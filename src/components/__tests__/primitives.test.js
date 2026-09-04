@@ -62,17 +62,34 @@ describe('Button', () => {
     expect(pressable.props.accessibilityLabel).toBe('Add to my plans');
   });
 
-  test('primary ink uses the always-dark onPrimary token, not theme `background` (U-F-1 contrast guard)', () => {
-    // `onPrimary` stays #0D0D0D in both themes; `background` flips near-white in the
-    // light theme and would fail contrast on the amber fill. In the dark-theme test
-    // env onPrimary and background share a value, so this pins the intended ink
-    // token at the value level and catches a swap to any other token.
+  test('emphatic ink uses the always-dark onPrimary token, not theme `background` (U-F-1 contrast guard)', () => {
+    // D148: the amber fill is the `emphatic` variant now. `onPrimary` stays
+    // #0D0D0D in both themes; `background` flips near-white in the light
+    // theme and would fail contrast on the amber fill.
     let tree;
-    act(() => { tree = create(<Button title="Save" onPress={() => {}} />); });
+    act(() => { tree = create(<Button title="Save" variant="emphatic" onPress={() => {}} />); });
     const label = tree.root.findByType(Text);
     expect(label.props.style).toEqual(
       expect.arrayContaining([expect.objectContaining({ color: colors.onPrimary })]),
     );
+  });
+
+  test('the default (standard primary) is a raised bordered surface with a white label and an amber icon (D148)', () => {
+    let tree;
+    act(() => { tree = create(<Button title="Start workout" icon="play" onPress={() => {}} />); });
+    const pressable = tree.root.findByProps({ accessibilityRole: 'button' });
+    const flattenedStyle = Array.isArray(pressable.props.style)
+      ? Object.assign({}, ...pressable.props.style)
+      : pressable.props.style;
+    expect(flattenedStyle.backgroundColor).toBe(colors.surface2);
+    expect(flattenedStyle.borderColor).toBe(colors.border);
+    expect(flattenedStyle.borderWidth).toBe(1);
+    const label = tree.root.findByType(Text);
+    expect(label.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ color: colors.textPrimary })]),
+    );
+    const icon = tree.root.findByProps({ name: 'play' });
+    expect(icon.props.color).toBe(colors.primary);
   });
 
   test('tertiary renders as a contained ghost button, not a bare orange text link', () => {
@@ -96,8 +113,10 @@ describe('Button', () => {
     const label = tree.root.findByType(Text);
     expect(flattenedStyle.backgroundColor).toBe(colors.surface);
     expect(flattenedStyle.borderColor).toBe(colors.border);
+    // D148: outline is the secondary treatment, one step quieter than the
+    // standard primary, so its label is the secondary ink.
     expect(label.props.style).toEqual(
-      expect.arrayContaining([expect.objectContaining({ color: colors.textPrimary })]),
+      expect.arrayContaining([expect.objectContaining({ color: colors.textSecondary })]),
     );
   });
 });

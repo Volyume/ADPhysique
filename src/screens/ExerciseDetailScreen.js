@@ -1488,7 +1488,7 @@ const styles = StyleSheet.create({
   },
   saveGoalBtnText: {
     ...type.bodyStrong,
-    color: colors.onPrimary,
+    color: colors.textPrimary,
   },
   removeGoalLink: {
     alignSelf: 'center',
@@ -1562,6 +1562,6 @@ function buildLiveStyles(t) {
     modalSubtitle: { ...t.type.bodySm, color: t.colors.textMuted },
     weightInput: { fontSize: t.fontSize.xxl },
     dateInput: { fontSize: t.fontSize.md },
-    saveGoalBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    saveGoalBtnText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
   };
 }

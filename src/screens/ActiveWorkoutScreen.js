@@ -4749,7 +4749,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 disabled={saving}
                 accessibilityLabel="Finish cluster and log the set"
               >
-                <Ionicons name="checkmark-circle" size={20} color={t.colors.onPrimary} />
+                <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />
                 <Text style={[styles.completeBtnText, live.completeBtnText]}>Finish cluster</Text>
               </Button>
               <TouchableOpacity onPress={cancelCluster} style={[styles.clusterCancel, live.clusterCancel]} accessibilityLabel="Cancel cluster">
@@ -6140,9 +6140,9 @@ const styles = StyleSheet.create({
   // amber button with a clear label rather than a tinted outline. Dark label
   // for contrast on amber (white on amber fails WCAG). Warm-ups stay visually
   // secondary via the tinted-outline override below.
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.xs, backgroundColor: colors.primaryFill },
+  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.xs, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
   btnDisabled: { opacity: 0.5 },
-  completeBtnText: { ...type.bodyStrong, color: colors.onPrimary },
+  completeBtnText: { ...type.bodyStrong, color: colors.textPrimary },
   completeBtnWarmup: { backgroundColor: colors.warningBg || colors.surface, borderWidth: 1, borderColor: colors.warning },
   completeBtnTextWarmup: { color: colors.warning },
   // Text button below the primary CTA (COMP-001): quiet, 44pt target.
@@ -6373,8 +6373,8 @@ const styles = StyleSheet.create({
   supStepNum: { color: colors.primary, fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, minWidth: 14 },
   supStepText: { ...type.bodySm, color: colors.textPrimary, flex: 1 },
   supTip: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xs },
-  supPrimaryBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
-  supPrimaryBtnText: { ...type.bodyStrong, color: colors.onPrimary },
+  supPrimaryBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
+  supPrimaryBtnText: { ...type.bodyStrong, color: colors.textPrimary },
   supSecondaryRow: { flexDirection: 'row', gap: spacing.sm },
   supSecondaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
   supSecondaryBtnText: { ...type.label, color: colors.textSecondary },
@@ -6383,8 +6383,8 @@ const styles = StyleSheet.create({
   staleSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%', maxHeight: '88%', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   staleTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
   staleBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.md },
-  staleResume: { width: '100%', backgroundColor: colors.primaryFill, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
-  staleResumeText: { ...type.bodyStrong, color: colors.onPrimary },
+  staleResume: { width: '100%', backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
+  staleResumeText: { ...type.bodyStrong, color: colors.textPrimary },
   staleFinish: { width: '100%', backgroundColor: colors.surface2, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.borderSubtle },
   staleFinishText: { ...type.label, color: colors.textPrimary },
   staleDiscard: { width: '100%', paddingVertical: spacing.md, alignItems: 'center' },
@@ -6393,8 +6393,8 @@ const styles = StyleSheet.create({
   discardSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%', maxHeight: '88%', gap: spacing.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   discardTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
   discardBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs },
-  keepTrainingBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
-  keepTrainingBtnText: { ...type.bodyStrong, color: colors.onPrimary },
+  keepTrainingBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
+  keepTrainingBtnText: { ...type.bodyStrong, color: colors.textPrimary },
   discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
   discardConfirmBtnText: { ...type.label, color: colors.error },
   // D43 S4: the "edit set" modal's own style block (keyboard wrapper,
@@ -6503,8 +6503,8 @@ function buildLiveStyles(t) {
     beatLineCueText: { ...t.type.caption, color: t.colors.textSecondary },
     coachLineText: { ...t.type.bodySm, color: t.colors.primary },
     noteInput: { backgroundColor: t.colors.surface2, fontSize: t.fontSize.sm, color: t.colors.textPrimary, borderColor: t.colors.border },
-    completeBtn: { backgroundColor: t.colors.primaryFill },
-    completeBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    completeBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    completeBtnText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     completeBtnWarmup: { backgroundColor: t.colors.warningBg || t.colors.surface, borderColor: t.colors.warning },
     completeBtnTextWarmup: { color: t.colors.warning },
     extraSetBtnText: { ...t.type.label, color: t.colors.textSecondary },
@@ -6576,16 +6576,16 @@ function buildLiveStyles(t) {
     supStepNum: { color: t.colors.primary, fontSize: t.fontSize.sm },
     supStepText: { ...t.type.bodySm, color: t.colors.textPrimary },
     supTip: { ...t.type.caption, color: t.colors.textMuted },
-    supPrimaryBtn: { backgroundColor: t.colors.primaryFill },
-    supPrimaryBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    supPrimaryBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    supPrimaryBtnText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     supSecondaryBtn: { borderColor: t.colors.border },
     supSecondaryBtnText: { ...t.type.label, color: t.colors.textSecondary },
     staleOverlay: { backgroundColor: t.colors.scrim },
     staleSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     staleTitle: { ...t.type.h3, color: t.colors.textPrimary },
     staleBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    staleResume: { backgroundColor: t.colors.primaryFill },
-    staleResumeText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    staleResume: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    staleResumeText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     staleFinish: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
     staleFinishText: { ...t.type.label, color: t.colors.textPrimary },
     staleDiscardText: { ...t.type.label, color: t.colors.error },
@@ -6593,8 +6593,8 @@ function buildLiveStyles(t) {
     discardSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     discardTitle: { ...t.type.h3, color: t.colors.textPrimary },
     discardBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    keepTrainingBtn: { backgroundColor: t.colors.primaryFill },
-    keepTrainingBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    keepTrainingBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    keepTrainingBtnText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     discardConfirmBtnText: { ...t.type.label, color: t.colors.error },
     nextTimeBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
     nextTimeBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },

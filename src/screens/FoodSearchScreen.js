@@ -1195,11 +1195,11 @@ const styles = StyleSheet.create({
   plateCount: { ...type.bodyStrong, color: colors.textPrimary },
   plateKcalLine: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   plateLogBtn: {
-    backgroundColor: colors.primaryFill,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
   },
-  plateLogText: { ...type.bodyStrong, color: colors.onPrimary },
+  plateLogText: { ...type.bodyStrong, color: colors.textPrimary },
   plateModalSheet: {
     paddingTop: spacing.lg,
   },
@@ -1223,7 +1223,7 @@ const styles = StyleSheet.create({
   plateClearText: { color: colors.textSecondary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   plateLogBtnWide: {
     flex: 1, alignItems: 'center',
-    backgroundColor: colors.primaryFill,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
     paddingVertical: spacing.md, borderRadius: radius.md,
   },
 });
@@ -1259,14 +1259,14 @@ function buildLiveStyles(t) {
     plateBar: { borderTopColor: t.colors.border, backgroundColor: t.colors.surface },
     plateCount: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     plateKcalLine: { ...t.type.caption, color: t.colors.textMuted },
-    plateLogBtn: { backgroundColor: t.colors.primaryFill },
-    plateLogText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    plateLogBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    plateLogText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     plateModalTitle: { ...t.type.title, color: t.colors.textPrimary },
     plateItem: { borderBottomColor: t.colors.borderSubtle },
     plateItemName: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
     plateItemMeta: { ...t.type.caption, color: t.colors.textMuted },
     plateClearBtn: { borderColor: t.colors.border },
     plateClearText: { color: t.colors.textSecondary, fontSize: t.fontSize.md },
-    plateLogBtnWide: { backgroundColor: t.colors.primaryFill },
+    plateLogBtnWide: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
   };
 }

@@ -1,6 +1,23 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-04 — ACTION HIERARCHY: AMBER IS ACCENT (D148); ALSO D146, D147 LANDED ★
+
+Founder brief: orange was doing "brand accent" and "this is a button" at
+once. `Button.js` now has five tiers (emphatic amber fill for one
+decisive action per journey; the default is a raised charcoal surface
+with a hairline and an amber icon; secondary flat; tertiary tint;
+icon-FAB). Hand-rolled amber fills migrated; Partner action pill and
+favoured channel tinted; in-app splash is a bare background. Coach root
+(YouScreen) was already at the bar and is unchanged. Exceptions kept
+amber (AppAlert confirm, Article 9 CTA, coach ED lockout CTA, Nutrition
+Calculate, every selection/state use) are listed in D148 with the
+contrast figures. Guard: `Button.hierarchy.guard.test.js`. Earlier the
+same day: D146 (wizard points at what is missing) and D147 (plan
+generation card never moves; See my plan lands on Train); 1.3.3 bumped
+for iOS. No build dispatched (founder's call, Section 4 rule).
+
+===============================================================================
 ## ★ 2026-09-04 — PREMIUM FIRST LAUNCH: WELCOME + CREATE ACCOUNT (D145) ★
 
 Founder spec (in chat, 2026-09-04) after the D144 welcome failed on

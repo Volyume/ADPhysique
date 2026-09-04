@@ -625,10 +625,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.md,
     borderRadius: radius.lg,
-    backgroundColor: colors.primaryFill,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
     alignItems: 'center',
   },
-  saveText: { color: colors.onPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  saveText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
@@ -657,7 +657,7 @@ function buildLiveStyles(t) {
     deleteBtn: { borderColor: t.colors.border },
     selectBtn: { borderColor: t.colors.border },
     cancelText: { color: t.colors.textSecondary },
-    saveBtn: { backgroundColor: t.colors.primaryFill },
-    saveText: { color: t.colors.onPrimary },
+    saveBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    saveText: { color: t.colors.textPrimary },
   };
 }

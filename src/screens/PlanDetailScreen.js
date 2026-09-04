@@ -520,7 +520,7 @@ export default function PlanDetailScreen({ navigation, route }) {
         {isLibrary ? (
           <Button title="Add to my plans" icon="copy-outline" size="lg" onPress={handleAddToMyPlans} />
         ) : !isActive ? (
-          <Button title="Set active" icon="checkmark-circle" size="lg" onPress={handleSetActive} />
+          <Button variant="emphatic" title="Set active" icon="checkmark-circle" size="lg" onPress={handleSetActive} />
         ) : null}
 
         {/* Workouts list */}
@@ -636,7 +636,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                       accessibilityRole="button"
                       accessibilityLabel={`Start ${routine.name}`}
                     >
-                      <Ionicons name="play" size={13} color={t.colors.onPrimary} />
+                      <Ionicons name="play" size={13} color={t.colors.primary} />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -772,7 +772,7 @@ const styles = StyleSheet.create({
   },
   startWorkoutBtn: {
     width: 36, height: 36, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.primaryFill, borderRadius: radius.md,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
   },
   // Card owns background/radius/border here; overflow clips row dividers to
   // the rounded corner.
@@ -824,7 +824,7 @@ function buildLiveStyles(t) {
     workoutName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     workoutMeta: { ...t.type.caption, color: t.colors.textSecondary },
     editWorkoutBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    startWorkoutBtn: { backgroundColor: t.colors.primaryFill },
+    startWorkoutBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     manageRow: { borderBottomColor: t.colors.borderSubtle },
     manageRowText: { ...t.type.body, color: t.colors.textPrimary },
     whyBullet: { backgroundColor: t.colors.primary },

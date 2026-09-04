@@ -1056,7 +1056,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   previewPrimary: {
-    backgroundColor: colors.primaryFill,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   previewSecondary: {
     backgroundColor: withAlpha(colors.background, 0.72),
@@ -1065,7 +1067,7 @@ const styles = StyleSheet.create({
   },
   previewPrimaryText: {
     ...type.bodyStrong,
-    color: colors.onPrimary,
+    color: colors.textPrimary,
   },
   previewSecondaryText: {
     ...type.bodyStrong,
@@ -1096,11 +1098,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: radius.lg,
-    backgroundColor: colors.primaryFill,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   fallbackBtnLabel: {
     ...type.bodyStrong,
-    color: colors.onPrimary,
+    color: colors.textPrimary,
   },
   fallbackClose: {
     marginTop: spacing.xs,
@@ -1157,15 +1161,15 @@ function buildLiveStyles(t) {
     previewTopBar: { backgroundColor: withAlpha(t.colors.camera, 0.36) },
     previewCopy: { backgroundColor: withAlpha(t.colors.background, 0.72), borderColor: withAlpha(t.colors.textPrimary, 0.16) },
     previewActions: { backgroundColor: withAlpha(t.colors.camera, 0.48) },
-    previewPrimary: { backgroundColor: t.colors.primaryFill },
+    previewPrimary: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     previewSecondary: { backgroundColor: withAlpha(t.colors.background, 0.72), borderColor: withAlpha(t.colors.textPrimary, 0.16) },
-    previewPrimaryText: { color: t.colors.onPrimary },
+    previewPrimaryText: { color: t.colors.textPrimary },
     previewSecondaryText: { color: t.colors.textPrimary },
     fallback: { backgroundColor: t.colors.background },
     fallbackTitle: { color: t.colors.textPrimary },
     fallbackBody: { color: t.colors.textSecondary },
-    fallbackBtn: { backgroundColor: t.colors.primaryFill },
-    fallbackBtnLabel: { color: t.colors.onPrimary },
+    fallbackBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    fallbackBtnLabel: { color: t.colors.textPrimary },
     fallbackCloseLabel: { color: t.colors.textSecondary },
     loading: { backgroundColor: t.colors.background },
   };

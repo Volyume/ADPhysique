@@ -80,7 +80,7 @@ export default function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, 
           onPress={onAdd}
           accessibilityLabel="Add exercise"
         >
-          <Ionicons name="add" size={22} color={t.colors.onPrimary} />
+          <Ionicons name="add" size={22} color={t.colors.primary} />
           <Text style={[styles.addFirstBtnText, live.addFirstBtnText]}>Add exercise</Text>
         </Button>
       </View>
@@ -140,8 +140,8 @@ const styles = StyleSheet.create({
   emptyContent: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: spacing.xxxl, gap: spacing.md, paddingHorizontal: spacing.xl },
   emptyTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   emptySubtitle: { ...type.body, color: colors.textSecondary, textAlign: 'center' },
-  addFirstBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: workoutLoggerSize.addExerciseMinHeight, backgroundColor: colors.primaryFill, borderRadius: radius.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginTop: spacing.sm },
-  addFirstBtnText: { ...type.label, color: colors.onPrimary },
+  addFirstBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: workoutLoggerSize.addExerciseMinHeight, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginTop: spacing.sm },
+  addFirstBtnText: { ...type.label, color: colors.textPrimary },
 });
 
 // CP-10 stage 3 (theming FINAL batch, 2026-07-10): the same "frozen base +
@@ -169,7 +169,7 @@ function buildLiveStyles(t) {
     emptyView: { backgroundColor: t.colors.background },
     emptyTitle: { ...t.type.title, color: t.colors.textPrimary },
     emptySubtitle: { ...t.type.body, color: t.colors.textSecondary },
-    addFirstBtn: { backgroundColor: t.colors.primaryFill },
-    addFirstBtnText: { ...t.type.label, color: t.colors.onPrimary },
+    addFirstBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    addFirstBtnText: { ...t.type.label, color: t.colors.textPrimary },
   };
 }

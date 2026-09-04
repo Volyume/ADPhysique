@@ -5963,3 +5963,94 @@ on the design canvas with a Replay control.
 
 **Engine, ED-safety, consent, billing: untouched.** Generation itself,
 its idempotence record and its failure handling are unchanged.
+
+## D148 — Amber is accent, not "this is a button": the action hierarchy (founder brief, 2026-09-04)
+
+**Verdict.** The founder's brief: orange has been doing two jobs, brand
+accent and "this is tappable", so every filled amber button competes with
+every other and the accent stops meaning anything. Orange is for accent,
+selection, emphasis and identity. The Coach root (YouScreen) is the
+reference: it has no amber-filled buttons at all and reads as the most
+premium screen in the app. Every other screen moves toward it. Do not
+overcorrect: touch targets, contrast and the few genuinely decisive
+moments keep their weight.
+
+**Inventory (read agent, Sonnet, full tree).** 307 shared `Button` uses;
+145 of them (124 default plus 21 explicit `primary`) rendered as filled
+amber, about half of every button in the product. Plus 26 hand-rolled
+amber fills across 14 files (FoodSearch, FoodDetailSheet,
+CuratedMealSheet, ExercisePickerModal, PlanDetail, BodyMetrics,
+ExerciseDetail, WorkoutSummary, ScanBarcode, ScanLabel, Quiz,
+PlanLibrary, Diary, ActiveWorkout) and one FAB (Diary scan).
+
+**The hierarchy (`src/components/Button.js`, five tiers).**
+- **emphatic** — amber fill, dark text. The one decisive, usually
+  once-per-journey action on a screen: Get started, Create account and
+  Sign in, Build my plan and See my plan, Start training, Create an
+  account to keep it, Agree and get my code, Agree and save, Create plan
+  and add workouts, Start next block, Import N sessions, the goal-lock
+  Save/Continue, Set active, the plan-preview confirm, Create workout.
+  Sixteen marks in fourteen files, pinned by an allowlist in the guard.
+- **primary** (the default) — raised surface: `surface2` fill, `border`
+  hairline, white label, amber leading icon. The routine forward action:
+  Start workout, Log set, Finish, Mark eaten, Save, Continue, Add.
+  Reads as the main button on its card without shouting.
+- **secondary** — flat `surface`, `border`, secondary text. Options,
+  View plan, Cancel-adjacent.
+- **tertiary** — amber tint (`primaryBg`) with an amber edge and amber
+  text. Accented but not filled: a favoured choice, an in-card action.
+- **icon / FAB** — the Diary scan FAB is a raised surface with an amber
+  glyph. Amber sits on the icon, the disc stays neutral.
+- destructive and outline are unchanged.
+Haptics: the selection tick fires on primary and emphatic, nothing else.
+Icons take `iconFg` so a raised button's icon can be amber while its
+label stays white.
+
+**What changed on screen.** Today card Start workout, Train Start next
+workout, Active workout Log set / complete / superset / keep-training /
+stale-resume, Nutrition Mark eaten and the scan FAB, the diary planned
+banner, the empty-exercise Add, the ghost-capture controls, the wizard's
+primary label override, and the fourteen hand-rolled files listed above
+(migrated to the shared `Button` where a shared button already sat
+beneath, else to the same surface2 + border + white label recipe).
+Partner: the support-plan action pill and the favoured invite channel
+moved to the tint tier.
+
+**Deliberately still amber, and why.**
+- The emphatic set above: one decisive action per journey.
+- `AppAlert` confirm: a modal with one answer; the amber says "this is
+  the answer", and it is the only fill on screen.
+- Article 9 consent CTA: the un-skippable gate's single action; the gate
+  must read as the one thing to do (Section 2, GDPR).
+- Coach ED-lockout CTA (`CoachOutputScreen.edLockoutCtaPrimary`): the
+  safety path's only button; ED-safety surfaces are not restyled without
+  a founder decision.
+- Nutrition targets Calculate: the single act the screen exists for,
+  with a neutral disabled state.
+- The label-scan shutter (`ScanLabelScreen.captureBtn`): the one control
+  on a full-screen camera, an amber ring inside the conventional white
+  shutter ring; it is the emphatic tier in camera clothing.
+- Everything that is selection or state, not a button: the active tab,
+  the active exercise chip, hour chips, opacity presets, timer chips,
+  the selected history day, the current block dot, radio dots, step
+  dots, badges, the calorie ring and macro bars, the rest-timer drain,
+  the cheer pill (a celebration, not a form action), the beta badge.
+
+**Coach-screen consistency.** YouScreen was already at the target: zero
+`Button`s, zero amber fills, amber only on icons, the selected state and
+the wordmark. It was left untouched and used as the bar.
+
+**Accessibility.** Every raised button keeps its 48dp minimum height and
+padding; white on `surface2` (#2A2A27) is 14.4:1, amber text on the
+12% tint is 8.0:1 over the background and 7.0:1 over a surface, all
+past AA (computed from the theme tokens). The hairline border keeps the
+raised tier visible as a control without relying on colour alone. The
+emphatic tier is unchanged (dark on amber, 7.3:1).
+
+**In-app splash.** With the Welcome screen carrying the product, the
+in-app splash is a bare background (the native splash still covers the
+first paint). The guard that measured the splash hero now pins the bare
+container.
+
+**Engine, ED-safety, consent, billing: untouched.** No engine module,
+floor, gate, consent path or billing surface changed.

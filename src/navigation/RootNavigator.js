@@ -5,12 +5,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { StackActions } from '@react-navigation/native';
 import { safeGetStateFromPath } from './safeGetStateFromPath';
 export const navigationRef = createNavigationContainerRef();
-import { View, Image, Text, StyleSheet, Animated, Easing, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from '../components/Button';
 
-const SPLASH_HERO = require('../../assets/volyume-wordmark.png');
-const HERO_ASPECT = 1032 / 277;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { colors, spacing, motion, fontSize, fontWeight, fontFamily } from '../styles/theme';
@@ -2132,90 +2130,13 @@ export default function RootNavigator() {
   );
 }
 
+// D148 (founder, 2026-09-04): no brand splash inside the app. The native
+// splash covers the boot (it hides exactly when the boot gate lifts, see
+// bootGateResolved above); every later gate holds on a bare background so
+// the next screen, Welcome or Today, simply appears. The animated wordmark
+// that used to play here read as a second loading screen before Welcome.
 function SplashScreen() {
-  const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  // UI-14 (docs audit 2026-07-09): sized from the live window-dimensions
-  // hook rather than a frozen module-level width snapshot taken once at
-  // import time, so an Android freeform/multi-window resize re-renders
-  // this at the new width instead of leaving the wordmark stuck at
-  // whatever width was current on first import.
-  const { width: windowWidth } = useWindowDimensions();
-  const splashW = Math.round(windowWidth * 0.7);
-  // Reduce Motion: start every animated value at its end state so the splash
-  // appears instantly without the hero scale / fade / accent-bar sweep.
-  const heroOpacity  = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-  const heroScale    = useRef(new Animated.Value(reduceMotion ? 1 : 0.86)).current;
-  const heroY        = useRef(new Animated.Value(reduceMotion ? 0 : 16)).current;
-  const wordOpacity  = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-  const wordY        = useRef(new Animated.Value(reduceMotion ? 0 : 12)).current;
-  const accentScaleX = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-
-  useEffect(() => {
-    if (reduceMotion) return;
-    Animated.sequence([
-      Animated.parallel([
-        Animated.timing(heroOpacity, {
-          toValue: 1,
-          duration: 550,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-        Animated.timing(heroScale, {
-          toValue: 1,
-          duration: 650,
-          easing: Easing.out(Easing.back(1.2)),
-          useNativeDriver: true,
-        }),
-        Animated.timing(heroY, {
-          toValue: 0,
-          duration: 550,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.parallel([
-        Animated.timing(wordOpacity, {
-          toValue: 1,
-          duration: 320,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(wordY, {
-          toValue: 0,
-          duration: 320,
-          easing: Easing.out(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.timing(accentScaleX, {
-        toValue: 1,
-        duration: 280,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <View style={splashStyles.container}>
-      <Animated.View
-        style={{
-          opacity: heroOpacity,
-          transform: [{ scale: heroScale }, { translateY: heroY }],
-        }}
-      >
-        <Image
-          source={SPLASH_HERO}
-          style={{ width: splashW, height: Math.round(splashW / HERO_ASPECT) }}
-          resizeMode="contain"
-          accessibilityLabel="Volyume"
-        />
-      </Animated.View>
-
-      <Animated.View style={[splashStyles.accent, { transform: [{ scaleX: accentScaleX }] }]} />
-    </View>
-  );
+  return <View style={splashStyles.container} />;
 }
 
 // SigningInSplash removed, restoreSessionFromCloud is now optimistic
@@ -2259,17 +2180,8 @@ const dbErrorStyles = StyleSheet.create({
 const splashStyles = StyleSheet.create({
   container: {
     flex: 1,
-    // Brand background, matches the rest of the app so there's no black
-    // seam at splash hand-off (was hardcoded #000000).
+    // Brand background, matches the rest of the app so there is no seam at
+    // the hand-off (was hardcoded #000000).
     backgroundColor: colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  accent: {
-    width: 40,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: colors.primaryFill,
-    marginTop: spacing.md,
   },
 });

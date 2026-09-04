@@ -387,7 +387,7 @@ export default function PlanPreviewSheet({
         ) : null}
       </View>
 
-      <Button
+      <Button variant="emphatic"
         title={confirmLabel}
         onPress={confirm}
         loading={busy}

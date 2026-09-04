@@ -150,7 +150,7 @@ export default function WelcomeScreen({ navigation, route }) {
 
         <View style={styles.actions} onLayout={(e) => setActionsH(Math.round(e.nativeEvent.layout.height))}>
           <Text style={[styles.free, live.free]}>Completely free · No ads</Text>
-          <Button variant="primary" size="lg" title="Get started" onPress={getStarted} accessibilityLabel="Get started" />
+          <Button variant="emphatic" size="lg" title="Get started" onPress={getStarted} accessibilityLabel="Get started" />
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel="Already have an account? Sign in"

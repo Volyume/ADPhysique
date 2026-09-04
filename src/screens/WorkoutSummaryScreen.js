@@ -2552,9 +2552,9 @@ const styles = StyleSheet.create({
   templateModalSave: {
     flex: 1,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    borderRadius: radius.md, backgroundColor: colors.primaryFill,
+    borderRadius: radius.md, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
   },
-  templateModalSaveText: { ...type.label, color: colors.onPrimary },
+  templateModalSaveText: { ...type.label, color: colors.textPrimary },
 });
 
 // CP-10 stage 3 (theming FINAL batch, 2026-07-10): buildLiveStyles is the
@@ -2650,7 +2650,7 @@ function buildLiveStyles(t) {
     templateModalInput: { ...t.type.body },
     templateModalCancel: { borderColor: t.colors.border },
     templateModalCancelText: { ...t.type.label, color: t.colors.textSecondary },
-    templateModalSave: { backgroundColor: t.colors.primaryFill },
-    templateModalSaveText: { ...t.type.label, color: t.colors.onPrimary },
+    templateModalSave: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    templateModalSaveText: { ...t.type.label, color: t.colors.textPrimary },
   };
 }

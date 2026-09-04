@@ -1015,7 +1015,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
               </Text>
             </View>
 
-            <Button
+            <Button variant="emphatic"
               title="Create plan and add workouts"
               icon="add-circle"
               size="lg"

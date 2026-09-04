@@ -66,7 +66,8 @@ describe('CP-10 stage 1: migrated primitives flip live, no remount', () => {
     act(() => { tree = create(<Button title="Save" onPress={() => {}} />); });
     const pressable = tree.root.findByProps({ accessibilityRole: 'button' });
     const darkBg = flat(pressable).backgroundColor;
-    expect(darkBg).toBe(theme.resolveTheme({ theme: 'dark' }).colors.primaryFill);
+    // D148: the default button is the standard primary, a raised surface.
+    expect(darkBg).toBe(theme.resolveTheme({ theme: 'dark' }).colors.surface2);
 
     setTheme('light');
     const lightBg = flat(pressable).backgroundColor;

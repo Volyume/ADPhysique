@@ -3417,6 +3417,46 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## AMBER IS ACCENT, NOT "THIS IS A BUTTON" (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D148.
+
+Five-tier action hierarchy in `src/components/Button.js` (emphatic /
+primary raised / secondary / tertiary tint / icon-FAB); sixteen emphatic
+marks pinned by an allowlist in `Button.hierarchy.guard.test.js`; the
+hand-rolled amber fills migrated; the in-app splash is a bare background
+now that Welcome carries the product. Full list, exceptions and contrast
+figures in D148.
+
+**Device checklist (Android, existing account with an active plan).**
+1. Today tab. Expected: Start workout is a raised charcoal button with a
+   hairline border, white label and an amber play glyph; Options sits
+   beside it flatter. The only amber fills on the screen are the
+   selected tab and the wordmark.
+2. Tap Start workout. Expected: the same short haptic tick as before.
+3. Train tab. Expected: Start next workout raised and neutral, View plan
+   flatter; the Active badge and the block dots still amber.
+4. Active workout. Expected: Log set at the bottom is raised charcoal
+   with a white label; the active exercise chip, rest-timer drain and
+   +15 stay amber; Finish unchanged. Log a set. Expected: same tick,
+   same flow.
+5. Nutrition tab. Expected: the scan FAB is a charcoal disc with an amber
+   barcode glyph; Mark eaten on a meal is raised and neutral; the
+   calorie ring and macro bars are unchanged.
+6. Food search, food detail, curated meal: the add / save buttons are
+   raised and neutral. Body metrics Log and Save likewise.
+7. Partner tab. Expected: the support-plan action is an amber-tinted
+   pill with amber text; in the invite sheet the favoured channel is
+   tinted, the others plain. Agree and get my code (first visit) is the
+   one amber fill.
+8. Sign out, cold start. Expected: no amber splash card; the Welcome
+   screen appears with Get started as the one amber button; the sheet's
+   Continue with email and Create account are amber.
+9. Wizard: Build my plan and See my plan are amber; every Continue is
+   raised and neutral.
+10. Font size at the largest accessibility setting: every raised button
+    keeps its label on one or two lines inside its box; nothing clips.
+ED-safety: the coach lockout CTA and the Article 9 consent CTA are
+unchanged and still amber; no weight/food copy or gate changed.
+
 ## PLAN-GENERATION CARD: FIXED LAYOUT, PAYOFF IN PLACE (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D147.
 
 Guard: `ProOnboardingScreen.buildCard.guard.test.js`. Version bumped to

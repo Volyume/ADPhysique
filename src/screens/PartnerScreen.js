@@ -277,7 +277,7 @@ function PartnerGuidedWeekCard({
           accessibilityRole="button"
           accessibilityLabel={action.accessibilityLabel || action.label}
         >
-          <Ionicons name={actionIcon} size={iconSize.sm} color={t.colors.onPrimary} />
+          <Ionicons name={actionIcon} size={iconSize.sm} color={t.colors.primary} />
           <Text style={[styles.supportPlanActionText, live.supportPlanActionText]}>{action.label}</Text>
         </TouchableOpacity>
       ) : null}
@@ -1569,7 +1569,7 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
               <Text style={[styles.beatConsent, live.beatConsent]}>
                 Pairing means you both agree to share this, and only this. Notice v{PARTNER_PRIVACY_NOTICE_VERSION}.
               </Text>
-              <Button
+              <Button variant="emphatic"
                 title="Agree and get my code"
                 onPress={onAgree}
                 disabled={minting}
@@ -1618,7 +1618,7 @@ function ChannelButton({ icon, label, onPress, primary = false }) {
       accessibilityRole="button"
       accessibilityLabel={`Send by ${label}`}
     >
-      <Ionicons name={icon} size={iconSize.md} color={primary ? t.colors.onPrimary : t.colors.textSecondary} />
+      <Ionicons name={icon} size={iconSize.md} color={primary ? t.colors.primary : t.colors.textSecondary} />
       <Text style={[styles.channelBtnText, live.channelBtnText, primary && [styles.channelBtnTextPrimary, live.channelBtnTextPrimary]]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -1787,13 +1787,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
     borderRadius: radius.full,
-    backgroundColor: colors.primaryFill,
+    // D148: the tint tier, not a filled amber button; amber marks the
+    // action, the surface stays quiet inside the card.
+    backgroundColor: colors.primaryBg,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     minHeight: touchTarget.minimum,
     alignSelf: 'flex-start',
   },
-  supportPlanActionText: { ...type.label, color: colors.onPrimary },
+  supportPlanActionText: { ...type.label, color: colors.primary },
   supportPlanPrivacy: { ...type.captionTight, color: colors.textMuted },
   shareWinsRow: {
     flexDirection: 'row',
@@ -2184,12 +2188,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     minHeight: 48,
   },
+  // D148: the favoured channel is tinted, not filled; amber says "this
+  // one", the button itself stays a surface like its neighbours.
   channelBtnPrimary: {
-    backgroundColor: colors.primaryFill,
-    borderColor: colors.primaryFill,
+    backgroundColor: colors.primaryBg,
+    borderColor: withAlpha(colors.primary, alpha.edge),
   },
   channelBtnText: { ...type.label, color: colors.textPrimary },
-  channelBtnTextPrimary: { color: colors.onPrimary },
+  channelBtnTextPrimary: { color: colors.primary },
   moreOptions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2253,8 +2259,8 @@ function buildLiveStyles(t) {
     supportPlanCardBorder: { borderColor: withAlpha(t.colors.primary, alpha.edge) },
     supportPlanTitle: { ...t.type.label, color: t.colors.textPrimary },
     supportPlanHeadline: { ...t.type.bodySm, color: t.colors.textPrimary, lineHeight: 20 },
-    supportPlanAction: { backgroundColor: t.colors.primaryFill },
-    supportPlanActionText: { ...t.type.label, color: t.colors.onPrimary },
+    supportPlanAction: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    supportPlanActionText: { ...t.type.label, color: t.colors.primary },
     supportPlanPrivacy: { ...t.type.captionTight, color: t.colors.textMuted },
     shareWinsRow: { borderColor: withAlpha(t.colors.primary, alpha.edge), backgroundColor: t.colors.surface2 },
     shareWinsIcon: { backgroundColor: t.colors.primaryBg },
@@ -2338,9 +2344,9 @@ function buildLiveStyles(t) {
     codeDisplay: { ...t.type.display, color: t.colors.textPrimary, letterSpacing: letterSpacing.caption },
     codeSub: { ...t.type.caption, color: t.colors.textSecondary },
     channelBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    channelBtnPrimary: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primaryFill },
+    channelBtnPrimary: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     channelBtnText: { ...t.type.label, color: t.colors.textPrimary },
-    channelBtnTextPrimary: { color: t.colors.onPrimary },
+    channelBtnTextPrimary: { color: t.colors.primary },
     moreOptions: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     moreOptionsText: { ...t.type.label, color: t.colors.textPrimary },
   };

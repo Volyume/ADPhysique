@@ -1034,9 +1034,13 @@ describe('manage sheet: block confirm', () => {
     expect(PARTNER_SCREEN_SOURCE).not.toContain('shareWinExampleConsent: { ...type.captionTight, color: colors.primary');
   });
 
-  test('invite channels keep secondary options neutral, with one filled primary', () => {
+  // D148 (2026-09-04): the favoured channel is the tint tier (amber edge
+  // and text on the primary tint), not a filled amber button. Amber says
+  // "this one"; it no longer says "this is a button".
+  test('invite channels keep secondary options neutral, with one tinted favourite', () => {
     expect(PARTNER_SCREEN_SOURCE).toMatch(/channelBtn: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(PARTNER_SCREEN_SOURCE).toContain('channelBtnPrimary: {\n    backgroundColor: colors.primaryFill,');
+    expect(PARTNER_SCREEN_SOURCE).toContain('channelBtnPrimary: {\n    backgroundColor: colors.primaryBg,\n    borderColor: withAlpha(colors.primary, alpha.edge),');
+    expect(PARTNER_SCREEN_SOURCE).not.toContain('channelBtnPrimary: {\n    backgroundColor: colors.primaryFill,');
     expect(PARTNER_SCREEN_SOURCE).toContain('channelBtnText: { ...type.label, color: colors.textPrimary }');
     expect(PARTNER_SCREEN_SOURCE).not.toContain('channelBtnText: { ...type.label, color: colors.primary }');
   });

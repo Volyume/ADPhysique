@@ -112,7 +112,7 @@ export default function CuratedMealSheet({
               accessibilityLabel={`Add ${meal.name} to diary`}
             >
               {logging
-                ? <ActivityIndicator color={t.colors.onPrimary} size="small" />
+                ? <ActivityIndicator color={t.colors.textPrimary} size="small" />
                 : <Text style={[styles.logText, live.logText]}>Add to diary</Text>}
             </Pressable>
           </View>
@@ -150,9 +150,9 @@ const styles = StyleSheet.create({
   cancelText: { color: colors.textSecondary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   logBtn: {
     flex: 1, paddingVertical: spacing.md, borderRadius: radius.lg,
-    backgroundColor: colors.primaryFill, alignItems: 'center',
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, alignItems: 'center',
   },
-  logText: { color: colors.onPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  logText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
@@ -172,7 +172,7 @@ function buildLiveStyles(t) {
     footnote: { color: t.colors.textMuted },
     cancelBtn: { borderColor: t.colors.border },
     cancelText: { color: t.colors.textSecondary },
-    logBtn: { backgroundColor: t.colors.primaryFill },
-    logText: { color: t.colors.onPrimary },
+    logBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    logText: { color: t.colors.textPrimary },
   };
 }

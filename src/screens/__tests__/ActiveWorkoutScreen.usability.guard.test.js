@@ -234,7 +234,9 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // letterSpacing: 0 literal removed (design campaign D3, 2026-07-09): raw
     // letterSpacing literals are swept to tokens/deleted app-wide; 0 was
     // value-identical to the RN default so the property is simply gone now.
-    expect(ACTIVE_WORKOUT).toContain('completeBtnText: { ...type.bodyStrong, color: colors.onPrimary }');
+    // D148: the logger's primary is the standard primary (raised surface,
+    // white label), not an amber fill.
+    expect(ACTIVE_WORKOUT).toContain('completeBtnText: { ...type.bodyStrong, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).toContain('sheetTitle: { ...type.title, color: colors.textPrimary, marginBottom: spacing.sm }');
     expect(ACTIVE_WORKOUT).toContain('swapTitle: { ...type.title, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).toContain('supTitle: { ...type.h3, color: colors.textPrimary }');
@@ -287,8 +289,8 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(ACTIVE_WORKOUT).toContain('inlineActionPill');
     // Re-pinned for D43 S1 extraction: addFirstBtn/addFirstBtnText moved to
     // src/components/workout/EmptyExerciseView.js's own frozen styles.
-    expect(EMPTY_EXERCISE_VIEW).toMatch(/addFirstBtn: \{[\s\S]*minHeight: workoutLoggerSize\.addExerciseMinHeight,[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*paddingHorizontal: spacing\.lg,[\s\S]*paddingVertical: spacing\.sm/);
-    expect(EMPTY_EXERCISE_VIEW).toContain('addFirstBtnText: { ...type.label, color: colors.onPrimary }');
+    expect(EMPTY_EXERCISE_VIEW).toMatch(/addFirstBtn: \{[\s\S]*minHeight: workoutLoggerSize\.addExerciseMinHeight,[\s\S]*backgroundColor: colors\.surface2,[\s\S]*paddingHorizontal: spacing\.lg,[\s\S]*paddingVertical: spacing\.sm/);
+    expect(EMPTY_EXERCISE_VIEW).toContain('addFirstBtnText: { ...type.label, color: colors.textPrimary }');
     expect(EMPTY_EXERCISE_VIEW).not.toContain('addFirstBtnText: { fontSize: fontSize.lg');
     // D1 sweep (design-consistency-audit-2026-08-06, DD62/DD63): this
     // assertion's greedy [\s\S]* previously matched past inlineActionPill's
@@ -410,12 +412,12 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   });
 
   test('modal actions use the same compact logger button system', () => {
-    expect(ACTIVE_WORKOUT).toMatch(/staleResume: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
-    expect(ACTIVE_WORKOUT).toMatch(/keepTrainingBtn: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
-    expect(ACTIVE_WORKOUT).toContain('staleResumeText: { ...type.bodyStrong, color: colors.onPrimary }');
-    expect(ACTIVE_WORKOUT).toContain('keepTrainingBtnText: { ...type.bodyStrong, color: colors.onPrimary }');
+    expect(ACTIVE_WORKOUT).toMatch(/staleResume: \{[\s\S]*backgroundColor: colors\.surface2,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(ACTIVE_WORKOUT).toMatch(/keepTrainingBtn: \{[\s\S]*backgroundColor: colors\.surface2,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(ACTIVE_WORKOUT).toContain('staleResumeText: { ...type.bodyStrong, color: colors.textPrimary }');
+    expect(ACTIVE_WORKOUT).toContain('keepTrainingBtnText: { ...type.bodyStrong, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).not.toContain('staleResumeText: { fontSize: fontSize.md');
-    expect(ACTIVE_WORKOUT).toMatch(/supPrimaryBtn: \{[\s\S]*backgroundColor: colors\.primaryFill,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
-    expect(ACTIVE_WORKOUT).toContain('supPrimaryBtnText: { ...type.bodyStrong, color: colors.onPrimary }');
+    expect(ACTIVE_WORKOUT).toMatch(/supPrimaryBtn: \{[\s\S]*backgroundColor: colors\.surface2,[\s\S]*minHeight: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(ACTIVE_WORKOUT).toContain('supPrimaryBtnText: { ...type.bodyStrong, color: colors.textPrimary }');
   });
 });

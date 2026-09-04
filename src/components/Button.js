@@ -6,11 +6,22 @@
  * looks and behaves the same. Replaces the 14+ hand-rolled `primaryBtn`
  * style blocks the component audit found.
  *
- * Variants:
- *   primary     amber fill, dark text (default)
- *   secondary   raised surface, light text, subtle border
- *   tertiary    quiet ghost button, amber label and subtle contained surface
- *   outline     quiet bordered surface with neutral text for secondary CTAs
+ * Variants (D148, founder 2026-09-04: colour is hierarchy; amber is an
+ * accent, a selection and an identity, not "this is a button"):
+ *   emphatic    solid amber fill, dark ink. The ONE action in a region that
+ *               must be the strongest thing on screen: a final confirmation,
+ *               a committing step (create the account, build the plan,
+ *               agree). Normally at most one per screen.
+ *   primary     the standard primary, and the default: a raised charcoal
+ *               surface with a neutral border, a white semibold label and
+ *               amber icons. Routine important actions (Start workout, Log
+ *               set, Add food, Save, Continue) live here: obvious through
+ *               position, size, contrast and the amber glyph, not fill.
+ *   secondary   the quieter sibling: the base surface, the same border, a
+ *               softer label. Supporting choices beside a primary.
+ *   outline     alias of secondary (kept for existing callers).
+ *   tertiary    quiet ghost button, amber label on a faint amber tint, for
+ *               compact contextual actions.
  *   destructive solid error fill, light text
  *
  * Sizes: sm | md (default) | lg. `loading` shows an inline spinner and
@@ -51,16 +62,19 @@ function buildVariants(c) {
   return {
     // fg uses onPrimary (always-dark ink, theme.js:42), NOT `background`, which flips
     // near-white in the light theme and fails contrast on the amber fill (audit U-F-1).
-    primary: { bg: c.primaryFill, fg: c.onPrimary, border: 'transparent' },
-    secondary: { bg: c.surface2, fg: c.textPrimary, border: c.border },
-    tertiary: { bg: c.primaryBg, fg: c.primary, border: withAlpha(c.primary, alpha.edge) },
-    outline: { bg: c.surface, fg: c.textPrimary, border: c.border },
+    emphatic: { bg: c.primaryFill, fg: c.onPrimary, border: 'transparent', iconFg: c.onPrimary },
+    // The standard primary: lifted one surface, bordered so it separates on
+    // any parent (the border token clears 3:1), white label, amber glyphs.
+    primary: { bg: c.surface2, fg: c.textPrimary, border: c.border, iconFg: c.primary },
+    secondary: { bg: c.surface, fg: c.textSecondary, border: c.border, iconFg: c.textSecondary },
+    tertiary: { bg: c.primaryBg, fg: c.primary, border: withAlpha(c.primary, alpha.edge), iconFg: c.primary },
+    outline: { bg: c.surface, fg: c.textSecondary, border: c.border, iconFg: c.textSecondary },
     // fg uses onError (always-light ink, theme.js), NOT textPrimary, which flips
     // dark in the light theme and fails contrast on the dark-red fill (audit U-F-1).
     // bg uses errorFill, not error: the flat `error` ink is only 3.68:1 under
     // white in dark/CVD, while errorFill is the deeper red/magenta that clears
     // the 4.5:1 semibold-label bar (AX-06 launch accessibility audit).
-    destructive: { bg: c.errorFill, fg: c.onError, border: 'transparent' },
+    destructive: { bg: c.errorFill, fg: c.onError, border: 'transparent', iconFg: c.onError },
   };
 }
 
@@ -179,13 +193,14 @@ export default function Button({
     return () => clearTimeout(timer);
   }, [phase]);
 
-  // M1 (audit 03b §3.3f): the filled primary CTA ticks as its action fires,
-  // an outcome-adjacent beat rather than press-in. Secondary, tertiary,
-  // outline and destructive stay silent. The vocabulary itself no-ops under
+  // M1 (audit 03b §3.3f): the primary and emphatic CTAs tick as their action
+  // fires, an outcome-adjacent beat rather than press-in. Secondary,
+  // tertiary, outline and destructive stay silent. The vocabulary itself no-ops under
   // reduce motion, so no extra gating is needed here.
-  const handlePress = onPress && v === VARIANTS.primary
+  const handlePress = onPress && (v === VARIANTS.primary || v === VARIANTS.emphatic)
     ? (e) => { haptics.selection(); return onPress(e); }
     : onPress;
+  const iconFg = v.iconFg ?? v.fg;
 
   const content = phase === 'loading' ? (
     <ActivityIndicator color={v.fg} />
@@ -200,7 +215,7 @@ export default function Button({
     </>
   ) : (
     <>
-      {icon ? <Ionicons name={icon} size={s.icon} color={v.fg} /> : null}
+      {icon ? <Ionicons name={icon} size={s.icon} color={iconFg} /> : null}
       {title != null ? (
         <Text
           numberOfLines={singleLine ? 1 : undefined}
@@ -212,7 +227,7 @@ export default function Button({
         </Text>
       ) : null}
       {children}
-      {trailingIcon ? <Ionicons name={trailingIcon} size={s.icon} color={v.fg} /> : null}
+      {trailingIcon ? <Ionicons name={trailingIcon} size={s.icon} color={iconFg} /> : null}
     </>
   );
 

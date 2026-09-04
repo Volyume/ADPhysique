@@ -474,10 +474,10 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm, marginBottom: spacing.xl,
   },
   permissionBtn: {
-    backgroundColor: colors.primaryFill, paddingHorizontal: spacing.lg,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md, borderRadius: radius.md,
   },
-  permissionBtnText: { color: colors.onPrimary, ...type.bodyStrong },
+  permissionBtnText: { color: colors.textPrimary, ...type.bodyStrong },
 });
 
 // CP-10 batch D (2026-07-10): the frozen `styles` block above stays byte-
@@ -499,7 +499,7 @@ function buildLiveStyles(t) {
     manualErrorText: { ...t.type.bodySm, color: t.colors.error },
     permissionTitle: { color: t.colors.textPrimary, ...t.type.title },
     permissionBody: { ...t.type.body, color: t.colors.textMuted },
-    permissionBtn: { backgroundColor: t.colors.primaryFill },
-    permissionBtnText: { color: t.colors.onPrimary, ...t.type.bodyStrong },
+    permissionBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    permissionBtnText: { color: t.colors.textPrimary, ...t.type.bodyStrong },
   };
 }

@@ -95,7 +95,7 @@ describe('fit rule 4: the JS-thread Animated API is a frozen allowlist', () => {
     'components/workout/WorkoutBottomBar.js',
     // components/food/MacroRings.js left this list in E15-4 (RollingNumber
     // + UI-thread ring; the Animated.Value listener is retired).
-    'navigation/RootNavigator.js',
+    // D148 (2026-09-04): the animated in-app splash left RootNavigator.
     'screens/ActiveWorkoutScreen.js',
     'screens/ExerciseDetailScreen.js',
     'screens/ProOnboardingScreen.js',

@@ -2636,7 +2636,7 @@ export default function ProOnboardingScreen({ navigation }) {
             ) : null}
 
             <Text style={[styles.continueHint, live.continueHint]}>{keep.detail}</Text>
-            <Button
+            <Button variant="emphatic"
               title={`Build my plan: ${keep.label}`}
               trailingIcon="arrow-forward"
               style={[styles.primaryBtn, fitBusy && styles.primaryBtnDisabled]}
@@ -2708,7 +2708,7 @@ export default function ProOnboardingScreen({ navigation }) {
                     {planLine3 ? <Text style={[styles.seqPlanLine, live.seqPlanLine]} numberOfLines={1}>{planLine3}</Text> : null}
                   </View>
                   <Text style={[styles.seqSub, live.seqSub]}>Your targets and weekly check-in are ready too.</Text>
-                  <Button
+                  <Button variant="emphatic"
                     title="See my plan"
                     trailingIcon="arrow-forward"
                     onPress={seePlan}
@@ -3190,7 +3190,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     marginBottom: spacing.md,
   },
-  primaryBtnText: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  // D148: the shared Button owns its label; nothing here overrides it.
+  primaryBtnText: {},
   primaryBtnDisabled: { opacity: 0.4 },
   oauthBusy: { alignItems: 'center', paddingVertical: spacing.lg },
   skipBtn: { alignItems: 'center', paddingVertical: spacing.md },
@@ -3263,6 +3264,6 @@ function buildLiveStyles(t) {
     hourChipActive: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
     hourChipText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     hourChipTextActive: { color: t.colors.onPrimary },
-    primaryBtnText: { fontSize: t.fontSize.lg, color: t.colors.onPrimary },
+    primaryBtnText: {},
   };
 }

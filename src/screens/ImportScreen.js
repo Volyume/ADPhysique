@@ -286,7 +286,7 @@ export default function ImportScreen({ navigation }) {
               )}
             </Card>
 
-            <Button
+            <Button variant="emphatic"
               title={`Import ${analysis.workoutCount} sessions`}
               icon="checkmark"
               onPress={handleConfirmImport}

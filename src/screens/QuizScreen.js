@@ -204,9 +204,9 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   quizChip: { minHeight: touchTarget.minimum },
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
-  cta: { backgroundColor: colors.primaryFill, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
+  cta: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
   ctaOff: { opacity: 0.5 },
-  ctaText: { color: colors.onPrimary, fontSize: fontSize.md, fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy },
+  ctaText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy },
 });
 
 // CP-10 batch F (2026-07-11): the frozen `styles` block above stays byte-
@@ -227,7 +227,7 @@ function buildLiveStyles(t) {
     section: { color: t.colors.textPrimary, fontSize: t.fontSize.lg },
     q: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     footer: { borderTopColor: t.colors.borderSubtle },
-    cta: { backgroundColor: t.colors.primaryFill },
-    ctaText: { color: t.colors.onPrimary, fontSize: t.fontSize.md },
+    cta: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    ctaText: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
   };
 }

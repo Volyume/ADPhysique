@@ -43,7 +43,7 @@ export default function PlanPreviewScreen({ navigation }) {
       </ScrollView>
 
       <View style={[styles.footer, live.footer]}>
-        <Button
+        <Button variant="emphatic"
           title="Create an account to keep it"
           onPress={toAccount}
           style={[styles.cta, live.cta]}

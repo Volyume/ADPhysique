@@ -430,7 +430,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
         </Text>
 
         <Animated.View entering={(reduceMotion || motionSuppressed) ? undefined : FadeInUp.duration(motion.enter).delay(5 * motion.micro)}>
-          <Button
+          <Button variant="emphatic"
             title="Start training"
             trailingIcon="arrow-forward"
             size="lg"

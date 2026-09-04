@@ -29,7 +29,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, iconSize, fontFamily, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import Card from '../components/Card';
@@ -1946,7 +1946,7 @@ export default function DiaryScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Scan barcode"
         >
-          <Ionicons name="barcode-outline" size={26} color={t.colors.onPrimary} />
+          <Ionicons name="barcode-outline" size={26} color={t.colors.primary} />
         </TouchableOpacity>
       ) : null}
 
@@ -2239,10 +2239,12 @@ function WaterRow({
 }
 
 const styles = StyleSheet.create({
+  // D148: the one floating action is a raised charcoal disc with an amber
+  // glyph, not an amber disc. It is found by form, place and glyph.
   scanFab: {
     position: 'absolute', right: spacing.lg, bottom: spacing.xl,
     width: 56, height: 56, borderRadius: circle(56),
-    backgroundColor: colors.primaryFill,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
     ...shadow.lg,
   },
@@ -2466,7 +2468,7 @@ const styles = StyleSheet.create({
   addMealLabel: { ...type.label, color: colors.textPrimary },
   plannedBanner: {
     backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.primary,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.lg,
@@ -2475,11 +2477,11 @@ const styles = StyleSheet.create({
   plannedBannerText: { ...type.bodySm, color: colors.textPrimary },
   plannedBannerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   plannedBtnPrimary: {
-    backgroundColor: colors.primaryFill, borderRadius: radius.md,
+    borderRadius: radius.md,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 40,
     alignItems: 'center', justifyContent: 'center',
   },
-  plannedBtnPrimaryText: { color: colors.onPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
+  plannedBtnPrimaryText: { fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
   plannedBtnGhostButton: {
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -2539,7 +2541,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    scanFab: { backgroundColor: t.colors.primaryFill, shadowOpacity: t.shadow.lg.shadowOpacity },
+    scanFab: { backgroundColor: t.colors.surface2, borderColor: t.colors.border, shadowOpacity: t.shadow.lg.shadowOpacity },
     selectionBar: { backgroundColor: t.colors.surface, borderTopColor: t.colors.border },
     selCount: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     selActionLabel: { color: t.colors.textPrimary, fontSize: t.fontSize.xs },
@@ -2575,10 +2577,10 @@ function buildLiveStyles(t) {
     offCardCta: { ...t.type.label, color: t.colors.textPrimary },
     addMealRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     addMealLabel: { ...t.type.label, color: t.colors.textPrimary },
-    plannedBanner: { backgroundColor: t.colors.surface2, borderColor: t.colors.primary },
+    plannedBanner: { backgroundColor: t.colors.surface2, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     plannedBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
-    plannedBtnPrimary: { backgroundColor: t.colors.primaryFill },
-    plannedBtnPrimaryText: { color: t.colors.onPrimary, fontSize: t.fontSize.sm },
+    plannedBtnPrimary: {},
+    plannedBtnPrimaryText: { fontSize: t.fontSize.sm },
     plannedBtnGhostButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     plannedBtnGhost: { ...t.type.label, color: t.colors.textPrimary },
     waterLabel: { color: t.colors.textPrimary, fontSize: t.fontSize.md },

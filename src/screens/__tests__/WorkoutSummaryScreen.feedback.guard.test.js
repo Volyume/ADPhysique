@@ -59,7 +59,8 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toContain('templateModalTitle: {');
     expect(SOURCE).toContain('...type.title, color: colors.textPrimary');
     expect(SOURCE).toContain('templateModalCancelText: { ...type.label, color: colors.textSecondary }');
-    expect(SOURCE).toMatch(/templateModalSave: \{[\s\S]*backgroundColor: colors\.primaryFill/);
+    // D148 (2026-09-04): routine primary is the standard primary, not an amber fill.
+    expect(SOURCE).toMatch(/templateModalSave: \{[\s\S]*backgroundColor: colors\.surface2/);
     expect(SOURCE).not.toContain('templateModalSave: {\n    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,\n    borderRadius: radius.md, backgroundColor: colors.primary,');
   });
 

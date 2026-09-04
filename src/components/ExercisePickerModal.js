@@ -206,8 +206,8 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     createLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     filterChipText: { ...t.type.label, color: t.colors.textSecondary },
     filterChipTextActive: { color: t.colors.primary },
-    createSaveBtn: { backgroundColor: t.colors.primaryFill },
-    createSaveBtnText: { ...t.type.label, color: t.colors.onPrimary },
+    createSaveBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    createSaveBtnText: { ...t.type.label, color: t.colors.textPrimary },
   };
   const buttonLabel = saveLabel || actionLabel || 'Add exercise';
   const isSwapAction = buttonLabel.toLowerCase().includes('swap');
@@ -735,7 +735,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 onPress={() => { haptics.commit(); handleCreate(); }}
                 disabled={creating}
               >
-                <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle'} size={20} color={t.colors.onPrimary} />
+                <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle'} size={20} color={t.colors.primary} />
                 <Text style={[styles.createSaveBtnText, live.createSaveBtnText]} numberOfLines={1}>{buttonLabel}</Text>
               </TouchableOpacity>
             </KeyboardAwareScrollView>
@@ -1092,7 +1092,7 @@ const styles = StyleSheet.create({
   createSaveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
     minHeight: spacing.xxxl,
-    backgroundColor: colors.primaryFill, borderRadius: radius.lg, paddingVertical: spacing.sm, marginTop: spacing.sm,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.sm, marginTop: spacing.sm,
   },
-  createSaveBtnText: { ...type.label, color: colors.onPrimary },
+  createSaveBtnText: { ...type.label, color: colors.textPrimary },
 });

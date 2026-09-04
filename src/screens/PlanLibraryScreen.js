@@ -1024,9 +1024,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.sm,
-    backgroundColor: colors.primaryFill,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
   },
-  addBtnText: { ...type.label, color: colors.onPrimary },
+  addBtnText: { ...type.label, color: colors.textPrimary },
 
   skeletonWrap: { gap: spacing.md },
 
@@ -1069,10 +1069,10 @@ const styles = StyleSheet.create({
   quizResultDesc: { ...type.bodySm, color: colors.textSecondary },
   quizResultMeta: { ...type.caption, color: colors.textMuted },
   quizStartBtn: {
-    backgroundColor: colors.primaryFill, borderRadius: radius.lg,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
     paddingVertical: spacing.md, alignItems: 'center',
   },
-  quizStartText: { ...type.bodyStrong, color: colors.onPrimary },
+  quizStartText: { ...type.bodyStrong, color: colors.textPrimary },
   quizBrowseBtn: {
     backgroundColor: colors.surface2, borderRadius: radius.lg,
     paddingVertical: spacing.md, alignItems: 'center',
@@ -1115,8 +1115,8 @@ function buildLiveStyles(t) {
     planCardFooter: { borderTopColor: t.colors.border },
     previewText: { ...t.type.label, color: t.colors.textSecondary },
     previewBtn: { backgroundColor: t.colors.surface2 },
-    addBtn: { backgroundColor: t.colors.primaryFill },
-    addBtnText: { ...t.type.label, color: t.colors.onPrimary },
+    addBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    addBtnText: { ...t.type.label, color: t.colors.textPrimary },
     quizDot: { backgroundColor: t.colors.border },
     quizDotActive: { backgroundColor: t.colors.primary },
     quizQuestion: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
@@ -1126,8 +1126,8 @@ function buildLiveStyles(t) {
     quizResultName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     quizResultDesc: { ...t.type.bodySm, color: t.colors.textSecondary },
     quizResultMeta: { ...t.type.caption, color: t.colors.textMuted },
-    quizStartBtn: { backgroundColor: t.colors.primaryFill },
-    quizStartText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    quizStartBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    quizStartText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     quizBrowseBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     quizBrowseText: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
   };

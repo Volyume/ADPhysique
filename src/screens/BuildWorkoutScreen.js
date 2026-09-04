@@ -514,6 +514,7 @@ export default function BuildWorkoutScreen({ navigation }) {
             accessibilityLabel="Cancel"
           />
           <Button
+            variant="emphatic"
             title="Create workout"
             style={styles.travelAction}
             onPress={applyTravelMode}

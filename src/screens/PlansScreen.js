@@ -2150,7 +2150,7 @@ export default function PlansScreen({ navigation }) {
           ) : null}
 
         <Button
-          variant="primary"
+          variant="emphatic"
           title="Start next block"
           onPress={confirmNextBlockReview}
           accessibilityLabel="Start next block"

@@ -400,7 +400,7 @@ export default function AuthSheet({ visible, initialMode = 'signup', onClose, na
                   </TouchableOpacity>
                 )}
               />
-              <Button
+              <Button variant="emphatic"
                 title={emailMode === 'signup' ? 'Create account' : 'Sign in'}
                 onPress={handleEmailAuth}
                 loading={emailSubmitting}
@@ -409,7 +409,7 @@ export default function AuthSheet({ visible, initialMode = 'signup', onClose, na
               />
             </>
           ) : (
-            <Button
+            <Button variant="emphatic"
               title="Continue with email"
               onPress={() => setEmailFormOpen(true)}
               accessibilityLabel="Continue with email"

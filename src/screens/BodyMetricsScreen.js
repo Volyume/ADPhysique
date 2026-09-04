@@ -1778,7 +1778,7 @@ const styles = StyleSheet.create({
   logBtn: {
     paddingVertical: spacing.lg,
   },
-  logBtnText: { ...type.title, color: colors.onPrimary },
+  logBtnText: { ...type.title, color: colors.textPrimary },
   formCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
     gap: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
@@ -1825,7 +1825,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     marginTop: spacing.sm,
   },
-  saveBtnText: { ...type.bodyStrong, color: colors.onPrimary },
+  saveBtnText: { ...type.bodyStrong, color: colors.textPrimary },
   section: { gap: spacing.sm },
   historyRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -1911,13 +1911,13 @@ function buildLiveStyles(t) {
     measureTabActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
     measureTabText: { ...t.type.captionStrong, color: t.colors.textSecondary },
     measureTabTextActive: { color: t.colors.primary },
-    logBtnText: { ...t.type.title, color: t.colors.onPrimary },
+    logBtnText: { ...t.type.title, color: t.colors.textPrimary },
     formCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     formTitle: { ...t.type.title, color: t.colors.textPrimary },
     formLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     measureToggle: { borderTopColor: t.colors.border },
     measureToggleText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    saveBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
+    saveBtnText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     historyDate: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     historyWeight: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     historyMeasure: { ...t.type.num('caption'), color: t.colors.textMuted },

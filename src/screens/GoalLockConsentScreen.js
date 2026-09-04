@@ -151,7 +151,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
           </Text>
         </View>
 
-        <Button
+        <Button variant="emphatic"
           title={editMode ? 'Save' : 'Continue'}
           onPress={save}
           disabled={!choice}
