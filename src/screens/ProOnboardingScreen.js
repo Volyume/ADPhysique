@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo, BackHandler } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo, BackHandler, Keyboard } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -787,6 +787,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   function goBack() {
     if (step === 1) return;
+    Keyboard.dismiss();
     if (step === 2 && accountCreated) return; // can't go back past completed registration
     // Going back means an answer may change, and every answer behind this
     // screen feeds the fit assessment. A stale acceptance would let a
@@ -916,7 +917,16 @@ export default function ProOnboardingScreen({ navigation }) {
     } catch (_) { /* tolerate */ }
   }
 
+  // Keyboard (founder defect 2026-09-04, Android walk): the number pad has
+  // no Done bar on Android (the iOS-only bar is TextField's A1), the steps'
+  // ScrollViews keep taps on controls from blurring the field, and Android
+  // does not reliably hide the IME when the focused input unmounts with the
+  // step. So the keyboard stayed up across Continue, Back and the
+  // selectors until the user closed it by hand. Every transition and every
+  // non-text selector on an input step now puts it away first, the way
+  // SetEntry does on submit and the Done bar does on iOS.
   function advanceFrom2() {
+    Keyboard.dismiss();
     // RA-4 (D96, Review A): the first name no longer gates the step. It is
     // presentation only, no engine reads it, and the 'there' fallback covers
     // every surface that greets by name - the rationale C5-P1-09 already
@@ -963,11 +973,13 @@ export default function ProOnboardingScreen({ navigation }) {
   // carry it, matching the "few fields per step" rule the rest of the wizard
   // follows.
   function advanceFrom3() {
+    Keyboard.dismiss();
     emitStepDone(3);
     setStep(4);
   }
 
   function advanceFrom4() {
+    Keyboard.dismiss();
     // Step 4 is logistics only (experience, session length, days, kit). The
     // goal/phase questions live in step 5 so neither step carries more than a
     // handful of fields (the 3-5-per-step rule).
@@ -988,11 +1000,13 @@ export default function ProOnboardingScreen({ navigation }) {
   // this step only offers the entry choice, so the two paths cannot
   // drift (section 12: "Add flows = the onboarding cards").
   function advanceFrom5() {
+    Keyboard.dismiss();
     emitStepDone(5);
     setStep(6);
   }
 
   function advanceFrom6() {
+    Keyboard.dismiss();
     if (!trainingGoal || !trainingPhase) {
       appAlert('Almost there', 'Choose what you are focused on to continue.');
       return;
@@ -1241,6 +1255,7 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   async function advanceFrom7() {
+    Keyboard.dismiss();
     if (!recoveryRating) {
       appAlert('Recovery rating', 'Please select your recovery level to continue.');
       return;
@@ -1680,7 +1695,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-1" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step}
               title="Set up your account safely"
@@ -1739,7 +1754,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-2" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step}
               title="Set your starting baseline"
@@ -1795,7 +1810,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 <SegmentedControl
                   options={SEX_OPTIONS}
                   value={sex}
-                  onChange={setSex}
+                  onChange={(v) => { Keyboard.dismiss(); setSex(v); }}
                   accessibilityLabel="Biological sex"
                 />
               </View>
@@ -1827,7 +1842,7 @@ export default function ProOnboardingScreen({ navigation }) {
                       <TouchableOpacity
                         key={u.key}
                         style={[styles.segmentSmall, localHeightUnits === u.key && [styles.segmentActive, live.segmentActive]]}
-                        onPress={() => setLocalHeightUnits(u.key)}
+                        onPress={() => { Keyboard.dismiss(); setLocalHeightUnits(u.key); }}
                         accessibilityRole="radio"
                         accessibilityState={{ selected: localHeightUnits === u.key }}
                         accessibilityLabel={u.label}
@@ -1897,7 +1912,7 @@ export default function ProOnboardingScreen({ navigation }) {
                     { label: 'lbs', value: 'lbs' },
                   ]}
                   value={localBWUnits}
-                  onChange={setLocalBWUnits}
+                  onChange={(v) => { Keyboard.dismiss(); setLocalBWUnits(v); }}
                   accessibilityLabel="Body weight units"
                 />
               </View>
@@ -1985,7 +2000,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-3" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step}
               title="Add your starting body composition"
@@ -2036,7 +2051,7 @@ export default function ProOnboardingScreen({ navigation }) {
                     <SegmentedControl
                       options={BODY_FAT_SOURCE_OPTIONS}
                       value={bfSource}
-                      onChange={setBfSource}
+                      onChange={(v) => { Keyboard.dismiss(); setBfSource(v); }}
                       accessibilityLabel="Body fat estimate source"
                       equalWidth={false}
                     />
@@ -2077,7 +2092,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-4" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step}
               title="Shape your training week"
@@ -2163,7 +2178,7 @@ export default function ProOnboardingScreen({ navigation }) {
   if (step === 5) {
     return (
       <SafeAreaView key="step-5" style={[styles.safe, live.safe]}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
           <ProOnboardingHeader
             step={step}
             title="Anything Volyume should build around?"
@@ -2214,7 +2229,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-5-goal" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step}
               title="Set your training focus"
@@ -2381,7 +2396,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
       return (
         <SafeAreaView key="step-6-fit" style={[styles.safe, live.safe]}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step}
               title="Plan fit"
@@ -2533,7 +2548,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
     return (
       <SafeAreaView key="step-6" style={[styles.safe, live.safe]}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
           <ProOnboardingHeader
             step={step}
             title="Recovery and reminders"

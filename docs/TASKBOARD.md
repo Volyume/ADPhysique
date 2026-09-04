@@ -3417,6 +3417,33 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## ONBOARDING KEYBOARD DISMISSES ON ITS OWN (2026-09-04) — COMPLETE, MERGED TO MAIN.
+
+Founder defect (Android walk): on the setup wizard the keyboard stayed up
+across Continue, Back and the selectors until closed by hand. Cause, from
+the code: Android's number pad has no Done bar (the bar is iOS-only by
+design, A1); the wizard's ScrollViews use keyboardShouldPersistTaps
+"handled", so a tap on Continue or a selector never blurs the field; and
+Android does not reliably hide the keyboard when the focused input
+unmounts with the step. Fix: every step transition (advanceFrom2 to 7,
+goBack) and every non-text selector on the input steps (sex, height and
+weight units, body-fat source) calls Keyboard.dismiss() first, and the
+wizard's scroll views carry the app's platform-split drag-to-dismiss
+(iOS interactive, Android none, the reason recorded in
+ActiveWorkoutScreen). Guard:
+`ProOnboardingScreen.keyboardDismiss.guard.test.js`.
+
+**Device checklist (Android).**
+1. Fresh account, setup step with age, height and weight: type a weight,
+   tap Continue. Expected: the keyboard drops as the next step appears.
+2. Type an age, then tap a sex option or switch the height units.
+   Expected: the keyboard drops on the tap; the selection registers.
+3. Type a value, tap Back. Expected: the keyboard drops with the step.
+4. On the number pad, tap the tick. Expected: the keyboard drops (this
+   was already the case; confirming it still is).
+5. iOS, if a build is made: drag the form down while the keyboard is up.
+   Expected: it follows the drag away.
+
 ## VERSION 1.3.2 (2026-09-04) — ON MAIN `e9dd8b74`. Founder-side: create the 1.3.2 version in App Store Connect.
 
 App Store Connect refused iOS build 1.3.1 (61) with 90062/90186: the
