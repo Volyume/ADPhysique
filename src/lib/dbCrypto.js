@@ -158,10 +158,10 @@ async function closeQuietly(handle, stage) {
 // next launch (or retry) probes again with clean state - the same contract as
 // the keyUnavailable blocked start. Never destructive: nothing has been
 // moved or deleted when this is thrown.
-function abortOpen(stage) {
+function abortOpen(stage, context = null) {
   const err = new Error(`dbCrypto open aborted (${stage})`);
   err.dbCryptoAbort = true;
-  logError('dbCrypto.abort', err, { stage });
+  logError('dbCrypto.abort', err, context ? { stage, ...context } : { stage });
   return err;
 }
 
@@ -186,16 +186,27 @@ function abortOpen(stage) {
 export async function attestSqlCipherConnection(db, key) {
   let keyAccepted = false;
   let cipherVersion = null;
+  // Incident 2026-09-04: when this attestation fails on a fresh install the
+  // open aborts and the user sees "Couldn't open your data". The abort used
+  // to record only its stage, so three shipped builds could not be told
+  // apart between "codec absent" and "codec present, probe wrong". The
+  // probe's own facts ride the abort now: whether PRAGMA key was accepted,
+  // the raw shape of the cipher_version row (column names only, never the
+  // key), and any thrown message.
+  const probe = { keyAccepted: false, rowKeys: null, rawType: null, error: null };
   try {
     const escapedKey = String(key).replace(/'/g, "''");
     await db.execAsync(`PRAGMA key = '${escapedKey}'`);
     keyAccepted = true;
+    probe.keyAccepted = true;
     const row = await db.getFirstAsync('PRAGMA cipher_version');
+    probe.rowKeys = row && typeof row === 'object' ? Object.keys(row) : (row === null ? 'null' : typeof row);
     const raw = row?.cipher_version
       ?? (row && typeof row === 'object' ? Object.values(row)[0] : null);
+    probe.rawType = raw === null || raw === undefined ? 'empty' : typeof raw;
     if (typeof raw === 'string' && raw.trim()) cipherVersion = raw.trim();
-  } catch (_) { /* classified through the returned attestation */ }
-  return { applied: keyAccepted && Boolean(cipherVersion), cipherVersion };
+  } catch (e) { probe.error = String(e?.message ?? e ?? 'unknown').slice(0, 200); }
+  return { applied: keyAccepted && Boolean(cipherVersion), cipherVersion, probe };
 }
 
 async function keyed(SQLite, key, name = DB_NAME) {
@@ -329,7 +340,7 @@ export async function openEncryptedDb(SQLite) {
 
   // 1. Open keyed. If readable, it's already encrypted (or a brand-new file).
   const liveExistedBeforeKeyedOpen = (await FileSystem.getInfoAsync(path(DB_NAME)).catch(() => ({ exists: false })))?.exists === true;
-  let { db, applied: keyApplied } = await keyed(SQLite, key);
+  let { db, applied: keyApplied, probe: keyProbe } = await keyed(SQLite, key);
   if (await readable(db)) {
     // `applied` and not merely `readable`: an empty file reads fine with no key
     // at all, so readable alone cannot tell an encrypted database from a build
@@ -344,7 +355,7 @@ export async function openEncryptedDb(SQLite) {
         for (const suffix of ['', '-wal', '-shm']) {
           try { await FileSystem.deleteAsync(`${path(DB_NAME)}${suffix}`, { idempotent: true }); } catch (_) {}
         }
-        throw abortOpen('sqlcipher_unavailable_fresh_database');
+        throw abortOpen('sqlcipher_unavailable_fresh_database', { probe: keyProbe ?? null });
       }
 
       // Existing plaintext databases remain usable (and honestly reported)

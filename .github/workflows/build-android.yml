@@ -293,6 +293,21 @@ jobs:
       # `expo prebuild --clean`, which regenerates android/ from scratch
       # and wipes any earlier gradle.properties. Appending is safe: a
       # later org.gradle.jvmargs line wins over the template's.
+      # Incident 2026-09-04: three builds shipped an expo-sqlite library
+      # without SQLCipher and every fresh install aborted at "Couldn't open
+      # your data" (dbCrypto fails closed by design). The property the
+      # expo-sqlite config plugin writes at prebuild is the ONLY thing that
+      # switches the codec on in Gradle, so its absence is a build failure,
+      # not a warning. The packaged library is verified again after the build.
+      - name: Verify prebuild asked Gradle for SQLCipher
+        run: |
+          echo "--- gradle.properties expo.sqlite lines ---"
+          grep '^expo\.sqlite' android/gradle.properties || true
+          if ! grep -q '^expo\.sqlite\.useSQLCipher=true$' android/gradle.properties; then
+            echo "::error::android/gradle.properties has no expo.sqlite.useSQLCipher=true after prebuild. The expo-sqlite config plugin did not run or app.json lost its useSQLCipher entry. Refusing to build a database the app cannot open."
+            exit 1
+          fi
+
       - name: Raise Gradle heap for the release build
         run: |
           echo "org.gradle.jvmargs=-Xmx5120m -XX:MaxMetaspaceSize=1024m -XX:+UseParallelGC -Dfile.encoding=UTF-8" >> android/gradle.properties
@@ -521,6 +536,15 @@ jobs:
       - name: Verify 64-bit native libraries are 16 KB page-size compatible
         run: |
           npm run verify:android:16kb -- \
+            android/app/build/outputs/apk/release/app-release.apk \
+            android/app/build/outputs/bundle/release/app-release.aab
+
+      # Incident 2026-09-04 (see the prebuild gate above): the packaged
+      # expo-sqlite library must carry the SQLCipher codec, or fresh installs
+      # cannot open their database. Checked on the binary, not the config.
+      - name: Verify the packaged SQLite library carries SQLCipher
+        run: |
+          npm run verify:android:sqlcipher -- \
             android/app/build/outputs/apk/release/app-release.apk \
             android/app/build/outputs/bundle/release/app-release.aab
 

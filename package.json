@@ -24,6 +24,7 @@
     "progress-scan:retest-report": "node scripts/run-progress-scan-retest-report.cjs",
     "progress-scan:sensitivity-report": "node scripts/run-progress-scan-sensitivity-report.cjs",
     "verify:android:16kb": "node scripts/verify-android-elf-page-size.cjs",
+    "verify:android:sqlcipher": "node scripts/verify-android-sqlcipher.cjs",
     "release:quality": "npx tsc --noEmit --strict && npm run lint && npm run check:imports && npm test -- --runInBand",
     "release:check": "npm ci --legacy-peer-deps --ignore-scripts && npm run release:quality && npm run release:audit",
     "release:audit": "node scripts/release-audit-report.cjs"
