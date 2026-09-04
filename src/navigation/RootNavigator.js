@@ -630,10 +630,20 @@ function ProfileStack({ navigation }) {
 }
 
 function MainTabs() {
+  // D147: the setup wizard's payoff asks to land on the plan (Train) rather
+  // than Today. Read once at mount, then cleared so a later remount of the
+  // tabs (sign out and in) opens on the default again.
+  const postSetupLanding = useAppStore((st) => st.postSetupLanding);
+  const initialTab = postSetupLanding || 'HomeTab';
+  useEffect(() => {
+    if (postSetupLanding) useAppStore.getState().setPostSetupLanding(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // Edge-to-edge inset padding moved into VolyumeTabBar (it reads the safe
   // area itself, exactly as the stock tabBarStyle here used to).
   return (
     <Tab.Navigator
+      initialRouteName={initialTab}
       // F6b (audit PR-2/UI-7): tabs are default-LAZY, each non-initial tab
       // stack mounts on its first focus instead of all five mounting (and
       // running their data effects) in one commit at boot. The old eager

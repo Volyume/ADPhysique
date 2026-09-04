@@ -5914,3 +5914,52 @@ auto-highlights "the next empty box" before the user has tried: it nags.
 
 **Engine, ED-safety, consent, billing: untouched.** Step 3 (optional body
 fat) has no gate and gained no error state.
+
+## D147 — The plan-generation card never moves; completion is a payoff in place (founder direction, 2026-09-04)
+
+**Verdict.** "The card begins compact and grows downward as stages are
+added; it looks mechanical, like rows appended to a debug panel." Hard
+rule: from the moment generation begins to the moment it completes, the
+logo, the progress line, the heading and the card keep their position and
+the card keeps its size. And completion must be payoff, not the old
+"You're all set" instruction page.
+
+**Built.**
+- Every stage row is rendered from the first frame in a fixed-height row
+  (upcoming: dim ring and 55% text; current: small spinner and full-weight
+  text; done: a restrained amber tick that fades in). Only the status
+  treatment animates, 200ms opacity, on the native driver. No slice, no
+  appended rows, no card growth. Stage copy is one line each so the rows
+  keep one height ("Setting each muscle's weekly work", with the division
+  name where one applies).
+- The card is a charcoal surface with a hairline, not the 1.5px outlined
+  box. The payoff is laid out under the stage content at zero opacity from
+  the start and measured, so the card reserves the taller of the two
+  before anything is seen.
+- When the last stage completes: every tick shows, a 500ms hold, the
+  ready haptic, then a 220ms crossfade of the card's content to: "Plan
+  ready" eyebrow, "Your plan is ready", the goal and phase, the split and
+  days, the block shape, "Your targets and weekly check-in are ready
+  too.", and See my plan. Every value is read from the plan that was
+  written (goal and phase labels, the programme's split type through
+  SPLIT_LABELS, the wizard's days, BLOCK_PLANNED_WEEKS); anything
+  unreadable is left out, never invented.
+- See my plan completes first run and lands on the Train tab (a one-shot
+  `postSetupLanding` the tab navigator reads at mount), because the one
+  thought at that moment is "show me what you made". The old completion
+  screen is no longer visited on success; it remains the destination when
+  generation fails, since it owns the no-plan state. Morning weighing,
+  food logging and the weekly check-in are taught in the product (the
+  Home welcome card and the coach surfaces), not at this beat.
+- Reduce Motion runs the same card with every transition instant; it used
+  to get a bare spinner instead.
+
+**Reviewed as an animation, not screenshots.** The card was prototyped
+at exact token values, recorded with the real timings, and watched:
+nothing outside the card moves; the card's box does not change between
+the first stage and the payoff. The recording and a filmstrip were
+delivered in chat; the animated artboard sits beside the launch screens
+on the design canvas with a Replay control.
+
+**Engine, ED-safety, consent, billing: untouched.** Generation itself,
+its idempotence record and its failure handling are unchanged.

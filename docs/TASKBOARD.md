@@ -3417,6 +3417,30 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## PLAN-GENERATION CARD: FIXED LAYOUT, PAYOFF IN PLACE (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D147.
+
+Guard: `ProOnboardingScreen.buildCard.guard.test.js`. Version bumped to
+1.3.3 in the same landing on the founder's ask (App Store Connect).
+
+**Device checklist (Android, fresh account, through the whole wizard).**
+1. Tap Continue on the final step. Expected: the card appears with all
+   four stages listed at once; the first shows a small spinner, the rest
+   a dim ring. Nothing above the card moves from here on.
+2. Watch the stages complete about every 0.8 s. Expected: each row's
+   spinner becomes an amber tick with a soft fade, the next row brightens
+   and takes the spinner. The card's edges do not move at any point.
+3. When the fourth completes: all four ticks hold for half a second, a
+   short haptic, then the card's content fades to "Plan ready", "Your
+   plan is ready", the goal and phase, the split and days, "5 build weeks
+   + 1 recovery week", one line about targets and check-in, and See my
+   plan. The card is the same size as before.
+4. Tap See my plan. Expected: the app opens on the Train tab with the
+   new plan active, not on Today.
+5. Reduce motion on (system setting): the same card, no fades; states
+   switch instantly; the payoff appears without a crossfade.
+6. Force a generation failure is not reproducible on device; the failure
+   path is unchanged and covered by tests.
+
 ## SETUP WIZARD POINTS AT WHAT IS MISSING (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D146.
 
 Continue never greys out; a tap with a gap marks the missing boxes,
@@ -3480,7 +3504,7 @@ ActiveWorkoutScreen). Guard:
 5. iOS, if a build is made: drag the form down while the keyboard is up.
    Expected: it follows the drag away.
 
-## VERSION 1.3.2 (2026-09-04) — ON MAIN `e9dd8b74`. Founder-side: create the 1.3.2 version in App Store Connect.
+## VERSION 1.3.3 (2026-09-04) — ON MAIN. Founder-side: create the 1.3.3 version in App Store Connect. (1.3.2 was bumped earlier the same day at `e9dd8b74`; the founder asked for a further bump.)
 
 App Store Connect refused iOS build 1.3.1 (61) with 90062/90186: the
 1.3.1 train is closed because 1.3.1 was approved, so every further iOS

@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, shadow, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, shadow, fontFamily, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
@@ -45,12 +45,15 @@ import {
   TRAINING_PHASES,
   GOALS_WITH_WEAK_POINTS,
   GOAL_LABELS,
+  PHASE_LABELS,
   weakPointSetForGoal,
   phaseToNutritionKey,
   phaseToCoachingKey,
   buildNutritionEngineInputs,
 } from '../lib/coachingGoals';
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
+import { SPLIT_LABELS } from '../lib/planEngine';
+import { BLOCK_PLANNED_WEEKS } from '../lib/mesocycle';
 import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceService';
 import {
   saveDraft, loadDraft, clearDraft, loadBuildProgress, markBuildProgress, DRAFT_DEBOUNCE_MS,
@@ -124,6 +127,8 @@ const STEP_OUTCOMES = {
 // the real work does; failure aborts it instantly (no completion tick).
 const STAGE_DWELL_MS = 800;
 const SEQUENCE_TOTAL_MS = STAGE_DWELL_MS * 4;
+// D147: how long every tick is shown before the card turns into the payoff.
+const PAYOFF_HOLD_MS = 500;
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // FOUNDER LAW (2026-08-13): there is NO default number of training days.
@@ -301,6 +306,41 @@ function ProOnboardingHeader({ step, title, sub, onBack }) {
   );
 }
 
+// D147: one stage row. The row's box never changes; only its status
+// treatment does: the tick fades in, the text steps between muted and full.
+function StageRow({ label, state, reduceMotion, t, live }) {
+  const textOpacity = useRef(new Animated.Value(state === 'upcoming' ? 0.55 : 1)).current;
+  const tickOpacity = useRef(new Animated.Value(state === 'done' ? 1 : 0)).current;
+  useEffect(() => {
+    const textTo = state === 'upcoming' ? 0.55 : 1;
+    const tickTo = state === 'done' ? 1 : 0;
+    if (reduceMotion) {
+      textOpacity.setValue(textTo);
+      tickOpacity.setValue(tickTo);
+      return;
+    }
+    Animated.parallel([
+      Animated.timing(textOpacity, { toValue: textTo, duration: motion.fast, useNativeDriver: true }),
+      Animated.timing(tickOpacity, { toValue: tickTo, duration: motion.fast, useNativeDriver: true }),
+    ]).start();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, reduceMotion]);
+  return (
+    <View style={styles.seqRow} accessibilityLabel={`${label}, ${state === 'done' ? 'done' : state === 'current' ? 'in progress' : 'next'}`}>
+      <View style={styles.seqIcon}>
+        {state === 'current' ? <ActivityIndicator size="small" color={t.colors.primary} /> : null}
+        {state === 'upcoming' ? <View style={[styles.seqDot, live.seqDot]} /> : null}
+        <Animated.View style={[StyleSheet.absoluteFill, styles.seqIconCentre, { opacity: tickOpacity }]} pointerEvents="none">
+          <Ionicons name="checkmark-circle" size={18} color={t.colors.primary} importantForAccessibility="no" />
+        </Animated.View>
+      </View>
+      <Animated.Text style={[styles.seqLine, live.seqLine, state === 'current' && styles.seqLineCurrent, { opacity: textOpacity }]}>
+        {label}
+      </Animated.Text>
+    </View>
+  );
+}
+
 function QuestionGroup({ icon, title, sub, children }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -335,7 +375,10 @@ export default function ProOnboardingScreen({ navigation }) {
   const {
     user, setUnits, bodyWeightUnits, setBodyWeightUnits, userProfile, saveLocalProfile,
     proOnboardingAccountCreated, setProOnboardingAccountCreated,
+    completeFirstRun, setPostSetupLanding,
   } = useAppStore(useShallow(s => ({
+    completeFirstRun: s.completeFirstRun,
+    setPostSetupLanding: s.setPostSetupLanding,
     user: s.user,
     setUnits: s.setUnits,
     bodyWeightUnits: s.bodyWeightUnits,
@@ -464,10 +507,22 @@ export default function ProOnboardingScreen({ navigation }) {
   // spinner stays, exactly the old behaviour). Same flag ProSetupComplete reads.
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const [sequenceActive, setSequenceActive] = useState(false);
-  // How many stage lines have entered so far (1..4). 0 = not started.
+  // The stage that is current (1..4); 5 = every stage done. 0 = not started.
+  // D147 (founder, 2026-09-04): every stage row is rendered from the first
+  // frame, so the card never grows; only each row's status treatment
+  // animates. When the fourth completes, the card's content crossfades to
+  // the plan-ready payoff in place. The outer composition never moves.
   const [sequenceStage, setSequenceStage] = useState(0);
   const stageTimersRef = useRef([]);
   const sequenceFade = useRef(new Animated.Value(0)).current;
+  const stageContentOpacity = useRef(new Animated.Value(1)).current;
+  const payoffOpacity = useRef(new Animated.Value(0)).current;
+  // The generated plan, read back once it exists: what the payoff shows.
+  const [payoff, setPayoff] = useState(null);
+  const [payoffShown, setPayoffShown] = useState(false);
+  // The payoff is laid out invisibly from the start and measured, so the
+  // card reserves the taller of the two contents before anything moves.
+  const [payoffH, setPayoffH] = useState(0);
   // Guards a synchronous double-tap on Continue: in sequence mode the button is
   // covered by the overlay rather than disabled by `busy`, so a fast second tap
   // before the overlay commits could fire two plan generations.
@@ -1094,7 +1149,8 @@ export default function ProOnboardingScreen({ navigation }) {
     // No meaning lost, animation/staging untouched.
     return [
       'Balancing your week',
-      divisionLabel ? `Setting how much you'll train each muscle - ${divisionLabel} priorities` : "Setting how much you'll train each muscle",
+      // D147: one line each, so the rows keep one height from the start.
+      divisionLabel ? `Setting each muscle's work for ${divisionLabel}` : "Setting each muscle's weekly work",
       'Choosing your exercises',
       `Fitting sessions to your ${sessionLengthMinutes} minutes`,
     ];
@@ -1109,10 +1165,16 @@ export default function ProOnboardingScreen({ navigation }) {
     const lines = sequenceStages();
     setSequenceActive(true);
     setSequenceStage(1);
-    sequenceFade.setValue(0);
-    Animated.timing(sequenceFade, {
-      toValue: 1, duration: motion.enter, useNativeDriver: true,
-    }).start();
+    setPayoff(null);
+    setPayoffShown(false);
+    stageContentOpacity.setValue(1);
+    payoffOpacity.setValue(0);
+    sequenceFade.setValue(reduceMotion ? 1 : 0);
+    if (!reduceMotion) {
+      Animated.timing(sequenceFade, {
+        toValue: 1, duration: motion.enter, useNativeDriver: true,
+      }).start();
+    }
     AccessibilityInfo.announceForAccessibility(lines[0]);
     cancelSequenceTimers();
     const ids = [];
@@ -1129,6 +1191,39 @@ export default function ProOnboardingScreen({ navigation }) {
     cancelSequenceTimers();
     setSequenceActive(false);
     setSequenceStage(0);
+    setPayoff(null);
+    setPayoffShown(false);
+  }
+
+  // D147: the payoff. Every stage shows its tick, a short pause so the
+  // completion registers, then the card's content crossfades in place.
+  // Nothing outside the card changes; the card itself keeps its size.
+  async function revealPayoff(nextPayoff) {
+    cancelSequenceTimers();
+    setPayoff(nextPayoff);
+    setSequenceStage(sequenceStages().length + 1);
+    AccessibilityInfo.announceForAccessibility('Your plan is ready');
+    await wait(reduceMotion ? 0 : PAYOFF_HOLD_MS);
+    haptics.planReady();
+    if (reduceMotion) {
+      stageContentOpacity.setValue(0);
+      payoffOpacity.setValue(1);
+    } else {
+      await new Promise((resolve) => {
+        Animated.parallel([
+          Animated.timing(stageContentOpacity, { toValue: 0, duration: motion.fast, useNativeDriver: true }),
+          Animated.timing(payoffOpacity, { toValue: 1, duration: motion.fast, delay: 80, useNativeDriver: true }),
+        ]).start(() => resolve());
+      });
+    }
+    setPayoffShown(true);
+  }
+
+  async function seePlan() {
+    // Land on the plan itself (the Train tab), not Today: the user's one
+    // thought at this moment is "show me what you made".
+    setPostSetupLanding('PlansTab');
+    await completeFirstRun();
   }
 
   // Tidy the stage timers if the screen unmounts mid-sequence.
@@ -1357,14 +1452,15 @@ export default function ProOnboardingScreen({ navigation }) {
       await applyReminderPreferences();
     } catch (_) { /* reminders are best-effort; setup continues */ }
 
-    // Reduce Motion keeps the plain button spinner; everyone else gets the
-    // staged sequence. The real work below is identical either way.
-    const useSequence = !reduceMotion;
+    // D147: the staged card runs for everyone; under Reduce Motion every
+    // transition inside it is instant. The real work below is identical.
+    const useSequence = true;
     const startedAt = Date.now();
     if (useSequence) startSequence();
-    else setBusy(true);
 
     let planFailed = false;
+    // D147: the id of the plan this run wrote (or reused), for the payoff.
+    let builtPlanId = null;
     // C5-P29-07 (D96): what an interrupted earlier run of this same build
     // already wrote. Null on a first run and on any storage failure, in which
     // case every write below runs exactly as it always did.
@@ -1619,6 +1715,7 @@ export default function ProOnboardingScreen({ navigation }) {
             await markBuildProgress(user.id, { planId: planResult.programmeId, planSignature });
           }
         }
+        if (planResult.ok && planResult.programmeId) builtPlanId = planResult.programmeId;
         if (!planResult.ok) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan', planResult.error, { userId: user.id }); } catch (_) {}
@@ -1744,8 +1841,22 @@ export default function ProOnboardingScreen({ navigation }) {
       const elapsed = Date.now() - startedAt;
       if (elapsed < SEQUENCE_TOTAL_MS) await wait(SEQUENCE_TOTAL_MS - elapsed);
     }
+    // D147: the payoff is drawn from the plan that was actually written,
+    // never from the wizard's guess at it. Anything unreadable is left out
+    // rather than invented.
+    let programme = null;
+    try {
+      if (builtPlanId) programme = await getProgrammeById(builtPlanId);
+    } catch (_) { programme = null; }
+    const splitName = programme?.splitType ? (SPLIT_LABELS[programme.splitType] ?? null) : null;
     setBusy(false);
-    navigation.replace('ProSetupComplete');
+    await revealPayoff({
+      goalLabel: GOAL_LABELS[trainingGoal] ?? null,
+      phaseLabel: PHASE_LABELS[trainingPhase] ?? null,
+      splitName,
+      days: Number.isFinite(daysPerWeek) ? daysPerWeek : null,
+      buildWeeks: BLOCK_PLANNED_WEEKS - 1,
+    });
   }
 
   // ── Step 1, Create account ──────────────────────────────────────────────────
@@ -2545,9 +2656,13 @@ export default function ProOnboardingScreen({ navigation }) {
     // bar), no new route, so a failure can fall back to the form below.
     if (sequenceActive) {
       const lines = sequenceStages();
+      const stateFor = (i) => (i < sequenceStage - 1 ? 'done' : i === sequenceStage - 1 ? 'current' : 'upcoming');
+      const planLine1 = [payoff?.goalLabel, payoff?.phaseLabel].filter(Boolean).join(' · ');
+      const planLine2 = [payoff?.splitName, payoff?.days ? `${payoff.days} days` : null].filter(Boolean).join(' · ');
+      const planLine3 = payoff ? `${payoff.buildWeeks} build weeks + 1 recovery week` : '';
       return (
         <SafeAreaView key="step-6-building" style={[styles.safe, live.safe]}>
-          <ScrollView contentContainerStyle={styles.seqScroll} keyboardShouldPersistTaps="handled">
+          <View style={styles.seqScroll}>
             <Animated.View style={[styles.seqWrap, { opacity: sequenceFade }]}>
               <View style={styles.brandRow}>
                 <VolyumeIcon size={22} />
@@ -2555,36 +2670,55 @@ export default function ProOnboardingScreen({ navigation }) {
               <View style={[styles.progressTrack, live.progressTrack]}>
                 <View style={[styles.progressFill, live.progressFill, { width: '100%' }]} />
               </View>
-              <View style={[styles.seqPanel, live.seqPanel]}>
-                <View style={styles.seqHeroRow}>
-                  <View style={[styles.seqHeroIcon, live.seqHeroIcon]}>
-                    <Ionicons name="clipboard-outline" size={20} color={t.colors.primary} />
+              {/* D147: one card, one size. The stage content is in flow and
+                  complete from the first frame; the payoff is laid out
+                  underneath at zero opacity and measured, so the card
+                  reserves the taller of the two before anything is seen. */}
+              <View style={[styles.seqPanel, live.seqPanel, payoffH ? { minHeight: payoffH + spacing.lg * 2 } : null]}>
+                <Animated.View
+                  style={{ opacity: stageContentOpacity }}
+                  pointerEvents={payoffShown ? 'none' : 'auto'}
+                  importantForAccessibility={payoffShown ? 'no-hide-descendants' : 'auto'}
+                >
+                  <Text style={[styles.seqHeading, live.seqHeading]}>Building your first plan</Text>
+                  <Text style={[styles.seqSub, live.seqSub]}>
+                    Using your goal, schedule and training setup to build your starting plan.
+                  </Text>
+                  <View style={styles.seqList} accessibilityLiveRegion="polite">
+                    {lines.map((line, i) => (
+                      <StageRow key={i} label={line} state={stateFor(i)} reduceMotion={reduceMotion} t={t} live={live} />
+                    ))}
                   </View>
-                  <View style={styles.seqHeroCopy}>
-                    <Text style={[styles.seqHeading, live.seqHeading]}>Building your first plan</Text>
-                    <Text style={[styles.seqSub, live.seqSub]}>
-                      Using your body data, goal, training week and recovery to set a sensible starting point.
-                    </Text>
+                </Animated.View>
+
+                <Animated.View
+                  style={[styles.seqPayoff, { opacity: payoffOpacity }]}
+                  pointerEvents={payoffShown ? 'auto' : 'none'}
+                  importantForAccessibility={payoffShown ? 'auto' : 'no-hide-descendants'}
+                  onLayout={(e) => setPayoffH(Math.round(e.nativeEvent.layout.height))}
+                >
+                  <View style={styles.seqEyebrowRow}>
+                    <Ionicons name="checkmark-circle" size={16} color={t.colors.primary} importantForAccessibility="no" />
+                    <Text style={[styles.seqEyebrow, live.seqEyebrow]}>Plan ready</Text>
                   </View>
-                </View>
-                <View style={styles.seqList} accessibilityLiveRegion="polite">
-                  {lines.slice(0, sequenceStage).map((line, i) => {
-                    const isCurrent = i === sequenceStage - 1;
-                    return (
-                      <View key={i} style={styles.seqRow}>
-                        {isCurrent ? (
-                          <ActivityIndicator size="small" color={t.colors.primary} style={styles.seqIcon} />
-                        ) : (
-                          <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} style={styles.seqIcon} />
-                        )}
-                        <Text style={[styles.seqLine, live.seqLine]}>{line}</Text>
-                      </View>
-                    );
-                  })}
-                </View>
+                  <Text style={[styles.seqHeading, live.seqHeading]} accessibilityRole="header">Your plan is ready</Text>
+                  <View style={styles.seqPlanLines}>
+                    {planLine1 ? <Text style={[styles.seqPlanLine, live.seqPlanLine]} numberOfLines={1}>{planLine1}</Text> : null}
+                    {planLine2 ? <Text style={[styles.seqPlanLine, live.seqPlanLine]} numberOfLines={1}>{planLine2}</Text> : null}
+                    {planLine3 ? <Text style={[styles.seqPlanLine, live.seqPlanLine]} numberOfLines={1}>{planLine3}</Text> : null}
+                  </View>
+                  <Text style={[styles.seqSub, live.seqSub]}>Your targets and weekly check-in are ready too.</Text>
+                  <Button
+                    title="See my plan"
+                    trailingIcon="arrow-forward"
+                    onPress={seePlan}
+                    style={styles.seqPayoffBtn}
+                    accessibilityLabel="See my plan"
+                  />
+                </Animated.View>
               </View>
             </Animated.View>
-          </ScrollView>
+          </View>
         </SafeAreaView>
       );
     }
@@ -2833,24 +2967,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   seqWrap: { width: '100%', gap: spacing.lg },
+  // D147: a charcoal surface with a hairline, not an outlined box; its
+  // size is fixed from the first frame (see the render note).
   seqPanel: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: colors.borderSubtle,
     padding: spacing.lg,
-    gap: spacing.lg,
   },
-  seqHeroRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  seqHeroIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  seqHeroCopy: { flex: 1, minWidth: 0 },
   seqHeading: {
     ...type.h3,
     color: colors.textPrimary,
@@ -2860,15 +2985,28 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     color: colors.textSecondary,
   },
-  seqList: { gap: spacing.sm },
+  seqList: { gap: spacing.xs, marginTop: spacing.lg },
   seqRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     minHeight: 34,
   },
-  seqIcon: { width: 22, alignItems: 'center' },
+  seqIcon: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center' },
+  seqIconCentre: { alignItems: 'center', justifyContent: 'center' },
+  seqDot: { width: 8, height: 8, borderRadius: circle(8), borderWidth: 1.5, borderColor: colors.textMuted },
   seqLine: { ...type.bodySm, flex: 1, color: colors.textPrimary },
+  seqLineCurrent: { fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  // The payoff sits under the stage content at zero opacity until it is
+  // revealed, inside the same padding, so it can never change the card.
+  seqPayoff: {
+    position: 'absolute', left: spacing.lg, right: spacing.lg, top: spacing.lg,
+  },
+  seqEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
+  seqEyebrow: { ...type.overline, color: colors.primary },
+  seqPlanLines: { gap: spacing.xxs, marginTop: spacing.sm, marginBottom: spacing.md },
+  seqPlanLine: { ...type.body, color: colors.textPrimary },
+  seqPayoffBtn: { marginTop: spacing.lg },
 
   // Back affordance, inline at the left of the brand row so it reads as part of
   // the header chrome instead of floating above the logo. Negative left margin
@@ -3086,11 +3224,13 @@ function buildLiveStyles(t) {
     outcomeEyebrow: { ...t.type.caption, color: t.colors.textMuted },
     outcomeChip: { backgroundColor: t.colors.primaryBg },
     outcomeChipText: { ...t.type.caption, color: t.colors.textPrimary },
-    seqPanel: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    seqHeroIcon: { backgroundColor: t.colors.primaryBg },
+    seqPanel: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     seqHeading: { ...t.type.h3, color: t.colors.textPrimary },
     seqSub: { ...t.type.bodySm, color: t.colors.textSecondary },
     seqLine: { ...t.type.bodySm, color: t.colors.textPrimary },
+    seqDot: { borderColor: t.colors.textMuted },
+    seqEyebrow: { ...t.type.overline, color: t.colors.primary },
+    seqPlanLine: { ...t.type.body, color: t.colors.textPrimary },
     questionGroup: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     questionGroupIcon: { backgroundColor: t.colors.primaryBg },
     questionGroupTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },

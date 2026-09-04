@@ -745,6 +745,10 @@ const useAppStore = create((set, get) => ({
       tier: null,
       tierChecked: true,
       firstRunComplete: false,
+      // D147 (2026-09-04): the tab the app opens on when first run completes
+      // from the setup wizard's "See my plan" (read once by MainTabs, then
+      // cleared). Null means the default tab.
+      postSetupLanding: null,
       firstRunChecked: true,
       // Consent state resets so the next sign-in re-checks. Cached
       // AsyncStorage value persists per-user so a same-account
@@ -1388,6 +1392,8 @@ const useAppStore = create((set, get) => ({
     if (!uid) return;
     try { await AsyncStorage.setItem(FIRST_RUN_KEY_PFX + uid, 'false'); } catch (_) {}
   },
+
+  setPostSetupLanding: (tab) => set({ postSetupLanding: tab || null }),
 
   completeFirstRun: async () => {
     const uid = get().session?.user?.id;
