@@ -1211,8 +1211,14 @@ export default function DiaryScreen({ navigation, route }) {
         variant: 'undo',
         action: { label: 'Undo', onPress: async () => { haptics.selection(); await restoreFoodEntry(entry.id, userId); await load(); } },
       });
-    } catch (_) {
+    } catch (e) {
+      // D138 contract: no optimistic removal happened above (the row only
+      // leaves the list once `load()` re-reads the deleted state after a
+      // successful delete), so on failure there is nothing to revert - the
+      // row is still in the list and the swipe panel just needs to close.
+      logError('DiaryScreen.deleteFoodEntry', e, { entryId: entry?.id, mealSlot: entry?.mealSlot ?? 'unknown' });
       closeSwipe?.();
+      toast.show("Couldn't delete that entry, try again", { variant: 'error' });
     }
   }, [userId, load, toast]);
 

@@ -1734,6 +1734,60 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       || !(sameWeight && sameReps);
   }
 
+  // Item 4a (D141): "Discard workout" must never lose data silently and must
+  // never leave a native rest-timer surface running behind a screen that's
+  // gone. The delete now runs FIRST, bounded against a stuck DB (~8s), and
+  // endWorkout()/navigation only fire once the delete has actually
+  // succeeded; a failure keeps the user on the screen so they can retry
+  // instead of quietly discarding half of the work.
+  //
+  // Ordering finding: endWorkout() (useAppStore.js) clears restTimerActive/
+  // restTimerEndsAt directly in the store, but it is NOT one of the five
+  // live-activity lifecycle call sites pinned by
+  // src/lib/__tests__/liveActivity.wiring.test.js - only stopRestTimer(),
+  // tickRestTimer() (natural expiry) and restoreActiveWorkout() (launch
+  // sweep) call require('live-activity').endRestActivity(). So a discard
+  // while a rest is running would leave the iOS Live Activity (and, on
+  // Android, the rest-timer-live foreground chronometer RestTimer.js only
+  // tears down via its own restTimerActive effect) counting down a session
+  // that no longer exists, until it expires on its own or the next launch's
+  // stale-Activity sweep. stopRestTimer() is called explicitly below
+  // whenever a rest is still active at the moment of discard, closing that
+  // gap without touching the store file.
+  async function discardWorkout(errorSource) {
+    const discardId = activeWorkout?.id;
+    if (!discardId) {
+      endWorkout();
+      navigation.goBack();
+      return;
+    }
+    let timer;
+    const bounded = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error('discard: timed out waiting for delete')), 8000);
+    });
+    try {
+      // deleteIncompleteWorkout resolves false when no live row matched
+      // (already deleted, or already completed elsewhere). That is not a
+      // failure to discard: the session is gone, and treating it as one
+      // would trap the user on a screen for a workout that no longer
+      // exists (a delete that finished after the bound below, then a second
+      // tap). Only a thrown delete or the bound keeps them here.
+      await Promise.race([deleteIncompleteWorkout(discardId), bounded]);
+      // Fresh read: the rest timer may have started, stopped or expired
+      // while the delete was in flight.
+      if (useAppStore.getState().restTimerActive) {
+        useAppStore.getState().stopRestTimer();
+      }
+      endWorkout();
+      navigation.goBack();
+    } catch (e) {
+      logError(errorSource, e, { workoutId: discardId });
+      toast.show("Couldn't discard this workout, try again", { variant: 'error' });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   function handleCancelWorkout() {
     const store = useAppStore.getState();
     const totalSets = store.workoutExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0);
@@ -5091,15 +5145,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   {
                     text: 'Discard',
                     style: 'destructive',
-                    onPress: async () => {
-                      const discardId = activeWorkout?.id;
-                      endWorkout();
-                      navigation.goBack();
-                      if (discardId) {
-                        try { await deleteIncompleteWorkout(discardId); }
-                        catch (e) { logError('ActiveWorkoutScreen.discardStale', e, { workoutId: discardId }); }
-                      }
-                    },
+                    onPress: () => discardWorkout('ActiveWorkoutScreen.discardStale'),
                   },
                 ]);
               }}>
@@ -5818,15 +5864,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 style={styles.discardConfirmBtn}
                 accessibilityRole="button"
                 accessibilityLabel="Discard workout"
-                onPress={async () => {
-                  const discardId = activeWorkout?.id;
-                  endWorkout();
-                  navigation.goBack();
-                  if (discardId) {
-                    try { await deleteIncompleteWorkout(discardId); }
-                    catch (e) { logError('ActiveWorkoutScreen.discardModal', e, { workoutId: discardId }); }
-                  }
-                }}
+                onPress={() => discardWorkout('ActiveWorkoutScreen.discardModal')}
               >
                 <Text style={[styles.discardConfirmBtnText, live.discardConfirmBtnText]}>Discard workout</Text>
               </TouchableOpacity>
@@ -6064,11 +6102,6 @@ const styles = StyleSheet.create({
   },
   warmupBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   warmupBannerText: { ...type.caption, color: colors.warning },
-  warmupOneTimeHint: {
-    ...type.bodySm, color: colors.textMuted, paddingTop: spacing.xs,
-  },
-  firstSetHint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderSubtle, padding: spacing.sm, marginBottom: spacing.xs },
-  firstSetHintText: { ...type.caption, flex: 1, color: colors.textSecondary, lineHeight: 18 },
   // COMP-001 card header: three lines replace the old chip stack.
   // D43 S5: paddingVertical was a hand-rolled 2px; spacing.xxs is the exact
   // same value from the token table (no visual change).
@@ -6461,9 +6494,6 @@ function buildLiveStyles(t) {
     setEntryCardWarmup: { borderColor: t.colors.warning, backgroundColor: t.colors.warningBg || t.colors.surface },
     setEntryCardFlash: { borderColor: t.colors.primary },
     warmupBannerText: { ...t.type.caption, color: t.colors.warning },
-    warmupOneTimeHint: { ...t.type.bodySm, color: t.colors.textMuted },
-    firstSetHint: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
-    firstSetHintText: { ...t.type.caption, color: t.colors.textSecondary },
     orientationText: { ...t.type.label, color: t.colors.textSecondary },
     orientationTarget: { ...t.type.label, color: t.colors.textMuted },
     beatLineLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
