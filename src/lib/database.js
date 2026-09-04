@@ -6874,10 +6874,21 @@ export async function verifyNoForeignLocalData(incomingUserId) {
     }
 
     // eslint-disable-next-line global-require
-    const { SNAP_DIR } = require('./dbSnapshot');
+    const { SNAP_DIR, parseSnapshotName } = require('./dbSnapshot');
     const snapshotInfo = await FileSystem.getInfoAsync(SNAP_DIR);
-    if (snapshotInfo?.exists && (await FileSystem.readDirectoryAsync(SNAP_DIR)).length > 0) {
-      return { ok: false, step: 'snapshots' };
+    if (snapshotInfo?.exists) {
+      // Incident 2026-09-04: a FRESH install takes a pre-migration snapshot of
+      // its own, empty database (_doInit, snapshotBeforeMigration) before the
+      // user has ever signed in, so "any file in SNAP_DIR" refused every
+      // first sign-in on every new device (Sentry VOLYUME-2G, step
+      // 'snapshots'). A migration snapshot is a copy of the same database
+      // the table checks above have just proved clean; it cannot carry a
+      // foreign account that the live database does not. What CAN is a
+      // pre-account-switch or pre-restore copy, and any name this app did
+      // not write (unknown is unsafe). Those still refuse.
+      const names = await FileSystem.readDirectoryAsync(SNAP_DIR);
+      const foreign = names.some((name) => parseSnapshotName(name)?.kind !== 'migration');
+      if (foreign) return { ok: false, step: 'snapshots' };
     }
 
     // eslint-disable-next-line global-require
