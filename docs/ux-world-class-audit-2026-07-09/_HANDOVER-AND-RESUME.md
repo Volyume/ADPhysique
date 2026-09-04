@@ -1,6 +1,17 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-04 — TOP-TEN IMPROVEMENT PASS LANDED (D141) ★
+
+Three read-only audit lanes (first launch, retention, reliability), ten
+ranked improvements to what exists, all built: bounded sign-in and boot,
+busy state on the first tap, destructive actions that never fail
+silently, the block-finished push wired, the coach badge until viewed,
+launch-time training-schedule refresh, visible sync give-ups, reminder
+discoverability, first-run polish. Record: D141; board entry with the
+device checklist; one open founder question (training reminder horizon).
+
+===============================================================================
 ## ★ 2026-09-03 — KEEP THE BLOCK ACROSS AN EXERCISE-PRESERVING REBUILD (D140) ★
 
 Founder answered the D139 question "Yes": a days-per-week change that

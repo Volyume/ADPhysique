@@ -3417,6 +3417,61 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## TOP-TEN IMPROVEMENT PASS, FIRST LAUNCH AND RETENTION (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D141.
+
+Branch `claude/volyume-coherence-pass-6s991m`. Founder order: rank the
+ten best improvements to what exists (no new features) from three
+read-only audit lanes, then "action all of these to the absolute best
+standard". Every item, its mechanism and the lead-review rulings: D141.
+
+**Gates.** Lint clean, typecheck clean, full suite green (exact counts in
+the closure report). Engine, ED-safety, consent and billing untouched.
+
+**Open founder question (delivered in chat).** The training reminder's
+horizon for a fully lapsed user (D141, "Open founder question").
+
+**Device checklist (Android, EAS build from main).**
+1. Sign in with Google on a connection that accepts but never answers
+   (a captive portal works): after about 20 seconds the button releases
+   and the toast says you need an internet connection. On a normal
+   connection sign-in is unchanged.
+2. Boot: cannot be forced on a healthy phone. If "Couldn't open your
+   data" ever appears, "Try again" recovers once the phone is idle.
+3. Fresh account, Today or Train, tap "Start with a plan": the button
+   shows a spinner and dims until the preview sheet opens; "Browse
+   plans" stays tappable. Both tabs read "your coach builds one from
+   your setup".
+4. Start a workout, log a set, let the rest timer run, Discard: the
+   rest chronometer disappears at once, the screen goes back. Diary:
+   swipe-delete an entry; on success the undo toast, on a failure a calm
+   "Couldn't delete that entry" toast and the row snaps back. Train tab,
+   delete a saved workout: same pattern.
+5. Activate a plan, then Settings, Notifications: no visible change, but
+   on the morning the block finishes a push "Your next block is ready"
+   arrives (respecting quiet hours), even if the app was not opened. It
+   never arrives for a block that has already finished when you open
+   the app.
+6. Coach tab after a weekly review lands: You-tab dot shows. Close the
+   Home banner with its X: dot stays. Open the review: dot clears and
+   stays clear on relaunch and on returning to Today.
+7. Train on Monday and Thursday for three weeks, then open the app on a
+   different day without training: the training reminder days follow
+   your habit without needing a finished workout first.
+8. Settings, Your data: with parked sync changes the line reads "N
+   changes couldn't sync." and a "Retry now" row appears; tapping it
+   shows "Retrying now." and the count clears once synced.
+9. Settings rows read "Training reminder, meal reminders and quiet
+   hours" and "Weigh-in and weekly check-in schedule". Coaching
+   reminders has a row through to Notifications and reminders. Diary:
+   with targets set, meal reminders off, at least one logged day and two
+   unlogged days in the last week: the "Want a nudge to log?" card shows
+   once; "Not now" or "Set up reminders" removes it for good. Under calm
+   mode or an open ED flag it never appears.
+10. Setup complete after a failed generation: the "Train your split" row
+    is plain text saying where to start a plan, no dead tap.
+ED-safety: the meal offer is off under calm mode and an open ED flag;
+no floors, thresholds, seeds or scoring touched; no new push category.
+
 ## KEEP THE BLOCK ACROSS AN EXERCISE-PRESERVING REBUILD (2026-09-03) — COMPLETE, MERGED TO MAIN. Founder decision D140.
 
 Branch `claude/volyume-coherence-pass-6s991m`. Founder answered the D139

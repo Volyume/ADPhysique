@@ -5515,6 +5515,15 @@ ranked finding was verified in code by the lead before ranking.
    the block finishes, re-lays it in `restoreNotifications`, never lays it
    for a block already over or without a block, one fixed identifier.
    Not laid on the keep-block path (D140): the block is unchanged.
+6. **The coach "unread" signal lasts until the review is opened.** A
+   per-user viewed marker (`@volyume_coach_output_viewed_<uid>`, written by
+   CoachOutputScreen on a real view) drives the You-tab badge through the
+   pure `resolveHasUnseenCoachChange` (`src/lib/home/unseenCoachChange.js`):
+   badge = latest decision-complete output newer than the marker, no time
+   expiry. The Home banner keeps its seven-day window and its dismissal;
+   dismissing the banner never clears the badge. Lead review: Home reloads
+   the coach output on every focus, so the marker is re-read on every
+   focus too, or the badge a user had just cleared came back on return.
 7. **The training reminder is refreshed at launch**, not only when a
    workout finishes (`refreshHabitDerivedTrainingSchedule` after the
    session-branch restore in RootNavigator). See the open question below
@@ -5523,6 +5532,20 @@ ranked finding was verified in code by the lead before ranking.
    Settings › Your data shows the count with "Retry now";
    `retryFailedOps` resets parked rows for the signed-in user, never
    during a sign-out wipe, and flushes.
+9. **Reminder settings are discoverable.** Settings subtitles now name
+   only what each screen owns ("Training reminder, meal reminders and
+   quiet hours" / "Weigh-in and weekly check-in schedule"); Coaching
+   reminders carries the reciprocal cross-link to Notifications and
+   reminders in the same component. The opt-in meal-log reminder gets one
+   calm, dismissible, one-time offer on the diary ("Want a nudge to
+   log?"), ruled by the pure `resolveMealReminderOfferEligible`
+   (`src/lib/food/mealReminderOffer.js`): account with targets set, at
+   least one logged day AND at least two unlogged days in the last seven,
+   meal reminders not already on, NOT under calm mode (a failed wellbeing
+   read counts as calm), NOT under an open ED flag (fail closed), not
+   previously dismissed (per-user key). Lead review added the "at least
+   one logged day" clause: the offer is for a lapsed logger, never a
+   first-day user who has not tried the diary yet. No telemetry event.
 10. **First-run polish.** One voice for the identical empty state ("your
     coach builds one from your setup", per the locked actor-naming rule);
     the setup-complete "Train your split" row is a plain view with honest
