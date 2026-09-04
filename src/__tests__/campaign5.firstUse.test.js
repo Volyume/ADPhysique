@@ -599,7 +599,7 @@ describe('BLOCK: the first block explains itself and never advances on its own (
     // C5-P11-06: the definition is read before the provenance lines.
     expect(sheet.indexOf('GLOSSARY.mesocycle')).toBeLessThan(sheet.indexOf('seedLines.map'));
     // C5-P11-07: the countdown carries its unit noun.
-    expect(read('components/BlockShapeCard.js')).toMatch(/Recovery week in \$\{weeksToRecovery\} \$\{weeksToRecovery === 1 \? 'week' : 'weeks'\}/);
+    expect(read('components/BlockShapeCard.js')).toMatch(/recovery week is in \$\{weeksToRecovery\} \$\{weeksToRecovery === 1 \? 'week' : 'weeks'\}/);
   });
 
   test('nothing describes a block as an optional layer the user configures', () => {

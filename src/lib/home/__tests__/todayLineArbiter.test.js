@@ -149,7 +149,7 @@ describe('todayLineArbiter — each rank in isolation', () => {
       },
     });
     expect(result.key).toBe('recovery_state');
-    expect(result.text).toBe('Recovery week. Training is deliberately lighter. What that means.');
+    expect(result.text).toBe('It is your recovery week, so training is deliberately lighter. See what that means.');
   });
 
   it('rank 5a: structural recovery state (adaptive adjustment) never claims "recovery week"', () => {

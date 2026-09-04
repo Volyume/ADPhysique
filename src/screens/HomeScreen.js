@@ -1839,7 +1839,7 @@ export default function HomeScreen({ navigation, route }) {
   // maintenance language instead: targets hold at recovery-week volume
   // until the user chooses.
   const readinessSummary = currentMesoWeek?.awaitingDecision
-    ? { tone: 'go', line: 'Block finished. Targets hold at recovery-week volume until you choose what comes next.' }
+    ? { tone: 'go', line: 'This block is finished. Your targets hold at recovery-week volume until you choose what comes next.' }
     : buildReadinessSummary({
       currentMesoWeek,
       // Campaign 22 Phase 2 Stage 1 (spec §8, the measured copy

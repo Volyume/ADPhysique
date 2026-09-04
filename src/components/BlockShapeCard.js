@@ -22,6 +22,15 @@ const PHASE_WORD = (i, n) => {
   if (i === n - 2) return 'Push';
   return 'Build';
 };
+// The same phase as a verb, for the sentence under the dots. Founder ruling
+// 2026-09-04 (D144): the line under the dots read "Week 3 of 5 · Build.
+// Recovery week in 2 weeks.", a run of fragments; it is now two plain
+// sentences.
+const PHASE_VERB = (i, n) => {
+  if (i === 0) return 'easing in';
+  if (i === n - 2) return 'pushing';
+  return 'building';
+};
 
 export default function BlockShapeCard({ weekIndex, plannedWeeks, isDeload = false, finished = false, compact = false }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
@@ -37,21 +46,21 @@ export default function BlockShapeCard({ weekIndex, plannedWeeks, isDeload = fal
   // week including recovery is done, and claiming a live week here is the
   // dishonesty Stage 1 (blueprint-adaptive-mesocycle §3.5) removes.
   const current = finished ? n : (isDeload ? n - 1 : Math.min(Math.max((weekIndex || 1) - 1, 0), n - 1));
-  const word = PHASE_WORD(current, n);
+  const verb = PHASE_VERB(current, n);
   const weeksToRecovery = (n - 1) - current; // dots from here to the recovery dot
 
   let line;
   if (finished) {
-    line = 'Block finished. Targets hold at recovery-week volume until you choose what comes next.';
+    line = 'This block is finished. Your targets hold at recovery-week volume until you choose what comes next.';
   } else if (isDeload || current === n - 1) {
-    line = 'Recovery week. Lighter on purpose. This is where the work pays off, and you lose nothing by easing back.';
+    line = 'This is your recovery week. It is lighter on purpose, and you lose nothing by easing back: this is where the work pays off.';
   } else if (current === n - 2) {
-    line = `Week ${current + 1} of ${n} · Push. Your hardest week of the block. Recovery week next.`;
+    line = `Week ${current + 1} of ${n} is the hardest week of the block, and your recovery week comes next.`;
   } else {
     // C5-P11-07 (D96): "Recovery week in 5" carried no unit noun. The dot
     // row supplies the context, but the sentence alone did not say five
     // what.
-    line = `Week ${current + 1} of ${n} · ${word}. Recovery week in ${weeksToRecovery} ${weeksToRecovery === 1 ? 'week' : 'weeks'}.`;
+    line = `You are in week ${current + 1} of ${n}, ${verb}. Your recovery week is in ${weeksToRecovery} ${weeksToRecovery === 1 ? 'week' : 'weeks'}.`;
   }
 
   return (

@@ -214,8 +214,8 @@ export function trainRecoveryDetail(resolved, differences = []) {
   const real = (Array.isArray(differences) ? differences : []).filter(Boolean);
   const planned = resolved.state === RECOVERY_STATE.PLANNED_BLOCK_RECOVERY;
   const lead = planned
-    ? 'Recovery week. This session is lighter on purpose, because you have finished the hard-training part of this block.'
-    : 'Recovery-adjusted session. This one is lighter because your recent recovery has been harder.';
+    ? 'This is your recovery week, so this session is lighter on purpose: you have finished the hard-training part of this block.'
+    : 'This session is recovery-adjusted, lighter because your recent recovery has been harder.';
   if (!real.length) return lead;
   return `${lead} ${sentenceList(real)}`;
 }

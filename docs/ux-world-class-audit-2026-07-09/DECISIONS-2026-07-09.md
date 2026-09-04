@@ -5728,7 +5728,16 @@ under the wordmark until 2026-09-03, when the D137 first-screen rebuild
 promoted it to the h1 headline. The defect users saw is D137's, in builds
 3560 onwards, not the May sweep's. The `src/lib/mesocycle.js` week labels
 have the same shape but no caller outside the engine file renders them;
-they have never been shown and are left alone. The web page's hero
+they have never been shown and are left alone. The block line that WAS
+live (BlockShapeCard, 2026-06-11, COMP-010: "Week 3 of 5 · Build.
+Recovery week in 2 weeks.", on Home, the workout summary, the
+consistency screen and the block builder, and on the D137 welcome
+mock-up) is rewritten as sentences in the same pass, with the matching
+lines in HomeScreen, ActiveWorkoutScreen, todayLineArbiter and
+recoveryState ("Recovery week. Training is deliberately lighter. What that
+means.", "Lighter on purpose. Full recovery, no PRs.", "Recovery week
+suggested. See why.", "Recovery-adjusted session. This one is lighter..").
+Meaning unchanged, every claim kept; ten pinned tests re-anchored. The web page's hero
 sub-line still describes a Free/Pro split (pre-D137); flagged, not
 changed.
 

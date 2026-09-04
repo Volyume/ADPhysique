@@ -133,7 +133,7 @@ function resolveRecovery(facts) {
   if (isLighterTrainingState(f.state) && f.onOpenDetail) {
     const planned = f.state.state === RECOVERY_STATE.PLANNED_BLOCK_RECOVERY;
     const text = planned
-      ? 'Recovery week. Training is deliberately lighter. What that means.'
+      ? 'It is your recovery week, so training is deliberately lighter. See what that means.'
       : 'Training is lighter for now. Why?';
     return {
       key: 'recovery_state',
@@ -146,10 +146,10 @@ function resolveRecovery(facts) {
   if (f.deloadEligible) {
     return {
       key: 'deload_suggestion',
-      text: 'Recovery week suggested. See why.',
+      text: 'A recovery week is suggested. See why.',
       onPress: f.onDeloadPress,
       onDismiss: f.onDeloadDismiss,
-      accessibilityLabel: 'Recovery week suggested. Tap to review.',
+      accessibilityLabel: 'A recovery week is suggested. Tap to review.',
     };
   }
   return null;

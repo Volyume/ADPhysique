@@ -127,7 +127,7 @@ describe('honest copy while awaiting the decision', () => {
   test('HomeScreen has a block-finished branch keyed on awaitingDecision', () => {
     const SRC = read('screens/HomeScreen.js');
     expect(SRC).toMatch(/awaitingDecision/);
-    expect(SRC).toContain('Block finished');
+    expect(SRC).toContain('This block is finished');
   });
 
   test('the widget writer stops claiming a live week for a finished block', () => {

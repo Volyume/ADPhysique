@@ -20,14 +20,14 @@ describe('finished rendering', () => {
   test('finished shows the honest line instead of a live-week or recovery-week claim', () => {
     const tree = create(<BlockShapeCard weekIndex={5} plannedWeeks={5} isDeload finished />);
     const all = texts(tree).join(' | ');
-    expect(all).toContain('Block finished. Targets hold at recovery-week volume until you choose what comes next.');
-    expect(all).not.toContain('Recovery week. Lighter on purpose');
+    expect(all).toContain('This block is finished. Your targets hold at recovery-week volume until you choose what comes next.');
+    expect(all).not.toContain('This is your recovery week');
     expect(all).not.toMatch(/Week \d+ of \d+/);
   });
 
   test('a live recovery week still reads as one (finished absent)', () => {
     const tree = create(<BlockShapeCard weekIndex={5} plannedWeeks={5} isDeload />);
-    expect(texts(tree).join(' | ')).toContain('Recovery week. Lighter on purpose');
+    expect(texts(tree).join(' | ')).toContain('This is your recovery week. It is lighter on purpose');
   });
 
   test('finished has no current dot: every week renders as done', () => {
@@ -61,6 +61,6 @@ describe('every consumer threads awaitingDecision into finished', () => {
 
   test("HomeScreen's chip override replaces the readiness line, not decorates it", () => {
     const src = read('screens/HomeScreen.js');
-    expect(src).toMatch(/currentMesoWeek\?\.awaitingDecision\s*\n?\s*\?\s*\{ tone: 'go', line: 'Block finished\./);
+    expect(src).toMatch(/currentMesoWeek\?\.awaitingDecision\s*\n?\s*\?\s*\{ tone: 'go', line: 'This block is finished\./);
   });
 });
