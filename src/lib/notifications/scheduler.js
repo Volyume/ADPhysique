@@ -1523,6 +1523,58 @@ export async function cancelBlockReadyToReview() {
   try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_BLOCK_READY); } catch {}
 }
 
+/**
+ * D141 item 5 (2026-09-04): scheduleBlockReadyToReview above was fully built
+ * (budget, quiet hours, opt-out, route) and had no caller, so the one
+ * five-to-six-week decision moment in the product depended entirely on the
+ * user opening the app to notice the block had finished.
+ *
+ * Laid AHEAD, at activation, for the local day the block finishes at 09:00
+ * (quiet hours shift it), so it reaches a user who is not opening the app -
+ * the only kind of user the push exists for. Re-laid by restoreNotifications
+ * (which wipes every scheduled push first) so a quiet-hours edit or a DST
+ * reschedule cannot lose it. One fixed identifier, so re-laying never stacks.
+ *
+ * Never laid for a block that is already over: the user is in the app when
+ * this runs, the decision card is on the Plans tab, and a push a minute
+ * later about the screen they are looking at would be noise. Never laid
+ * without an active block. No proposal is attached (none exists yet at
+ * activation), so the body is the plain "ready to review" line, which is
+ * the only honest one ahead of time.
+ */
+export async function scheduleBlockReadyForActiveBlock(userId) {
+  if (Platform.OS === 'web') return;
+  if (!userId) return;
+  try {
+    // eslint-disable-next-line global-require
+    const { getActiveBlock } = require('../database');
+    const block = await getActiveBlock(userId);
+    if (!block) { await cancelBlockReadyToReview(); return; }
+    const plannedWeeks = Number(block.plannedWeeks ?? block.durationWeeks);
+    if (!Number.isFinite(plannedWeeks) || plannedWeeks <= 0) return;
+    // eslint-disable-next-line global-require
+    const { getBlockStatus } = require('../mesocycle');
+    const status = getBlockStatus(block.startDate ?? block.createdAt ?? Date.now(), plannedWeeks);
+    if (status.status === 'completed_awaiting_decision') { await cancelBlockReadyToReview(); return; }
+    // Local calendar arithmetic, the same day-counting getBlockStatus uses:
+    // the block is over once plannedWeeks * 7 local days have elapsed from
+    // the start day, so that is the morning the push belongs to.
+    const startRaw = block.startDate ?? block.createdAt ?? Date.now();
+    const startDate = typeof startRaw === 'string' && /^\d{4}-\d{2}-\d{2}/.test(startRaw)
+      ? new Date(Number(startRaw.slice(0, 4)), Number(startRaw.slice(5, 7)) - 1, Number(startRaw.slice(8, 10)))
+      : new Date(startRaw);
+    if (!Number.isFinite(startDate.getTime())) return;
+    const fireAt = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + plannedWeeks * 7, 9, 0, 0, 0);
+    await scheduleBlockReadyToReview(null, fireAt);
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.WEEKLY_COACH_READY,
+      reason: 'block_ready_relay_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+  }
+}
+
 // ─── Cancel helpers ───────────────────────────────────────────────────────────
 
 export async function cancelMorningNotification() {
@@ -1736,6 +1788,15 @@ export async function restoreNotifications(prefs, userId = null) {
     const { scheduleTrainingReminders } = require('./trainingReminders');
     await scheduleTrainingReminders();
   } catch (_) { /* training-reminder re-lay is best-effort */ }
+
+  // D141 item 5: the block-finished push is laid ahead at activation and
+  // wiped by cancelAllNotifications above like everything else; re-lay it
+  // from the active block (self-guards: no block, block already over).
+  try {
+    // eslint-disable-next-line global-require
+    const store = require('../../store/useAppStore').default;
+    await scheduleBlockReadyForActiveBlock(userId ?? store.getState().user?.id ?? null);
+  } catch (_) { /* block-ready re-lay is best-effort */ }
 }
 
 // ─── Year of Lifts unlock ─────────────────────────────────────────────────────

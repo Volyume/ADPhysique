@@ -5038,6 +5038,15 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
       .scheduleTrainingReminders(activeForReminder?.name)
       .catch(() => {});
   } catch (_) { /* notifications layer unavailable -- reminders refresh on next schedule */ }
+  // D141 item 5: lay the block-finished push for the morning this new block
+  // ends, so the decision moment reaches a user who is not opening the app.
+  // Best-effort; activation never fails on it.
+  try {
+    // eslint-disable-next-line global-require
+    require('./notifications/scheduler')
+      .scheduleBlockReadyForActiveBlock(userId)
+      .catch(() => {});
+  } catch (_) { /* notifications layer unavailable */ }
 
   return id;
 }
