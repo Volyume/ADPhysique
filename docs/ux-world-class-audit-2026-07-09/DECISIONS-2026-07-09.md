@@ -5615,3 +5615,72 @@ been lost."
   a person who has asked for calm has asked for fewer nudges, full stop.
 
 **Engine, ED-safety, consent, billing: untouched.**
+
+## D143 — Fresh-install incident: encryption codec missing from the Android build; first-account residue check tripped by the install's own snapshot (2026-09-04)
+
+**What the founder saw.** Every fresh install since the build made on
+the morning of 2026-09-03 failed. Android: "Couldn't open your data" at
+boot. iOS: "Couldn't switch accounts safely" on the first sign-in. Existing
+installs with data kept working.
+
+**Evidence (observed, not inferred).**
+- Sentry VOLYUME-33, `dbCrypto open aborted
+  (sqlcipher_unavailable_fresh_database)`: 20 events, all Android,
+  releases 1.3.1+3560 (first seen 2026-09-03 07:30 UTC) and 1.3.1+3561.
+- Build 3563 was run with the new packaged-library gate
+  (`scripts/verify-android-sqlcipher.cjs`): `libexpo-sqlite.so` in both
+  the APK and the AAB carried no SQLCipher markers, although
+  `android/gradle.properties` carried `expo.sqlite.useSQLCipher=true`
+  after prebuild. That is the Android cause, proven on the artefact.
+- `verifyNoForeignLocalData` (added 2026-09-01, 34495ebf) refused any
+  file in the snapshot directory. `_doInit` writes a pre-migration
+  snapshot whenever `user_version` is below the migration count, which
+  is true of every fresh install. So the install's own snapshot read as
+  another account's residue. That is the iOS cause, and it would have
+  hit Android next.
+
+**Why now.** The 2026-09-01 fail-closed open (0bc08b67) turned a missing
+codec from a silent plain-SQLite fallback into a hard refusal on any
+database created without it. The 09-01 residue check is the second half.
+Both were correct in intent; neither had a fresh-install test, and the
+build had no proof the codec was actually packaged.
+
+**Fixes (all on main, build 3564 green on every gate).**
+- 32ebfdf5: packaged-library gate in the Android workflow (fails the run
+  if `libexpo-sqlite.so` lacks `sqlcipher_extra_init`/`cipher_version`),
+  a gradle.properties gate after prebuild, and the abort now logs the
+  key-probe result so the next failure names itself.
+- cfa8c2fe: migration-kind snapshots pass the residue check;
+  account-switch, pre-restore and unknown snapshots still refuse
+  (`verifyNoForeignLocalData.snapshots.test.js`).
+- 9a2e6cfe: `scripts/force-sqlcipher-android.cjs` pins
+  `USE_SQLCIPHER = true` in expo-sqlite's Android build script after
+  `npm ci`, the Gradle invocation also passes
+  `-Pexpo.sqlite.useSQLCipher=true`, and an init script prints the
+  evaluated value. Build 3564's log: `USE_SQLCIPHER=true
+  findProperty(expo.sqlite.useSQLCipher)=true`, and the gate reported the
+  codec in all four native libraries.
+
+**Not established.** Why Gradle evaluated the property false in builds
+3559 to 3563. The diagnostic only exists from 3564, where the pin already
+forces true, so it cannot show the earlier value. The pin and the binary
+gate make the cause moot for shipping: a build without the codec can no
+longer pass.
+
+**Rulings.**
+- The codec is pinned on unconditionally rather than "fixed properly"
+  in prebuild: the app has exactly one storage mode and a build must not
+  be able to choose the other one. A gate on the artefact, not on the
+  configuration, is the only proof that counts.
+- The residue check keeps refusing every non-migration snapshot. Only
+  the kind the fresh install itself creates is exempt.
+- Sentry VOLYUME-33 stays open until a fresh install of 3564 reports no
+  new event; it is the founder's confirmation signal, not ours.
+
+**Standing rule from this incident (founder, 2026-09-04).** Never
+trigger an iOS (EAS) build, or any build that costs money, without the
+founder's explicit go for that build. An iOS build was started during
+this incident without permission and had to be cancelled. Recorded in
+CLAUDE.md Section 4.
+
+**Engine, ED-safety, consent, billing: untouched.**

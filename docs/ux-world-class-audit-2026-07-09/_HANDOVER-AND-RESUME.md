@@ -1,6 +1,20 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-04 — FRESH-INSTALL INCIDENT FIXED (D143); FOUNDER CONFIRMATION PENDING ★
+
+Fresh installs since the 2026-09-03 morning build failed on both
+platforms. Android: the packaged SQLite library had no SQLCipher, and the
+09-01 fail-closed open refused the database (Sentry VOLYUME-33). iOS: the
+09-01 residue check refused the install's own pre-migration snapshot.
+Fixed on main `9a2e6cfe`: codec pinned on in the expo-sqlite build script
+plus a binary gate that fails any build without it; migration snapshots
+pass the residue check. Android build 3564 green on every gate. iOS build
+NOT started: founder's explicit go required (costs money). Board entry
+carries the checklist and the artefact run. Open: why Gradle evaluated the
+flag false in builds 3559 to 3563 (not established; moot under the pin).
+
+===============================================================================
 ## ★ 2026-09-04 — BOUNDED TRAINING HORIZON + WELCOME-BACK NOTE (D142) ★
 
 Founder chose C on the D141 question. The training reminder is a bounded

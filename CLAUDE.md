@@ -323,6 +323,15 @@ main CONTINUALLY as each change goes green -- see the merge rule in Section 2
 (founder order 2026-07-30). Never leave a finished change sitting on a branch.
 CI (`release:check`) is the final arbiter.
 
+**Builds cost money (founder rule 2026-09-04, INVIOLABLE).** Never
+trigger an iOS (EAS) build, or any other paid build or submission, without
+the founder's explicit go for that specific build. The Android workflow
+is manual dispatch too (order 2026-08-28) and runs on GitHub Actions from
+main: dispatch it only when a landed fix actually needs a build, and say
+which run number it produced. An iOS build started
+without permission during the 2026-09-04 fresh-install incident (D143) is
+the failure this rule records.
+
 **Testing on device (no simulator).** The founder works from a phone and
 cannot run a local simulator. EVERY shipped change includes a short manual
 test checklist written for a physical Android device using an EAS build (or

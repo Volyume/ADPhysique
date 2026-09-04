@@ -3417,6 +3417,47 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## FRESH-INSTALL INCIDENT (2026-09-04) — FIXED ON MAIN `9a2e6cfe`, ANDROID BUILD 3564 GREEN. Record D143. FOUNDER: INSTALL AND CONFIRM.
+
+Branch `claude/fix-sqlcipher-fresh-install`. Every fresh install since
+the 2026-09-03 morning build failed: Android "Couldn't open your data",
+iOS "Couldn't switch accounts safely". Two causes, both proven and both
+fixed; the full evidence and rulings are D143.
+
+**What ships.** GitHub Actions run 33875960876 (build 3564, main
+`9a2e6cfe`): artefacts `volyume-release-aab-9a2e6cfe…` (Play) and
+`volyume-release-apk-9a2e6cfe…` (sideload), expiring 2026-09-07. The run
+proved the packaged SQLite library carries SQLCipher in all four native
+libraries. iOS: the residue fix is on main; an iOS build needs the
+founder's explicit go (it costs money) and is NOT started.
+
+**Gates.** Lint clean, full suite green at 9a2e6cfe (exact counts in the
+closure report); build 3564 passed every workflow gate including the new
+packaged-library check.
+
+**Device checklist (Android, build 3564 from the run above).**
+1. Uninstall Volyume completely, install the 3564 APK (or the Play build
+   once the AAB is uploaded). Expected: the app opens to first run or
+   sign-in with no "Couldn't open your data".
+2. Sign in with Google, Apple or email on that fresh install. Expected:
+   lands in the app; no "Couldn't switch accounts safely".
+3. Finish onboarding, log one workout, force-close and reopen. Expected:
+   the workout and profile are still there.
+4. On a phone that already had 3560 with data, update to 3564. Expected:
+   opens straight into the existing data, still signed in.
+5. Sentry VOLYUME-33: no event from release 1.3.1+3564 after steps 1 to
+   4. Then resolve the issue.
+6. Sign out and sign in as a different account on the same install.
+   Expected: the account switch still refuses if data from the first
+   account remains (the residue check is intact for real residue).
+ED-safety: nothing in the engine, floors, flags or notifications was
+touched; the change is the build script, the open path's logging and one
+snapshot-kind check.
+
+**Founder-side.** Cancel the leftover EAS iOS build on expo.dev if it is
+still listed (the GitHub run 33873252133 was cancelled; the EAS job may
+have continued). Upload the 3564 AAB to Play.
+
 ## BOUNDED TRAINING HORIZON + WELCOME-BACK NOTE (2026-09-04) — COMPLETE, MERGED TO MAIN. Founder decision D142.
 
 Branch `claude/volyume-coherence-pass-6s991m`. Founder answered the D141
