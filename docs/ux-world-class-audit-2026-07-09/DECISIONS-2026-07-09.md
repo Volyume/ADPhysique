@@ -5721,11 +5721,15 @@ invented numbers on the app's first screen.
   gloss there; the pin now enforces "gloss it if the word appears, and the
   word does not appear", so the term cannot return unglossed.
 
-**Left as found, for the founder.** `src/lib/mesocycle.js` week labels
-("Build week. Push a little harder.", "Recovery week. Back off and
-recharge.") are the same clipped-command shape. They are engine strings;
-whether any surface renders them was not established in this pass.
-Question delivered in chat. The web page's hero sub-line still describes a
-Free/Pro split (pre-D137); flagged, not changed.
+**Provenance, corrected the same day.** The slogan entered the tree on
+2026-05-19 (an em-dash sweep that turned dashed phrases into fragment
+pairs, plus a one-line tagline commit) but sat as small muted caption text
+under the wordmark until 2026-09-03, when the D137 first-screen rebuild
+promoted it to the h1 headline. The defect users saw is D137's, in builds
+3560 onwards, not the May sweep's. The `src/lib/mesocycle.js` week labels
+have the same shape but no caller outside the engine file renders them;
+they have never been shown and are left alone. The web page's hero
+sub-line still describes a Free/Pro split (pre-D137); flagged, not
+changed.
 
 **Engine, ED-safety, consent, billing: untouched.**
