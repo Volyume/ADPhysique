@@ -3439,13 +3439,15 @@ carries it.
    settings): the composition shrinks, the button stays on screen.
 3. Settings, Display, larger text on: headline three lines at most, no
    overlap with the composition.
-4. Tap Sign in: the account screen opens in sign-in mode with "Welcome
-   back", the fields visible, and no faint background logo.
-5. Back, then Get started: the account screen in create mode with
-   "Create your account", Continue with Google, Continue with email
-   (amber label), "Already have an account? Sign in", the trust line.
-   Tap Continue with email: the fields and the Create account button
-   appear; the keyboard does not cover the button.
+4. Tap Sign in: the same sheet in sign-in mode with "Welcome back", the
+   fields visible, the capture receding above it.
+5. Back, then Get started: the Train screen capture top-right behind a
+   charcoal sheet that holds "Create your account", one line, Continue
+   with Google (charcoal), Continue with email (amber), "Already have an
+   account? Sign in" and a small Privacy policy link. No trust line, no
+   ghost logo. Tap Continue with email: the fields and the Create account
+   button appear inside the sheet; the keyboard does not cover the button.
+   Tap Privacy policy: the in-app policy opens and Back returns.
 6. Continue with Google still signs in; nothing about the account flow
    changed beyond the visuals.
 ED-safety: copy and layout only; nothing weight, food or notification

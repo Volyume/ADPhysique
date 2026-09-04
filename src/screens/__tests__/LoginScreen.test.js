@@ -13,7 +13,10 @@ const mockToastShow = jest.fn();
 // binding is specially hoisted alongside it -- standard jest convention).
 const mockPasswordFocus = jest.fn();
 
-jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }) => children }));
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: ({ children }) => children,
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 jest.mock('../../lib/observability', () => ({ audit: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logInfo: jest.fn(), logError: jest.fn() }));
@@ -432,7 +435,7 @@ describe('LoginScreen fully-free account step framing', () => {
     await act(async () => {
       signupTree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />);
     });
-    expect(html(signupTree)).toContain('Save your training, nutrition and progress across devices.');
+    expect(html(signupTree)).toContain('Keep your training, nutrition and progress synced across devices.');
     let signinTree;
     await act(async () => { signinTree = create(<LoginScreen />); });
     expect(html(signinTree)).toContain('Sign in to pick up where you left off.');
@@ -443,12 +446,14 @@ describe('LoginScreen fully-free account step framing', () => {
     await act(async () => {
       signupTree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />);
     });
-    // D145: one restrained trust line, no blanket offline claim.
-    expect(html(signupTree)).toContain('No ads · Export your data anytime');
+    // D145 (second pass): no marketing line on the account step at all;
+    // the only foot text is the in-app privacy policy link.
+    expect(html(signupTree)).not.toMatch(/No ads|Works fully offline|Export your data/);
+    expect(html(signupTree)).toContain('Privacy policy');
 
     let signinTree;
     await act(async () => { signinTree = create(<LoginScreen route={{ params: {} }} />); });
-    expect(html(signinTree)).toContain('No ads · Export your data anytime');
+    expect(html(signinTree)).not.toMatch(/No ads|Works fully offline|Export your data/);
 
     expect(html(signupTree)).not.toMatch(/trial|\bPro\b|payment card|14 day/i);
     expect(html(signinTree)).not.toMatch(/trial|\bPro\b|payment card|14 day/i);

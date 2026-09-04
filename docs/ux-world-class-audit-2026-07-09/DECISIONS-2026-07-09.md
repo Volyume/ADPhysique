@@ -5800,3 +5800,26 @@ now guards the intent (touch target, no underline, accent on the verb).
 **Engine, ED-safety, consent, billing: untouched.** One new test double
 (`__mocks__/expo-linear-gradient.js`): the real component calls a
 react-native function the test environment lacks.
+
+**Second pass on Create Account (founder verdict the same day: Welcome
+approved and preserved; the account screen "placed into the upper half of
+a large empty black screen").** Composition, not content. Ruled after
+rendering three candidates beside the approved Welcome: (A) a full-bleed
+dimmed crop of a real screen behind the form failed, the back arrow
+collided with the screen's own title and it read as a ghost screen; (B) a
+framed, turned capture top-right with the content anchored to the bottom
+was right but floated; (C) is B with the account step on a sheet, and is
+what shipped. The Train capture (`assets/welcome/train.jpg`, the real
+store screenshot) sits top-right, turned 7 degrees, dimmed to 62%,
+bleeding off the edge under the status bar; it fades into the page just
+above a sheet (surface colour, the card radius on its top corners, a
+hairline) that holds: an 18dp mark, the heading one size below Welcome's
+(semibold at 20dp), one line ("Keep your training, nutrition and progress
+synced across devices."), Continue with Google raised one surface so it
+reads on the sheet, Continue with email as the primary amber button (the
+translucent tertiary fill was judged cheap), the sign-in text action, and
+a quiet in-app Privacy policy link. The marketing trust line is gone from
+this screen. The back chevron sits on a round half-alpha scrim so it reads
+over the capture. `PrivacyPolicy` is now registered in the pre-account
+stack so the link works before sign-in; `OAuthButtons` gained a `raised`
+prop. Sign-in mode uses the same sheet with the fields open.

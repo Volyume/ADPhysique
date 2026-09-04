@@ -723,6 +723,9 @@ function WelcomeStack() {
       <Stack.Screen name="QuizTraining" component={QuizScreen} />
       <Stack.Screen name="PlanPreview" component={PlanPreviewScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
+      {/* D145: the account step links to the policy in-app, so the pre-
+          account stack carries the same screen the consent gate does. */}
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
     </Stack.Navigator>
   );
 }

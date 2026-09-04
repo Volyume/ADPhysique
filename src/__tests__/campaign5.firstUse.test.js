@@ -1416,7 +1416,7 @@ describe('WELLBEING + ACCOUNT: the two settings sentences (W-3/W-4, E-7, D96)', 
     // trial thread; the why-account law itself (one line, said once, here)
     // is what this test still pins.
     // AMENDED 2026-09-04 (D145): shorter still, one line per mode.
-    expect(login).toContain('Save your training, nutrition and progress across devices.');
+    expect(login).toContain('Keep your training, nutrition and progress synced across devices.');
     // One line, not a privacy lecture: the Article 9 gate that follows is
     // still the place the full data story is told, so no consent copy is
     // duplicated onto this screen.

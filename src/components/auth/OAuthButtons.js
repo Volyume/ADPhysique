@@ -30,7 +30,10 @@ if (Platform.OS === 'ios') {
 // verification proved too flaky), so no screen shows an "or with email" section
 // any more and the divider would dangle under the OAuth buttons. Pass a label
 // only if a future screen reintroduces an alternative below the buttons.
-export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel = null }) {
+// `raised`: one surface up (surface2) for a button that sits on a surface-
+// coloured sheet (LoginScreen, D145), where the default surface fill would
+// vanish into its parent.
+export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel = null, raised = false }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
@@ -74,7 +77,7 @@ export default function OAuthButtons({ onApple, onGoogle, disabled, dividerLabel
           Guideline 4.8 (Apple sign-in present). Android keeps Google. */}
       {Platform.OS !== 'ios' && (
         <TouchableOpacity
-          style={[styles.btn, live.btn, disabled && styles.btnDisabled]}
+          style={[styles.btn, live.btn, raised && live.btnRaised, disabled && styles.btnDisabled]}
           onPress={onGoogle}
           disabled={disabled}
           accessibilityRole="button"
@@ -127,6 +130,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     btn: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    btnRaised: { backgroundColor: t.colors.surface2 },
     btnText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     btnApple: { backgroundColor: t.colors.appleBtnBg },
     btnAppleText: { ...t.type.bodyStrong, color: t.colors.appleBtnText },

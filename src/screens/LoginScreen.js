@@ -1,8 +1,9 @@
 import { useState, useRef } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, radius, spacing, type } from '../styles/theme';
+import { colors, fontSize, radius, spacing, type, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { VolyumeMark } from '../components/BrandMark';
 import OAuthButtons from '../components/auth/OAuthButtons';
@@ -13,6 +14,11 @@ import { audit } from '../lib/observability';
 import { useToast } from '../components/Toast';
 import { authErrorMessage, isDuplicateSignup, AUTH_COPY } from '../lib/authErrorCopy';
 import { touchTarget } from '../styles/layout';
+
+// A real capture of the Train screen (the store-listing screenshot, resized
+// for the bundle), the backdrop the account step sits in front of.
+const SHOT_TRAIN = require('../../assets/welcome/train.jpg');
+const SHOT_ASPECT = 709 / 1388;
 
 export default function LoginScreen({ navigation, route }) {
   // Sign in with Apple/Google, PLUS an email + password option (founder
@@ -67,6 +73,14 @@ export default function LoginScreen({ navigation, route }) {
   // precedent (batch D).
   const t = useTheme();
   const live = buildLiveStyles(t);
+  const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  // D145 (2026-09-04): the composition. One real capture of the Train
+  // screen sits top-right, turned and dimmed, receding behind a sheet that
+  // holds the account step, so the screen reads as the product continuing
+  // beneath the thing being asked, not as a form on a black page.
+  const shotW = Math.round(windowWidth * 0.7);
+  const shotH = Math.round(shotW / SHOT_ASPECT);
 
   async function handleOAuth(provider) {
     // VOLYUME-2B: under Fabric the native Apple button can fire onPress twice
@@ -246,18 +260,29 @@ export default function LoginScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, live.safe]} edges={['left', 'right']}>
+      {/* Backdrop: the capture bleeds off the top-right edge under the
+          status bar; the sheet below covers its lower half. */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none" importantForAccessibility="no-hide-descendants">
+        <View style={[styles.shotFrame, live.shotFrame, {
+          width: shotW, height: shotH, right: -Math.round(shotW * 0.2), top: insets.top + spacing.xl,
+        }]}>
+          <Image source={SHOT_TRAIN} style={styles.shot} resizeMode="cover" />
+        </View>
+      </View>
+
       {/* E-9 (D96): the WelcomeStack runs headerShown: false, so this screen
           had no visible back control at all, against the app's own convention
           (contrast WellbeingCheckScreen's BackHeader). Hardware back and the
           iOS edge swipe always worked, so nobody was trapped; this is the
-          missing affordance, in the same chevron shape FreeStarter's top bar
-          uses. Rendered only when there is somewhere to go back to. */}
+          missing affordance. Rendered only when there is somewhere to go
+          back to; on a round scrim so it reads over the capture. */}
       {navigation?.canGoBack?.() ? (
-        <View style={styles.topBar}>
+        <View style={[styles.topBar, { paddingTop: insets.top + spacing.md }]}>
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={[styles.backScrim, live.backScrim]}
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
@@ -272,187 +297,194 @@ export default function LoginScreen({ navigation, route }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Heading block (D145, 2026-09-04) ──
-              Welcome sells; this screen converts. A small mark for
-              continuity, the mode heading, and one short line on what the
-              account is for. No tagline, no watermark, no second pitch.
-              E-7 (D96) is still honoured: the why-account line is here, on
-              the form that asks; the full data story stays in the Article 9
-              gate that follows. */}
-          <View style={styles.brand}>
-            <VolyumeMark size={20} style={styles.brandMark} />
-            <Text style={[styles.heading, live.heading]} accessibilityRole="header">
-              {emailMode === 'signup' ? 'Create your account' : 'Welcome back'}
-            </Text>
-            <Text style={[styles.whyAccount, live.whyAccount]}>
-              {emailMode === 'signup'
-                ? 'Save your training, nutrition and progress across devices.'
-                : 'Sign in to pick up where you left off.'}
-            </Text>
-          </View>
-
-          {/* ── OAuth sign-in ──
-              Apple on iOS, Google on Android (see OAuthButtons for the
-              platform split). This is the only way into the app. */}
-          <OAuthButtons
-            onApple={() => handleOAuth('apple')}
-            onGoogle={() => handleOAuth('google')}
-            disabled={loading}
+          {/* The capture fades out just above the sheet, whatever height the
+              sheet takes in this mode. */}
+          <LinearGradient
+            colors={[withAlpha(t.colors.background, 0), t.colors.background]}
+            style={styles.fade}
+            pointerEvents="none"
           />
-          {/* A7: the only affordance while waiting was dimmed buttons, no
-              indication anything is actually happening. A calm caption names
-              what's in progress.
-              AX-08 (launch accessibility audit): the caption wasn't marked
-              busy/live, so a screen reader never heard that sign-in was in
-              progress. accessibilityLiveRegion announces it on appearance
-              (polite, mirroring Toast's non-error pattern); accessibilityState
-              busy reinforces the in-progress state for the duration. */}
-          {loading ? (
-            <Text
-              style={[styles.oauthWaiting, live.oauthWaiting]}
-              accessibilityLiveRegion="polite"
-              accessibilityState={{ busy: true }}
-            >
-              Waiting for Google or Apple…
-            </Text>
-          ) : null}
-
-          {/* ── Email + password ──
-              A second, equal way in (founder 2026-07-21). Any session it
-              creates flows through the same onAuthStateChange path as OAuth.
-              D145: no "or" divider; the options read as one short list. */}
-          {/* E-8 / E-2 / E-3: the persistent outcome state. Survives leaving
-              the app for the inbox and coming back, which a toast cannot. */}
-          {notice ? (
-            <View
-              style={[styles.notice, live.notice]}
-              accessibilityLiveRegion="polite"
-            >
-              <Ionicons name="mail-outline" size={16} color={t.colors.textSecondary} />
-              <Text style={[styles.noticeText, live.noticeText]}>{notice.text}</Text>
-              <TouchableOpacity
-                onPress={() => setNotice(null)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="Dismiss this message"
-              >
-                <Ionicons name="close" size={16} color={t.colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
-          <View style={styles.emailForm}>
-            {/* Create-account mode collapses the email + password fields
-                behind a tertiary "Continue with email" button, so the
-                account step reads OAuth-first and lightweight. Sign-in mode
-                keeps the fields visible immediately: a returning user
-                already knows they want email, and hiding it would cost them
-                a tap for no benefit. */}
-            {(emailMode === 'signin' || emailFormOpen) ? (
-              <>
-                <TextField
-                  label="Email"
-                  value={email}
-                  onChangeText={setEmail}
-                  accessibilityLabel="Email address"
-                  placeholder="you@example.com"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType="emailAddress"
-                  editable={!emailSubmitting}
-                  // A5: email is a genuine text keyboard (Return key exists), so
-                  // unlike the numeric-pad sibling pairs elsewhere in the app,
-                  // returnKeyType/onSubmitEditing are live here, not dead props.
-                  returnKeyType="next"
-                  onSubmitEditing={() => passwordRef.current?.focus()}
-                  blurOnSubmit={false}
-                />
-                <TextField
-                  ref={passwordRef}
-                  label="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  accessibilityLabel="Password"
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  textContentType={emailMode === 'signup' ? 'newPassword' : 'password'}
-                  returnKeyType="go"
-                  onSubmitEditing={handleEmailAuth}
-                  editable={!emailSubmitting}
-                  // A5: show/hide toggle, mirrored from EmailPasswordFields.js
-                  // (same icon, same accessibility label convention) rather than
-                  // swapping LoginScreen over to that component -- primary
-                  // sign-in funnel, smaller blast radius per the ruling.
-                  trailing={(
-                    <TouchableOpacity
-                      style={styles.eyeBtn}
-                      onPress={() => setShowPassword(v => !v)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={19} color={t.colors.textMuted} />
-                    </TouchableOpacity>
-                  )}
-                />
-                <Button
-                  title={emailMode === 'signup' ? 'Create account' : 'Sign in'}
-                  onPress={handleEmailAuth}
-                  loading={emailSubmitting}
-                  disabled={loading || emailSubmitting}
-                  style={styles.emailSubmit}
-                  accessibilityLabel={emailMode === 'signup' ? 'Create account with email' : 'Sign in with email'}
-                />
-              </>
-            ) : (
-              <Button
-                title="Continue with email"
-                variant="tertiary"
-                onPress={() => setEmailFormOpen(true)}
-                style={styles.emailSubmit}
-                accessibilityLabel="Continue with email"
-              />
-            )}
-            <TouchableOpacity
-              onPress={() => switchEmailMode(emailMode === 'signup' ? 'signin' : 'signup')}
-              accessibilityRole="button"
-              accessibilityLabel={emailMode === 'signup' ? 'Switch to signing in' : 'Switch to creating an account'}
-              style={styles.textAction}
-            >
-              <Text style={[styles.textActionLabel, live.textActionLabel]}>
-                {emailMode === 'signup' ? 'Already have an account?' : 'New here?'}
-                <Text style={[styles.textActionAccent, live.textActionAccent]}>
-                  {emailMode === 'signup' ? ' Sign in' : ' Create an account'}
-                </Text>
+          <View style={[styles.sheet, live.sheet, { paddingBottom: spacing.lg + insets.bottom }]}>
+            {/* ── Heading block ──
+                Small mark for continuity, the mode heading one size below
+                Welcome's, one line on what the account is for. E-7 (D96)
+                is still honoured: the why-account line is here, on the form
+                that asks; the full data story stays in the Article 9 gate. */}
+            <View style={styles.brand}>
+              <VolyumeMark size={18} style={styles.brandMark} />
+              <Text style={[styles.heading, live.heading]} accessibilityRole="header">
+                {emailMode === 'signup' ? 'Create your account' : 'Welcome back'}
               </Text>
-            </TouchableOpacity>
-            {/* E-3: sign-in mode only. Creating an account has no password to
-                recover yet, so the link would be noise there. */}
-            {emailMode === 'signin' ? (
+              <Text style={[styles.whyAccount, live.whyAccount]}>
+                {emailMode === 'signup'
+                  ? 'Keep your training, nutrition and progress synced across devices.'
+                  : 'Sign in to pick up where you left off.'}
+              </Text>
+            </View>
+
+            {/* ── OAuth sign-in ──
+                Apple on iOS, Google on Android (see OAuthButtons for the
+                platform split). Raised one surface so it reads on the sheet. */}
+            <OAuthButtons
+              onApple={() => handleOAuth('apple')}
+              onGoogle={() => handleOAuth('google')}
+              disabled={loading}
+              raised
+            />
+            {/* A7: the only affordance while waiting was dimmed buttons, no
+                indication anything is actually happening. A calm caption names
+                what's in progress.
+                AX-08 (launch accessibility audit): the caption wasn't marked
+                busy/live, so a screen reader never heard that sign-in was in
+                progress. accessibilityLiveRegion announces it on appearance
+                (polite, mirroring Toast's non-error pattern); accessibilityState
+                busy reinforces the in-progress state for the duration. */}
+            {loading ? (
+              <Text
+                style={[styles.oauthWaiting, live.oauthWaiting]}
+                accessibilityLiveRegion="polite"
+                accessibilityState={{ busy: true }}
+              >
+                Waiting for Google or Apple…
+              </Text>
+            ) : null}
+
+            {/* E-8 / E-2 / E-3: the persistent outcome state. Survives leaving
+                the app for the inbox and coming back, which a toast cannot. */}
+            {notice ? (
+              <View
+                style={[styles.notice, live.notice]}
+                accessibilityLiveRegion="polite"
+              >
+                <Ionicons name="mail-outline" size={16} color={t.colors.textSecondary} />
+                <Text style={[styles.noticeText, live.noticeText]}>{notice.text}</Text>
+                <TouchableOpacity
+                  onPress={() => setNotice(null)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Dismiss this message"
+                >
+                  <Ionicons name="close" size={16} color={t.colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            {/* ── Email + password ──
+                A second, equal way in (founder 2026-07-21). Any session it
+                creates flows through the same onAuthStateChange path as OAuth.
+                Create-account mode collapses the fields behind a primary
+                "Continue with email"; sign-in keeps them visible, since a
+                returning user already knows what they want. */}
+            <View style={styles.emailForm}>
+              {(emailMode === 'signin' || emailFormOpen) ? (
+                <>
+                  <TextField
+                    label="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    accessibilityLabel="Email address"
+                    placeholder="you@example.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    textContentType="emailAddress"
+                    editable={!emailSubmitting}
+                    // A5: email is a genuine text keyboard (Return key exists), so
+                    // unlike the numeric-pad sibling pairs elsewhere in the app,
+                    // returnKeyType/onSubmitEditing are live here, not dead props.
+                    returnKeyType="next"
+                    onSubmitEditing={() => passwordRef.current?.focus()}
+                    blurOnSubmit={false}
+                  />
+                  <TextField
+                    ref={passwordRef}
+                    label="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    accessibilityLabel="Password"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    textContentType={emailMode === 'signup' ? 'newPassword' : 'password'}
+                    returnKeyType="go"
+                    onSubmitEditing={handleEmailAuth}
+                    editable={!emailSubmitting}
+                    // A5: show/hide toggle, mirrored from EmailPasswordFields.js
+                    // (same icon, same accessibility label convention) rather than
+                    // swapping LoginScreen over to that component -- primary
+                    // sign-in funnel, smaller blast radius per the ruling.
+                    trailing={(
+                      <TouchableOpacity
+                        style={styles.eyeBtn}
+                        onPress={() => setShowPassword(v => !v)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                      >
+                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={19} color={t.colors.textMuted} />
+                      </TouchableOpacity>
+                    )}
+                  />
+                  <Button
+                    title={emailMode === 'signup' ? 'Create account' : 'Sign in'}
+                    onPress={handleEmailAuth}
+                    loading={emailSubmitting}
+                    disabled={loading || emailSubmitting}
+                    accessibilityLabel={emailMode === 'signup' ? 'Create account with email' : 'Sign in with email'}
+                  />
+                </>
+              ) : (
+                <Button
+                  title="Continue with email"
+                  onPress={() => setEmailFormOpen(true)}
+                  accessibilityLabel="Continue with email"
+                />
+              )}
               <TouchableOpacity
-                onPress={handleForgotPassword}
-                disabled={resetSubmitting || emailSubmitting}
+                onPress={() => switchEmailMode(emailMode === 'signup' ? 'signin' : 'signup')}
                 accessibilityRole="button"
-                accessibilityLabel="Send a link to get back into your account"
-                accessibilityState={{ disabled: resetSubmitting || emailSubmitting, busy: resetSubmitting }}
+                accessibilityLabel={emailMode === 'signup' ? 'Switch to signing in' : 'Switch to creating an account'}
                 style={styles.textAction}
               >
-                <Text style={[styles.textActionAccent, live.textActionAccent]}>
-                  {resetSubmitting ? 'Sending…' : 'Forgot your password?'}
+                <Text style={[styles.textActionLabel, live.textActionLabel]}>
+                  {emailMode === 'signup' ? 'Already have an account?' : 'New here?'}
+                  <Text style={[styles.textActionAccent, live.textActionAccent]}>
+                    {emailMode === 'signup' ? ' Sign in' : ' Create an account'}
+                  </Text>
                 </Text>
               </TouchableOpacity>
-            ) : null}
+              {/* E-3: sign-in mode only. Creating an account has no password to
+                  recover yet, so the link would be noise there. */}
+              {emailMode === 'signin' ? (
+                <TouchableOpacity
+                  onPress={handleForgotPassword}
+                  disabled={resetSubmitting || emailSubmitting}
+                  accessibilityRole="button"
+                  accessibilityLabel="Send a link to get back into your account"
+                  accessibilityState={{ disabled: resetSubmitting || emailSubmitting, busy: resetSubmitting }}
+                  style={styles.textAction}
+                >
+                  <Text style={[styles.textActionAccent, live.textActionAccent]}>
+                    {resetSubmitting ? 'Sending…' : 'Forgot your password?'}
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {/* The one legal link the pre-account stack can show in-app.
+                Quiet, readable, at the foot of the sheet. */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('PrivacyPolicy')}
+              accessibilityRole="link"
+              accessibilityLabel="Privacy policy"
+              style={styles.legal}
+            >
+              <Text style={[styles.legalText, live.legalText]}>Privacy policy</Text>
+            </TouchableOpacity>
+
+            {/* "Continue without an account" removed per
+                IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1 (no anonymous mode). */}
           </View>
-
-          {/* One restrained trust line, both modes (founder ruling: no
-              trial talk, no payment-card mention, and D145: no blanket
-              offline claim on the account step). */}
-          <Text style={[styles.trust, live.trust]}>No ads · Export your data anytime</Text>
-
-          {/* "Continue without an account" removed per
-              IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1 (no anonymous mode). */}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -462,19 +494,29 @@ export default function LoginScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
+  // The backdrop capture: framed like a card, turned away, dimmed.
+  shotFrame: {
+    position: 'absolute', borderRadius: radius.xl, overflow: 'hidden',
+    borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface,
+    opacity: 0.62, transform: [{ rotate: '-7deg' }],
+  },
+  shot: { width: '100%', height: '100%' },
+
+  // The sheet is pushed to the bottom; anything above it is backdrop.
+  scroll: { flexGrow: 1, justifyContent: 'flex-end' },
+  fade: { height: 140 },
+  sheet: {
+    paddingHorizontal: spacing.xl, paddingTop: spacing.xl,
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl,
+    borderTopWidth: 1, borderColor: colors.borderSubtle,
   },
 
-  // E-9 back chevron row (same shape as FreeStarter's top bar).
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+  // E-9 back chevron, on a round scrim over the capture.
+  topBar: { position: 'absolute', top: 0, left: 0, zIndex: 2, paddingHorizontal: spacing.lg },
+  backScrim: {
+    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: withAlpha(colors.background, alpha.half),
   },
 
   // E-8 persistent notice.
@@ -482,7 +524,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    marginTop: spacing.lg,
+    marginBottom: spacing.md,
     padding: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -491,43 +533,20 @@ const styles = StyleSheet.create({
   },
   noticeText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
-  // Heading block: left-aligned, like every titled screen inside the app.
-  brand: {
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    paddingBottom: spacing.xxl,
-  },
-  brandMark: {
-    marginBottom: spacing.md,
-  },
-  // The largest text on the screen: it carries the mode (create vs sign in).
-  heading: {
-    ...type.h2,
-    color: colors.textPrimary,
-  },
-  // E-7: the one why-account line.
-  whyAccount: {
-    ...type.bodySm,
-    color: colors.textSecondary,
-  },
-  trust: {
-    ...type.label,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.lg,
-  },
-  oauthWaiting: {
-    ...type.caption,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.sm,
-  },
+  // Heading block: left-aligned, like every titled screen inside the app;
+  // the heading one size below Welcome's, tight to its one line.
+  brand: { alignItems: 'flex-start', gap: spacing.xs, paddingBottom: spacing.xl },
+  brandMark: { marginBottom: spacing.md },
+  heading: { ...type.h2, fontSize: fontSize.xl, lineHeight: Math.round(fontSize.xl * 1.35), color: colors.textPrimary },
+  whyAccount: { ...type.bodySm, color: colors.textSecondary },
+  oauthWaiting: { ...type.caption, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.md },
   emailForm: { gap: spacing.md },
-  emailSubmit: { marginTop: 0 },
   // Text actions: no pill, a full touch target, the accent only on the verb.
   textAction: { minHeight: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
   textActionLabel: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
   textActionAccent: { ...type.bodyStrong, fontSize: fontSize.sm, color: colors.primary },
+  legal: { minHeight: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
+  legalText: { ...type.caption, color: colors.textMuted },
   eyeBtn: {
     minWidth: touchTarget.minimum,
     minHeight: touchTarget.minimum,
@@ -547,12 +566,15 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    heading: { ...t.type.h2, color: t.colors.textPrimary },
+    shotFrame: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
+    sheet: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    backScrim: { backgroundColor: withAlpha(t.colors.background, alpha.half) },
+    heading: { ...t.type.h2, fontSize: t.fontSize.xl, lineHeight: Math.round(t.fontSize.xl * 1.35), color: t.colors.textPrimary },
     whyAccount: { ...t.type.bodySm, color: t.colors.textSecondary },
-    trust: { ...t.type.label, color: t.colors.textSecondary },
     oauthWaiting: { ...t.type.caption, color: t.colors.textSecondary },
     textActionLabel: { ...t.type.bodySm, color: t.colors.textSecondary },
     textActionAccent: { ...t.type.bodyStrong, fontSize: t.fontSize.sm, color: t.colors.primary },
+    legalText: { ...t.type.caption, color: t.colors.textMuted },
     notice: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     noticeText: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
