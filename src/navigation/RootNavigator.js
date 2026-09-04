@@ -13,7 +13,7 @@ const SPLASH_HERO = require('../../assets/volyume-wordmark.png');
 const HERO_ASPECT = 1032 / 277;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, spacing, motion, type, fontSize, fontWeight, fontFamily } from '../styles/theme';
+import { colors, spacing, motion, fontSize, fontWeight, fontFamily } from '../styles/theme';
 // CP-10 stage 2 (docs/ux-world-class-audit-2026-07-09/
 // CP-10-restart-free-theming-plan.md, "Stage 2 — Root chrome"): the
 // NavigationContainer theme prop and the stackOptions header/card colours
@@ -39,7 +39,6 @@ import { getSupabaseClient } from '../lib/supabase';
 // Campaign 24 Wave E: the pure boot-time auth presentation decision (the
 // startup auth-hydration flash fix — see the give-up branch in the render).
 import { classifyAuthBoot } from '../lib/authBootGate';
-import { TAGLINE } from '../lib/brand';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
 import { seedExercisesIfNeeded, topUpNewExercisesIfNeeded, backfillExerciseMetadataIfNeeded, rederiveExerciseMetadataIfNeeded } from '../lib/seedExercises';
 import * as haptics from '../lib/haptics';
@@ -2137,7 +2136,6 @@ function SplashScreen() {
   const wordOpacity  = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
   const wordY        = useRef(new Animated.Value(reduceMotion ? 0 : 12)).current;
   const accentScaleX = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
-  const tagOpacity   = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -2182,12 +2180,6 @@ function SplashScreen() {
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-      Animated.timing(tagOpacity, {
-        toValue: 1,
-        duration: 300,
-        easing: Easing.out(Easing.quad),
-        useNativeDriver: true,
-      }),
     ]).start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -2209,10 +2201,6 @@ function SplashScreen() {
       </Animated.View>
 
       <Animated.View style={[splashStyles.accent, { transform: [{ scaleX: accentScaleX }] }]} />
-
-      <Animated.Text style={[splashStyles.tagline, { opacity: tagOpacity }]}>
-        {TAGLINE}
-      </Animated.Text>
     </View>
   );
 }
@@ -2269,12 +2257,6 @@ const splashStyles = StyleSheet.create({
     height: 2,
     borderRadius: 1,
     backgroundColor: colors.primaryFill,
-    marginTop: spacing.md,
-  },
-  tagline: {
-    ...type.label,
-    color: colors.textMuted,
-    textAlign: 'center',
     marginTop: spacing.md,
   },
 });

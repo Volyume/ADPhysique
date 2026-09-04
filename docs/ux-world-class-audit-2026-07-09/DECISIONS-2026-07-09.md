@@ -5740,3 +5740,63 @@ labels were never shown and are untouched. The web page's hero sub-line
 still describes a Free/Pro split (pre-D137); flagged, not changed.
 
 **Engine, ED-safety, consent, billing: untouched.**
+
+## D145 — Premium first launch: Welcome and Create Account redesigned (founder spec, 2026-09-04)
+
+**Authority.** The founder's written spec of 2026-09-04 ("VOLYUME —
+PREMIUM FIRST-LAUNCH + ACCOUNT CREATION REDESIGN"), delivered in chat
+after the D144 welcome was judged "utterly shit" on device: generic,
+text-led, dead space, a headline that diced across lines, no product on
+the product's first screen. The spec is the contract; this entry records
+how it was met and the two places judgement was needed.
+
+**Welcome (`src/screens/WelcomeScreen.js`).** Small wordmark (24dp),
+headline "Everything you need to build your physique.", support line
+"Training, nutrition, progress and coaching, connected in one app.", the
+product as the hero, "Completely free · No ads", Get started, and a text
+sign-in. The hero is three REAL captures (the store-listing screenshots
+under `marketing/hq/assets/screenshots`, resized to 480px into
+`assets/welcome/`: Today, a set being logged, the day's nutrition) framed
+at the app's card radius with a hairline border, the main one centred,
+the other two behind at 84%, turned 5 degrees and dimmed, the bottom
+fading into the page. Nothing drawn, no invented numbers. The
+composition is sized from the height the words and the actions leave
+(measured by onLayout), capped at 55% of the width, and centred between
+two flex spacers, so a tall phone gets a taller composition and a short
+phone a smaller one, never a dead band and never a CTA below the fold.
+
+**Type.** The headline is the display face at the h2 size (24dp,
+InterDisplay-Bold, line height 1.2): at h1 (32dp) "Everything you need"
+cannot fit a 360dp line and the founder's screenshot showed exactly that
+dicing. At 24dp the line breaks after "to". The support line is body;
+the free line and the sign-in are label and small body; the accent is on
+the verb "Sign in" only.
+
+**Create Account (`src/screens/LoginScreen.js`).** The faint background
+wordmark, the 56dp centred mark, the tagline, the divider, the "or"
+divider and the verbose why-account sentence are gone. Now: back chevron,
+a 20dp wordmark, left-aligned heading ("Create your account" / "Welcome
+back"), one line ("Save your training, nutrition and progress across
+devices." / "Sign in to pick up where you left off."), Continue with
+Google (neutral provider button), Continue with email (tertiary, accent
+label; expands to the fields), the mode toggle and forgot-password as
+text actions with full touch targets, and one restrained trust line
+"No ads · Export your data anytime". No blanket offline claim on the
+account step. Auth logic, session handling, the identity invariant and
+the consent gate are untouched.
+
+**Judgement calls.** (1) The C5-P34-01 gloss pin attached to the word
+"coaching" in the founder's support line; the pin now attaches to the
+product term and to the noun "coach", since a plain English list of four
+things is not jargon. (2) The Welcome sign-in was pinned as "contained
+neutral chrome"; the founder's spec makes it a text action, and the pin
+now guards the intent (touch target, no underline, accent on the verb).
+
+**Render.** Both screens were rendered from the same values as the code
+(Inter, the theme's colours, radii and spacing, the real captures) at
+360x800 and 412x915, plus the sign-in mode, and reviewed side by side:
+`https://claude.ai/code/artifact/9c7eb2a6-68f7-4beb-ab27-bf26e361147e`.
+
+**Engine, ED-safety, consent, billing: untouched.** One new test double
+(`__mocks__/expo-linear-gradient.js`): the real component calls a
+react-native function the test environment lacks.

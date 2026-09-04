@@ -427,9 +427,15 @@ describe('LoginScreen fully-free account step framing', () => {
   });
 
   test('the one why-account line names the account benefit, with no trial mention', async () => {
-    let tree;
-    await act(async () => { tree = create(<LoginScreen />); });
-    expect(html(tree)).toContain('Your plan and history are saved to your account, so nothing is lost if you change phone.');
+    // D145 (2026-09-04): one short line per mode on what the account is for.
+    let signupTree;
+    await act(async () => {
+      signupTree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />);
+    });
+    expect(html(signupTree)).toContain('Save your training, nutrition and progress across devices.');
+    let signinTree;
+    await act(async () => { signinTree = create(<LoginScreen />); });
+    expect(html(signinTree)).toContain('Sign in to pick up where you left off.');
   });
 
   test('the trust line shows in both modes and names no payment card, no trial, no Pro', async () => {
@@ -437,11 +443,12 @@ describe('LoginScreen fully-free account step framing', () => {
     await act(async () => {
       signupTree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />);
     });
-    expect(html(signupTree)).toContain('Works fully offline. Your data exports anytime. No ads.');
+    // D145: one restrained trust line, no blanket offline claim.
+    expect(html(signupTree)).toContain('No ads · Export your data anytime');
 
     let signinTree;
     await act(async () => { signinTree = create(<LoginScreen route={{ params: {} }} />); });
-    expect(html(signinTree)).toContain('Works fully offline. Your data exports anytime. No ads.');
+    expect(html(signinTree)).toContain('No ads · Export your data anytime');
 
     expect(html(signupTree)).not.toMatch(/trial|\bPro\b|payment card|14 day/i);
     expect(html(signinTree)).not.toMatch(/trial|\bPro\b|payment card|14 day/i);

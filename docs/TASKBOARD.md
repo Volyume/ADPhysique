@@ -3417,6 +3417,40 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## PREMIUM FIRST LAUNCH: WELCOME + CREATE ACCOUNT (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D145.
+
+Branch `claude/fix-sqlcipher-fresh-install`. Founder spec delivered in
+chat 2026-09-04; ruling and rationale: D145. Rendered for review at
+`https://claude.ai/code/artifact/9c7eb2a6-68f7-4beb-ab27-bf26e361147e`.
+
+**Gates.** Lint clean, full suite green (exact counts in the closure
+report). No migration, no new dependency (expo-linear-gradient was
+already installed), no native change: the next Android build from main
+carries it.
+
+**Device checklist (Android, next build from main, fresh install).**
+1. First screen, top to bottom: small wordmark, "Everything you need /
+   to build your physique." on exactly two lines, one support line, three
+   product screens with the Today screen in front and the other two
+   behind it at the edges, fading out at the bottom, "Completely free ·
+   No ads", the amber Get started, "Already have an account? Sign in".
+   Nothing scrolls; the button is on screen without scrolling.
+2. On a small phone (or with the display size set larger in Android
+   settings): the composition shrinks, the button stays on screen.
+3. Settings, Display, larger text on: headline three lines at most, no
+   overlap with the composition.
+4. Tap Sign in: the account screen opens in sign-in mode with "Welcome
+   back", the fields visible, and no faint background logo.
+5. Back, then Get started: the account screen in create mode with
+   "Create your account", Continue with Google, Continue with email
+   (amber label), "Already have an account? Sign in", the trust line.
+   Tap Continue with email: the fields and the Create account button
+   appear; the keyboard does not cover the button.
+6. Continue with Google still signs in; nothing about the account flow
+   changed beyond the visuals.
+ED-safety: copy and layout only; nothing weight, food or notification
+adjacent.
+
 ## FIRST SCREEN REBUILT, TAGLINE RETIRED (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D144.
 
 Branch `claude/fix-sqlcipher-fresh-install`. Founder device verdict on

@@ -1,6 +1,18 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-04 — PREMIUM FIRST LAUNCH: WELCOME + CREATE ACCOUNT (D145) ★
+
+Founder spec (in chat, 2026-09-04) after the D144 welcome failed on
+device. Welcome: small mark, benefit headline at the display face / h2
+size, one support line, three REAL product captures as the hero (sized
+from the free height, centred between spacers), "Completely free · No
+ads", Get started, text sign-in. Create Account: no watermark, no
+tagline, no dividers; left-aligned heading, one line, Google, email,
+text actions, one trust line. Rendered for review (artifact link in
+D145). Board entry carries the device checklist. Record: D145.
+
+===============================================================================
 ## ★ 2026-09-04 — FIRST SCREEN REBUILT, TAGLINE RETIRED (D144) ★
 
 Founder device verdict on build 3564: "Less thinking. More lifting." is the

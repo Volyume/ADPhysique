@@ -73,9 +73,13 @@ describe('share copy polish', () => {
     const upgrade = read('ProUpgradeScreen.js');
     const credits = read('CreditsScreen.js');
 
-    expect(welcome).toMatch(/signInLink: \{[\s\S]*minHeight: touchTarget\.minimum,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(welcome).toContain('signInAction: { ...type.label, color: colors.textPrimary }');
-    expect(welcome).not.toContain('signInAction: { ...type.label, color: colors.primary }');
+    // Founder spec 2026-09-04 (D145): Welcome's sign-in is a TEXT action,
+    // not a pill: a full touch target, no underline, and the accent only on
+    // the verb. The pin's intent (a deliberate, accessible secondary control
+    // rather than an underlined link) is unchanged.
+    expect(welcome).toMatch(/signInLink: \{ minHeight: touchTarget\.minimum/);
+    expect(welcome).not.toContain("textDecorationLine: 'underline'");
+    expect(welcome).toMatch(/signInAction: \{[^}]*color: colors\.primary/);
 
     expect(upgrade).toContain('title="Skip for now"');
     expect(upgrade).toContain('variant="outline"');

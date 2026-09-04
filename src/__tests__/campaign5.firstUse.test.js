@@ -1275,7 +1275,11 @@ describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, 
     // uses no coaching vocabulary at all, so either the gloss renders there
     // or the word never appears there. Both are checked so a future line
     // that reintroduces the term cannot arrive without its gloss.
-    const usesTerm = /\bcoach(ing)?\b/i.test(src) || /Precision Coaching/.test(src);
+    // D145: the founder's support line names "coaching" as one of the four
+    // things the app connects; that is plain English, not the product term.
+    // The gloss obligation attaches to the product term and to the Coach
+    // surface's own noun.
+    const usesTerm = /\bcoach\b/i.test(src) || /Precision Coaching/.test(src);
     if (usesTerm) {
       expect(src).toContain('<InfoTooltip text={GLOSSARY.precisionCoaching}');
     } else {
@@ -1411,7 +1415,8 @@ describe('WELLBEING + ACCOUNT: the two settings sentences (W-3/W-4, E-7, D96)', 
     // the word "device" ambiguity ("phone") and read cleanly without a
     // trial thread; the why-account law itself (one line, said once, here)
     // is what this test still pins.
-    expect(login).toContain('Your plan and history are saved to your account, so nothing is lost if you change phone.');
+    // AMENDED 2026-09-04 (D145): shorter still, one line per mode.
+    expect(login).toContain('Save your training, nutrition and progress across devices.');
     // One line, not a privacy lecture: the Article 9 gate that follows is
     // still the place the full data story is told, so no consent copy is
     // duplicated onto this screen.

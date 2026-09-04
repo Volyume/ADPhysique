@@ -10,7 +10,6 @@ import TextField from '../components/TextField';
 import Button from '../components/Button';
 import { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, resetPassword } from '../lib/supabase';
 import { audit } from '../lib/observability';
-import { TAGLINE } from '../lib/brand';
 import { useToast } from '../components/Toast';
 import { authErrorMessage, isDuplicateSignup, AUTH_COPY } from '../lib/authErrorCopy';
 import { touchTarget } from '../styles/layout';
@@ -248,11 +247,6 @@ export default function LoginScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
-      {/* Decorative background wordmark, faint and centred */}
-      <View style={styles.bgDecor} pointerEvents="none">
-        <VolyumeMark size={120} style={{ opacity: 0.04 }} />
-      </View>
-
       {/* E-9 (D96): the WelcomeStack runs headerShown: false, so this screen
           had no visible back control at all, against the app's own convention
           (contrast WellbeingCheckScreen's BackHeader). Hardware back and the
@@ -278,32 +272,24 @@ export default function LoginScreen({ navigation, route }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Brand block ──
-              The heading is the largest text on the screen and carries the
-              mode: "Create your account" for a new signup, "Welcome back"
-              for a returning sign-in. The tagline stays, small, underneath. */}
+          {/* ── Heading block (D145, 2026-09-04) ──
+              Welcome sells; this screen converts. A small mark for
+              continuity, the mode heading, and one short line on what the
+              account is for. No tagline, no watermark, no second pitch.
+              E-7 (D96) is still honoured: the why-account line is here, on
+              the form that asks; the full data story stays in the Article 9
+              gate that follows. */}
           <View style={styles.brand}>
-            <VolyumeMark size={56} style={styles.brandMark} />
-            <Text style={[styles.heading, live.heading]}>
+            <VolyumeMark size={20} style={styles.brandMark} />
+            <Text style={[styles.heading, live.heading]} accessibilityRole="header">
               {emailMode === 'signup' ? 'Create your account' : 'Welcome back'}
             </Text>
-            <Text style={[styles.brandTagline, live.brandTagline]}>{TAGLINE}</Text>
+            <Text style={[styles.whyAccount, live.whyAccount]}>
+              {emailMode === 'signup'
+                ? 'Save your training, nutrition and progress across devices.'
+                : 'Sign in to pick up where you left off.'}
+            </Text>
           </View>
-
-          {/* Thin divider below brand */}
-          <View style={[styles.brandDivider, live.brandDivider]} />
-
-          {/* E-7 (D96): the screen that actually demands an account carried
-              no rationale at all - the approved "why an account" sentence was
-              written on ProOnboarding step 1, which the live account-first
-              flow auto-advances past, so it never rendered for anyone. Same
-              sentence, on the form that asks. One line, not a privacy
-              lecture; the full account and data story stays in the Article 9
-              gate that follows. Founder ruling: Volyume is fully free, so
-              this is the one why-account line, with no trial mention. */}
-          <Text style={[styles.whyAccount, live.whyAccount]}>
-            Your plan and history are saved to your account, so nothing is lost if you change phone.
-          </Text>
 
           {/* ── OAuth sign-in ──
               Apple on iOS, Google on Android (see OAuthButtons for the
@@ -333,13 +319,8 @@ export default function LoginScreen({ navigation, route }) {
 
           {/* ── Email + password ──
               A second, equal way in (founder 2026-07-21). Any session it
-              creates flows through the same onAuthStateChange path as OAuth. */}
-          <View style={styles.emailDivider}>
-            <View style={[styles.emailDividerLine, live.emailDividerLine]} />
-            <Text style={[styles.emailDividerText, live.emailDividerText]}>or</Text>
-            <View style={[styles.emailDividerLine, live.emailDividerLine]} />
-          </View>
-
+              creates flows through the same onAuthStateChange path as OAuth.
+              D145: no "or" divider; the options read as one short list. */}
           {/* E-8 / E-2 / E-3: the persistent outcome state. Survives leaving
               the app for the inbox and coming back, which a toast cannot. */}
           {notice ? (
@@ -438,10 +419,13 @@ export default function LoginScreen({ navigation, route }) {
               onPress={() => switchEmailMode(emailMode === 'signup' ? 'signin' : 'signup')}
               accessibilityRole="button"
               accessibilityLabel={emailMode === 'signup' ? 'Switch to signing in' : 'Switch to creating an account'}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.textAction}
             >
-              <Text style={[styles.emailToggle, live.emailToggle]}>
-                {emailMode === 'signup' ? 'Have an account? Sign in' : 'New here? Create an account'}
+              <Text style={[styles.textActionLabel, live.textActionLabel]}>
+                {emailMode === 'signup' ? 'Already have an account?' : 'New here?'}
+                <Text style={[styles.textActionAccent, live.textActionAccent]}>
+                  {emailMode === 'signup' ? ' Sign in' : ' Create an account'}
+                </Text>
               </Text>
             </TouchableOpacity>
             {/* E-3: sign-in mode only. Creating an account has no password to
@@ -453,21 +437,19 @@ export default function LoginScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Send a link to get back into your account"
                 accessibilityState={{ disabled: resetSubmitting || emailSubmitting, busy: resetSubmitting }}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={styles.textAction}
               >
-                <Text style={[styles.emailToggle, live.emailToggle]}>
+                <Text style={[styles.textActionAccent, live.textActionAccent]}>
                   {resetSubmitting ? 'Sending…' : 'Forgot your password?'}
                 </Text>
               </TouchableOpacity>
             ) : null}
           </View>
 
-          {/* Trust line, shown under the form in both modes (founder
-              ruling: no trial talk, no payment-card mention -- the app has
-              neither). */}
-          <Text style={[styles.whyAccount, live.whyAccount]}>
-            Works fully offline. Your data exports anytime. No ads.
-          </Text>
+          {/* One restrained trust line, both modes (founder ruling: no
+              trial talk, no payment-card mention, and D145: no blanket
+              offline claim on the account step). */}
+          <Text style={[styles.trust, live.trust]}>No ads · Export your data anytime</Text>
 
           {/* "Continue without an account" removed per
               IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1 (no anonymous mode). */}
@@ -480,19 +462,11 @@ export default function LoginScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
 
-  bgDecor: {
-    position: 'absolute',
-    top: '15%',
-    alignSelf: 'center',
-    zIndex: 0,
-  },
-
   scroll: {
     flexGrow: 1,
     paddingHorizontal: spacing.xl,
-    paddingTop: spacing.xxxl,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xxl,
-    justifyContent: 'center',
   },
 
   // E-9 back chevron row (same shape as FreeStarter's top bar).
@@ -517,36 +491,30 @@ const styles = StyleSheet.create({
   },
   noticeText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
-  // Brand block
+  // Heading block: left-aligned, like every titled screen inside the app.
   brand: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: spacing.sm,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.xxl,
   },
   brandMark: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   // The largest text on the screen: it carries the mode (create vs sign in).
   heading: {
     ...type.h2,
     color: colors.textPrimary,
   },
-  brandTagline: {
-    fontSize: fontSize.sm,
-    color: colors.textMuted,
-  },
-  brandDivider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginBottom: spacing.xxl,
-  },
-  // E-7: the "why an account" line, in the caption register the screen
-  // already uses for its other quiet explanation (oauthWaiting below).
+  // E-7: the one why-account line.
   whyAccount: {
-    ...type.caption,
+    ...type.bodySm,
+    color: colors.textSecondary,
+  },
+  trust: {
+    ...type.label,
     color: colors.textSecondary,
     textAlign: 'center',
-    marginBottom: spacing.lg,
+    marginTop: spacing.lg,
   },
   oauthWaiting: {
     ...type.caption,
@@ -554,12 +522,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.sm,
   },
-  emailDivider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg, marginBottom: spacing.md },
-  emailDividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  emailDividerText: { color: colors.textMuted, fontSize: fontSize.xs },
   emailForm: { gap: spacing.md },
-  emailSubmit: { marginTop: spacing.xs },
-  emailToggle: { ...type.caption, color: colors.primary, textAlign: 'center', marginTop: spacing.xs },
+  emailSubmit: { marginTop: 0 },
+  // Text actions: no pill, a full touch target, the accent only on the verb.
+  textAction: { minHeight: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
+  textActionLabel: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
+  textActionAccent: { ...type.bodyStrong, fontSize: fontSize.sm, color: colors.primary },
   eyeBtn: {
     minWidth: touchTarget.minimum,
     minHeight: touchTarget.minimum,
@@ -580,13 +548,11 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     heading: { ...t.type.h2, color: t.colors.textPrimary },
-    brandTagline: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    whyAccount: { ...t.type.caption, color: t.colors.textSecondary },
-    brandDivider: { backgroundColor: t.colors.border },
+    whyAccount: { ...t.type.bodySm, color: t.colors.textSecondary },
+    trust: { ...t.type.label, color: t.colors.textSecondary },
     oauthWaiting: { ...t.type.caption, color: t.colors.textSecondary },
-    emailDividerLine: { backgroundColor: t.colors.border },
-    emailDividerText: { color: t.colors.textMuted },
-    emailToggle: { ...t.type.caption, color: t.colors.primary },
+    textActionLabel: { ...t.type.bodySm, color: t.colors.textSecondary },
+    textActionAccent: { ...t.type.bodyStrong, fontSize: t.fontSize.sm, color: t.colors.primary },
     notice: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     noticeText: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
