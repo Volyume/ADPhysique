@@ -252,6 +252,13 @@ export default function PlansScreen({ navigation }) {
   // `visible`). `startingPlan` is the commit's own busy flag.
   const [planPreview, setPlanPreview] = useState(null);
   const [startingPlan, setStartingPlan] = useState(false);
+  // Item 3 (D141): true from the EmptyState tap until prepareStartWithPlan
+  // resolves (sheet set) or the attempt fails, so the button can show it is
+  // doing real work (a DB-backed capability preflight plus a full engine dry
+  // run) instead of sitting inert. Reset in `finally` alongside the ref
+  // guard below, which stays for the same-render double-entry protection
+  // this state cannot provide by itself.
+  const [preparingPlan, setPreparingPlan] = useState(false);
 
   const scrollRef = useRef(null);
   const peekRef = useRef(null);
@@ -484,6 +491,7 @@ export default function PlansScreen({ navigation }) {
   async function handleStartWithPlanPress() {
     if (startWithPlanRef.current) return;
     startWithPlanRef.current = true;
+    setPreparingPlan(true);
     try {
       const prep = await prepareStartWithPlan(user.id, userProfile, { mode: 'first' });
       if (!prep.ok) {
@@ -498,6 +506,7 @@ export default function PlansScreen({ navigation }) {
       setPlanPreview({ preview: prep.preview, otherPlansCount: prep.otherPlansCount });
     } finally {
       startWithPlanRef.current = false;
+      setPreparingPlan(false);
     }
   }
 
@@ -1304,13 +1313,23 @@ export default function PlansScreen({ navigation }) {
              the same real two-CTA EmptyState shape the free branch had,
              with the coach-built plan Home's Pro branch already offers, so
              the verb and the action finally agree. */
+          /* D141 item 10a: unified with HomeScreen's own no-plan copy.
+             Voice rule applied: COACHING_VOICE_SYNTHESIS_LOCKED.md addendum
+             "actor-naming rule (two registers)" (line ~836) -- "Volyume"
+             names the app only (saving, syncing, reminders), never the
+             coaching decider; building the plan is Precision Coaching's
+             call, so the actor is "your coach", the locked informal actor
+             for running prose (line ~829-830), not collaborative "we".
+             Noun unified to "setup" (was "profile" here). Plans' own extra
+             clause (the library) is kept. */
           <EmptyState
             icon="barbell-outline"
             title="No active plan yet"
-            text={`Start with a plan and we'll build one from your profile, or browse the library and pick one yourself. ${BLOCK_START_SENTENCE}`}
+            text={`Start with a plan and your coach builds one from your setup, or browse the library and pick one yourself. ${BLOCK_START_SENTENCE}`}
             actionLabel="Start with a plan"
             onAction={handleStartWithPlanPress}
-            actionAccessibilityLabel="Start with a plan built from your profile"
+            actionAccessibilityLabel="Start with a plan built from your setup"
+            busy={preparingPlan}
             secondaryLabel="Browse plans"
             onSecondary={() => navigation.navigate('PlanLibrary')}
             secondaryAccessibilityLabel="Browse the plan library"

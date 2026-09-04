@@ -337,6 +337,13 @@ export default function HomeScreen({ navigation, route }) {
   // is written while it is open.
   const [planPreview, setPlanPreview] = useState(null);
   const [startingPlan, setStartingPlan] = useState(false);
+  // Item 3 (D141): true from the EmptyState tap until prepareStartWithPlan
+  // resolves (sheet set) or the attempt fails, so the button can show it is
+  // doing real work (a DB-backed capability preflight plus a full engine dry
+  // run) instead of sitting inert. Reset in `finally` alongside the ref
+  // guard, which stays for the same-render double-entry protection this
+  // state cannot provide by itself.
+  const [preparingPlan, setPreparingPlan] = useState(false);
   const startFlowRef = useRef(false);
   // COMP-008: the three "walked-in-with" readiness facts, captured on the
   // pre-workout prompt where they are accurate rather than recalled after the
@@ -1351,6 +1358,7 @@ export default function HomeScreen({ navigation, route }) {
   async function handleStartWithPlanPress() {
     if (startWithPlanRef.current) return;
     startWithPlanRef.current = true;
+    setPreparingPlan(true);
     try {
       const prep = await prepareStartWithPlan(user.id, userProfile, { mode: 'first' });
       if (!prep.ok) {
@@ -1365,6 +1373,7 @@ export default function HomeScreen({ navigation, route }) {
       setPlanPreview({ preview: prep.preview, otherPlansCount: prep.otherPlansCount });
     } finally {
       startWithPlanRef.current = false;
+      setPreparingPlan(false);
     }
   }
 
@@ -2349,9 +2358,20 @@ export default function HomeScreen({ navigation, route }) {
               title="No active plan yet"
               /* C5-P10-01 (D96): the "Start with a plan" action creates a
                  training block too, so it says so first. */
-              text={`Start with a plan and Volyume builds one from your setup. If you just signed in on this phone, your existing plan may still be arriving. ${BLOCK_START_SENTENCE}`}
+              /* D141 item 10a: unified with PlansScreen's own no-plan copy.
+                 Voice rule applied: COACHING_VOICE_SYNTHESIS_LOCKED.md
+                 addendum "actor-naming rule (two registers)" (line ~836) --
+                 "Volyume" names the app only (saving, syncing, reminders),
+                 never the coaching decider; building the plan is Precision
+                 Coaching's call, so the actor here is "your coach", the
+                 locked informal actor for running prose (line ~829-830),
+                 not "Volyume" and not collaborative "we". Noun unified to
+                 "setup" (was "setup" here already, "profile" on Plans).
+                 Home's own extra clause (the cloud-arrival note) is kept. */
+              text={`Start with a plan and your coach builds one from your setup. If you just signed in on this phone, your existing plan may still be arriving. ${BLOCK_START_SENTENCE}`}
               actionLabel="Start with a plan"
               onAction={handleStartWithPlanPress}
+              busy={preparingPlan}
               secondaryLabel="Browse plans"
               onSecondary={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary'); }}
             />

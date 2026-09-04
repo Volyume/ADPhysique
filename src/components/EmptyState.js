@@ -19,6 +19,16 @@ import useTheme from '../hooks/useTheme';
  *   ghost      - if true, renders faint/dismissible "your data will look like this" style
  *   onDismiss  - if provided with ghost, shows a dismiss control
  *   compact    - tighter padding for inline use
+ *   busy       - primary action is mid-attempt (item 3, D141): disables the
+ *                primary Button and morphs it to Button's own inline
+ *                ActivityIndicator/busy treatment (ADX-B26.1a). The
+ *                accessibility label stays the original actionLabel even
+ *                while the visual content is the spinner (Button always
+ *                sets accessibilityLabel from `title`), and
+ *                accessibilityState carries disabled+busy the same way
+ *                every other Button in the app does. The secondary action
+ *                is left enabled -- ruling: "Browse plans" never conflicts
+ *                with an in-flight "Start with a plan" preview.
  */
 export default function EmptyState({
   icon = 'information-circle-outline',
@@ -33,6 +43,7 @@ export default function EmptyState({
   ghost = false,
   onDismiss,
   compact = false,
+  busy = false,
 }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
@@ -86,6 +97,7 @@ export default function EmptyState({
               size="md"
               fullWidth={false}
               accessibilityLabel={actionAccessibilityLabel}
+              loading={busy}
             />
           )}
           {secondaryLabel && onSecondary && (
