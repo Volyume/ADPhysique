@@ -5,6 +5,7 @@
  * and the "waiting" caption shown while the dialog is up.
  */
 import { create, act } from 'react-test-renderer';
+import { Text } from 'react-native';
 
 const mockToastShow = jest.fn();
 // A5: shared fake `.focus()` the password field's forwarded ref exposes, so
@@ -385,20 +386,35 @@ describe('LoginScreen entry honesty and recovery (Wave B, D96)', () => {
     );
   });
 
-  test('E-9: a visible back control appears when there is somewhere to go back to', async () => {
+  // D145 (third pass): the account step is a sheet over Welcome. Closing
+  // it (backdrop, handle, hardware back) is the way back; when the Login
+  // route was pushed from elsewhere, closing also pops back there.
+  test('E-9: closing the sheet goes back when there is somewhere to go back to', async () => {
     const navigation = { canGoBack: () => true, goBack: jest.fn() };
     let tree;
     await act(async () => { tree = create(<LoginScreen navigation={navigation} />); });
-    const back = tree.root.findByProps({ accessibilityLabel: 'Back' });
-    await act(async () => { back.props.onPress(); });
+    const close = tree.root.findByProps({ accessibilityLabel: 'Close' });
+    await act(async () => { close.props.onPress(); });
     expect(navigation.goBack).toHaveBeenCalled();
   });
 
-  test('E-9: and never a dead control when the screen is the stack root', async () => {
+  test('E-9: and never pops when the screen is the stack root', async () => {
     const navigation = { canGoBack: () => false, goBack: jest.fn() };
     let tree;
     await act(async () => { tree = create(<LoginScreen navigation={navigation} />); });
-    expect(() => tree.root.findByProps({ accessibilityLabel: 'Back' })).toThrow();
+    const close = tree.root.findByProps({ accessibilityLabel: 'Close' });
+    await act(async () => { close.props.onPress(); });
+    expect(navigation.goBack).not.toHaveBeenCalled();
+  });
+
+  test('E-9: inside the email form a visible control returns to the sign-up options', async () => {
+    let tree;
+    await act(async () => { tree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />); });
+    const open = tree.root.findByProps({ accessibilityLabel: 'Continue with email' });
+    await act(async () => { open.props.onPress(); });
+    const back = tree.root.findByProps({ accessibilityLabel: 'Back to sign-up options' });
+    await act(async () => { back.props.onPress(); });
+    expect(() => tree.root.findByProps({ accessibilityLabel: 'Continue with email' })).not.toThrow();
   });
 
   test('no anonymous escape hatch survives anywhere on this screen', async () => {
@@ -413,7 +429,15 @@ describe('LoginScreen entry honesty and recovery (Wave B, D96)', () => {
 // the single why-account line, and the trust line in both modes, plus the
 // absence of any trial/Pro/payment-card copy.
 describe('LoginScreen fully-free account step framing', () => {
-  const html = (tree) => JSON.stringify(tree.toJSON());
+  // The sheet's own subtree: Welcome renders behind it and carries its own
+  // copy ("Completely free · No ads"), which is not the account step's.
+  const html = (tree) => {
+    const texts = [];
+    tree.root.findAll((n) => n.type === 'BottomSheetModal').forEach((modal) => {
+      modal.findAllByType(Text).forEach((n) => texts.push([].concat(n.props.children).join('')));
+    });
+    return texts.join(' | ');
+  };
 
   test('heading reads "Create your account" in create-account mode, "Welcome back" in sign-in mode', async () => {
     let signupTree;

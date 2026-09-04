@@ -5823,3 +5823,30 @@ this screen. The back chevron sits on a round half-alpha scrim so it reads
 over the capture. `PrivacyPolicy` is now registered in the pre-account
 stack so the link works before sign-in; `OAuthButtons` gained a `raised`
 prop. Sign-in mode uses the same sheet with the fields open.
+
+**Third pass, founder direction the same day: STOP iterating the route;
+authentication is a sheet over Welcome.** The second pass (capture plus
+sheet on its own route) was ruled busier, not more premium: a website
+authentication template. The model now: Welcome sells; tapping Get
+started raises a bottom sheet over the same Welcome (scrim-dimmed, still
+legible), and the sheet holds only the task. Built on the app's own
+`BottomSheet` (surface panel, card radius top corners, hairline, handle,
+backdrop and hardware-back dismiss, keyboard-aware) as
+`components/auth/AuthSheet.js`, which carries every former LoginScreen
+handler verbatim (OAuth, email sign-up and sign-in, duplicate-address
+and confirm-email notices, password reset; log keys unchanged). Content:
+"Create your account", one line, Continue with Google (raised one
+surface), Continue with email (primary amber), "Already have an account?
+Sign in", Privacy policy. Continue with email expands the SAME sheet into
+the form with a Back control to the options; Sign in opens the sheet as
+"Welcome back" with the fields visible, Forgot your password and "New
+here? Create an account". No mark, no artwork, no trust line, no second
+pitch inside the sheet. Fields use a new compact `TextField` size (48dp,
+the touch floor) rather than the 50dp default plus label spacing that
+read as oversized. The Login route still exists for the app's other
+entry points (PlanPreview's account wall, deep links) and renders
+Welcome with the sheet already open; closing it pops back when the route
+was pushed. Terms of use is not linked because the app has no terms page
+of its own (the web site carries only a privacy page); flagged, not
+invented. The Train backdrop capture is deleted. Rendered as four
+sequential states beside the approved Welcome before landing.

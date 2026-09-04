@@ -13,6 +13,18 @@ text actions, one trust line. Rendered for review (artifact link in
 D145). Board entry carries the device checklist. Record: D145.
 
 ===============================================================================
+## ★ 2026-09-04 — FIRST LAUNCH REDESIGNED (D145): PRODUCT-LED WELCOME, AUTH AS A SHEET ★
+
+Founder spec and three device verdicts in one day. Welcome (approved):
+wordmark, benefit headline, one line, three real captures as the hero,
+free line, Get started, text sign-in. Authentication: a bottom sheet
+over Welcome (`components/auth/AuthSheet.js`, all former LoginScreen
+logic moved verbatim); the Login route renders Welcome with the sheet
+open. Rendered for review; record D145 (three passes, with what was
+rejected and why). Board entry carries the checklist. No Android build
+dispatched; founder's call.
+
+===============================================================================
 ## ★ 2026-09-04 — FIRST SCREEN REBUILT, TAGLINE RETIRED (D144) ★
 
 Founder device verdict on build 3564: "Less thinking. More lifting." is the

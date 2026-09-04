@@ -3429,51 +3429,25 @@ already installed), no native change: the next Android build from main
 carries it.
 
 **Device checklist (Android, next build from main, fresh install).**
-1. First screen, top to bottom: small wordmark, "Everything you need /
-   to build your physique." on exactly two lines, one support line, three
-   product screens with the Today screen in front and the other two
-   behind it at the edges, fading out at the bottom, "Completely free ·
-   No ads", the amber Get started, "Already have an account? Sign in".
-   Nothing scrolls; the button is on screen without scrolling.
-2. On a small phone (or with the display size set larger in Android
-   settings): the composition shrinks, the button stays on screen.
-3. Settings, Display, larger text on: headline three lines at most, no
-   overlap with the composition.
-4. Tap Sign in: the same sheet in sign-in mode with "Welcome back", the
-   fields visible, the capture receding above it.
-5. Back, then Get started: the Train screen capture top-right behind a
-   charcoal sheet that holds "Create your account", one line, Continue
-   with Google (charcoal), Continue with email (amber), "Already have an
-   account? Sign in" and a small Privacy policy link. No trust line, no
-   ghost logo. Tap Continue with email: the fields and the Create account
-   button appear inside the sheet; the keyboard does not cover the button.
-   Tap Privacy policy: the in-app policy opens and Back returns.
-6. Continue with Google still signs in; nothing about the account flow
-   changed beyond the visuals.
-ED-safety: copy and layout only; nothing weight, food or notification
-adjacent.
-
-## FIRST SCREEN REBUILT, TAGLINE RETIRED (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D144.
-
-Branch `claude/fix-sqlcipher-fresh-install`. Founder device verdict on
-build 3564: the two-fragment tagline is banned copy, the sizes were
-mismatched, the mocked example week looked bad. Ruling and rationale: D144.
-
-**Gates.** Lint clean, full suite green (exact counts in the closure
-report). No migration, no dependency, no native change: the next Android
-build from main carries it.
-
-**Device checklist (Android, next build from main, fresh install).**
-1. First screen: wordmark, "Your plan adjusts to what you log." on one or
-   two lines at a size clearly below the wordmark's weight, one sentence
-   under it, then Get started, the sign-in pill and the trust row at the
-   bottom. No card, no example numbers, no "Less thinking".
-2. Rotate or use a small phone: the layout scrolls rather than clipping.
-3. Settings, Display, larger text on: the two lines grow with the theme and
-   still fit above the actions.
-4. Sign in screen: the same sentence sits under the mark in small muted
-   text. Settings, About: the same sentence under the version.
-5. Cold launch splash: the same sentence fades in under the wordmark.
+1. First screen: wordmark, "Everything you need / to build your
+   physique." on two clean lines, one support line, three real product
+   screens as the hero fading into the page, "Completely free · No ads",
+   Get started, and "Already have an account? Sign in" as plain text.
+   Get started is on screen without scrolling.
+2. Tap Get started: a sheet rises over the same Welcome (dimmed behind):
+   "Create your account", one line, Continue with Google, Continue with
+   email (amber), "Already have an account? Sign in", Privacy policy. No
+   logo or artwork inside the sheet. Swipe down or tap outside closes it.
+3. Tap Continue with email: the same sheet grows into Email, Password and
+   Create account, with a Back control that returns to the options. The
+   keyboard lifts the sheet; the button stays reachable.
+4. Close the sheet, tap Sign in: the sheet opens as "Welcome back" with
+   the fields visible, Sign in, Forgot your password? and "New here?
+   Create an account". Sign in with a real account and land in the app.
+5. Tap Privacy policy inside the sheet: the sheet closes and the policy
+   opens; Back returns to Welcome.
+6. Settings, Display, larger text on: the headline still breaks cleanly
+   and the sheet still fits.
 ED-safety: copy only; nothing weight, food or notification adjacent.
 
 ## FRESH-INSTALL INCIDENT (2026-09-04) — FIXED ON MAIN `9a2e6cfe`, ANDROID BUILD 3564 GREEN. Record D143. FOUNDER: INSTALL AND CONFIRM.

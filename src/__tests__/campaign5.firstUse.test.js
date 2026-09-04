@@ -104,49 +104,53 @@ describe('ROLLBACK SWITCH: the quiz-first flow stays dark with its infrastructur
  * nothing on the way back can step past consent or required-safe data.
  */
 describe('ACCOUNT: no anonymous flow (identity invariant, standing)', () => {
-  test('LoginScreen offers no way in without an account', () => {
-    const src = stripComments(read('screens/LoginScreen.js'));
-    expect(src).not.toMatch(/[Cc]ontinue without an account/);
-    expect(src).not.toMatch(/anonymous|isLocal|guest|skip sign|local user/i);
+  test('the account sheet offers no way in without an account', () => {
+    // D145 (third pass): the auth surface is components/auth/AuthSheet.js,
+    // a sheet over Welcome; LoginScreen.js is the route that opens it.
+    for (const f of ['components/auth/AuthSheet.js', 'screens/LoginScreen.js']) {
+      const src = stripComments(read(f));
+      expect(src).not.toMatch(/[Cc]ontinue without an account/);
+      expect(src).not.toMatch(/anonymous|isLocal|guest|skip sign|local user/i);
+    }
   });
 
-  test('the entry screens still route only to a real sign-in', () => {
+  test('the entry screen still routes only to a real sign-in', () => {
     const welcome = stripComments(read('screens/WelcomeScreen.js'));
-    expect(welcome).toMatch(/navigation\.navigate\('Login'/);
+    expect(welcome).toMatch(/<AuthSheet/);
     expect(welcome).not.toMatch(/anonymous|guest|without an account/i);
   });
 });
 
 describe('ACCOUNT: the sign-up CTA opens a sign-up form (E-1, D96)', () => {
-  test('LoginScreen reads the intent param Welcome has always sent', () => {
+  test('the Login route reads the intent param and Welcome opens the sheet in sign-up mode', () => {
     const src = read('screens/LoginScreen.js');
     expect(src).toMatch(/route\?\.params\?\.intent === 'pro_signup' \? 'signup' : 'signin'/);
-    // And the param is still sent, so the CTA is not silently back on sign-in.
-    expect(read('screens/WelcomeScreen.js')).toMatch(/navigation\.navigate\('Login', \{ intent: 'pro_signup' \}\)/);
+    // And Welcome's CTA opens create-account, not sign-in.
+    expect(stripComments(read('screens/WelcomeScreen.js'))).toMatch(/setSheet\('signup'\)/);
   });
 
-  test('"Already have an account?" still opens sign-in (no intent)', () => {
+  test('"Already have an account?" still opens sign-in', () => {
     const welcome = read('screens/WelcomeScreen.js');
-    expect(welcome).toMatch(/onPress=\{\(\) => navigation\.navigate\('Login'\)\}/);
+    expect(welcome).toMatch(/onPress=\{\(\) => setSheet\('signin'\)\}/);
   });
 });
 
 describe('ACCOUNT: failed auth is recoverable (E-3 / E-5, D96)', () => {
   test('the forgot-password flow calls the reset helper that nothing used to call', () => {
-    const src = read('screens/LoginScreen.js');
-    expect(src).toMatch(/import \{[^}]*resetPassword[^}]*\} from '\.\.\/lib\/supabase'/s);
+    const src = read('components/auth/AuthSheet.js');
+    expect(src).toMatch(/import \{[^}]*resetPassword[^}]*\} from '\.\.\/\.\.\/lib\/supabase'/s);
     expect(src).toMatch(/async function handleForgotPassword\(\)/);
     expect(stripComments(src)).toMatch(/await resetPassword\(e\)/);
     expect(src).toMatch(/Forgot your password\?/);
   });
 
   test('the reset promise stays conditional (Supabase answers unknown addresses identically)', () => {
-    const src = read('screens/LoginScreen.js');
+    const src = read('components/auth/AuthSheet.js');
     expect(src).toMatch(/If that email has an account/);
   });
 
   test('a connection failure names connectivity instead of blaming credentials', () => {
-    const src = stripComments(read('screens/LoginScreen.js'));
+    const src = stripComments(read('components/auth/AuthSheet.js'));
     // Every user-facing failure path routes through the shared mapping.
     expect(src).toMatch(/authErrorMessage\(result\.error\)/);
     expect(src).toMatch(/authErrorMessage\(error\)/);
@@ -160,23 +164,28 @@ describe('ACCOUNT: failed auth is recoverable (E-3 / E-5, D96)', () => {
 
 describe('ACCOUNT: a duplicate email is told the truth (E-2 / E-8, D96)', () => {
   test('the enumeration-protection shape is read as a duplicate, not a sent email', () => {
-    const src = stripComments(read('screens/LoginScreen.js'));
+    const src = stripComments(read('components/auth/AuthSheet.js'));
     expect(src).toMatch(/isDuplicateSignup\(data\)/);
     expect(read('lib/authErrorCopy.js')).toMatch(/identities\.length === 0/);
   });
 
   test('the confirm-email instruction persists on the form, it is not a toast', () => {
-    const src = stripComments(read('screens/LoginScreen.js'));
+    const src = stripComments(read('components/auth/AuthSheet.js'));
     // The state the user has to leave the app to act on lives on screen.
     expect(src).toMatch(/setNotice\(\{ text: AUTH_COPY\.unconfirmed \}\)/);
     expect(src).toMatch(/setNotice\(\{ text: AUTH_COPY\.duplicate \}\)/);
     expect(src).not.toMatch(/toast\.show\('Check your email to confirm/);
   });
 
-  test('LoginScreen has a visible back affordance (E-9)', () => {
-    const src = read('screens/LoginScreen.js');
-    expect(src).toMatch(/accessibilityLabel="Back"/);
-    expect(src).toMatch(/navigation\?\.canGoBack\?\.\(\)/);
+  test('the account step has a visible way back (E-9)', () => {
+    // D145: the sheet closes by handle, backdrop and hardware back (the
+    // BottomSheet contract); inside the email form a visible control
+    // returns to the provider choice; and when the Login route was pushed
+    // from elsewhere, closing the sheet goes back there.
+    const sheet = read('components/auth/AuthSheet.js');
+    expect(sheet).toMatch(/accessibilityLabel="Back to sign-up options"/);
+    const welcome = read('screens/WelcomeScreen.js');
+    expect(welcome).toMatch(/navigation\?\.canGoBack\?\.\(\)\) navigation\.goBack\(\)/);
   });
 });
 
@@ -1408,7 +1417,7 @@ describe('WELLBEING + ACCOUNT: the two settings sentences (W-3/W-4, E-7, D96)', 
   });
 
   test('the sign-in screen says why an account is needed (E-7)', () => {
-    const login = read('screens/LoginScreen.js');
+    const login = read('components/auth/AuthSheet.js');
     // The approved sentence existed only on a wizard step the live flow
     // auto-advances past, so nobody ever read it. AMENDED 2026-09-03
     // (fully-free product, founder decision): the wording changed to drop

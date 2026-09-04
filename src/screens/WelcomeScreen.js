@@ -11,6 +11,7 @@ import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { ONBOARDING_QUIZ_FIRST } from '../lib/onboarding/quizFlow';
 import { touchTarget } from '../styles/layout';
+import AuthSheet from '../components/auth/AuthSheet';
 
 // The product, as captured for the store listing (marketing/hq/assets/
 // screenshots, resized to 480px wide for the bundle). Real screens, real
@@ -37,7 +38,11 @@ const SHOT_ASPECT = 709 / 1388; // width / height of the captures
 // Per IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1: no anonymous mode. The
 // primary action routes to sign-up; the text action to sign-in.
 
-export default function WelcomeScreen({ navigation }) {
+export default function WelcomeScreen({ navigation, route }) {
+  // D145 (third pass): the account step is a sheet over this screen. Get
+  // started opens it in create-account mode, Sign in in sign-in mode; the
+  // Login route arrives with `sheet` set so it opens at once.
+  const [sheet, setSheet] = useState(route?.params?.sheet ?? null);
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
@@ -70,10 +75,16 @@ export default function WelcomeScreen({ navigation }) {
       navigation.navigate('QuizTraining');
       return;
     }
-    // E-1 (D96): the intent is READ by LoginScreen, which opens in
-    // create-account mode for it. "Sign in" below navigates without it and
-    // opens sign-in.
-    navigation.navigate('Login', { intent: 'pro_signup' });
+    // E-1 (D96): the sheet opens in create-account mode; "Sign in" below
+    // opens it in sign-in mode.
+    setSheet('signup');
+  }
+
+  function closeSheet() {
+    setSheet(null);
+    // Arrived on the Login route from elsewhere in the app: closing the
+    // sheet is the way back there, not a Welcome screen with nothing open.
+    if (route?.params?.sheet && navigation?.canGoBack?.()) navigation.goBack();
   }
 
   // Composition: the main capture centred, two behind it at a smaller scale,
@@ -144,7 +155,7 @@ export default function WelcomeScreen({ navigation }) {
             accessibilityRole="button"
             accessibilityLabel="Already have an account? Sign in"
             style={styles.signInLink}
-            onPress={() => navigation.navigate('Login')}
+            onPress={() => setSheet('signin')}
           >
             <Text style={[styles.signInText, live.signInText]}>
               Already have an account?
@@ -153,6 +164,12 @@ export default function WelcomeScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </View>
+      <AuthSheet
+        visible={sheet != null}
+        initialMode={sheet ?? 'signup'}
+        onClose={closeSheet}
+        navigation={navigation}
+      />
     </SafeAreaView>
   );
 }

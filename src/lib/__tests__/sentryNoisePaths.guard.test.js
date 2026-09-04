@@ -19,7 +19,9 @@ const SYNC = read('lib/sync.js');
 const QUEUE = read('lib/syncQueue.js');
 const SUPABASE = read('lib/supabase.js');
 const DBCRYPTO = read('lib/dbCrypto.js');
-const LOGIN = read('screens/LoginScreen.js');
+// D145: the auth handlers live in the account sheet; the log keys keep
+// their LoginScreen.* names for Sentry continuity.
+const LOGIN = read('components/auth/AuthSheet.js');
 
 describe('every push-on-save path is dead-session guarded (VOLYUME-2D/2F/2C/2J/28)', () => {
   test.each([

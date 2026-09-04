@@ -41,13 +41,13 @@ describe('IDENTITY_AND_OWNERSHIP_LOCKED.md anti-patterns', () => {
   });
 
   test('LoginScreen.js has no handleContinueLocally', () => {
-    const src = read('src/screens/LoginScreen.js');
+    const src = read('src/screens/LoginScreen.js') + read('src/components/auth/AuthSheet.js');
     expect(src).not.toMatch(/function\s+handleContinueLocally\b/);
     expect(src).not.toMatch(/Continue locally/);
   });
 
   test('LoginScreen.js does not import or call migrateLocalUserId', () => {
-    const src = read('src/screens/LoginScreen.js');
+    const src = read('src/screens/LoginScreen.js') + read('src/components/auth/AuthSheet.js');
     // Comments referencing the deleted symbol (for context) are fine.
     // Reject import/require/function-call shapes.
     expect(src).not.toMatch(/import\s+\{[^}]*migrateLocalUserId[^}]*\}/);
@@ -69,9 +69,11 @@ describe('IDENTITY_AND_OWNERSHIP_LOCKED.md anti-patterns', () => {
 
   test('WelcomeScreen.js routes both Free and Pro to Login', () => {
     // Spec scenario A: "User taps Free or Pro on Welcome. Both
-    // route to sign-up."
+    // route to sign-up." D145 (2026-09-04): the account step is a sheet
+    // hosted by Welcome itself; both CTAs open it, nothing else.
     const src = read('src/screens/WelcomeScreen.js');
-    expect(src).toMatch(/navigation\.navigate\(\s*['"]Login['"]/);
+    expect(src).toMatch(/<AuthSheet/);
+    expect(src).toMatch(/setSheet\('signup'\)/);
     // Sanity: neither CTA still calls initLocalUser.
     expect(src).not.toMatch(/initLocalUser/);
   });
