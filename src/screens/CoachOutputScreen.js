@@ -21,6 +21,7 @@ import { contextFacts } from '../lib/coachContext';
 import { buildRampPositionLine } from '../lib/blockExplain';
 import { buildHoldReceipt } from '../lib/coachLedger';
 import { isCompletedCoachDecision } from '../lib/coachDecision';
+import { COACH_OUTPUT_VIEWED_KEY_FOR } from '../lib/home/unseenCoachChange';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getLatestCheckin,
@@ -2270,13 +2271,27 @@ export default function CoachOutputScreen({ navigation, route }) {
       // review counts as "seen" even if the user never taps the Home banner's
       // own dismiss control. Reuses the SAME per-week flag the Home banner
       // writes (HomeScreen.js @volyume_coach_banner_dismissed_<weekStart>)
-      // rather than a second scheme, so the You-tab badge (which mirrors that
-      // same flag into the store) clears the moment this screen actually
-      // shows the review. The insufficient-data ("building your baseline")
-      // view is not a coach change, so it clears nothing.
+      // for the banner's own text. The insufficient-data ("building your
+      // baseline") view is not a coach change, so it clears nothing.
+      //
+      // ITEM 6 (D141): the You-tab badge no longer rides that per-week flag
+      // (which HomeScreen also cleared via its own dismiss X, and which
+      // expired after 7 days regardless of whether anyone had looked). It now
+      // rides a durable, per-user "last viewed" marker holding this output's
+      // weekStart -- written HERE, the moment a real review is actually shown
+      // -- which HomeScreen compares against the latest output
+      // (resolveHasUnseenCoachChange, src/lib/home/unseenCoachChange.js) with
+      // no time expiry. Per-user key: nothing to clear on sign-out, a
+      // different account simply has no marker of its own yet.
       if (result.hasEnoughData) {
         AsyncStorage.setItem(`@volyume_coach_banner_dismissed_${weekStart}`, 'true').catch(() => {});
         useAppStore.getState().setHasUnseenCoachChange(false);
+        if (user?.id) {
+          AsyncStorage.setItem(
+            COACH_OUTPUT_VIEWED_KEY_FOR(user.id),
+            JSON.stringify({ weekStart }),
+          ).catch(() => {});
+        }
 
         // D15: adherence-why, said once, on the first REAL weekly output
         // (baseline/insufficient-data runs never reach this branch). The

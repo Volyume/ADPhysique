@@ -46,6 +46,7 @@ import Chip from '../components/Chip';
 import * as haptics from '../lib/haptics';
 import { buildCoachBrief, constraintLineText } from '../lib/homeCoachBrief';
 import { isCompletedCoachDecision } from '../lib/coachDecision';
+import { resolveHasUnseenCoachChange, COACH_OUTPUT_VIEWED_KEY_FOR } from '../lib/home/unseenCoachChange';
 import { isEnrolmentSeedWeight } from '../lib/checkinDerive';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
@@ -1881,17 +1882,67 @@ export default function HomeScreen({ navigation, route }) {
   const showCoachBanner = !!latestCoachOutput && latestCoachDecisionComplete
     && !coachBannerDismissed
     && (Date.now() - (latestCoachOutput.weekStart ?? 0) < 7 * 86400000);
-  // T2 (world-class-audit-2026-07-03/05-cohesion.md #4): today this signal
-  // surfaces ONLY on this banner, and dismissing it loses the reminder for the
-  // rest of the week. Mirror the exact same condition into the store so the
-  // You-tab icon can carry a calm badge too; CoachOutputScreen clears both the
-  // badge and this banner (same per-week dismissal flag) the moment the
-  // review is actually viewed, not just when the banner's own close button is
-  // tapped. showCoachBanner is rank 1 below, so it is always the one shown
-  // whenever eligible, this mirror never disagrees with what Home shows.
+  // ITEM 6 (D141, superseding T2 world-class-audit-2026-07-03/05-cohesion.md
+  // #4): the badge used to mirror showCoachBanner exactly, so it expired on
+  // the same 7-day window AND cleared on the banner's own dismiss button --
+  // neither of those means the review was actually READ. The badge is now
+  // driven by a durable, per-user "last viewed" marker instead: no time
+  // expiry, and dismissing the Home banner's close X (which only retires its
+  // time-relevant TEXT) leaves the badge exactly as it was. The banner itself
+  // is UNCHANGED above -- still 7-day windowed, still dismissible.
+  //
+  // The marker is written by CoachOutputScreen (COACH_OUTPUT_VIEWED_KEY_FOR,
+  // src/lib/home/unseenCoachChange.js) the moment a real review is shown, and
+  // read here once per user id. coachViewedMarkerLoaded stays false until
+  // that read settles, so the effect below intentionally does nothing while
+  // loading rather than defaulting to "unread" and flashing the badge before
+  // the real answer (possibly "already read") is known.
+  const [coachViewedMarkerLoaded, setCoachViewedMarkerLoaded] = useState(false);
+  const [coachViewedWeekStart, setCoachViewedWeekStart] = useState(null);
+  // Lead review (D141 item 6): loadData() re-runs on EVERY focus and sets a
+  // fresh latestCoachOutput object, which re-fires the store write below.
+  // Read once per mount, the marker would be stale the moment the user came
+  // back from the review, and the badge they had just cleared would
+  // reappear. So the marker is re-read on every focus, ahead of that write.
+  const readCoachViewedMarker = useCallback(async () => {
+    let weekStart = null;
+    try {
+      const raw = await AsyncStorage.getItem(COACH_OUTPUT_VIEWED_KEY_FOR(user?.id));
+      weekStart = raw ? JSON.parse(raw)?.weekStart ?? null : null;
+    } catch (_) {
+      weekStart = null; // corrupt/missing marker reads as "never viewed"
+    }
+    return weekStart;
+  }, [user?.id]);
   useEffect(() => {
-    useAppStore.getState().setHasUnseenCoachChange(showCoachBanner);
-  }, [showCoachBanner]);
+    let cancelled = false;
+    setCoachViewedMarkerLoaded(false);
+    readCoachViewedMarker().then((weekStart) => {
+      if (cancelled) return;
+      setCoachViewedWeekStart(weekStart);
+      setCoachViewedMarkerLoaded(true);
+    });
+    return () => { cancelled = true; };
+  }, [readCoachViewedMarker]);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      readCoachViewedMarker().then((weekStart) => {
+        if (!cancelled) setCoachViewedWeekStart(weekStart);
+      });
+      return () => { cancelled = true; };
+    }, [readCoachViewedMarker]),
+  );
+
+  useEffect(() => {
+    if (!coachViewedMarkerLoaded) return; // guard: keep the store's previous value while loading
+    useAppStore.getState().setHasUnseenCoachChange(resolveHasUnseenCoachChange({
+      latestOutput: latestCoachOutput,
+      latestDecisionComplete: latestCoachDecisionComplete,
+      viewedWeekStart: coachViewedWeekStart,
+      markerLoaded: coachViewedMarkerLoaded,
+    }));
+  }, [latestCoachOutput, latestCoachDecisionComplete, coachViewedWeekStart, coachViewedMarkerLoaded]);
   // Stage 2: the everyday trial value card's own eligibility calc
   // (trialBannerEligible, "suppressed by the day-of coaching nudge so two
   // voices never say the same thing") is retired with the card -- it no

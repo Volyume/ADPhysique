@@ -144,10 +144,14 @@ describe('Campaign 22 Phase 2 Stage 1: the senior ranks moved to the Today line 
     expect(HOME).toMatch(
       /const showCoachBanner = !!latestCoachOutput && latestCoachDecisionComplete\s*\n\s*&& !coachBannerDismissed\s*\n\s*&& \(Date\.now\(\) - \(latestCoachOutput\.weekStart \?\? 0\) < 7 \* 86400000\);/,
     );
-    // Still its own trigger, not routed through shownBannerKey -- and still
-    // mirrored into the store for the You-tab badge, exactly as before.
-    expect(HOME).toMatch(/setHasUnseenCoachChange\(showCoachBanner\)/);
-    expect(HOME).toMatch(/\}, \[showCoachBanner\]\);/);
+    // Still its own trigger, not routed through shownBannerKey. Item 6
+    // (D141) replaced the bare showCoachBanner mirror into the store with a
+    // durable per-user "last viewed" marker (src/lib/home/unseenCoachChange.js)
+    // so the You-tab badge no longer expires on this banner's 7-day window
+    // or clears on this banner's own dismiss control -- see
+    // CoachHomeUnseenMarker.item6.guard.test.js for that wiring's own pin.
+    expect(HOME).toMatch(/setHasUnseenCoachChange\(resolveHasUnseenCoachChange\(\{/);
+    expect(HOME).not.toMatch(/setHasUnseenCoachChange\(showCoachBanner\)/);
     expect(HOME).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'CoachOutput', \{ weekStart: latestCoachOutput\.weekStart \}\)/);
     expect(HOME).toMatch(/AsyncStorage\.setItem\(`@volyume_coach_banner_dismissed_\$\{latestCoachOutput\.weekStart\}`, 'true'\)\.catch\(\(\) => \{\}\);/);
   });

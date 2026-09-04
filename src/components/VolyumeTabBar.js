@@ -22,14 +22,16 @@
  * log-food candidate is Pro-gated, and a paywalled centre button violates
  * the free/pro exposure rule).
  *
- * T2 (world-class-audit-2026-07-03/05-cohesion.md #4): the Coach tab (where
- * CoachOutput is registered, see RootNavigator's ProfileStack) carries a
- * small amber dot when there is an unseen weekly coach review. Sourced from
- * the store's hasUnseenCoachChange flag, which HomeScreen mirrors from its
- * own coach-banner condition and CoachOutputScreen clears the moment the
- * review is actually viewed (both via the SAME per-week AsyncStorage
- * dismissal flag the Home banner already used, no second scheme). Amber, not
- * red: the theme defines no alarm-dot treatment, and amber matches the
+ * T2 (world-class-audit-2026-07-03/05-cohesion.md #4), durability fix under
+ * Item 6 (D141): the Coach tab (where CoachOutput is registered, see
+ * RootNavigator's ProfileStack) carries a small amber dot when there is an
+ * unseen weekly coach review. Sourced from the store's hasUnseenCoachChange
+ * flag, which HomeScreen now derives from a durable per-user "last viewed"
+ * marker (src/lib/home/unseenCoachChange.js) rather than a 7-day mirror of
+ * its own banner -- the badge no longer expires on a clock and no longer
+ * clears when the Home banner's own dismiss X is tapped, only when the
+ * review is actually opened (CoachOutputScreen writes the marker). Amber,
+ * not red: the theme defines no alarm-dot treatment, and amber matches the
  * calm coach-update treatment rather than reading as an alarm.
  */
 import { useEffect, useState } from 'react';
