@@ -31,7 +31,7 @@ export default [
     loadCharacter: "grind",
     setup: "Kneel with your hands on the wheel or bar in front of you.",
     execution: "Brace your stomach and roll forward until your body is almost flat, then pull back to kneeling.",
-    watch: "Letting the lower back sag as you roll out is the common fault.",
+    watch: "Letting your lower back sag as you roll out puts the work into your hips, so stop short of that point.",
   },
   {
     name: "Ab Wheel (Kneeling)",
@@ -47,7 +47,7 @@ export default [
     loadCharacter: "grind",
     setup: "Kneel behind the wheel and grip the handles with arms straight.",
     execution: "Brace your stomach, roll it forward a short distance, then draw it back using your abs rather than your arms.",
-    watch: "Rolling out further than you can control is the common mistake.",
+    watch: "Rolling out further than you can pull back from leaves you flat on the floor, so shorten the range.",
   },
   {
     name: "Ab Wheel Rollout",
@@ -82,7 +82,7 @@ export default [
     overrides: { demands: { weightBearingHands: true } },
     setup: "Kneel with one leg out wide, hands on the floor for balance.",
     execution: "Rock your hips back towards your heel until you feel a stretch on the inner thigh of the straight leg, then return forward.",
-    watch: "Rounding the back instead of the hips is the fault.",
+    watch: "Rocking back through a rounded back instead of the hips hides the stretch you are after.",
   },
   {
     name: "Adductor Squeeze (Ball)",
@@ -98,7 +98,7 @@ export default [
     overrides: {"exerciseType":"duration"},
     setup: "Sit tall with a ball or firm cushion held between your knees.",
     execution: "Squeeze your knees together hard and hold briefly, then ease off.",
-    watch: "Pushing through the feet instead of the knees is the common fault.",
+    watch: "Pushing through your feet instead of your knees takes the squeeze off the inner thighs.",
   },
   {
     name: "Agility Ladder Drills",
@@ -129,7 +129,7 @@ export default [
     loadCharacter: "grind",
     setup: "Set up in a wide push-up position, hands further apart than usual.",
     execution: "Lower towards one side, bending that elbow while the other arm stays straight, then push back to centre.",
-    watch: "Letting the hips twist is the common fault.",
+    watch: "Letting your hips twist towards the bent arm spreads the load back across both sides.",
   },
   {
     name: "Bear Crawl",
@@ -145,7 +145,7 @@ export default [
     loadCharacter: "grind",
     setup: "Start on hands and feet with your knees hovering just off the floor.",
     execution: "Move opposite hand and foot together to crawl forward, keeping your hips low and steady.",
-    watch: "Letting the hips rise up or rock side to side is the common fault.",
+    watch: "Hips that rise or rock side to side turn it into a walk, so keep them low and level.",
   },
   {
     name: "Bench Dip",
@@ -176,7 +176,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back, hands lightly behind your head, knees bent towards your chest.",
     execution: "Bring one elbow towards the opposite knee while straightening the other leg, switching sides steadily.",
-    watch: "Yanking on the neck is the common fault.",
+    watch: "Pulling your head up with your hands takes the work off your stomach, so rest them there lightly.",
   },
   {
     name: "Bodyweight Bulgarian Split Squat",
@@ -191,7 +191,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand a stride away from a bench with the top of your rear foot resting on it.",
     execution: "Bend your front knee to lower your back knee towards the floor, then push back up.",
-    watch: "Leaning too far forward shifts the work off the front leg.",
+    watch: "A front heel that lifts means the stance is too short, so step that foot further forward.",
   },
   {
     name: "Bodyweight Single-Leg RDL",
@@ -206,7 +206,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on one leg with a soft bend in the knee.",
     execution: "Hinge forward at the hip while your other leg extends back, keeping your back flat, then return to standing.",
-    watch: "Rounding the back instead of hinging at the hip is the main fault to fix.",
+    watch: "Rounding your back instead of hinging at the hip takes the stretch off the hamstring.",
   },
   {
     name: "Bodyweight Squat",
@@ -228,7 +228,7 @@ export default [
     overrides: { demands: { axialLoad: false, gripDemand: "none", weightBearingHands: false } },
     setup: "Stand with feet shoulder width apart.",
     execution: "Bend your hips and knees together to sit down and back, keeping your chest up, then drive back up through your whole foot.",
-    watch: "Letting your knees cave inward on the way up is common.",
+    watch: "Knees caving inward as you stand up means the drive has left your glutes, so push them out over your feet.",
   },
   {
     name: "Box Jump",
@@ -244,7 +244,7 @@ export default [
     loadCharacter: "ballistic",
     setup: "Stand facing a sturdy box or step, feet shoulder width apart.",
     execution: "Swing your arms, bend your knees, then jump up and land softly on the box with both feet.",
-    watch: "Landing with straight, stiff legs instead of bending the knees is the common fault.",
+    watch: "Landing with stiff, straight legs jars the whole drill, so meet the box with soft knees.",
   },
   {
     name: "Box Step-Up",
@@ -270,7 +270,7 @@ export default [
     overrides: { demands: { axialLoad: false, gripDemand: "none", weightBearingHands: false } },
     setup: "Stand facing a sturdy box or step.",
     execution: "Place one foot fully on top, then drive through that foot to stand up, bringing the other leg to meet it.",
-    watch: "Pushing off the trailing foot rather than driving through the top leg is common.",
+    watch: "Pushing off the trailing foot does the work for the top leg, so let it hang until you are standing.",
   },
   {
     name: "Broad Jump",
@@ -285,7 +285,7 @@ export default [
     loadCharacter: "ballistic",
     setup: "Stand with feet shoulder width apart, arms back and knees bent ready to spring.",
     execution: "Swing your arms forward and jump out as far as you can, landing softly on both feet.",
-    watch: "Landing stiff legged instead of bending the knees is what to watch for.",
+    watch: "Landing with locked legs jolts the whole body, so bend your knees and hips as you touch down.",
   },
   {
     name: "Calf Raise on Steps",
@@ -300,7 +300,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on a step with the balls of your feet on the edge and heels hanging off.",
     execution: "Rise up onto your toes, then lower your heels below the step level.",
-    watch: "Rushing the lowering phase instead of controlling it is the common fault.",
+    watch: "Dropping quickly at the bottom bounces the heel down rather than working the calf, so lower slowly.",
   },
   {
     name: "Chin-Up",
@@ -317,7 +317,7 @@ export default [
     overrides: {"exerciseType":"weighted_bodyweight"},
     setup: "Hang from a bar with an underhand grip, hands about shoulder width apart.",
     execution: "Pull your chin above the bar by driving your elbows down, then lower to a full hang.",
-    watch: "Swinging the body for momentum reduces the effect.",
+    watch: "Swinging your legs to start the pull hands the work to your hips, so begin from a still hang.",
   },
   {
     name: "Chin-Up (Supinated)",
@@ -363,7 +363,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your side, top foot resting on a bench and bottom leg hovering underneath.",
     execution: "Lift your bottom leg towards the bench by squeezing your inner thigh, then lower under control.",
-    watch: "Rushing instead of pausing at the top reduces the effect.",
+    watch: "Letting your hips drop back towards the floor takes the work off the inner thigh.",
   },
   {
     name: "Copenhagen Plank",
@@ -379,7 +379,7 @@ export default [
     overrides: {"exerciseType":"duration"},
     setup: "Lie on your side propped on your forearm, top foot resting on a bench.",
     execution: "Lift your hips and bottom leg off the floor so your body forms a straight line, and hold.",
-    watch: "Letting the hips sag or twist forward is the common fault.",
+    watch: "Hips that sag or roll forward turn the hold into a rest, so keep them stacked and lifted.",
   },
   {
     name: "Cossack Squat",
@@ -398,7 +398,7 @@ export default [
     overrides: { demands: { weightBearingHands: false } },
     setup: "Stand with feet wide apart, toes turned slightly out.",
     execution: "Shift your weight to one side, bending that knee and sitting back while the other leg stays straight, then push back to centre.",
-    watch: "Letting the bent knee's heel lift off is the fault.",
+    watch: "Letting the bent leg's heel lift shortens the depth you can hold, so keep the whole foot down.",
   },
   {
     name: "Crunch",
@@ -414,7 +414,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back, knees bent, feet flat, hands lightly behind your head.",
     execution: "Curl your shoulders up off the floor by squeezing your stomach, then lower back down under control.",
-    watch: "Pulling on your neck with your hands is the common fault.",
+    watch: "Pulling your head up with your hands hides how little your stomach is doing, so rest them there lightly.",
   },
   {
     name: "Dead Bug",
@@ -430,7 +430,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back, arms reaching up, knees bent to a right angle above your hips.",
     execution: "Lower one arm behind you and the opposite leg straight, keeping your lower back on the floor, then switch.",
-    watch: "Letting the back arch off the floor is the fault.",
+    watch: "If your lower back lifts off the floor you have reached too far, so shorten the reach.",
   },
   {
     name: "Dead Hang",
@@ -466,7 +466,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie back on a decline bench with your feet secured near the top.",
     execution: "Curl your shoulders and upper back up towards your knees, then lower back down under control.",
-    watch: "Using momentum to swing up rather than curling is the common fault.",
+    watch: "Swinging up with momentum skips the curl through your spine, so start each rep from still.",
   },
   {
     name: "Decline Push-Up",
@@ -547,7 +547,7 @@ export default [
     loadCharacter: "grind",
     setup: "Bend forward at the hips resting your upper body on a support, balls of your feet on a raised edge.",
     execution: "Rise up onto your toes, then lower your heels below the edge.",
-    watch: "A fast bouncing rhythm instead of a controlled lowering reduces the effect.",
+    watch: "Bouncing at the bottom skips the stretch that makes the rep count, so lower slowly.",
   },
   {
     name: "Donkey Kick",
@@ -562,7 +562,7 @@ export default [
     loadCharacter: "grind",
     setup: "Start on hands and knees with your back flat.",
     execution: "Keeping your knee bent, drive one foot up towards the ceiling by squeezing your glute, then lower without touching the floor.",
-    watch: "Arching the lower back to gain height is the common fault.",
+    watch: "Arching your lower back to lift the foot higher moves the work away from the glute.",
   },
   {
     name: "Dragon Flag",
@@ -578,7 +578,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on a bench and grip behind your head for support, body straight.",
     execution: "Keeping your body rigid and legs together, lower them slowly without letting your lower back round, then raise up.",
-    watch: "Letting the hips bend first is the common fault.",
+    watch: "Bending at the hips first turns it into a leg lower, so keep your body in one straight line.",
   },
   {
     name: "Eccentric Calf Raise (Bodyweight)",
@@ -609,7 +609,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit on a stability ball and walk your feet forward until your lower back rests on the ball.",
     execution: "Curl your shoulders up towards your hips by squeezing your stomach, then lower back down.",
-    watch: "Letting the ball roll around makes it unstable.",
+    watch: "If the ball rolls under you your feet are too close together, so widen your stance.",
   },
   {
     name: "Frog Pump",
@@ -628,7 +628,7 @@ export default [
     overrides: { demands: { weightBearingHands: false } },
     setup: "Lie on your back with the soles of your feet together, knees dropped out to the sides.",
     execution: "Drive your hips up by squeezing your glutes, then lower under control.",
-    watch: "Arching the lower back instead of using the glutes is the common fault.",
+    watch: "Arching your lower back at the top takes the squeeze away from the glutes.",
   },
   {
     name: "Glute Bridge",
@@ -660,7 +660,7 @@ export default [
     overrides: {"exerciseType":"duration"},
     setup: "Stand tall or lie on your front with your legs straight.",
     execution: "Squeeze your glutes together as hard as you can and hold the contraction, then release.",
-    watch: "Holding your breath throughout the hold is a common habit to avoid.",
+    watch: "Squeezing your thighs together instead of your glutes changes what the hold works.",
   },
   {
     name: "Hanging Knee Raise",
@@ -691,7 +691,7 @@ export default [
     loadCharacter: "grind",
     setup: "Hang from a bar with arms straight, legs together beneath you.",
     execution: "Keeping your legs mostly straight, raise them towards hip height or higher, then lower under control.",
-    watch: "Using a big swing instead of a controlled lift is the common fault.",
+    watch: "Swinging into each rep lets your hips throw the legs up, so start from a still hang.",
   },
   {
     name: "Hanging Oblique Raise",
@@ -722,7 +722,7 @@ export default [
     overrides: {"exerciseType":"distance"},
     setup: "Stand tall and lift your toes and the front of your feet off the floor, balancing on your heels.",
     execution: "Walk forward keeping your toes lifted the whole time.",
-    watch: "Letting the toes drop back down between steps is the common fault.",
+    watch: "Dropping your toes between steps rests the shins, so hold them up for the whole walk.",
   },
   {
     name: "Hollow Body Hold",
@@ -739,7 +739,7 @@ export default [
     overrides: {"exerciseType":"duration"},
     setup: "Lie on your back, arms extended overhead, legs straight.",
     execution: "Press your lower back into the floor and lift your shoulders and legs slightly off the ground, holding the position.",
-    watch: "Letting the lower back arch off the floor is the fault.",
+    watch: "When your lower back lifts off the floor, tuck your knees a little until it settles down.",
   },
   {
     name: "Incline Board Sit-Up",
@@ -754,7 +754,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie back on an inclined board with your feet secured near the top.",
     execution: "Curl your body up towards your knees using your stomach, then lower back down under control.",
-    watch: "Pulling on your neck instead of curling from the stomach is the common fault.",
+    watch: "Pulling on your neck to get moving takes the work off your stomach, so cross your hands on your chest.",
   },
   {
     name: "Incline Push-Up (Hands Elevated)",
@@ -785,7 +785,7 @@ export default [
     loadCharacter: "grind",
     setup: "Set a bar at waist height and lie underneath it, gripping it shoulder width apart, body straight.",
     execution: "Pull your chest towards the bar by squeezing your shoulder blades together, then lower under control.",
-    watch: "Letting the hips sag is the fault.",
+    watch: "Letting your hips sag shortens the pull and hides how much your back is doing.",
   },
   {
     name: "Jump Squat",
@@ -801,7 +801,7 @@ export default [
     loadCharacter: "ballistic",
     setup: "Stand with feet shoulder width apart.",
     execution: "Bend your knees and hips into a squat, then drive up explosively into a jump, landing softly back in the squat.",
-    watch: "Landing with stiff, straight legs instead of absorbing it is the common fault.",
+    watch: "Landing with locked legs jars each rep, so meet the floor with soft knees and hips.",
   },
   {
     name: "Kneeling Ab Rollout",
@@ -816,7 +816,7 @@ export default [
     loadCharacter: "grind",
     setup: "Kneel with your hands on a roller or slider out in front of your knees.",
     execution: "Brace your stomach and roll forward a controlled distance, then draw back using your abs.",
-    watch: "Arching the lower back as you roll out is the common fault.",
+    watch: "Arching your lower back as you roll out means you have gone past your range, so stop shorter.",
   },
   {
     name: "L-Sit Hold",
@@ -833,7 +833,7 @@ export default [
     overrides: {"exerciseType":"duration"},
     setup: "Support your body on parallel bars or the floor with straight arms.",
     execution: "Lift your legs straight out in front of you until your body forms an L shape, and hold.",
-    watch: "Letting the shoulders creep up towards the ears is the common fault.",
+    watch: "Shoulders creeping up towards your ears drop your hips, so press down hard through your hands.",
   },
   {
     name: "Leg Raise",
@@ -848,7 +848,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back, legs straight, hands by your sides or under your hips.",
     execution: "Keeping your legs mostly straight, raise them towards the ceiling, then lower slowly without touching down.",
-    watch: "Letting the lower back arch is the common fault.",
+    watch: "Letting your lower back arch as the legs drop means going lower than you can hold, so stop higher.",
   },
   {
     name: "Leg Raise (Flat Bench)",
@@ -864,7 +864,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on a flat bench, hands gripping the edges behind your head for support.",
     execution: "Raise your straight legs towards the ceiling, then lower slowly until just before your feet reach the bench.",
-    watch: "Swinging the legs down quickly loses the effect.",
+    watch: "Dropping the legs quickly at the end swings you into the next rep, so lower them slowly.",
   },
   {
     name: "Lunge",
@@ -890,7 +890,7 @@ export default [
     overrides: { demands: { axialLoad: false, gripDemand: "none", weightBearingHands: false } },
     setup: "Stand tall, then step forward and lower your back knee towards the floor while your front knee stays roughly over your ankle.",
     execution: "Push through your front heel to return standing.",
-    watch: "Letting the front knee cave inward is the main thing to watch.",
+    watch: "Letting the front knee fall inward wobbles the step, so track it over your middle toes.",
   },
   {
     name: "Manual Resistance Neck Extension",
@@ -905,7 +905,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit tall and place both hands on the back of your head.",
     execution: "Press your head back against your hands while your hands press forward to match, keeping the resistance steady.",
-    watch: "Jerking instead of applying steady pressure is the common fault.",
+    watch: "Jerking your head back against your hands makes the resistance uneven, so build the pressure slowly.",
   },
   {
     name: "Manual Resistance Neck Flexion",
@@ -920,7 +920,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit tall and place both hands on your forehead.",
     execution: "Press your head forward against your hands while your hands press back to match, keeping the resistance steady.",
-    watch: "Rushing instead of applying smooth, even pressure is the common fault.",
+    watch: "Rushing the rep makes the pressure jump about, so press and release at a slow, even pace.",
   },
   {
     name: "Monster Walk",
@@ -935,7 +935,7 @@ export default [
     loadCharacter: "grind",
     setup: "Loop a band around your ankles and bend into a slight squat, feet shoulder width apart.",
     execution: "Step forward and out at a slight diagonal, keeping tension in the band each step.",
-    watch: "Steps too small to keep tension reduces the effect.",
+    watch: "Steps too short to keep the band tight let your hips coast, so widen each step.",
   },
   {
     name: "Mountain Climber",
@@ -966,7 +966,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back and place the top of your head on the floor, hands nearby for balance.",
     execution: "Press through your feet and the crown of your head to lift and arch your body, then lower slowly.",
-    watch: "Rushing before building control is the common fault.",
+    watch: "Rolling further back than you can control loads the neck quickly, so keep the range small at first.",
   },
   {
     name: "Neck Curl",
@@ -981,7 +981,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back, head hanging slightly off the edge of a bench, hands resting nearby for balance.",
     execution: "Tuck your chin towards your chest to curl your head forward, then lower back slowly.",
-    watch: "A fast, jerky motion is the common fault.",
+    watch: "A quick, jerky curl throws your head through the range, so move slowly in both directions.",
   },
   {
     name: "Neck Lateral Flexion",
@@ -996,7 +996,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your side, head hanging slightly off the edge of a bench.",
     execution: "Lower your head towards the floor, then lift it back up towards your shoulder using the side of your neck.",
-    watch: "Letting the shoulder shrug up to help lift is the common fault.",
+    watch: "Shrugging the shoulder up to meet your head shortens the range, so keep it pressed down.",
   },
   {
     name: "Neck Rotation (Resistance)",
@@ -1011,7 +1011,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit tall and place one hand on the side of your head above the ear.",
     execution: "Turn your head against your hand's resistance to one side, then return and repeat on the other.",
-    watch: "Moving too fast instead of applying steady resistance is the common fault.",
+    watch: "Turning quickly against your hand makes the pressure jump, so keep it steady the whole way.",
   },
   {
     name: "Neutral Grip Pull-Up",
@@ -1044,7 +1044,7 @@ export default [
     loadCharacter: "grind",
     setup: "Kneel with your ankles secured under a bar, body straight from knees to head.",
     execution: "Lower your torso forward as slowly as you can, resisting with your hamstrings, catching yourself near the floor.",
-    watch: "Dropping quickly misses the point.",
+    watch: "Dropping the last part instead of resisting it skips the work, so slow the descent as long as you can.",
   },
   {
     name: "Nordic Glute Curl",
@@ -1081,7 +1081,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your side, legs stacked, one arm extended overhead.",
     execution: "Lift your top leg and top arm together, bringing them towards each other in a V shape, then lower back down.",
-    watch: "Rolling onto your back reduces the effect.",
+    watch: "Rolling onto your back mid-rep takes the work off your side, so stay stacked on your hip.",
   },
   {
     name: "Plank",
@@ -1097,7 +1097,7 @@ export default [
     overrides: {"exerciseType":"duration"},
     setup: "Prop yourself up on your forearms and toes, body in a straight line from head to heels.",
     execution: "Brace your stomach and hold the position, keeping your hips level.",
-    watch: "Letting the hips sag or pike up into the air is the common fault.",
+    watch: "Hips that sag or pike up turn the hold into a rest, so hold a straight line from head to heels.",
   },
   {
     name: "Prone Reverse Fly",
@@ -1129,7 +1129,7 @@ export default [
     overrides: {"exerciseType":"weighted_bodyweight"},
     setup: "Hang from a bar with an overhand grip, hands slightly wider than shoulder width.",
     execution: "Pull yourself up until your chin clears the bar, then lower back to a full hang.",
-    watch: "A kicking or swinging motion reduces the effect.",
+    watch: "Kicking your legs to start the pull hands the work to your hips, so begin from a still hang.",
   },
   {
     name: "Push-Up",
@@ -1161,7 +1161,7 @@ export default [
     loadCharacter: "grind",
     setup: "Start in a push-up position with arms straight, body in a straight line.",
     execution: "After the usual push-up, round your upper back further by pushing your shoulder blades apart before returning.",
-    watch: "Skipping the extra push at the top misses the point.",
+    watch: "Stopping at a normal lockout skips the part that works the shoulder blades.",
   },
   {
     name: "Reverse Crunch",
@@ -1177,7 +1177,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back, knees bent towards your chest, hands by your sides.",
     execution: "Curl your hips up off the floor by drawing your knees towards your chest, then lower under control.",
-    watch: "Swinging the legs reduces the effect.",
+    watch: "Swinging your legs to lift the hips takes the work off your stomach, so move them slowly.",
   },
   {
     name: "Reverse Nordic Curl",
@@ -1192,7 +1192,7 @@ export default [
     loadCharacter: "grind",
     setup: "Kneel upright with your feet secured, body straight from the knees up.",
     execution: "Lean back slowly from the knees, keeping your hips extended, then return to upright using your quads.",
-    watch: "Bending at the hips changes the movement.",
+    watch: "Bending at the hips as you lean back takes the stretch off the front of the thighs.",
   },
   {
     name: "Reverse Plank",
@@ -1208,7 +1208,7 @@ export default [
     overrides: {"exerciseType":"duration"},
     setup: "Sit with legs straight out in front and hands behind your hips, fingers pointing towards your feet.",
     execution: "Push through your hands and heels to lift your hips into a straight line, and hold.",
-    watch: "Letting the hips drop is the common fault.",
+    watch: "Letting your hips drop turns the hold into a sit, so lift them back to a straight line.",
   },
   {
     name: "Rice Bucket",
@@ -1256,7 +1256,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with knees bent, leaning back slightly so your torso is at an angle, feet lifted or on the floor.",
     execution: "Rotate your torso to touch the floor on one side, then the other, keeping your chest up.",
-    watch: "A small range of motion reduces the effect.",
+    watch: "Moving only your arms while your chest stays square skips the twist, so turn through your ribs.",
   },
   {
     name: "Seated Bodyweight Calf Raise",
@@ -1289,7 +1289,7 @@ export default [
     overrides: {"exerciseType":"duration"},
     setup: "Lie on your side and prop yourself up on one forearm, feet stacked or staggered.",
     execution: "Lift your hips so your body forms a straight line, and hold the position.",
-    watch: "Letting the hips drop towards the floor or rotate forward is the common fault.",
+    watch: "Hips that drop or roll forward take the load off your side, so stack them and lift.",
   },
   {
     name: "Side-Lying Adduction",
@@ -1308,7 +1308,7 @@ export default [
     overrides: { demands: { weightBearingHands: false } },
     setup: "Lie on your side, bottom leg straight and top leg bent with the foot flat on the floor in front.",
     execution: "Lift your bottom leg towards the ceiling, then lower slowly under control.",
-    watch: "Rotating the hip forward reduces the effect.",
+    watch: "Rolling your hips backwards lets the front of the thigh take over, so keep them stacked.",
   },
   {
     name: "Single Leg Hip Thrust",
@@ -1323,7 +1323,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back, one foot flat on the floor and the other leg extended straight out.",
     execution: "Drive your hips up by squeezing the glute of the planted leg, then lower back down under control.",
-    watch: "Letting the hips twist to one side is the common fault.",
+    watch: "Letting your hips twist towards the free leg hands the work to the other side, so keep them level.",
   },
   {
     name: "Single-Arm Push-Up",
@@ -1385,7 +1385,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand holding something stable for balance, heels anchored or raised slightly.",
     execution: "Lean back and bend your knees, lowering your hips while keeping a straight line from knees to shoulders, then rise up.",
-    watch: "Bending at the hips changes the movement.",
+    watch: "Folding at the hips instead of driving them forward takes the stretch off the front of the thighs.",
   },
   {
     name: "Sit-Up",
@@ -1401,7 +1401,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back, knees bent, feet flat, hands lightly crossed on your chest.",
     execution: "Curl your entire torso up towards your knees, then lower under control.",
-    watch: "Yanking the body up with momentum is the common fault.",
+    watch: "Throwing yourself up with momentum skips the curl through your spine, so start each rep still.",
   },
   {
     name: "Skater Squat",
@@ -1416,7 +1416,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on one leg with the other leg lifted behind you.",
     execution: "Bend the standing knee to lower down, letting the lifted leg reach back for balance, then push back up.",
-    watch: "Letting the standing knee cave inward is the common fault.",
+    watch: "Letting the standing knee fall inward costs you the balance, so track it over your middle toes.",
   },
   {
     name: "Slider Leg Curl (Bodyweight)",
@@ -1447,7 +1447,7 @@ export default [
     loadCharacter: "grind",
     setup: "Loop a band around a sturdy anchor at knee height and step into it so it sits in the crease of your knees.",
     execution: "Lean back against the tension and bend your knees to squat, then push back up.",
-    watch: "Torso collapsing forward reduces the effect.",
+    watch: "Folding forward at the chest lets your hips take over, so stay tall against the band.",
   },
   {
     name: "Stair Running",
@@ -1493,7 +1493,7 @@ export default [
     loadCharacter: "grind",
     setup: "Prop yourself on your forearms on a stability ball in a plank position.",
     execution: "Keeping your body braced, move your forearms in small circles as if stirring a pot.",
-    watch: "Letting the hips sway or drop to keep up with the circles is the common fault.",
+    watch: "Hips that sway with the circles mean the circles are too big, so make them smaller.",
   },
   {
     name: "Swiss Ball Leg Curl",
@@ -1526,7 +1526,7 @@ export default [
     overrides: { demands: { weightBearingHands: false } },
     setup: "Anchor a band behind one knee and stand facing away with a slight bend in that knee.",
     execution: "Straighten the knee fully by squeezing the front of the thigh, then let it bend back slightly.",
-    watch: "Locking the knee out harshly reduces control.",
+    watch: "Snapping the knee straight instead of squeezing it out loses the tension you are after.",
   },
   {
     name: "Tibialis Raise (Slant Board)",
@@ -1572,7 +1572,7 @@ export default [
     overrides: {"exerciseType":"distance"},
     setup: "Stand tall and rise up onto the balls of your feet, lifting your heels as high as you can.",
     execution: "Walk forward staying up on your toes the whole time.",
-    watch: "Letting the heels drop down between steps is the common fault.",
+    watch: "Dropping your heels between steps rests the calves, so stay up high for the whole walk.",
   },
   {
     name: "Toe-to-Bar",
@@ -1588,7 +1588,7 @@ export default [
     loadCharacter: "grind",
     setup: "Hang from a bar with arms straight, legs together beneath you.",
     execution: "Keeping your legs straight, raise them until your toes touch the bar, then lower under control.",
-    watch: "Swinging the body to throw the legs up is the common fault.",
+    watch: "Throwing the legs up on a big swing hands the rep to momentum, so control the way down too.",
   },
   {
     name: "Towel Pull-Up",
@@ -1603,7 +1603,7 @@ export default [
     loadCharacter: "grind",
     setup: "Drape a towel over a pull-up bar and grip one end in each hand.",
     execution: "Pull yourself up until your chin clears the bar, then lower back to a full hang.",
-    watch: "Letting your grip slip on the towel instead of holding it firmly is the common fault.",
+    watch: "Letting the towel slip through your hands ends the set early, so grip low and squeeze hard.",
   },
   {
     name: "Tricep Dip (Parallel Bars)",
@@ -1633,7 +1633,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back with arms extended overhead and legs straight.",
     execution: "Lift your legs and upper body together to meet in a V shape, reaching your hands towards your feet, then lower back down.",
-    watch: "Bending the knees too much reduces the effect.",
+    watch: "Bending your knees to make the reach easier shortens the work through your stomach.",
   },
   {
     name: "Wall Sit",
@@ -1650,7 +1650,7 @@ export default [
     overrides: {"exerciseType":"duration"},
     setup: "Lean your back against a wall and walk your feet out, then slide down until your knees are bent to about a right angle.",
     execution: "Hold with your thighs roughly level with the floor.",
-    watch: "Letting the knees drift past the toes is the common fault.",
+    watch: "Knees drifting past your toes means your feet are too close in, so walk them further out.",
   },
   {
     name: "Weighted Dips (Chest)",
@@ -1758,7 +1758,7 @@ export default [
     overrides: {"exerciseType":"duration","demands":{"position":"lying","floorAccess":true,"overheadPosition":true,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":false}},
     setup: "Lie face down with arms extended overhead.",
     execution: "Lift your arms, chest and legs off the floor together, holding the arched position briefly, then lower with control.",
-    watch: "Yanking the head up rather than lifting smoothly through the back is common.",
+    watch: "Throwing your head back to gain height leaves the rest of your back flat, so lead with your chest.",
   },
   {
     name: "Archer Pull-Up",
@@ -1790,7 +1790,7 @@ export default [
     overrides: {"difficulty":2,"demands":{"balanceDemand":"stable","gripDemand":"supportive","axialLoad":false,"weightBearingHands":false}},
     setup: "Stand in front of a chair or rail, holding it lightly with one hand, one leg extended in front of you.",
     execution: "Squat down on the standing leg as far as comfortable, then push back up.",
-    watch: "Gripping the support too hard to pull yourself up is common.",
+    watch: "Hauling on the support does the work for the leg, so use it only for balance.",
   },
   {
     name: "Back Lever (Tuck)",
@@ -1807,7 +1807,7 @@ export default [
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":false}},
     setup: "Hang from the bar, then roll back and under so your body faces the floor, knees tucked to your chest, arms straight and back parallel to the ground.",
     execution: "Hold the position, then return to hanging.",
-    watch: "Letting the hips sag out of the tuck is common.",
+    watch: "Letting the hips sag out of the tuck makes the hold much harder, so keep your knees drawn in tight.",
   },
   {
     name: "Bench Dip (Feet Elevated)",
@@ -1823,7 +1823,7 @@ export default [
     overrides: {"demands":{"position":"mixed","floorAccess":false,"gripDemand":"supportive","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported","overheadPosition":false}},
     setup: "Sit between two benches, hands gripping the edge behind you and heels resting on the other bench.",
     execution: "Lower your body by bending your elbows, then press back up.",
-    watch: "Letting the shoulders roll forward and up towards your ears is common.",
+    watch: "Shoulders rolling forward towards your ears mean you have gone too low, so stop shorter.",
   },
   {
     name: "Bird Dog",
@@ -1839,7 +1839,7 @@ export default [
     overrides: {"laterality":"alternating","demands":{"position":"kneeling","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"unilateralLoadable":true,"bilateralLower":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":true}},
     setup: "Start on all fours with hands under shoulders and knees under hips.",
     execution: "Extend one arm forward and the opposite leg back until both are level with your torso, then return and switch sides.",
-    watch: "Letting the hips twist to one side is the main fault.",
+    watch: "Letting your hips twist as the leg goes back turns it into a balance drill, so keep them level.",
   },
   {
     name: "Bodyweight Box Squat",
@@ -1855,7 +1855,7 @@ export default [
     overrides: {"difficulty":1,"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
     setup: "Stand in front of a box or bench with feet shoulder width apart.",
     execution: "Sit back and down until you touch the box lightly, then drive back up to standing.",
-    watch: "Collapsing your weight fully onto the box rather than touching lightly is common.",
+    watch: "Dropping your full weight onto the box loses the tension in your legs, so touch it lightly.",
   },
   {
     name: "Bodyweight Curtsy Lunge",
@@ -1871,7 +1871,7 @@ export default [
     overrides: {"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
     setup: "Stand tall, then step one leg diagonally behind and across the other, bending both knees until your back knee nears the floor.",
     execution: "Push through the front foot to return to standing.",
-    watch: "Letting the front knee cave inward is the main fault.",
+    watch: "Letting the front knee fall inward as you cross behind costs you the balance, so hold it out.",
   },
   {
     name: "Bodyweight Lateral Step-Up",
@@ -1887,7 +1887,7 @@ export default [
     overrides: {"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
     setup: "Stand side on to a sturdy box or step.",
     execution: "Place the near foot fully on top and drive through it to stand up on the box, then step back down under control.",
-    watch: "Pushing off the ground foot to help rather than driving through the top leg is common.",
+    watch: "Pushing off the floor foot does the work for the top leg, so let it hang and drive from the box.",
   },
   {
     name: "Bodyweight Reverse Lunge",
@@ -1903,7 +1903,7 @@ export default [
     overrides: {"difficulty":1,"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
     setup: "Stand tall, then step one foot backward and lower that knee towards the floor, weight mostly through the front leg.",
     execution: "Push back to standing through the front heel.",
-    watch: "Letting the front knee cave inward is the main thing to watch for.",
+    watch: "Stepping back too short crowds the front knee, so take a longer step.",
   },
   {
     name: "Bodyweight Split Squat",
@@ -1919,7 +1919,7 @@ export default [
     overrides: {"difficulty":1,"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
     setup: "Stand in a staggered stance with one foot forward and one back on the floor or a raised support.",
     execution: "Lower your back knee towards the floor, then push back up through the front heel.",
-    watch: "Letting the front heel lift off the ground is common.",
+    watch: "Letting the front heel lift shifts the load onto your toes, so press through the whole foot.",
   },
   {
     name: "Bodyweight Walking Lunge",
@@ -1933,8 +1933,9 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","difficulty":1,"demands":{"unilateralLoadable":false,"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
-    setup: "Stand tall, then step forward into a lunge, lowering your rear knee towards the floor, and push off your front leg to step into the next lunge.",
-    execution: "Taking too short a step forces the front knee too far forward.",
+    setup: "Stand tall with your feet together and clear space in front of you to walk.",
+    execution: "Step forward and lower your rear knee towards the floor, then push off the front leg into the next step.",
+    watch: "Taking too short a step forces the front knee a long way forward, so step further out.",
   },
   {
     name: "Clamshell (Side-Lying)",
@@ -1951,7 +1952,7 @@ export default [
     overrides: {"laterality":"unilateral","difficulty":1,"demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"none","unilateralLoadable":false,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Lie on your side with knees bent and stacked, feet together.",
     execution: "Keeping your feet touching, raise your top knee up towards the ceiling, then lower with control.",
-    watch: "Rolling your hips backward to help the knee up is the common fault.",
+    watch: "Rolling your hips backwards lets the knee rise further than the glute lifted it, so stay stacked.",
   },
   {
     name: "Clap Push-Up",
@@ -1999,7 +2000,7 @@ export default [
     overrides: {"laterality":"alternating","difficulty":3,"demands":{"unilateralLoadable":true}},
     setup: "Hang from the bar with one hand in front of the other, gripping it lengthwise.",
     execution: "Pull yourself up so your head passes to one side of the bar, then lower and alternate sides on the next rep.",
-    watch: "Twisting the torso excessively to help is common.",
+    watch: "Twisting your whole body to get your head past the bar hands the pull to momentum.",
   },
   {
     name: "Elevated Pike Push-Up",
@@ -2015,7 +2016,7 @@ export default [
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high"}},
     setup: "Place your feet on a raised bench and hands on the floor, hips lifted high so your body forms an inverted V.",
     execution: "Lower your head towards the floor by bending your elbows, then press back up.",
-    watch: "Letting the hips drop out of the pike is common.",
+    watch: "Letting the hips drop out of the pike turns it into a decline push-up.",
   },
   {
     name: "Flutter Kick",
@@ -2031,7 +2032,7 @@ export default [
     overrides: {"exerciseType":"duration","laterality":"alternating","difficulty":1,"demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Lie on your back with legs straight and lifted slightly off the floor, hands by your sides.",
     execution: "Alternate small up and down kicks with your legs, keeping your lower back pressed down.",
-    watch: "Letting the back arch off the floor is the main fault.",
+    watch: "When your lower back lifts off the floor, raise your legs a little higher until it settles.",
   },
   {
     name: "Freestanding Handstand Hold",
@@ -2048,7 +2049,7 @@ export default [
     overrides: {"exerciseType":"duration","demands":{"position":"mixed","floorAccess":true,"overheadPosition":true,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":true}},
     setup: "Kick up into a handstand away from any wall, stacking your shoulders over your wrists and squeezing your whole body tight.",
     execution: "Hold the balance, making small hand adjustments to stay upright.",
-    watch: "Letting the hips pike or arch excessively is common.",
+    watch: "Piking or arching at the hips sends you off balance, so squeeze your body into one line.",
   },
   {
     name: "Freestanding Handstand Push-Up",
@@ -2063,8 +2064,9 @@ export default [
     aliases: ["Handstand Push-Ups","Handstand Pushup"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"mixed","floorAccess":true,"overheadPosition":true,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","weightBearingHands":true}},
-    setup: "From a freestanding handstand, bend your elbows to lower your head towards the floor, then press back up to full lockout without losing your balance.",
-    execution: "Letting the hips pike as you lower is the common way balance is lost.",
+    setup: "Kick up into a freestanding handstand with your hands about shoulder width apart.",
+    execution: "Bend your elbows to lower the top of your head towards the floor, then press back up to straight arms.",
+    watch: "Letting the hips pike as you lower is usually how the balance goes.",
   },
   {
     name: "Front Lever (Full)",
@@ -2080,7 +2082,7 @@ export default [
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":false}},
     setup: "Hang from the bar, then pull your straight body up until horizontal to the ground, facing upward, legs fully extended.",
     execution: "Hold the position, then lower back to hanging with control.",
-    watch: "Letting the hips sag below the body line is common.",
+    watch: "Letting the hips sag below the line means the hold has gone, so drop to a tuck instead.",
   },
   {
     name: "Front Lever (Tuck)",
@@ -2097,7 +2099,7 @@ export default [
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":false}},
     setup: "Hang from the bar, then pull your knees towards your chest while leaning your straight body back until it is roughly horizontal, facing upward.",
     execution: "Hold the position, then return to hanging.",
-    watch: "Letting the hips sag out of the tuck is common.",
+    watch: "Hips sagging out of the tuck flattens the position, so pull your knees in tighter.",
   },
   {
     name: "Full Planche Hold",
@@ -2131,7 +2133,7 @@ export default [
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"high"}},
     setup: "Hang from the bar with an underhand grip, leaning back slightly.",
     execution: "Pull yourself up and lean your head back so your chest, near the sternum, reaches the bar, then lower with control.",
-    watch: "Failing to lean back through the pull is the common fault.",
+    watch: "Staying vertical through the pull keeps your chest off the bar, so lean back as you rise.",
   },
   {
     name: "Hanging L-Sit",
@@ -2163,7 +2165,7 @@ export default [
     overrides: {"difficulty":2,"demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported"}},
     setup: "Start in a downward dog position, hips high.",
     execution: "Dive your chest forward and down in an arc close to the floor, ending with your hips low and chest lifted, then reverse the arc back to the start.",
-    watch: "Letting the hips drag on the floor is common.",
+    watch: "Dragging your hips along the floor flattens the arc, so scoop through and lift your chest.",
   },
   {
     name: "Human Flag",
@@ -2179,7 +2181,7 @@ export default [
     overrides: {"laterality":"unilateral","difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":false}},
     setup: "Grip a vertical pole with one hand high and one low, then lift your straight body until horizontal to the ground, held only by your arms.",
     execution: "Hold the position, then lower with control.",
-    watch: "Letting the hips sag below the body line is common.",
+    watch: "Hips dropping below your shoulders bend the body, so press hard with the low hand.",
   },
   {
     name: "Human Flag (Tuck Progression)",
@@ -2195,7 +2197,7 @@ export default [
     overrides: {"laterality":"unilateral","difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":false}},
     setup: "Grip a vertical pole with one hand high and one low, then lift your hips and tuck your knees to your chest until your body is roughly horizontal.",
     execution: "Hold the position, then lower with control.",
-    watch: "Letting the shoulders dip is the common fault.",
+    watch: "Letting the top shoulder collapse drops the whole body, so pull down hard with that arm.",
   },
   {
     name: "Inverted Row (Feet Elevated)",
@@ -2210,7 +2212,7 @@ export default [
     loadCharacter: "grind",
     setup: "Set a bar at around waist height, lie underneath with heels on a raised bench and body straight.",
     execution: "Pull your chest up towards the bar, squeezing your shoulder blades together, then lower with control.",
-    watch: "Letting the hips sag is a common fault.",
+    watch: "Letting your hips sag shortens the pull, so squeeze your glutes and stay in one line.",
   },
   {
     name: "Inverted Row (High Bar)",
@@ -2226,7 +2228,7 @@ export default [
     overrides: {"difficulty":1},
     setup: "Set a bar high, lie underneath with your body at a shallow angle, heels on the floor and torso close to vertical.",
     execution: "Pull your chest up towards the bar, then lower with control.",
-    watch: "Letting the hips sag out of a straight line is the common fault.",
+    watch: "Hips that sag make the angle easier than you set it, so hold the line from head to heels.",
   },
   {
     name: "Inverted Row (Low Bar)",
@@ -2241,7 +2243,7 @@ export default [
     loadCharacter: "grind",
     setup: "Set a bar low, lie underneath with your body close to horizontal, heels on the floor.",
     execution: "Pull your chest up towards the bar, squeezing your shoulder blades together, then lower with control.",
-    watch: "Letting the hips sag is the common fault to avoid.",
+    watch: "Letting your hips sag takes the work off your back, so hold your body flat.",
   },
   {
     name: "Inverted Row (Underhand Grip)",
@@ -2257,7 +2259,7 @@ export default [
     overrides: {"difficulty":1},
     setup: "Set a bar at around waist height, lie underneath and grip it with palms facing you.",
     execution: "Pull your chest up towards the bar, keeping your body straight, then lower with control.",
-    watch: "Letting the hips sag out of a straight line is a common fault.",
+    watch: "Hips that sag shorten the pull, so keep a straight line from your shoulders to your heels.",
   },
   {
     name: "Isometric Pull-Up Hold (Flexed Arm Hang)",
@@ -2271,9 +2273,9 @@ export default [
     subregion: "vertical_pull",
     loadCharacter: "grind",
     overrides: {"difficulty":2},
-    setup: "Pull yourself up to the top of a pull-up with your chin above the bar, then hold without moving.",
-    execution: "Keep your shoulders pulled down rather than shrugged towards your ears.",
-    watch: "Sinking slowly rather than holding still is the common failure point.",
+    setup: "Step or jump up to the bar and pull your chin above it, elbows bent.",
+    execution: "Hold there without moving, shoulders pulled down rather than shrugged towards your ears.",
+    watch: "Sinking a little at a time turns the hold into a slow lower, so hold your chin high.",
   },
   {
     name: "Jump Lunge (Alternating)",
@@ -2287,9 +2289,9 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: {"demands":{"bilateralLower":false,"axialLoad":false}},
-    setup: "Start in a lunge, then jump up and switch your legs mid air, landing in a lunge with the opposite leg forward.",
-    execution: "Keep alternating with each jump.",
-    watch: "Landing stiff legged rather than absorbing through the knees and hips is the main risk.",
+    setup: "Stand in a split stance, one foot forward and one back, knees soft.",
+    execution: "Drop into a lunge, then jump and swap your legs in the air, landing softly in a lunge on the other side.",
+    watch: "Landing with locked knees jolts each switch, so let your legs bend as you touch down.",
   },
   {
     name: "Knee Push-Up",
@@ -2322,7 +2324,7 @@ export default [
     overrides: {"difficulty":3},
     setup: "Hang from the bar with legs lifted in front, toes pointed, holding an L shape.",
     execution: "Pull your chin over the bar while keeping the legs raised, then lower with control.",
-    watch: "Dropping the legs midway loses the position fastest.",
+    watch: "Dropping your legs partway up turns it into a normal pull-up, so hold the L to the top.",
   },
   {
     name: "Long-Lever Plank",
@@ -2353,7 +2355,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back with knees bent and feet flat, then lift your hips into a bridge.",
     execution: "Keeping the hips level, raise one knee towards your chest and swap sides while staying lifted.",
-    watch: "Letting the raised hip drop is the main fault.",
+    watch: "Letting the hip drop as you lift a knee hands the work to the other side, so keep them level.",
   },
   {
     name: "Mixed Grip Pull-Up",
@@ -2368,7 +2370,7 @@ export default [
     loadCharacter: "grind",
     setup: "Hang from the bar with one palm facing you and the other facing away.",
     execution: "Pull yourself up until your chin clears the bar, then lower under control.",
-    watch: "Swap grip sides evenly rather than always leading with the same hand.",
+    watch: "Always setting the same hand underhand loads one side more, so swap them between sets.",
   },
   {
     name: "Muscle-Up (Bar)",
@@ -2401,7 +2403,7 @@ export default [
     overrides: {"demands":{"position":"kneeling","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"unilateralLoadable":false,"bilateralLower":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":false}},
     setup: "Kneel and rest your forehead on a soft mat, walking your feet back until weight sits gently on your head and hands.",
     execution: "Rock forward and back through a small range while your neck supports the load.",
-    watch: "Rushing the range is the common error.",
+    watch: "Rocking further than you can control loads the neck quickly, so keep the range small.",
   },
   {
     name: "Negative Pull-Up (Eccentric-Only)",
@@ -2415,8 +2417,8 @@ export default [
     subregion: "vertical_pull",
     loadCharacter: "grind",
     overrides: {"difficulty":1},
-    setup: "Jump or step up so your chin is above the bar, then lower yourself as slowly as you can manage.",
-    execution: "Keep your shoulders engaged rather than letting your body drop loosely.",
+    setup: "Step or jump up so your chin starts above the bar, shoulders pulled down rather than loose.",
+    execution: "Lower yourself as slowly as you can manage until your arms are straight, then step up and start again.",
     watch: "Rushing the lowering phase defeats the point of the drill.",
   },
   {
@@ -2467,7 +2469,7 @@ export default [
     overrides: {"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
     setup: "Stand on one leg with the other reaching out in front, arms forward for balance.",
     execution: "Bend the standing knee to lower until your hip nears your heel, then drive back up.",
-    watch: "Letting the knee cave inward is the common breakdown under fatigue.",
+    watch: "Letting the knee fall inward at the bottom tips you over, so track it over your middle toes.",
   },
   {
     name: "Planche Lean",
@@ -2515,8 +2517,8 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","difficulty":2},
-    setup: "Start in a forearm plank, then press up onto one hand at a time until you reach a high plank, and reverse the sequence.",
-    execution: "Keep your hips steady throughout.",
+    setup: "Set up in a forearm plank with your body straight from head to heels.",
+    execution: "Press up onto one hand at a time until you reach a high plank, then lower back down the same way.",
     watch: "Letting the hips twist or sag gives away the point of the drill.",
   },
   {
@@ -2663,7 +2665,7 @@ export default [
     overrides: {"demands":{"balanceDemand":"supported"}},
     setup: "Lie on your back with one knee bent and foot flat, the other leg extended straight or held to the chest.",
     execution: "Drive through the planted heel to lift your hips, squeezing the glute at the top.",
-    watch: "Letting the hips tilt to one side is the main fault.",
+    watch: "Letting your hips tilt means the free leg is dragging you over, so hold them square.",
   },
   {
     name: "Spiderman Push-Up",
@@ -2712,7 +2714,7 @@ export default [
     overrides: {"laterality":"unilateral","difficulty":2},
     setup: "Get into a push-up position with one hand set further forward than the other.",
     execution: "Lower your chest towards the floor and press back up, keeping the stagger throughout.",
-    watch: "Letting the hips rotate towards the back hand is the common fault.",
+    watch: "Letting your hips turn towards the back hand evens the load out again, so keep them square.",
   },
   {
     name: "Straight Bar Dip (Chest-Lean)",
@@ -2744,7 +2746,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand with feet hip-width apart and knees soft.",
     execution: "Jump straight up and drive both knees towards your chest at the top, then land softly with bent knees.",
-    watch: "Landing with straight, locked knees is the biggest thing to correct.",
+    watch: "Landing with locked knees stops you loading the next jump, so let them bend on the way down.",
   },
   {
     name: "Tuck Planche Hold",
@@ -2776,8 +2778,8 @@ export default [
     aliases: ["Typewriter Pull-ups"],
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","difficulty":3,"demands":{"unilateralLoadable":true}},
-    setup: "Pull yourself up until your chin is above the bar, then shift sideways towards one hand while staying up, and back across to the other.",
-    execution: "Keep your chin above the bar throughout.",
+    setup: "Hang from the bar with a wide overhand grip, arms straight.",
+    execution: "Pull your chin above the bar, then shift across towards one hand and back to the other before lowering.",
     watch: "Dropping down between sides splits it into two pull-ups.",
   },
   {
@@ -2810,7 +2812,7 @@ export default [
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":true,"balanceDemand":"high","weightBearingHands":true}},
     setup: "Sit on the floor and lean back slightly, lifting your legs straight so your body forms a V with your torso.",
     execution: "Hold the position with arms reaching forward or resting beside you.",
-    watch: "Rounding through the lower back is the usual compensation.",
+    watch: "Rounding through your lower back drops the legs, so sit tall and lift your chest.",
   },
   {
     name: "Wall Handstand Hold",
@@ -2827,7 +2829,7 @@ export default [
     overrides: {"exerciseType":"duration","difficulty":2,"demands":{"position":"mixed","floorAccess":true,"overheadPosition":true,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":true}},
     setup: "Kick up into a handstand facing a wall, walking your hands back until upright and braced against it.",
     execution: "Press firmly through your hands and hold the position steady.",
-    watch: "Letting the lower back arch heavily is the most common thing to tidy up.",
+    watch: "A heavily arched lower back tips your weight into the wall, so squeeze your ribs down.",
   },
   {
     name: "Wall Handstand Push-Up",
@@ -2859,7 +2861,7 @@ export default [
     overrides: {"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Hang from the bar with palms facing you and a weight at your waist or between your feet.",
     execution: "Pull your chin above the bar leading with your chest, then lower fully under control.",
-    watch: "Rushing the lowering under the extra load is the main fault.",
+    watch: "Dropping quickly under the extra load costs you the best part of the rep, so lower slowly.",
   },
   {
     name: "Windshield Wiper (Hanging)",
@@ -2875,7 +2877,7 @@ export default [
     overrides: {"laterality":"alternating","difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","weightBearingHands":false}},
     setup: "Hang from the bar and raise your straight legs to hip height in front of you.",
     execution: "Rotate your legs together side to side like a windscreen wiper, keeping your shoulders stable.",
-    watch: "Swinging from momentum rather than the abs is the main fault.",
+    watch: "Letting the legs swing across on momentum takes the work off your waist, so move them slowly.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];
