@@ -140,7 +140,13 @@ const DISTINGUISHING_TOKENS = new Set([
   'curl', 'extension', 'press', 'row', 'raise', 'fly', 'crunch', 'thrust',
   'pull', 'push', 'shrug', 'kickback', 'squat', 'deadlift', 'lunge',
   'bridge', 'dip', 'chop', 'twist', 'rotation', 'pulldown', 'pullover',
-  'walk', 'carry', 'hold', 'wheel', 'rollout',
+  'walk', 'carry', 'hold', 'wheel', 'rollout', 'stance', 'narrow',
+  'hanging', 'ring', 'wall', 'slant', 'heel', 'toe', 'sit',
+  // Single-letter movement-shape identifiers: Y/T/W/V/L-raise-or-sit are
+  // each a different arm angle or shape, never interchangeable (verified:
+  // Prone Incline Y-Raise, Prone Incline T-Raise and W-Raise/YTW all appear
+  // as distinct NICHE entries, canonicality.js NICHE list).
+  'y', 'w', 'v', 'l',
 ]);
 
 function tupleKey(r) {
@@ -169,8 +175,8 @@ for (const [tuple, group] of tupleGroups.entries()) {
       if (totalDiff === 0) continue; // identical tokens, different order -> already caught in (2)
       const diffTokens = [...onlyA, ...onlyB].map((t) => t.replace(/[^a-z0-9]/g, ''));
       const hasDistinguishing = diffTokens.some((t) => DISTINGUISHING_TOKENS.has(t));
-      const allCosmetic = diffTokens.every((t) => COSMETIC_TOKENS.has(t) || t.length <= 2);
-      const unresolved = diffTokens.filter((t) => !DISTINGUISHING_TOKENS.has(t) && !COSMETIC_TOKENS.has(t) && t.length > 2);
+      const allCosmetic = diffTokens.every((t) => COSMETIC_TOKENS.has(t));
+      const unresolved = diffTokens.filter((t) => !DISTINGUISHING_TOKENS.has(t) && !COSMETIC_TOKENS.has(t));
       let classification;
       let confidence;
       let reason;

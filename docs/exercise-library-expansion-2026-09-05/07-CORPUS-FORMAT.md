@@ -86,8 +86,15 @@ JSON string; `load_character`; `cue`; `canonical id` from the name.
   with the same name (case-insensitive) exists under another id, re-id it
   to the canonical id rewriting `routine_exercises`, `workout_sets`,
   `exercise_user_notes`, `exercise_goals`, `exercise_swaps`, exclusions
-  and any other referencing table (find them all; the v18 re-id migration
-  is the precedent), else insert.
+  and any other referencing table, else insert. The exact precedent is
+  the sync pull's same-name merge in `src/lib/database.js` (search
+  `sameName` near the exercises upsert, around line 10380): it rewrites
+  `routine_exercises`, `workout_sets`, `exercise_user_notes`,
+  `exercise_goals` and the intent tables via
+  `remapExerciseIdInIntentTables`, then deletes the duplicate row.
+  Extract that into one shared helper and call it from both places.
+  Today's top-up matches by id only (`seedExercises.js` ~1475), which is
+  exactly why the eighteen template rows would duplicate by name.
 - `rederiveExerciseMetadataIfNeeded` (bump `METADATA_REDERIVE_KEY` to v3):
   rewrite every derived column plus `aliases`, `load_character`, `cue`,
   `exercise_category`, `increment_kg`, `equipment` (for rows whose coarse
