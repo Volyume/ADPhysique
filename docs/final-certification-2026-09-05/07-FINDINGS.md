@@ -20,13 +20,14 @@ disability must be able to predict the door without knowing the product.
 "How you train" reads as split, frequency or style. "Injuries &
 limitations" names what is actually stored: functional limits on movement
 ("overhead work", "gripping a bar", a family, an exercise), whichever of
-injury, pain, condition or disability lies behind them. Disability sits
-under "limitations", never under "injuries", and the subtitle names all
-four causes so nobody has to classify themselves at the door. This
-overrides RT2-2 and the CAP-1/2 reading that a door label must not say
-"limitation": CAP-1/2 govern PLAN surfaces (a baseline-shaped plan is
-simply the plan, no marker), not the name of the place a person goes to
-say what they cannot do. Ampersand titles are house style ("Workout &
+injury, pain, condition or disability lies behind them. The subtitle names all
+four causes (injuries, pain, long-term conditions, disabilities) so
+nobody has to classify themselves at the door. Founder ruling 2026-09-05:
+"injury" and "disability" may be used freely, on long-term rules too; the
+earlier lane-vocabulary rule (D112 R6) and RT2-2 no longer constrain this
+copy. Mid-sentence, "limitation" stays the default noun because it names
+what is stored, and "injury"/"disability" are used wherever they read more
+naturally. Ampersand titles are house style ("Workout &
 units", "Help & FAQ").
 
 Vocabulary (one table, applied everywhere; route ids, file names and
@@ -37,7 +38,7 @@ function names are NOT renamed):
 | `How you train` (title, row label, step label, "under / Open / Update How you train") | `Injuries & limitations` |
 | Row / card subtitle when nothing is saved | `Injuries, pain, long-term conditions or disabilities that affect your training.` |
 | Populated line, baseline only, subject nameable (≤2 phrases) | `Leaves out <subject>` e.g. `Leaves out overhead work and gripping a bar` |
-| Populated line, baseline only, not nameable | `<N> limitation(s) saved. Used when Volyume picks exercises and builds your plan.` (N counts RESTRICTION rows only, never allowances) |
+| Populated line, baseline only, not nameable | `<N> injuries or limitations saved. Used when Volyume picks exercises and builds your plan.` (singular: `1 injury or limitation saved.`; N counts RESTRICTION rows only, never allowances) |
 | Populated line, baseline restrictions 0 but allowances exist | `Set up. Nothing is left out.` |
 | Populated line with an episode | unchanged head (`Working around <subject>, until about <date>`), tail `<N> long-term` instead of `<N> permanent` |
 | `Built around N thing(s) you told it` | RETIRED, guard-banned |

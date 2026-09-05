@@ -6312,19 +6312,20 @@ screen title and step label, and the vocabulary table in
 `docs/final-certification-2026-09-05/07-FINDINGS.md` (F-01) governs every
 mid-sentence use. The word "limitation" names what the lane actually
 stores: functional limits on movement (an axis, a family, an exercise),
-whichever cause lies behind them. Disability sits under "limitations",
-never under "injuries"; the subtitle names all four causes so nobody
-classifies themselves at the door. This overrides RT2-2 and D134's "the
-NAME stays". CAP-1/2 (a baseline-shaped plan is simply the plan, no
-marker) still hold on plan surfaces; they never governed the door label.
-The D112 R6 lane law holds: "injury" is never attached to a long-term
-rule, so the baseline role is now "long-term" (the wizard asks "Is this
-long-term, or temporary?"), the live-session badge is "Limitation" and
-the episode vocabulary is unchanged.
+whichever cause lies behind them. The subtitle names all four
+causes so nobody classifies themselves at the door. This overrides RT2-2
+and D134's "the NAME stays". **Founder ruling (in chat, 2026-09-05):
+"injury" and "disability" may be used freely, on long-term rules too; the
+D112 R6 lane-vocabulary rule no longer constrains copy.** The baseline
+role reads "long-term" (the wizard asks "Is this long-term, or
+temporary?") because it is the clearer question, not because of the old
+rule; the live-session badge is "Limitation"; the episode vocabulary is
+unchanged.
 
 The populated line: a subject where two or fewer rules are nameable
-("Leaves out overhead work and gripping a bar"), otherwise "N limitations
-saved. Used when Volyume picks exercises and builds your plan." The count
+("Leaves out overhead work and gripping a bar"), otherwise "N injuries or
+limitations saved. Used when Volyume picks exercises and builds your
+plan." The count
 is restriction rows only; allowances are not "things it is built around".
 "Things you told it" is retired and guard-banned. The claim in the new
 copy is exactly what the consumers do: generated plans, the picker, swaps,
