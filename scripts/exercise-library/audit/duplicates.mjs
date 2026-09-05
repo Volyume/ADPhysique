@@ -92,26 +92,55 @@ for (const [norm, names] of normGroups.entries()) {
 // Cosmetic tokens that, alone, never establish a distinct training stimulus
 // under EL-2 (word-order noise, generic descriptors, brand words already
 // covered by (2) or genuinely interchangeable in this corpus's own naming).
+// Deliberately narrow: filler/stopwords only. Anything with real semantic
+// content defaults to "distinguishing" below (the safer default — see
+// UNRESOLVED handling), never assumed cosmetic without a reason on record.
 const COSMETIC_TOKENS = new Set([
-  'the', 'a', 'an', 'style', 'variation', 'version', 'standard', 'classic',
-  'traditional', 'basic', 'regular',
+  'the', 'a', 'an', 'of', 'for', 'with', 'style', 'variation', 'version',
+  'standard', 'classic', 'traditional', 'basic', 'regular',
 ]);
 // Tokens that DO establish a distinct stimulus under EL-2 even in a
-// close-name pair: implement, loading vector, laterality, support, grip,
-// range/depth, ballistic-vs-grind.
+// close-name pair: implement, loading vector/pulley height, laterality,
+// support, grip/attachment, range/depth class, ballistic-vs-grind, OR a
+// named-variant word that (verified against canonicality.js) the app
+// already carries as its OWN separate registry entry alongside its
+// close-named sibling — evidence that the product itself treats the
+// distinction as real, not cosmetic.
 const DISTINGUISHING_TOKENS = new Set([
+  // Implement family
   'barbell', 'dumbbell', 'kettlebell', 'cable', 'band', 'machine', 'smith',
   'landmine', 'suspension', 'trx', 'bodyweight', 'ez', 'plate', 'plateloaded',
-  'selectorised', 'hammer',
-  'high', 'low', 'mid', 'incline', 'flat', 'decline', 'overhead',
+  'selectorised', 'hammer', 'trap', 'hex', 'safety', 'cambered', 'medicine',
+  'ball', 'sled', 'prowler', 'tyre',
+  // Loading vector / pulley height / plane
+  'high', 'low', 'mid', 'incline', 'flat', 'decline', 'overhead', 'behind',
+  'over', 'bent', 'front', 'back', 'reverse',
+  // Laterality
   'single', 'double', 'unilateral', 'bilateral', 'alternating', 'onearm',
   'oneleg', 'singleleg', 'singlearm',
+  // Support / posture
   'seated', 'standing', 'lying', 'kneeling', 'chestsupported', 'supported',
-  'unsupported', 'prone',
-  'wide', 'close', 'neutral', 'pronated', 'supinated', 'reverse', 'underhand',
-  'overhand',
-  'deficit', 'paused', 'pin', 'partial', 'full',
-  'ballistic', 'swing', 'grind',
+  'unsupported', 'prone', 'leaning',
+  // Grip / attachment (verified: STAPLE lists 'Tricep Pushdown (Rope)' AND
+  // 'Tricep Pushdown (Bar)' as separate entries — canonicality.js:122-123)
+  'wide', 'close', 'neutral', 'pronated', 'supinated', 'underhand',
+  'overhand', 'rope', 'bar',
+  // Range / depth / tempo class
+  'deficit', 'paused', 'pause', 'pin', 'partial', 'full', 'weighted',
+  // Character
+  'ballistic', 'swing', 'grind', 'jump', 'bicycle', 'preacher', 'donkey',
+  'zercher', 'anderson', 'hatfield', 'jefferson', 'ssb', 'cyclist', 'spanish',
+  'sumo', 'conventional', 'box', 'goblet', 'hack', 'belt', 'pendulum',
+  'bulgarian', 'cossack', 'curtsy', 'skater', 'shrimp', 'split', 'meadows',
+  'kroc', 'helms', 'batwing', 'renegade', 'pendlay', 'snatch', 'clean',
+  'guillotine', 'spider', 'zottman', 'waiter', 'drag', 'jm', 'tate', 'svend',
+  'bradford', 'cuban', 'arnold', 'bayesian',
+  // Movement identity (a differing verb is a different exercise, not a
+  // cosmetic label)
+  'curl', 'extension', 'press', 'row', 'raise', 'fly', 'crunch', 'thrust',
+  'pull', 'push', 'shrug', 'kickback', 'squat', 'deadlift', 'lunge',
+  'bridge', 'dip', 'chop', 'twist', 'rotation', 'pulldown', 'pullover',
+  'walk', 'carry', 'hold', 'wheel', 'rollout',
 ]);
 
 function tupleKey(r) {
@@ -141,17 +170,26 @@ for (const [tuple, group] of tupleGroups.entries()) {
       const diffTokens = [...onlyA, ...onlyB].map((t) => t.replace(/[^a-z0-9]/g, ''));
       const hasDistinguishing = diffTokens.some((t) => DISTINGUISHING_TOKENS.has(t));
       const allCosmetic = diffTokens.every((t) => COSMETIC_TOKENS.has(t) || t.length <= 2);
+      const unresolved = diffTokens.filter((t) => !DISTINGUISHING_TOKENS.has(t) && !COSMETIC_TOKENS.has(t) && t.length > 2);
       let classification;
+      let confidence;
       let reason;
       if (hasDistinguishing) {
         classification = 'legitimately_distinct';
-        reason = `Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (${[...new Set(diffTokens.filter((t) => DISTINGUISHING_TOKENS.has(t)))].join(', ')}) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character), so they are not interchangeable even though the 5-tuple matches.`;
+        confidence = 'high';
+        reason = `Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (${[...new Set(diffTokens.filter((t) => DISTINGUISHING_TOKENS.has(t)))].join(', ')}) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.`;
       } else if (allCosmetic) {
         classification = 'likely_same_stimulus';
+        confidence = 'high';
         reason = `Same 5-tuple; differing token(s) (${diffTokens.join(', ') || '(word order)'}) are cosmetic descriptors under EL-2 with no mechanical distinction.`;
       } else {
-        classification = 'needs_manual_review';
-        reason = `Same 5-tuple; differing token(s) (${diffTokens.join(', ')}) are not on either the cosmetic or the distinguishing list — flagged for lead judgement rather than guessed.`;
+        // Safer default (mirrors the tier registry's "unlisted defaults to
+        // the safer/more conservative class" philosophy, canonicality.js:42-46):
+        // an unrecognised token is treated as a real distinction rather than
+        // silently merged, but flagged medium-confidence for lead review.
+        classification = 'legitimately_distinct';
+        confidence = 'medium';
+        reason = `Same 5-tuple; differing token(s) (${unresolved.join(', ')}) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation.`;
       }
       nearByTuple.push({
         tuple: { primaryMuscle: a.primaryMuscle, equipmentCategory: a.equipmentCategory, movementPattern: a.movementPattern, subregion: a.subregion, laterality: a.laterality },
@@ -159,14 +197,22 @@ for (const [tuple, group] of tupleGroups.entries()) {
         jaccard: Number(sim.toFixed(2)),
         diffTokens,
         classification,
+        confidence,
         reason,
       });
     }
   }
 }
 // Sort by classification (likely_same_stimulus first — the actionable ones) then by name.
-const order = { likely_same_stimulus: 0, needs_manual_review: 1, legitimately_distinct: 2 };
+const order = { likely_same_stimulus: 0, legitimately_distinct: 1 };
 nearByTuple.sort((a, b) => (order[a.classification] - order[b.classification]) || a.pair[0].localeCompare(b.pair[0]));
+
+// Every pair a human should actually look at: all likely_same_stimulus
+// (consolidation candidates) plus every medium-confidence legitimately_distinct
+// call (the safer-default cases above).
+const flaggedForLeadReview = nearByTuple.filter(
+  (p) => p.classification === 'likely_same_stimulus' || p.confidence === 'medium',
+);
 
 const out = {
   exactDuplicateCount: exactDuplicates.length,
@@ -176,6 +222,8 @@ const out = {
   nearDuplicatesByNormalizedName: nearByNormalizedName,
   nearDuplicatesByTupleCount: nearByTuple.length,
   nearDuplicatesByTupleBreakdown: countByClassification(nearByTuple),
+  nearDuplicatesByTupleFlaggedForLeadReviewCount: flaggedForLeadReview.length,
+  nearDuplicatesByTupleFlaggedForLeadReview: flaggedForLeadReview,
   nearDuplicatesByTuple: nearByTuple,
 };
 
@@ -188,5 +236,5 @@ function countByClassification(list) {
 const path = writeJson('duplicates.json', out);
 console.log(`duplicates.json written: ${path}`);
 console.log(`Exact (case/whitespace) duplicates: ${exactDuplicates.length}`);
-console.log(`Near-dup by normalized name groups: ${nearByNormalizedName.length}`);
+console.log(`Near-dup by normalized name pairs: ${nearByNormalizedName.length}`, out.nearDuplicatesByNormalizedNameBreakdown);
 console.log(`Near-dup by tuple pairs: ${nearByTuple.length}`, out.nearDuplicatesByTupleBreakdown);

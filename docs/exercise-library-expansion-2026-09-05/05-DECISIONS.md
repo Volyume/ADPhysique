@@ -213,3 +213,89 @@ and history.
 Cardio and endurance logging, EMOM / AMRAP / timed-station modes,
 CrossFit scoring, calorie-burn estimates, medical safety labels,
 demonstration video production, competitor text or media.
+
+## EL-14 Corpus format: one structured module, no more text parsing
+
+Facts (01): the seed is a 552-row array of positional tuples parsed by
+three separate text parsers (two scripts and a test helper), all of
+which silently skipped one row for a decade-old quote-character blind
+spot; hand-authored overrides are scattered across five name-keyed maps;
+`cue`, `exercise_category` and `increment_kg` are dead for every
+canonical row; no alias field exists; no test pins the row count.
+
+Ruling: the corpus moves to `src/lib/exerciseCorpus/` (pure, no React
+Native imports, importable from Node and Jest): one module per family
+exporting structured entries, an index that concatenates them, and one
+mapping function that produces exactly the row the seed inserts. The
+existing 552 rows are converted one-to-one by script with names
+unchanged (canonical ids are name hashes; history is untouched). The
+format is specified in `07-CORPUS-FORMAT.md`. The RAW tuple, the three
+parsers and the seed-local override maps are retired in the same
+landing; the capability lane's curated tables (`CURATED_DEMANDS`,
+`ADAPTED_SETUP`, `MACHINE_TYPE_BY_NAME`, `FAMILY_LISTS`) stay where they
+are, since they are owned by that lane and read by name, and a guard
+pins that every name they reference exists in the corpus.
+
+## EL-15 The eighteen template-scaffolding rows become canonical
+
+Facts (01 finding 2): `seedRoutines.js` inserts eighteen exercises the
+library plans need through `insertExercise()` with a random id, invisible
+to every coverage report and non-deterministic across devices.
+
+Ruling: they fold into the corpus as ordinary canonical rows. Existing
+installs already hold them under random ids; the top-up matches by
+name (case-insensitive) and re-ids such a row to its canonical id,
+rewriting every reference the same way the existing v18 re-id migration
+did, so history is preserved and cross-device ids converge. Sync's
+name-based remap already tolerates the transition.
+
+## EL-16 Dead columns are made live
+
+`exercise_category` derives from compound/isolation and `increment_kg`
+from implement and category in the corpus mapping, so the live screen's
+isolation-aware increments finally engage; the metadata re-derive key is
+bumped so existing rows are corrected once. `cue` is populated for every
+row (EL-17).
+
+## EL-17 Exercise detail: concise original cues for every row
+
+Research (03): every serious competitor ships instructions; several ship
+video. Volyume ships no cue text for any canonical row today.
+
+Ruling: every corpus entry carries a `cue`: two or three short original
+sentences (setup, execution, the one thing that goes wrong), calm voice,
+British English, no em dash, no diagnosis or safety-claim words, drafted
+by agents per family and validated by script (length, banned words,
+spelling), with a lead sample review. Video and animation are excluded
+this campaign; the detail screen already renders the cue field.
+
+## EL-18 Custom exercises
+
+Facts (01 findings 5 and 6): custom rows live in `exercises` with
+`is_custom = 1`; the local `custom_exercises` table is a fossil; no UI
+can delete a custom exercise.
+
+Ruling: custom exercises gain soft delete from their detail screen
+(history rows keep the name snapshot they already carry); creation shows
+a calm "this looks like an existing exercise" suggestion when the name
+or an alias matches a canonical row, never a forced merge; the fossil
+table is left in place (dropping is not additive) and recorded as dead.
+
+## EL-19 Storage: local-only additive columns, no cloud migration
+
+New columns on `exercises` (`aliases`, `load_character`) are populated
+from the corpus on every device and are not synced; canonical rows are
+never pushed. No Supabase migration is needed for this campaign and none
+is written. Custom-exercise aliases are out of scope.
+
+## EL-20 Search and picker ranking
+
+Facts (01 section 5): the fuzzy search matches `name` only; an empty
+query returns the library alphabetically.
+
+Ruling: the search index covers name and aliases (alias hits rank just
+below exact-name hits); an empty query shows recent and frequent
+exercises first, then the user's current plan's exercises, then
+staples by the active equipment filter, then everything else
+alphabetically; equipment and muscle filters remain; results are capped
+per page with the same virtualised list. No new dependency.

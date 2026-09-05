@@ -65,9 +65,19 @@ export function normalizeNameCaseOnly(name) {
   return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+/** Expand DB/BB/KB shorthand to their full words (whole-word only), same
+ *  substitutions as normalizeNameForDupeCheck, WITHOUT sorting — callers
+ *  that need order-sensitive tokens (near-tuple pairwise diff) use this so
+ *  "Single-Leg Romanian Deadlift (DB)" and "... (Dumbbell)" tokenize to the
+ *  same words instead of leaving a spurious 2-letter diff token. */
+export function expandAbbreviations(name) {
+  let s = String(name || '').toLowerCase();
+  for (const [re, rep] of ABBREV) s = s.replace(re, rep);
+  return s;
+}
+
 export function tokenize(name) {
-  return String(name || '')
-    .toLowerCase()
+  return expandAbbreviations(name)
     .replace(/[()]/g, ' ')
     .replace(/[^a-z0-9\s]/g, ' ')
     .split(/\s+/)
