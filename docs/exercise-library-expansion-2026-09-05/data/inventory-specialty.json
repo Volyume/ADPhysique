@@ -1,0 +1,841 @@
+{
+  "family": "specialty",
+  "generatedAt": "2026-09-05",
+  "existingRowsConsidered": 40,
+  "candidates": [
+    {
+      "name": "GHD Hip Extension",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings",
+        "back"
+      ],
+      "equipment": "machine",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 6,
+      "subregion": "activator",
+      "aliases": [
+        "Glute-Ham Developer Hip Extension"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "45-Degree Hip Extension",
+        "why": "the GHD holds the hips over a horizontal pad with the knees free to bend, letting the glutes work through a longer hip-extension range with less lower-back involvement than the fixed 45-degree angled bench"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)",
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": null,
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": null,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "unilateralLoadable"
+      ],
+      "notes": "The existing \"GHD Sit-Up\" row is the same apparatus’s spinal-flexion exercise (per the brief, that one should be never_auto); this hip-extension movement on the same apparatus is a separate hinge-pattern stimulus without that flexion loading, so it is not held to the same tier."
+    },
+    {
+      "name": "Trap Bar Deadlift (Low Handle)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "quads",
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 8,
+      "fatigueCost": 6,
+      "sfr": 5,
+      "subregion": "spinal_erector",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Trap Bar Deadlift",
+        "why": "range/depth class differs (EL-2): the low handles sit closer to the floor, increasing knee and hip flexion at the start and moving the demand closer to a conventional barbell deadlift than the existing row’s (high-handle) shorter pull"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "No dedicated trap-bar coarse equipment value exists in this vocabulary; tagged \"barbell\", matching the existing \"Trap Bar Deadlift\" row."
+    },
+    {
+      "name": "Trap Bar Row",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps",
+        "rear_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: the trap bar is only seeded for the deadlift and shrug, never a bent-over row; the neutral-grip handles change the pull path versus a straight bar"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": null,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "Bent-over row using the trap bar’s neutral handles; a shoulder-friendlier alternative to a pronated-grip barbell row."
+    },
+    {
+      "name": "Trap Bar Floor Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Close-Grip Floor Press",
+        "why": "implement family differs (trap bar’s neutral handles vs a straight barbell); the neutral grip changes shoulder rotation demand through the same floor-limited ROM"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Lying inside the trap bar’s frame, pressing the neutral handles; a shoulder-friendlier floor press variant."
+    },
+    {
+      "name": "Cambered Bar Bench Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 5,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [
+        "Cambered Bar Press"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Cambered Bar Squat",
+        "why": "this is a horizontal press pattern, not a squat; the two rows share only the implement, not the training stimulus"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "The bend lets the hands drop below the chest, extending stretch ROM at the bottom versus a straight bar; a common accommodating-ROM pressing tool."
+    },
+    {
+      "name": "Zercher Deadlift",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 10,
+      "fatigueCost": 5,
+      "sfr": 4,
+      "subregion": "spinal_erector",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Zercher Squat",
+        "why": "movement pattern differs (hinge, not squat): the bar stays in the crook of the elbows through a hip-hinge pull rather than a knee-and-hip squat descent"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Less common than the Zercher squat; the elbow-crook hold is the shared coaching point, the pattern is not."
+    },
+    {
+      "name": "Axle Deadlift",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "forearms",
+        "hamstrings"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 8,
+      "fatigueCost": 6,
+      "sfr": 4,
+      "subregion": "spinal_erector",
+      "aliases": [
+        "Fat Bar Deadlift",
+        "Thick Bar Deadlift"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Snatch Grip Deadlift",
+        "why": "grip changes the prime mover/demand (EL-2): the thick (typically 2-inch) axle diameter forces an open, crush-limited grip that a standard-diameter bar at any hand width does not create"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)",
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "A strongman axle bar rather than a standard barbell diameter; no dedicated coarse equipment value exists for it, so it is tagged \"barbell\" like the corpus’s other specialty-bar rows."
+    },
+    {
+      "name": "Log Press",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "abs"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 6,
+      "sfr": 3,
+      "subregion": "overhead_press",
+      "aliases": [
+        "Log Clean and Press"
+      ],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: a strongman log implement, neutral-grip and cylindrical, presses differently from any bar the corpus seeds"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": null,
+        "floorAccess": null,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": null,
+        "impact": false,
+        "balanceDemand": null,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": "Strongman implement; never_auto per EL-5 (\"strongman implement\" is one of the five categories the ruling names explicitly). No dedicated coarse equipment value for a log; tagged \"barbell\" as the closest bucket, same treatment as the other specialty bars."
+    },
+    {
+      "name": "Swiss Bar Bench Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": "flat",
+      "aliases": [
+        "Neutral-Grip Bench Press",
+        "Football Bar Bench Press"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Close-Grip Bench Press",
+        "why": "grip changes the prime mover/demand (EL-2): the fixed neutral (palms-facing) grip removes the shoulder external-rotation position a pronated-grip press requires, regardless of hand width"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "No dedicated coarse equipment value for a Swiss/football bar; tagged \"barbell\" as the closest bucket."
+    },
+    {
+      "name": "Swiss Bar Row",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps",
+        "rear_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": "upper_mid_row",
+      "aliases": [
+        "Neutral-Grip Barbell Row"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Trap Bar Row",
+        "why": "implement family differs at the mechanical level: the Swiss bar’s multiple neutral-grip handle positions let hand width be chosen, where the trap bar’s width is fixed by its frame"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": null,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "No dedicated coarse equipment value for a Swiss bar; tagged \"barbell\"."
+    },
+    {
+      "name": "Chaos Bench Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 8,
+      "fatigueCost": 5,
+      "sfr": 3,
+      "subregion": "flat",
+      "aliases": [
+        "Chaos Bar Bench Press",
+        "Bamboo Bar Bench Press"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Cambered Bar Bench Press",
+        "why": "plates hang from bands/chains off the bar ends and swing, adding a continuously shifting balance demand a rigid cambered bar does not have"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Setup complexity (bands/chains rigged to each end) and the instability skill it trains keep it niche rather than specialist."
+    },
+    {
+      "name": "Band-Resisted Bench Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 5,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [
+        "Banded Bench Press"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Close-Grip Bench Press",
+        "why": "loading vector differs (EL-2): bands anchored to the rack add resistance that increases through the ROM (more tension at lockout), a different strength curve from a flat plate load"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Accommodating-resistance technique; bands anchored to the rack or floor, not the \"Band Chest Press\" seeded row (which is band-only, no bar)."
+    },
+    {
+      "name": "Chain-Loaded Bench Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 5,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [
+        "Chain Bench Press"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Band-Resisted Bench Press",
+        "why": "chains add resistance as links lift progressively off the floor (a stepped, mass-based curve) rather than an elastic band’s continuously increasing tension; a mechanically different accommodating-resistance tool"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Chains draped over each bar end, deloading at the bottom and loading toward lockout."
+    },
+    {
+      "name": "Band-Resisted Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 6,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [
+        "Banded Barbell Squat"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Safety Bar Squat",
+        "why": "loading vector differs (EL-2): bands anchored to the floor add resistance that increases toward lockout, unlike the seeded \"Band Squat\" row, which is band-only with no bar at all"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Accommodating resistance on a loaded barbell squat; distinct from the seeded band-only \"Band Squat\"."
+    },
+    {
+      "name": "Chain-Loaded Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 6,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [
+        "Chain Squat"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Band-Resisted Squat",
+        "why": "chains (stepped, mass-based curve) rather than bands (elastic, continuous curve); the same accommodating-resistance intent through a mechanically different tool"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Chains draped over each end of the bar, deloading in the hole and loading near lockout."
+    },
+    {
+      "name": "Band-Resisted Deadlift",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "hamstrings",
+        "glutes"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 6,
+      "sfr": 4,
+      "subregion": "spinal_erector",
+      "aliases": [
+        "Banded Deadlift"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Axle Deadlift",
+        "why": "loading vector differs (EL-2): bands anchored under the plates add resistance increasing toward lockout, unlike the seeded band-only \"Band Deadlift\" row, which uses no bar"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Accommodating resistance on a loaded barbell deadlift; distinct from the seeded band-only \"Band Deadlift\"."
+    },
+    {
+      "name": "Chain-Loaded Deadlift",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "hamstrings",
+        "glutes"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 6,
+      "sfr": 4,
+      "subregion": "spinal_erector",
+      "aliases": [
+        "Chain Deadlift"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Band-Resisted Deadlift",
+        "why": "chains (stepped, mass-based curve) rather than bands (elastic, continuous curve)"
+      },
+      "sources": [
+        "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Chains draped from the bar, most of the length resting on the floor at the start."
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Bulgarian Bag Swing",
+      "reason": "not representable (no equipment vocabulary bucket fits a Bulgarian bag: it is a flexible, shifting-load bag, not a rigid kettlebell/barbell/dumbbell/medicine-ball; the movements it is used for — swings, shouldering, halos — also duplicate ones already seeded for kettlebells)"
+    },
+    {
+      "name": "Nordic Curl (Weighted/Banded)",
+      "reason": "duplicate of 'Nordic Curl' / 'Nordic Hamstring Curl' / 'Nordic Glute Curl' / 'Reverse Nordic Curl' (all four already seeded; a loading-aid detail is a coaching cue on those rows, not a new stimulus)"
+    },
+    {
+      "name": "GHD Back Extension",
+      "reason": "duplicate of 'Reverse Hyperextension' / '45-Degree Hip Extension' / existing back-extension family (same hip-hinge-on-a-pad stimulus already seeded three ways for the back-primary version)"
+    }
+  ],
+  "aliasesForExisting": [
+    {
+      "existing": "Hand Gripper",
+      "aliases": [
+        "Grip Crusher",
+        "Crush Gripper",
+        "Captains of Crush"
+      ]
+    },
+    {
+      "existing": "Neck Harness Flexion",
+      "aliases": [
+        "Neck Harness (Flexion)"
+      ]
+    },
+    {
+      "existing": "Neck Harness Extension",
+      "aliases": [
+        "Neck Harness (Extension)"
+      ]
+    },
+    {
+      "existing": "Pallof Press",
+      "aliases": [
+        "Cable Pallof Press"
+      ]
+    },
+    {
+      "existing": "Step-Up (Glute Focus)",
+      "aliases": [
+        "Peterson Step-Up"
+      ]
+    },
+    {
+      "existing": "Step-Up (Dumbbell)",
+      "aliases": [
+        "Poliquin Step-Up"
+      ]
+    }
+  ],
+  "observations": [
+    "Trap-bar deadlift: only one handle height is currently seeded (\"Trap Bar Deadlift\"); this agent could not confirm from the corpus alone whether that row is the high- or low-handle version, so treated it as the higher/shorter-pull default and added \"Trap Bar Deadlift (Low Handle)\" as the distinct longer-ROM variant per EL-2 range/depth class.",
+    "Nordic curl variants: already saturated (4 existing rows: Nordic Curl, Nordic Hamstring Curl, Nordic Glute Curl, Reverse Nordic Curl); no new Nordic row added.",
+    "Pallof variants: already saturated on cable (4 existing rows); no new cable Pallof row added. The landmine family’s \"Landmine Anti-Rotation Press (Half-Kneeling)\" covers the same anti-rotation intent on a different implement.",
+    "Glute-ham raise, reverse hyperextension, safety-bar squat, cambered-bar squat, Zercher squat, Jefferson squat, sissy squat (bodyweight and machine), Spanish squat, belt squat, GHD sit-up, plate pinch, wrist roller, hand gripper, neck harness: all already seeded; no new rows added for these, per EL-3 (would duplicate an existing stimulus).",
+    "Poliquin step-up and Peterson step-up: checked against the existing step-up rows. \"Peterson Step-Up\" (forward torso lean, glute-dominant execution) reads as the same stimulus as the seeded \"Step-Up (Glute Focus)\" and is recorded as an alias, not a new row. \"Poliquin Step-Up\" (controlled-eccentric, no push-off cue) is a coaching-technique variant on the same generic step-up pattern, not a different prime mover or loading vector under EL-2, so it is recorded as an alias of \"Step-Up (Dumbbell)\" rather than added as a row."
+  ]
+}
