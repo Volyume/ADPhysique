@@ -39,8 +39,11 @@ describe('C16-LIVE job 10: the reason survives the save and reaches a screen', (
     // explanation existed only for as long as the in-memory plan did.
     const db = lib('database.js');
     expect(db).toMatch(/selection_reason TEXT/);
-    expect(db).toMatch(/superset_group_id, selection_reason, created_at, updated_at/);
-    expect(db).toMatch(/addExerciseToRoutine\([^)]*selectionReason = null\)/s);
+    // EL-9 (exercise-library-expansion-2026-09-05): the circuit columns
+    // group_kind and round_rest_seconds sit between selection_reason and
+    // created_at now; the pin is that selection_reason is written.
+    expect(db).toMatch(/superset_group_id, selection_reason, group_kind, round_rest_seconds, created_at, updated_at/);
+    expect(db).toMatch(/addExerciseToRoutine\([^)]*selectionReason = null/s);
     expect(lib('planAutoGen.js')).toMatch(/ex\.selectionReason \?\? null/);
   });
 

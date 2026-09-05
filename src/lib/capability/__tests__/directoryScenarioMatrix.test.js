@@ -21,6 +21,8 @@ const { movementFamily } = require('../../exercise/movementFamily');
 const { CONSTRAINT_RULE_KIND, CONSTRAINT_SOURCE, CONSTRAINT_ROLE } = require('../model');
 const { CONDITION_PROFILES } = require('../directory/conditions');
 const { INJURY_PROFILES } = require('../directory/injuries');
+const fs = require('fs');
+const path = require('path');
 const { CORPUS } = require('../../exerciseCorpus');
 
 const NOW = 1_750_000_000_000;

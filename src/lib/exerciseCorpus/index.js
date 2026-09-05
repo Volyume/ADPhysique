@@ -30,7 +30,6 @@ import sled from './families/sled.js';
 import { deriveExerciseMetadata } from '../exerciseMetadata.js';
 import { deriveDemandMetadata } from '../capability/demands.js';
 import { deriveLoadSemantics } from '../exercise/loadSemantics.js';
-import { canonicalExerciseId } from '../exercise/canonicalId.js';
 
 export const FAMILY_NAMES = Object.freeze([
   'barbell', 'dumbbell', 'cable', 'machine', 'smith', 'bodyweight', 'band',

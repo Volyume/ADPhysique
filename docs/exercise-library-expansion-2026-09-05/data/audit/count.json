@@ -61,9 +61,9 @@
   "perTier": {
     "common": 204,
     "niche": 163,
-    "specialist": 103,
+    "specialist": 85,
     "staple": 66,
-    "never_auto": 28
+    "never_auto": 46
   },
   "perExerciseType": {
     "weight_reps": 528,

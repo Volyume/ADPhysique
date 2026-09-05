@@ -1,6 +1,6 @@
 {
   "totalRows": 564,
-  "neverEligibleCount": 32,
+  "neverEligibleCount": 50,
   "neverEligible": [
     {
       "name": "Barbell Upright Row (Wide)",
@@ -60,6 +60,20 @@
       "equipmentProfilesEmpty": false
     },
     {
+      "name": "Hip Thrust (Barbell)",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
       "name": "Power Clean",
       "tier": "never_auto",
       "poolEligible": false,
@@ -103,6 +117,20 @@
       "equipmentProfilesEmpty": false
     },
     {
+      "name": "Trap Bar Deadlift (Low Handle)",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
       "name": "Upright Row",
       "tier": "never_auto",
       "poolEligible": true,
@@ -117,7 +145,105 @@
       "equipmentProfilesEmpty": false
     },
     {
+      "name": "Dumbbell Goblet Squat",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
+      "name": "Single-Arm Dumbbell Row",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
+      "name": "Cable Fly (Low to Mid, Incline)",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
+      "name": "Cable Fly (Mid Height, Cuff)",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
+      "name": "Cable Lateral Raise (Low Pulley)",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
+      "name": "Cable Serratus Punch",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
       "name": "Cable Upright Row",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
+      "name": "Underhand Lat Pulldown",
       "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
@@ -190,7 +316,63 @@
       "equipmentProfilesEmpty": false
     },
     {
+      "name": "Facing-In Shoulder Press",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
       "name": "GHD Sit-Up",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
+      "name": "HS ISO High Row",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
+      "name": "HS Plate-Loaded Lat Pulldown",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
+      "name": "Plate-Loaded Seated Row",
       "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
@@ -293,6 +475,20 @@
       "equipmentProfilesEmpty": false
     },
     {
+      "name": "Bodyweight Squat",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
       "name": "Box Jump",
       "tier": "never_auto",
       "poolEligible": false,
@@ -301,6 +497,20 @@
       "neverEligibleReasons": [
         "never_auto tier (canonicality.js)",
         "pool screen: movementPattern \"plyometric\" is in NON_HYPERTROPHY_PATTERNS (plyometric/power)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
+      "name": "Box Step-Up",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
       ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
@@ -346,6 +556,20 @@
       "neverEligibleReasons": [
         "never_auto tier (canonicality.js)",
         "pool screen: named in poolGenerator.js NON_HYPERTROPHY_NAMES"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
+      "name": "Lunge",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
       ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
@@ -425,6 +649,34 @@
       "equipmentProfilesEmpty": true
     },
     {
+      "name": "Seated Band Lat Pulldown",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
+      "name": "Seated Band Row",
+      "tier": "never_auto",
+      "poolEligible": true,
+      "poolBlockReason": null,
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
+      "beginnerBlockedByDifficulty3": false,
+      "exerciseType": "weight_reps",
+      "nonWeightReps": false,
+      "equipmentProfilesEmpty": false
+    },
+    {
       "name": "Kettlebell Clean and Press",
       "tier": "never_auto",
       "poolEligible": true,
@@ -470,9 +722,9 @@
   "tierDistribution": {
     "common": 204,
     "niche": 163,
-    "specialist": 103,
+    "specialist": 85,
     "staple": 66,
-    "never_auto": 28
+    "never_auto": 46
   },
   "difficulty3Count": 24,
   "difficulty3Rows": [
@@ -703,7 +955,7 @@
     "Side Plank",
     "Wall Sit"
   ],
-  "unlistedDefaultSpecialistCount": 104,
+  "unlistedDefaultSpecialistCount": 86,
   "unlistedDefaultSpecialist": [
     "Barbell Good Morning",
     "Barbell Wrist Curl",
@@ -714,7 +966,6 @@
     "Fat Grip Curl",
     "Good Morning",
     "Good Morning (Barbell)",
-    "Hip Thrust (Barbell)",
     "JM Press",
     "Pinch Grip Carry",
     "Plate Neck Curl",
@@ -730,11 +981,9 @@
     "Thick Bar Curl",
     "Trap Bar Deadlift",
     "Trap Bar Deadlift (Hamstring)",
-    "Trap Bar Deadlift (Low Handle)",
     "Wrist Roller",
     "Zercher Sumo Squat (Adductor Focus)",
     "Decline Dumbbell Fly",
-    "Dumbbell Goblet Squat",
     "Dumbbell Pronation/Supination",
     "Dumbbell Pullover",
     "Dumbbell Tibialis Raise (Seated)",
@@ -743,19 +992,14 @@
     "Farmer's Walk",
     "Gripper Walks",
     "Lateral Lunge",
-    "Single-Arm Dumbbell Row",
     "Sumo Squat (Adductor Focus)",
     "Wide-Stance Goblet Squat (Adductor Bias)",
     "Cable Anti-Rotation Hold (Half-Kneeling)",
-    "Cable Fly (Low to Mid, Incline)",
-    "Cable Fly (Mid Height, Cuff)",
     "Cable Hip Adduction",
-    "Cable Lateral Raise (Low Pulley)",
     "Cable Pull-Through",
     "Cable Reverse Curl (Forearms)",
     "Cable Reverse Woodchop (Kneeling)",
     "Cable Reverse Wrist Curl",
-    "Cable Serratus Punch",
     "Cable Woodchop (Half-Kneeling)",
     "Cable Wrist Curl",
     "Half-Kneeling Pallof Press",
@@ -764,32 +1008,24 @@
     "Single-Arm Cable Woodchop (Standing)",
     "Single-Arm Cable Wrist Curl",
     "Tall-Kneeling Pallof Press",
-    "Underhand Lat Pulldown",
-    "Facing-In Shoulder Press",
     "Glute Ham Raise",
     "Hand Gripper",
     "Hip Adduction Machine",
-    "HS ISO High Row",
-    "HS Plate-Loaded Lat Pulldown",
     "Neck Extension (Machine)",
     "Neck Flexion (Machine)",
     "Neck Harness Extension",
     "Neck Harness Flexion",
     "Neck Machine Lateral Flexion",
     "Plate-Loaded Decline Press",
-    "Plate-Loaded Seated Row",
     "Reverse Hyperextension (Glute)",
     "Seated Tibialis Raise",
     "Tib Bar Raise (Machine)",
     "Adductor Rock-Back (Kneeling)",
     "Adductor Squeeze (Ball)",
-    "Bodyweight Squat",
-    "Box Step-Up",
     "Copenhagen Adduction",
     "Cossack Squat",
     "Dead Hang",
     "Heel Walk",
-    "Lunge",
     "Manual Resistance Neck Extension",
     "Manual Resistance Neck Flexion",
     "Neck Bridge",
@@ -806,9 +1042,7 @@
     "Towel Pull-Up",
     "Band Tibialis Raise",
     "Band Wrist Curl",
-    "Band Wrist Extension",
-    "Seated Band Lat Pulldown",
-    "Seated Band Row"
+    "Band Wrist Extension"
   ],
   "arguablyShouldNotBeAutoCount": 15,
   "arguablyShouldNotBeAuto": [
@@ -1476,11 +1710,13 @@
     },
     {
       "name": "Hip Thrust (Barbell)",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -2083,11 +2319,13 @@
     },
     {
       "name": "Trap Bar Deadlift (Low Handle)",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -2421,11 +2659,13 @@
     },
     {
       "name": "Dumbbell Goblet Squat",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -3105,11 +3345,13 @@
     },
     {
       "name": "Single-Arm Dumbbell Row",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -3633,11 +3875,13 @@
     },
     {
       "name": "Cable Fly (Low to Mid, Incline)",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -3645,11 +3889,13 @@
     },
     {
       "name": "Cable Fly (Mid Height, Cuff)",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -3801,11 +4047,13 @@
     },
     {
       "name": "Cable Lateral Raise (Low Pulley)",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -3969,11 +4217,13 @@
     },
     {
       "name": "Cable Serratus Punch",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -4607,11 +4857,13 @@
     },
     {
       "name": "Underhand Lat Pulldown",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -4834,11 +5086,13 @@
     },
     {
       "name": "Facing-In Shoulder Press",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -4944,11 +5198,13 @@
     },
     {
       "name": "HS ISO High Row",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -4956,11 +5212,13 @@
     },
     {
       "name": "HS Plate-Loaded Lat Pulldown",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -5472,11 +5730,13 @@
     },
     {
       "name": "Plate-Loaded Seated Row",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -6041,11 +6301,13 @@
     },
     {
       "name": "Bodyweight Squat",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -6068,11 +6330,13 @@
     },
     {
       "name": "Box Step-Up",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -6533,11 +6797,13 @@
     },
     {
       "name": "Lunge",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -7445,11 +7711,13 @@
     },
     {
       "name": "Seated Band Lat Pulldown",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -7457,11 +7725,13 @@
     },
     {
       "name": "Seated Band Row",
-      "tier": "specialist",
+      "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
+      "everNeverEligible": true,
+      "neverEligibleReasons": [
+        "never_auto tier (canonicality.js)"
+      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,

@@ -2464,108 +2464,6 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* CC33 D112 R5 (closes audit T1-14/T2-31): the pre-workout quiet
-            constraint line, standalone now -- it renders whenever the
-            capability state has an active APPLIED episode rule and an
-            active plan exists, independent of which brief headline fired
-            (or none) and of whether the brief itself was dismissed. Same
-            quiet styling as the former in-brief line; now tappable
-            through to How you train. */}
-        {/* Premium UI pass. These rows are the capability lane's presence on
-            Home, and they were five loose sentences floating on the
-            background between two cards: no container, no heading, nothing
-            grouping them, so the squint test resolved no group here at all
-            and the one surface a user with an injury looks for read as
-            stray text. They are now one grouped list under its own heading,
-            the same shape Settings and the Coach tab use. The rows keep
-            their quiet 13px voice, their targets and their behaviour; only
-            the grouping is new. */}
-        {hasConstraintRows ? (
-        <View style={styles.constraintSection}>
-          <SectionLabel tone="muted">How you train</SectionLabel>
-          <View style={[styles.constraintGroup, live.constraintGroup]}>
-        {activeConstraint && activePlan ? (
-          <TouchableOpacity
-            style={[styles.constraintLineRow, live.constraintLineRow]}
-            onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
-            accessibilityRole="button"
-            accessibilityLabel={`${constraintLineText(constraintSubject)} Open How you train`}
-          >
-            <Text style={[styles.constraintLineText, live.constraintLineText]}>
-              {constraintLineText(constraintSubject)}
-            </Text>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-          </TouchableOpacity>
-        ) : null}
-
-        {/* CC33 D112 R5 (closes audit T1-15/T2-24): the §22 AWAITING
-            prompt, previously reachable only from HowYouTrain and the
-            weekly check-in. Quiet row, tappable through to How you train
-            to answer it there. */}
-        {awaitingConstraintLine ? (
-          <TouchableOpacity
-            style={[styles.constraintLineRow, live.constraintLineRow]}
-            onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
-            accessibilityRole="button"
-            accessibilityLabel={`${awaitingConstraintLine} Open How you train`}
-          >
-            <Text style={[styles.constraintLineText, live.constraintLineText]}>
-              {awaitingConstraintLine}
-            </Text>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-          </TouchableOpacity>
-        ) : null}
-
-        {/* CC33 adversarial review E1: the undecided-rule ask. Shares the
-            AWAITING slot (one ask-class row at a time, J4); the works-
-            around statement line above may still coexist, exactly as it
-            does with AWAITING. */}
-        {undecidedConstraint && !awaitingConstraintLine ? (
-          <TouchableOpacity
-            style={[styles.constraintLineRow, live.constraintLineRow]}
-            onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
-            accessibilityRole="button"
-            accessibilityLabel="A change to how you train is waiting for your decision. Open How you train"
-          >
-            <Text style={[styles.constraintLineText, live.constraintLineText]}>
-              A change to how you train is waiting for your decision.
-            </Text>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-          </TouchableOpacity>
-        ) : null}
-
-        {/* CC33 D112 R5 (closes audit T2-25's copy half): the durable
-            reintroduction line. Same quiet styling as the rows above but
-            NOT tappable - it asks nothing and reports the plan's own
-            trajectory while any of this week's planned rows carry the
-            §23 ramp's source stamp. Meaning is in the text alone (J3). */}
-        {rampLine ? (
-          <View style={[styles.constraintLineRow, live.constraintLineRow]}>
-            <Text style={[styles.constraintLineText, live.constraintLineText]}>
-              {rampLine}
-            </Text>
-          </View>
-        ) : null}
-
-        {/* CC33 round 9 (B4/E1): the honest could-not-check line. When the
-            capability read fails with no last-known state, every row above
-            vanishes silently and Home reads as "nothing going on" - this
-            quiet line (rampLine's non-tappable pattern) says the truth
-            instead, in the lane's established honesty vocabulary
-            (RoutineDetail and ActiveWorkout say the same at their swap
-            surfaces). Not tappable: it asks nothing, and How you train
-            would face the same failed read. */}
-        {capabilityCheckFailed ? (
-          <View style={[styles.constraintLineRow, live.constraintLineRow]}>
-            <Text style={[styles.constraintLineText, live.constraintLineText]}>
-              Volyume could not check how you train just now.
-            </Text>
-          </View>
-        ) : null}
-          </View>
-        </View>
-        ) : null}
-
         {/* ── Campaign 26 (founder device order 2026-08-17): the post-hero
             evidence region. The weigh-in strip renders ONLY while today's
             weight is an ACTION (not yet logged) - once logged, the big
@@ -2703,6 +2601,113 @@ export default function HomeScreen({ navigation, route }) {
 
         {/* History / Lifts / Volume quick links removed from Train (founder
             2026-06-03): they are Progress items and live on the Progress tab. */}
+
+        {/* Founder order 2026-09-05: the "How you train" group is the LAST
+            item on Today. It reports how training is being worked around;
+            it is not the day's action, so it sits below every action and
+            evidence card rather than above them. */}
+        {/* CC33 D112 R5 (closes audit T1-14/T2-31): the pre-workout quiet
+            constraint line, standalone now -- it renders whenever the
+            capability state has an active APPLIED episode rule and an
+            active plan exists, independent of which brief headline fired
+            (or none) and of whether the brief itself was dismissed. Same
+            quiet styling as the former in-brief line; now tappable
+            through to How you train. */}
+        {/* Premium UI pass. These rows are the capability lane's presence on
+            Home, and they were five loose sentences floating on the
+            background between two cards: no container, no heading, nothing
+            grouping them, so the squint test resolved no group here at all
+            and the one surface a user with an injury looks for read as
+            stray text. They are now one grouped list under its own heading,
+            the same shape Settings and the Coach tab use. The rows keep
+            their quiet 13px voice, their targets and their behaviour; only
+            the grouping is new. */}
+        {hasConstraintRows ? (
+        <View style={styles.constraintSection}>
+          <SectionLabel tone="muted">How you train</SectionLabel>
+          <View style={[styles.constraintGroup, live.constraintGroup]}>
+        {activeConstraint && activePlan ? (
+          <TouchableOpacity
+            style={[styles.constraintLineRow, live.constraintLineRow]}
+            onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
+            accessibilityRole="button"
+            accessibilityLabel={`${constraintLineText(constraintSubject)} Open How you train`}
+          >
+            <Text style={[styles.constraintLineText, live.constraintLineText]}>
+              {constraintLineText(constraintSubject)}
+            </Text>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </TouchableOpacity>
+        ) : null}
+
+        {/* CC33 D112 R5 (closes audit T1-15/T2-24): the §22 AWAITING
+            prompt, previously reachable only from HowYouTrain and the
+            weekly check-in. Quiet row, tappable through to How you train
+            to answer it there. */}
+        {awaitingConstraintLine ? (
+          <TouchableOpacity
+            style={[styles.constraintLineRow, live.constraintLineRow]}
+            onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
+            accessibilityRole="button"
+            accessibilityLabel={`${awaitingConstraintLine} Open How you train`}
+          >
+            <Text style={[styles.constraintLineText, live.constraintLineText]}>
+              {awaitingConstraintLine}
+            </Text>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </TouchableOpacity>
+        ) : null}
+
+        {/* CC33 adversarial review E1: the undecided-rule ask. Shares the
+            AWAITING slot (one ask-class row at a time, J4); the works-
+            around statement line above may still coexist, exactly as it
+            does with AWAITING. */}
+        {undecidedConstraint && !awaitingConstraintLine ? (
+          <TouchableOpacity
+            style={[styles.constraintLineRow, live.constraintLineRow]}
+            onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
+            accessibilityRole="button"
+            accessibilityLabel="A change to how you train is waiting for your decision. Open How you train"
+          >
+            <Text style={[styles.constraintLineText, live.constraintLineText]}>
+              A change to how you train is waiting for your decision.
+            </Text>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </TouchableOpacity>
+        ) : null}
+
+        {/* CC33 D112 R5 (closes audit T2-25's copy half): the durable
+            reintroduction line. Same quiet styling as the rows above but
+            NOT tappable - it asks nothing and reports the plan's own
+            trajectory while any of this week's planned rows carry the
+            §23 ramp's source stamp. Meaning is in the text alone (J3). */}
+        {rampLine ? (
+          <View style={[styles.constraintLineRow, live.constraintLineRow]}>
+            <Text style={[styles.constraintLineText, live.constraintLineText]}>
+              {rampLine}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* CC33 round 9 (B4/E1): the honest could-not-check line. When the
+            capability read fails with no last-known state, every row above
+            vanishes silently and Home reads as "nothing going on" - this
+            quiet line (rampLine's non-tappable pattern) says the truth
+            instead, in the lane's established honesty vocabulary
+            (RoutineDetail and ActiveWorkout say the same at their swap
+            surfaces). Not tappable: it asks nothing, and How you train
+            would face the same failed read. */}
+        {capabilityCheckFailed ? (
+          <View style={[styles.constraintLineRow, live.constraintLineRow]}>
+            <Text style={[styles.constraintLineText, live.constraintLineText]}>
+              Volyume could not check how you train just now.
+            </Text>
+          </View>
+        ) : null}
+          </View>
+        </View>
+        ) : null}
+
       </ScrollView>
 
       {/* Change Workout Sheet */}
