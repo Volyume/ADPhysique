@@ -67,9 +67,9 @@ export default [
     aliases: ["Sled Rope Row"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","difficulty":1,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    setup: "Face away from the sled attached by a strap or rope, in a split or athletic stance.",
+    setup: "Face the sled with the rope or handles in both hands, in a split or athletic stance.",
     execution: "Pull the handles towards your ribs, then extend your arms forward to let the sled slide back before pulling again.",
-    watch: "Walking the pull loses back tension.",
+    watch: "Stepping backwards as you pull hides how much your back is doing, so keep your feet planted.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];

@@ -31,14 +31,14 @@ export default [
     loadCharacter: "grind",
     setup: "Rest your hips on the pad with ankles locked under the rollers, body hanging forward.",
     execution: "Hinge up by squeezing your glutes until your body is level, then lower slowly.",
-    watch: "Rounding your lower back to rise is the common fault.",
+    watch: "Rounding your lower back to rise takes the glutes out of it, so keep your back flat.",
   },
   {
     name: "Ab Crunch Machine",
     retiredInto: "Machine Crunch",
     setup: "Sit in the machine with the pad across your chest and hips still.",
     execution: "Curl your ribs down towards your hips rather than nodding your head forward.",
-    watch: "Pulling with the neck instead of curling the torso is the usual fault.",
+    watch: "Pulling with your neck instead of curling your ribs down leaves the abs barely working.",
   },
   {
     name: "Abduction Machine",
@@ -54,7 +54,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with your back flat and the outside of your knees against the pads.",
     execution: "Push your knees apart against the machine, then bring them back slowly.",
-    watch: "Rocking your hips to help the push is the common fault.",
+    watch: "Rocking your hips to help the push shortens the range, so keep your back flat on the pad.",
   },
   {
     name: "Assault Bike",
@@ -89,7 +89,7 @@ export default [
     loadCharacter: "grind",
     setup: "Kneel on the platform with the counterweight set to support part of your weight, hands on the bars.",
     execution: "Lower by bending your elbows until your shoulders dip, then press back up.",
-    watch: "Flaring the elbows wide takes the work off the chest.",
+    watch: "Stopping halfway down keeps the chest out of it, so lower until your shoulders sit below your elbows.",
   },
   {
     name: "Assisted Pull-Up",
@@ -104,7 +104,7 @@ export default [
     loadCharacter: "grind",
     setup: "Kneel on the platform with the counterweight set to offset your weight, and take an overhand grip above you.",
     execution: "Pull your chest towards the bar by driving your elbows down, then lower slowly.",
-    watch: "Letting the machine do all the work wastes the rep.",
+    watch: "Setting the assistance so high that you shoot up leaves nothing to pull against, so take some off.",
   },
   {
     name: "Back Extension (Weighted)",
@@ -119,7 +119,7 @@ export default [
     loadCharacter: "grind",
     setup: "Set your hips on the pad with ankles locked under the rollers, holding a plate to your chest.",
     execution: "Hinge forward until you feel a stretch, then squeeze your glutes to rise level.",
-    watch: "Rounding your lower back on the way down is the usual fault.",
+    watch: "Rounding your lower back on the way down moves the stretch off the hamstrings, so hinge at the hips.",
   },
   {
     name: "Battle Ropes",
@@ -153,7 +153,7 @@ export default [
     loadCharacter: "grind",
     setup: "Clip the belt around your hips and stand on the platform with the weight hanging below.",
     execution: "Bend your knees and hips to lower until your thighs are level, then drive back up.",
-    watch: "Letting your knees cave inward on the way up is the common fault.",
+    watch: "Hanging back on the handles instead of standing tall shifts the load off your legs.",
   },
   {
     name: "Calf Raise on Leg Press Sled",
@@ -183,7 +183,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit in the machine with one handle at chest height, feet flat on the floor.",
     execution: "Press the handle forward until your arm extends, then return slowly without twisting your torso.",
-    watch: "Rotating your body to help the press is the common fault.",
+    watch: "Rotating your torso to help the press hides the weaker side, so keep both shoulders square.",
   },
   {
     name: "Cycling (Stationary)",
@@ -222,7 +222,7 @@ export default [
     overrides: { demands: { unilateralLoadable: false } },
     setup: "Sit in the machine with the seat adjusted so the handles sit level with your lower chest.",
     execution: "Press the handles forward and slightly down until your arms extend, then return slowly.",
-    watch: "Flaring the elbows out wide is the common fault.",
+    watch: "Flaring your elbows straight out shifts the press off the lower chest, so keep them tucked in a little.",
   },
   {
     name: "Dip Machine",
@@ -252,7 +252,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand in the machine with your hips against the pad and the balls of your feet on the platform.",
     execution: "Rise onto your toes as high as possible, pause, then lower for a full stretch.",
-    watch: "Bouncing through a short range is the usual fault.",
+    watch: "Bouncing through a short range skips the stretch at the bottom that makes the rep count.",
   },
   {
     name: "Donkey Kickback (Machine)",
@@ -285,9 +285,9 @@ export default [
     // in its name uses a single shared handlebar driven by one stack, so
     // the two sides cannot be loaded independently.
     overrides: { demands: { unilateralLoadable: false } },
-    setup: "Sit facing into the machine and grip the handles at shoulder height.",
-    execution: "Press them forward and slightly together until your arms extend, then return with control.",
-    watch: "Arching your lower back off the pad to help the press is the fault to avoid.",
+    setup: "Sit facing into the machine with your chest against the pad and grip the handles at shoulder height.",
+    execution: "Press the handles up and slightly forward until your arms extend, then return with control.",
+    watch: "Arching your lower back off the pad to help the press moves the work onto your chest.",
   },
   {
     name: "GHD Sit-Up",
@@ -306,7 +306,7 @@ export default [
     overrides: { demands: { floorAccess: false } },
     setup: "Lie back on the GHD with your hips supported and feet locked under the footplates.",
     execution: "Curl your torso up until you are upright, then lower back down slowly.",
-    watch: "Swinging up with momentum instead of curling through the abs is the common fault.",
+    watch: "Swinging up on momentum lets the hips do the work, so curl your ribs towards your hips.",
   },
   {
     name: "Glute Ham Raise",
@@ -338,7 +338,7 @@ export default [
     loadCharacter: "grind",
     setup: "Kneel in the machine with one knee on the pad and your foot pressed against the lever.",
     execution: "Drive the leg back and up, squeezing the glute at the top, then return slowly.",
-    watch: "Rushing the reps without a pause at the top is the common fault.",
+    watch: "Swinging the leg up instead of driving it back loses the squeeze at the top.",
   },
   {
     name: "Glute-Ham Raise Machine",
@@ -357,7 +357,7 @@ export default [
     overrides: { demands: { weightBearingHands: false } },
     setup: "Kneel with your ankles locked under the footplates, body upright.",
     execution: "Curl forward and back using your hamstrings to control the movement, then return upright.",
-    watch: "Letting your hips lead the movement instead of your hamstrings is the usual fault.",
+    watch: "Dropping forward fast instead of fighting the descent skips the hardest part of the rep.",
   },
   {
     name: "Hack Squat Machine",
@@ -373,7 +373,7 @@ export default [
     loadCharacter: "grind",
     setup: "Set your shoulders and back against the pads, feet shoulder width apart on the platform.",
     execution: "Bend your knees to lower until your thighs are roughly level, then drive back up.",
-    watch: "Letting your knees cave inward as you push up is the common fault.",
+    watch: "Letting your knees cave inward as you drive up leaks power, so push them out over your toes.",
   },
   {
     name: "Hammer Strength Chest Press",
@@ -392,7 +392,7 @@ export default [
     overrides: { demands: { unilateralLoadable: true } },
     setup: "Sit in the machine with the handles at chest height and your feet flat on the floor.",
     execution: "Press the handles forward until your arms extend, then return slowly.",
-    watch: "Bouncing the handles off your chest at the bottom is the common fault.",
+    watch: "Letting the handles crash back into the stops kills the tension, so stop the weight yourself.",
   },
   {
     name: "Hand Gripper",
@@ -408,7 +408,7 @@ export default [
     loadCharacter: "grind",
     setup: "Hold the gripper in one hand with the handles resting in your palm and fingers.",
     execution: "Squeeze the handles together until they touch, then release slowly under control.",
-    watch: "Using short, fast squeezes instead of a full close is the common fault.",
+    watch: "Short, fast squeezes miss the hardest part, which is the last inch before the handles meet.",
   },
   {
     name: "Hip Adduction Machine",
@@ -424,7 +424,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with your back against the pad and the inside of your knees against the pads.",
     execution: "Squeeze your knees together against the machine, then let them return slowly.",
-    watch: "Using your hands to help pull the pads together is the common fault.",
+    watch: "Using your hands to help the pads together takes the work off your inner thighs.",
   },
   {
     name: "HS ISO High Row",
@@ -439,7 +439,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit facing the pad with your chest supported and grip the high handles.",
     execution: "Pull them back towards your body, squeezing your shoulder blades together, then extend back with control.",
-    watch: "Letting your chest lift off the pad is the common fault.",
+    watch: "Letting your chest lift off the pad shortens the pull, so stay pinned to the support.",
   },
   // EL-21/EL-23 (exercise-library-expansion-2026-09-05): retired, a
   // duplicate of "Plate-Loaded Lat Pulldown" below (confirmed by
@@ -459,7 +459,7 @@ export default [
     loadCharacter: "grind",
     setup: "Set your hips on the pad with ankles locked under the rollers, body hanging forward.",
     execution: "Hinge forward until you feel a stretch, then squeeze your glutes to rise level.",
-    watch: "Rounding your lower back on the way down is the usual fault.",
+    watch: "Throwing yourself up past level arches your back, so stop when your body is straight.",
   },
   {
     name: "Incline Machine Press",
@@ -479,7 +479,7 @@ export default [
     overrides: { demands: { unilateralLoadable: false } },
     setup: "Sit in the machine with the seat set so the handles sit level with your upper chest.",
     execution: "Press the handles forward and slightly up until your arms extend, then return slowly.",
-    watch: "Flaring the elbows out wide is the common fault.",
+    watch: "Flaring your elbows straight out takes the press off your upper chest, so angle them slightly in.",
   },
   {
     name: "Iso-Lateral Chest Press",
@@ -510,7 +510,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with your thighs under the pads and grip a handle in each hand above you.",
     execution: "Pull both handles down towards your upper chest, driving your elbows down, then extend slowly.",
-    watch: "Leaning back too far to help the pull is the common fault.",
+    watch: "Leaning back to drag the handles down turns it into a row, so keep your torso upright.",
   },
   // EL-25 (exercise-library-expansion-2026-09-05): retired, a word-order
   // duplicate of "Machine Lateral Raise" (confirmed by cue and
@@ -530,7 +530,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with your back against the pad and the pad resting on top of your shins.",
     execution: "Extend your legs until they straighten, pause, then lower slowly.",
-    watch: "Swinging the weight up with momentum instead of a controlled extension is the common fault.",
+    watch: "Swinging the weight up with your hips wastes the top of the rep, where the quads work hardest.",
   },
   {
     name: "Leg Press",
@@ -546,7 +546,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with your back flat against the pad, feet shoulder width apart on the platform.",
     execution: "Bend your knees to lower the platform towards you, then press back up without locking hard.",
-    watch: "A rounding lower back off the pad is the common fault.",
+    watch: "Letting your lower back round off the pad at the bottom means you have gone too deep for your hips.",
   },
   {
     name: "Leg Press (High Foot)",
@@ -561,7 +561,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with your back flat against the pad and your feet set high on the platform.",
     execution: "Bend your knees to lower the platform towards you, then press back up.",
-    watch: "Placing your feet too low shifts the work onto the quads and misses the setup.",
+    watch: "Sliding your feet down the platform turns it back into a quad press, so keep them high.",
   },
   {
     name: "Leg Press (Narrow Stance)",
@@ -576,7 +576,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with your back flat against the pad and your feet close together on the platform.",
     execution: "Bend your knees to lower the platform towards you, then press back up.",
-    watch: "Letting your knees drift wide instead of tracking straight is the common fault.",
+    watch: "Letting your knees drift apart widens the stance you set, so keep them tracking over your feet.",
   },
   {
     name: "Leg Press Calf Raise",
@@ -592,7 +592,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit in the leg press with your legs extended and the balls of your feet on the platform edge.",
     execution: "Press through your feet to extend your ankles, then lower for a full stretch.",
-    watch: "Bouncing through a short range is the usual fault.",
+    watch: "Cutting the stretch short at the bottom leaves most of the calf work undone.",
   },
   {
     name: "Lying Leg Curl",
@@ -607,7 +607,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie face down on the machine with the pad resting just above your ankles.",
     execution: "Curl your heels up towards your glutes, then lower slowly.",
-    watch: "Lifting your hips off the bench to gain extra range is the usual fault.",
+    watch: "Lifting your hips off the pad fakes extra range, so keep them pressed down throughout.",
   },
   {
     name: "Machine Chest Fly (Single-Arm)",
@@ -623,7 +623,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit in the machine with one arm resting on the pad, elbow slightly bent.",
     execution: "Bring your arm across your body in an arc until your hand reaches the centre, then return slowly.",
-    watch: "Using your shoulder to shrug the arm forward is the common fault.",
+    watch: "Shrugging your shoulder forward hands the work to your traps, so keep it settled back.",
   },
   {
     name: "Machine Chest Press",
@@ -643,7 +643,7 @@ export default [
     overrides: { demands: { unilateralLoadable: false } },
     setup: "Sit in the machine with the handles level with your chest and your feet flat on the floor.",
     execution: "Press the handles forward until your arms extend, then return slowly.",
-    watch: "Flaring the elbows out wide instead of tracking forward is the common fault.",
+    watch: "Letting your shoulders roll forward off the pad takes the chest out, so keep them back and down.",
   },
   {
     name: "Machine Crunch",
@@ -663,7 +663,7 @@ export default [
     overrides: { demands: { position: "seated", floorAccess: false } },
     setup: "Settle into the machine with the pad set across your chest and your hips held still.",
     execution: "Curl your ribs down towards your hips rather than nodding your head forward.",
-    watch: "Pulling with your neck instead of curling the torso is the usual fault.",
+    watch: "Pulling with your neck instead of curling your ribs down leaves the abs barely working.",
   },
   {
     name: "Machine Curl",
@@ -683,7 +683,7 @@ export default [
     unknownAxes: [{ axis: "unilateralLoadable", reason: "Selectorised curl machine; independent-arm vs shared-bar linkage varies by manufacturer and is not determinable from the name or cue." }],
     setup: "Sit with your arms resting on the pad and your hands gripping the handles.",
     execution: "Curl the handles up towards your shoulders, then lower fully slowly.",
-    watch: "Lifting your elbows off the pad as the set gets harder is the common fault.",
+    watch: "Lifting your elbows off the pad as it gets hard shortens the curl, so keep them planted.",
   },
   {
     name: "Machine Hip Thrust",
@@ -703,7 +703,7 @@ export default [
     overrides: { demands: { floorAccess: false } },
     setup: "Lie back into the machine with the pad resting across your hips.",
     execution: "Drive your hips up until your body forms a straight line, squeezing your glutes, then lower slowly.",
-    watch: "Arching your lower back at the top instead of stopping level is the fault.",
+    watch: "Arching your lower back at the top fakes height that your glutes never produced.",
   },
   {
     name: "Machine Lateral Raise",
@@ -724,7 +724,7 @@ export default [
     unknownAxes: [{ axis: "unilateralLoadable", reason: "Selectorised lateral-raise machine; independent-arm vs synchronised-shaft linkage varies by manufacturer and is not determinable from the name or cue." }],
     setup: "Sit with your back against the pad and your upper arms against the lever pads.",
     execution: "Raise your arms out to the sides to shoulder height, then lower slowly.",
-    watch: "Using momentum to jerk the weight up instead of a smooth raise is the common fault.",
+    watch: "Heaving the pads up with a shrug moves the work to your traps, so raise with the arms only.",
   },
   {
     name: "Machine Rear Delt Fly",
@@ -744,7 +744,7 @@ export default [
     unknownAxes: [{ axis: "unilateralLoadable", reason: "Selectorised reverse-fly machine; independent-arm vs synchronised-shaft linkage varies by manufacturer and is not determinable from the name or cue." }],
     setup: "Sit facing the pads with your chest against the support and your arms resting on the handles.",
     execution: "Sweep your arms out and back, squeezing your shoulder blades, then return slowly.",
-    watch: "Using your upper back to heave the weight is the common fault.",
+    watch: "Bending your elbows more as you go turns it into a row, so keep the same slight bend.",
   },
   {
     name: "Machine Row (Chest Supported)",
@@ -759,7 +759,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit or lie with your chest against the pad and grip the handles with arms extended.",
     execution: "Pull the handles towards your torso, driving your elbows back, then extend slowly.",
-    watch: "Lifting your chest off the pad to help the pull is the common fault.",
+    watch: "Lifting your chest off the pad lets your hips do the pulling, so stay flat against it.",
   },
   {
     name: "Machine Row (Hammer Strength)",
@@ -774,7 +774,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit braced at the machine with your chest supported, gripping the handles with arms extended.",
     execution: "Pull the handles towards your torso, driving your elbows back, then extend slowly.",
-    watch: "Using your torso to heave the weight is the common fault.",
+    watch: "Stopping the pull before your elbows pass your ribs leaves the back short of the squeeze.",
   },
   {
     name: "Machine Shoulder Press",
@@ -794,7 +794,7 @@ export default [
     overrides: { demands: { unilateralLoadable: false } },
     setup: "Sit with your back against the pad and grip the handles at shoulder height.",
     execution: "Press the handles straight up until your arms extend, then lower slowly.",
-    watch: "Arching your lower back off the pad to help press is the usual fault.",
+    watch: "Arching your lower back off the pad turns it into an incline press, so keep your ribs down.",
   },
   {
     name: "Machine Shoulder Press (Front Delt Focus)",
@@ -835,7 +835,7 @@ export default [
     unknownAxes: [{ axis: "unilateralLoadable", reason: "Selectorised tricep-extension machine; independent-arm vs shared-bar linkage varies by manufacturer and is not determinable from the name or cue." }],
     setup: "Sit with your arms resting on the pad, hands gripping the handles, upper arms still.",
     execution: "Push the handles down or forward until your arms straighten, then return slowly.",
-    watch: "Moving at the shoulder instead of just the elbow is the usual mistake.",
+    watch: "Letting your upper arms travel with the handles turns it into a press, so move at the elbow only.",
   },
   {
     name: "Machine Y-Raise",
@@ -859,7 +859,7 @@ export default [
     ],
     setup: "Sit facing the pads with your chest against the support and your arms hanging below you.",
     execution: "Raise your arms up and out into a Y shape, squeezing your upper back, then lower slowly.",
-    watch: "Shrugging instead of raising through the arms is the fault.",
+    watch: "Shrugging the weight up hands the work to your traps, so keep your shoulders down as you lift.",
   },
   {
     name: "Neck Extension (Machine)",
@@ -875,7 +875,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with the pad resting against the back of your head and your neck in a neutral position.",
     execution: "Push your head back against the pad, then return slowly to the start.",
-    watch: "Using your whole upper back to move the pad instead of your neck is the fault.",
+    watch: "Rocking your torso back to move the pad takes the work off your neck, so sit still.",
   },
   {
     name: "Neck Flexion (Machine)",
@@ -890,7 +890,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with the pad resting against your forehead and your neck in a neutral position.",
     execution: "Push your head forward against the pad, then return slowly to the start.",
-    watch: "Using your shoulders to help push instead of just your neck is the common fault.",
+    watch: "Curling your shoulders forward to help takes the work off your neck, so keep them still.",
   },
   {
     name: "Neck Harness Extension",
@@ -908,9 +908,9 @@ export default [
     // head harness loads the whole head/neck against one hanging weight;
     // there is no per-side split to load independently.
     overrides: { demands: { unilateralLoadable: false } },
-    setup: "Sit or kneel with the harness strapped around your head and a weight hanging behind you.",
+    setup: "Sit or kneel with the harness strapped around your head and the weight hanging down in front.",
     execution: "Tilt your head back against the load, then return slowly to neutral.",
-    watch: "Moving your whole torso instead of just your head is the common fault.",
+    watch: "Rocking your torso to swing the weight leaves your neck doing little, so move only your head.",
   },
   {
     name: "Neck Harness Flexion",
@@ -928,9 +928,9 @@ export default [
     // head harness loads the whole head/neck against one hanging weight;
     // there is no per-side split to load independently.
     overrides: { demands: { unilateralLoadable: false } },
-    setup: "Sit or kneel with the harness strapped around your head and a weight hanging in front.",
+    setup: "Sit or kneel with the harness strapped around your head and the weight hanging down behind you.",
     execution: "Tilt your head forward against the load, then return slowly to neutral.",
-    watch: "Using your shoulders to help pull the weight is the common fault.",
+    watch: "Hunching your shoulders to lift the weight takes it off your neck, so keep them settled.",
   },
   {
     name: "Neck Machine Lateral Flexion",
@@ -945,7 +945,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with the side of your head against the pad and your neck in a neutral position.",
     execution: "Tilt your head sideways against the pad, then return slowly to the centre.",
-    watch: "Rushing the reps instead of moving slowly is the usual fault.",
+    watch: "Turning your head rather than tilting it sideways misses the muscles down the side of the neck.",
   },
   {
     name: "Pec Deck (Machine Fly)",
@@ -961,7 +961,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with your back against the pad and your forearms resting on the arm pads in front of you.",
     execution: "Bring your arms together in front of your chest, then open back out slowly.",
-    watch: "Letting the weight stack slam down between reps is the common fault.",
+    watch: "Letting the stack slam down between reps drops the tension your chest was holding.",
   },
   {
     name: "Pendulum Squat",
@@ -976,7 +976,7 @@ export default [
     loadCharacter: "grind",
     setup: "Set your shoulders against the pad and your feet shoulder width apart on the platform.",
     execution: "Bend your knees to lower along the machine's arc, then drive back up.",
-    watch: "Letting your knees cave inward as you push up is the common fault.",
+    watch: "Coming onto your toes at the bottom tips you forward, so keep your weight through mid foot.",
   },
   {
     name: "Plate-Loaded Chest Press",
@@ -995,7 +995,7 @@ export default [
     overrides: { demands: { unilateralLoadable: true } },
     setup: "Sit in the machine with the handles level with your chest, plates loaded evenly on each side.",
     execution: "Press the handles forward until your arms extend, then return slowly.",
-    watch: "Letting one side lead the press unevenly is the common fault.",
+    watch: "Letting one side press ahead of the other hides the weaker arm, so start them together.",
   },
   {
     name: "Plate-Loaded Decline Press",
@@ -1015,7 +1015,7 @@ export default [
     overrides: { demands: { unilateralLoadable: true } },
     setup: "Sit in the machine with the seat set so the handles sit level with your lower chest.",
     execution: "Press the handles forward and slightly down until your arms extend, then return slowly.",
-    watch: "Flaring the elbows out wide is the common fault.",
+    watch: "Letting the handles drop fast to the stops kills the tension, so control them back in.",
   },
   {
     name: "Plate-Loaded High Row",
@@ -1030,7 +1030,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit or kneel with your chest against the pad, gripping the handles above you.",
     execution: "Pull the handles towards your torso, driving your elbows up and back, then extend slowly.",
-    watch: "Using your torso to heave the weight is the common fault.",
+    watch: "Leaning back to start the pull turns it into a low row, so keep your chest on the pad.",
   },
   {
     name: "Plate-Loaded Hip Thrust",
@@ -1049,7 +1049,7 @@ export default [
     overrides: { demands: { floorAccess: false } },
     setup: "Lie back into the machine with the pad across your hips, plates loaded evenly.",
     execution: "Drive your hips up until your body forms a straight line, squeezing your glutes, then lower slowly.",
-    watch: "Arching your lower back at the top is the common fault.",
+    watch: "Pushing through your toes shifts the lift to your quads, so drive through your heels.",
   },
   {
     name: "Plate-Loaded Incline Press",
@@ -1068,7 +1068,7 @@ export default [
     overrides: { demands: { unilateralLoadable: true } },
     setup: "Sit in the machine with the seat set so the handles sit level with your upper chest, plates loaded evenly.",
     execution: "Press the handles forward and up until your arms extend, then return slowly.",
-    watch: "Letting one side lead the press is the common fault.",
+    watch: "Letting your shoulders shrug up towards your ears takes the work off your upper chest.",
   },
   {
     name: "Plate-Loaded Lat Pulldown",
@@ -1084,7 +1084,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with your thighs under the pads and grip the handles above you, plates loaded evenly.",
     execution: "Pull the handles down towards your upper chest, driving your elbows down, then extend slowly.",
-    watch: "Leaning back excessively is the usual fault.",
+    watch: "Pulling with your arms alone leaves the lats short, so start each rep by driving your elbows down.",
   },
   {
     name: "Plate-Loaded Low Row",
@@ -1099,7 +1099,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with your chest against the pad, feet braced, gripping the handles with arms extended.",
     execution: "Pull the handles towards your torso, squeezing your shoulder blades, then extend back out.",
-    watch: "Rounding your back at the start is the common fault.",
+    watch: "Rounding your back to reach the handles at the start takes the pull out of your lats.",
   },
   {
     name: "Plate-Loaded Overhead Extension",
@@ -1120,7 +1120,7 @@ export default [
     unknownAxes: [{ axis: "unilateralLoadable", reason: "Plate-loaded overhead-extension machine; independent-arm vs shared-bar linkage varies by manufacturer and is not determinable from the name or cue." }],
     setup: "Sit with your arms overhead gripping the handles, plates loaded evenly on the machine.",
     execution: "Lower the handles behind your head by bending your elbows, then extend back up.",
-    watch: "Letting the elbows wing out wide is the usual fault.",
+    watch: "Letting your elbows wing out wide takes the stretch off the triceps, so keep them by your ears.",
   },
   {
     name: "Plate-Loaded Preacher Curl",
@@ -1140,7 +1140,7 @@ export default [
     overrides: { demands: { unilateralLoadable: false } },
     setup: "Sit with your arms resting over the preacher pad and grip the handle, plates loaded evenly.",
     execution: "Curl the handle up towards your shoulders, then lower fully to extend your arms.",
-    watch: "Lifting your elbows off the pad is the common fault.",
+    watch: "Stopping before your arms straighten skips the stretch at the bottom of each curl.",
   },
   {
     name: "Plate-Loaded Rear Delt",
@@ -1160,7 +1160,7 @@ export default [
     unknownAxes: [{ axis: "unilateralLoadable", reason: "Plate-loaded reverse-fly machine; independent-arm vs synchronised-shaft linkage varies by manufacturer and is not determinable from the name or cue." }],
     setup: "Sit facing the pads with your chest against the support, gripping the handles in front of you.",
     execution: "Sweep your arms out and back, squeezing your shoulder blades, then return slowly.",
-    watch: "Using your upper back to heave the weight is the usual fault.",
+    watch: "Letting your chest come off the pad turns it into a row, so stay pressed against it.",
   },
   {
     name: "Plate-Loaded Row",
@@ -1175,7 +1175,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit or stand braced at the machine, plates loaded evenly, gripping the handles with arms extended.",
     execution: "Pull the handles towards your torso, driving your elbows back, then extend slowly.",
-    watch: "Leaning back to heave the weight is the common fault.",
+    watch: "Leaning back to start the pull hands the work to your hips, so keep your torso still.",
   },
   {
     name: "Plate-Loaded Seated Row",
@@ -1195,7 +1195,7 @@ export default [
     overrides: { demands: { unilateralLoadable: true, bilateralUpper: false } },
     setup: "Sit with your chest against the pad and grip the handles in front of you.",
     execution: "Pull them towards your body, squeezing your shoulder blades together, then extend back with control.",
-    watch: "Using your lower back to heave the weight is a common fault.",
+    watch: "Rocking backwards with each pull swaps back work for hip swing, so keep your chest on the pad.",
   },
   {
     name: "Plate-Loaded Shoulder Press",
@@ -1215,7 +1215,7 @@ export default [
     overrides: { demands: { unilateralLoadable: true } },
     setup: "Sit with your back against the pad, plates loaded evenly, gripping the handles at shoulder height.",
     execution: "Press the handles straight up until your arms extend, then lower slowly.",
-    watch: "Arching your lower back off the pad is the usual fault.",
+    watch: "Letting the handles drift forward as you press puts the load on your chest, so press straight up.",
   },
   {
     name: "Preacher Curl Machine",
@@ -1235,7 +1235,7 @@ export default [
     overrides: { demands: { unilateralLoadable: false } },
     setup: "Sit with your arms resting over the preacher pad and your hands gripping the handle.",
     execution: "Curl the handle up towards your shoulders, then lower fully to extend your arms.",
-    watch: "Letting your elbows lift off the pad is the common fault.",
+    watch: "Letting your elbows slide out wide on the pad takes the work off the biceps.",
   },
   {
     name: "Prone Leg Curl",
@@ -1250,7 +1250,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie face down on the machine with the pad resting just above your ankles, hips flat against the bench.",
     execution: "Curl your heels up towards your glutes, then lower slowly.",
-    watch: "Lifting your hips off the bench for extra range is the usual fault.",
+    watch: "Letting the weight drop back fast wastes the lowering half of each rep.",
   },
   {
     name: "Prowler Drag",
@@ -1284,7 +1284,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie face down on a raised bench with your hips at the edge and legs hanging free below.",
     execution: "Swing your legs up until your body forms a straight line, using your glutes, then lower slowly.",
-    watch: "A big swing instead of control is the common fault.",
+    watch: "Swinging your legs up and letting them drop hands the work to momentum, not your glutes.",
   },
   {
     name: "Reverse Hyperextension (Glute)",
@@ -1299,7 +1299,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie face down on a raised bench with your hips at the edge and legs hanging free below.",
     execution: "Drive your legs up by squeezing your glutes until level, then lower slowly.",
-    watch: "Swinging with momentum instead of a glute drive is the usual fault.",
+    watch: "Lifting past level arches your lower back and adds nothing, so stop in line with your body.",
   },
   {
     name: "Reverse Pec Deck",
@@ -1315,7 +1315,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit facing the pads with your chest against the support, arms on the handles in front.",
     execution: "Sweep your arms out and back, squeezing your shoulder blades, then return slowly.",
-    watch: "Shrugging instead of squeezing the blades is the common fault.",
+    watch: "Shrugging your shoulders up as you open takes the work off the rear delts.",
   },
   {
     name: "Seated Calf Raise",
@@ -1330,7 +1330,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with the pad across your knees and the balls of your feet on the platform.",
     execution: "Press through your feet to rise onto your toes, pause, then lower for a full stretch.",
-    watch: "Bouncing through a short range instead of pausing is the usual fault.",
+    watch: "Bouncing straight out of the bottom skips the stretch that makes the rep count.",
   },
   {
     name: "Seated Dip Machine",
@@ -1345,7 +1345,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit in the machine and grip the handles beside you, feet flat on the floor or footrest.",
     execution: "Push the handles down until your arms straighten, then return slowly.",
-    watch: "Letting the elbows wing out wide is the common fault.",
+    watch: "Letting your elbows wing out wide takes the work off the triceps, so keep them close to your sides.",
   },
   {
     name: "Seated Leg Curl",
@@ -1360,7 +1360,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with the pad resting on top of your shins near your ankles, back flat against the seat.",
     execution: "Curl your legs back and down against the resistance, then return slowly.",
-    watch: "Lifting your hips or thighs off the seat is the usual fault.",
+    watch: "Lifting your thighs off the seat as you curl shortens the range, so keep the pad pressed down.",
   },
   {
     name: "Seated Machine Calf Raise",
@@ -1375,7 +1375,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with the pad across your knees and the balls of your feet on the platform edge.",
     execution: "Press through your feet to rise onto your toes, pause, then lower for a full stretch.",
-    watch: "Rushing through short reps instead of pausing is the fault.",
+    watch: "Cutting the descent short keeps the calf out of its stretch, so let the heels drop fully.",
   },
   {
     name: "Seated Machine Row (Wide)",
@@ -1390,7 +1390,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with your feet braced and grip the wide handles with arms extended in front of you.",
     execution: "Pull the handles towards your torso, keeping your elbows out wide, then extend back out slowly.",
-    watch: "Leaning your torso back to help pull is the usual fault.",
+    watch: "Dropping your elbows in close turns the wide row into a narrow one, so keep them out.",
   },
   {
     name: "Seated Rear Delt Machine",
@@ -1410,7 +1410,7 @@ export default [
     unknownAxes: [{ axis: "unilateralLoadable", reason: "Selectorised reverse-fly machine; independent-arm vs synchronised-shaft linkage varies by manufacturer and is not determinable from the name or cue." }],
     setup: "Sit facing the pads with your chest against the support, arms resting on the handles in front.",
     execution: "Sweep your arms out and back, squeezing your shoulder blades, then return slowly.",
-    watch: "Using your upper back to heave the weight is the common fault.",
+    watch: "Starting the sweep with a shrug moves the work to your traps, so let the arms lead.",
   },
   {
     name: "Seated Tibialis Raise",
@@ -1424,8 +1424,8 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     setup: "Sit with your heels on a support and the front of your feet under the padded lever.",
-    execution: "Lift the front of your feet towards your shins against it, then lower slowly.",
-    watch: "Using your whole leg instead of moving through the ankle is the usual fault.",
+    execution: "Pull the front of your feet up towards your shins, then lower them slowly.",
+    watch: "Sliding your heels forward on the support turns it into a leg lift, so keep them planted.",
   },
   {
     name: "Single Leg Press",
@@ -1441,7 +1441,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit with one foot flat on the centre of the platform and your back flat against the pad.",
     execution: "Push through that leg to extend it, then bend your knee to lower slowly.",
-    watch: "Letting your hip rotate or twist to help push is the common fault.",
+    watch: "Twisting your hip to help the push moves the load off the working leg, so stay square.",
   },
   {
     name: "Sissy Squat Machine",
@@ -1456,7 +1456,7 @@ export default [
     loadCharacter: "grind",
     setup: "Strap your shins into the machine and hold the handles for support, body upright to start.",
     execution: "Lean back and bend your knees until you feel a stretch through your quads, then rise up.",
-    watch: "Bending at the hips like a squat is the fault.",
+    watch: "Bending at the hips takes the stretch off your quads, so keep hips and shoulders in one line.",
   },
   {
     name: "Sled Pull",
@@ -1503,7 +1503,7 @@ export default [
     loadCharacter: "grind",
     setup: "Set your shoulders under the pads and the balls of your feet on the platform, standing upright.",
     execution: "Rise onto your toes as high as possible, pause, then lower for a full stretch.",
-    watch: "Bouncing through a short range instead of pausing is the mistake.",
+    watch: "Bending your knees to help the rise turns it into a small squat, so keep your legs straight.",
   },
   {
     name: "Standing Leg Curl",
@@ -1518,7 +1518,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand at the machine with the pad resting behind one ankle, hips square and torso upright.",
     execution: "Curl your heel up towards your glute against the resistance, then lower slowly.",
-    watch: "Leaning forward and using hip momentum is the common fault.",
+    watch: "Leaning forward as you curl swings the hip into it, so keep your torso upright.",
   },
   {
     name: "Tib Bar Raise (Machine)",
@@ -1539,14 +1539,14 @@ export default [
     overrides: { demands: { unilateralLoadable: true } },
     setup: "Sit with your heels resting on a support and the front of your feet hooked under the bar.",
     execution: "Pull your toes up towards your shins against the resistance, then lower slowly.",
-    watch: "Rushing through the reps instead of moving slowly is the common fault.",
+    watch: "Lifting your heels off the support to help means the shins do less, so keep them down.",
   },
   {
     name: "Triceps Extension Machine",
     retiredInto: "Machine Tricep Extension",
     setup: "Sit with your arm resting along the pad, hand gripping the handle, upper arm still.",
     execution: "Push the handle down or forward until your arm straightens, then return slowly.",
-    watch: "Moving at the shoulder instead of the elbow is the usual mistake.",
+    watch: "Letting your upper arm travel with the handle turns it into a press, so move at the elbow only.",
   },
   {
     name: "Tyre Flip",
@@ -1562,7 +1562,7 @@ export default [
     loadCharacter: "grind",
     setup: "Crouch behind the tyre with your hands underneath the near edge and your back flat.",
     execution: "Drive through your legs to lift and push the tyre up and over, then reset and repeat.",
-    watch: "Rounding the back is the common fault.",
+    watch: "Rounding your back to lift the tyre takes the drive out of your legs, so lift with a flat back.",
   },
   {
     name: "Viking Press",
@@ -1582,7 +1582,7 @@ export default [
     overrides: { demands: { position: "standing", unilateralLoadable: true } },
     setup: "Sit or stand gripping the handles with a neutral grip in front of your chest.",
     execution: "Press the handles straight up overhead until your arms extend, then lower slowly.",
-    watch: "Leaning back excessively to help press the weight up is the usual mistake.",
+    watch: "Leaning back to get the handles moving turns it into an incline press, so keep your ribs down.",
   },
   // ── INTEGRATION STAGE 2 (exercise-library-expansion-2026-09-05) — generated by scripts/exercise-library/integrate-inventories.mjs; rerun the script to regenerate, do not hand-edit below this line ──
   {
@@ -1599,7 +1599,7 @@ export default [
     overrides: {"demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Sit with your back against the pad and grip the handles at chest height.",
     execution: "Press them forward, letting the handles converge together as your arms extend, then return with control.",
-    watch: "Letting the shoulders round forward at the start is common.",
+    watch: "Stopping before the handles meet misses the squeeze the converging path is built for.",
   },
   {
     name: "Converging Shoulder Press Machine",
@@ -1615,7 +1615,7 @@ export default [
     overrides: {"demands":{"position":"seated","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Sit with your back against the pad and grip the handles at shoulder height.",
     execution: "Press them up, letting them converge together as your arms extend, then return with control.",
-    watch: "Arching your lower back off the pad to assist the press is common.",
+    watch: "Stopping short of the point where the handles meet leaves the top of the press undone.",
   },
   {
     name: "GHD Hip Extension",
@@ -1632,7 +1632,7 @@ export default [
     overrides: {"difficulty":2,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":false,"bilateralLower":true,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Lie face down with your hips on the pad and feet secured behind you, torso hanging forward.",
     execution: "Raise your torso up until straight, squeezing your glutes, then lower back down.",
-    watch: "Swinging up using the lower back rather than the glutes is common.",
+    watch: "Swinging up with your lower back rather than your glutes turns it into a back extension.",
   },
   {
     name: "Hip Flexion Machine (Seated)",
@@ -1649,7 +1649,7 @@ export default [
     overrides: {"laterality":"unilateral","demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Sit with the pad resting on top of your thigh, leg hanging down.",
     execution: "Lift your knee up towards your chest against the resistance, then lower with control.",
-    watch: "Leaning your torso back to help the leg up is the fault to avoid.",
+    watch: "Leaning your torso back to help the leg up shortens the range your hip actually moves.",
   },
   {
     name: "Horizontal Back Extension",
@@ -1666,7 +1666,7 @@ export default [
     overrides: {"demands":{"position":"mixed","floorAccess":false,"overheadPosition":false,"gripDemand":"none","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Lie face down on the flat pad with your hips at the edge and feet secured.",
     execution: "Lower your torso down, then raise it back up until your body is straight, squeezing your glutes and hamstrings.",
-    watch: "Overextending past straight at the top is common.",
+    watch: "Bending at the knees to help the lift takes the work off your glutes and hamstrings.",
   },
   {
     name: "Horizontal Leg Press",
@@ -1682,7 +1682,7 @@ export default [
     overrides: {"demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Sit in the machine with your feet on the horizontal platform, knees bent towards your chest.",
     execution: "Push the platform away until your legs extend, then let it return under control.",
-    watch: "Letting your knees cave inward as you push is common.",
+    watch: "Pushing only with your toes lifts your heels, so drive through the whole foot.",
   },
   {
     name: "Iso-Lateral Row Machine (Single-Arm)",
@@ -1696,9 +1696,9 @@ export default [
     subregion: "horizontal_lat",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    setup: "Sit facing the pad and grip one handle.",
+    setup: "Sit with your chest against the pad and grip one handle with your arm extended.",
     execution: "Pull it back towards your body, squeezing your shoulder blade, then extend forward with control.",
-    watch: "Twisting your torso to help the pull is the fault to avoid.",
+    watch: "Twisting your torso to help the pull hides how much that side is doing, so stay square.",
   },
   {
     name: "Iso-Lateral Shoulder Press (Single-Arm)",
@@ -1713,9 +1713,9 @@ export default [
     aliases: ["Hammer Strength Shoulder Press (Single-Arm)"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"seated","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    setup: "Sit and grip one handle at shoulder height.",
+    setup: "Sit with your back against the pad and grip one handle at shoulder height.",
     execution: "Press it up until your arm locks out, then lower with control.",
-    watch: "Leaning your torso to the opposite side to assist the press is the common fault.",
+    watch: "Leaning away from the working arm lets your torso do the lifting, so stay square to the seat.",
   },
   {
     name: "Machine Pullover",
@@ -1735,7 +1735,7 @@ export default [
     overrides: {"demands":{"position":"seated","floorAccess":false,"overheadPosition":true,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Sit with your back against the pad, forearms resting on the padded bar above your head.",
     execution: "Pull it down and forward in an arc to your torso, then let it rise back with control.",
-    watch: "Using your lower back to help pull is common.",
+    watch: "Bending your arms to pull the bar down turns it into a pulldown, so keep them long.",
   },
   {
     name: "Machine Shrug",
@@ -1752,7 +1752,7 @@ export default [
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Stand or sit gripping the handles at your sides.",
     execution: "Shrug your shoulders straight up towards your ears, hold briefly, then lower with control.",
-    watch: "Rolling the shoulders in a circle rather than moving straight up and down is the mistake.",
+    watch: "Rolling your shoulders in a circle adds nothing, so lift them straight up and lower them.",
   },
   {
     name: "Plate-Loaded T-Bar Row (Chest-Supported)",
@@ -1769,7 +1769,7 @@ export default [
     overrides: {"demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Sit or stand with your chest against the angled pad and grip the T-bar handle with both hands.",
     execution: "Pull it towards your body, squeezing your shoulder blades, then extend back with control.",
-    watch: "Lifting your chest off the pad is a common fault.",
+    watch: "Shrugging the handle up towards your chin turns the row into a shrug.",
   },
   {
     name: "Reverse Hack Squat",
@@ -1786,7 +1786,7 @@ export default [
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Stand facing the machine with your shoulders under the pads and back straight.",
     execution: "Bend your knees to lower down, then drive back up through your whole foot.",
-    watch: "Letting your heels lift off the platform is the common thing to avoid.",
+    watch: "Letting your heels lift tips you onto your toes, so keep your whole foot down.",
   },
   {
     name: "Rotary Torso Machine",
@@ -1803,7 +1803,7 @@ export default [
     overrides: {"difficulty":2,"demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Sit with your chest against the pad and grip the handles.",
     execution: "Rotate your torso to one side as far as comfortable, then rotate through to the other side with control.",
-    watch: "Using your arms to pull rather than rotating the trunk is common.",
+    watch: "Pulling with your arms rather than turning your trunk leaves the waist barely working.",
   },
   {
     name: "Single-Leg Leg Extension",
@@ -1819,7 +1819,7 @@ export default [
     overrides: {"demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Sit with the pad resting on the front of one shin, the other foot on the floor.",
     execution: "Extend that leg until it straightens, then lower with control.",
-    watch: "Using momentum to swing the leg up rather than a steady extension is common.",
+    watch: "Letting your other foot press into the floor to help takes the load off the working leg.",
   },
   {
     name: "Single-Leg Lying Leg Curl",
@@ -1836,7 +1836,7 @@ export default [
     overrides: {"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Lie face down with the pad against one ankle, the other leg resting flat.",
     execution: "Curl your heel up towards your glute, then lower with control.",
-    watch: "Lifting your hips off the bench to help the curl is a common fault.",
+    watch: "Lifting your hip on the working side fakes range, so keep both hips flat on the pad.",
   },
   {
     name: "V-Squat Machine",
@@ -1852,7 +1852,7 @@ export default [
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Stand under the shoulder pads with your feet on the platform in the converging rails.",
     execution: "Bend your knees to lower down, then drive back up through your whole foot.",
-    watch: "Letting your knees cave inward as you push is common.",
+    watch: "Letting your knees cave inward as you drive up wastes power, so keep them over your feet.",
   },
   {
     name: "Vertical Leg Press",
@@ -1868,7 +1868,7 @@ export default [
     overrides: {"difficulty":2,"demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     setup: "Lie back in the machine with feet on the overhead platform, knees bent towards your chest.",
     execution: "Push the platform straight up until your legs extend, then let it return under control.",
-    watch: "Locking the knees out hard at the top is a common mistake.",
+    watch: "Letting your hips curl up off the pad at the bottom rounds your lower back.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];

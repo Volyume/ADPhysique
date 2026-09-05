@@ -35,7 +35,7 @@ export default [
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
     setup: "Hold the ball at your chest, elbows bent, facing a wall or partner.",
     execution: "Extend your arms explosively to throw it straight out, then catch it as it returns and absorb it back to your chest.",
-    watch: "Pushing only with the arms loses most of the power.",
+    watch: "Pushing with your arms alone leaves the legs out, so drive from your feet as you throw.",
   },
   {
     name: "Medicine Ball Overhead Throw",
@@ -52,7 +52,7 @@ export default [
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
     setup: "Hold the ball overhead with arms extended, feet slightly staggered.",
     execution: "Snap your torso forward and throw the ball down and forward into the floor or a wall with full effort.",
-    watch: "Throwing only with the arms loses most of the power.",
+    watch: "Bending only at the arms keeps your torso out of it, so snap from the hips and ribs.",
   },
   {
     name: "Medicine Ball Rotational Throw",
@@ -69,7 +69,7 @@ export default [
     overrides: {"laterality":"unilateral","demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
     setup: "Stand side on to a wall holding the ball at your hip with both hands.",
     execution: "Rotate your hips and torso together and release the ball explosively towards the wall, then catch the rebound and reset.",
-    watch: "Arms alone take power off the throw.",
+    watch: "Turning your shoulders while your hips stay still costs most of the throw, so let the back foot pivot.",
   },
   {
     name: "Medicine Ball Scoop Toss",
@@ -86,7 +86,7 @@ export default [
     overrides: {"laterality":"unilateral","difficulty":3,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
     setup: "Stand with the ball held low near one hip, knees bent.",
     execution: "Drive up through your legs and swing the ball diagonally across your body, releasing it up and out at the top.",
-    watch: "Using only the arms loses most of the power.",
+    watch: "Swinging with the arms while your legs stay straight loses the drive, so bend and extend the knees.",
   },
   {
     name: "Medicine Ball Slam",
@@ -103,7 +103,7 @@ export default [
     overrides: {"difficulty":1,"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
     setup: "Hold the ball overhead with arms extended, feet shoulder-width apart.",
     execution: "Slam it down into the floor as hard as you can by driving through your torso, then catch the bounce or pick it back up.",
-    watch: "Slamming with only the arms loses power.",
+    watch: "Slamming from the elbows only keeps your torso out of it, so fold from the ribs as the ball drops.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];

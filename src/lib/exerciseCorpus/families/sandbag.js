@@ -31,7 +31,7 @@ export default [
     loadCharacter: "grind",
     setup: "Hug the sandbag tightly against your chest with both arms wrapped around it.",
     execution: "Sit your hips back and down into a squat, chest tall, then drive back up.",
-    watch: "Letting the bag slide down your chest as you fatigue is the common fault.",
+    watch: "Letting the bag slide down your chest pulls you forward, so squeeze it tight and keep your chest up.",
   },
   {
     name: "Sandbag Bent-Over Row",
@@ -47,7 +47,7 @@ export default [
     overrides: { demands: { axialLoad: true } },
     setup: "Hinge forward with a flat back, gripping the sandbag handles or the bag itself in front of your shins.",
     execution: "Pull the bag up towards your torso, then lower under control.",
-    watch: "Rounding the back to lift it off the floor is the main fault.",
+    watch: "Rounding your back to reach the bag takes the pull off your lats, so hinge and keep your back flat.",
   },
   {
     name: "Sandbag Clean",
@@ -63,7 +63,7 @@ export default [
     overrides: { difficulty: 3, demands: { overheadPosition: false } },
     setup: "Stand over the sandbag, feet shoulder-width apart, hips hinged, gripping the bag.",
     execution: "Pull it up explosively and catch it against your chest or shoulders, absorbing the weight with bent knees.",
-    watch: "Catching with straight legs sends impact upward.",
+    watch: "Catching the bag with straight legs jars the landing, so meet it with your knees bent.",
   },
   {
     name: "Sandbag Front Carry",
@@ -79,7 +79,7 @@ export default [
     overrides: { exerciseType: "duration" },
     setup: "Hug the sandbag against your chest with both arms wrapped around it, shoulders pulled back and down.",
     execution: "Walk forward with even steps, keeping your torso upright.",
-    watch: "The bag pulling your shoulders forward is the main thing to correct.",
+    watch: "Letting the bag pull your shoulders forward rounds your upper back, so keep it high on your chest.",
   },
   {
     name: "Sandbag Get-Up",
@@ -112,9 +112,9 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: { laterality: "alternating" },
-    setup: "Hug the sandbag tightly against your chest.",
+    setup: "Hug the sandbag tightly against your chest and stand tall with your feet under your hips.",
     execution: "Step forward into a lunge, bending both knees until your back knee nears the floor, then push back to standing.",
-    watch: "Letting the bag pull your torso forward and down is the common fault.",
+    watch: "Letting the bag pull your torso forward tips your weight onto the front foot, so stay tall.",
   },
   {
     name: "Sandbag Shouldering",
@@ -133,7 +133,7 @@ export default [
     },
     setup: "Stand over the sandbag, feet shoulder-width apart, hips hinged.",
     execution: "Pull it up explosively and rotate it onto one shoulder in one motion, catching it with bent knees to absorb the weight.",
-    watch: "Catching with straight legs sends impact into your back.",
+    watch: "Twisting only with your arms to get it up leaves the legs out, so drive with your hips.",
   },
   {
     name: "Sandbag Zercher Carry",
@@ -149,6 +149,6 @@ export default [
     overrides: { exerciseType: "duration" },
     setup: "Cradle the sandbag in the crooks of your elbows, hands together at your chest.",
     execution: "Walk forward with even steps, keeping your torso upright and the bag pulled in close.",
-    watch: "The bag riding low and pulling your shoulders down is the common fault.",
+    watch: "Letting the bag ride low pulls your shoulders down, so pull it back into your elbow crooks.",
   },
 ];
