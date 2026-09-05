@@ -117,8 +117,8 @@
     "null": 132,
     "squat_press": 107,
     "flat": 81,
-    "upper_mid_row": 52,
     "anti_extension": 49,
+    "upper_mid_row": 48,
     "overhead_press": 40,
     "vertical_pull": 40,
     "hip_extension": 39,
@@ -130,10 +130,10 @@
     "short_head": 26,
     "rotation": 25,
     "incline": 22,
+    "spinal_erector": 21,
     "gastro": 20,
     "overhead": 20,
     "pumper": 16,
-    "spinal_erector": 16,
     "lateral_raise": 15,
     "long_head": 14,
     "stretcher": 14,
@@ -142,7 +142,7 @@
     "decline": 9,
     "knee_extension": 9,
     "face_pull": 6,
-    "shoulder_extension": 5,
-    "soleus": 5
+    "soleus": 5,
+    "shoulder_extension": 4
   }
 }

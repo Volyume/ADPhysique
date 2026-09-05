@@ -399,6 +399,16 @@ export const CURATED_DEMANDS = Object.freeze({
   // floor-adjacent-but-not-resting position) clears the contradiction
   // without denying the impact axis its true value.
   'Clap Push-Up': { position: 'mixed' },
+  // Matches the existing full "Turkish Get-Up" entry above: a floor-to-
+  // elbow/seated transition, not a torso-on-the-ground position, so
+  // 'mixed' (not 'lying') keeps its genuine high balance demand legal.
+  'Turkish Get-Up (Half)': { position: 'mixed' },
+  // Same "L-Sit Hold" convention: the body is held clear of the floor
+  // (planche) or braced on an unstable ball (knee tuck), not a torso-on-
+  // the-ground position — 'lying' + 'high' balance is illegal and would
+  // also understate the real demand these holds are FOR.
+  'Full Planche Hold': { position: 'mixed' },
+  'Stability Ball Knee Tuck': { position: 'mixed' },
 });
 
 // ── Derivation ──────────────────────────────────────────────────────────

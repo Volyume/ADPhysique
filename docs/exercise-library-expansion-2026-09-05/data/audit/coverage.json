@@ -409,7 +409,7 @@
       },
       "horizontal_row": {
         "full_gym": {
-          "totalMatching": 68,
+          "totalMatching": 65,
           "stapleOrCommonCount": 22,
           "stapleOrCommonNames": [
             "Barbell Row (Bent Over)",
@@ -437,7 +437,7 @@
           ]
         },
         "machines_cables": {
-          "totalMatching": 20,
+          "totalMatching": 21,
           "stapleOrCommonCount": 13,
           "stapleOrCommonNames": [
             "Cable Face Pull (Upper Back)",
@@ -456,7 +456,7 @@
           ]
         },
         "home_gym": {
-          "totalMatching": 29,
+          "totalMatching": 28,
           "stapleOrCommonCount": 2,
           "stapleOrCommonNames": [
             "Chest-Supported Row (Dumbbell)",
@@ -464,7 +464,7 @@
           ]
         },
         "dumbbells_only": {
-          "totalMatching": 22,
+          "totalMatching": 23,
           "stapleOrCommonCount": 2,
           "stapleOrCommonNames": [
             "Chest-Supported Row (Dumbbell)",
@@ -472,7 +472,7 @@
           ]
         },
         "barbell_plates": {
-          "totalMatching": 17,
+          "totalMatching": 16,
           "stapleOrCommonCount": 7,
           "stapleOrCommonNames": [
             "Barbell Row (Bent Over)",
@@ -1619,7 +1619,7 @@
         "Chest-Supported Row (Dumbbell)",
         "Dumbbell Row"
       ],
-      "totalMatchingAnyTier": 29
+      "totalMatchingAnyTier": 28
     },
     {
       "muscle": "back",
@@ -1630,7 +1630,7 @@
         "Chest-Supported Row (Dumbbell)",
         "Dumbbell Row"
       ],
-      "totalMatchingAnyTier": 22
+      "totalMatchingAnyTier": 23
     },
     {
       "muscle": "back",

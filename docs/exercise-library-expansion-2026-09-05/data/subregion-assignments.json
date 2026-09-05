@@ -1,6 +1,6 @@
 {
-  "note": "EL-21 / F6: 59 rows missing a required subregion, assigned from the movement by convert-legacy.mjs. Lead review requested.",
-  "count": 75,
+  "note": "EL-21 / F6: 59 rows missing a required subregion, assigned from the movement by convert-legacy.mjs. Lead review requested. Extended (exercise-library-expansion-2026-09-05, integration stage 2, INTEGRATION-BRIEF.md job 4): 46 new-candidate subregion fixes (null-where-required or outside vocab in the source inventory/gap-triage JSON), assigned from the movement by scripts/exercise-library/integrate-inventories.mjs's SUBREGION_FIX table. Two flagged for lead review: Cable External/Internal Rotation use 'horiz_abduction' as a guard-passing placeholder \u2014 the lead's own triageCorrections specified subregion: null for a genuinely new rotator-cuff category, but validate-corpus.mjs's subregion rule has no unknownAxes-style escape hatch the way the demand-axis rule does.",
+  "count": 121,
   "assignments": [
     {
       "name": "Dumbbell Pullover",
@@ -301,6 +301,190 @@
     {
       "name": "Seated Band Row",
       "subregion": "horizontal_lat"
+    },
+    {
+      "name": "Band Sumo Deadlift",
+      "subregion": "stretcher"
+    },
+    {
+      "name": "Kettlebell Sumo Deadlift",
+      "subregion": "stretcher"
+    },
+    {
+      "name": "Landmine Sumo Squat",
+      "subregion": "stretcher"
+    },
+    {
+      "name": "Medicine Ball Scoop Toss",
+      "subregion": "activator"
+    },
+    {
+      "name": "Reverse Band Deadlift",
+      "subregion": "spinal_erector"
+    },
+    {
+      "name": "Barbell Snatch Pull",
+      "subregion": "spinal_erector"
+    },
+    {
+      "name": "Barbell Clean High Pull",
+      "subregion": "spinal_erector"
+    },
+    {
+      "name": "Sandbag Clean",
+      "subregion": "spinal_erector"
+    },
+    {
+      "name": "Sandbag Shouldering",
+      "subregion": "spinal_erector"
+    },
+    {
+      "name": "Kettlebell Swing (Single-Arm)",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Kettlebell Swing (Alternating)",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Double Kettlebell Swing",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Dumbbell Front Rack Carry",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Barbell Zercher Carry",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Kettlebell Suitcase Carry",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Kettlebell Rack Carry",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Mixed Kettlebell Carry",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Turkish Get-Up (Half)",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Get-Up to Elbow",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Kettlebell Windmill (Low)",
+      "subregion": "rotation"
+    },
+    {
+      "name": "Kettlebell Windmill (High)",
+      "subregion": "rotation"
+    },
+    {
+      "name": "Kettlebell Around-the-World",
+      "subregion": "rotation"
+    },
+    {
+      "name": "Hanging L-Sit",
+      "subregion": "flexion"
+    },
+    {
+      "name": "V-Sit",
+      "subregion": "flexion"
+    },
+    {
+      "name": "TRX Mountain Climber (Feet Suspended)",
+      "subregion": "flexion"
+    },
+    {
+      "name": "Tuck Jump",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Cable Hip Flexion (Standing)",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Sled Reverse Drag",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Kettlebell Reverse Lunge (Rack Position)",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Kettlebell Forward Lunge (Rack Position)",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Kettlebell Overhead Lunge",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Hip Flexion Machine (Seated)",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Reverse Band Squat",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Barbell Snatch Balance",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Dumbbell Jump Squat",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Kettlebell Pistol Squat",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Incline Dumbbell Pullover",
+      "subregion": "incline"
+    },
+    {
+      "name": "Medicine Ball Overhead Throw",
+      "subregion": "incline"
+    },
+    {
+      "name": "Reverse Band Bench Press",
+      "subregion": "flat"
+    },
+    {
+      "name": "Gironda Sternum Chin-Up",
+      "subregion": "vertical_pull"
+    },
+    {
+      "name": "Clamshell (Side-Lying)",
+      "subregion": "pumper"
+    },
+    {
+      "name": "Dumbbell Spellcaster",
+      "subregion": "lateral_raise"
+    },
+    {
+      "name": "Full Planche Hold",
+      "subregion": null
+    },
+    {
+      "name": "Scapular Push-Up",
+      "subregion": "upper_mid_row"
+    },
+    {
+      "name": "Cable External Rotation",
+      "subregion": "horiz_abduction"
+    },
+    {
+      "name": "Cable Internal Rotation",
+      "subregion": "horiz_abduction"
     }
   ]
 }

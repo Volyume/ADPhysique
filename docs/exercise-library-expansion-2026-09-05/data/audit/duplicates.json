@@ -1188,9 +1188,9 @@
       "reason": "Bag-of-words identical but the pulley direction (high-to-low vs low-to-high) reverses — EL-2 names loading vector/pulley height as a distinguishing dimension, and both forms are already separate registry entries in canonicality.js."
     }
   ],
-  "nearDuplicatesByTupleCount": 550,
+  "nearDuplicatesByTupleCount": 551,
   "nearDuplicatesByTupleBreakdown": {
-    "legitimately_distinct": 550
+    "legitimately_distinct": 551
   },
   "nearDuplicatesByTupleFlaggedForLeadReviewCount": 85,
   "nearDuplicatesByTupleFlaggedForLeadReview": [
@@ -4044,6 +4044,28 @@
     },
     {
       "tuple": {
+        "primaryMuscle": "back",
+        "equipmentCategory": "band",
+        "movementPattern": "hinge",
+        "subregion": "spinal_erector",
+        "laterality": "bilateral"
+      },
+      "pair": [
+        "Band-Resisted Deadlift",
+        "Reverse Band Deadlift"
+      ],
+      "jaccard": 0.5,
+      "diffTokens": [
+        "resisted",
+        "reverse"
+      ],
+      "classification": "legitimately_distinct",
+      "confidence": "high",
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (reverse) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
+      "alsoSharesNumericTemplate": false
+    },
+    {
+      "tuple": {
         "primaryMuscle": "quads",
         "equipmentCategory": "band",
         "movementPattern": "squat",
@@ -4360,7 +4382,7 @@
         "primaryMuscle": "back",
         "equipmentCategory": "barbell",
         "movementPattern": "power",
-        "subregion": "hip_extension",
+        "subregion": "spinal_erector",
         "laterality": "bilateral"
       },
       "pair": [
