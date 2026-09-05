@@ -26,7 +26,14 @@ const METADATA_BACKFILL_KEY = '@volyume_exercise_metadata_backfilled_v1';
 // v4 (D151, instruction contract): the cue column is now the joined
 // setup/execution/watch text and the family audit rewrote many watch
 // lines, so every canonical row takes the new instructions once.
-const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v4';
+// v5 (F-09, final-certification-2026-09-05): the search-alias repair.
+// Sixteen garbled bulk-import aliases were deleted (one of them made
+// "glute bridge" return Dumbbell Bench Press) and the "Flat ...",
+// "Hamstring Curl" aliases the picker had no word for were added. The
+// aliases column is written by corpusEntryToSeedRow, so without this
+// bump an install that already ran v4 would keep the broken alias data
+// for good and the search fix would only reach fresh installs.
+const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v5';
 // Bumped when exercises are added to the corpus so the top-up scans for the
 // new canonical IDs once on installs that already seeded an earlier list.
 // v4 (EL-14/EL-15, exercise-library-expansion-2026-09-05): the corpus

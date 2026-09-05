@@ -9,7 +9,7 @@ import {
 // ScrollViews further down have no text inputs and are left as core
 // ScrollView.
 import { KeyboardAwareScrollView, KeyboardGestureArea } from 'react-native-keyboard-controller';
-// E8 perf: the full library is ~450 rows with no render cap; FlashList
+// E8 perf: the full library is ~920 rows with no render cap; FlashList
 // recycles rows instead of mounting them all (audit/perf-baseline.md section 2).
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -55,7 +55,11 @@ import { useToast } from './Toast';
 // path ManualBuilder already shipped, so getAllExercises() surfaces them and
 // the existing syncExercises push covers them.
 const PICKER_MUSCLES = Object.keys(MUSCLE_DISPLAY_NAMES);
-const PICKER_EQUIPMENT = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands'];
+// F-09 (certification 2026-09-05): Kettlebell joins the chip row. The
+// corpus carries a full kettlebell family and five kettlebell library
+// plans, and matchesEquipmentFilter already handled the label; the picker
+// simply never offered it.
+const PICKER_EQUIPMENT = ['Barbell', 'Dumbbell', 'Kettlebell', 'Cable', 'Machine', 'Bodyweight', 'Smith Machine', 'Bands'];
 
 // L07-F8: the exercise TYPE axis a custom exercise can pick, matching the
 // existing exercise_type CHECK constraint (supabase/migrate_091_exercise_type.sql,
@@ -168,14 +172,14 @@ function describeCapabilityConflict(capabilityState, exercise, reason) {
       const base = rulePhrase({ ...first, laterality: null });
       if (shape === 'both_sides' && base) return `You've said ${base} does not work on either side`;
     }
-    return `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you keep out under how you train`;
+    return `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you keep out under Injuries & limitations`;
   }
   // CC33 D112 R6 (closes audit T2-33/T1-19): the capability lane never
   // borrows the preference lane's "set aside" (RoutineDetailScreen's own
   // exclusion copy owns that verb). Every branch here names how the user
   // trains, not what they set aside.
-  if (first?.ruleKind === 'family') return `Involves ${familyLabel(first.ruleValue)}, which you keep out under how you train`;
-  return 'You keep this movement out under How you train.';
+  if (first?.ruleKind === 'family') return `Involves ${familyLabel(first.ruleValue)}, which you keep out under Injuries & limitations`;
+  return 'You keep this movement out under Injuries & limitations.';
 }
 
 // saveLabel / actionLabel are aliases for the create-form's save button text
@@ -249,7 +253,7 @@ export default function ExercisePickerModal({
   const [intentUnavailable, setIntentUnavailable] = useState(false);
   // Red-team finding 1 (bundle), section 9.6: true only when the CAPABILITY
   // read failed with NO known state this session - the one posture where
-  // the browse list filters nothing for how you train - AND the user has
+  // the browse list filters nothing for Injuries & limitations - AND the user has
   // the feature turned on (local consent flag), so it is a true notice,
   // never noise.
   const [capabilityUnavailable, setCapabilityUnavailable] = useState(false);
@@ -365,7 +369,7 @@ export default function ExercisePickerModal({
               .then((consented) => {
                 if (consented === true) {
                   setCapabilityUnavailable(true);
-                  try { AccessibilityInfo.announceForAccessibility('How you train could not be checked right now, so nothing is filtered for it.'); } catch (_a) { /* best effort */ }
+                  try { AccessibilityInfo.announceForAccessibility('Injuries & limitations could not be checked right now, so nothing is filtered for it.'); } catch (_a) { /* best effort */ }
                 }
               })
               .catch(() => {});
@@ -478,11 +482,11 @@ export default function ExercisePickerModal({
       // No inline override for a clinician-reported rule (CAP-7).
       appAlert(
         `${item.name} is one you're keeping out`,
-        `${describeCapabilityConflict(intentState.capability, item, capReason)}. If that's changed, update it under How you train first.`,
+        `${describeCapabilityConflict(intentState.capability, item, capReason)}. If that's changed, update it under Injuries & limitations first.`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
-            text: 'Update How you train',
+            text: 'Open Injuries & limitations',
             onPress: () => {
               onClose?.();
               try {
@@ -892,13 +896,13 @@ export default function ExercisePickerModal({
 
             {/* Red-team finding 1 (bundle), section 9.6: the capability
                 lane's read failed with no known state, so the list is not
-                filtered for how you train. Same visible-notice posture as
+                filtered for Injuries & limitations. Same visible-notice posture as
                 the intent row above; shown only when the feature is on. */}
             {capabilityUnavailable ? (
               <View style={styles.constraintsUnavailableRow} accessibilityLiveRegion="polite">
                 <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
                 <Text style={[styles.constraintsUnavailableText, live.constraintsUnavailableText]}>
-                  How you train could not be checked right now, so nothing is filtered for it.
+                  Injuries & limitations could not be checked right now, so nothing is filtered for it.
                 </Text>
               </View>
             ) : null}
@@ -910,13 +914,13 @@ export default function ExercisePickerModal({
             {intentState?.capability && !intentState.capability.empty ? (
               <TouchableOpacity
                 accessibilityRole="button"
-                accessibilityLabel={showIncompatible ? 'Hide movements outside how you train' : 'Show movements outside how you train'}
+                accessibilityLabel={showIncompatible ? 'Hide movements that clash with your limitations' : 'Show movements that clash with your limitations'}
                 onPress={() => setShowIncompatible(v => !v)}
                 style={styles.showExcludedRow}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Text style={[styles.showExcludedText, live.showExcludedText]}>
-                  {showIncompatible ? 'Hide movements outside how you train' : 'Show movements outside how you train'}
+                  {showIncompatible ? 'Hide movements that clash with your limitations' : 'Show movements that clash with your limitations'}
                 </Text>
               </TouchableOpacity>
             ) : null}
@@ -1100,7 +1104,8 @@ export default function ExercisePickerModal({
                 <View style={styles.pickerEmpty}>
                   <Ionicons name="search-outline" size={32} color={t.colors.textMuted} style={{ marginBottom: spacing.md }} />
                   <Text style={[styles.pickerEmptyText, live.pickerEmptyText]}>
-                    {isSwapAction ? 'No swaps found. Try a different search.' : 'No matches found. Try a different search.'}
+                    {(isSwapAction ? 'No swaps found. ' : 'No matches found. ')
+                      + ((muscleFilter || equipmentFilter) ? 'Try fewer words, or clear a filter.' : 'Try fewer words, or a different search.')}
                   </Text>
                 </View>
               }

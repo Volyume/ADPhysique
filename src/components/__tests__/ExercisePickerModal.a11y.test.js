@@ -31,6 +31,6 @@ describe('ExercisePickerModal accessibility labels', () => {
     expect(source).toContain('modalShown && showBrowseFilters ? (');
     expect(source).toContain('Swap mode stays');
     expect(source).toContain('ListFooterComponent={!isSwapAction ? (');
-    expect(source).toContain("isSwapAction ? 'No swaps found. Try a different search.'");
+    expect(source).toContain("isSwapAction ? 'No swaps found. '");
   });
 });

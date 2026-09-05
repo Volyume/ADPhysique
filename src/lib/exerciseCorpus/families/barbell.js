@@ -89,7 +89,7 @@ export default [
     repMin: 4, repMax: 8,
     fatigueCost: 4, sfr: 3,
     subregion: "flat",
-    aliases: ["BB Bench Press","Bench Press","Seated Bench Press"],
+    aliases: ["BB Bench Press","Bench Press","Flat Bench Press","Flat Barbell Bench Press","Seated Bench Press"],
     loadCharacter: "grind",
     setup: "Lie back with your feet planted and the bar over your eyes.",
     execution: "Lower the bar to the lower chest with elbows tucked slightly, then press it back over your shoulders.",

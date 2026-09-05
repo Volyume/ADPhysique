@@ -45,6 +45,14 @@
  *     canonical name elsewhere is the point of aliases). The high-to-low /
  *     low-to-high direction phrase is folded as one atomic token so a
  *     direction pair (a genuinely distinct exercise) never collides.
+ * 16. Version-suffix aliases (F-09, final-certification-2026-09-05): no
+ *     alias may carry a "v. 2" / "v2" style variant number. Those are
+ *     artefacts of an unreviewed bulk alias import ("dumbbell lying one
+ *     arm press v. 2"), never a name a person types, and they sat beside
+ *     aliases that named a different exercise entirely. The companion
+ *     half of that ruling -- an alias identical to another row's
+ *     canonical name -- is already rule 2 above and is not duplicated
+ *     here.
  *
  * Run: node scripts/exercise-library/validate-corpus.mjs
  */
@@ -317,6 +325,21 @@ requireKnown(CONTESTED.map((c) => c.name), 'canonicality.js CONTESTED');
   for (const names of byFoldedKey.values()) {
     if (names.length > 1) {
       fail(`normalised-name collision (EL-25): ${names.map((n) => `"${n}"`).join(' / ')}`);
+    }
+  }
+}
+
+// ── 16. Version-suffix aliases (F-09) ──────────────────────────────────────
+// "... v. 2" / "... v2" is a bulk-import artefact, not an alternative
+// name anyone searches for. Banned outright so the next alias import
+// cannot reintroduce the class.
+{
+  const VERSION_SUFFIX = /\bv\.?\s?\d\b/i;
+  for (const e of CORPUS) {
+    for (const alias of e.aliases ?? []) {
+      if (VERSION_SUFFIX.test(alias)) {
+        fail(`alias "${alias}" (on "${e.name}") carries a version suffix; that is an import artefact, not a searchable name`);
+      }
     }
   }
 }

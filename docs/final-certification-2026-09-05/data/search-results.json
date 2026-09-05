@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-05T15:47:38.212Z",
+  "generatedAt": "2026-09-05T19:44:34.089Z",
   "corpusSize": 918,
   "kettlebellFilteredSize": 59,
   "queries": [
@@ -7,37 +7,8 @@
       "query": "bench",
       "kind": "query",
       "noFilter": {
-        "count": 57,
+        "count": 37,
         "top5": [
-          {
-            "id": "ae31cb3f-803f-4510-8322-0124125c01f9",
-            "name": "Bench Dip",
-            "tier": "common",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": [
-              "three bench dip",
-              "weighted bench dip"
-            ]
-          },
-          {
-            "id": "6ed13f9c-9d8f-48b7-bf40-a241919a3d21",
-            "name": "Bench Dip (Feet Elevated)",
-            "tier": "common",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": []
-          },
-          {
-            "id": "e0b4258f-11ad-43ee-94af-3e66f4cbd1fc",
-            "name": "Bench Press (Close Grip, Dumbbell)",
-            "tier": "niche",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
-            "aliases": [
-              "Bench Press (Close Grip, DB)"
-            ]
-          },
           {
             "id": "1df86495-6abc-490a-80e9-a70736f8ab1d",
             "name": "Barbell Bench Press",
@@ -47,75 +18,8 @@
             "aliases": [
               "BB Bench Press",
               "Bench Press",
-              "Seated Bench Press"
-            ]
-          },
-          {
-            "id": "605d8c0b-d4d2-400d-bca9-d1d120622917",
-            "name": "Dumbbell Bench Press",
-            "tier": "staple",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
-            "aliases": [
-              "DB Bench Press",
-              "dumbbell decline one arm hammer press",
-              "dumbbell lying one arm press",
-              "dumbbell lying one arm press v. 2",
-              "dumbbell one arm decline chest press",
-              "dumbbell one arm reverse grip press",
-              "dumbbell palms in incline bench press",
-              "dumbbell standing one arm palm in press",
-              "Hammer Grip Incline DB Bench Press",
-              "Standing Palm-In One-Arm Dumbbell Press",
-              "Benchpress Dumbbells",
-              "Elbows Tucked DB Bench Press",
-              "Glute Bridge Single-Arm Press",
-              "No Leg Drive Dumbbell Chest Press"
-            ]
-          }
-        ]
-      },
-      "kettlebellFilter": {
-        "count": 1,
-        "top5": [
-          {
-            "id": "cc96ed85-49d2-4e93-bd79-d63cad34ca57",
-            "name": "Kettlebell Bent Press",
-            "tier": "niche",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "Bent Press"
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "query": "bench press",
-      "kind": "query",
-      "noFilter": {
-        "count": 29,
-        "top5": [
-          {
-            "id": "e0b4258f-11ad-43ee-94af-3e66f4cbd1fc",
-            "name": "Bench Press (Close Grip, Dumbbell)",
-            "tier": "niche",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
-            "aliases": [
-              "Bench Press (Close Grip, DB)"
-            ]
-          },
-          {
-            "id": "1df86495-6abc-490a-80e9-a70736f8ab1d",
-            "name": "Barbell Bench Press",
-            "tier": "staple",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "BB Bench Press",
-              "Bench Press",
+              "Flat Bench Press",
+              "Flat Barbell Bench Press",
               "Seated Bench Press"
             ]
           },
@@ -137,18 +41,10 @@
             "equipmentCategory": "dumbbell",
             "aliases": [
               "DB Bench Press",
-              "dumbbell decline one arm hammer press",
-              "dumbbell lying one arm press",
-              "dumbbell lying one arm press v. 2",
-              "dumbbell one arm decline chest press",
-              "dumbbell one arm reverse grip press",
-              "dumbbell palms in incline bench press",
-              "dumbbell standing one arm palm in press",
-              "Hammer Grip Incline DB Bench Press",
-              "Standing Palm-In One-Arm Dumbbell Press",
+              "Flat Dumbbell Bench Press",
+              "Flat Dumbbell Press",
               "Benchpress Dumbbells",
               "Elbows Tucked DB Bench Press",
-              "Glute Bridge Single-Arm Press",
               "No Leg Drive Dumbbell Chest Press"
             ]
           },
@@ -164,30 +60,106 @@
               "Incline Bench Press - MP",
               "Legend Incline Bench Press"
             ]
+          },
+          {
+            "id": "ae31cb3f-803f-4510-8322-0124125c01f9",
+            "name": "Bench Dip",
+            "tier": "common",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": [
+              "three bench dip",
+              "weighted bench dip"
+            ]
           }
         ]
       },
       "kettlebellFilter": {
-        "count": 1,
+        "count": 0,
+        "top5": []
+      }
+    },
+    {
+      "query": "bench press",
+      "kind": "query",
+      "noFilter": {
+        "count": 25,
         "top5": [
           {
-            "id": "cc96ed85-49d2-4e93-bd79-d63cad34ca57",
-            "name": "Kettlebell Bent Press",
-            "tier": "niche",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
+            "id": "1df86495-6abc-490a-80e9-a70736f8ab1d",
+            "name": "Barbell Bench Press",
+            "tier": "staple",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
             "aliases": [
-              "Bent Press"
+              "BB Bench Press",
+              "Bench Press",
+              "Flat Bench Press",
+              "Flat Barbell Bench Press",
+              "Seated Bench Press"
+            ]
+          },
+          {
+            "id": "c7955e90-8a02-42c3-954e-4363e507f05f",
+            "name": "Close-Grip Bench Press",
+            "tier": "staple",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
+            "aliases": [
+              "Close-grip Press-ups"
+            ]
+          },
+          {
+            "id": "605d8c0b-d4d2-400d-bca9-d1d120622917",
+            "name": "Dumbbell Bench Press",
+            "tier": "staple",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "DB Bench Press",
+              "Flat Dumbbell Bench Press",
+              "Flat Dumbbell Press",
+              "Benchpress Dumbbells",
+              "Elbows Tucked DB Bench Press",
+              "No Leg Drive Dumbbell Chest Press"
+            ]
+          },
+          {
+            "id": "fbd4c228-b09f-42b9-a298-3b34e86f9c91",
+            "name": "Incline Barbell Bench Press",
+            "tier": "staple",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
+            "aliases": [
+              "Incline BB Bench Press",
+              "Incline Bench Press",
+              "Incline Bench Press - MP",
+              "Legend Incline Bench Press"
+            ]
+          },
+          {
+            "id": "f2836d44-448d-4161-b005-ab69b349a346",
+            "name": "Decline Barbell Bench Press",
+            "tier": "common",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
+            "aliases": [
+              "Decline BB Bench Press",
+              "Decline Bench Press"
             ]
           }
         ]
+      },
+      "kettlebellFilter": {
+        "count": 0,
+        "top5": []
       }
     },
     {
       "query": "incline bench",
       "kind": "query",
       "noFilter": {
-        "count": 12,
+        "count": 9,
         "top5": [
           {
             "id": "fbd4c228-b09f-42b9-a298-3b34e86f9c91",
@@ -217,14 +189,19 @@
             ]
           },
           {
-            "id": "f2836d44-448d-4161-b005-ab69b349a346",
-            "name": "Decline Barbell Bench Press",
+            "id": "072b9305-2b19-41fe-920b-799e640f3fd7",
+            "name": "Single-Arm Dumbbell Row (Bench-Supported)",
             "tier": "common",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
             "aliases": [
-              "Decline BB Bench Press",
-              "Decline Bench Press"
+              "One-Arm Dumbbell Row",
+              "Bench-Supported Dumbbell Row",
+              "one arm towel row",
+              "dumbbell one arm bent-over row",
+              "dumbbell reverse grip incline bench one arm row",
+              "DB Single-Arm Row (5kg)",
+              "One-Arm Heavy Row"
             ]
           },
           {
@@ -238,13 +215,17 @@
             ]
           },
           {
-            "id": "95aad741-0e0f-44dd-8321-5871135207a7",
-            "name": "Close-Grip Decline Bench Press",
-            "tier": "niche",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
+            "id": "9833564b-d201-4c85-a9b5-9f6c4dd107b9",
+            "name": "Incline Dumbbell Press (Single-Arm)",
+            "tier": "specialist",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
             "aliases": [
-              "Decline Close-Grip Bench Press"
+              "One-Arm Incline Dumbbell Press",
+              "Single-Arm Incline Dumbbell Bench Press",
+              "dumbbell incline one arm press",
+              "dumbbell incline one arm press on exercise ball",
+              "dumbbell one arm incline chest press"
             ]
           }
         ]
@@ -258,8 +239,24 @@
       "query": "flat db press",
       "kind": "query",
       "noFilter": {
-        "count": 0,
-        "top5": []
+        "count": 1,
+        "top5": [
+          {
+            "id": "605d8c0b-d4d2-400d-bca9-d1d120622917",
+            "name": "Dumbbell Bench Press",
+            "tier": "staple",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "DB Bench Press",
+              "Flat Dumbbell Bench Press",
+              "Flat Dumbbell Press",
+              "Benchpress Dumbbells",
+              "Elbows Tucked DB Bench Press",
+              "No Leg Drive Dumbbell Chest Press"
+            ]
+          }
+        ]
       },
       "kettlebellFilter": {
         "count": 0,
@@ -270,7 +267,7 @@
       "query": "db bench",
       "kind": "query",
       "noFilter": {
-        "count": 20,
+        "count": 12,
         "top5": [
           {
             "id": "605d8c0b-d4d2-400d-bca9-d1d120622917",
@@ -280,19 +277,21 @@
             "equipmentCategory": "dumbbell",
             "aliases": [
               "DB Bench Press",
-              "dumbbell decline one arm hammer press",
-              "dumbbell lying one arm press",
-              "dumbbell lying one arm press v. 2",
-              "dumbbell one arm decline chest press",
-              "dumbbell one arm reverse grip press",
-              "dumbbell palms in incline bench press",
-              "dumbbell standing one arm palm in press",
-              "Hammer Grip Incline DB Bench Press",
-              "Standing Palm-In One-Arm Dumbbell Press",
+              "Flat Dumbbell Bench Press",
+              "Flat Dumbbell Press",
               "Benchpress Dumbbells",
               "Elbows Tucked DB Bench Press",
-              "Glute Bridge Single-Arm Press",
               "No Leg Drive Dumbbell Chest Press"
+            ]
+          },
+          {
+            "id": "e0b4258f-11ad-43ee-94af-3e66f4cbd1fc",
+            "name": "Bench Press (Close Grip, Dumbbell)",
+            "tier": "niche",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "Bench Press (Close Grip, DB)"
             ]
           },
           {
@@ -320,14 +319,6 @@
             "aliases": []
           },
           {
-            "id": "ca3ee50c-3255-4209-85e3-5d8b9a8a37d5",
-            "name": "Sandbag Bent-Over Row",
-            "tier": "specialist",
-            "equipment": "sandbag",
-            "equipmentCategory": "sandbag",
-            "aliases": []
-          },
-          {
             "id": "131cf65f-fd23-4521-b803-db92444fa8da",
             "name": "Single-Arm Dumbbell Bench Press",
             "tier": "specialist",
@@ -348,7 +339,7 @@
       "query": "dumbbell press",
       "kind": "query",
       "noFilter": {
-        "count": 21,
+        "count": 19,
         "top5": [
           {
             "id": "605d8c0b-d4d2-400d-bca9-d1d120622917",
@@ -358,18 +349,10 @@
             "equipmentCategory": "dumbbell",
             "aliases": [
               "DB Bench Press",
-              "dumbbell decline one arm hammer press",
-              "dumbbell lying one arm press",
-              "dumbbell lying one arm press v. 2",
-              "dumbbell one arm decline chest press",
-              "dumbbell one arm reverse grip press",
-              "dumbbell palms in incline bench press",
-              "dumbbell standing one arm palm in press",
-              "Hammer Grip Incline DB Bench Press",
-              "Standing Palm-In One-Arm Dumbbell Press",
+              "Flat Dumbbell Bench Press",
+              "Flat Dumbbell Press",
               "Benchpress Dumbbells",
               "Elbows Tucked DB Bench Press",
-              "Glute Bridge Single-Arm Press",
               "No Leg Drive Dumbbell Chest Press"
             ]
           },
@@ -385,6 +368,27 @@
               "dumbbell standing alternate overhead press",
               "dumbbell standing overhead press",
               "Arnold Shoulder Press"
+            ]
+          },
+          {
+            "id": "880c5d76-b66a-4c3f-9859-d281a1db43db",
+            "name": "Hammer Curl",
+            "tier": "staple",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "TRX hammer curl",
+              "dumbbell alternate seated hammer curl",
+              "dumbbell hammer curls (with arm blaster)",
+              "dumbbell one arm prone hammer curl",
+              "dumbbell one arm seated hammer curl",
+              "dumbbell one arm standing hammer curl",
+              "dumbbell peacher hammer curl",
+              "dumbbell prone incline hammer curl",
+              "dumbbell standing alternate hammer curl and press",
+              "Alternate Hammer Curl",
+              "Alternating dumbbell hammer curl",
+              "DB Hammer Curls (5kg)"
             ]
           },
           {
@@ -406,16 +410,6 @@
             "aliases": [
               "Seated DB Press"
             ]
-          },
-          {
-            "id": "1c84a3eb-ac07-4d04-a5cd-2170c7980cb2",
-            "name": "Decline Dumbbell Press",
-            "tier": "common",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
-            "aliases": [
-              "Decline DB Press"
-            ]
           }
         ]
       },
@@ -428,7 +422,7 @@
       "query": "squat",
       "kind": "query",
       "noFilter": {
-        "count": 77,
+        "count": 76,
         "top5": [
           {
             "id": "f90abef4-9c28-46a2-abcc-c56c4b961a02",
@@ -556,17 +550,6 @@
             ]
           },
           {
-            "id": "ef7be2d8-7c04-412d-b729-03ffe78272de",
-            "name": "Hack Squat Machine",
-            "tier": "staple",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": [
-              "Hack Squat",
-              "sled hack squat"
-            ]
-          },
-          {
             "id": "5b2b60ff-7254-4265-b782-2b75b20c2e8c",
             "name": "Low-Bar Back Squat",
             "tier": "common",
@@ -578,25 +561,35 @@
             ]
           },
           {
-            "id": "d116efef-6463-45ef-badc-e2da5a08dc3d",
-            "name": "Reverse Hack Squat",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
+            "id": "7ca24ef1-4f23-4810-be08-0ccd79515e77",
+            "name": "Landmine Hack Squat",
+            "tier": "specialist",
+            "equipment": "landmine",
+            "equipmentCategory": "landmine",
             "aliases": [
-              "Front-Facing Hack Squat"
+              "Landmine Hack Squat (Behind the Back)"
             ]
           },
           {
-            "id": "14883618-8c70-4f5f-ad86-7fd5e43599d9",
-            "name": "Kettlebell Front Rack Squat (Double)",
-            "tier": "specialist",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
+            "id": "a19c67b2-e5ce-482d-94f2-b20bf4a2b021",
+            "name": "Barbell Hack Squat",
+            "tier": "niche",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
             "aliases": [
-              "Double Kettlebell Front Squat",
-              "Double Rack Squat",
-              "Front Squats With Two Kettlebells"
+              "Behind-the-Back Barbell Squat",
+              "Hack Squat (Barbell)"
+            ]
+          },
+          {
+            "id": "ef7be2d8-7c04-412d-b729-03ffe78272de",
+            "name": "Hack Squat Machine",
+            "tier": "staple",
+            "equipment": "machine",
+            "equipmentCategory": "machine_selectorised",
+            "aliases": [
+              "Hack Squat",
+              "sled hack squat"
             ]
           }
         ]
@@ -633,26 +626,8 @@
       "query": "front squat",
       "kind": "query",
       "noFilter": {
-        "count": 7,
+        "count": 6,
         "top5": [
-          {
-            "id": "eb8fec7f-147a-494b-8905-bd410d28bbbc",
-            "name": "Front Squat (Dumbbell)",
-            "tier": "niche",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
-            "aliases": [
-              "Front Squat (DB)",
-              "dumbbell bench squat",
-              "dumbbell single leg split squat",
-              "dumbbell single leg squat",
-              "dumbbell squat",
-              "dumbbell supported squat",
-              "Dumbbell Squat To A Bench",
-              "Plie Dumbbell Squat",
-              "Bulgarian Squat with Dumbbells"
-            ]
-          },
           {
             "id": "fffbc7ce-bc40-4228-8589-6513fb846edb",
             "name": "Barbell Front Squat",
@@ -663,6 +638,16 @@
               "BB Front Squat",
               "Front Squat",
               "Front Squat (Clean Grip)"
+            ]
+          },
+          {
+            "id": "d116efef-6463-45ef-badc-e2da5a08dc3d",
+            "name": "Reverse Hack Squat",
+            "tier": "common",
+            "equipment": "machine",
+            "equipmentCategory": "machine_selectorised",
+            "aliases": [
+              "Front-Facing Hack Squat"
             ]
           },
           {
@@ -688,12 +673,20 @@
             ]
           },
           {
-            "id": "7c60d861-8549-4f0b-a609-5d6c65b12375",
-            "name": "Smith Machine Front Squat",
+            "id": "eb8fec7f-147a-494b-8905-bd410d28bbbc",
+            "name": "Front Squat (Dumbbell)",
             "tier": "niche",
-            "equipment": "smith_machine",
-            "equipmentCategory": "smith",
-            "aliases": []
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "Front Squat (DB)",
+              "dumbbell bench squat",
+              "dumbbell single leg squat",
+              "dumbbell squat",
+              "dumbbell supported squat",
+              "Dumbbell Squat To A Bench",
+              "Plie Dumbbell Squat"
+            ]
           }
         ]
       },
@@ -743,6 +736,26 @@
             ]
           },
           {
+            "id": "d116efef-6463-45ef-badc-e2da5a08dc3d",
+            "name": "Reverse Hack Squat",
+            "tier": "common",
+            "equipment": "machine",
+            "equipmentCategory": "machine_selectorised",
+            "aliases": [
+              "Front-Facing Hack Squat"
+            ]
+          },
+          {
+            "id": "7ca24ef1-4f23-4810-be08-0ccd79515e77",
+            "name": "Landmine Hack Squat",
+            "tier": "specialist",
+            "equipment": "landmine",
+            "equipmentCategory": "landmine",
+            "aliases": [
+              "Landmine Hack Squat (Behind the Back)"
+            ]
+          },
+          {
             "id": "a19c67b2-e5ce-482d-94f2-b20bf4a2b021",
             "name": "Barbell Hack Squat",
             "tier": "niche",
@@ -764,27 +777,6 @@
               "Back Squat",
               "High-Bar Back Squat",
               "High Bar Squat"
-            ]
-          },
-          {
-            "id": "5b2b60ff-7254-4265-b782-2b75b20c2e8c",
-            "name": "Low-Bar Back Squat",
-            "tier": "common",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "Low Bar Squat",
-              "Powerlifting Squat"
-            ]
-          },
-          {
-            "id": "d116efef-6463-45ef-badc-e2da5a08dc3d",
-            "name": "Reverse Hack Squat",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": [
-              "Front-Facing Hack Squat"
             ]
           }
         ]
@@ -821,7 +813,7 @@
       "query": "leg press",
       "kind": "query",
       "noFilter": {
-        "count": 15,
+        "count": 14,
         "top5": [
           {
             "id": "0bd12c48-ec6a-489b-b931-cfb2eb3d0b45",
@@ -834,6 +826,34 @@
             ]
           },
           {
+            "id": "605d8c0b-d4d2-400d-bca9-d1d120622917",
+            "name": "Dumbbell Bench Press",
+            "tier": "staple",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "DB Bench Press",
+              "Flat Dumbbell Bench Press",
+              "Flat Dumbbell Press",
+              "Benchpress Dumbbells",
+              "Elbows Tucked DB Bench Press",
+              "No Leg Drive Dumbbell Chest Press"
+            ]
+          },
+          {
+            "id": "fbd4c228-b09f-42b9-a298-3b34e86f9c91",
+            "name": "Incline Barbell Bench Press",
+            "tier": "staple",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
+            "aliases": [
+              "Incline BB Bench Press",
+              "Incline Bench Press",
+              "Incline Bench Press - MP",
+              "Legend Incline Bench Press"
+            ]
+          },
+          {
             "id": "3d649487-860e-423b-b5b7-ad9b89abdc8d",
             "name": "Leg Press Calf Raise",
             "tier": "staple",
@@ -842,22 +862,6 @@
             "aliases": [
               "Double Leg Calf Raise"
             ]
-          },
-          {
-            "id": "789273d4-fca8-4fc4-837f-4a772acad67c",
-            "name": "Leg Press (High Foot)",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
-          },
-          {
-            "id": "104d11fe-364a-416a-b3f7-ba15194ebe0d",
-            "name": "Leg Press (Narrow Stance)",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
           },
           {
             "id": "96dd80f3-660c-43c1-8176-ecdbff4bff19",
@@ -924,14 +928,6 @@
             ]
           },
           {
-            "id": "47f38d23-d9d7-48cf-8d47-16ea3d853bff",
-            "name": "Bodyweight Single-Leg RDL",
-            "tier": "niche",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": []
-          },
-          {
             "id": "e6e6aea7-4a78-49f9-886b-bb6192fc3430",
             "name": "Landmine Romanian Deadlift",
             "tier": "common",
@@ -949,6 +945,16 @@
             "equipmentCategory": "smith",
             "aliases": [
               "Smith Machine RDL"
+            ]
+          },
+          {
+            "id": "22afbf2a-cb5e-400c-b900-136a50d30ba1",
+            "name": "Cable Romanian Deadlift",
+            "tier": "specialist",
+            "equipment": "cable",
+            "equipmentCategory": "cable",
+            "aliases": [
+              "Cable RDL"
             ]
           }
         ]
@@ -998,20 +1004,22 @@
             ]
           },
           {
-            "id": "37cfedbe-e95d-4b25-b1b3-42139d084e08",
-            "name": "Romanian Deadlift (Glute)",
-            "tier": "specialist",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": []
-          },
-          {
             "id": "24b03bf6-4324-4e57-b70a-4a00dced2dca",
             "name": "B-Stance Romanian Deadlift",
             "tier": "common",
             "equipment": "barbell",
             "equipmentCategory": "barbell",
             "aliases": []
+          },
+          {
+            "id": "ef9bfb4f-ee2a-42af-993c-7526a4bb4204",
+            "name": "Band Romanian Deadlift (Bilateral)",
+            "tier": "common",
+            "equipment": "band",
+            "equipmentCategory": "band",
+            "aliases": [
+              "band straight back stiff leg deadlift"
+            ]
           }
         ]
       },
@@ -1038,37 +1046,6 @@
         "count": 39,
         "top5": [
           {
-            "id": "7e9264fd-04bb-451d-a7fe-aa2d0f8682c9",
-            "name": "Conventional Deadlift",
-            "tier": "specialist",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "Deadlift",
-              "Deadlift (Conventional)"
-            ]
-          },
-          {
-            "id": "b55e0a42-bf2e-4401-a286-fb2b8c8af971",
-            "name": "Block Pull (Deadlift)",
-            "tier": "specialist",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "Deadlift from Blocks"
-            ]
-          },
-          {
-            "id": "ab07551e-c1fe-4c4e-87c6-14d39c4dff4b",
-            "name": "Sumo Deadlift",
-            "tier": "specialist",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "Deadlift (Sumo)"
-            ]
-          },
-          {
             "id": "0c3bc751-9c15-4a71-8f5f-ee94bf071d5f",
             "name": "Romanian Deadlift",
             "tier": "staple",
@@ -1086,6 +1063,37 @@
             "equipmentCategory": "barbell",
             "aliases": [
               "Romanian Deadlift (BB)"
+            ]
+          },
+          {
+            "id": "52347d87-77c2-4e7a-909a-9e0cdad814fd",
+            "name": "Romanian Deadlift (Dumbbell)",
+            "tier": "staple",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "Romanian Deadlift (DB)",
+              "dumbbell deadlift",
+              "dumbbell single leg deadlift with stepbox support",
+              "Stiff-Legged Dumbbell Deadlift"
+            ]
+          },
+          {
+            "id": "24b03bf6-4324-4e57-b70a-4a00dced2dca",
+            "name": "B-Stance Romanian Deadlift",
+            "tier": "common",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
+            "aliases": []
+          },
+          {
+            "id": "ef9bfb4f-ee2a-42af-993c-7526a4bb4204",
+            "name": "Band Romanian Deadlift (Bilateral)",
+            "tier": "common",
+            "equipment": "band",
+            "equipmentCategory": "band",
+            "aliases": [
+              "band straight back stiff leg deadlift"
             ]
           }
         ]
@@ -1162,6 +1170,32 @@
             "aliases": []
           },
           {
+            "id": "4a0fc930-96df-41cb-940d-a58cdf0f8145",
+            "name": "Band Sumo Deadlift",
+            "tier": "specialist",
+            "equipment": "band",
+            "equipmentCategory": "band",
+            "aliases": []
+          },
+          {
+            "id": "0667a351-2449-45a6-8044-70c8104b4f15",
+            "name": "Kettlebell Sumo Deadlift",
+            "tier": "specialist",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
+            "aliases": []
+          },
+          {
+            "id": "9392dce8-5e03-4597-9ba7-7de9087af5da",
+            "name": "Landmine Sumo Squat",
+            "tier": "specialist",
+            "equipment": "landmine",
+            "equipmentCategory": "landmine",
+            "aliases": [
+              "Landmine Sumo Squat (Adductor Focus)"
+            ]
+          },
+          {
             "id": "ab07551e-c1fe-4c4e-87c6-14d39c4dff4b",
             "name": "Sumo Deadlift",
             "tier": "specialist",
@@ -1170,30 +1204,6 @@
             "aliases": [
               "Deadlift (Sumo)"
             ]
-          },
-          {
-            "id": "fb23b9fc-2fa6-4dfa-a40f-6da7f1e2e534",
-            "name": "Sumo Deadlift (Glute Focus)",
-            "tier": "specialist",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": []
-          },
-          {
-            "id": "f80466ab-91f7-4b8f-9ed4-35d16ee0eb78",
-            "name": "Sumo Deadlift (Wide Stance)",
-            "tier": "specialist",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": []
-          },
-          {
-            "id": "4e6da990-9a0d-4a6e-9c57-12733504aa3e",
-            "name": "Sumo Squat (Adductor Focus)",
-            "tier": "specialist",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
-            "aliases": []
           }
         ]
       },
@@ -1287,7 +1297,7 @@
       "query": "ohp",
       "kind": "query",
       "noFilter": {
-        "count": 11,
+        "count": 10,
         "top5": [
           {
             "id": "696654dc-74ac-4b49-854c-2013402261db",
@@ -1363,6 +1373,20 @@
             ]
           },
           {
+            "id": "9d9d3d9f-ef7f-4094-911c-6375a738d450",
+            "name": "Dumbbell Shoulder Press",
+            "tier": "staple",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "DB Shoulder Press",
+              "dumbbell seated shoulder press (parallel grip)",
+              "dumbbell standing alternate overhead press",
+              "dumbbell standing overhead press",
+              "Arnold Shoulder Press"
+            ]
+          },
+          {
             "id": "e0e3b81b-752f-447b-86f6-5e5e4939e6b1",
             "name": "Seated Barbell Overhead Press",
             "tier": "common",
@@ -1390,20 +1414,6 @@
             "equipment": "smith_machine",
             "equipmentCategory": "smith",
             "aliases": []
-          },
-          {
-            "id": "9d9d3d9f-ef7f-4094-911c-6375a738d450",
-            "name": "Dumbbell Shoulder Press",
-            "tier": "staple",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
-            "aliases": [
-              "DB Shoulder Press",
-              "dumbbell seated shoulder press (parallel grip)",
-              "dumbbell standing alternate overhead press",
-              "dumbbell standing overhead press",
-              "Arnold Shoulder Press"
-            ]
           }
         ]
       },
@@ -1503,7 +1513,7 @@
       "query": "shoulder press",
       "kind": "query",
       "noFilter": {
-        "count": 15,
+        "count": 14,
         "top5": [
           {
             "id": "9d9d3d9f-ef7f-4094-911c-6375a738d450",
@@ -1544,12 +1554,15 @@
             "aliases": []
           },
           {
-            "id": "43b09e63-1e53-48b3-86c7-a9ea927b861e",
-            "name": "Machine Shoulder Press (Front Delt Focus)",
+            "id": "c030a3e2-ce92-4e1a-bfb2-d93e36d299f0",
+            "name": "Landmine Press",
             "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
+            "equipment": "landmine",
+            "equipmentCategory": "landmine",
+            "aliases": [
+              "Two-Arm Landmine Press",
+              "Landmine Shoulder Press"
+            ]
           }
         ]
       },
@@ -1564,6 +1577,16 @@
       "noFilter": {
         "count": 16,
         "top5": [
+          {
+            "id": "3f19d853-de91-4f4e-b6df-2ac5838636ba",
+            "name": "Cable Lateral Raise",
+            "tier": "staple",
+            "equipment": "cable",
+            "equipmentCategory": "cable",
+            "aliases": [
+              "Cable Lateral Raise (Low Pulley)"
+            ]
+          },
           {
             "id": "fb825ebd-012a-419c-b5c2-ef91dc1abbd2",
             "name": "Dumbbell Lateral Raise",
@@ -1590,16 +1613,6 @@
             "equipmentCategory": "machine_selectorised",
             "aliases": [
               "Lateral Raise Machine"
-            ]
-          },
-          {
-            "id": "3f19d853-de91-4f4e-b6df-2ac5838636ba",
-            "name": "Cable Lateral Raise",
-            "tier": "staple",
-            "equipment": "cable",
-            "equipmentCategory": "cable",
-            "aliases": [
-              "Cable Lateral Raise (Low Pulley)"
             ]
           },
           {
@@ -1713,10 +1726,10 @@
             "equipmentCategory": "dumbbell",
             "aliases": [
               "DB Rear Delt Fly",
+              "Reverse Fly",
+              "Dumbbell Reverse Fly",
               "dumbbell lying on floor rear delt raise",
               "dumbbell rear delt raise",
-              "dumbbell rear delt row_shoulder",
-              "Bent Over Dumbbell Rear Delt Raise With Head On Bench",
               "Lying Rear Delt Raise",
               "Chest-Supported Rear Delt Raise",
               "Dumbbell rear delt row",
@@ -1774,34 +1787,32 @@
             ]
           },
           {
-            "id": "382af868-d6c1-46f9-8497-3b6fc2a87bd4",
-            "name": "Face Pull (Rope)",
-            "tier": "common",
-            "equipment": "cable",
-            "equipmentCategory": "cable",
-            "aliases": []
-          },
-          {
-            "id": "00d71aad-5e24-43a6-bb22-7e0203425f3f",
-            "name": "Face Pull (Traps)",
-            "tier": "common",
-            "equipment": "cable",
-            "equipmentCategory": "cable",
-            "aliases": []
-          },
-          {
-            "id": "308d434f-c2fc-4001-b0a6-4272f16e20f3",
-            "name": "Band Face Pull",
-            "tier": "niche",
-            "equipment": "band",
-            "equipmentCategory": "band",
-            "aliases": [
-              "Face pulls with yellow/green band"
-            ]
-          },
-          {
             "id": "143ff823-e9b0-48c1-9e3e-891805a18d3d",
             "name": "Cable Face Pull",
+            "tier": "common",
+            "equipment": "cable",
+            "equipmentCategory": "cable",
+            "aliases": []
+          },
+          {
+            "id": "849b1b0a-42da-44da-aa52-c2e3f876f9b8",
+            "name": "Cable Face Pull (Rope)",
+            "tier": "common",
+            "equipment": "cable",
+            "equipmentCategory": "cable",
+            "aliases": []
+          },
+          {
+            "id": "54bb02ee-2401-4248-8142-4f3787e1257c",
+            "name": "Cable Face Pull (Upper Back)",
+            "tier": "common",
+            "equipment": "cable",
+            "equipmentCategory": "cable",
+            "aliases": []
+          },
+          {
+            "id": "382af868-d6c1-46f9-8497-3b6fc2a87bd4",
+            "name": "Face Pull (Rope)",
             "tier": "common",
             "equipment": "cable",
             "equipmentCategory": "cable",
@@ -1818,22 +1829,8 @@
       "query": "row",
       "kind": "query",
       "noFilter": {
-        "count": 89,
+        "count": 74,
         "top5": [
-          {
-            "id": "d9e1fa1c-f3c3-42cd-b3c1-40765443a082",
-            "name": "TRX Row",
-            "tier": "niche",
-            "equipment": "suspension",
-            "equipmentCategory": "suspension",
-            "aliases": [
-              "Ring Row",
-              "Suspension Row",
-              "Inverted Row on Rings",
-              "inverted row on bench",
-              "Rowing with TRX band"
-            ]
-          },
           {
             "id": "cec4b20d-876e-443f-9985-d5db00238db5",
             "name": "Barbell Row (Bent Over)",
@@ -1844,16 +1841,6 @@
               "BB Row (Bent Over)",
               "Bent-Over Row",
               "Bent Over Rowing"
-            ]
-          },
-          {
-            "id": "38454f8e-302d-4c25-9cde-5d240b22e12a",
-            "name": "Cable Crossover (High to Low)",
-            "tier": "staple",
-            "equipment": "cable",
-            "equipmentCategory": "cable",
-            "aliases": [
-              "Cable Crossover"
             ]
           },
           {
@@ -1873,11 +1860,43 @@
             "equipment": "barbell",
             "equipmentCategory": "barbell",
             "aliases": []
+          },
+          {
+            "id": "1436a9a9-c70e-46c8-bcec-64e62bb683f5",
+            "name": "Dumbbell Rear Delt Fly",
+            "tier": "staple",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "DB Rear Delt Fly",
+              "Reverse Fly",
+              "Dumbbell Reverse Fly",
+              "dumbbell lying on floor rear delt raise",
+              "dumbbell rear delt raise",
+              "Lying Rear Delt Raise",
+              "Chest-Supported Rear Delt Raise",
+              "Dumbbell rear delt row",
+              "Seated rear delt rise"
+            ]
+          },
+          {
+            "id": "967f5fdf-2919-4195-93b5-663f0e113f13",
+            "name": "Dumbbell Row",
+            "tier": "staple",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "DB Row",
+              "Two-Arm Bent-Over Dumbbell Row",
+              "Bent-Over Dumbbell Row",
+              "Single-Arm Dumbbell Row",
+              "Single-Arm DB Row"
+            ]
           }
         ]
       },
       "kettlebellFilter": {
-        "count": 4,
+        "count": 3,
         "top5": [
           {
             "id": "c08afc39-110f-49e3-bdf6-ac64afeaf774",
@@ -1900,18 +1919,6 @@
               "Kettlebell Gorilla Row",
               "kettlebell two arm row",
               "Two-Arm Kettlebell Row"
-            ]
-          },
-          {
-            "id": "497f8eb1-b954-4281-98c5-c8c0cb9fdf6b",
-            "name": "Kettlebell Windmill (Low)",
-            "tier": "specialist",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "Windmill (Low)",
-              "Kettlebell Low Windmill",
-              "kettlebell windmill"
             ]
           },
           {
@@ -1947,6 +1954,26 @@
             ]
           },
           {
+            "id": "b3ed088a-10d3-4652-b2ba-2b50075bd02f",
+            "name": "Chest-Supported Row (Barbell)",
+            "tier": "common",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
+            "aliases": [
+              "Chest-Supported Row (BB)"
+            ]
+          },
+          {
+            "id": "5f7bfeb1-2573-4bde-9117-1389e885a6f7",
+            "name": "Swiss Bar Row",
+            "tier": "specialist",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
+            "aliases": [
+              "Neutral-Grip Barbell Row"
+            ]
+          },
+          {
             "id": "38c1ecb9-f6b4-4f3a-a478-82224df8d921",
             "name": "Barbell Row (Supinated)",
             "tier": "niche",
@@ -1961,16 +1988,6 @@
             ]
           },
           {
-            "id": "b3ed088a-10d3-4652-b2ba-2b50075bd02f",
-            "name": "Chest-Supported Row (Barbell)",
-            "tier": "common",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "Chest-Supported Row (BB)"
-            ]
-          },
-          {
             "id": "a36a7ef6-5b3b-4db6-9f80-9e9630c85d52",
             "name": "Barbell Upright Row (Wide)",
             "tier": "never_auto",
@@ -1978,16 +1995,6 @@
             "equipmentCategory": "barbell",
             "aliases": [
               "BB Upright Row (Wide)"
-            ]
-          },
-          {
-            "id": "5f7bfeb1-2573-4bde-9117-1389e885a6f7",
-            "name": "Swiss Bar Row",
-            "tier": "specialist",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "Neutral-Grip Barbell Row"
             ]
           }
         ]
@@ -2001,7 +2008,7 @@
       "query": "cable row",
       "kind": "query",
       "noFilter": {
-        "count": 18,
+        "count": 9,
         "top5": [
           {
             "id": "84c017bd-f80c-413a-b29c-bca1d329fb8d",
@@ -2015,40 +2022,42 @@
             ]
           },
           {
-            "id": "b8d71619-ec1e-4608-be67-a232619e13f9",
-            "name": "Wide-Grip Cable Row",
+            "id": "3931d83c-3f16-414d-a51d-c064a4d87bd4",
+            "name": "Cable High Row",
             "tier": "common",
             "equipment": "cable",
             "equipmentCategory": "cable",
             "aliases": [
-              "Cable Row (Wide Grip)"
+              "Remo alto polea alta"
             ]
           },
           {
-            "id": "38454f8e-302d-4c25-9cde-5d240b22e12a",
-            "name": "Cable Crossover (High to Low)",
-            "tier": "staple",
+            "id": "2cb6bda7-4b29-4492-b819-9d4adb629628",
+            "name": "Seated Cable Row (Rope)",
+            "tier": "common",
             "equipment": "cable",
             "equipmentCategory": "cable",
             "aliases": [
-              "Cable Crossover"
+              "Rope Seated Cable Row"
             ]
           },
           {
-            "id": "9af105c9-dc2c-4e61-9bee-099a67117547",
-            "name": "Cable Fly (High to Low)",
+            "id": "86845b0c-2a81-4679-9730-0dbdab0e4037",
+            "name": "Single-Arm Cable Row",
             "tier": "common",
             "equipment": "cable",
             "equipmentCategory": "cable",
             "aliases": []
           },
           {
-            "id": "398692bb-9455-4d76-ad16-b3c75fc7030d",
-            "name": "Cable Fly (Low to High)",
+            "id": "33b26ac2-8a3a-4b4d-b638-3d6cd99d3f35",
+            "name": "Standing Cable Row (Single-Arm)",
             "tier": "common",
             "equipment": "cable",
             "equipmentCategory": "cable",
-            "aliases": []
+            "aliases": [
+              "Standing Single-Arm Cable Row"
+            ]
           }
         ]
       },
@@ -2061,7 +2070,7 @@
       "query": "seated row",
       "kind": "query",
       "noFilter": {
-        "count": 7,
+        "count": 6,
         "top5": [
           {
             "id": "84c017bd-f80c-413a-b29c-bca1d329fb8d",
@@ -2072,6 +2081,17 @@
             "aliases": [
               "Cable Row",
               "Long-Pulley (low Row)"
+            ]
+          },
+          {
+            "id": "e7213f12-3187-4bca-80cb-d5f8ec90b894",
+            "name": "Band Row (Single-Arm)",
+            "tier": "common",
+            "equipment": "band",
+            "equipmentCategory": "band",
+            "aliases": [
+              "band one arm standing low row",
+              "band one arm twisting seated row"
             ]
           },
           {
@@ -2099,17 +2119,6 @@
             "equipment": "machine",
             "equipmentCategory": "machine_plate_loaded",
             "aliases": []
-          },
-          {
-            "id": "708c1c8f-658c-453e-9e51-1eefcc0cac91",
-            "name": "Seated Band Row",
-            "tier": "never_auto",
-            "equipment": "band",
-            "equipmentCategory": "band",
-            "aliases": [
-              "Band Seated Row",
-              "resistance band seated straight back row"
-            ]
           }
         ]
       },
@@ -2187,14 +2196,6 @@
         "count": 22,
         "top5": [
           {
-            "id": "1ade8208-efd7-4f72-a364-eb690d39cdca",
-            "name": "Cable Pushdown (Straight Bar)",
-            "tier": "staple",
-            "equipment": "cable",
-            "equipmentCategory": "cable",
-            "aliases": []
-          },
-          {
             "id": "bcc36f32-94aa-4046-ab03-a6ffab01db49",
             "name": "Cable Straight-Arm Pulldown",
             "tier": "staple",
@@ -2234,6 +2235,16 @@
             "aliases": [
               "Jalón al pecho con agarre ancho"
             ]
+          },
+          {
+            "id": "b4628b92-003c-4454-b325-5748b8cfd0be",
+            "name": "Iso-Lateral Front Pulldown",
+            "tier": "common",
+            "equipment": "machine",
+            "equipmentCategory": "machine_plate_loaded",
+            "aliases": [
+              "alternate lateral pulldown"
+            ]
           }
         ]
       },
@@ -2248,6 +2259,16 @@
       "noFilter": {
         "count": 20,
         "top5": [
+          {
+            "id": "de3c9b92-43a4-4d7c-9037-c9bb78cf623f",
+            "name": "Chin-Up",
+            "tier": "staple",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": [
+              "Underhand Pull-Up"
+            ]
+          },
           {
             "id": "8584d88f-f8b7-4611-ac7e-50dddc7a24de",
             "name": "Pull-Up",
@@ -2284,16 +2305,6 @@
             "equipment": "bodyweight",
             "equipmentCategory": "bodyweight",
             "aliases": []
-          },
-          {
-            "id": "05379c99-95f0-47b3-bac8-da3a76a59c61",
-            "name": "Neutral Grip Pull-Up",
-            "tier": "common",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": [
-              "Pull-Ups (Neutral Grip)"
-            ]
           }
         ]
       },
@@ -2322,23 +2333,13 @@
             ]
           },
           {
-            "id": "05379c99-95f0-47b3-bac8-da3a76a59c61",
-            "name": "Neutral Grip Pull-Up",
-            "tier": "common",
+            "id": "de3c9b92-43a4-4d7c-9037-c9bb78cf623f",
+            "name": "Chin-Up",
+            "tier": "staple",
             "equipment": "bodyweight",
             "equipmentCategory": "bodyweight",
             "aliases": [
-              "Pull-Ups (Neutral Grip)"
-            ]
-          },
-          {
-            "id": "a5188c5a-61fd-4ec0-8ede-0982d024bdf3",
-            "name": "Wide-Grip Pull-Up",
-            "tier": "common",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": [
-              "Pull-Ups (Wide Grip)"
+              "Underhand Pull-Up"
             ]
           },
           {
@@ -2355,6 +2356,14 @@
             "tier": "common",
             "equipment": "cable",
             "equipmentCategory": "cable",
+            "aliases": []
+          },
+          {
+            "id": "f02fb60a-e013-492b-8dd2-e537a7964455",
+            "name": "Close-Grip Pull-Up",
+            "tier": "common",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
             "aliases": []
           }
         ]
@@ -2379,14 +2388,6 @@
             "aliases": [
               "Underhand Pull-Up"
             ]
-          },
-          {
-            "id": "cf010504-121f-4921-8a1e-b9fa643f94df",
-            "name": "Machine Row (Chest Supported)",
-            "tier": "staple",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
           },
           {
             "id": "f3bb041f-2965-4dc2-9693-a585aef0c131",
@@ -2415,6 +2416,14 @@
             "equipment": "suspension",
             "equipmentCategory": "suspension",
             "aliases": []
+          },
+          {
+            "id": "3f1081a9-cd8d-46a4-a5c4-07dc2c70d2d7",
+            "name": "Chin-Up (Supinated)",
+            "tier": "niche",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": []
           }
         ]
       },
@@ -2429,17 +2438,6 @@
       "noFilter": {
         "count": 75,
         "top5": [
-          {
-            "id": "46cc6dbc-2928-4b6d-9b59-ddd4eb0cee38",
-            "name": "Barbell Wrist Curl",
-            "tier": "specialist",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "BB Wrist Curl",
-              "Curl De Muñeca Con Barra"
-            ]
-          },
           {
             "id": "91f08c79-e784-4058-ac0d-ab1f58e675bb",
             "name": "Barbell Curl",
@@ -2469,40 +2467,27 @@
               "DB Curl",
               "dumbbell alternate biceps curl",
               "dumbbell alternate biceps curl (with arm blaster)",
-              "dumbbell bicep curl lunge with bowling motion",
               "dumbbell bicep curl with stork stance",
               "dumbbell biceps curl (with arm blaster)",
-              "dumbbell biceps curl squat",
-              "dumbbell finger curls",
               "dumbbell high curl",
               "dumbbell kneeling bicep curl exercise ball",
-              "dumbbell lunge with bicep curl",
               "dumbbell lying supine biceps curl",
               "dumbbell lying supine curl",
               "dumbbell lying wide curl",
               "dumbbell one arm prone curl",
               "dumbbell one arm standing curl",
               "dumbbell revers grip biceps curl",
-              "dumbbell seated biceps curl to shoulder press",
               "dumbbell standing biceps curl",
-              "dumbbell standing inner biceps curl v. 2",
-              "dumbbell standing one arm curl (over incline bench)",
-              "dumbbell standing one arm curl over incline bench",
-              "dumbbell step up single leg balance with bicep curl",
               "dumbbell waiter biceps curl",
               "Dumbbell Alternate Bicep Curl",
               "Lying Supine Dumbbell Curl",
-              "Standing One-Arm Dumbbell Curl Over Incline Bench",
               "Alternating Biceps Curls With Dumbbell",
               "Alternating bicep curls",
               "Biceps Curls With Dumbbell",
               "Drop Curl",
-              "Dumbbell bicep curl to press",
               "Dumbbell wide bicep curls",
-              "Forearm Curls (underhand grip)",
               "Seated W Curl",
-              "Standing Bicep Curl",
-              "one-handed kettlebell curls"
+              "Standing Bicep Curl"
             ]
           },
           {
@@ -2514,6 +2499,27 @@
             "aliases": [
               "EZ Curl",
               "Biceps Curls With SZ-bar"
+            ]
+          },
+          {
+            "id": "880c5d76-b66a-4c3f-9859-d281a1db43db",
+            "name": "Hammer Curl",
+            "tier": "staple",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "TRX hammer curl",
+              "dumbbell alternate seated hammer curl",
+              "dumbbell hammer curls (with arm blaster)",
+              "dumbbell one arm prone hammer curl",
+              "dumbbell one arm seated hammer curl",
+              "dumbbell one arm standing hammer curl",
+              "dumbbell peacher hammer curl",
+              "dumbbell prone incline hammer curl",
+              "dumbbell standing alternate hammer curl and press",
+              "Alternate Hammer Curl",
+              "Alternating dumbbell hammer curl",
+              "DB Hammer Curls (5kg)"
             ]
           }
         ]
@@ -2529,33 +2535,6 @@
       "noFilter": {
         "count": 8,
         "top5": [
-          {
-            "id": "978d1478-2a3f-4c27-9e11-9aec40dc1e25",
-            "name": "TRX Bicep Curl (Single-Arm)",
-            "tier": "specialist",
-            "equipment": "suspension",
-            "equipmentCategory": "suspension",
-            "aliases": []
-          },
-          {
-            "id": "55fc656c-e59e-4f1b-8dc4-287a2cd06e37",
-            "name": "Band Bicep Curl",
-            "tier": "niche",
-            "equipment": "band",
-            "equipmentCategory": "band",
-            "aliases": [
-              "Band Curl",
-              "resistance band seated biceps curl"
-            ]
-          },
-          {
-            "id": "302867a2-0be8-4d30-a9f9-8aab853cfdfc",
-            "name": "Cable Overhead Bicep Curl",
-            "tier": "niche",
-            "equipment": "cable",
-            "equipmentCategory": "cable",
-            "aliases": []
-          },
           {
             "id": "91f08c79-e784-4058-ac0d-ab1f58e675bb",
             "name": "Barbell Curl",
@@ -2577,41 +2556,57 @@
               "DB Curl",
               "dumbbell alternate biceps curl",
               "dumbbell alternate biceps curl (with arm blaster)",
-              "dumbbell bicep curl lunge with bowling motion",
               "dumbbell bicep curl with stork stance",
               "dumbbell biceps curl (with arm blaster)",
-              "dumbbell biceps curl squat",
-              "dumbbell finger curls",
               "dumbbell high curl",
               "dumbbell kneeling bicep curl exercise ball",
-              "dumbbell lunge with bicep curl",
               "dumbbell lying supine biceps curl",
               "dumbbell lying supine curl",
               "dumbbell lying wide curl",
               "dumbbell one arm prone curl",
               "dumbbell one arm standing curl",
               "dumbbell revers grip biceps curl",
-              "dumbbell seated biceps curl to shoulder press",
               "dumbbell standing biceps curl",
-              "dumbbell standing inner biceps curl v. 2",
-              "dumbbell standing one arm curl (over incline bench)",
-              "dumbbell standing one arm curl over incline bench",
-              "dumbbell step up single leg balance with bicep curl",
               "dumbbell waiter biceps curl",
               "Dumbbell Alternate Bicep Curl",
               "Lying Supine Dumbbell Curl",
-              "Standing One-Arm Dumbbell Curl Over Incline Bench",
               "Alternating Biceps Curls With Dumbbell",
               "Alternating bicep curls",
               "Biceps Curls With Dumbbell",
               "Drop Curl",
-              "Dumbbell bicep curl to press",
               "Dumbbell wide bicep curls",
-              "Forearm Curls (underhand grip)",
               "Seated W Curl",
-              "Standing Bicep Curl",
-              "one-handed kettlebell curls"
+              "Standing Bicep Curl"
             ]
+          },
+          {
+            "id": "91c4d969-66bc-4df5-abe6-bc192e8944e9",
+            "name": "EZ Bar Curl",
+            "tier": "staple",
+            "equipment": "ez_bar",
+            "equipmentCategory": "barbell",
+            "aliases": [
+              "EZ Curl",
+              "Biceps Curls With SZ-bar"
+            ]
+          },
+          {
+            "id": "c508736c-0950-4897-9313-d1e88f4bb51e",
+            "name": "Band Standing Curl (Single-Arm)",
+            "tier": "common",
+            "equipment": "band",
+            "equipmentCategory": "band",
+            "aliases": [
+              "band one arm overhead biceps curl"
+            ]
+          },
+          {
+            "id": "978d1478-2a3f-4c27-9e11-9aec40dc1e25",
+            "name": "TRX Bicep Curl (Single-Arm)",
+            "tier": "specialist",
+            "equipment": "suspension",
+            "equipmentCategory": "suspension",
+            "aliases": []
           }
         ]
       },
@@ -2693,8 +2688,27 @@
       "query": "preacher",
       "kind": "query",
       "noFilter": {
-        "count": 17,
+        "count": 7,
         "top5": [
+          {
+            "id": "612ec5a0-d7c7-4c13-92f2-2ce45f0ef777",
+            "name": "EZ Bar Preacher Curl",
+            "tier": "common",
+            "equipment": "ez_bar",
+            "equipmentCategory": "barbell",
+            "aliases": [
+              "Preacher Curls",
+              "Preacher Curl (EZ Bar)"
+            ]
+          },
+          {
+            "id": "3f75cb62-c181-4be8-b6d9-7f1decafda64",
+            "name": "Plate-Loaded Preacher Curl",
+            "tier": "common",
+            "equipment": "machine",
+            "equipmentCategory": "machine_plate_loaded",
+            "aliases": []
+          },
           {
             "id": "4b3b38ba-504a-4a21-b575-b1da9a39f9a4",
             "name": "Preacher Curl (Barbell)",
@@ -2732,25 +2746,6 @@
             "equipment": "machine",
             "equipmentCategory": "machine_selectorised",
             "aliases": []
-          },
-          {
-            "id": "612ec5a0-d7c7-4c13-92f2-2ce45f0ef777",
-            "name": "EZ Bar Preacher Curl",
-            "tier": "common",
-            "equipment": "ez_bar",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "Preacher Curls",
-              "Preacher Curl (EZ Bar)"
-            ]
-          },
-          {
-            "id": "3f75cb62-c181-4be8-b6d9-7f1decafda64",
-            "name": "Plate-Loaded Preacher Curl",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_plate_loaded",
-            "aliases": []
           }
         ]
       },
@@ -2787,17 +2782,6 @@
             ]
           },
           {
-            "id": "301cc7be-0e1f-43bc-af78-f979e37c6064",
-            "name": "Band Tricep Pushdown",
-            "tier": "niche",
-            "equipment": "band",
-            "equipmentCategory": "band",
-            "aliases": [
-              "Band Pushdown",
-              "Tricep Pull-Down"
-            ]
-          },
-          {
             "id": "fcb19b55-a1d3-409a-ba6b-f77e181a5e6d",
             "name": "Cable Pushdown (V-Bar)",
             "tier": "common",
@@ -2815,6 +2799,17 @@
             "equipmentCategory": "cable",
             "aliases": [
               "Reverse Grip Triceps Pushdown"
+            ]
+          },
+          {
+            "id": "301cc7be-0e1f-43bc-af78-f979e37c6064",
+            "name": "Band Tricep Pushdown",
+            "tier": "niche",
+            "equipment": "band",
+            "equipmentCategory": "band",
+            "aliases": [
+              "Band Pushdown",
+              "Tricep Pull-Down"
             ]
           }
         ]
@@ -2839,44 +2834,44 @@
             "aliases": []
           },
           {
-            "id": "bcc36f32-94aa-4046-ab03-a6ffab01db49",
-            "name": "Cable Straight-Arm Pulldown",
+            "id": "eaa2d96c-a041-44de-8906-c57d867a7b6b",
+            "name": "Tricep Pushdown (Bar)",
             "tier": "staple",
             "equipment": "cable",
             "equipmentCategory": "cable",
             "aliases": [
-              "Lat Prayer",
-              "Rope Straight-Arm Pulldown",
-              "Straight-arm Pull Down (bar Attachment)"
+              "Triceps Pushdown"
             ]
           },
           {
-            "id": "eda67d43-801e-40ac-a948-327a00c71e1c",
-            "name": "Lat Pulldown (Close Grip)",
-            "tier": "staple",
-            "equipment": "cable",
-            "equipmentCategory": "cable",
-            "aliases": []
-          },
-          {
-            "id": "3b037fc7-8cbd-4e3c-919f-7fc9109a8114",
-            "name": "Lat Pulldown (Neutral Grip)",
+            "id": "41274e01-919c-4ce9-87ef-a651f573d6a2",
+            "name": "Tricep Pushdown (Rope)",
             "tier": "staple",
             "equipment": "cable",
             "equipmentCategory": "cable",
             "aliases": [
-              "twin handle parallel grip lat pulldown",
-              "Neutral-grip chest pulldown"
+              "Rope Pushdown",
+              "cable pushdown (with rope attachment)"
             ]
           },
           {
-            "id": "a45fc14b-ad79-4278-abe7-27441ea6a63d",
-            "name": "Lat Pulldown (Wide Grip)",
-            "tier": "staple",
+            "id": "fcb19b55-a1d3-409a-ba6b-f77e181a5e6d",
+            "name": "Cable Pushdown (V-Bar)",
+            "tier": "common",
             "equipment": "cable",
             "equipmentCategory": "cable",
             "aliases": [
-              "Jalón al pecho con agarre ancho"
+              "V-Bar Tricep Pushdown"
+            ]
+          },
+          {
+            "id": "8fa50785-1697-4788-b25b-934f3aa3c5a5",
+            "name": "Reverse Grip Cable Pushdown",
+            "tier": "common",
+            "equipment": "cable",
+            "equipmentCategory": "cable",
+            "aliases": [
+              "Reverse Grip Triceps Pushdown"
             ]
           }
         ]
@@ -2994,6 +2989,65 @@
         "count": 12,
         "top5": [
           {
+            "id": "c5042605-ed88-45a2-a5b0-84abe02ffe65",
+            "name": "Weighted Dips (Chest)",
+            "tier": "common",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": []
+          },
+          {
+            "id": "5e836f80-44b8-4e2c-9cd2-8682ed52e817",
+            "name": "Weighted Dips (Triceps)",
+            "tier": "common",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": []
+          },
+          {
+            "id": "a368a9ab-89aa-4f23-8022-2b644c45ce51",
+            "name": "Assisted Dip Machine",
+            "tier": "common",
+            "equipment": "machine",
+            "equipmentCategory": "machine_selectorised",
+            "aliases": [
+              "assisted chest dip (kneeling)",
+              "assisted triceps dip (kneeling)"
+            ]
+          },
+          {
+            "id": "4f8e6b0d-be40-4369-90c1-c1113bd32e5c",
+            "name": "Band Assisted Dip",
+            "tier": "common",
+            "equipment": "band",
+            "equipmentCategory": "band",
+            "aliases": []
+          },
+          {
+            "id": "ae31cb3f-803f-4510-8322-0124125c01f9",
+            "name": "Bench Dip",
+            "tier": "common",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": [
+              "three bench dip",
+              "weighted bench dip"
+            ]
+          }
+        ]
+      },
+      "kettlebellFilter": {
+        "count": 0,
+        "top5": []
+      }
+    },
+    {
+      "query": "dip",
+      "kind": "query",
+      "noFilter": {
+        "count": 12,
+        "top5": [
+          {
             "id": "a368a9ab-89aa-4f23-8022-2b644c45ce51",
             "name": "Assisted Dip Machine",
             "tier": "common",
@@ -3047,72 +3101,10 @@
       }
     },
     {
-      "query": "dip",
-      "kind": "query",
-      "noFilter": {
-        "count": 35,
-        "top5": [
-          {
-            "id": "5eb8df51-c327-4390-8703-38405be65318",
-            "name": "Dip Machine",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
-          },
-          {
-            "id": "3ac74910-e3b1-4a1a-9e02-b5ee610b0d30",
-            "name": "Barbell Hip Thrust",
-            "tier": "staple",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "BB Hip Thrust",
-              "Hip Thrust",
-              "Unilateral Hip Thrust",
-              "Hip Thrust (Barbell)",
-              "Hip Thrust (BB)"
-            ]
-          },
-          {
-            "id": "71ad9611-f031-4d5a-b1af-b1e24c6abeb8",
-            "name": "Machine Hip Thrust",
-            "tier": "staple",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
-          },
-          {
-            "id": "5c24f0f8-4384-4fe2-a40b-ec28df74894f",
-            "name": "45-Degree Hip Extension",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
-          },
-          {
-            "id": "a368a9ab-89aa-4f23-8022-2b644c45ce51",
-            "name": "Assisted Dip Machine",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": [
-              "assisted chest dip (kneeling)",
-              "assisted triceps dip (kneeling)"
-            ]
-          }
-        ]
-      },
-      "kettlebellFilter": {
-        "count": 0,
-        "top5": []
-      }
-    },
-    {
       "query": "lunge",
       "kind": "query",
       "noFilter": {
-        "count": 29,
+        "count": 24,
         "top5": [
           {
             "id": "609329c6-aceb-4a71-8b00-8c926b5056f1",
@@ -3162,7 +3154,7 @@
         ]
       },
       "kettlebellFilter": {
-        "count": 4,
+        "count": 3,
         "top5": [
           {
             "id": "a69a252a-f74e-4494-9e3c-af9768e8dcba",
@@ -3192,18 +3184,6 @@
             "equipment": "kettlebell",
             "equipmentCategory": "kettlebell",
             "aliases": []
-          },
-          {
-            "id": "e09fe591-c39d-4cc8-a441-ed6dd39db5c3",
-            "name": "Kettlebell Jerk",
-            "tier": "never_auto",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "Kettlebell Jerk (Long Cycle)",
-              "kettlebell one arm jerk",
-              "One-Arm Kettlebell Jerk"
-            ]
           }
         ]
       }
@@ -3220,24 +3200,6 @@
             "tier": "staple",
             "equipment": "dumbbell",
             "equipmentCategory": "dumbbell",
-            "aliases": []
-          },
-          {
-            "id": "b02a4f6a-922a-4ca5-998d-558be3c2ff0c",
-            "name": "Bulgarian Split Squat (Barbell)",
-            "tier": "niche",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "Barbell Rear-Foot-Elevated Split Squat"
-            ]
-          },
-          {
-            "id": "37107a1e-655b-4118-b26d-dbe9b500d651",
-            "name": "Bodyweight Bulgarian Split Squat",
-            "tier": "niche",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
             "aliases": []
           },
           {
@@ -3259,6 +3221,24 @@
             "aliases": [
               "Landmine Bulgarian Split Squat"
             ]
+          },
+          {
+            "id": "37107a1e-655b-4118-b26d-dbe9b500d651",
+            "name": "Bodyweight Bulgarian Split Squat",
+            "tier": "niche",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": []
+          },
+          {
+            "id": "b02a4f6a-922a-4ca5-998d-558be3c2ff0c",
+            "name": "Bulgarian Split Squat (Barbell)",
+            "tier": "niche",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
+            "aliases": [
+              "Barbell Rear-Foot-Elevated Split Squat"
+            ]
           }
         ]
       },
@@ -3271,7 +3251,7 @@
       "query": "split squat",
       "kind": "query",
       "noFilter": {
-        "count": 9,
+        "count": 8,
         "top5": [
           {
             "id": "4d316d7b-e0b4-4b3c-a538-0e540f5d61eb",
@@ -3310,13 +3290,16 @@
             ]
           },
           {
-            "id": "861a65b5-c56d-4e9b-b3e8-7cb424518759",
-            "name": "Landmine Split Squat",
-            "tier": "specialist",
-            "equipment": "landmine",
-            "equipmentCategory": "landmine",
+            "id": "cd1d022a-9c71-457d-8440-e25b304690cb",
+            "name": "Step-Up (Dumbbell)",
+            "tier": "common",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
             "aliases": [
-              "Landmine Bulgarian Split Squat"
+              "Step-Up (DB)",
+              "Poliquin Step-Up",
+              "dumbbell step-up split squat",
+              "Dumbbell Step Ups"
             ]
           }
         ]
@@ -3332,22 +3315,6 @@
       "noFilter": {
         "count": 23,
         "top5": [
-          {
-            "id": "96dd80f3-660c-43c1-8176-ecdbff4bff19",
-            "name": "Calf Raise on Leg Press Sled",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "other",
-            "aliases": []
-          },
-          {
-            "id": "8597177f-b96b-4cbe-be7b-d643a946e6b7",
-            "name": "Calf Raise on Steps",
-            "tier": "niche",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": []
-          },
           {
             "id": "3d649487-860e-423b-b5b7-ad9b89abdc8d",
             "name": "Leg Press Calf Raise",
@@ -3373,6 +3340,22 @@
             "equipment": "machine",
             "equipmentCategory": "machine_selectorised",
             "aliases": []
+          },
+          {
+            "id": "4dec7c4b-3e6d-4a0e-b967-8f8fd900a026",
+            "name": "Standing Calf Raise (Machine)",
+            "tier": "staple",
+            "equipment": "machine",
+            "equipmentCategory": "machine_selectorised",
+            "aliases": []
+          },
+          {
+            "id": "96dd80f3-660c-43c1-8176-ecdbff4bff19",
+            "name": "Calf Raise on Leg Press Sled",
+            "tier": "common",
+            "equipment": "machine",
+            "equipmentCategory": "other",
+            "aliases": []
           }
         ]
       },
@@ -3388,6 +3371,27 @@
         "count": 12,
         "top5": [
           {
+            "id": "e730444f-01d5-471a-8321-b40d4a327439",
+            "name": "Lying Leg Curl",
+            "tier": "staple",
+            "equipment": "machine",
+            "equipmentCategory": "machine_selectorised",
+            "aliases": [
+              "Hamstring Curl",
+              "Lying Hamstring Curl"
+            ]
+          },
+          {
+            "id": "a6a6b367-a8e5-4ee4-8887-4184d154f0a7",
+            "name": "Seated Leg Curl",
+            "tier": "staple",
+            "equipment": "machine",
+            "equipmentCategory": "machine_selectorised",
+            "aliases": [
+              "Seated Hamstring Curl"
+            ]
+          },
+          {
             "id": "aa832f0f-1503-4423-b3e9-20bdc9cc6f2d",
             "name": "Leg Curl (Cable)",
             "tier": "common",
@@ -3396,35 +3400,16 @@
             "aliases": []
           },
           {
-            "id": "509377b3-aa70-4ee9-b85e-6ed97cc20a09",
-            "name": "Band Leg Curl",
-            "tier": "niche",
-            "equipment": "band",
-            "equipmentCategory": "band",
-            "aliases": [
-              "Leg Curl",
-              "Leg curl with elastic"
-            ]
-          },
-          {
-            "id": "e730444f-01d5-471a-8321-b40d4a327439",
-            "name": "Lying Leg Curl",
-            "tier": "staple",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
-          },
-          {
-            "id": "a6a6b367-a8e5-4ee4-8887-4184d154f0a7",
-            "name": "Seated Leg Curl",
-            "tier": "staple",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
-          },
-          {
             "id": "accf4129-72a1-497c-bd97-c6b962708e14",
             "name": "Prone Leg Curl",
+            "tier": "common",
+            "equipment": "machine",
+            "equipmentCategory": "machine_selectorised",
+            "aliases": []
+          },
+          {
+            "id": "ea19d50a-4cc9-4bd9-b719-f0a8da3b0199",
+            "name": "Standing Leg Curl",
             "tier": "common",
             "equipment": "machine",
             "equipmentCategory": "machine_selectorised",
@@ -3480,8 +3465,29 @@
       "query": "hamstring curl",
       "kind": "query",
       "noFilter": {
-        "count": 4,
+        "count": 6,
         "top5": [
+          {
+            "id": "e730444f-01d5-471a-8321-b40d4a327439",
+            "name": "Lying Leg Curl",
+            "tier": "staple",
+            "equipment": "machine",
+            "equipmentCategory": "machine_selectorised",
+            "aliases": [
+              "Hamstring Curl",
+              "Lying Hamstring Curl"
+            ]
+          },
+          {
+            "id": "a6a6b367-a8e5-4ee4-8887-4184d154f0a7",
+            "name": "Seated Leg Curl",
+            "tier": "staple",
+            "equipment": "machine",
+            "equipmentCategory": "machine_selectorised",
+            "aliases": [
+              "Seated Hamstring Curl"
+            ]
+          },
           {
             "id": "284977c3-d664-4498-ab13-ce56dcb2b8cf",
             "name": "TRX Hamstring Curl",
@@ -3509,16 +3515,6 @@
             "aliases": [
               "Single-leg hamstring curl"
             ]
-          },
-          {
-            "id": "643985bb-983d-46af-94ec-f27a18b6338e",
-            "name": "Slider Leg Curl (Bodyweight)",
-            "tier": "niche",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": [
-              "Floor Glider Hamstring Curls"
-            ]
           }
         ]
       },
@@ -3531,7 +3527,7 @@
       "query": "plank",
       "kind": "query",
       "noFilter": {
-        "count": 35,
+        "count": 12,
         "top5": [
           {
             "id": "24de40b6-fa4a-48e8-9b1b-04dbbbe6a0b5",
@@ -3542,37 +3538,39 @@
             "aliases": []
           },
           {
-            "id": "99564ad8-22bd-4f66-8306-87117c2a3902",
-            "name": "Plank Shoulder Tap",
-            "tier": "specialist",
+            "id": "c21eb910-ee75-4b51-b3c0-b96d3787fcaa",
+            "name": "Side Plank",
+            "tier": "common",
             "equipment": "bodyweight",
             "equipmentCategory": "bodyweight",
             "aliases": [
-              "shoulder tap"
+              "Adductor Side Plank",
+              "Dynamic side plank",
+              "Side plank right"
             ]
           },
           {
-            "id": "8d976ffc-105a-48d1-b4be-f96f4443dfbd",
-            "name": "Plank to Push-Up (Walk-Up)",
+            "id": "812eed8d-1b11-40e9-b8f3-e0810b48c320",
+            "name": "TRX Plank (Feet Suspended)",
+            "tier": "common",
+            "equipment": "suspension",
+            "equipmentCategory": "suspension",
+            "aliases": []
+          },
+          {
+            "id": "cd1323fc-ee4d-42eb-9718-9593011ca2e5",
+            "name": "Weighted Plank (Plate on Back)",
+            "tier": "common",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
+            "aliases": []
+          },
+          {
+            "id": "071aec23-740e-4375-ab37-b8bede31af27",
+            "name": "Long-Lever Plank",
             "tier": "specialist",
             "equipment": "bodyweight",
             "equipmentCategory": "bodyweight",
-            "aliases": []
-          },
-          {
-            "id": "f4e4d66e-7a27-4c63-bc74-2f1bfb7022bb",
-            "name": "Plank Row",
-            "tier": "niche",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
-            "aliases": []
-          },
-          {
-            "id": "84d5e2e3-7706-4822-adfd-aa015bfe708f",
-            "name": "Plate-Loaded Chest Press",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_plate_loaded",
             "aliases": []
           }
         ]
@@ -3586,7 +3584,7 @@
       "query": "crunch",
       "kind": "query",
       "noFilter": {
-        "count": 14,
+        "count": 10,
         "top5": [
           {
             "id": "7e057172-b9f2-4000-a2a8-7854a6805d99",
@@ -3609,18 +3607,6 @@
             ]
           },
           {
-            "id": "dffc40cd-f6ef-4714-846c-c69c9ac0af4e",
-            "name": "Exercise Ball Crunch",
-            "tier": "common",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": [
-              "crunch (on stability ball)",
-              "Crunch - Legs On Exercise Ball",
-              "Ball crunches"
-            ]
-          },
-          {
             "id": "d9e6c972-181a-4611-8836-02c27ad8a812",
             "name": "Bicycle Crunch",
             "tier": "common",
@@ -3637,6 +3623,18 @@
             "aliases": [
               "Decline Oblique Crunch",
               "Decline Reverse Crunch"
+            ]
+          },
+          {
+            "id": "dffc40cd-f6ef-4714-846c-c69c9ac0af4e",
+            "name": "Exercise Ball Crunch",
+            "tier": "common",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": [
+              "crunch (on stability ball)",
+              "Crunch - Legs On Exercise Ball",
+              "Ball crunches"
             ]
           }
         ]
@@ -3693,7 +3691,7 @@
       "query": "kb swing",
       "kind": "query",
       "noFilter": {
-        "count": 5,
+        "count": 4,
         "top5": [
           {
             "id": "a22e0fd5-faef-4fe2-8589-7d0099d2b5ae",
@@ -3706,6 +3704,17 @@
               "Two-Hand Kettlebell Swing",
               "Russian Kettlebell Swing",
               "2 Handed Kettlebell Swing"
+            ]
+          },
+          {
+            "id": "dff6fc90-13ae-4eeb-92c1-6d776d731fd4",
+            "name": "Kettlebell Swing (Single-Arm)",
+            "tier": "never_auto",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
+            "aliases": [
+              "One-Arm Kettlebell Swing",
+              "Single Arm KB Swing"
             ]
           },
           {
@@ -3726,36 +3735,6 @@
             "equipmentCategory": "kettlebell",
             "aliases": [
               "Hand-to-Hand Kettlebell Swing"
-            ]
-          },
-          {
-            "id": "dff6fc90-13ae-4eeb-92c1-6d776d731fd4",
-            "name": "Kettlebell Swing (Single-Arm)",
-            "tier": "never_auto",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "One-Arm Kettlebell Swing",
-              "Single Arm KB Swing"
-            ]
-          },
-          {
-            "id": "e0e867f1-15e2-473b-a5ee-e5f0efbaa0c4",
-            "name": "Tricep Kickback",
-            "tier": "niche",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
-            "aliases": [
-              "dumbbell kickback",
-              "dumbbell kickbacks on exercise ball",
-              "dumbbell one arm kickback",
-              "dumbbell seated bent over alternate kickback",
-              "dumbbell seated kickback",
-              "dumbbell seated one arm kickback",
-              "dumbbell standing alternating tricep kickback",
-              "dumbbell standing kickback",
-              "dumbbell tricep kickback with stork stance",
-              "Lying Triceps Kickback"
             ]
           }
         ]
@@ -3777,6 +3756,17 @@
             ]
           },
           {
+            "id": "dff6fc90-13ae-4eeb-92c1-6d776d731fd4",
+            "name": "Kettlebell Swing (Single-Arm)",
+            "tier": "never_auto",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
+            "aliases": [
+              "One-Arm Kettlebell Swing",
+              "Single Arm KB Swing"
+            ]
+          },
+          {
             "id": "77e7f885-b5df-479c-b829-35356897b795",
             "name": "Double Kettlebell Swing",
             "tier": "never_auto",
@@ -3794,17 +3784,6 @@
             "equipmentCategory": "kettlebell",
             "aliases": [
               "Hand-to-Hand Kettlebell Swing"
-            ]
-          },
-          {
-            "id": "dff6fc90-13ae-4eeb-92c1-6d776d731fd4",
-            "name": "Kettlebell Swing (Single-Arm)",
-            "tier": "never_auto",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "One-Arm Kettlebell Swing",
-              "Single Arm KB Swing"
             ]
           }
         ]
@@ -3830,6 +3809,16 @@
             ]
           },
           {
+            "id": "77e7f885-b5df-479c-b829-35356897b795",
+            "name": "Double Kettlebell Swing",
+            "tier": "never_auto",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
+            "aliases": [
+              "Two-Kettlebell Swing"
+            ]
+          },
+          {
             "id": "ef8ede1b-3816-48bd-933f-d8cce7ae432e",
             "name": "Kettlebell Swing (Alternating)",
             "tier": "never_auto",
@@ -3849,6 +3838,24 @@
               "One-Arm Kettlebell Swing",
               "Single Arm KB Swing"
             ]
+          }
+        ]
+      },
+      "kettlebellFilter": {
+        "count": 4,
+        "top5": [
+          {
+            "id": "a22e0fd5-faef-4fe2-8589-7d0099d2b5ae",
+            "name": "Kettlebell Swing",
+            "tier": "never_auto",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
+            "aliases": [
+              "KB Swing",
+              "Two-Hand Kettlebell Swing",
+              "Russian Kettlebell Swing",
+              "2 Handed Kettlebell Swing"
+            ]
           },
           {
             "id": "77e7f885-b5df-479c-b829-35356897b795",
@@ -3859,12 +3866,47 @@
             "aliases": [
               "Two-Kettlebell Swing"
             ]
+          },
+          {
+            "id": "ef8ede1b-3816-48bd-933f-d8cce7ae432e",
+            "name": "Kettlebell Swing (Alternating)",
+            "tier": "never_auto",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
+            "aliases": [
+              "Hand-to-Hand Kettlebell Swing"
+            ]
+          },
+          {
+            "id": "dff6fc90-13ae-4eeb-92c1-6d776d731fd4",
+            "name": "Kettlebell Swing (Single-Arm)",
+            "tier": "never_auto",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
+            "aliases": [
+              "One-Arm Kettlebell Swing",
+              "Single Arm KB Swing"
+            ]
           }
         ]
-      },
-      "kettlebellFilter": {
+      }
+    },
+    {
+      "query": "swing",
+      "kind": "query",
+      "noFilter": {
         "count": 4,
         "top5": [
+          {
+            "id": "77e7f885-b5df-479c-b829-35356897b795",
+            "name": "Double Kettlebell Swing",
+            "tier": "never_auto",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
+            "aliases": [
+              "Two-Kettlebell Swing"
+            ]
+          },
           {
             "id": "a22e0fd5-faef-4fe2-8589-7d0099d2b5ae",
             "name": "Kettlebell Swing",
@@ -3898,94 +3940,6 @@
               "One-Arm Kettlebell Swing",
               "Single Arm KB Swing"
             ]
-          },
-          {
-            "id": "77e7f885-b5df-479c-b829-35356897b795",
-            "name": "Double Kettlebell Swing",
-            "tier": "never_auto",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "Two-Kettlebell Swing"
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "query": "swing",
-      "kind": "query",
-      "noFilter": {
-        "count": 37,
-        "top5": [
-          {
-            "id": "e730444f-01d5-471a-8321-b40d4a327439",
-            "name": "Lying Leg Curl",
-            "tier": "staple",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
-          },
-          {
-            "id": "39f0b4ac-0438-4f4c-a76b-c84530273813",
-            "name": "Clamshell (Side-Lying)",
-            "tier": "common",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": [
-              "Clamshells",
-              "Side-Lying Clamshell"
-            ]
-          },
-          {
-            "id": "79c559ed-ef3a-4593-954f-111e3eaecf36",
-            "name": "Lying Tricep Extension",
-            "tier": "common",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
-            "aliases": [
-              "dumbbell decline triceps extension",
-              "dumbbell forward lunge triceps extension",
-              "dumbbell incline triceps extension",
-              "dumbbell lying one arm pronated triceps extension",
-              "dumbbell lying one arm supinated triceps extension",
-              "dumbbell one arm triceps extension (on bench)",
-              "dumbbell pronate-grip triceps extension",
-              "dumbbell seated bent over triceps extension",
-              "dumbbell seated triceps extension",
-              "dumbbell standing bent over one arm triceps extension",
-              "dumbbell standing bent over two arm triceps extension",
-              "dumbbell standing triceps extension",
-              "dumbbells seated triceps extension",
-              "exercise ball supine triceps extension",
-              "Decline Dumbbell Triceps Extension",
-              "Dumbbell One-Arm Triceps Extension",
-              "Dumbbell Tricep Extension -Pronated Grip",
-              "One Arm Pronated Dumbbell Triceps Extension",
-              "One Arm Supinated Dumbbell Triceps Extension",
-              "Seated Bent-Over One-Arm Dumbbell Triceps Extension",
-              "Seated Bent-Over Two-Arm Dumbbell Triceps Extension",
-              "Standing Bent-Over One-Arm Dumbbell Triceps Extension",
-              "Standing Bent-Over Two-Arm Dumbbell Triceps Extension",
-              "Standing Dumbbell Triceps Extension",
-              "Standing One-Arm Dumbbell Triceps Extension"
-            ]
-          },
-          {
-            "id": "2276374f-efaa-4a4a-a793-0d1f1dfce321",
-            "name": "Ring Chin-Up",
-            "tier": "specialist",
-            "equipment": "suspension",
-            "equipmentCategory": "suspension",
-            "aliases": []
-          },
-          {
-            "id": "8f6cbc6c-8399-40ec-98c3-6c028b319cd6",
-            "name": "Ring Dip",
-            "tier": "specialist",
-            "equipment": "suspension",
-            "equipmentCategory": "suspension",
-            "aliases": []
           }
         ]
       },
@@ -4104,15 +4058,19 @@
       "query": "clean",
       "kind": "query",
       "noFilter": {
-        "count": 25,
+        "count": 20,
         "top5": [
           {
-            "id": "861b626f-5d73-4294-9e47-cecc3b6d25e4",
-            "name": "Clean Pull",
-            "tier": "never_auto",
+            "id": "fffbc7ce-bc40-4228-8589-6513fb846edb",
+            "name": "Barbell Front Squat",
+            "tier": "common",
             "equipment": "barbell",
             "equipmentCategory": "barbell",
-            "aliases": []
+            "aliases": [
+              "BB Front Squat",
+              "Front Squat",
+              "Front Squat (Clean Grip)"
+            ]
           },
           {
             "id": "0288a404-07c7-4a1f-96c7-1d223bd26066",
@@ -4126,32 +4084,31 @@
             ]
           },
           {
-            "id": "4cb81d4d-30c0-4055-b6e4-f5e903eed8e3",
-            "name": "Kettlebell Clean and Press",
+            "id": "05ebcacc-7d8e-4d6b-9b0c-fc2a7a95a96e",
+            "name": "Barbell Clean High Pull",
             "tier": "never_auto",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
             "aliases": [
-              "KB Clean and Press",
-              "Clean and Press (Kettlebell)"
+              "Barbell High Pull"
             ]
           },
           {
-            "id": "f7a689b2-253d-4f08-b5cb-1780809fb850",
-            "name": "Straight Bar Dip (Chest-Lean)",
-            "tier": "common",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
+            "id": "8a7b3abf-b759-4cee-a420-08ac0de33c37",
+            "name": "Barbell Hang Power Clean",
+            "tier": "never_auto",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
             "aliases": [
-              "chest dip on straight bar"
+              "Hang Clean"
             ]
           },
           {
-            "id": "4e52ff9e-8559-4e34-8ee4-85c474eb16eb",
-            "name": "Cuban Press",
-            "tier": "niche",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
+            "id": "861b626f-5d73-4294-9e47-cecc3b6d25e4",
+            "name": "Clean Pull",
+            "tier": "never_auto",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
             "aliases": []
           }
         ]
@@ -4159,17 +4116,6 @@
       "kettlebellFilter": {
         "count": 7,
         "top5": [
-          {
-            "id": "4cb81d4d-30c0-4055-b6e4-f5e903eed8e3",
-            "name": "Kettlebell Clean and Press",
-            "tier": "never_auto",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "KB Clean and Press",
-              "Clean and Press (Kettlebell)"
-            ]
-          },
           {
             "id": "8a123e79-ddd3-4445-ac25-f4d0733af383",
             "name": "Double Kettlebell Clean",
@@ -4201,6 +4147,17 @@
             "aliases": [
               "Kettlebell Clean & Jerk",
               "One-Arm Kettlebell Clean and Jerk"
+            ]
+          },
+          {
+            "id": "4cb81d4d-30c0-4055-b6e4-f5e903eed8e3",
+            "name": "Kettlebell Clean and Press",
+            "tier": "never_auto",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
+            "aliases": [
+              "KB Clean and Press",
+              "Clean and Press (Kettlebell)"
             ]
           },
           {
@@ -4234,6 +4191,17 @@
             ]
           },
           {
+            "id": "8a123e79-ddd3-4445-ac25-f4d0733af383",
+            "name": "Double Kettlebell Clean",
+            "tier": "never_auto",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
+            "aliases": [
+              "kettlebell two arm clean",
+              "Two-Arm Kettlebell Clean"
+            ]
+          },
+          {
             "id": "d83154d0-1ac2-488d-ae0d-ad5da031c6c5",
             "name": "Kettlebell Clean and Jerk",
             "tier": "never_auto",
@@ -4253,17 +4221,6 @@
             "aliases": [
               "KB Clean and Press",
               "Clean and Press (Kettlebell)"
-            ]
-          },
-          {
-            "id": "8a123e79-ddd3-4445-ac25-f4d0733af383",
-            "name": "Double Kettlebell Clean",
-            "tier": "never_auto",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "kettlebell two arm clean",
-              "Two-Arm Kettlebell Clean"
             ]
           },
           {
@@ -4293,6 +4250,17 @@
             ]
           },
           {
+            "id": "8a123e79-ddd3-4445-ac25-f4d0733af383",
+            "name": "Double Kettlebell Clean",
+            "tier": "never_auto",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
+            "aliases": [
+              "kettlebell two arm clean",
+              "Two-Arm Kettlebell Clean"
+            ]
+          },
+          {
             "id": "d83154d0-1ac2-488d-ae0d-ad5da031c6c5",
             "name": "Kettlebell Clean and Jerk",
             "tier": "never_auto",
@@ -4315,17 +4283,6 @@
             ]
           },
           {
-            "id": "8a123e79-ddd3-4445-ac25-f4d0733af383",
-            "name": "Double Kettlebell Clean",
-            "tier": "never_auto",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "kettlebell two arm clean",
-              "Two-Arm Kettlebell Clean"
-            ]
-          },
-          {
             "id": "6de63a74-8736-44e4-afb7-afef6040963e",
             "name": "Kettlebell Dead Clean",
             "tier": "never_auto",
@@ -4342,7 +4299,7 @@
       "query": "snatch",
       "kind": "query",
       "noFilter": {
-        "count": 13,
+        "count": 12,
         "top5": [
           {
             "id": "8baea5fe-34e8-4525-8176-601a61422914",
@@ -4363,32 +4320,34 @@
             "aliases": []
           },
           {
-            "id": "6e78c305-ef7f-448f-8904-d307ec1c3b9d",
-            "name": "Snatch Grip Deadlift",
+            "id": "973aeccf-01a5-405c-9eb5-45ac11db7538",
+            "name": "Alternating Kettlebell Snatch",
             "tier": "never_auto",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": []
-          },
-          {
-            "id": "dc79a7a2-21fe-40c7-8966-7ddf97c83f91",
-            "name": "Barbell Power Snatch",
-            "tier": "never_auto",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
             "aliases": [
-              "Snatch OL"
+              "Hand-to-Hand Kettlebell Snatch"
             ]
           },
           {
-            "id": "d77b1bc0-2135-484d-9b53-9b0308e2e477",
-            "name": "Barbell Snatch Pull",
+            "id": "5260628d-1098-4763-acbd-dd76e9afe456",
+            "name": "Barbell Hang Snatch",
             "tier": "never_auto",
             "equipment": "barbell",
             "equipmentCategory": "barbell",
             "aliases": [
-              "Snatch Pull",
-              "Front pull wide"
+              "Hang Snatch (Below the Knee)",
+              "Hang Snatch"
+            ]
+          },
+          {
+            "id": "b52d4d11-36e6-45fc-8484-a4be6aef1248",
+            "name": "Barbell Muscle Snatch",
+            "tier": "never_auto",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
+            "aliases": [
+              "Muscle Snatch"
             ]
           }
         ]
@@ -4527,19 +4486,8 @@
       "query": "press",
       "kind": "query",
       "noFilter": {
-        "count": 138,
+        "count": 128,
         "top5": [
-          {
-            "id": "13a61c17-7f8c-447b-9a4d-267e2377cfa8",
-            "name": "Push-Up",
-            "tier": "common",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": [
-              "Press-Up",
-              "Pushups"
-            ]
-          },
           {
             "id": "1df86495-6abc-490a-80e9-a70736f8ab1d",
             "name": "Barbell Bench Press",
@@ -4549,6 +4497,8 @@
             "aliases": [
               "BB Bench Press",
               "Bench Press",
+              "Flat Bench Press",
+              "Flat Barbell Bench Press",
               "Seated Bench Press"
             ]
           },
@@ -4582,25 +4532,31 @@
             "equipmentCategory": "dumbbell",
             "aliases": [
               "DB Bench Press",
-              "dumbbell decline one arm hammer press",
-              "dumbbell lying one arm press",
-              "dumbbell lying one arm press v. 2",
-              "dumbbell one arm decline chest press",
-              "dumbbell one arm reverse grip press",
-              "dumbbell palms in incline bench press",
-              "dumbbell standing one arm palm in press",
-              "Hammer Grip Incline DB Bench Press",
-              "Standing Palm-In One-Arm Dumbbell Press",
+              "Flat Dumbbell Bench Press",
+              "Flat Dumbbell Press",
               "Benchpress Dumbbells",
               "Elbows Tucked DB Bench Press",
-              "Glute Bridge Single-Arm Press",
               "No Leg Drive Dumbbell Chest Press"
+            ]
+          },
+          {
+            "id": "9d9d3d9f-ef7f-4094-911c-6375a738d450",
+            "name": "Dumbbell Shoulder Press",
+            "tier": "staple",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "DB Shoulder Press",
+              "dumbbell seated shoulder press (parallel grip)",
+              "dumbbell standing alternate overhead press",
+              "dumbbell standing overhead press",
+              "Arnold Shoulder Press"
             ]
           }
         ]
       },
       "kettlebellFilter": {
-        "count": 13,
+        "count": 12,
         "top5": [
           {
             "id": "a6d404f0-d51a-4902-bdb8-c6af214a84cb",
@@ -4660,7 +4616,7 @@
       "query": "push press",
       "kind": "query",
       "noFilter": {
-        "count": 3,
+        "count": 2,
         "top5": [
           {
             "id": "8be51bcb-841a-45f6-ab50-ff976c46e0fc",
@@ -4679,20 +4635,6 @@
             "aliases": [
               "kettlebell one arm push press",
               "One-Arm Kettlebell Push Press"
-            ]
-          },
-          {
-            "id": "978fd912-d0b4-4259-805f-2c3c6fccb0d7",
-            "name": "Medicine Ball Chest Pass",
-            "tier": "never_auto",
-            "equipment": "medicine_ball",
-            "equipmentCategory": "medicine_ball",
-            "aliases": [
-              "Medicine Ball Push Pass",
-              "medicine ball chest push multiple response",
-              "medicine ball chest push single response",
-              "Chest Push (multiple response)",
-              "Chest Push (single response)"
             ]
           }
         ]
@@ -4822,7 +4764,7 @@
       "query": "glute bridge",
       "kind": "query",
       "noFilter": {
-        "count": 7,
+        "count": 6,
         "top5": [
           {
             "id": "549f2e29-f259-4b1e-b624-1d59b87cb8cb",
@@ -4833,29 +4775,6 @@
             "aliases": [
               "Floor Bridge",
               "glute bridge march"
-            ]
-          },
-          {
-            "id": "605d8c0b-d4d2-400d-bca9-d1d120622917",
-            "name": "Dumbbell Bench Press",
-            "tier": "staple",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
-            "aliases": [
-              "DB Bench Press",
-              "dumbbell decline one arm hammer press",
-              "dumbbell lying one arm press",
-              "dumbbell lying one arm press v. 2",
-              "dumbbell one arm decline chest press",
-              "dumbbell one arm reverse grip press",
-              "dumbbell palms in incline bench press",
-              "dumbbell standing one arm palm in press",
-              "Hammer Grip Incline DB Bench Press",
-              "Standing Palm-In One-Arm Dumbbell Press",
-              "Benchpress Dumbbells",
-              "Elbows Tucked DB Bench Press",
-              "Glute Bridge Single-Arm Press",
-              "No Leg Drive Dumbbell Chest Press"
             ]
           },
           {
@@ -4880,6 +4799,14 @@
             "tier": "common",
             "equipment": "barbell",
             "equipmentCategory": "barbell",
+            "aliases": []
+          },
+          {
+            "id": "89797915-cb7d-43df-b012-73e98e1cfdfa",
+            "name": "Dumbbell Glute Bridge",
+            "tier": "common",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
             "aliases": []
           }
         ]
@@ -5002,14 +4929,6 @@
             ]
           },
           {
-            "id": "e2dabf4a-80c2-433c-9300-3b86d066bb53",
-            "name": "TRX Chest Fly",
-            "tier": "specialist",
-            "equipment": "suspension",
-            "equipmentCategory": "suspension",
-            "aliases": []
-          },
-          {
             "id": "a5fb19ba-7be7-4e70-9dab-9c63aae0163b",
             "name": "Single-Arm Cable Fly (Standing)",
             "tier": "common",
@@ -5018,6 +4937,14 @@
             "aliases": [
               "Single-Arm Cable Chest Fly"
             ]
+          },
+          {
+            "id": "e2dabf4a-80c2-433c-9300-3b86d066bb53",
+            "name": "TRX Chest Fly",
+            "tier": "specialist",
+            "equipment": "suspension",
+            "equipmentCategory": "suspension",
+            "aliases": []
           }
         ]
       },
@@ -5048,10 +4975,10 @@
             "equipmentCategory": "dumbbell",
             "aliases": [
               "DB Rear Delt Fly",
+              "Reverse Fly",
+              "Dumbbell Reverse Fly",
               "dumbbell lying on floor rear delt raise",
               "dumbbell rear delt raise",
-              "dumbbell rear delt row_shoulder",
-              "Bent Over Dumbbell Rear Delt Raise With Head On Bench",
               "Lying Rear Delt Raise",
               "Chest-Supported Rear Delt Raise",
               "Dumbbell rear delt row",
@@ -5069,6 +4996,16 @@
             ]
           },
           {
+            "id": "d01f338d-3919-4e38-9b4d-1c69013011d2",
+            "name": "Reverse Pec Deck",
+            "tier": "staple",
+            "equipment": "machine",
+            "equipmentCategory": "machine_selectorised",
+            "aliases": [
+              "Reverse Machine Flyes"
+            ]
+          },
+          {
             "id": "a526f802-4cb1-4d44-9c53-f6d8dfd64c80",
             "name": "Band Chest Fly (Standing)",
             "tier": "common",
@@ -5076,17 +5013,6 @@
             "equipmentCategory": "band",
             "aliases": [
               "Cross Over - With Bands"
-            ]
-          },
-          {
-            "id": "83f4b712-09d3-4110-8b4f-25671921aaa3",
-            "name": "Band Rear Delt Fly",
-            "tier": "common",
-            "equipment": "band",
-            "equipmentCategory": "band",
-            "aliases": [
-              "band reverse fly",
-              "Back Flyes - With Bands"
             ]
           }
         ]
@@ -5102,6 +5028,22 @@
       "noFilter": {
         "count": 13,
         "top5": [
+          {
+            "id": "ba84d3c8-30a2-413e-b396-a8fb155864d3",
+            "name": "Cable Rear Delt Fly",
+            "tier": "staple",
+            "equipment": "cable",
+            "equipmentCategory": "cable",
+            "aliases": []
+          },
+          {
+            "id": "b6a63e8f-b065-4ae7-81cb-3158c6be6502",
+            "name": "Bent-Over Cable Rear Delt Fly",
+            "tier": "common",
+            "equipment": "cable",
+            "equipmentCategory": "cable",
+            "aliases": []
+          },
           {
             "id": "ee2f7a50-d862-410b-8ae1-91be0aa9e960",
             "name": "Cable Fly (Chest Height)",
@@ -5127,22 +5069,6 @@
             "equipment": "cable",
             "equipmentCategory": "cable",
             "aliases": []
-          },
-          {
-            "id": "219028ae-5598-4931-8429-b08996654d1c",
-            "name": "Cable Fly (Neutral)",
-            "tier": "common",
-            "equipment": "cable",
-            "equipmentCategory": "cable",
-            "aliases": []
-          },
-          {
-            "id": "a50e537d-a57d-4d43-b37f-e9e17080f309",
-            "name": "Cable Fly (Low to Mid, Incline)",
-            "tier": "never_auto",
-            "equipment": "cable",
-            "equipmentCategory": "cable",
-            "aliases": []
           }
         ]
       },
@@ -5155,18 +5081,8 @@
       "query": "shrug",
       "kind": "query",
       "noFilter": {
-        "count": 17,
+        "count": 15,
         "top5": [
-          {
-            "id": "56a9a4de-ad72-490f-a512-96b853a19adb",
-            "name": "Machine Shrug",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": [
-              "Shrug Machine"
-            ]
-          },
           {
             "id": "80e6df24-10c6-487a-9f02-a5fe2a0b8571",
             "name": "Barbell Shrug",
@@ -5185,9 +5101,7 @@
             "equipmentCategory": "dumbbell",
             "aliases": [
               "DB Shrug",
-              "dumbbell decline shrug",
-              "dumbbell decline shrug v. 2",
-              "Lying Dumbbell Row SS Seated Shrug"
+              "dumbbell decline shrug"
             ]
           },
           {
@@ -5204,6 +5118,14 @@
             "tier": "common",
             "equipment": "barbell",
             "equipmentCategory": "barbell",
+            "aliases": []
+          },
+          {
+            "id": "efde6b56-0be3-4e50-875f-c019b0df70db",
+            "name": "Incline Shrug",
+            "tier": "common",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
             "aliases": []
           }
         ]
@@ -5228,8 +5150,22 @@
       "query": "single arm row",
       "kind": "query",
       "noFilter": {
-        "count": 11,
+        "count": 10,
         "top5": [
+          {
+            "id": "967f5fdf-2919-4195-93b5-663f0e113f13",
+            "name": "Dumbbell Row",
+            "tier": "staple",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "DB Row",
+              "Two-Arm Bent-Over Dumbbell Row",
+              "Bent-Over Dumbbell Row",
+              "Single-Arm Dumbbell Row",
+              "Single-Arm DB Row"
+            ]
+          },
           {
             "id": "e7213f12-3187-4bca-80cb-d5f8ec90b894",
             "name": "Band Row (Single-Arm)",
@@ -5251,14 +5187,6 @@
               "Single-Arm Kettlebell Row",
               "One-Arm Kettlebell Row"
             ]
-          },
-          {
-            "id": "9504bcac-9cdb-4559-94f3-f0dcf6e9a80f",
-            "name": "Single-Arm Cable Curl (Low Pulley)",
-            "tier": "common",
-            "equipment": "cable",
-            "equipmentCategory": "cable",
-            "aliases": []
           },
           {
             "id": "86845b0c-2a81-4679-9730-0dbdab0e4037",
@@ -5370,7 +5298,7 @@
       "query": "step up",
       "kind": "query",
       "noFilter": {
-        "count": 8,
+        "count": 7,
         "top5": [
           {
             "id": "e0b28ed7-c20e-4f78-9b71-3efc1bad4cc0",
@@ -5515,14 +5443,6 @@
             ]
           },
           {
-            "id": "c5368b1f-8f58-4dee-8555-b35ed7e6932d",
-            "name": "Landmine Press (Abs)",
-            "tier": "niche",
-            "equipment": "landmine",
-            "equipmentCategory": "landmine",
-            "aliases": []
-          },
-          {
             "id": "bba57089-47e9-4018-ad2e-3bf5149ea72e",
             "name": "Half-Kneeling Landmine Press",
             "tier": "specialist",
@@ -5548,6 +5468,16 @@
             "equipment": "landmine",
             "equipmentCategory": "landmine",
             "aliases": []
+          },
+          {
+            "id": "82e5b511-e7be-41d5-a492-ae9011f33ed3",
+            "name": "Landmine Thruster",
+            "tier": "specialist",
+            "equipment": "landmine",
+            "equipmentCategory": "landmine",
+            "aliases": [
+              "Landmine Squat to Press"
+            ]
           }
         ]
       },
@@ -5591,7 +5521,7 @@
       "query": "pushup",
       "kind": "query",
       "noFilter": {
-        "count": 33,
+        "count": 2,
         "top5": [
           {
             "id": "13a61c17-7f8c-447b-9a4d-267e2377cfa8",
@@ -5605,63 +5535,21 @@
             ]
           },
           {
-            "id": "61d0f500-2d42-4308-88c1-a1d1b2fe4d03",
-            "name": "Decline Push-Up",
-            "tier": "common",
+            "id": "00275898-6789-418e-b1f9-f06ccc034033",
+            "name": "Freestanding Handstand Push-Up",
+            "tier": "never_auto",
             "equipment": "bodyweight",
             "equipmentCategory": "bodyweight",
             "aliases": [
-              "Push-Ups | Decline"
-            ]
-          },
-          {
-            "id": "bf74b5f7-e220-4bfe-a692-e4f04d2d4db1",
-            "name": "Diamond Push-Up",
-            "tier": "common",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": [
-              "Diamond push ups"
-            ]
-          },
-          {
-            "id": "4c1ebd9e-1ab1-450b-a7fe-e28a5c14b93f",
-            "name": "Knee Push-Up",
-            "tier": "common",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": [
-              "kneeling push-up (male)",
-              "knee push-ups"
-            ]
-          },
-          {
-            "id": "8f648750-542f-4793-99f3-775fc09d6bf4",
-            "name": "Pike Push-Up",
-            "tier": "common",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": [
-              "Pike Push Ups"
+              "Handstand Push-Ups",
+              "Handstand Pushup"
             ]
           }
         ]
       },
       "kettlebellFilter": {
-        "count": 1,
-        "top5": [
-          {
-            "id": "8be21e91-c9cb-4f3b-9b67-52d87de546df",
-            "name": "Kettlebell Push Press",
-            "tier": "never_auto",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "kettlebell one arm push press",
-              "One-Arm Kettlebell Push Press"
-            ]
-          }
-        ]
+        "count": 0,
+        "top5": []
       }
     },
     {
@@ -5747,24 +5635,6 @@
             ]
           },
           {
-            "id": "4f70d849-dee6-46c7-b567-e48a6ffe9bab",
-            "name": "Push-Up (Band-Resisted)",
-            "tier": "specialist",
-            "equipment": "band",
-            "equipmentCategory": "band",
-            "aliases": [
-              "band push sit-up"
-            ]
-          },
-          {
-            "id": "a180cc92-2c87-4b43-9712-50080fa8a625",
-            "name": "Push-Up Plus",
-            "tier": "niche",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": []
-          },
-          {
             "id": "61d0f500-2d42-4308-88c1-a1d1b2fe4d03",
             "name": "Decline Push-Up",
             "tier": "common",
@@ -5782,6 +5652,27 @@
             "equipmentCategory": "bodyweight",
             "aliases": [
               "Diamond push ups"
+            ]
+          },
+          {
+            "id": "4c1ebd9e-1ab1-450b-a7fe-e28a5c14b93f",
+            "name": "Knee Push-Up",
+            "tier": "common",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": [
+              "kneeling push-up (male)",
+              "knee push-ups"
+            ]
+          },
+          {
+            "id": "8f648750-542f-4793-99f3-775fc09d6bf4",
+            "name": "Pike Push-Up",
+            "tier": "common",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": [
+              "Pike Push Ups"
             ]
           }
         ]
@@ -5807,8 +5698,47 @@
       "query": "thruster",
       "kind": "query",
       "noFilter": {
-        "count": 22,
+        "count": 14,
         "top5": [
+          {
+            "id": "cf47f46e-d3a1-4674-b1e5-f8ee4ea0d0fe",
+            "name": "Barbell Thruster",
+            "tier": "specialist",
+            "equipment": "barbell",
+            "equipmentCategory": "barbell",
+            "aliases": []
+          },
+          {
+            "id": "dded3f31-efd4-4660-91e5-932bee673a17",
+            "name": "Dumbbell Thruster",
+            "tier": "specialist",
+            "equipment": "dumbbell",
+            "equipmentCategory": "dumbbell",
+            "aliases": [
+              "Dumbbell Squat to Press"
+            ]
+          },
+          {
+            "id": "42e7e0fb-72ba-4bdc-a6dc-e7c20bf3b0c7",
+            "name": "Kettlebell Thruster (Double)",
+            "tier": "specialist",
+            "equipment": "kettlebell",
+            "equipmentCategory": "kettlebell",
+            "aliases": [
+              "Kettlebell Thruster",
+              "Double Kettlebell Thruster"
+            ]
+          },
+          {
+            "id": "82e5b511-e7be-41d5-a492-ae9011f33ed3",
+            "name": "Landmine Thruster",
+            "tier": "specialist",
+            "equipment": "landmine",
+            "equipmentCategory": "landmine",
+            "aliases": [
+              "Landmine Squat to Press"
+            ]
+          },
           {
             "id": "3ac74910-e3b1-4a1a-9e02-b5ee610b0d30",
             "name": "Barbell Hip Thrust",
@@ -5821,44 +5751,6 @@
               "Unilateral Hip Thrust",
               "Hip Thrust (Barbell)",
               "Hip Thrust (BB)"
-            ]
-          },
-          {
-            "id": "8117ebfa-455f-4b4f-9f15-481102830327",
-            "name": "EZ Bar Skull Crusher",
-            "tier": "staple",
-            "equipment": "ez_bar",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "Skull Crusher",
-              "EZ-Bar Skullcrusher",
-              "Skullcrusher SZ-bar"
-            ]
-          },
-          {
-            "id": "71ad9611-f031-4d5a-b1af-b1e24c6abeb8",
-            "name": "Machine Hip Thrust",
-            "tier": "staple",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
-          },
-          {
-            "id": "6b122a3b-d81c-49ca-a530-ff75c860d6c7",
-            "name": "B-Stance Hip Thrust",
-            "tier": "common",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": []
-          },
-          {
-            "id": "6773b532-9433-4260-a48a-12210edbeb82",
-            "name": "Barbell Skull Crusher",
-            "tier": "common",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "BB Skull Crusher"
             ]
           }
         ]
@@ -5908,14 +5800,6 @@
         "count": 16,
         "top5": [
           {
-            "id": "677d6b50-900f-4394-afac-305e41cc01c8",
-            "name": "Assisted Pull-Up",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
-          },
-          {
             "id": "fcfe970e-6539-4b57-b1d5-1cf53e06b5b6",
             "name": "Incline Board Sit-Up",
             "tier": "common",
@@ -5942,17 +5826,23 @@
             "aliases": []
           },
           {
-            "id": "c0b551e6-3391-403e-830a-11b8437d68e7",
-            "name": "Dumbbell Pronation/Supination",
+            "id": "4f70d849-dee6-46c7-b567-e48a6ffe9bab",
+            "name": "Push-Up (Band-Resisted)",
             "tier": "specialist",
-            "equipment": "dumbbell",
-            "equipmentCategory": "dumbbell",
+            "equipment": "band",
+            "equipmentCategory": "band",
             "aliases": [
-              "DB Pronation/Supination",
-              "dumbbell lying pronation",
-              "dumbbell lying pronation on floor",
-              "dumbbell lying supination",
-              "dumbbell lying supination on floor"
+              "band push sit-up"
+            ]
+          },
+          {
+            "id": "47365809-fa2f-493b-8abc-592362e0466f",
+            "name": "L-Sit Pull-Up",
+            "tier": "niche",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": [
+              "L-Sit Pull-ups"
             ]
           }
         ]
@@ -6056,6 +5946,17 @@
         "count": 6,
         "top5": [
           {
+            "id": "b8342afb-d036-4f88-9f66-e7ad1da85f3d",
+            "name": "Abduction Machine",
+            "tier": "common",
+            "equipment": "machine",
+            "equipmentCategory": "machine_selectorised",
+            "aliases": [
+              "Thigh Abductor",
+              "Machine Hip Abduction"
+            ]
+          },
+          {
             "id": "b7ce6985-6611-4b72-b1c9-ad5a2b5c280e",
             "name": "Band Standing Hip Abduction",
             "tier": "common",
@@ -6088,16 +5989,6 @@
             "aliases": [
               "Standing Adduction (Cable)"
             ]
-          },
-          {
-            "id": "3b79d93f-e174-410e-8596-be37f8cc1fa4",
-            "name": "Hip Adduction Machine",
-            "tier": "specialist",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": [
-              "Thigh Adductor"
-            ]
           }
         ]
       },
@@ -6110,8 +6001,20 @@
       "query": "adductor",
       "kind": "query",
       "noFilter": {
-        "count": 15,
+        "count": 13,
         "top5": [
+          {
+            "id": "c21eb910-ee75-4b51-b3c0-b96d3787fcaa",
+            "name": "Side Plank",
+            "tier": "common",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": [
+              "Adductor Side Plank",
+              "Dynamic side plank",
+              "Side plank right"
+            ]
+          },
           {
             "id": "f0c3fb00-822b-4d56-b5bd-5683a8264414",
             "name": "Adductor Rock-Back (Kneeling)",
@@ -6129,35 +6032,24 @@
             "aliases": []
           },
           {
-            "id": "c21eb910-ee75-4b51-b3c0-b96d3787fcaa",
-            "name": "Side Plank",
-            "tier": "common",
-            "equipment": "bodyweight",
-            "equipmentCategory": "bodyweight",
-            "aliases": [
-              "Adductor Side Plank",
-              "Dynamic side plank",
-              "Side plank right"
-            ]
-          },
-          {
-            "id": "b8342afb-d036-4f88-9f66-e7ad1da85f3d",
-            "name": "Abduction Machine",
-            "tier": "common",
+            "id": "3b79d93f-e174-410e-8596-be37f8cc1fa4",
+            "name": "Hip Adduction Machine",
+            "tier": "specialist",
             "equipment": "machine",
             "equipmentCategory": "machine_selectorised",
             "aliases": [
-              "Thigh Abductor",
-              "Machine Hip Abduction"
+              "Thigh Adductor"
             ]
           },
           {
-            "id": "b7ce6985-6611-4b72-b1c9-ad5a2b5c280e",
-            "name": "Band Standing Hip Abduction",
-            "tier": "common",
-            "equipment": "band",
-            "equipmentCategory": "band",
-            "aliases": []
+            "id": "9392dce8-5e03-4597-9ba7-7de9087af5da",
+            "name": "Landmine Sumo Squat",
+            "tier": "specialist",
+            "equipment": "landmine",
+            "equipmentCategory": "landmine",
+            "aliases": [
+              "Landmine Sumo Squat (Adductor Focus)"
+            ]
           }
         ]
       },
@@ -6173,6 +6065,14 @@
         "count": 2,
         "top5": [
           {
+            "id": "ab89ed95-f71d-43b0-ab47-c05a344f6dd8",
+            "name": "Band Glute Kickback",
+            "tier": "common",
+            "equipment": "band",
+            "equipmentCategory": "band",
+            "aliases": []
+          },
+          {
             "id": "32d3477e-b93f-42af-a12d-4cffd6d74d23",
             "name": "Glute Kickback Machine",
             "tier": "common",
@@ -6181,14 +6081,6 @@
             "aliases": [
               "Glute Kickback"
             ]
-          },
-          {
-            "id": "ab89ed95-f71d-43b0-ab47-c05a344f6dd8",
-            "name": "Band Glute Kickback",
-            "tier": "common",
-            "equipment": "band",
-            "equipmentCategory": "band",
-            "aliases": []
           }
         ]
       },
@@ -6258,7 +6150,7 @@
       "query": "benhc",
       "kind": "misspelling",
       "noFilter": {
-        "count": 52,
+        "count": 37,
         "top5": [
           {
             "id": "1df86495-6abc-490a-80e9-a70736f8ab1d",
@@ -6269,19 +6161,9 @@
             "aliases": [
               "BB Bench Press",
               "Bench Press",
+              "Flat Bench Press",
+              "Flat Barbell Bench Press",
               "Seated Bench Press"
-            ]
-          },
-          {
-            "id": "cec4b20d-876e-443f-9985-d5db00238db5",
-            "name": "Barbell Row (Bent Over)",
-            "tier": "staple",
-            "equipment": "barbell",
-            "equipmentCategory": "barbell",
-            "aliases": [
-              "BB Row (Bent Over)",
-              "Bent-Over Row",
-              "Bent Over Rowing"
             ]
           },
           {
@@ -6302,18 +6184,10 @@
             "equipmentCategory": "dumbbell",
             "aliases": [
               "DB Bench Press",
-              "dumbbell decline one arm hammer press",
-              "dumbbell lying one arm press",
-              "dumbbell lying one arm press v. 2",
-              "dumbbell one arm decline chest press",
-              "dumbbell one arm reverse grip press",
-              "dumbbell palms in incline bench press",
-              "dumbbell standing one arm palm in press",
-              "Hammer Grip Incline DB Bench Press",
-              "Standing Palm-In One-Arm Dumbbell Press",
+              "Flat Dumbbell Bench Press",
+              "Flat Dumbbell Press",
               "Benchpress Dumbbells",
               "Elbows Tucked DB Bench Press",
-              "Glute Bridge Single-Arm Press",
               "No Leg Drive Dumbbell Chest Press"
             ]
           },
@@ -6329,30 +6203,30 @@
               "Incline Bench Press - MP",
               "Legend Incline Bench Press"
             ]
+          },
+          {
+            "id": "ae31cb3f-803f-4510-8322-0124125c01f9",
+            "name": "Bench Dip",
+            "tier": "common",
+            "equipment": "bodyweight",
+            "equipmentCategory": "bodyweight",
+            "aliases": [
+              "three bench dip",
+              "weighted bench dip"
+            ]
           }
         ]
       },
       "kettlebellFilter": {
-        "count": 1,
-        "top5": [
-          {
-            "id": "cc96ed85-49d2-4e93-bd79-d63cad34ca57",
-            "name": "Kettlebell Bent Press",
-            "tier": "niche",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "Bent Press"
-            ]
-          }
-        ]
+        "count": 0,
+        "top5": []
       }
     },
     {
       "query": "squt",
       "kind": "misspelling",
       "noFilter": {
-        "count": 77,
+        "count": 76,
         "top5": [
           {
             "id": "f90abef4-9c28-46a2-abcc-c56c4b961a02",
@@ -6891,7 +6765,7 @@
       "query": "pullup",
       "kind": "misspelling",
       "noFilter": {
-        "count": 48,
+        "count": 1,
         "top5": [
           {
             "id": "8584d88f-f8b7-4611-ac7e-50dddc7a24de",
@@ -6905,70 +6779,12 @@
               "Pullups",
               "Pull-ups"
             ]
-          },
-          {
-            "id": "934d7cdc-95bc-4d34-a9ec-5f8d10369a11",
-            "name": "Face Pull",
-            "tier": "staple",
-            "equipment": "cable",
-            "equipmentCategory": "cable",
-            "aliases": [
-              "Facepull"
-            ]
-          },
-          {
-            "id": "677d6b50-900f-4394-afac-305e41cc01c8",
-            "name": "Assisted Pull-Up",
-            "tier": "common",
-            "equipment": "machine",
-            "equipmentCategory": "machine_selectorised",
-            "aliases": []
-          },
-          {
-            "id": "22667c0a-0e1d-45d5-b9a0-326266c04e52",
-            "name": "Band Pull-Apart",
-            "tier": "common",
-            "equipment": "band",
-            "equipmentCategory": "band",
-            "aliases": [
-              "Banded Scapular Retraction"
-            ]
-          },
-          {
-            "id": "b5e63d6a-2dff-4378-9dd0-4f14af002bf8",
-            "name": "Band Pull-Apart (Overhead)",
-            "tier": "common",
-            "equipment": "band",
-            "equipmentCategory": "band",
-            "aliases": []
           }
         ]
       },
       "kettlebellFilter": {
-        "count": 2,
-        "top5": [
-          {
-            "id": "5af23f2d-7c2c-482b-a1c9-c48eabf2b498",
-            "name": "Kettlebell High Pull",
-            "tier": "never_auto",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "Kettlebell High Pull (Single-Arm)"
-            ]
-          },
-          {
-            "id": "f4223fca-8636-4b00-8688-c526fae19232",
-            "name": "Kettlebell Sumo Deadlift High Pull",
-            "tier": "never_auto",
-            "equipment": "kettlebell",
-            "equipmentCategory": "kettlebell",
-            "aliases": [
-              "SDHP",
-              "Kettlebell SDHP"
-            ]
-          }
-        ]
+        "count": 0,
+        "top5": []
       }
     }
   ]

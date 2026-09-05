@@ -15,6 +15,22 @@
  * a format migration, not new content. New rows added in a later stage of
  * this campaign follow EL-3's quality gate and are attested against
  * coaching/exercise-science literature or the open datasets checklist.
+ *
+ * F-09 alias pass (final-certification-2026-09-05,
+ * docs/final-certification-2026-09-05/06-LIBRARY-SEARCH.md anomaly 3):
+ * this family carried an unreviewed bulk alias import. Thirty-nine
+ * aliases were deleted across eight rows on one rule: an alias stays only
+ * if it is another NAME FOR THIS ROW'S OWN MOVEMENT. Deleted were import
+ * artefacts ("... v. 2", "rear delt row_shoulder", "DB Floor Press (5kg
+ * Single Arm)", "Lying Dumbbell Row SS Seated Shrug") and aliases naming
+ * a DIFFERENT exercise -- a glute bridge, an incline or decline press, a
+ * standing overhead press, a combination lift ("dumbbell biceps curl
+ * squat"), or a variant that has its own row here (an incline curl, a
+ * reverse fly, a Bulgarian split squat). Search ranks an alias hit as
+ * highly as a name hit and prefers staples, so one wrong alias on a
+ * staple row answered a whole movement's searches with the wrong
+ * exercise: "shoulder press" and "incline bench" both returned Dumbbell
+ * Curl first, and "glute bridge" returned Dumbbell Bench Press second.
  */
 
 export default [
@@ -228,7 +244,17 @@ export default [
     repMin: 6, repMax: 12,
     fatigueCost: 3, sfr: 4,
     subregion: "flat",
-    aliases: ["DB Bench Press","dumbbell decline one arm hammer press","dumbbell lying one arm press","dumbbell lying one arm press v. 2","dumbbell one arm decline chest press","dumbbell one arm reverse grip press","dumbbell palms in incline bench press","dumbbell standing one arm palm in press","Hammer Grip Incline DB Bench Press","Standing Palm-In One-Arm Dumbbell Press","Benchpress Dumbbells","Elbows Tucked DB Bench Press","Glute Bridge Single-Arm Press","No Leg Drive Dumbbell Chest Press"],
+    // F-09 (final-certification-2026-09-05, 06-LIBRARY-SEARCH.md anomaly
+    // 3): ten aliases removed here, all from the same unreviewed bulk
+    // import. Each named a DIFFERENT exercise -- a glute bridge, an
+    // incline or decline press, a standing overhead press, a single-arm
+    // press -- so this flat two-arm bench press answered searches for
+    // those movements instead ("glute bridge" returned it second). One
+    // was a "... v. 2" import artefact; the corpus guard now bans that
+    // suffix outright. "Flat ..." replaces them: the picker previously
+    // had no word for the flat bench at all, so "flat db press" returned
+    // nothing.
+    aliases: ["DB Bench Press","Flat Dumbbell Bench Press","Flat Dumbbell Press","Benchpress Dumbbells","Elbows Tucked DB Bench Press","No Leg Drive Dumbbell Chest Press"],
     loadCharacter: "grind",
     setup: "Lie on a bench holding dumbbells over your chest, palms facing your feet.",
     execution: "Lower them to the sides of your chest, elbows at roughly a right angle, then press back up.",
@@ -260,7 +286,7 @@ export default [
     repMin: 10, repMax: 15,
     fatigueCost: 2, sfr: 4,
     subregion: "short_head",
-    aliases: ["DB Curl","dumbbell alternate biceps curl","dumbbell alternate biceps curl (with arm blaster)","dumbbell bicep curl lunge with bowling motion","dumbbell bicep curl with stork stance","dumbbell biceps curl (with arm blaster)","dumbbell biceps curl squat","dumbbell finger curls","dumbbell high curl","dumbbell kneeling bicep curl exercise ball","dumbbell lunge with bicep curl","dumbbell lying supine biceps curl","dumbbell lying supine curl","dumbbell lying wide curl","dumbbell one arm prone curl","dumbbell one arm standing curl","dumbbell revers grip biceps curl","dumbbell seated biceps curl to shoulder press","dumbbell standing biceps curl","dumbbell standing inner biceps curl v. 2","dumbbell standing one arm curl (over incline bench)","dumbbell standing one arm curl over incline bench","dumbbell step up single leg balance with bicep curl","dumbbell waiter biceps curl","Dumbbell Alternate Bicep Curl","Lying Supine Dumbbell Curl","Standing One-Arm Dumbbell Curl Over Incline Bench","Alternating Biceps Curls With Dumbbell","Alternating bicep curls","Biceps Curls With Dumbbell","Drop Curl","Dumbbell bicep curl to press","Dumbbell wide bicep curls","Forearm Curls (underhand grip)","Seated W Curl","Standing Bicep Curl","one-handed kettlebell curls"],
+    aliases: ["DB Curl","dumbbell alternate biceps curl","dumbbell alternate biceps curl (with arm blaster)","dumbbell bicep curl with stork stance","dumbbell biceps curl (with arm blaster)","dumbbell high curl","dumbbell kneeling bicep curl exercise ball","dumbbell lying supine biceps curl","dumbbell lying supine curl","dumbbell lying wide curl","dumbbell one arm prone curl","dumbbell one arm standing curl","dumbbell revers grip biceps curl","dumbbell standing biceps curl","dumbbell waiter biceps curl","Dumbbell Alternate Bicep Curl","Lying Supine Dumbbell Curl","Alternating Biceps Curls With Dumbbell","Alternating bicep curls","Biceps Curls With Dumbbell","Drop Curl","Dumbbell wide bicep curls","Seated W Curl","Standing Bicep Curl"],
     loadCharacter: "grind",
     setup: "Stand holding a dumbbell in each hand, palms facing forward, elbows at your sides.",
     execution: "Curl the weights up towards your shoulders, then lower under control.",
@@ -292,7 +318,7 @@ export default [
     repMin: 10, repMax: 15,
     fatigueCost: 2, sfr: 4,
     subregion: "flat",
-    aliases: ["DB Fly","dumbbell reverse fly","dumbbell rotation reverse fly","dumbbell side plank with rear fly","hyght dumbbell fly","Decline Dumbbell Flyes","Dumbbell Flyes","One-Arm Flat Bench Dumbbell Flye","One-Arm Side Laterals","Reverse Flyes","DB Floor Press (5kg Single Arm)"],
+    aliases: ["DB Fly","hyght dumbbell fly","Dumbbell Flyes"],
     loadCharacter: "grind",
     setup: "Lie on a bench holding dumbbells above your chest, a slight bend in the elbows.",
     execution: "Lower them out to the sides in a wide arc until you feel a stretch, then bring them together above you.",
@@ -442,7 +468,7 @@ export default [
     repMin: 15, repMax: 25,
     fatigueCost: 2, sfr: 5,
     subregion: "horiz_abduction",
-    aliases: ["DB Rear Delt Fly","dumbbell lying on floor rear delt raise","dumbbell rear delt raise","dumbbell rear delt row_shoulder","Bent Over Dumbbell Rear Delt Raise With Head On Bench","Lying Rear Delt Raise","Chest-Supported Rear Delt Raise","Dumbbell rear delt row","Seated rear delt rise"],
+    aliases: ["DB Rear Delt Fly","Reverse Fly","Dumbbell Reverse Fly","dumbbell lying on floor rear delt raise","dumbbell rear delt raise","Lying Rear Delt Raise","Chest-Supported Rear Delt Raise","Dumbbell rear delt row","Seated rear delt rise"],
     loadCharacter: "grind",
     setup: "Lie face down on an inclined bench holding dumbbells hanging straight below you.",
     execution: "Raise your arms out to the sides, squeezing your shoulder blades together, then lower under control.",
@@ -458,7 +484,7 @@ export default [
     repMin: 8, repMax: 15,
     fatigueCost: 3, sfr: 4,
     subregion: "horizontal_lat",
-    aliases: ["DB Row","Two-Arm Bent-Over Dumbbell Row","Bent-Over Dumbbell Row","dumbbell reverse grip incline bench two arm row","Single-Arm Dumbbell Row","Single-Arm DB Row"],
+    aliases: ["DB Row","Two-Arm Bent-Over Dumbbell Row","Bent-Over Dumbbell Row","Single-Arm Dumbbell Row","Single-Arm DB Row"],
     loadCharacter: "grind",
     setup: "Rest one knee and hand on a bench, back flat, and hold a dumbbell in the other hand below your shoulder.",
     execution: "Pull it up towards your hip, elbow back, then lower fully.",
@@ -490,7 +516,7 @@ export default [
     repMin: 12, repMax: 20,
     fatigueCost: 2, sfr: 4,
     subregion: null,
-    aliases: ["DB Shrug","dumbbell decline shrug","dumbbell decline shrug v. 2","Lying Dumbbell Row SS Seated Shrug"],
+    aliases: ["DB Shrug","dumbbell decline shrug"],
     loadCharacter: "grind",
     setup: "Stand tall holding a dumbbell in each hand at your sides.",
     execution: "Lift your shoulders straight up towards your ears, pause, then lower fully.",
@@ -698,7 +724,7 @@ export default [
     repMin: 8, repMax: 15,
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
-    aliases: ["Front Squat (DB)","dumbbell bench squat","dumbbell single leg split squat","dumbbell single leg squat","dumbbell squat","dumbbell supported squat","Dumbbell Squat To A Bench","Plie Dumbbell Squat","Bulgarian Squat with Dumbbells"],
+    aliases: ["Front Squat (DB)","dumbbell bench squat","dumbbell single leg squat","dumbbell squat","dumbbell supported squat","Dumbbell Squat To A Bench","Plie Dumbbell Squat"],
     loadCharacter: "grind",
     setup: "Hold dumbbells up at your shoulders, resting against the front of them, elbows lifted.",
     execution: "Squat down, torso upright, then drive back up.",
@@ -1200,7 +1226,7 @@ export default [
     repMin: 8, repMax: 15,
     fatigueCost: 3, sfr: 4,
     subregion: "overhead_press",
-    aliases: ["Single-Arm DB Press","dumbbell one arm shoulder press","dumbbell one arm shoulder press v. 2","Dumbbell One-Arm Shoulder Press"],
+    aliases: ["Single-Arm DB Press","dumbbell one arm shoulder press","Dumbbell One-Arm Shoulder Press"],
     loadCharacter: "grind",
     setup: "Stand or sit holding a dumbbell at shoulder height on one side, torso braced.",
     execution: "Press it straight overhead without leaning to the opposite side, then lower.",

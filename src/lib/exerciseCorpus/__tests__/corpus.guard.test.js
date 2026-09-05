@@ -91,6 +91,21 @@ describe('exercise corpus guard (EL-3, EL-14, 07-CORPUS-FORMAT.md section 6)', (
     expect(collisions).toEqual([]);
   });
 
+  // F-09 (final-certification-2026-09-05, validate-corpus.mjs rule 16):
+  // "... v. 2" aliases are bulk-import artefacts, never a name a person
+  // types. The other half of that ruling (an alias identical to another
+  // row's canonical name) is covered by the collision test above.
+  test('no alias carries a version suffix ("v. 2", "v2")', () => {
+    const VERSION_SUFFIX = /\bv\.?\s?\d\b/i;
+    const offenders = [];
+    for (const e of CORPUS) {
+      for (const alias of e.aliases ?? []) {
+        if (VERSION_SUFFIX.test(alias)) offenders.push(`${alias} (on ${e.name})`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   test('every field is inside its closed vocab, and required subregions are filled', () => {
     const violations = [];
     for (const entry of CORPUS) {
