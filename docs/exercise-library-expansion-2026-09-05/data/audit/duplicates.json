@@ -107,73 +107,53 @@
       "reason": "Bag-of-words identical but the pulley direction (high-to-low vs low-to-high) reverses — EL-2 names loading vector/pulley height as a distinguishing dimension, and both forms are already separate registry entries in canonicality.js."
     }
   ],
-  "nearDuplicatesByTupleCount": 246,
+  "nearDuplicatesByTupleCount": 247,
   "nearDuplicatesByTupleBreakdown": {
-    "likely_same_stimulus": 3,
-    "legitimately_distinct": 243
+    "likely_same_stimulus": 2,
+    "legitimately_distinct": 245
   },
-  "nearDuplicatesByTupleFlaggedForLeadReviewCount": 29,
+  "nearDuplicatesByTupleFlaggedForLeadReviewCount": 21,
   "nearDuplicatesByTupleFlaggedForLeadReview": [
     {
       "tuple": {
-        "primaryMuscle": "abs",
+        "primaryMuscle": "triceps",
         "equipmentCategory": "machine_selectorised",
         "movementPattern": "isolation",
-        "subregion": "flexion",
+        "subregion": "pushdown",
         "laterality": "bilateral"
       },
       "pair": [
-        "Machine Crunch",
-        "Ab Crunch Machine"
+        "Machine Tricep Extension",
+        "Triceps Extension Machine"
+      ],
+      "jaccard": 0.5,
+      "diffTokens": [
+        "tricep",
+        "triceps"
+      ],
+      "classification": "likely_same_stimulus",
+      "confidence": "high",
+      "reason": "LEAD OVERRIDE: same selectorised machine triceps-extension station; the diff tokens (\"tricep\" vs \"triceps\") are a singular/plural spelling variant, not a mechanical difference. Both listed separately in COMMON (canonicality.js). Consolidate: keep \"Machine Tricep Extension\" canonical (matches MACHINE_TYPE_BY_NAME key), alias \"Triceps Extension Machine\"."
+    },
+    {
+      "tuple": {
+        "primaryMuscle": "triceps",
+        "equipmentCategory": "cable",
+        "movementPattern": "isolation",
+        "subregion": "pushdown",
+        "laterality": "bilateral"
+      },
+      "pair": [
+        "Tricep Pushdown (Rope)",
+        "Rope Pushdown"
       ],
       "jaccard": 0.67,
       "diffTokens": [
-        "ab"
+        "tricep"
       ],
       "classification": "likely_same_stimulus",
       "confidence": "high",
-      "reason": "Same 5-tuple; differing token(s) (ab) are cosmetic descriptors under EL-2 with no mechanical distinction."
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "rear_delts",
-        "equipmentCategory": "dumbbell",
-        "movementPattern": "isolation",
-        "subregion": "horiz_abduction",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Prone Incline Y-Raise",
-        "Prone Incline T-Raise"
-      ],
-      "jaccard": 0.6,
-      "diffTokens": [
-        "y",
-        "t"
-      ],
-      "classification": "likely_same_stimulus",
-      "confidence": "high",
-      "reason": "Same 5-tuple; differing token(s) (y, t) are cosmetic descriptors under EL-2 with no mechanical distinction."
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "hamstrings",
-        "equipmentCategory": "dumbbell",
-        "movementPattern": "hinge",
-        "subregion": "hip_extension",
-        "laterality": "unilateral"
-      },
-      "pair": [
-        "Single-Leg Romanian Deadlift",
-        "Single-Leg Romanian Deadlift (DB)"
-      ],
-      "jaccard": 0.8,
-      "diffTokens": [
-        "db"
-      ],
-      "classification": "likely_same_stimulus",
-      "confidence": "high",
-      "reason": "Same 5-tuple; differing token(s) (db) are cosmetic descriptors under EL-2 with no mechanical distinction."
+      "reason": "LEAD OVERRIDE: both are the rope-attachment cable pushdown for triceps — \"Rope Pushdown\" simply omits the muscle name. Both are separately listed as STAPLE (canonicality.js STAPLE list, \"Tricep Pushdown (Rope)\" and \"Rope Pushdown\"), i.e. the tier registry already, unintentionally, treats one movement as two staples. Consolidate: keep \"Tricep Pushdown (Rope)\" canonical, alias \"Rope Pushdown\"."
     },
     {
       "tuple": {
@@ -412,26 +392,6 @@
       },
       "pair": [
         "Hanging Leg Raise",
-        "Leg Raise"
-      ],
-      "jaccard": 0.67,
-      "diffTokens": [
-        "hanging"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (hanging) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "abs",
-        "equipmentCategory": "bodyweight",
-        "movementPattern": "isolation",
-        "subregion": "flexion",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Hanging Leg Raise",
         "Hanging Knee Raise"
       ],
       "jaccard": 0.5,
@@ -445,45 +405,23 @@
     },
     {
       "tuple": {
-        "primaryMuscle": "quads",
-        "equipmentCategory": "machine_selectorised",
-        "movementPattern": "squat",
-        "subregion": "squat_press",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Leg Press",
-        "Leg Press (Narrow Stance)"
-      ],
-      "jaccard": 0.5,
-      "diffTokens": [
-        "narrow",
-        "stance"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (narrow, stance) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "triceps",
+        "primaryMuscle": "abs",
         "equipmentCategory": "machine_selectorised",
         "movementPattern": "isolation",
-        "subregion": "pushdown",
+        "subregion": "flexion",
         "laterality": "bilateral"
       },
       "pair": [
-        "Machine Tricep Extension",
-        "Triceps Extension Machine"
+        "Machine Crunch",
+        "Ab Crunch Machine"
       ],
-      "jaccard": 0.5,
+      "jaccard": 0.67,
       "diffTokens": [
-        "tricep",
-        "triceps"
+        "ab"
       ],
       "classification": "legitimately_distinct",
       "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (tricep, triceps) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
+      "reason": "Same 5-tuple; differing token(s) (ab) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
     },
     {
       "tuple": {
@@ -606,69 +544,29 @@
       "classification": "legitimately_distinct",
       "confidence": "medium",
       "reason": "Same 5-tuple; differing token(s) (side) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
-    },
+    }
+  ],
+  "nearDuplicatesByTuple": [
     {
       "tuple": {
-        "primaryMuscle": "chest",
-        "equipmentCategory": "bodyweight",
-        "movementPattern": "push",
-        "subregion": "flat",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Push-Up",
-        "Ring Push-Up"
-      ],
-      "jaccard": 0.67,
-      "diffTokens": [
-        "ring"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (ring) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "tibialis",
-        "equipmentCategory": "bodyweight",
+        "primaryMuscle": "triceps",
+        "equipmentCategory": "machine_selectorised",
         "movementPattern": "isolation",
-        "subregion": null,
+        "subregion": "pushdown",
         "laterality": "bilateral"
       },
       "pair": [
-        "Tibialis Raise (Wall)",
-        "Tibialis Raise (Slant Board)"
+        "Machine Tricep Extension",
+        "Triceps Extension Machine"
       ],
-      "jaccard": 0.4,
+      "jaccard": 0.5,
       "diffTokens": [
-        "wall",
-        "slant",
-        "board"
+        "tricep",
+        "triceps"
       ],
-      "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (wall, slant, board) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "tibialis",
-        "equipmentCategory": "bodyweight",
-        "movementPattern": "isolation",
-        "subregion": null,
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Toe Walk",
-        "Heel Walk"
-      ],
-      "jaccard": 0.33,
-      "diffTokens": [
-        "toe",
-        "heel"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (toe, heel) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
+      "classification": "likely_same_stimulus",
+      "confidence": "high",
+      "reason": "LEAD OVERRIDE: same selectorised machine triceps-extension station; the diff tokens (\"tricep\" vs \"triceps\") are a singular/plural spelling variant, not a mechanical difference. Both listed separately in COMMON (canonicality.js). Consolidate: keep \"Machine Tricep Extension\" canonical (matches MACHINE_TYPE_BY_NAME key), alias \"Triceps Extension Machine\"."
     },
     {
       "tuple": {
@@ -686,93 +584,9 @@
       "diffTokens": [
         "tricep"
       ],
-      "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (tricep) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "abs",
-        "equipmentCategory": "bodyweight",
-        "movementPattern": "isolation",
-        "subregion": "flexion",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "V-Up",
-        "Sit-Up"
-      ],
-      "jaccard": 0.33,
-      "diffTokens": [
-        "v",
-        "sit"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (sit) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
-    }
-  ],
-  "nearDuplicatesByTuple": [
-    {
-      "tuple": {
-        "primaryMuscle": "abs",
-        "equipmentCategory": "machine_selectorised",
-        "movementPattern": "isolation",
-        "subregion": "flexion",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Machine Crunch",
-        "Ab Crunch Machine"
-      ],
-      "jaccard": 0.67,
-      "diffTokens": [
-        "ab"
-      ],
       "classification": "likely_same_stimulus",
       "confidence": "high",
-      "reason": "Same 5-tuple; differing token(s) (ab) are cosmetic descriptors under EL-2 with no mechanical distinction."
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "rear_delts",
-        "equipmentCategory": "dumbbell",
-        "movementPattern": "isolation",
-        "subregion": "horiz_abduction",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Prone Incline Y-Raise",
-        "Prone Incline T-Raise"
-      ],
-      "jaccard": 0.6,
-      "diffTokens": [
-        "y",
-        "t"
-      ],
-      "classification": "likely_same_stimulus",
-      "confidence": "high",
-      "reason": "Same 5-tuple; differing token(s) (y, t) are cosmetic descriptors under EL-2 with no mechanical distinction."
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "hamstrings",
-        "equipmentCategory": "dumbbell",
-        "movementPattern": "hinge",
-        "subregion": "hip_extension",
-        "laterality": "unilateral"
-      },
-      "pair": [
-        "Single-Leg Romanian Deadlift",
-        "Single-Leg Romanian Deadlift (DB)"
-      ],
-      "jaccard": 0.8,
-      "diffTokens": [
-        "db"
-      ],
-      "classification": "likely_same_stimulus",
-      "confidence": "high",
-      "reason": "Same 5-tuple; differing token(s) (db) are cosmetic descriptors under EL-2 with no mechanical distinction."
+      "reason": "LEAD OVERRIDE: both are the rope-attachment cable pushdown for triceps — \"Rope Pushdown\" simply omits the muscle name. Both are separately listed as STAPLE (canonicality.js STAPLE list, \"Tricep Pushdown (Rope)\" and \"Rope Pushdown\"), i.e. the tier registry already, unintentionally, treats one movement as two staples. Consolidate: keep \"Tricep Pushdown (Rope)\" canonical, alias \"Rope Pushdown\"."
     },
     {
       "tuple": {
@@ -3105,8 +2919,8 @@
         "hanging"
       ],
       "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (hanging) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
+      "confidence": "high",
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (hanging) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
     },
     {
       "tuple": {
@@ -3128,7 +2942,7 @@
       ],
       "classification": "legitimately_distinct",
       "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (flat) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (hanging, flat) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
     },
     {
       "tuple": {
@@ -3570,8 +3384,8 @@
         "stance"
       ],
       "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (narrow, stance) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
+      "confidence": "high",
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (narrow, stance) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
     },
     {
       "tuple": {
@@ -3701,6 +3515,26 @@
     },
     {
       "tuple": {
+        "primaryMuscle": "abs",
+        "equipmentCategory": "machine_selectorised",
+        "movementPattern": "isolation",
+        "subregion": "flexion",
+        "laterality": "bilateral"
+      },
+      "pair": [
+        "Machine Crunch",
+        "Ab Crunch Machine"
+      ],
+      "jaccard": 0.67,
+      "diffTokens": [
+        "ab"
+      ],
+      "classification": "legitimately_distinct",
+      "confidence": "medium",
+      "reason": "Same 5-tuple; differing token(s) (ab) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
+    },
+    {
+      "tuple": {
         "primaryMuscle": "biceps",
         "equipmentCategory": "machine_selectorised",
         "movementPattern": "isolation",
@@ -3739,27 +3573,6 @@
       "classification": "legitimately_distinct",
       "confidence": "high",
       "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (fly, seated) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "triceps",
-        "equipmentCategory": "machine_selectorised",
-        "movementPattern": "isolation",
-        "subregion": "pushdown",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Machine Tricep Extension",
-        "Triceps Extension Machine"
-      ],
-      "jaccard": 0.5,
-      "diffTokens": [
-        "tricep",
-        "triceps"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (tricep, triceps) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
     },
     {
       "tuple": {
@@ -4647,6 +4460,27 @@
     },
     {
       "tuple": {
+        "primaryMuscle": "rear_delts",
+        "equipmentCategory": "dumbbell",
+        "movementPattern": "isolation",
+        "subregion": "horiz_abduction",
+        "laterality": "bilateral"
+      },
+      "pair": [
+        "Prone Incline Y-Raise",
+        "Prone Incline T-Raise"
+      ],
+      "jaccard": 0.6,
+      "diffTokens": [
+        "y",
+        "t"
+      ],
+      "classification": "legitimately_distinct",
+      "confidence": "high",
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (y) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
+    },
+    {
+      "tuple": {
         "primaryMuscle": "back",
         "equipmentCategory": "bodyweight",
         "movementPattern": "pull",
@@ -4766,8 +4600,8 @@
         "ring"
       ],
       "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (ring) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
+      "confidence": "high",
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (ring) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
     },
     {
       "tuple": {
@@ -4849,7 +4683,7 @@
       ],
       "classification": "legitimately_distinct",
       "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (deficit) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (ring, deficit) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
     },
     {
       "tuple": {
@@ -5038,6 +4872,48 @@
       "classification": "legitimately_distinct",
       "confidence": "high",
       "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (reverse) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
+    },
+    {
+      "tuple": {
+        "primaryMuscle": "hamstrings",
+        "equipmentCategory": "dumbbell",
+        "movementPattern": "hinge",
+        "subregion": "hip_extension",
+        "laterality": "unilateral"
+      },
+      "pair": [
+        "Single-Leg Romanian Deadlift",
+        "Single-Leg Romanian Deadlift (DB)"
+      ],
+      "jaccard": 0.8,
+      "diffTokens": [
+        "dumbbell"
+      ],
+      "classification": "legitimately_distinct",
+      "confidence": "high",
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (dumbbell) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
+    },
+    {
+      "tuple": {
+        "primaryMuscle": "hamstrings",
+        "equipmentCategory": "dumbbell",
+        "movementPattern": "hinge",
+        "subregion": "hip_extension",
+        "laterality": "unilateral"
+      },
+      "pair": [
+        "Single-Leg Romanian Deadlift (DB)",
+        "Dumbbell Single-Leg RDL"
+      ],
+      "jaccard": 0.5,
+      "diffTokens": [
+        "romanian",
+        "deadlift",
+        "rdl"
+      ],
+      "classification": "legitimately_distinct",
+      "confidence": "high",
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (deadlift) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
     },
     {
       "tuple": {
@@ -5436,8 +5312,8 @@
         "board"
       ],
       "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (wall, slant, board) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
+      "confidence": "high",
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (wall, slant) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
     },
     {
       "tuple": {
@@ -5457,8 +5333,8 @@
         "heel"
       ],
       "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (toe, heel) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
+      "confidence": "high",
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (toe, heel) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
     },
     {
       "tuple": {
@@ -5505,26 +5381,6 @@
     },
     {
       "tuple": {
-        "primaryMuscle": "triceps",
-        "equipmentCategory": "cable",
-        "movementPattern": "isolation",
-        "subregion": "pushdown",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Tricep Pushdown (Rope)",
-        "Rope Pushdown"
-      ],
-      "jaccard": 0.67,
-      "diffTokens": [
-        "tricep"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (tricep) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
-    },
-    {
-      "tuple": {
         "primaryMuscle": "abs",
         "equipmentCategory": "bodyweight",
         "movementPattern": "isolation",
@@ -5541,8 +5397,8 @@
         "sit"
       ],
       "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (sit) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation."
+      "confidence": "high",
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (v, sit) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
     },
     {
       "tuple": {
@@ -5714,7 +5570,7 @@
       ],
       "classification": "legitimately_distinct",
       "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (wide) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
+      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (wide, ring) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches."
     },
     {
       "tuple": {

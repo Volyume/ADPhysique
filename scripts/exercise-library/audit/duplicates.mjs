@@ -209,6 +209,33 @@ for (const [tuple, group] of tupleGroups.entries()) {
     }
   }
 }
+// ── lead manual overrides ──────────────────────────────────────────────
+// Reviewed individually against canonicality.js and the seed: the
+// automated pass correctly flagged these as ambiguous (unresolved token),
+// but manual check shows they are the SAME station/movement under a
+// different name, not a real distinction. Recorded here with evidence
+// rather than silently reclassified in a spreadsheet.
+const MANUAL_OVERRIDES = [
+  {
+    pair: ['Tricep Pushdown (Rope)', 'Rope Pushdown'],
+    classification: 'likely_same_stimulus',
+    confidence: 'high',
+    reason: 'LEAD OVERRIDE: both are the rope-attachment cable pushdown for triceps — "Rope Pushdown" simply omits the muscle name. Both are separately listed as STAPLE (canonicality.js STAPLE list, "Tricep Pushdown (Rope)" and "Rope Pushdown"), i.e. the tier registry already, unintentionally, treats one movement as two staples. Consolidate: keep "Tricep Pushdown (Rope)" canonical, alias "Rope Pushdown".',
+  },
+  {
+    pair: ['Machine Tricep Extension', 'Triceps Extension Machine'],
+    classification: 'likely_same_stimulus',
+    confidence: 'high',
+    reason: 'LEAD OVERRIDE: same selectorised machine triceps-extension station; the diff tokens ("tricep" vs "triceps") are a singular/plural spelling variant, not a mechanical difference. Both listed separately in COMMON (canonicality.js). Consolidate: keep "Machine Tricep Extension" canonical (matches MACHINE_TYPE_BY_NAME key), alias "Triceps Extension Machine".',
+  },
+];
+for (const override of MANUAL_OVERRIDES) {
+  const match = nearByTuple.find(
+    (p) => p.pair.includes(override.pair[0]) && p.pair.includes(override.pair[1]),
+  );
+  if (match) Object.assign(match, override);
+}
+
 // Sort by classification (likely_same_stimulus first — the actionable ones) then by name.
 const order = { likely_same_stimulus: 0, legitimately_distinct: 1 };
 nearByTuple.sort((a, b) => (order[a.classification] - order[b.classification]) || a.pair[0].localeCompare(b.pair[0]));
