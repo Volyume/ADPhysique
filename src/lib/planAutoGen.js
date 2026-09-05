@@ -276,6 +276,43 @@ export async function assessScheduleFit(profile, {
  * onboarding and the rebuild flow. `missedCount` is how many requested moves
  * could not be matched to the user's equipment / library.
  */
+export const CIRCUIT_FLATTEN_NOTICE = 'Circuit rounds are not kept. Volyume will build straight sets from the same kind of exercises.';
+
+/**
+ * F-15 (docs/final-certification-2026-09-05/07-FINDINGS.md, evidence A3):
+ * does the athlete's ACTIVE plan contain a circuit group?
+ *
+ * Disclosure data only. No generation path emits `groupKind` or
+ * `roundRestSeconds` (grep planAutoGen/planEngine/poolGenerator: zero hits)
+ * and `assignSupersets` was deliberately deleted, so a circuit-grouped plan
+ * that is regenerated comes back as ungrouped straight sets. Nothing told
+ * the athlete the grouping was gone. This read exists so the rebuild surface
+ * can SAY so before anything changes; it does not alter what is generated.
+ *
+ * Best effort: a read failure answers false, which shows no notice rather
+ * than blocking a rebuild.
+ *
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function activePlanHasCircuitGroups(userId) {
+  if (!userId) return false;
+  try {
+    const active = await getActivePlan(userId);
+    if (!active?.id) return false;
+    const routines = await getRoutinesForPlan(active.id);
+    for (const r of routines ?? []) {
+      const rows = await getRoutineExercisesWithDetails(r.id).catch(() => []);
+      if ((rows ?? []).some(x => String(x?.groupKind ?? '') === 'circuit')) return true;
+    }
+    return false;
+  } catch (e) {
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logError('planAutoGen.activePlanHasCircuitGroups', e, { userId }); } catch (_) {}
+    return false;
+  }
+}
+
 export function planShortfallNote(missedCount) {
   const n = Number.isFinite(missedCount) ? missedCount : 0;
   if (n <= 0) return 'Your plan is built. A couple of moves were swapped to fit your equipment.';

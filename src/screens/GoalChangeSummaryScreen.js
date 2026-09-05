@@ -142,7 +142,18 @@ function MacroRow({ label, prev, next, unit = 'g' }) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function GoalChangeSummaryScreen({ navigation, route }) {
-  const { previous = {}, next = {}, planRerolled = false } = route.params || {};
+  const {
+    previous = {}, next = {}, planRerolled = false,
+    // F-16 REVISED point 3 (docs/final-certification-2026-09-05/
+    // 07-FINDINGS.md): a kettlebell, circuit or band library plan is
+    // deliberately NOT rebuilt by a goal change, because generation cannot
+    // rebuild it as the same kind of plan. Without this the summary reported
+    // the intended outcome as "didn't rebuild this time", and its retry
+    // instruction ("Start with a plan") would have GENERATED over the very
+    // plan being protected.
+    planKeptReason = null, planStyleLabel = null,
+  } = route.params || {};
+  const planKeptOnPurpose = planKeptReason === 'style_lock';
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -298,9 +309,11 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
           <View style={styles.nextRow}>
             <Ionicons name="ellipse" size={6} color={t.colors.primary} style={styles.bullet} />
             <Text style={[styles.nextText, live.nextText]}>
-              {planRerolled
-                ? 'A fresh plan has been built for your new goal and is now your active plan. Your next session comes from it. Review the full plan from Train.'
-                : 'Your goal is saved, but the training plan didn\'t rebuild this time. Open Train and choose "Start with a plan" to retry.'}
+              {planKeptOnPurpose
+                ? `Your ${planStyleLabel ?? 'library'} plan stays as it is, so your next session is unchanged. To train differently, choose another ${planStyleLabel ?? 'library'} plan in the Plan Library.`
+                : planRerolled
+                  ? 'A fresh plan has been built for your new goal and is now your active plan. Your next session comes from it. Review the full plan from Train.'
+                  : 'Your goal is saved, but the training plan didn\'t rebuild this time. Open Train and choose "Start with a plan" to retry.'}
             </Text>
           </View>
           <View style={styles.nextRow}>

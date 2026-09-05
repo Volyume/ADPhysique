@@ -39,7 +39,10 @@
 
 import {
   getActivePlan, getRoutinesForPlan, getRoutineExercisesWithDetails, getAllPlansForUser,
+  getLibraryPlans, copyPlanFromLibrary, activatePlanWithBlock,
 } from './database';
+import { getPlanDays } from './onboarding/freeStarter';
+import { planHeadingName } from './planDisplay';
 import { generatePlanDryRun, generateAndSavePlan, thinSessionReport } from './planAutoGen';
 import { capabilityPreflight, offerCapabilityPreflightChoice } from './capability/preflight';
 import { diffPlans, summariseProspectivePlan, summariseCurrentPlan } from './planDiff';
@@ -142,4 +145,151 @@ export async function prepareStartWithPlan(userId, userProfile, {
 
 export async function commitStartWithPlan(userId, userProfile) {
   return generateAndSavePlan(userId, userProfile);
+}
+
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * F-16 REVISED: the LIBRARY route for kettlebell-only and band-only kit.
+ *
+ * Authority: the F-16 REVISED ruling in
+ * docs/final-certification-2026-09-05/07-FINDINGS.md, on the evidence of the
+ * "F-16 INVESTIGATION" appendix in
+ * docs/final-certification-2026-09-05/04-TRAINING-STYLES.md. That
+ * investigation measured the real generator against the real corpus and
+ * found it is NOT ready for either kit:
+ *   - kettlebells blended with bodyweight generate ZERO kettlebell
+ *     exercises (only 2 COMMON-tier kettlebell rows exist, so bodyweight
+ *     wins every slot); kept pure, `shoulders` sits at zero planned sets
+ *     because the corpus carries no kettlebell shoulder-isolation row;
+ *   - every band exercise is already selectable inside the shipped
+ *     `bodyweight` option (PROFILES_BY_CATEGORY.band = ['bodyweight']), so a
+ *     `bands` profile would generate a plan identical to a bodyweight one.
+ * So answering "Kettlebells" or "Bands" does NOT run the generator. Volyume
+ * installs the hand-authored library plan that fits the athlete's week,
+ * through exactly the path the Plan Library's own "Add and start this plan"
+ * uses (copyPlanFromLibrary -> activatePlanWithBlock), so a training block is
+ * started the same way a generated plan starts one.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * The two kit answers, and the equipment PROFILE each one is stored as.
+ *
+ * The profile matters and is not cosmetic: `kettlebells` and `bands` are not
+ * values the rest of the app understands. `deriveEquipmentProfiles`
+ * (exerciseMetadata.js) has a closed six-value vocabulary, and both
+ * planEngine's `filterPool` and swapEngine's `rankSwaps` do a bare
+ * membership test against it - an unknown string matches nothing, so every
+ * swap sheet and any later generation would come back EMPTY rather than
+ * filtered. Each answer is therefore stored as the profile that keeps the
+ * whole of its own style pool reachable:
+ *   kettlebells -> home_gym   (kettlebell rows carry
+ *                              ['full_gym','dumbbells_only','home_gym'])
+ *   bands       -> bodyweight (band rows carry ['bodyweight'])
+ * The kit answer itself is what picks the library plan below; the installed
+ * plan then carries its own `style:` tag, which is what every swap, preview
+ * and Adjust-training surface reads afterwards.
+ */
+const LIBRARY_KIT_BY_EQUIPMENT = Object.freeze({
+  kettlebells: Object.freeze({ kit: 'kettlebell', generationEquipment: 'home_gym' }),
+  bands: Object.freeze({ kit: 'band', generationEquipment: 'bodyweight' }),
+});
+
+/** 'kettlebells' | 'bands' -> 'kettlebell' | 'band'; null for every other answer. */
+export function libraryKitForEquipment(equipment) {
+  return LIBRARY_KIT_BY_EQUIPMENT[equipment]?.kit ?? null;
+}
+
+/**
+ * The equipment profile to STORE and to hand any engine, for a given
+ * equipment answer. A pass-through for the six ordinary answers.
+ */
+export function generationEquipmentFor(equipment) {
+  return LIBRARY_KIT_BY_EQUIPMENT[equipment]?.generationEquipment ?? equipment ?? null;
+}
+
+function planHasTag(plan, tag) {
+  return plan && typeof plan.tags === 'string'
+    ? plan.tags.toLowerCase().includes(tag.toLowerCase())
+    : false;
+}
+
+/**
+ * Pick the library plan that fits a kit answer. PURE: no I/O, deterministic,
+ * same answers always give the same plan.
+ *
+ * Contract (F-16 REVISED point 1):
+ *  - candidates carry `equipment:<kit>` and are NOT circuit plans (a circuit
+ *    is its own style with its own rounds; onboarding never installs one
+ *    silently);
+ *  - kettlebells additionally match the pool the experience answer implies -
+ *    `style:kettlebell_foundations` for a beginner, `style:kettlebell_
+ *    experienced` for everyone else. If that pool is empty the kit's whole
+ *    candidate set stands, so the pick never dead-ends;
+ *  - within that set the plan whose `days:N` tag is NEAREST the athlete's
+ *    training days wins. Ties break on difficulty ascending, then name
+ *    ascending, so the result never depends on library row order.
+ *
+ * @param {{kit: string, daysPerWeek: number, experience: string}} answers
+ * @param {Array<object>} plans every library plan (getLibraryPlans rows)
+ * @returns {object|null} the winning plan row, or null when the kit has none
+ */
+export function pickLibraryPlanForKit({ kit, daysPerWeek, experience } = {}, plans) {
+  if (!kit || !Array.isArray(plans) || !plans.length) return null;
+  let candidates = plans.filter(p => planHasTag(p, `equipment:${kit}`) && !planHasTag(p, 'circuit'));
+  if (kit === 'kettlebell') {
+    const wantedPool = experience === 'beginner'
+      ? 'style:kettlebell_foundations'
+      : 'style:kettlebell_experienced';
+    const byPool = candidates.filter(p => planHasTag(p, wantedPool));
+    if (byPool.length) candidates = byPool;
+  }
+  if (!candidates.length) return null;
+  const target = Number.isFinite(daysPerWeek) ? daysPerWeek : 3;
+  const scored = candidates.map((plan) => {
+    const d = getPlanDays(plan);
+    // A plan with no days: tag can still be chosen, but only when nothing
+    // tagged survives - never in preference to one that states its week.
+    return { plan, gap: d == null ? Number.MAX_SAFE_INTEGER : Math.abs(d - target) };
+  });
+  scored.sort((a, b) => (a.gap - b.gap)
+    || ((a.plan.difficulty ?? 0) - (b.plan.difficulty ?? 0))
+    || String(a.plan.name ?? '').localeCompare(String(b.plan.name ?? '')));
+  return scored[0].plan;
+}
+
+/**
+ * The ONE line the athlete is shown when a kit answer installed a library
+ * plan. It never claims the plan was generated for them.
+ */
+export function libraryKitInstalledLine(kit, planName) {
+  const kitWord = kit === 'kettlebell' ? 'kettlebell' : 'band';
+  return `Volyume has ${kitWord} plans built for this kit. ${planHeadingName(planName)} fits your week.`;
+}
+
+/**
+ * Install and START the library plan that fits a kit answer, through the
+ * Plan Library's own two-step (copyPlanFromLibrary -> activatePlanWithBlock),
+ * so the athlete lands on an active plan AND a running block exactly as a
+ * generated plan would leave them.
+ *
+ * @returns {Promise<{ok: true, programmeId: string, planName: string,
+ *   libraryPlanId: string} | {ok: false, error: string}>}
+ */
+export async function installLibraryPlanForKit(userId, { kit, daysPerWeek, experience } = {}) {
+  if (!userId) return { ok: false, error: 'no_user' };
+  if (!kit) return { ok: false, error: 'no_kit' };
+  try {
+    const plans = await getLibraryPlans();
+    const pick = pickLibraryPlanForKit({ kit, daysPerWeek, experience }, plans);
+    if (!pick?.id) return { ok: false, error: 'no_library_plan_for_kit' };
+    const copy = await copyPlanFromLibrary(pick.id, userId);
+    if (!copy?.id) return { ok: false, error: 'library_copy_failed' };
+    await activatePlanWithBlock(userId, copy.id, planHeadingName(pick.name));
+    return {
+      ok: true, programmeId: copy.id, planName: pick.name, libraryPlanId: pick.id,
+    };
+  } catch (e) {
+    logError('startWithPlan.installLibraryPlanForKit', e, { userId, kit });
+    return { ok: false, error: e?.message ?? 'unknown' };
+  }
 }

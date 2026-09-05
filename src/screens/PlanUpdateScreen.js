@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView,
+  View, Text, StyleSheet, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
@@ -22,10 +22,19 @@ import {
 import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
 import {
   generateAndSavePlan, generatePlanDryRun, planShortfallNote, assessScheduleFit, thinSessionReport,
+  activePlanHasCircuitGroups, CIRCUIT_FLATTEN_NOTICE,
 } from '../lib/planAutoGen';
+// F-16 REVISED point 3 / F-15: the active plan's own style tag and its
+// circuit grouping decide what this screen may offer. The lock rule itself is
+// shared with ProGoalSetupScreen (the other screen that rebuilds the active
+// plan), so the two cannot drift.
+import {
+  styleLockFromTags, styleLockRebuildNotice, styleLockBrowseLabel,
+} from '../lib/exercise/styleLock';
+import { appAlert } from '../components/AppAlert';
 import { PLAN_FIT } from '../lib/planFit';
 import { buildChangeReceipt } from '../lib/planRationale';
-import { getAllPlansForUser } from '../lib/database';
+import { getAllPlansForUser, getActivePlan } from '../lib/database';
 import { diffPlans, summariseProspectivePlan, keepsBlockOnRebuild } from '../lib/planDiff';
 // D139: the preview sheet is shared with the three other generation moments
 // (Today and Train's no-plan empty states, and a goal/phase change), so all
@@ -104,9 +113,41 @@ export default function PlanUpdateScreen({ navigation }) {
   const [previewing, setPreviewing] = useState(false);
   const [diff, setDiff] = useState(null);     // Now/After view-model for the sheet
   const [staged, setStaged] = useState(null); // { profile, partial, missedCount }
+  // F-16 REVISED point 3 / F-15: what the ACTIVE plan is, read once on entry.
+  // `styleLock` non-null removes the regenerate path entirely; `hasCircuit`
+  // keeps it but discloses that the rounds are not carried across.
+  const [planKind, setPlanKind] = useState(null); // { styleLock, hasCircuit } once read
+  const [kindChecked, setKindChecked] = useState(false);
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let styleLock = null;
+      let hasCircuit = false;
+      try {
+        const active = user?.id ? await getActivePlan(user.id) : null;
+        styleLock = styleLockFromTags(active?.tags);
+        // A style plan never reaches the preview, so the circuit read is
+        // only needed for the plans that still can.
+        if (!styleLock) hasCircuit = await activePlanHasCircuitGroups(user?.id ?? null);
+      } catch (e) {
+        // Best effort: an unreadable plan behaves exactly as it did before
+        // this existed. It is logged rather than shown.
+        logWarn('PlanUpdateScreen.readPlanKind', e?.message ?? 'unknown', { userId: user?.id });
+      }
+      if (cancelled) return;
+      setPlanKind({ styleLock, hasCircuit });
+      setKindChecked(true);
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  const styleLock = planKind?.styleLock ?? null;
+  const hasCircuitGroups = !!planKind?.hasCircuit;
 
   const weakPointsApplicable = GOALS_WITH_WEAK_POINTS.includes(selectedGoal);
 
@@ -154,6 +195,9 @@ export default function PlanUpdateScreen({ navigation }) {
   // untouched if they back out.
   async function handleRebuildPress() {
     if (previewing || saving) return;
+    // F-16 REVISED point 3: belt and braces. The button is not rendered for
+    // a style plan, so this can only be reached by a stale render.
+    if (styleLock) return;
     setPreviewing(true);
     const updatedProfile = buildUpdatedProfile();
     try {
@@ -258,6 +302,19 @@ export default function PlanUpdateScreen({ navigation }) {
     setSaving(true);
     const updatedProfile = staged.profile;
 
+    // F-15 (evidence A3): no generation path emits `groupKind`, so a plan
+    // with circuit groups comes back as ungrouped straight sets. Said in
+    // full, and answered, BEFORE anything is written.
+    if (hasCircuitGroups) {
+      const acceptsFlatten = await new Promise((resolve) => {
+        appAlert('Your plan has circuits', CIRCUIT_FLATTEN_NOTICE, [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Rebuild anyway', onPress: () => resolve(true) },
+        ]);
+      });
+      if (!acceptsFlatten) { setSaving(false); return; }
+    }
+
     // FF-002 (unchanged invariant): rebuild FIRST, bail on failure without
     // saving or navigating, and only commit the profile as canonical once the
     // rebuild succeeds, so a failed rebuild can't split-brain.
@@ -348,6 +405,33 @@ export default function PlanUpdateScreen({ navigation }) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {/* F-16 REVISED point 3: nothing on this form can be applied to a
+            library style plan, because the only thing it does is regenerate
+            and generation cannot build that kind of plan. So the form is
+            replaced by the plain reason and the route that CAN change it,
+            rather than left on screen as an inert set of controls. */}
+        {!kindChecked ? (
+          <View style={styles.kindLoading}>
+            <ActivityIndicator color={t.colors.primary} />
+          </View>
+        ) : null}
+
+        {kindChecked && styleLock ? (
+          <>
+            <Text style={[styles.sectionSub, live.sectionSub]}>
+              {styleLockRebuildNotice(styleLock.label)}
+            </Text>
+            <Button
+              title={styleLockBrowseLabel(styleLock.label)}
+              onPress={() => navigation.navigate('PlanLibrary', { initialCollection: styleLock.collection })}
+              accessibilityLabel={styleLockBrowseLabel(styleLock.label)}
+              style={styles.saveBtn}
+            />
+          </>
+        ) : null}
+
+        {kindChecked && !styleLock ? (
+        <>
         <Text style={[styles.sectionSub, live.sectionSub]}>
           Adjust your training setup and rebuild the plan around it. Your calorie and macro targets stay as they are. Update those from the Coach tab.
         </Text>
@@ -443,6 +527,13 @@ export default function PlanUpdateScreen({ navigation }) {
           placeholder="Select your recovery"
         />
 
+        {/* F-15 (evidence A3): the circuit grouping is not carried across a
+            rebuild. Said here, before the preview is even opened, and again
+            as an explicit answer before anything is written. */}
+        {hasCircuitGroups ? (
+          <Text style={[styles.circuitNotice, live.circuitNotice]}>{CIRCUIT_FLATTEN_NOTICE}</Text>
+        ) : null}
+
         <Button
           title="Review my plan changes"
           onPress={handleRebuildPress}
@@ -451,6 +542,8 @@ export default function PlanUpdateScreen({ navigation }) {
           accessibilityLabel="Review my plan changes"
           style={styles.saveBtn}
         />
+        </>
+        ) : null}
       </ScrollView>
 
       {/* Plan diff/preview (ULTIMATE-PLANDIFF-01, shared out under D139): the
@@ -495,6 +588,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   saveBtn: { marginTop: spacing.xxl },
+  kindLoading: { paddingVertical: spacing.xxl, alignItems: 'center' },
+  circuitNotice: {
+    ...type.captionTight, color: colors.textMuted,
+    marginTop: spacing.xxl,
+  },
 });
 
 // CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
@@ -509,6 +607,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     sectionSub: { ...t.type.captionTight, color: t.colors.textMuted },
+    circuitNotice: { ...t.type.captionTight, color: t.colors.textMuted },
     optionalTag: { ...t.type.caption, color: t.colors.textMuted },
   };
 }

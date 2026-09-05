@@ -344,7 +344,13 @@ function DivisionGrid({ selectedDivision, onSelectDivision }) {
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
-export default function PlanLibraryScreen({ navigation }) {
+// F-16 REVISED point 3 (docs/final-certification-2026-09-05/07-FINDINGS.md):
+// the collection keys another screen may open this library on. Validated
+// against COLLECTIONS so a stale or mistyped param can never leave the
+// browse showing an empty, unnamed filter.
+const COLLECTION_KEYS = new Set(COLLECTIONS.map(c => c.key));
+
+export default function PlanLibraryScreen({ navigation, route }) {
   const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user } = useAppStore(useShallow(s => ({
@@ -370,7 +376,14 @@ export default function PlanLibraryScreen({ navigation }) {
   // same treatment as compatibility above.
   const [planStats, setPlanStats] = useState(new Map());
   const [query, setQuery] = useState('');
-  const [activeCollection, setActiveCollection] = useState('all');
+  // F-16 REVISED: `initialCollection` is the smallest additive route param
+  // that lets Adjust training send someone straight to the style they are
+  // already on ('kettlebell' | 'circuit' | 'band'). Anything unrecognised
+  // falls back to the ordinary 'All plans' browse.
+  const initialCollection = COLLECTION_KEYS.has(route?.params?.initialCollection)
+    ? route.params.initialCollection
+    : 'all';
+  const [activeCollection, setActiveCollection] = useState(initialCollection);
   const [selectedDivision, setSelectedDivision] = useState(null);
   const listRef = useRef(null);
   // RB-3 (D96, Review B): appAlert queues, so two taps on a plan card used

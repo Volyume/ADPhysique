@@ -27,6 +27,13 @@ import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { isAppleUser, appleFirstName } from '../lib/appleIdentity';
 import { generateAndSavePlan, planShortfallNote, assessScheduleFit } from '../lib/planAutoGen';
+// F-16 REVISED: the library route for the kettlebell-only / band-only kit
+// answers, and the equipment-profile mapping that keeps every other engine
+// (generation, swaps) reading a value it understands.
+import {
+  installLibraryPlanForKit, libraryKitForEquipment, generationEquipmentFor,
+  libraryKitInstalledLine,
+} from '../lib/startWithPlan';
 import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
 import {
   PLAN_FIT, fitCopy, alternativeCopy, keepChoiceCopy, coverageCopy,
@@ -210,6 +217,16 @@ const EQUIPMENT_OPTIONS = [
   { value: 'barbell_plates',  label: 'Barbell & Plates',  sub: 'Power rack or squat stand setup' },
   { value: 'home_gym',        label: 'Home Gym',          sub: 'Mixed equipment at home' },
   { value: 'bodyweight',      label: 'Bodyweight',        sub: 'No equipment needed' },
+  // F-16 REVISED (docs/final-certification-2026-09-05/07-FINDINGS.md,
+  // evidence A12): a kettlebell or band owner had to answer "Dumbbells Only"
+  // or "Home Gym" and was then given a plan full of kit they do not own.
+  // These two answers do NOT generate. The F-16 investigation
+  // (04-TRAINING-STYLES.md) measured the real generator against the real
+  // corpus and found it cannot build either kit honestly, so each answer
+  // installs the LIBRARY plan that fits the week instead
+  // (installLibraryPlanForKit, src/lib/startWithPlan.js).
+  { value: 'kettlebells',     label: 'Kettlebells',       sub: 'One or two kettlebells, no other weights' },
+  { value: 'bands',           label: 'Bands',             sub: 'Resistance bands, no weights' },
 ];
 
 const RECOVERY_OPTIONS = [
@@ -1330,7 +1347,13 @@ export default function ProOnboardingScreen({ navigation }) {
       experience,
       daysPerWeek,
       sessionLengthMinutes,
-      equipment,
+      // F-16 REVISED: 'kettlebells' / 'bands' are ANSWERS, not equipment
+      // profiles. Every engine (planEngine.filterPool, swapEngine.rankSwaps)
+      // does a bare membership test against the closed six-value profile
+      // vocabulary, so an unknown string would empty the pool rather than
+      // filter it. Mapped to the profile that keeps the kit's own style pool
+      // whole (home_gym for kettlebells, bodyweight for bands).
+      equipment: generationEquipmentFor(equipment),
       trainingGoal,
       trainingPhase,
       planWeakPoints,
@@ -1417,7 +1440,11 @@ export default function ProOnboardingScreen({ navigation }) {
     // carries the plan is never interrupted; one that does not gets the
     // athlete a real choice instead of a silently shortened plan or a
     // 45-minute session that runs to 70.
-    if (!fitAccepted) {
+    // F-16 REVISED: a kettlebell or band answer installs a hand-authored
+    // library plan, so there is no generated plan for the fit resolver to
+    // describe. Running it here would interrupt the athlete with a verdict
+    // about a plan they are never going to receive.
+    if (!fitAccepted && !libraryKitForEquipment(equipment)) {
       if (fitInFlightRef.current) return;
       const fit = await runFitAssessment();
       if (fit && (fit.state === PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN
@@ -1550,7 +1577,9 @@ export default function ProOnboardingScreen({ navigation }) {
         daysPerWeek,
         experience,
         sessionLengthMinutes,
-        equipment,
+        // F-16 REVISED: stored as an equipment PROFILE, never as the raw
+        // 'kettlebells'/'bands' answer - see planProfileNow above for why.
+        equipment: generationEquipmentFor(equipment),
         recoveryRating,
         planWeakPoints,
         proteinApproach,
@@ -1673,6 +1702,10 @@ export default function ProOnboardingScreen({ navigation }) {
       // home screen rather than a "build me a plan" empty state.
       if (user?.id) {
         const planProfile = planProfileNow();
+        // F-16 REVISED point 1: 'Kettlebells' and 'Bands' never reach the
+        // generator. Non-null here means this build installs a LIBRARY plan
+        // instead, through the Plan Library's own copy + activate path.
+        const libraryKit = libraryKitForEquipment(equipment);
         let planResult = { ok: false, error: 'not attempted' };
         // C5-P29-07: a retry after a kill used to build a SECOND plan, which
         // archived the first and took the "Your plan 2" name. If the earlier
@@ -1693,7 +1726,20 @@ export default function ProOnboardingScreen({ navigation }) {
         // earlier run left behind. Anything else regenerates, so first-run
         // always ends on exactly one valid active plan and block.
         if (priorPlan && priorPlan.isActive && !priorPlan.isArchived) {
-          planResult = { ok: true, programmeId: priorPlan.id };
+          planResult = { ok: true, programmeId: priorPlan.id, planName: priorPlan.name ?? null };
+        } else if (libraryKit) {
+          // F-16 REVISED: the honest route for a kit the generator cannot
+          // build. copyPlanFromLibrary + activatePlanWithBlock, so the
+          // athlete lands on an active plan AND a running block exactly as
+          // a generated plan would leave them.
+          planResult = await installLibraryPlanForKit(user.id, {
+            kit: libraryKit,
+            daysPerWeek,
+            experience,
+          });
+          if (planResult.ok && planResult.programmeId) {
+            await markBuildProgress(user.id, { planId: planResult.programmeId, planSignature });
+          }
         } else {
           // CC27 (section 9.6): capability pre-flight before the first
           // generation. A hold falls into the existing plan-recovery path
@@ -1730,7 +1776,15 @@ export default function ProOnboardingScreen({ navigation }) {
           // blockedByCapability specifically - a total block caused purely
           // by the user's own set-aside exercises (preference lane, not
           // capability) still reads as the plain generic failure, unchanged.
-          if (planResult.error === 'plan_blocked_by_exclusions' && planResult.blockedByCapability) {
+          if (libraryKit) {
+            // The generic copy below points at "Start with a plan", which
+            // GENERATES. That is the wrong instruction for this kit, so the
+            // retry route named here is the library the plan came from.
+            appAlert(
+              "Plan setup didn't finish",
+              `Your profile is saved, but your plan was not added. Open Plans from the Train tab, browse the plan library and choose a ${libraryKit === 'kettlebell' ? 'kettlebell' : 'band'} plan.`,
+            );
+          } else if (planResult.error === 'plan_blocked_by_exclusions' && planResult.blockedByCapability) {
             appAlert(
               'Volyume could not build a full plan within your limitations.',
               "Your profile and targets are saved. Every session needed at least one movement that clashes with an injury or limitation you've set right now.",
@@ -1787,6 +1841,11 @@ export default function ProOnboardingScreen({ navigation }) {
               'Your profile is saved, but your training plan did not generate. Open Today and choose "Start with a plan" to retry.',
             );
           }
+        } else if (libraryKit) {
+          // F-16 REVISED: ONE line, and it never claims the plan was
+          // generated for them. `partial` / capability shortfall notes below
+          // describe generation and cannot apply to a hand-authored plan.
+          appAlert('Plan ready', libraryKitInstalledLine(libraryKit, planResult.planName));
         } else {
           if (planResult.partial) {
             // FF-003: the plan generated but couldn't fulfil every requested

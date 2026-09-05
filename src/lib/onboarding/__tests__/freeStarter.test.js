@@ -44,6 +44,28 @@ const STARTERS = [
     tags: 'full_body equipment:bodyweight home gender:all goal:build_muscle goal:conditioning days:3 beginner audience:beginner',
     difficulty: 0,
   },
+  // F-16 REVISED (docs/final-certification-2026-09-05/07-FINDINGS.md): the
+  // quiz gained "Kettlebells" and "Bands" answers, so the fixture gains the
+  // difficulty-0 plans those answers must land on. Tags verbatim from
+  // src/lib/seedRoutines.js and src/lib/seedRoutines.bandPlans.js.
+  {
+    id: 'p-kb2',
+    name: 'Kettlebell Foundations: 2 Days',
+    tags: 'style:kettlebell_foundations equipment:kettlebell kettlebell home full_body beginner goal:build_muscle days:2 short',
+    difficulty: 0,
+  },
+  {
+    id: 'p-kb3',
+    name: 'Kettlebell Foundations: 3 Days',
+    tags: 'style:kettlebell_foundations equipment:kettlebell kettlebell home full_body beginner goal:build_muscle days:3',
+    difficulty: 0,
+  },
+  {
+    id: 'p-band3',
+    name: 'Full Body: Bands',
+    tags: 'style:band equipment:band band home full_body gender:all goal:build_muscle days:3 beginner intermediate audience:beginner',
+    difficulty: 0,
+  },
 ];
 
 // Decoys: tag-perfect but NOT difficulty 0. Must never be recommended.
@@ -65,6 +87,20 @@ const DECOYS = [
     name: 'Minimalist 2×/Week',
     tags: 'minimalist full_body gender:all goal:build_muscle days:2 short',
     difficulty: 1,
+  },
+  // Tag-perfect for the two new answers, but NOT difficulty 0: the starter
+  // quiz must still never hand a beginner either of these.
+  {
+    id: 'p-band4',
+    name: 'Upper/Lower: Bands',
+    tags: 'style:band equipment:band band home upper_lower gender:all goal:build_muscle days:4 intermediate',
+    difficulty: 1,
+  },
+  {
+    id: 'p-kbs3',
+    name: 'Kettlebell Strength: 3 Days',
+    tags: 'style:kettlebell_experienced equipment:kettlebell kettlebell home full_body intermediate advanced goal:build_muscle days:3',
+    difficulty: 2,
   },
 ];
 
@@ -138,6 +174,56 @@ describe('isStarterCandidate', () => {
   });
 });
 
+// ─── F-16 REVISED: the two kit answers ───────────────────────────────────────
+//
+// Authority: the F-16 REVISED ruling in
+// docs/final-certification-2026-09-05/07-FINDINGS.md, on evidence A2/A12 in
+// 04-TRAINING-STYLES.md. Written to FAIL if either answer is dropped, if
+// either is made a default, or if a kit answer is ever allowed to fall back
+// onto kit the athlete does not own.
+describe('F-16 REVISED: kettlebell and band answers', () => {
+  test('the equipment step offers both, and neither is a default', () => {
+    const step = FREE_STARTER_STEPS.find(s => s.key === 'equipment');
+    const keys = step.options.map(o => o.key);
+    expect(keys).toContain('kettlebell');
+    expect(keys).toContain('band');
+    // No answer on any step is preselected: the quiz has no default, no
+    // `selected` flag and no initial answers object anywhere in its shape.
+    for (const s of FREE_STARTER_STEPS) {
+      for (const o of s.options) {
+        expect(Object.keys(o).sort()).toEqual(['icon', 'key', 'label']);
+      }
+      expect(s.defaultKey).toBeUndefined();
+    }
+  });
+
+  test('a band answer picks a band plan, never a bodyweight or dumbbell one', () => {
+    for (const days of DAYS) {
+      const pick = getFreeStarterRecommendation({ goal: 'build_muscle', equipment: 'band', days }, ALL_PLANS);
+      expect(pick).not.toBeNull();
+      expect(pick.name).toBe('Full Body: Bands');
+      expect(pick.difficulty).toBe(0);
+    }
+  });
+
+  test('a kettlebell answer picks a kettlebell plan, and the difficulty-0 one', () => {
+    const two = getFreeStarterRecommendation({ goal: 'build_muscle', equipment: 'kettlebell', days: 2 }, ALL_PLANS);
+    expect(two.tags).toContain('equipment:kettlebell');
+    expect(two.difficulty).toBe(0);
+    const three = getFreeStarterRecommendation({ goal: 'build_muscle', equipment: 'kettlebell', days: 3 }, ALL_PLANS);
+    expect(three.name).toBe('Kettlebell Foundations: 3 Days');
+  });
+
+  test('neither answer can reach a plan built for other kit', () => {
+    for (const equipment of ['kettlebell', 'band']) {
+      for (const days of DAYS) {
+        const pick = getFreeStarterRecommendation({ goal: 'general_fitness', equipment, days }, ALL_PLANS);
+        expect(pick.tags).toContain(`equipment:${equipment}`);
+      }
+    }
+  });
+});
+
 describe('getFreeStarterRecommendation — every answer combination', () => {
   for (const goal of GOALS) {
     for (const equipment of EQUIPMENT) {
@@ -155,6 +241,13 @@ describe('getFreeStarterRecommendation — every answer combination', () => {
             expect(
               pick.tags.includes('equipment:dumbbell') || pick.tags.includes('equipment:bodyweight'),
             ).toBe(true);
+          }
+          // F-16 REVISED: kit that will not do the job is never a fallback.
+          if (equipment === 'kettlebell') {
+            expect(pick.tags).toContain('equipment:kettlebell');
+          }
+          if (equipment === 'band') {
+            expect(pick.tags).toContain('equipment:band');
           }
         });
 

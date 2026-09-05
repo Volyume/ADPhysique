@@ -31,6 +31,7 @@ import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceS
 import {
   saveNutritionTargets, getNutritionTargets, getMorningWeightsLast14Days,
   getLatestBodyComposition, getUserBodyProfile, getActivePeakWeekPlan, setPeakWeekShowDate,
+  getActivePlan,
 } from '../lib/database';
 import { ageYearsFromDateOfBirth } from '../lib/profileAge';
 import { computeEWMA } from '../lib/weeklyCoach';
@@ -42,6 +43,16 @@ import { formatBodyWeightShort } from '../lib/units';
 import { prepareStartWithPlan, commitStartWithPlan } from '../lib/startWithPlan';
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
+// F-16 REVISED point 3 / F-15 (docs/final-certification-2026-09-05/
+// 07-FINDINGS.md). This screen rebuilds the active plan on save, so an
+// athlete on a kettlebell, circuit or band library plan who came here to
+// change a GOAL had their plan silently replaced by a generated one. Same
+// rule as Adjust training, from the one shared module.
+import {
+  styleLockFromTags, styleLockGoalNotice, styleLockBrowseLabel,
+} from '../lib/exercise/styleLock';
+import { activePlanHasCircuitGroups, CIRCUIT_FLATTEN_NOTICE } from '../lib/planAutoGen';
+import { appAlert } from '../components/AppAlert';
 
 const APPROACH_SHORT = {
   standard:  'Enough for consistent training. Easy to sustain day to day.',
@@ -174,6 +185,36 @@ export default function ProGoalSetupScreen({ navigation }) {
   const [equipment, setEquipment] = useState(userProfile?.equipment ?? 'full_gym');
   const [recoveryRating, setRecoveryRating] = useState(userProfile?.recoveryRating ?? 'average');
 
+  // F-16 REVISED point 3 / F-15: what the ACTIVE plan is, read once on entry.
+  // `styleLock` non-null withholds the rebuild entirely (goal, phase, protein
+  // and nutrition still save); `hasCircuit` keeps the rebuild but discloses
+  // that the rounds are not carried across it.
+  const [planKind, setPlanKind] = useState(null);
+  const [kindChecked, setKindChecked] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      let styleLock = null;
+      let hasCircuit = false;
+      try {
+        const active = user?.id ? await getActivePlan(user.id) : null;
+        styleLock = styleLockFromTags(active?.tags);
+        // A style-locked plan never reaches the rebuild, so the circuit read
+        // is only needed for the plans that still can.
+        if (!styleLock) hasCircuit = await activePlanHasCircuitGroups(user?.id ?? null);
+      } catch (_) {
+        // Best effort: an unreadable plan behaves exactly as it did before
+        // this existed, which is the ordinary rebuild.
+      }
+      if (cancelled) return;
+      setPlanKind({ styleLock, hasCircuit });
+      setKindChecked(true);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+  const styleLock = planKind?.styleLock ?? null;
+  const hasCircuitGroups = !!planKind?.hasCircuit;
+
   // The weight the targets are actually built from: the smoothed morning-weight
   // trend if there's history, otherwise the profile value. Read-only here, the
   // user changes it by logging a morning weight on Home, not in the builder.
@@ -240,8 +281,26 @@ export default function ProGoalSetupScreen({ navigation }) {
     // confirm every other plan-replacing path already runs, in its usual
     // position: before the write, with the rebuild wording, and silent in
     // week 1 or once the block is past its training weeks (nothing to lose).
-    const proceed = await confirmPlanSwitchMidBlock(user?.id, { mode: 'rebuild' });
-    if (!proceed) return;
+    // F-16 REVISED point 3: a style-locked plan is NOT rebuilt by this save,
+    // so no block is replaced and there is nothing to confirm. The goal,
+    // phase, protein approach and nutrition targets below all still save.
+    if (!styleLock) {
+      const proceed = await confirmPlanSwitchMidBlock(user?.id, { mode: 'rebuild' });
+      if (!proceed) return;
+
+      // F-15 (evidence A3): no generation path emits `groupKind`, so a plan
+      // with circuit groups comes back as ungrouped straight sets. Said in
+      // full, and answered, BEFORE anything is written.
+      if (hasCircuitGroups) {
+        const acceptsFlatten = await new Promise((resolve) => {
+          appAlert('Your plan has circuits', CIRCUIT_FLATTEN_NOTICE, [
+            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'Rebuild anyway', onPress: () => resolve(true) },
+          ]);
+        });
+        if (!acceptsFlatten) return;
+      }
+    }
 
     const goalPhase = phaseToCoachingKey(selectedPhase);
 
@@ -482,6 +541,12 @@ export default function ProGoalSetupScreen({ navigation }) {
     // a hold there still skips ONLY the rebuild, and so does "Not yet".
     let planResult = { ok: false, error: 'not attempted' };
     let previewDeclined = false;
+    if (styleLock) {
+      // F-16 REVISED point 3: the plan is deliberately left exactly as it is.
+      // Not a failure, so no warning toast and no retry instruction: the
+      // summary below says so in its own words.
+      planResult = { ok: false, error: 'style_locked' };
+    } else {
     const prep = await prepareStartWithPlan(user.id, updatedProfile, {
       mode: 'goal',
       currentSessionLengthMinutes: userProfile?.sessionLengthMinutes ?? null,
@@ -509,7 +574,10 @@ export default function ProGoalSetupScreen({ navigation }) {
         setPlanPreview(null);
       }
     }
-    if (previewDeclined) {
+    }
+    if (styleLock) {
+      // Nothing to say beyond the summary: this is the intended outcome.
+    } else if (previewDeclined) {
       // The athlete chose not to rebuild. That is a valid answer, so it gets
       // no warning: the change summary below already reports the plan as not
       // rerolled, and Adjust training rebuilds whenever they want it.
@@ -548,6 +616,12 @@ export default function ProGoalSetupScreen({ navigation }) {
         fat: nextTargets?.fatG ?? null,
       },
       planRerolled: !!planResult?.ok,
+      // F-16 REVISED point 3: the summary must not report a style-locked plan
+      // as "didn't rebuild this time" (a failure, whose retry instruction
+      // would GENERATE over the very plan being protected). Named, so the
+      // summary can say the plan was kept on purpose.
+      planKeptReason: styleLock ? 'style_lock' : null,
+      planStyleLabel: styleLock?.label ?? null,
     });
   }
 
@@ -645,6 +719,28 @@ export default function ProGoalSetupScreen({ navigation }) {
           placeholder="Select your focus"
         />
 
+        {/* F-16 REVISED point 3: saving this screen rebuilds the active
+            plan, and generation cannot rebuild a kettlebell, circuit or band
+            plan as the same kind of plan. So for a style-locked plan the
+            training-setup fields are withheld along with the rebuild, and
+            the reason takes their place. Goal, phase, protein approach and
+            nutrition targets below are unaffected and still save. */}
+        {kindChecked && styleLock ? (
+          <>
+            <Text style={[styles.sectionSub, live.sectionSub, styles.sectionLabelSpaced]}>
+              {styleLockGoalNotice(styleLock.label)}
+            </Text>
+            <Button
+              title={styleLockBrowseLabel(styleLock.label)}
+              onPress={() => navigation.navigate('PlanLibrary', { initialCollection: styleLock.collection })}
+              accessibilityLabel={styleLockBrowseLabel(styleLock.label)}
+              variant="secondary"
+            />
+          </>
+        ) : null}
+
+        {kindChecked && !styleLock ? (
+        <>
         {/* ── Training experience ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Experience</SectionLabel>
         <Text style={[styles.sectionSub, live.sectionSub]}>
@@ -700,6 +796,17 @@ export default function ProGoalSetupScreen({ navigation }) {
           onChange={setRecoveryRating}
           placeholder="Select your recovery"
         />
+
+        {/* F-15 (evidence A3): the circuit grouping is not carried across a
+            rebuild. Said here, before save is even pressed, and answered
+            explicitly before anything is written. */}
+        {hasCircuitGroups ? (
+          <Text style={[styles.sectionSub, live.sectionSub, styles.sectionLabelSpaced]}>
+            {CIRCUIT_FLATTEN_NOTICE}
+          </Text>
+        ) : null}
+        </>
+        ) : null}
 
         {/* ── Protein target ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Protein target</SectionLabel>

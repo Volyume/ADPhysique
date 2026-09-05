@@ -37,6 +37,16 @@ export const FREE_STARTER_STEPS = Object.freeze([
     options: [
       { key: 'full_gym', label: 'A gym with full equipment', icon: 'fitness-outline' },
       { key: 'dumbbell', label: 'Dumbbells at home', icon: 'barbell-outline' },
+      // F-16 REVISED (docs/final-certification-2026-09-05/07-FINDINGS.md,
+      // evidence A12): a kettlebell or band owner had no honest answer here
+      // and had to claim dumbbells or a home gym they do not own. Both keys
+      // are already understood by planEquipmentAllows below, which hard-
+      // filters on the equipment:kettlebell / equipment:band plan tags, so
+      // each answer picks a matching LIBRARY plan. Neither runs the
+      // generator: the F-16 investigation measured it and it is not ready
+      // for either kit.
+      { key: 'kettlebell', label: 'One or two kettlebells, no other weights', icon: 'barbell-outline' },
+      { key: 'band', label: 'Resistance bands, no weights', icon: 'body-outline' },
       { key: 'home', label: 'At home, no equipment', icon: 'home-outline' },
     ],
   },
