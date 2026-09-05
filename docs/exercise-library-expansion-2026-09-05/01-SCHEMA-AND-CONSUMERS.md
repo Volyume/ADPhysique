@@ -179,7 +179,7 @@ that array position becomes) by counting top-level `[` array starts:
 
 | Migration (local v) | Line(s) | Column(s) added |
 |---|---|---|
-| v1 | `database.js:494` | `subregion` (predates version tracking as a dedicated col; also carried in the base CREATE by the time of this read? No — CREATE TABLE at :233 already lists `subregion`; this ALTER is the pre-CREATE-TABLE-catchup path for installs whose table predates it. Tolerant of "duplicate column".) |
+| v1 | `database.js:494` | `subregion` — the base `CREATE TABLE IF NOT EXISTS exercises` (`database.js:221-239`) already lists `subregion` for a brand-new install, but `CREATE TABLE IF NOT EXISTS` is a no-op against an existing table, so this `ALTER` is what actually adds the column for any install whose table predates it. Tolerant of "duplicate column" on installs where it's already there. |
 | v3 | `database.js:565-566` | `increment_kg REAL DEFAULT 2.5`, `exercise_category TEXT DEFAULT 'compound'` |
 | v19 | `database.js:813-814` | `updated_at_v2 INTEGER`, `deleted_at INTEGER` |
 | v38 | `database.js:1358-1366` | `equipment_category`, `machine_type`, `force`, `laterality`, `difficulty`, `machine_ok INTEGER DEFAULT 0`, `home_ok INTEGER DEFAULT 0`, `cue TEXT`, `equipment_profiles TEXT` |
