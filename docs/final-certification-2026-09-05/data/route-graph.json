@@ -1431,14 +1431,14 @@
   },
   "inboundCounts": {
     "ActiveWorkout": 11,
-    "HomeTab": 9,
+    "HomeTab": 8,
     "HowYouTrain": 15,
-    "PlansTab": 4,
+    "PlansTab": 3,
     "BuildWorkout": 4,
     "Subscription": 1,
     "ProfileTab": 2,
     "ProUpgrade": 3,
-    "Home": 2,
+    "Home": 3,
     "WorkoutSummary": 4,
     "FoodSearch": 5,
     "LiftProgress": 3,
@@ -1455,7 +1455,7 @@
     "SettingsProfile": 2,
     "SettingsData": 2,
     "Settings": 2,
-    "Plans": 5,
+    "Plans": 6,
     "SettingsWorkout": 3,
     "ShareCard": 8,
     "NutritionTargets": 9,
@@ -1465,7 +1465,7 @@
     "CoachHeldHistory": 2,
     "NotificationSettings": 4,
     "MesocycleBuilder": 2,
-    "PlanLibrary": 3,
+    "PlanLibrary": 6,
     "ScanBarcode": 3,
     "CoachOutput": 7,
     "SettingsPrivacy": 2,
@@ -1477,6 +1477,7 @@
     "WeeklyCheckIn": 2,
     "CoachReview": 1,
     "HowYouTrainAdd": 5,
+    "PlanDetail": 11,
     "Analytics": 1,
     "TrainingConsiderations": 1,
     "AvoidedMovements": 2,
@@ -1487,7 +1488,6 @@
     "NutritionEducation": 2,
     "ManualBuilder": 1,
     "RoutineDetail": 2,
-    "PlanDetail": 9,
     "Login": 1,
     "PlanUpdate": 1,
     "GoalChangeSummary": 1,
@@ -1538,47 +1538,47 @@
         "target": "ActiveWorkout",
         "kind": "navigate",
         "file": "src/screens/HomeScreen.js",
-        "line": 1504
+        "line": 1525
       },
       {
         "target": "ActiveWorkout",
         "kind": "navigate",
         "file": "src/screens/HomeScreen.js",
-        "line": 1537
+        "line": 1558
       },
       {
         "target": "ActiveWorkout",
         "kind": "navigate",
         "file": "src/screens/HomeScreen.js",
-        "line": 2257
+        "line": 2330
       },
       {
         "target": "ActiveWorkout",
         "tab": "HomeTab",
         "kind": "nested",
         "file": "src/screens/PlanDetailScreen.js",
-        "line": 250
+        "line": 274
       },
       {
         "target": "ActiveWorkout",
         "tab": "HomeTab",
         "kind": "nested",
         "file": "src/screens/PlansScreen.js",
-        "line": 842
+        "line": 861
       },
       {
         "target": "ActiveWorkout",
         "tab": "HomeTab",
         "kind": "nested",
         "file": "src/screens/PlansScreen.js",
-        "line": 1124
+        "line": 1143
       },
       {
         "target": "ActiveWorkout",
         "tab": "HomeTab",
         "kind": "nested",
         "file": "src/screens/RoutineDetailScreen.js",
-        "line": 977
+        "line": 1024
       },
       {
         "target": "ActiveWorkout",
@@ -1610,38 +1610,32 @@
       {
         "target": "HomeTab",
         "kind": "navigate",
-        "file": "src/screens/ManualBuilderScreen.js",
-        "line": 1589
-      },
-      {
-        "target": "HomeTab",
-        "kind": "navigate",
         "file": "src/screens/PlanDetailScreen.js",
-        "line": 250
+        "line": 274
       },
       {
         "target": "HomeTab",
         "kind": "navigate",
         "file": "src/screens/PlansScreen.js",
-        "line": 842
+        "line": 861
       },
       {
         "target": "HomeTab",
         "kind": "navigate",
         "file": "src/screens/PlansScreen.js",
-        "line": 1124
+        "line": 1143
       },
       {
         "target": "HomeTab",
         "kind": "navigate",
         "file": "src/screens/RoutineDetailScreen.js",
-        "line": 958
+        "line": 1005
       },
       {
         "target": "HomeTab",
         "kind": "navigate",
         "file": "src/screens/RoutineDetailScreen.js",
-        "line": 977
+        "line": 1024
       }
     ],
     "HowYouTrain": [
@@ -1655,13 +1649,13 @@
         "target": "HowYouTrain",
         "kind": "navigate",
         "file": "src/components/ExercisePickerModal.js",
-        "line": 493
+        "line": 497
       },
       {
         "target": "HowYouTrain",
         "kind": "navigate",
         "file": "src/screens/ActiveWorkoutScreen.js",
-        "line": 5501
+        "line": 5626
       },
       {
         "target": "HowYouTrain",
@@ -1673,19 +1667,19 @@
         "target": "HowYouTrain",
         "kind": "navigate",
         "file": "src/screens/HomeScreen.js",
-        "line": 2632
+        "line": 2768
       },
       {
         "target": "HowYouTrain",
         "kind": "navigate",
         "file": "src/screens/HomeScreen.js",
-        "line": 2650
+        "line": 2786
       },
       {
         "target": "HowYouTrain",
         "kind": "navigate",
         "file": "src/screens/HomeScreen.js",
-        "line": 2668
+        "line": 2804
       },
       {
         "target": "HowYouTrain",
@@ -1697,19 +1691,19 @@
         "target": "HowYouTrain",
         "kind": "navigate",
         "file": "src/screens/PlansScreen.js",
-        "line": 1667
+        "line": 1704
       },
       {
         "target": "HowYouTrain",
         "kind": "navigate",
         "file": "src/screens/ProOnboardingScreen.js",
-        "line": 1738
+        "line": 1792
       },
       {
         "target": "HowYouTrain",
         "kind": "navigate",
         "file": "src/screens/ProOnboardingScreen.js",
-        "line": 2350
+        "line": 2408
       },
       {
         "target": "HowYouTrain",
@@ -1751,12 +1745,6 @@
       },
       {
         "target": "PlansTab",
-        "kind": "navigate",
-        "file": "src/screens/ManualBuilderScreen.js",
-        "line": 1012
-      },
-      {
-        "target": "PlansTab",
         "tab": "PlansTab",
         "kind": "crossTabRoot",
         "file": "src/screens/WorkoutHistoryScreen.js",
@@ -1789,7 +1777,7 @@
         "tab": "HomeTab",
         "kind": "nested",
         "file": "src/screens/RoutineDetailScreen.js",
-        "line": 958
+        "line": 1005
       }
     ],
     "Subscription": [
@@ -1812,7 +1800,7 @@
         "target": "ProfileTab",
         "kind": "navigate",
         "file": "src/screens/HomeScreen.js",
-        "line": 2082
+        "line": 2128
       }
     ],
     "ProUpgrade": [
@@ -1847,8 +1835,15 @@
         "target": "Home",
         "tab": "HomeTab",
         "kind": "crossTab",
+        "file": "src/screens/ManualBuilderScreen.js",
+        "line": 1051
+      },
+      {
+        "target": "Home",
+        "tab": "HomeTab",
+        "kind": "crossTab",
         "file": "src/screens/WeeklyCheckInScreen.js",
-        "line": 1757
+        "line": 1762
       }
     ],
     "WorkoutSummary": [
@@ -1856,7 +1851,7 @@
         "target": "WorkoutSummary",
         "kind": "replace",
         "file": "src/screens/ActiveWorkoutScreen.js",
-        "line": 3796
+        "line": 3835
       },
       {
         "target": "WorkoutSummary",
@@ -1976,7 +1971,7 @@
         "target": "ProgressPhotos",
         "kind": "navigate",
         "file": "src/screens/WeeklyCheckInScreen.js",
-        "line": 1863
+        "line": 1868
       },
       {
         "target": "ProgressPhotos",
@@ -2003,7 +1998,7 @@
         "target": "WorkoutHistory",
         "kind": "navigate",
         "file": "src/screens/HomeScreen.js",
-        "line": 2118
+        "line": 2191
       }
     ],
     "VolumeHeatmap": [
@@ -2140,7 +2135,7 @@
         "tab": "ProgressTab",
         "kind": "crossTab",
         "file": "src/screens/HomeScreen.js",
-        "line": 2523
+        "line": 2659
       },
       {
         "target": "ExerciseDetail",
@@ -2224,7 +2219,7 @@
         "tab": "PlansTab",
         "kind": "crossTab",
         "file": "src/screens/BlockReflectionScreen.js",
-        "line": 376
+        "line": 382
       },
       {
         "target": "Plans",
@@ -2238,14 +2233,21 @@
         "tab": "PlansTab",
         "kind": "crossTab",
         "file": "src/screens/HomeScreen.js",
-        "line": 2062
+        "line": 2108
       },
       {
         "target": "Plans",
         "tab": "PlansTab",
         "kind": "crossTab",
         "file": "src/screens/HomeScreen.js",
-        "line": 2726
+        "line": 2364
+      },
+      {
+        "target": "Plans",
+        "tab": "PlansTab",
+        "kind": "crossTab",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2862
       }
     ],
     "SettingsWorkout": [
@@ -2260,7 +2262,7 @@
         "target": "SettingsWorkout",
         "kind": "navigate",
         "file": "src/screens/HowYouTrainScreen.js",
-        "line": 1447
+        "line": 1448
       },
       {
         "target": "SettingsWorkout",
@@ -2352,7 +2354,7 @@
         "tab": "ProfileTab",
         "kind": "crossTab",
         "file": "src/screens/HomeScreen.js",
-        "line": 2104
+        "line": 2150
       },
       {
         "target": "NutritionTargets",
@@ -2371,7 +2373,7 @@
         "target": "NutritionTargets",
         "kind": "navigate",
         "file": "src/screens/WeeklyCheckInScreen.js",
-        "line": 1237
+        "line": 1242
       },
       {
         "target": "NutritionTargets",
@@ -2393,7 +2395,7 @@
         "tab": "DiaryTab",
         "kind": "nested",
         "file": "src/screens/CoachOutputScreen.js",
-        "line": 3097
+        "line": 3107
       },
       {
         "target": "MealPlan",
@@ -2419,7 +2421,7 @@
         "target": "DiaryTab",
         "kind": "navigate",
         "file": "src/screens/CoachOutputScreen.js",
-        "line": 3097
+        "line": 3107
       }
     ],
     "Methodology": [
@@ -2427,13 +2429,13 @@
         "target": "Methodology",
         "kind": "navigate",
         "file": "src/screens/CoachOutputScreen.js",
-        "line": 3155
+        "line": 3165
       },
       {
         "target": "Methodology",
         "kind": "navigate",
         "file": "src/screens/CoachOutputScreen.js",
-        "line": 3240
+        "line": 3250
       },
       {
         "target": "Methodology",
@@ -2447,13 +2449,13 @@
         "target": "CoachHeldHistory",
         "kind": "navigate",
         "file": "src/screens/CoachOutputScreen.js",
-        "line": 3239
+        "line": 3249
       },
       {
         "target": "CoachHeldHistory",
         "kind": "navigate",
         "file": "src/screens/CoachOutputScreen.js",
-        "line": 3300
+        "line": 3310
       }
     ],
     "NotificationSettings": [
@@ -2495,7 +2497,7 @@
         "target": "MesocycleBuilder",
         "kind": "navigate",
         "file": "src/screens/PlansScreen.js",
-        "line": 1681
+        "line": 1718
       }
     ],
     "PlanLibrary": [
@@ -2511,13 +2513,32 @@
         "tab": "PlansTab",
         "kind": "crossTab",
         "file": "src/screens/HomeScreen.js",
-        "line": 2435
+        "line": 2542
+      },
+      {
+        "target": "PlanLibrary",
+        "tab": "PlansTab",
+        "kind": "crossTab",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2571
+      },
+      {
+        "target": "PlanLibrary",
+        "kind": "navigate",
+        "file": "src/screens/PlanUpdateScreen.js",
+        "line": 426
       },
       {
         "target": "PlanLibrary",
         "kind": "navigate",
         "file": "src/screens/PlansScreen.js",
-        "line": 1358
+        "line": 1395
+      },
+      {
+        "target": "PlanLibrary",
+        "kind": "navigate",
+        "file": "src/screens/ProGoalSetupScreen.js",
+        "line": 735
       }
     ],
     "ScanBarcode": [
@@ -2553,7 +2574,7 @@
         "tab": "ProfileTab",
         "kind": "crossTab",
         "file": "src/screens/HomeScreen.js",
-        "line": 2071
+        "line": 2117
       },
       {
         "target": "CoachOutput",
@@ -2565,7 +2586,7 @@
         "target": "CoachOutput",
         "kind": "navigate",
         "file": "src/screens/WeeklyCheckInScreen.js",
-        "line": 1631
+        "line": 1636
       },
       {
         "target": "CoachOutput",
@@ -2694,7 +2715,7 @@
         "tab": "ProfileTab",
         "kind": "crossTab",
         "file": "src/screens/HomeScreen.js",
-        "line": 2053
+        "line": 2099
       }
     ],
     "WeeklyCheckIn": [
@@ -2703,7 +2724,7 @@
         "tab": "ProfileTab",
         "kind": "nested",
         "file": "src/screens/HomeScreen.js",
-        "line": 2082
+        "line": 2128
       },
       {
         "target": "WeeklyCheckIn",
@@ -2717,7 +2738,7 @@
         "target": "CoachReview",
         "kind": "navigate",
         "file": "src/screens/HomeScreen.js",
-        "line": 2094
+        "line": 2140
       }
     ],
     "HowYouTrainAdd": [
@@ -2725,7 +2746,7 @@
         "target": "HowYouTrainAdd",
         "kind": "navigate",
         "file": "src/screens/HomeScreen.js",
-        "line": 2248
+        "line": 2321
       },
       {
         "target": "HowYouTrainAdd",
@@ -2737,19 +2758,88 @@
         "target": "HowYouTrainAdd",
         "kind": "navigate",
         "file": "src/screens/HowYouTrainScreen.js",
-        "line": 1273
+        "line": 1274
       },
       {
         "target": "HowYouTrainAdd",
         "kind": "navigate",
         "file": "src/screens/HowYouTrainScreen.js",
-        "line": 1519
+        "line": 1520
       },
       {
         "target": "HowYouTrainAdd",
         "kind": "navigate",
         "file": "src/screens/HowYouTrainScreen.js",
-        "line": 1570
+        "line": 1571
+      }
+    ],
+    "PlanDetail": [
+      {
+        "target": "PlanDetail",
+        "tab": "PlansTab",
+        "kind": "crossTab",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2538
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlanLibraryScreen.js",
+        "line": 802
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlanLibraryScreen.js",
+        "line": 871
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlanLibraryScreen.js",
+        "line": 973
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1034
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1080
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1346
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1359
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1880
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1906
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1955
       }
     ],
     "Analytics": [
@@ -2758,7 +2848,7 @@
         "tab": "ProgressTab",
         "kind": "crossTab",
         "file": "src/screens/HomeScreen.js",
-        "line": 2487
+        "line": 2623
       }
     ],
     "TrainingConsiderations": [
@@ -2766,7 +2856,7 @@
         "target": "TrainingConsiderations",
         "kind": "navigate",
         "file": "src/screens/HowYouTrainScreen.js",
-        "line": 1431
+        "line": 1432
       }
     ],
     "AvoidedMovements": [
@@ -2774,13 +2864,13 @@
         "target": "AvoidedMovements",
         "kind": "navigate",
         "file": "src/screens/HowYouTrainScreen.js",
-        "line": 1462
+        "line": 1463
       },
       {
         "target": "AvoidedMovements",
         "kind": "navigate",
         "file": "src/screens/PlansScreen.js",
-        "line": 1700
+        "line": 1737
       }
     ],
     "Diary": [
@@ -2817,7 +2907,7 @@
         "tab": "ProfileTab",
         "kind": "crossTab",
         "file": "src/screens/PlansScreen.js",
-        "line": 1514
+        "line": 1551
       }
     ],
     "RecipeBuilder": [
@@ -2851,7 +2941,7 @@
         "target": "CoachingReminders",
         "kind": "navigate",
         "file": "src/screens/WeeklyCheckInScreen.js",
-        "line": 1589
+        "line": 1594
       },
       {
         "target": "CoachingReminders",
@@ -2865,7 +2955,7 @@
         "target": "NutritionEducation",
         "kind": "navigate",
         "file": "src/screens/NutritionTargetsScreen.js",
-        "line": 798
+        "line": 828
       },
       {
         "target": "NutritionEducation",
@@ -2879,7 +2969,7 @@
         "target": "ManualBuilder",
         "kind": "navigate",
         "file": "src/screens/PlanDetailScreen.js",
-        "line": 373
+        "line": 397
       }
     ],
     "RoutineDetail": [
@@ -2887,69 +2977,13 @@
         "target": "RoutineDetail",
         "kind": "navigate",
         "file": "src/screens/PlanDetailScreen.js",
-        "line": 629
+        "line": 666
       },
       {
         "target": "RoutineDetail",
         "kind": "navigate",
         "file": "src/screens/PlansScreen.js",
-        "line": 1078
-      }
-    ],
-    "PlanDetail": [
-      {
-        "target": "PlanDetail",
-        "kind": "navigate",
-        "file": "src/screens/PlanLibraryScreen.js",
-        "line": 789
-      },
-      {
-        "target": "PlanDetail",
-        "kind": "navigate",
-        "file": "src/screens/PlanLibraryScreen.js",
-        "line": 858
-      },
-      {
-        "target": "PlanDetail",
-        "kind": "navigate",
-        "file": "src/screens/PlanLibraryScreen.js",
-        "line": 960
-      },
-      {
-        "target": "PlanDetail",
-        "kind": "navigate",
-        "file": "src/screens/PlansScreen.js",
-        "line": 1015
-      },
-      {
-        "target": "PlanDetail",
-        "kind": "navigate",
-        "file": "src/screens/PlansScreen.js",
-        "line": 1061
-      },
-      {
-        "target": "PlanDetail",
-        "kind": "navigate",
-        "file": "src/screens/PlansScreen.js",
-        "line": 1323
-      },
-      {
-        "target": "PlanDetail",
-        "kind": "navigate",
-        "file": "src/screens/PlansScreen.js",
-        "line": 1843
-      },
-      {
-        "target": "PlanDetail",
-        "kind": "navigate",
-        "file": "src/screens/PlansScreen.js",
-        "line": 1869
-      },
-      {
-        "target": "PlanDetail",
-        "kind": "navigate",
-        "file": "src/screens/PlansScreen.js",
-        "line": 1918
+        "line": 1097
       }
     ],
     "Login": [
@@ -2965,7 +2999,7 @@
         "target": "PlanUpdate",
         "kind": "navigate",
         "file": "src/screens/PlansScreen.js",
-        "line": 1589
+        "line": 1626
       }
     ],
     "GoalChangeSummary": [
@@ -2973,7 +3007,7 @@
         "target": "GoalChangeSummary",
         "kind": "replace",
         "file": "src/screens/ProGoalSetupScreen.js",
-        "line": 531
+        "line": 599
       }
     ],
     "ProSetupComplete": [
@@ -2981,7 +3015,7 @@
         "target": "ProSetupComplete",
         "kind": "replace",
         "file": "src/screens/ProOnboardingScreen.js",
-        "line": 1833
+        "line": 1892
       }
     ],
     "SubscriptionPolicy": [
@@ -3230,7 +3264,7 @@
     },
     {
       "file": "src/screens/PlansScreen.js",
-      "line": 1732,
+      "line": 1769,
       "text": "onPress={() => navigation.navigate(card.screen)}"
     }
   ]

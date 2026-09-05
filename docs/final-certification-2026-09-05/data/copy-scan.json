@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-05T16:02:48.959Z",
+  "generatedAt": "2026-09-05T20:24:45.288Z",
   "scope": {
     "dirs": [
       "src/screens",
@@ -117,7 +117,7 @@
     ]
   },
   "counts": {
-    "usSpelling": 4,
+    "usSpelling": 3,
     "aiTells": 14,
     "commercialResidue": 6,
     "placeholders": 0,
@@ -144,15 +144,6 @@
         "rule": "tire (noun)",
         "note": "UK: tyre(s) -- \"tired\"/\"tiring\" (the verb) are unaffected by this word-boundary regex",
         "value": "Plain wording and no hurry matter when concentration tires; nothing in logging runs against a clock.",
-        "kind": "string",
-        "dormant": false
-      },
-      {
-        "file": "src/lib/capability/directory/injuries.js",
-        "line": 35,
-        "rule": "toward",
-        "note": "UK usually: towards",
-        "value": "When you end a temporary change, movements come back conservatively and volume rebuilds gradually toward your own plan. No timetable is assumed.",
         "kind": "string",
         "dormant": false
       },
@@ -558,8 +549,8 @@
         "propName": "title",
         "value": "Skip for now",
         "lines": [
-          2219,
-          2358
+          2278,
+          2417
         ]
       },
       {
