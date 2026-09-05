@@ -175,16 +175,20 @@ export function generatePoolFromLibrary(exercises) {
     if (!ex || !ex.name || !ex.primaryMuscle) continue;
     if (!ex.equipmentCategory || ex.equipmentCategory === 'other') continue;
     if (!isHypertrophyExercise(ex)) continue;
-    // EL-21 (exercise-library-expansion-2026-09-05, F4): a row whose
-    // logging type is not weight_reps (duration/distance/reps_only/
-    // weighted_bodyweight) cannot honestly carry the rep-range/weight
-    // prescription automatic generation writes. Hard screen, the same
-    // shape as NEVER_AUTO — a duration hold or a distance carry stays
-    // fully searchable and manually selectable, never auto-generated.
+    // EL-21 (exercise-library-expansion-2026-09-05, F4): a duration/
+    // distance/reps_only row (Plank, Toe Walk, Mountain Climber...) cannot
+    // honestly carry the rep-range/weight prescription automatic
+    // generation writes. Hard screen, the same shape as NEVER_AUTO — it
+    // stays fully searchable and manually selectable, never auto-generated.
+    // weighted_bodyweight is DELIBERATELY still allowed through: per its
+    // own seed-time documentation it "renders exactly like weight_reps:
+    // weight field + reps field, weight defaults to 0" — Pull-Up, Chin-Up
+    // and Push-Up are weighted_bodyweight and STAPLE/COMMON tier; excluding
+    // them here would silently empty several muscles' generated pools.
     // exerciseType snake_case fallback: this pool also runs over rows read
     // straight from SQLite in code paths that have not camelCased yet.
     const exerciseType = ex.exerciseType ?? ex.exercise_type ?? 'weight_reps';
-    if (exerciseType !== 'weight_reps') continue;
+    if (exerciseType !== 'weight_reps' && exerciseType !== 'weighted_bodyweight') continue;
     const entry = toPoolEntry(ex);
     if (entry.eq.length === 0) continue;
     if (!pool[ex.primaryMuscle]) pool[ex.primaryMuscle] = [];

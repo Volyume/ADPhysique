@@ -27,23 +27,15 @@ const { INJURY_PROFILES } = require('../injuries');
 const { searchProfiles, profileById, OTHER_PROFILE } = require('../index');
 const { movementFamily } = require('../../../exercise/movementFamily');
 
-const fs = require('fs');
-const path = require('path');
+const { CORPUS } = require('../../../exerciseCorpus');
 
+// Re-anchored EL-14 (exercise-library-expansion-2026-09-05): this used to
+// regex-parse seedExercises.js's RAW tuple and SUBREGION_MAP text
+// directly. Both are gone — the corpus is the source of truth.
 function seedRows() {
-  const seedSrc = fs.readFileSync(path.resolve(__dirname, '../../../seedExercises.js'), 'utf8');
-  const start = seedSrc.indexOf('const RAW = [');
-  const body = seedSrc.slice(start, seedSrc.indexOf('\n];', start));
-  const rows = [];
-  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',/g;
-  let m;
-  while ((m = re.exec(body)) !== null) rows.push({ name: m[1], muscle: m[2] });
-  const mapStart = seedSrc.indexOf('const SUBREGION_MAP = {');
-  const mapBody = seedSrc.slice(mapStart, seedSrc.indexOf('\n};', mapStart));
-  const sub = new Map();
-  const subRe = /'((?:[^'\\]|\\.)+)':\s*'([a-z_]+)'/g;
-  while ((m = subRe.exec(mapBody)) !== null) sub.set(m[1].replace(/\\'/g, "'"), m[2]);
-  return rows.map(r => ({ ...r, subregion: sub.get(r.name) ?? null }));
+  return CORPUS.map((entry) => ({
+    name: entry.name, muscle: entry.primaryMuscle, subregion: entry.subregion ?? null,
+  }));
 }
 
 const validCondition = () => ({

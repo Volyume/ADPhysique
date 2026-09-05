@@ -205,6 +205,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
         initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
           exercise, routineExercise, sets: [],
           supersetGroupId: routineExercise?.supersetGroupId ?? null,
+          // EL-9 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+          // hydrate the circuit stamp + round rest alongside the superset id.
+          groupKind: routineExercise?.groupKind ?? null,
+          roundRestSeconds: routineExercise?.roundRestSeconds ?? null,
         }));
       } else {
         // T3 (comprehension-trust-audit-2026-08-06): no routine to read a

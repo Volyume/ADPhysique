@@ -64,4 +64,21 @@ if (typeof result.status === 'number' && result.status !== 0) {
   console.warn(`npm audit exited with ${result.status}; accepted as reporting-only for APK builds.`);
 }
 
+// Exercise-library-expansion-2026-09-05 (EL-3, EL-14, 07-CORPUS-FORMAT.md
+// section 6): the corpus quality gate. Unlike the npm-audit report above,
+// this DOES block the build — a corpus violation (duplicate name, orphan
+// curated-table reference, count below the committed floor, and so on) is
+// a real defect in shipped content, not accepted tooling debt.
+const corpusGuard = spawnSync(
+  process.execPath,
+  [require('node:path').join(__dirname, 'exercise-library', 'validate-corpus.mjs')],
+  { encoding: 'utf8' },
+);
+if (corpusGuard.stdout) console.log(corpusGuard.stdout.trim());
+if (corpusGuard.stderr) console.error(corpusGuard.stderr.trim());
+if (corpusGuard.status !== 0) {
+  console.error('Exercise corpus guard failed — see violations above.');
+  process.exit(corpusGuard.status || 1);
+}
+
 process.exit(0);

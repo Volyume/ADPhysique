@@ -40,15 +40,18 @@ const SOURCE = path.resolve(__dirname, '../seedRoutines.js');
  */
 function loadSeedData() {
   const src = fs.readFileSync(SOURCE, 'utf8');
-  const start = src.indexOf('const REQUIRED_EXERCISES = [');
+  const start = src.indexOf('export const LIBRARY_PLANS = [');
   const end = src.indexOf('export async function seedRoutinesIfNeeded');
   expect(start).toBeGreaterThan(-1);
   expect(end).toBeGreaterThan(start);
   // eslint-disable-next-line no-new-func
-  return new Function(`${src.slice(start, end)}\nreturn { REQUIRED_EXERCISES, LIBRARY_PLANS };`)();
+  return new Function(`${src.slice(start, end).replace('export const LIBRARY_PLANS', 'const LIBRARY_PLANS')}\nreturn { LIBRARY_PLANS };`)();
 }
 
-const { REQUIRED_EXERCISES, LIBRARY_PLANS } = loadSeedData();
+// REQUIRED_EXERCISES removed (EL-15, exercise-library-expansion-2026-09-05):
+// the 18 rows are now ordinary canonical corpus entries; the exercise-list
+// literal this suite guards against array holes is now just LIBRARY_PLANS.
+const { LIBRARY_PLANS } = loadSeedData();
 
 /** Indices present in the index range but absent as own properties. */
 function holeIndices(arr) {
@@ -63,11 +66,6 @@ describe('seedRoutines library data is dense', () => {
   it('LIBRARY_PLANS has no array holes', () => {
     expect(holeIndices(LIBRARY_PLANS)).toEqual([]);
     expect(LIBRARY_PLANS.every((_, i) => Object.prototype.hasOwnProperty.call(LIBRARY_PLANS, i))).toBe(true);
-  });
-
-  it('REQUIRED_EXERCISES has no array holes', () => {
-    expect(holeIndices(REQUIRED_EXERCISES)).toEqual([]);
-    expect(REQUIRED_EXERCISES.every((_, i) => Object.prototype.hasOwnProperty.call(REQUIRED_EXERCISES, i))).toBe(true);
   });
 
   it('nested workout and exercise arrays have no holes either', () => {
@@ -108,18 +106,10 @@ describe('seedRoutines library rows are named', () => {
     expect(unnamed).toEqual([]);
   });
 
-  it('every REQUIRED_EXERCISES row has a non-empty name', () => {
-    const unnamed = REQUIRED_EXERCISES
-      .map((ex, i) => (ex?.name?.trim() ? null : `required exercise ${i}`))
-      .filter(Boolean);
-    expect(unnamed).toEqual([]);
-  });
-
   // Vacuity guard: if the slice above ever stops finding the literals, the
   // sweeps become assertions about empty arrays and pass while checking
   // nothing. A floor, not an exact count, so adding plans never fails this.
   it('actually loaded the library', () => {
     expect(LIBRARY_PLANS.length).toBeGreaterThanOrEqual(40);
-    expect(REQUIRED_EXERCISES.length).toBeGreaterThanOrEqual(1);
   });
 });

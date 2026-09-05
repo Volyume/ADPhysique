@@ -600,11 +600,11 @@ export const POOL = {
   triceps: [
     { n: 'Overhead Cable Tricep Extension', sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
     { n: 'EZ Bar Skull Crusher',            sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Overhead Dumbbell Extension',     sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
+    { n: 'Dumbbell Overhead Tricep Extension', sub: 'overhead', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'] }, // EL-21: 'Overhead Dumbbell Extension' retired into this survivor (exercise-library-expansion-2026-09-05)
     { n: 'JM Press',                        sub: 'overhead', p: 'mod_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['chest'] },
     { n: 'Lying Tricep Extension',          sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
     { n: 'Decline Skull Crusher',           sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Rope Pushdown',                   sub: 'pushdown', p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
+    { n: 'Tricep Pushdown (Rope)',          sub: 'pushdown', p: 'isolation',    eq: ['full_gym', 'machines_cables'] }, // EL-21: 'Rope Pushdown' retired into this survivor (exercise-library-expansion-2026-09-05)
     { n: 'Cable Pushdown (Straight Bar)',   sub: 'pushdown', p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
     { n: 'Machine Tricep Extension',        sub: 'pushdown', p: 'machine',      eq: ['full_gym', 'machines_cables'] },
     { n: 'Close-Grip Bench Press',          sub: 'pushdown', p: 'mod_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['chest', 'front_delts'] },
@@ -633,7 +633,7 @@ export const POOL = {
     { n: 'Stiff-Leg Deadlift',             sub: 'hip_extension', p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['back', 'glutes'] },
     { n: 'Lying Leg Curl',                 sub: 'knee_flexion',  p: 'machine',        eq: ['full_gym', 'machines_cables'] },
     { n: 'Seated Leg Curl',                sub: 'knee_flexion',  p: 'machine',        eq: ['full_gym', 'machines_cables'] },
-    { n: 'Nordic Hamstring Curl',          sub: 'knee_flexion',  p: 'isolation',      eq: ['full_gym', 'bodyweight', 'home_gym'] },
+    { n: 'Nordic Curl',                    sub: 'knee_flexion',  p: 'isolation',      eq: ['full_gym', 'bodyweight', 'home_gym'] }, // EL-21: 'Nordic Hamstring Curl' retired into this survivor (exercise-library-expansion-2026-09-05)
     { n: 'Standing Leg Curl',              sub: 'knee_flexion',  p: 'machine',        eq: ['full_gym', 'machines_cables'] },
   ],
   glutes: [

@@ -10,13 +10,13 @@ coverage floors pinned in `capabilityDemands.test.js`.
 | Axis | Known | Coverage |
 |---|---|---|
 | position | 564 | 100% |
-| floorAccess | 562 | 100% |
+| floorAccess | 564 | 100% |
 | overheadPosition | 564 | 100% |
 | gripDemand | 561 | 99% |
 | unilateralLoadable | 537 | 95% |
 | bilateralUpper | 562 | 100% |
 | bilateralLower | 564 | 100% |
-| axialLoad | 552 | 98% |
+| axialLoad | 560 | 99% |
 | impact | 564 | 100% |
 | balanceDemand | 564 | 100% |
 | weightBearingHands | 548 | 97% |
@@ -25,14 +25,14 @@ coverage floors pinned in `capabilityDemands.test.js`.
 
 | Muscle | Rows | position | grip | overhead | floor | bilat.upper | bilat.lower | balance | axial |
 |---|---|---|---|---|---|---|---|---|---|
-| abs | 62 | 100% | 100% | 100% | 98% | 100% | 100% | 100% | 100% |
+| abs | 62 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | adductors * | 11 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| back | 72 | 100% | 100% | 100% | 100% | 99% | 100% | 100% | 90% |
+| back | 72 | 100% | 100% | 100% | 100% | 99% | 100% | 100% | 99% |
 | biceps | 36 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | calves | 21 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| chest | 58 | 100% | 100% | 100% | 98% | 100% | 100% | 100% | 98% |
+| chest | 58 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | forearms * | 22 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| front_delts | 24 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 96% |
+| front_delts | 24 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | glutes | 37 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | hamstrings | 37 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | neck * | 14 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
@@ -58,9 +58,9 @@ where families exist); their per-axis coverage is in the table above.
 
 (none)
 
-### floorAccess (2 unknown)
+### floorAccess (0 unknown)
 
-Landmine Press [chest/landmine]; Landmine Press (Abs) [abs/landmine]
+(none)
 
 ### overheadPosition (0 unknown)
 
@@ -82,9 +82,9 @@ Machine Y-Raise [rear_delts/machine]; Plate-Loaded Seated Row [back/machine]
 
 (none)
 
-### axialLoad (12 unknown)
+### axialLoad (4 unknown)
 
-Single-Arm Dumbbell Row [back/dumbbell]; Bodyweight Squat [quads/bodyweight]; Box Step-Up [quads/bodyweight]; Lunge [quads/bodyweight]; Band Assisted Pull-Up [back/band]; Band Chest Press [chest/band]; Band Lat Pulldown [back/band]; Band Row [back/band]; Band Shoulder Press [front_delts/band]; Seated Band Lat Pulldown [back/band]; Seated Band Row [back/band]; TRX Row [back/suspension]
+Single-Arm Dumbbell Row [back/dumbbell]; Bodyweight Squat [quads/bodyweight]; Box Step-Up [quads/bodyweight]; Lunge [quads/bodyweight]
 
 ### impact (0 unknown)
 

@@ -13,34 +13,28 @@
  *    rules cannot ride movement families, so demand axes are their lane);
  *  - derivation is pure and deterministic (same input, same output).
  */
-const fs = require('fs');
-const path = require('path');
 const {
   deriveDemandMetadata, validateDemandMetadata, DEMAND_FIELDS,
 } = require('../demands');
+const { CORPUS } = require('../../exerciseCorpus');
 
+// Re-anchored EL-14/EL-21 (exercise-library-expansion-2026-09-05): this
+// used to regex-eval seedExercises.js's RAW tuple text line by line. RAW
+// no longer exists — the structured corpus is the source of truth.
 function rawRows() {
-  const src = fs.readFileSync(path.resolve(__dirname, '../../seedExercises.js'), 'utf8');
-  const start = src.indexOf('const RAW = [');
-  const block = src.slice(start, src.indexOf('\n];', start));
-  const rows = [];
-  for (const line of block.split('\n')) {
-    const t = line.trim();
-    if (!t.startsWith("['")) continue;
-    // eslint-disable-next-line no-eval
-    const arr = (0, eval)(`(${t.replace(/,\s*$/, '')})`);
-    rows.push({
-      name: arr[0], primaryMuscle: arr[1], equipment: arr[3],
-      movementPattern: arr[4], compoundIsolation: arr[5] ? 'compound' : 'isolation',
-    });
-  }
-  return rows;
+  return CORPUS.map((entry) => ({
+    name: entry.name,
+    primaryMuscle: entry.primaryMuscle,
+    equipment: entry.equipment,
+    movementPattern: entry.movementPattern,
+    compoundIsolation: entry.compound ? 'compound' : 'isolation',
+  }));
 }
 
 const rows = rawRows();
 const derived = rows.map((ex) => ({ ex, meta: deriveDemandMetadata(ex) }));
 
-test('the seed parses to the full library (551 rows as of CC27)', () => {
+test('the seed parses to the full library (551 rows as of CC27; EL-14 folded in the 18 template rows and retired 6 duplicates)', () => {
   expect(rows.length).toBeGreaterThanOrEqual(551);
 });
 
@@ -131,7 +125,11 @@ describe('weight_bearing_hands (gap-closure Phase C: the audited eleventh column
   });
 
   test('curated judgement rows: catch phases and front racks load extended wrists', () => {
-    expect(by('Nordic Hamstring Curl')?.weightBearingHands).toBe(true);
+    // EL-21 (exercise-library-expansion-2026-09-05): 'Nordic Hamstring
+    // Curl' retired into 'Nordic Curl' (a duplicate pair) and is no longer
+    // a live corpus row; CURATED_DEMANDS still carries a curated entry for
+    // it by name (harmless), but the survivor is what a real plan resolves.
+    expect(by('Nordic Curl')?.weightBearingHands).toBe(true);
     expect(by('Barbell Front Squat')?.weightBearingHands).toBe(true);
     expect(by('L-Sit Hold')?.weightBearingHands).toBe(true);
     // Reverse Nordic has no catch; the knees and torso carry it.

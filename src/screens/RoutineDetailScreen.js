@@ -944,6 +944,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
         routineExercise,
         sets: [],
         supersetGroupId: routineExercise?.supersetGroupId ?? null,
+        // EL-9 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+        // hydrate the circuit stamp + round rest alongside the superset id.
+        groupKind: routineExercise?.groupKind ?? null,
+        roundRestSeconds: routineExercise?.roundRestSeconds ?? null,
       }));
       startWorkout(workout, initialExercises);
       navigation.navigate('HomeTab', { screen: 'ActiveWorkout', initial: false });
@@ -1075,27 +1079,41 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   const gid = routineExercise?.supersetGroupId;
                   const gIdx = gid ? supersetGroupOrder.indexOf(gid) : -1;
                   if (gIdx < 0) return null;
+                  // EL-9 (docs/exercise-library-expansion-2026-09-05/
+                  // 05-DECISIONS.md): a circuit is a different group KIND,
+                  // shown with the same read-only chip style supersets use.
+                  const isCircuit = routineExercise?.groupKind === 'circuit';
                   return (
                     <>
                       <View style={[styles.supersetChip, live.supersetChip]}>
-                        <Ionicons name="link" size={11} color={t.colors.primary} />
+                        <Ionicons name={isCircuit ? 'repeat' : 'link'} size={11} color={t.colors.primary} />
                         <Text style={[styles.supersetChipText, live.supersetChipText]}>
-                          Superset {String.fromCharCode(65 + gIdx)}
+                          {isCircuit ? 'Circuit' : 'Superset'} {String.fromCharCode(65 + gIdx)}
                         </Text>
                       </View>
                       {/* O17: only the first superset chip in the list carries
                           the explanation -- see firstSupersetIndex above. */}
                       {index === firstSupersetIndex ? (
-                        <InfoTooltip text={GLOSSARY.superset} size={14} />
+                        <InfoTooltip text={isCircuit ? GLOSSARY.circuit : GLOSSARY.superset} size={14} />
                       ) : null}
                     </>
                   );
                 })()}
               </View>
               <Text style={[styles.exerciseMeta, live.exerciseMeta]}>
-                {routineExercise.recommendedSets} sets ·{' '}
-                {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
-                {routineExercise.restSeconds ? ` · ${routineExercise.restSeconds}s rest` : ''}
+                {routineExercise?.groupKind === 'circuit' ? (
+                  <>
+                    {routineExercise.recommendedSets} round{routineExercise.recommendedSets === 1 ? '' : 's'} ·{' '}
+                    {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
+                    {routineExercise.roundRestSeconds ? ` · ${routineExercise.roundRestSeconds}s between rounds` : ''}
+                  </>
+                ) : (
+                  <>
+                    {routineExercise.recommendedSets} sets ·{' '}
+                    {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
+                    {routineExercise.restSeconds ? ` · ${routineExercise.restSeconds}s rest` : ''}
+                  </>
+                )}
               </Text>
               {routineExercise.startingWeight > 0 ? (
                 <Text style={[styles.exerciseStartWeight, live.exerciseStartWeight]}>

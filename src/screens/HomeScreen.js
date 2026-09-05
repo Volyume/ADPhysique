@@ -1444,6 +1444,10 @@ export default function HomeScreen({ navigation, route }) {
         // Hydrate plan-time superset pairings onto the workout entry so
         // ActiveWorkoutScreen renders them as paired from the start.
         supersetGroupId: routineExercise?.supersetGroupId ?? null,
+        // EL-9 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+        // hydrate the circuit stamp + round rest alongside the superset id.
+        groupKind: routineExercise?.groupKind ?? null,
+        roundRestSeconds: routineExercise?.roundRestSeconds ?? null,
       }));
       pendingStartRef.current = {
         routineId: routine.id,
@@ -1555,6 +1559,10 @@ export default function HomeScreen({ navigation, route }) {
         initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
           exercise, routineExercise, sets: [],
           supersetGroupId: routineExercise?.supersetGroupId ?? null,
+          // EL-9 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+          // hydrate the circuit stamp + round rest alongside the superset id.
+          groupKind: routineExercise?.groupKind ?? null,
+          roundRestSeconds: routineExercise?.roundRestSeconds ?? null,
         }));
       } else {
         // No routine linked, fall back to exercises from the session's sets

@@ -68,6 +68,10 @@ export const SUBREGIONS_BY_MUSCLE = Object.freeze({
   back: [
     'vertical_pull', 'horizontal_row', 'horizontal_lat', 'upper_mid_row',
     'shoulder_extension', 'spinal_erector', 'hip_extension',
+    // 'Face Pull (Rope)' is tagged primaryMuscle back with this rear-delt-
+    // style subregion in the pre-existing corpus (not introduced by this
+    // campaign) — carried through honestly rather than silently narrowed.
+    'face_pull',
   ],
   front_delts: ['overhead_press'],
   side_delts: ['lateral_raise', 'overhead_press'],

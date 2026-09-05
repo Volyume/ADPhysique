@@ -78,6 +78,11 @@ export const GLOSSARY = {
   // session teach the same thing.
   superset:
     'Two or more exercises done back-to-back with no rest between them, then a full rest before repeating.',
+  // EL-9 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md): the
+  // circuit's own gloss, mirroring the superset entry above so the builder
+  // and the live session teach the same thing.
+  circuit:
+    'A round of exercises done back-to-back with no rest between stations, then a full rest before the next round.',
   // NV-4: baseline vocabulary glosses for the "never lifted" persona, so the
   // two most foundational training words in the product are defined
   // somewhere. Self-naming (like rir/redS above) since these surface as a

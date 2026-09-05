@@ -228,35 +228,25 @@ describe('deriveExerciseMetadata (integration)', () => {
 // values. This is the guard that catches a new exercise (or an equipment
 // typo) that the derivers don't understand.
 describe('coverage over the whole seed library', () => {
-  // Re-parse RAW the same way the seed does, without touching the DB.
-  const seedSrc = require('fs').readFileSync(
-    require('path').join(__dirname, '../seedExercises.js'),
-    'utf8',
-  );
+  // Re-anchored EL-14/EL-21 (exercise-library-expansion-2026-09-05): this
+  // used to regex-parse seedExercises.js's RAW tuple text directly. RAW no
+  // longer exists — the structured corpus is the source of truth.
+  const { CORPUS } = require('../exerciseCorpus');
 
   function parseRaw() {
-    const start = seedSrc.indexOf('const RAW = [');
-    const end = seedSrc.indexOf('\n];', start);
-    const body = seedSrc.slice(start, end);
-    const rows = [];
-    const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
-    let m;
-    while ((m = re.exec(body)) !== null) {
-      rows.push({
-        name: m[1],
-        primaryMuscle: m[2],
-        equipment: m[4],
-        movementPattern: m[5],
-        compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
-        fatigueCost: parseInt(m[9], 10),
-      });
-    }
-    return rows;
+    return CORPUS.map((entry) => ({
+      name: entry.name,
+      primaryMuscle: entry.primaryMuscle,
+      equipment: entry.equipment,
+      movementPattern: entry.movementPattern,
+      compoundIsolation: entry.compound ? 'compound' : 'isolation',
+      fatigueCost: entry.fatigueCost,
+    }));
   }
 
   const VALID_CATEGORIES = new Set([
     'barbell', 'dumbbell', 'cable', 'machine_selectorised', 'machine_plate_loaded',
-    'smith', 'bodyweight', 'band', 'kettlebell', 'landmine', 'other',
+    'smith', 'bodyweight', 'band', 'kettlebell', 'landmine', 'suspension', 'other',
   ]);
   const VALID_PROFILES = new Set([
     'full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates', 'home_gym', 'bodyweight',

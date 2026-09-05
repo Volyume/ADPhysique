@@ -111,6 +111,11 @@ const LATERALITY_SET = new Set(LATERALITY);
 const LOAD_CHARACTER_SET = new Set(LOAD_CHARACTER);
 const EXERCISE_TYPE_SET = new Set(EXERCISE_TYPES);
 
+const baselineNames = new Set(
+  JSON.parse(readFileSync(join(ROOT, 'docs/exercise-library-expansion-2026-09-05/data/corpus-baseline-names.json'), 'utf8')).names,
+);
+
+let nullAxisCount = 0;
 for (const entry of CORPUS) {
   const row = corpusEntryToSeedRow(entry);
   const ctx = `"${entry.name}"`;
@@ -147,11 +152,18 @@ for (const entry of CORPUS) {
   if (entry.sfr < 1 || entry.sfr > 5) fail(`${ctx}: sfr ${entry.sfr} outside 1-5`);
 
   // ── 9. Demand axes: null only with an explicit unknownAxes reason ───────
+  // Grandfathered (report, don't fail) for every name already live at the
+  // EL-14 format-migration landing — see corpus-floor.json
+  // demandAxesRequireReason for why. A name NOT in that baseline (added by
+  // a later expansion stage) is held to the full rule immediately.
   for (const axis of DEMAND_FIELDS) {
     if (row[axis] == null) {
       const declared = (entry.unknownAxes ?? []).find((u) => u.axis === axis);
       if (!declared || !declared.reason) {
-        fail(`${ctx}: demand axis "${axis}" is null with no unknownAxes reason declared`);
+        nullAxisCount++;
+        if (demandAxesRequireReason() || !baselineNames.has(entry.name)) {
+          fail(`${ctx}: demand axis "${axis}" is null with no unknownAxes reason declared`);
+        }
       }
     }
   }
@@ -178,6 +190,15 @@ function cuesRequired() {
     return floor.cuesRequired === true;
   } catch {
     return false; // fail closed to "not required" only if the floor file is missing entirely
+  }
+}
+
+function demandAxesRequireReason() {
+  try {
+    const floor = JSON.parse(readFileSync(join(ROOT, 'docs/exercise-library-expansion-2026-09-05/data/corpus-floor.json'), 'utf8'));
+    return floor.demandAxesRequireReason === true;
+  } catch {
+    return false;
   }
 }
 
@@ -235,5 +256,5 @@ if (errors.length) {
   for (const e of errors) console.error(`  - ${e}`);
   process.exitCode = 1;
 } else {
-  console.log(`validate-corpus: OK — ${CORPUS.length} live rows, ${RETIRED_ENTRIES.length} retired, 0 violations.`);
+  console.log(`validate-corpus: OK — ${CORPUS.length} live rows, ${RETIRED_ENTRIES.length} retired, 0 violations (${nullAxisCount} grandfathered null-axis instances not yet annotated with unknownAxes; see corpus-floor.json demandAxesRequireReason).`);
 }

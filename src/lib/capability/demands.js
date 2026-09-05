@@ -153,8 +153,12 @@ export const CURATED_DEMANDS = Object.freeze({
   'Cable Fly (Low to High)': { position: 'standing' },
   // Face pull: standing cable pull at face height - no overhead reach.
   'Face Pull': { position: 'standing', overheadPosition: false },
-  // Back extension apparatus: no grip needed, trunk supported.
-  'Back Extension (45-degree)': { position: 'mixed', gripDemand: 'none', balanceDemand: 'supported', floorAccess: false },
+  // 'Back Extension (45-degree)' removed (exercise-library-expansion-
+  // 2026-09-05, validate-corpus.mjs finding): no corpus row has ever had
+  // this exact name — the real 45-degree back-extension movement is
+  // 'Hyperextension (Back Extension)', which already carries its own
+  // (richer) entry below. This key was dead on arrival and never applied
+  // to any row; removed rather than left as silently-inert curation.
   // Captain's chair knee raise: forearms on pads.
   // Wall sit: standing profile against support, no floor, no grip.
   'Wall Sit': { position: 'standing', balanceDemand: 'supported', floorAccess: false, gripDemand: 'none', bilateralLower: true },

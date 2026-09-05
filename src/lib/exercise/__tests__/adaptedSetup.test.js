@@ -16,24 +16,21 @@
  *     impact rows get nothing, and the class/specific merge lets the
  *     richer per-exercise line win.
  */
-const fs = require('fs');
-const path = require('path');
 const {
   ADAPTED_SETUP, SETUP_CONTEXT, SETUP_CONTEXT_LABELS, CLASS_TEXT,
   adaptedSetupFor, materialContextsFor,
 } = require('../adaptedSetup');
 const { directoryWordingViolation } = require('../../capability/directory/schema');
+const { CORPUS, RETIRED_ENTRIES } = require('../../exerciseCorpus');
 
+// Re-anchored EL-14 (exercise-library-expansion-2026-09-05): this used to
+// regex-parse seedExercises.js's RAW tuple text plus seedRoutines.js's
+// REQUIRED_EXERCISES literal. Both are gone — the corpus is the source of
+// truth. Retired names are included too (ADAPTED_SETUP entries reference
+// them by their pre-retirement name and remain valid guidance text for
+// that canonical id).
 function seedNames() {
-  const src = fs.readFileSync(path.resolve(__dirname, '../../seedExercises.js'), 'utf8');
-  const start = src.indexOf('const RAW = [');
-  const body = src.slice(start, src.indexOf('\n];', start));
-  const names = new Set();
-  const re = /\[\s*'([^']+)',/g;
-  let m;
-  while ((m = re.exec(body)) !== null) names.add(m[1]);
-  for (const rm of src.matchAll(/name: '((?:[^'\\]|\\.)*)',\s*primaryMuscle/g)) names.add(rm[1]);
-  return names;
+  return new Set([...CORPUS.map((e) => e.name), ...RETIRED_ENTRIES.map((e) => e.name)]);
 }
 
 const CONTEXTS = new Set(Object.values(SETUP_CONTEXT));

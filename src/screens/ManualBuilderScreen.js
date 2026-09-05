@@ -60,6 +60,17 @@ const DAY_COUNT_OPTIONS = [2, 3, 4, 5, 6];
 // builder.
 const DEFAULT_SETS = 3;
 const DEFAULT_REST = 90;
+// EL-9 circuit model (docs/exercise-library-expansion-2026-09-05/
+// 05-DECISIONS.md): rounds are the members' recommended_sets, kept equal
+// within the group; round rest is the between-round rest, a template
+// constant never auto-shortened (EL-10). Defaults picked to read as an
+// ordinary starter circuit; both are adjustable per group.
+const DEFAULT_ROUNDS = 3;
+const MIN_ROUNDS = 2;
+const MAX_ROUNDS = 6;
+const DEFAULT_ROUND_REST = 90;
+const MIN_ROUND_REST = 30;
+const MAX_ROUND_REST = 180;
 // Hit slop for the small +/- stepper buttons, ported verbatim from
 // BuildWorkoutScreen's stepBtn touchables.
 const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
@@ -352,6 +363,11 @@ export default function ManualBuilderScreen({ navigation, route }) {
               repsMax: routineExercise.recommendedRepsMax ?? 12,
               restSeconds: routineExercise.restSeconds ?? DEFAULT_REST,
               supersetGroupId: routineExercise.supersetGroupId ?? null,
+              // EL-9: 'circuit' | null (superset/no group). round_rest_seconds
+              // travels with every member so ungrouping one member never
+              // loses the group's own setting for the rest.
+              groupKind: routineExercise.groupKind ?? null,
+              roundRestSeconds: routineExercise.roundRestSeconds ?? null,
             })),
           };
         }));
@@ -667,6 +683,101 @@ export default function ManualBuilderScreen({ navigation, route }) {
     }));
   }
 
+  // EL-9 circuit model (docs/exercise-library-expansion-2026-09-05/
+  // 05-DECISIONS.md): a circuit is the SAME group primitive as a superset
+  // (shared supersetGroupId, cycled A -> B -> C -> A by the live screen's
+  // existing group advance) with group_kind:'circuit' and two behaviours
+  // on top - rounds (recommended_sets) equalised across every member via
+  // ONE group rounds stepper, and every member's rest_seconds forced to 0
+  // (transition; the group's round_rest_seconds is the rest that fires
+  // after the last station instead). Each member's PREVIOUS sets/rest are
+  // captured so Ungroup can restore them exactly, never guess a default.
+  function handleGroupCircuit(dayIndex) {
+    const selected = supersetSelection[dayIndex];
+    if (!selected || selected.size < 2) {
+      toast.show('Select at least two exercises to make a circuit', { variant: 'warning' });
+      return;
+    }
+    haptics.selection();
+    const groupId = `c-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    setDayList(prev => prev.map((d, i) => {
+      if (i !== dayIndex) return d;
+      const members = d.exercises.filter(ex => selected.has(ex.localId));
+      // Starting rounds: the highest sets count already dialled in among
+      // the selected exercises, clamped to the 2-6 template range - a
+      // calmer starting point than always resetting to the bare default.
+      const startingRounds = Math.max(
+        MIN_ROUNDS,
+        Math.min(MAX_ROUNDS, Math.max(DEFAULT_ROUNDS, ...members.map(m => m.sets || 0))),
+      );
+      return {
+        ...d,
+        exercises: d.exercises.map(ex => (
+          selected.has(ex.localId)
+            ? {
+              ...ex,
+              supersetGroupId: groupId,
+              groupKind: 'circuit',
+              // Restored verbatim on Ungroup.
+              _preCircuitSets: ex.sets,
+              _preCircuitRestSeconds: ex.restSeconds,
+              sets: startingRounds,
+              restSeconds: 0, // transition between stations, no rest (EL-9)
+              roundRestSeconds: DEFAULT_ROUND_REST,
+            }
+            : ex
+        )),
+      };
+    }));
+    clearSupersetSelection(dayIndex);
+  }
+
+  function handleUngroupCircuit(dayIndex, groupId) {
+    haptics.commit();
+    setDayList(prev => prev.map((d, i) => {
+      if (i !== dayIndex) return d;
+      return {
+        ...d,
+        exercises: d.exercises.map(ex => {
+          if (ex.supersetGroupId !== groupId) return ex;
+          const { _preCircuitSets, _preCircuitRestSeconds, ...rest } = ex;
+          return {
+            ...rest,
+            supersetGroupId: null,
+            groupKind: null,
+            roundRestSeconds: null,
+            sets: _preCircuitSets ?? ex.sets,
+            restSeconds: _preCircuitRestSeconds ?? DEFAULT_REST,
+          };
+        }),
+      };
+    }));
+  }
+
+  // The group's rounds stepper writes recommended_sets to EVERY member at
+  // once (EL-9: rounds are kept equal within a circuit by the builder).
+  function setGroupRounds(dayIndex, groupId, rounds) {
+    const next = Math.max(MIN_ROUNDS, Math.min(MAX_ROUNDS, rounds));
+    setDayList(prev => prev.map((d, i) => (i !== dayIndex ? d : {
+      ...d,
+      exercises: d.exercises.map(ex => (
+        ex.supersetGroupId === groupId ? { ...ex, sets: next } : ex
+      )),
+    })));
+  }
+
+  // The group's round-rest stepper writes round_rest_seconds to EVERY
+  // member (read off whichever station finishes the round).
+  function setGroupRoundRest(dayIndex, groupId, seconds) {
+    const next = Math.max(MIN_ROUND_REST, Math.min(MAX_ROUND_REST, seconds));
+    setDayList(prev => prev.map((d, i) => (i !== dayIndex ? d : {
+      ...d,
+      exercises: d.exercises.map(ex => (
+        ex.supersetGroupId === groupId ? { ...ex, roundRestSeconds: next } : ex
+      )),
+    })));
+  }
+
   // ── Target steppers ───────────────────────────────────────────────────────
   // Single clamp-and-set helper behind every target change (sets, reps min/max,
   // rest), the same Math.max/Math.min clamp BuildWorkoutScreen's target editors
@@ -816,6 +927,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
         await addExerciseToRoutine(
           routineId, ex.id, j, ex.repsMin, ex.repsMax, null, ex.sets,
           null, ex.restSeconds ?? null, ex.supersetGroupId ?? null,
+          true, null, ex.groupKind ?? null, ex.roundRestSeconds ?? null,
         );
       }
     }
@@ -1141,6 +1253,11 @@ export default function ManualBuilderScreen({ navigation, route }) {
                     const groupIdx = ex.supersetGroupId ? groupOrder.indexOf(ex.supersetGroupId) : -1;
                     const isFirst = exIdx === 0;
                     const isLast = exIdx === day.exercises.length - 1;
+                    // EL-9: a circuit group shows its rounds/round-rest
+                    // steppers once, on the group's first member in day order.
+                    const isCircuit = ex.groupKind === 'circuit';
+                    const isFirstOfGroup = groupIdx >= 0
+                      && day.exercises.findIndex(e => e.supersetGroupId === ex.supersetGroupId) === exIdx;
                     return (
                       <TouchableOpacity
                         style={[styles.exRow, live.exRow, isSelected && [styles.exRowSelected, live.exRowSelected]]}
@@ -1163,25 +1280,61 @@ export default function ManualBuilderScreen({ navigation, route }) {
                             <Text style={[styles.exName, live.exName]}>{ex.name}</Text>
                             {groupIdx >= 0 && (
                               <View style={[styles.ssChip, live.ssChip]}>
-                                <Ionicons name="link" size={11} color={t.colors.primary} />
+                                <Ionicons name={isCircuit ? 'repeat' : 'link'} size={11} color={t.colors.primary} />
                                 <Text style={[styles.ssChipText, live.ssChipText]}>
-                                  Superset {String.fromCharCode(65 + groupIdx)}
+                                  {isCircuit ? 'Circuit' : 'Superset'} {String.fromCharCode(65 + groupIdx)}
                                 </Text>
                               </View>
                             )}
                           </View>
+                          {/* EL-9: the group header, plus its rounds/round-rest
+                              steppers, shown once on the first member. */}
+                          {isCircuit && isFirstOfGroup && (
+                            <Text style={[styles.groupBtnText, live.groupBtnText]}>
+                              Circuit {String.fromCharCode(65 + groupIdx)} · {ex.sets} round{ex.sets === 1 ? '' : 's'} · {formatRest(ex.roundRestSeconds ?? DEFAULT_ROUND_REST)} between rounds
+                            </Text>
+                          )}
+                          {isCircuit && isFirstOfGroup && (
+                            <View style={styles.controls}>
+                              <TargetStepper
+                                label="Rounds"
+                                value={ex.sets}
+                                displayValue={ex.sets}
+                                valueLabel={`${ex.sets} rounds`}
+                                decreaseLabel="Decrease rounds"
+                                increaseLabel="Increase rounds"
+                                min={MIN_ROUNDS}
+                                max={MAX_ROUNDS}
+                                onChange={(next) => setGroupRounds(dayIdx, ex.supersetGroupId, next)}
+                              />
+                              <TargetStepper
+                                label="Between rounds"
+                                value={ex.roundRestSeconds ?? DEFAULT_ROUND_REST}
+                                displayValue={formatRest(ex.roundRestSeconds ?? DEFAULT_ROUND_REST)}
+                                valueLabel={`${formatRest(ex.roundRestSeconds ?? DEFAULT_ROUND_REST)} between rounds`}
+                                decreaseLabel="Decrease rest between rounds"
+                                increaseLabel="Increase rest between rounds"
+                                min={MIN_ROUND_REST}
+                                max={MAX_ROUND_REST}
+                                step={15}
+                                onChange={(next) => setGroupRoundRest(dayIdx, ex.supersetGroupId, next)}
+                              />
+                            </View>
+                          )}
                           <View style={styles.controls}>
-                            <TargetStepper
-                              label="Sets"
-                              value={ex.sets}
-                              displayValue={ex.sets}
-                              valueLabel={`${ex.sets} sets`}
-                              decreaseLabel={`Decrease sets for ${ex.name}`}
-                              increaseLabel={`Increase sets for ${ex.name}`}
-                              min={1}
-                              max={20}
-                              onChange={(next) => setExerciseNumber(dayIdx, ex.localId, 'sets', next, 1, 20)}
-                            />
+                            {!isCircuit && (
+                              <TargetStepper
+                                label="Sets"
+                                value={ex.sets}
+                                displayValue={ex.sets}
+                                valueLabel={`${ex.sets} sets`}
+                                decreaseLabel={`Decrease sets for ${ex.name}`}
+                                increaseLabel={`Increase sets for ${ex.name}`}
+                                min={1}
+                                max={20}
+                                onChange={(next) => setExerciseNumber(dayIdx, ex.localId, 'sets', next, 1, 20)}
+                              />
+                            )}
                             <TargetStepper
                               label="Reps min"
                               value={ex.repsMin}
@@ -1204,18 +1357,20 @@ export default function ManualBuilderScreen({ navigation, route }) {
                               max={50}
                               onChange={(next) => setExerciseNumber(dayIdx, ex.localId, 'repsMax', next, 1, 50)}
                             />
-                            <TargetStepper
-                              label="Rest"
-                              value={ex.restSeconds ?? DEFAULT_REST}
-                              displayValue={formatRest(ex.restSeconds ?? DEFAULT_REST)}
-                              valueLabel={`Rest ${formatRest(ex.restSeconds ?? DEFAULT_REST)}`}
-                              decreaseLabel={`Decrease rest for ${ex.name}`}
-                              increaseLabel={`Increase rest for ${ex.name}`}
-                              min={30}
-                              max={600}
-                              step={15}
-                              onChange={(next) => setExerciseNumber(dayIdx, ex.localId, 'restSeconds', next, 30, 600)}
-                            />
+                            {!isCircuit && (
+                              <TargetStepper
+                                label="Rest"
+                                value={ex.restSeconds ?? DEFAULT_REST}
+                                displayValue={formatRest(ex.restSeconds ?? DEFAULT_REST)}
+                                valueLabel={`Rest ${formatRest(ex.restSeconds ?? DEFAULT_REST)}`}
+                                decreaseLabel={`Decrease rest for ${ex.name}`}
+                                increaseLabel={`Increase rest for ${ex.name}`}
+                                min={30}
+                                max={600}
+                                step={15}
+                                onChange={(next) => setExerciseNumber(dayIdx, ex.localId, 'restSeconds', next, 30, 600)}
+                              />
+                            )}
                           </View>
                         </View>
                         <View style={styles.reorderCol}>
@@ -1244,10 +1399,12 @@ export default function ManualBuilderScreen({ navigation, route }) {
                         </View>
                         {groupIdx >= 0 && (
                           <TouchableOpacity
-                            onPress={() => handleUngroupSuperset(dayIdx, ex.supersetGroupId)}
+                            onPress={() => (isCircuit
+                              ? handleUngroupCircuit(dayIdx, ex.supersetGroupId)
+                              : handleUngroupSuperset(dayIdx, ex.supersetGroupId))}
                             hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
                             accessibilityRole="button"
-                            accessibilityLabel={`Ungroup superset ${String.fromCharCode(65 + groupIdx)}`}
+                            accessibilityLabel={`Ungroup ${isCircuit ? 'circuit' : 'superset'} ${String.fromCharCode(65 + groupIdx)}`}
                           >
                             <Ionicons name="close-circle-outline" size={16} color={t.colors.textMuted} />
                           </TouchableOpacity>
@@ -1287,6 +1444,24 @@ export default function ManualBuilderScreen({ navigation, route }) {
                           building their own plan (no equivalent of the
                           in-session teaching modal here). */}
                       <InfoTooltip text={GLOSSARY.superset} size={14} />
+                    </View>
+                  )}
+                  {/* EL-9: the circuit action sits beside the existing
+                      superset action rather than replacing it - a circuit
+                      is a different group KIND, not a superset variant. */}
+                  {selected.size >= 2 && (
+                    <View style={styles.groupBtnRow}>
+                      <Button
+                        title={`Make circuit of ${selected.size}`}
+                        icon="repeat"
+                        variant="tertiary"
+                        size="sm"
+                        onPress={() => handleGroupCircuit(dayIdx)}
+                        style={styles.groupBtn}
+                        textStyle={[styles.groupBtnText, live.groupBtnText]}
+                        accessibilityLabel={`Make a circuit of ${selected.size} exercises`}
+                      />
+                      <InfoTooltip text={GLOSSARY.circuit} size={14} />
                     </View>
                   )}
                 </View>

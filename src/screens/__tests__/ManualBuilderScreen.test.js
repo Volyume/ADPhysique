@@ -271,6 +271,120 @@ describe('ManualBuilderScreen — giant sets (3+ exercises, campaign item 21)', 
   });
 });
 
+describe('ManualBuilderScreen — circuits (EL-9, docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md)', () => {
+  // addExerciseToRoutine positional args: (routineId, exerciseId, order,
+  // repsMin, repsMax, notes, sets, startingWeight, restSeconds,
+  // supersetGroupId, scheduleSync, selectionReason, groupKind, roundRestSeconds).
+  const SETS = 6;
+  const REST = 8;
+  const GROUP_ID = 9;
+  const GROUP_KIND = 12;
+  const ROUND_REST = 13;
+
+  test('"Make circuit" groups exercises with rounds equalised, no rest between stations, and a round rest', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Circuit Plan');
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Goblet Squat', primaryMuscle: 'quads' }); });
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-b', name: 'Push-Up', primaryMuscle: 'chest' }); });
+
+    press(tree, 'Goblet Squat, 3 sets');
+    press(tree, 'Push-Up, 3 sets');
+    press(tree, 'Make a circuit of 2 exercises');
+
+    press(tree, 'Remove Day 2');
+    await act(async () => { press(tree, 'Save and activate'); });
+
+    const calls = addExerciseToRoutine.mock.calls;
+    expect(calls).toHaveLength(2);
+    // Both members share ONE group id and carry 'circuit'.
+    expect(calls[0][GROUP_ID]).toBeTruthy();
+    expect(calls[0][GROUP_ID]).toBe(calls[1][GROUP_ID]);
+    expect(calls[0][GROUP_KIND]).toBe('circuit');
+    expect(calls[1][GROUP_KIND]).toBe('circuit');
+    // Rounds equalised across every member.
+    expect(calls[0][SETS]).toBe(calls[1][SETS]);
+    // No rest between stations (transition), the round rest fires instead.
+    expect(calls[0][REST]).toBe(0);
+    expect(calls[1][REST]).toBe(0);
+    expect(calls[0][ROUND_REST]).toBe(90); // default round rest
+    expect(calls[1][ROUND_REST]).toBe(90);
+  });
+
+  test('the group rounds stepper writes the SAME rounds to every member', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Circuit Rounds Plan');
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Goblet Squat', primaryMuscle: 'quads' }); });
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-b', name: 'Push-Up', primaryMuscle: 'chest' }); });
+    press(tree, 'Goblet Squat, 3 sets');
+    press(tree, 'Push-Up, 3 sets');
+    press(tree, 'Make a circuit of 2 exercises');
+
+    // The rounds and round-rest steppers are shown once, on the group's
+    // first member, and each writes to EVERY member.
+    press(tree, 'Increase rounds');
+    press(tree, 'Increase rounds');
+    press(tree, 'Increase rest between rounds');
+
+    press(tree, 'Remove Day 2');
+    await act(async () => { press(tree, 'Save and activate'); });
+
+    const calls = addExerciseToRoutine.mock.calls;
+    expect(calls[0][SETS]).toBe(calls[1][SETS]); // still equal after the bump
+    expect(calls[0][SETS]).toBeGreaterThan(3);
+    expect(calls[0][ROUND_REST]).toBe(calls[1][ROUND_REST]);
+    expect(calls[0][ROUND_REST]).toBe(105); // 90 default + one 15s bump
+  });
+
+  test('Ungroup restores each member\'s pre-circuit sets and rest exactly', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Circuit Ungroup Plan');
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Goblet Squat', primaryMuscle: 'quads' }); });
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-b', name: 'Push-Up', primaryMuscle: 'chest' }); });
+
+    // Dial in distinct starting values before grouping, so restoration can
+    // be proven exact rather than coincidentally matching a default.
+    press(tree, 'Increase sets for Goblet Squat');
+    press(tree, 'Increase rest for Push-Up');
+
+    press(tree, 'Goblet Squat, 4 sets');
+    press(tree, 'Push-Up, 3 sets');
+    press(tree, 'Make a circuit of 2 exercises');
+    press(tree, 'Ungroup circuit A');
+
+    press(tree, 'Remove Day 2');
+    await act(async () => { press(tree, 'Save and activate'); });
+
+    const calls = addExerciseToRoutine.mock.calls;
+    const squat = calls.find(c => c[1] === 'ex-a');
+    const pushup = calls.find(c => c[1] === 'ex-b');
+    expect(squat[GROUP_ID]).toBeNull();
+    expect(squat[GROUP_KIND]).toBeNull();
+    expect(squat[SETS]).toBe(4); // restored, not left at the circuit's rounds
+    expect(pushup[REST]).toBe(105); // restored (90 default + one 15s bump)
+  });
+});
+
 describe('ManualBuilderScreen — target steppers (S5)', () => {
   test('sets, reps and rest are editable via +/- steppers, not read-only text', async () => {
     let tree;
@@ -368,6 +482,10 @@ describe('ManualBuilderScreen — editing an existing plan (S5)', () => {
     expect(removeExerciseFromRoutine).toHaveBeenCalledWith('re-1');
     expect(addExerciseToRoutine).toHaveBeenCalledWith(
       'routine-existing-1', 'ex-bench', 0, 6, 10, null, 4, null, 120, null,
+      // EL-9 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+      // groupKind/roundRestSeconds trail every write; null for an ordinary,
+      // ungrouped exercise.
+      true, null, null, null,
     );
     expect(nav.goBack).toHaveBeenCalled();
   });

@@ -144,6 +144,35 @@ describe('generatePoolFromLibrary', () => {
     expect(generatePoolFromLibrary([])).toEqual({});
     expect(generatePoolFromLibrary(null)).toEqual({});
   });
+
+  // EL-21 (exercise-library-expansion-2026-09-05, F4): a row whose
+  // logging type is not weight_reps cannot honestly take an automatic
+  // rep-range/weight prescription. Hard screen, the same shape as
+  // NEVER_AUTO — searchable and manually selectable, never auto-generated.
+  test('a non-weight_reps exerciseType is hard-screened out of automatic generation', () => {
+    const pool = generatePoolFromLibrary([
+      { name: 'Plank', primaryMuscle: 'abs', exerciseType: 'duration', equipmentCategory: 'bodyweight', equipmentProfiles: ['bodyweight'] },
+      { name: 'Toe Walk', primaryMuscle: 'tibialis', exerciseType: 'distance', equipmentCategory: 'bodyweight', equipmentProfiles: ['bodyweight'] },
+      { name: 'Mountain Climber', primaryMuscle: 'abs', exerciseType: 'reps_only', equipmentCategory: 'bodyweight', equipmentProfiles: ['bodyweight'] },
+      { name: 'Push-Up', primaryMuscle: 'chest', exerciseType: 'weighted_bodyweight', equipmentCategory: 'bodyweight', equipmentProfiles: ['bodyweight'] },
+      { name: 'Barbell Curl', primaryMuscle: 'biceps', exerciseType: 'weight_reps', equipmentCategory: 'barbell', equipmentProfiles: ['full_gym'] },
+      { name: 'No Type Field', primaryMuscle: 'chest', equipmentCategory: 'barbell', equipmentProfiles: ['full_gym'] },
+    ]);
+    const allNames = Object.values(pool).flat().map((e) => e.n);
+    expect(allNames).not.toContain('Plank');
+    expect(allNames).not.toContain('Toe Walk');
+    expect(allNames).not.toContain('Mountain Climber');
+    // weighted_bodyweight is DELIBERATELY still eligible: it renders
+    // exactly like weight_reps (weight + reps, weight defaults to 0) and
+    // several STAPLE/COMMON rows (Pull-Up, Chin-Up, Push-Up) carry it —
+    // excluding it would silently empty those muscles' generated pools.
+    expect(allNames).toContain('Push-Up');
+    expect(allNames).toContain('Barbell Curl');
+    // A row with no exerciseType field at all (the pre-EL-14 shape) still
+    // defaults to weight_reps and passes, so this screen never regresses
+    // a caller that has not started carrying the field.
+    expect(allNames).toContain('No Type Field');
+  });
 });
 
 describe('findThinMuscles', () => {
@@ -155,39 +184,29 @@ describe('findThinMuscles', () => {
 
 // Shared by the two "real seed library" describe blocks below (pool
 // coverage, and the biceps weak-point generator test), so the library is
-// parsed from source once and both blocks reason about the exact same
+// built from the corpus once and both blocks reason about the exact same
 // derivation the seed itself uses.
-const seedSrc = require('fs').readFileSync(
-  require('path').join(__dirname, '../seedExercises.js'), 'utf8',
-);
+//
+// Re-anchored EL-14/EL-21 (exercise-library-expansion-2026-09-05): this
+// used to regex-parse seedExercises.js's RAW tuple text directly. RAW no
+// longer exists — the structured corpus (src/lib/exerciseCorpus/) is the
+// source of truth, and retired stub entries are already excluded from
+// CORPUS, so this shape is unaffected by them.
+const { CORPUS } = require('../exerciseCorpus');
 function parseLibrary() {
-  const start = seedSrc.indexOf('const RAW = [');
-  const end = seedSrc.indexOf('\n];', start);
-  const body = seedSrc.slice(start, end);
-  // Pull the SUBREGION_MAP too so subregions match what the seed writes.
-  const smStart = seedSrc.indexOf('const SUBREGION_MAP = {');
-  const smEnd = seedSrc.indexOf('\n};', smStart);
-  const smBody = seedSrc.slice(smStart, smEnd);
-  const subMap = {};
-  for (const m of smBody.matchAll(/'([^']+)':\s*'(\w+)'/g)) subMap[m[1]] = m[2];
-
-  const rows = [];
-  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
+  return CORPUS.map((entry) => {
     const base = {
-      name: m[1],
-      primaryMuscle: m[2],
-      equipment: m[4],
-      movementPattern: m[5],
-      compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
-      fatigueCost: parseInt(m[9], 10),
-      stimulusToFatigueRatio: parseInt(m[10], 10),
-      subregion: subMap[m[1]] ?? null,
+      name: entry.name,
+      primaryMuscle: entry.primaryMuscle,
+      equipment: entry.equipment,
+      movementPattern: entry.movementPattern,
+      compoundIsolation: entry.compound ? 'compound' : 'isolation',
+      fatigueCost: entry.fatigueCost,
+      stimulusToFatigueRatio: entry.sfr,
+      subregion: entry.subregion ?? null,
     };
-    rows.push({ ...base, ...deriveExerciseMetadata(base) });
-  }
-  return rows;
+    return { ...base, ...deriveExerciseMetadata(base) };
+  });
 }
 
 // Integration: build the pool from the REAL seed library (derived the same
@@ -291,12 +310,9 @@ describe('generated pool over the real seed library', () => {
   // holes in the first place (running generatePoolFromLibrary against the
   // live library, not asserting against the raw exercise count).
   describe('library expansion closes the named plan-A section 2 gaps', () => {
-    const rawStart = seedSrc.indexOf('const RAW = [');
-    const rawEnd = seedSrc.indexOf('\n];', rawStart);
-    const rawBody = seedSrc.slice(rawStart, rawEnd);
-    const rawExerciseNames = new Set(
-      [...rawBody.matchAll(/^\s*\[\s*'([^']+)',/gm)].map(m => m[1]),
-    );
+    // Re-anchored EL-14 (exercise-library-expansion-2026-09-05): RAW no
+    // longer exists; the corpus's live names are the equivalent set.
+    const rawExerciseNames = new Set(CORPUS.map((e) => e.name));
 
     function coverage(muscle, sub) {
       const entries = (pool[muscle] ?? []).filter(e => e.sub === sub);
