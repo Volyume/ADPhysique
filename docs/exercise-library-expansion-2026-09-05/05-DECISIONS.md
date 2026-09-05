@@ -327,3 +327,13 @@ per page with the same virtualised list. No new dependency.
   laterality is recognised; the "neck" grip-demand regex no longer
   fires on "behind-the-neck"; `weightBearingHands` is treated as the
   eleventh demand axis it already is.
+
+## EL-22 Logging types for carries and sleds
+
+Fact (inventory K): the live screen supports `weight_reps`, `duration`
+and `weighted_bodyweight`; there is no distance type. Ruling: carries
+and sled work log as `duration` with a load (time under load is the
+honest, supported measure; distance is not invented). Their rep
+defaults are seconds (20 to 40 s carries, 15 to 30 s sled pushes). No
+new logging type is added this campaign; `sled` and `medicine_ball`
+join the demand derivation's implement sets so grip and balance derive.
