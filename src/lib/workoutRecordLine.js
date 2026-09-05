@@ -132,25 +132,36 @@ export function buildRecordLine({
   // Each record type is named separately because they do not move together:
   // a heavier weight for fewer reps can be a heaviest-weight record while not
   // being an estimated-max one. Saying only "PR" would let the user read the
-  // smaller achievement as the bigger one.
+  // smaller achievement as the bigger one. Every line follows one pattern,
+  // "<what this set would be> · Previous best <the number it beats>", so
+  // simultaneous records stack cleanly under the headline (D150; two is the
+  // most detectPR awards at once, since a heaviest weight has no prior set
+  // at that weight for a most-reps record to coincide with). The numbers
+  // are detectPR's own value/previousValue, never a second calculation; the
+  // estimated max keeps the app's hedged whole-number form (D88 item 5).
   const reasons = [];
   for (const pr of prs) {
     if (pr.type === 'heaviest_weight') {
       reasons.push(pr.previousValue
-        ? `Heaviest ever, best is ${formatWeight(pr.previousValue)}${units}`
-        : 'Heaviest ever on this exercise');
+        ? `Heaviest weight yet · Previous best ${formatWeight(pr.previousValue)}${units}`
+        : 'Heaviest weight yet on this exercise');
     } else if (pr.type === 'most_reps_at_weight') {
       reasons.push(assisted
-        ? `Most reps at ${formatWeight(w)}${units} assistance, best is ${pr.previousValue}`
-        : `Most reps at ${formatWeight(w)}${units}, best is ${pr.previousValue}`);
+        ? `Most reps at ${formatWeight(w)}${units} assistance · Previous best ${pr.previousValue} reps`
+        : `Most reps at ${formatWeight(w)}${units} · Previous best ${pr.previousValue} reps`);
     } else if (pr.type === '1rm_estimate') {
-      reasons.push(`Est. max ~${Math.round(pr.value)}${units} beats ${Math.round(pr.previousValue)}${units}`);
+      reasons.push(`Est. max ~${Math.round(pr.value)}${units} · Previous best ~${Math.round(pr.previousValue)}${units}`);
     } else if (pr.type === 'least_assistance') {
-      reasons.push(`Least assistance ever, best is ${formatWeight(pr.previousValue)}${units}`);
+      reasons.push(`Least assistance yet · Previous best ${formatWeight(pr.previousValue)}${units}`);
     }
   }
 
-  const headline = 'Record set if you hit this';
+  // "PR" is the app's badge-form term for a lift record (founder ruling
+  // 2026-07-23, D88: "personal record" in prose, "PR" in chips and badges;
+  // "personal best" is reserved for consistency streaks). The condition is
+  // stated plainly: this exact weight and reps, logged, IS a record, because
+  // detectPR above is the same call the celebration makes on log.
+  const headline = 'New PR if you complete this set';
   return {
     isRecord: true,
     bestLabel,

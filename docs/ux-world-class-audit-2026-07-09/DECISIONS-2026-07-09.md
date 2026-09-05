@@ -6129,3 +6129,71 @@ frame for as long as the session restore takes, then Today. Nothing
 reads as a splash screen.
 
 **Engine, ED-safety, consent, billing: untouched.**
+
+## D150 — The live PR callout: a restrained milestone, not a warning banner (founder brief, 2026-09-05)
+
+**Founder brief.** The Active Workout direction is right; do not redesign
+the logger. One element sat below the rest of the active-set card: the
+"Record set if you hit this" row under the weight/reps controls. Keep its
+place and the set-entry workflow; fix the visual treatment and the copy.
+Named faults: a muddy olive fill that read as a warning, a loud yellow
+headline competing with the inputs, supporting text that read as raw
+engine output, awkward wording, and the trophy repeated on the Log set
+button.
+
+**What was observed (D87 as built).** `SetEntry.js` rendered the row as a
+gold tint (`withAlpha(gold, alpha.soft)`), a 15 px gold trophy and a gold
+`label` headline, then every reason joined on one caption line with
+"best is" / "beats" phrasing straight from the detector. The bottom bar's
+primary took `primaryIcon='trophy'` whenever `recordLine.isRecord` held
+(guarded in `loggerVisualArchitecture.guard.test.js`). The Last session
+strip directly above the steppers (`NowCard.prefillRow`) is surface2 on
+the card's surface with a hairline, radius.md, spacing.md inset and a
+36 dp minimum: the silhouette the callout did not share.
+
+**Ruling.**
+- **Shell.** The callout takes the strip's exact shell: surface2 fill,
+  `borderSubtle` hairline, `radius.md`, spacing.md horizontal inset,
+  spacing.sm vertical, 36 dp minimum, and a spacing.xxs top margin so it
+  sits the card's own 4 dp step below the steppers, as the strip sits
+  above them. No tinted fill anywhere. The rows that bracket the steppers
+  now share one silhouette and one left edge.
+- **Accent.** One small amber trophy (`iconSize.sm`, `colors.primary`),
+  lifted `spacing.hair` so the 16 px glyph is centred on the headline's
+  18 px line. Amber, not gold: the founder asked for amber, D148 made
+  amber the app's accent, and the yellow was the loudness complained of.
+  The PR celebration toast that follows the log is unchanged.
+- **Type.** Headline in `label` at `textPrimary`; each record on its own
+  `num('caption')` line at `textSecondary`. Nothing in the callout is
+  louder than the numbers in the steppers.
+- **Copy.** Headline: "New PR if you complete this set". "PR" per the
+  2026-07-23 ruling (D88: "personal record" in prose, "PR" in chips and
+  badges; "personal best" is a streak term here), so the founder brief's
+  "PB" is translated, not adopted. Each record line follows one pattern,
+  "<what this set would be> · Previous best <the number it beats>":
+  "Heaviest weight yet · Previous best 90kg"; "Most reps at 92.5kg ·
+  Previous best 8 reps"; "Est. max ~130kg · Previous best ~126kg";
+  assisted machines: "Least assistance yet · Previous best 25kg" and
+  "Most reps at 25kg assistance · Previous best 6 reps". The numbers are
+  detectPR's own value/previousValue, so nothing is fabricated and the
+  D87 agreement contract (the line reuses detectPR over the same history
+  the log path assembles) is untouched. Simultaneous records stack as
+  separate lines rather than one run-on caption. Verified through the
+  real component: two is the most the detector awards at once (a
+  heaviest weight has no prior set at that weight, so a most-reps record
+  cannot coincide with it), so the callout is one headline plus one or
+  two lines.
+- **Log set trophy: retired.** It appeared only when a genuine record was
+  dialled in, so both states were compared. With the callout now sitting
+  directly above the bar in the same visual system, the second trophy
+  added nothing but a second place to look; Log set is an action, not an
+  achievement. The bar's `primaryIcon` prop remains for other callers;
+  the screen no longer passes it. Label and spoken label unchanged
+  (R4/D64 same-string rule).
+
+**Bounds.** Presentation and copy only. `buildRecordLine`'s gates (warm-up,
+ballistic, non weight-and-reps schema, empty history) and its use of
+detectPR are unchanged; no engine, threshold, ED-safety, consent or
+billing code is touched. Guards: `workoutRecordLine.test.js` (copy
+contract, one pattern per line, retired phrasing absent) and
+`loggerVisualArchitecture.guard.test.js` (no trophy on the primary).

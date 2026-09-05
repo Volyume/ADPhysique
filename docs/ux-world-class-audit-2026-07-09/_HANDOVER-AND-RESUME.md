@@ -1,6 +1,21 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-05 — LIVE PR CALLOUT RESTYLED (D150); LOG SET TROPHY RETIRED ★
+
+Founder brief (in chat): the "Record set if you hit this" row under the
+weight/reps controls was the one element below the active-set card's
+standard. Same place, same workflow; new treatment and copy. The callout
+now shares the Last session strip's shell (surface2, hairline, radius.md,
+spacing.md inset, 36 dp), carries one small amber trophy, a white `label`
+headline "New PR if you complete this set" and one soft-grey line per
+record in the pattern "<what> · Previous best <number>". The trophy on
+the Log set button is retired (one place says a PR is on). Files:
+`src/lib/workoutRecordLine.js`, `src/components/SetEntry.js`,
+`src/screens/ActiveWorkoutScreen.js`, tests alongside. Register: D150.
+Device checklist on the board.
+
+===============================================================================
 ## ★ 2026-09-05 — EXERCISE LIBRARY & ALTERNATIVE TRAINING EXPANSION (campaign, landing) ★
 
 Founder brief (one autonomous end-to-end task). Campaign folder

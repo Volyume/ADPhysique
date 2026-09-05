@@ -76,8 +76,8 @@ describe('each record type is named, never a bare "PR"', () => {
   test('one more rep at the same weight reads as a reps record', () => {
     const line = buildRecordLine({ ...base, weight: 90, reps: 13 });
     expect(line.isRecord).toBe(true);
-    expect(line.headline).toBe('Record set if you hit this');
-    expect(line.reasons.join(' · ')).toMatch(/Most reps at 90kg, best is 12/);
+    expect(line.headline).toBe('New PR if you complete this set');
+    expect(line.reasons.join(' · ')).toMatch(/Most reps at 90kg · Previous best 12 reps/);
   });
 
   test('a heavier weight for fewer reps is a heaviest-weight record and says so, WITHOUT claiming an estimated-max record it does not have', () => {
@@ -86,19 +86,48 @@ describe('each record type is named, never a bare "PR"', () => {
     const line = buildRecordLine({ ...base, weight: 92.5, reps: 10 });
     expect(line.isRecord).toBe(true);
     const joined = line.reasons.join(' · ');
-    expect(joined).toMatch(/Heaviest ever, best is 90kg/);
+    expect(joined).toMatch(/Heaviest weight yet · Previous best 90kg/);
     expect(joined).not.toMatch(/Est\. max/);
   });
 
   test('a genuinely bigger set names the estimated-max record with both numbers', () => {
     const line = buildRecordLine({ ...base, weight: 95, reps: 12 });
-    expect(line.reasons.join(' · ')).toMatch(/Est\. max ~\d+kg beats 126kg/);
+    expect(line.reasons.join(' · ')).toMatch(/Est\. max ~\d+kg · Previous best ~126kg/);
   });
 
   test('the spoken label carries the headline and every reason', () => {
     const line = buildRecordLine({ ...base, weight: 90, reps: 13 });
-    expect(line.a11y).toContain('Record set if you hit this');
+    expect(line.a11y).toContain('New PR if you complete this set');
     expect(line.a11y).toContain('Most reps at 90kg');
+  });
+});
+
+describe('D150 copy contract: natural language, one pattern per line, never raw engine phrasing', () => {
+  test('every record line reads "<what> · Previous best <number>", so they stack cleanly', () => {
+    // 100x13 over a history whose heaviest set is 95x12: the estimated-max
+    // AND heaviest-weight records fall together. Two is the most detectPR
+    // can award at once (a heaviest weight has no prior set at that weight,
+    // so a most-reps record cannot coincide with it); two records, two
+    // lines, one shape.
+    const history = [...HISTORY, { weight: 95, actualReps: 12 }];
+    const line = buildRecordLine({ ...base, historySets: history, weight: 100, reps: 13 });
+    expect(line.isRecord).toBe(true);
+    expect(line.reasons).toHaveLength(2);
+    for (const reason of line.reasons) {
+      expect(reason).toMatch(/ · Previous best /);
+    }
+  });
+
+  test('the reps line says what the number is', () => {
+    // 90x13 is also an estimated-max record; the reps line is one of two.
+    const line = buildRecordLine({ ...base, weight: 90, reps: 13 });
+    expect(line.reasons).toContain('Most reps at 90kg · Previous best 12 reps');
+  });
+
+  test('none of the retired phrasing survives', () => {
+    const line = buildRecordLine({ ...base, weight: 95, reps: 12 });
+    const all = [line.headline, ...line.reasons].join(' ');
+    expect(all).not.toMatch(/hit this|best is|beats|Heaviest ever/);
   });
 });
 

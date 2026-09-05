@@ -3496,6 +3496,51 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## LIVE PR CALLOUT RESTYLED; LOG SET TROPHY RETIRED (2026-09-05) — COMPLETE, MERGED TO MAIN. Record D150.
+
+The record row under the weight/reps controls keeps its place and the
+set-entry workflow. It now takes the Last session strip's shell (surface2
+fill, hairline, radius.md, spacing.md inset, 36 dp), one small amber
+trophy, a white headline "New PR if you complete this set", and one
+soft-grey line per record: "Heaviest weight yet · Previous best 90kg",
+"Most reps at 92.5kg · Previous best 8 reps", "Est. max ~130kg ·
+Previous best ~126kg" (assisted: "Least assistance yet · Previous best
+25kg"). Multiple records stack as separate lines. The trophy on the Log
+set button is gone. Copy and presentation only; `buildRecordLine` still
+reuses detectPR over the log path's history, so the callout can never
+promise a record the celebration withholds. Guards:
+`workoutRecordLine.test.js`, `loggerVisualArchitecture.guard.test.js`.
+
+**Device checklist (Android, from a green build).**
+1. Start a workout on an exercise with history (e.g. best 90kg x 12).
+   Dial in 80kg x 8. Expected: no callout; the card is just the strip,
+   the steppers and Add a note. Log set shows no trophy.
+2. Dial in 90kg x 13. Expected: a charcoal row appears under the
+   steppers with the same edges, corner radius and left inset as the
+   Last session strip; small amber trophy centred on the first line;
+   white "New PR if you complete this set"; grey lines "Est. max ~129kg
+   · Previous best ~126kg" and "Most reps at 90kg · Previous best 12
+   reps". Nothing in the row is brighter than the stepper numbers.
+3. Dial in 92.5kg x 10 (heavier for fewer reps). Expected: one grey
+   line, "Heaviest weight yet · Previous best 90kg", and NO estimated-max
+   line (92.5 x 10 does not beat the ~126kg estimate).
+4. Dial in 100kg x 13 after a 95kg x 12 set is logged. Expected: two
+   lines stacked, "Est. max ~143kg · Previous best ~133kg" then "Heaviest
+   weight yet · Previous best 95kg" (two is the most that can fall at
+   once), each on its own line under the one headline.
+5. Tap Log set on a record set. Expected: the usual PR toast and haptic
+   as before; the callout disappears once the new best is on record.
+6. Step the reps back down to your best. Expected: the row vanishes and
+   the card returns to its ordinary height with no jump elsewhere.
+7. Warm-up set with record numbers. Expected: no callout (unchanged).
+8. Assisted machine (e.g. assisted pull-up) with history: lower the
+   assistance at the same reps. Expected: "Least assistance yet ·
+   Previous best Nkg".
+9. Light theme: charcoal becomes the light surface2, trophy is the amber
+   ink, headline the dark ink; still no tinted fill.
+10. TalkBack on the row: reads the headline then each record line.
+ED-safety: not adjacent (lift records only; no bodyweight or food copy).
+
 ## NO SPLASH SCREEN: STRAIGHT INTO WELCOME (2026-09-05) — COMPLETE, MERGED TO MAIN. Record D149.
 
 The native launch frame is a plain charcoal frame (transparent plugin

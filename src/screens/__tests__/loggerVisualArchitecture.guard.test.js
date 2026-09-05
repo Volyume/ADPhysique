@@ -112,10 +112,13 @@ describe('estimated-max/PR split (failure 7): record system intact, routine copy
     }
   });
 
-  test('PR detection, the record line and the trophy commitment cue all survive', () => {
+  test('PR detection and the record line survive; the CTA trophy is retired (D150)', () => {
     expect(SRC).toContain('detectPR');
     expect(SRC).toContain('buildRecordLine');
-    expect(SRC).toContain("primaryIcon={recordLine?.isRecord ? 'trophy' : null}");
+    // D150: the record callout above the bar is the ONE place that says a
+    // PR is on. Log set is an action and carries no achievement icon.
+    expect(SRC).not.toContain('primaryIcon={recordLine');
+    expect(SRC).not.toMatch(/primaryIcon=\{[^}]*trophy/);
     expect(SRC).toContain('showPRCelebration');
   });
 });

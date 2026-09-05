@@ -4955,9 +4955,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             action is the additive sibling gated by the unchanged
             `targetComplete && !extraSetArmed` condition; the whole bar hides
             only mid-cluster (the cluster banner carries its own controls). */}
-        {/* D87: primaryIcon carries the record signal through to the moment
-            of commitment. Icon only; the label and its spoken twin are
-            unchanged (R4/D64 same-string rule). */}
+        {/* D87 gave the primary a trophy while a record was dialled in;
+            D150 retires it. The record callout directly above the bar is
+            the one place that says a PR is on, and Log set is an action,
+            not an achievement. The label and its spoken twin are unchanged
+            (R4/D64 same-string rule). */}
         {/* Phase 2B: the compact rest strip docks HERE, above the bottom
             bar and outside the workspace scroll - rest state is glanceable
             by the thumb without ever pushing the active set down the page
@@ -4989,7 +4991,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             }
             onPrimary={handleCompleteSetPress}
             saving={saving}
-            primaryIcon={recordLine?.isRecord ? 'trophy' : null}
             safeBottom={safeBottom}
             advance={(targetComplete && !extraSetArmed && !perSide)
               ? (isLastExercise

@@ -1,7 +1,7 @@
 import { memo, useRef, useEffect, useId } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard, InputAccessoryView, Platform } from 'react-native';
 import * as haptics from '../lib/haptics';
-import { colors, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import { colors, spacing, radius, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { formatSeconds, parseTimeToSeconds } from '../lib/workoutHelpers';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -36,9 +36,9 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
     valueInputGhost: { color: t.colors.textMuted },
     keyboardDoneBar: { backgroundColor: t.colors.surface2, borderTopColor: t.colors.border },
     keyboardDoneText: { ...t.type.bodyStrong, color: t.colors.primary },
-    recordRow: { backgroundColor: withAlpha(t.colors.gold, alpha.soft) },
-    recordHeadline: { ...t.type.label, color: t.colors.gold },
-    recordWhy: { ...t.type.caption, color: t.colors.textSecondary },
+    recordRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
+    recordHeadline: { ...t.type.label, color: t.colors.textPrimary },
+    recordWhy: { ...t.type.num('caption'), color: t.colors.textSecondary },
   };
   const { weight, reps, isGhost } = value;
   const repsRef = useRef(null);
@@ -148,7 +148,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
   // Phase 2B (founder ruling, screenshot failure 7): the live estimated-max
   // caption under the reps row is REMOVED - that routine copy repeated on
   // every surface and read as noise. The RECORD system is untouched:
-  // recordLine.isRecord still renders the gold record flag below, and PR
+  // recordLine.isRecord still renders the record callout below, and PR
   // detection/celebration live in the orchestrator.
 
   // Shared stepper groups so the compact and full layouts render the SAME
@@ -460,23 +460,27 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
       </View>
       )}
 
-      {/* D87: the record flag. Exists ONLY while what is dialled in would
-          break a record, so the card stays exactly as it is on an ordinary
-          set. Gold, not the primary amber: the Log set fill keeps the
-          one-amber rule. buildRecordLine reuses detectPR, so this can never
-          claim a record the celebration then withholds. */}
+      {/* D87 / D150: the record callout. Exists ONLY while what is dialled
+          in would break a record, so the card stays exactly as it is on an
+          ordinary set. Same shell as the Last session strip above the
+          steppers (surface2 fill, hairline, radius.md, spacing.md inset)
+          so it reads as part of the card, not a banner laid over it; the
+          one accent is the small amber trophy, the headline is plain white
+          and each record names itself on its own soft-grey line.
+          buildRecordLine reuses detectPR, so this can never claim a record
+          the celebration then withholds. */}
       {recordLine?.isRecord ? (
         <View
           style={[styles.recordRow, live.recordRow]}
           accessible
           accessibilityLabel={recordLine.a11y}
         >
-          <Ionicons name="trophy" size={15} color={t.colors.gold} />
+          <Ionicons name="trophy" size={iconSize.sm} color={t.colors.primary} style={styles.recordIcon} />
           <View style={styles.recordCopy}>
             <Text style={[styles.recordHeadline, live.recordHeadline]}>{recordLine.headline}</Text>
-            {recordLine.reasons.length > 0 ? (
-              <Text style={[styles.recordWhy, live.recordWhy]}>{recordLine.reasons.join(' · ')}</Text>
-            ) : null}
+            {recordLine.reasons.map(reason => (
+              <Text key={reason} style={[styles.recordWhy, live.recordWhy]}>{reason}</Text>
+            ))}
           </View>
         </View>
       ) : null}
@@ -552,21 +556,29 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: -spacing.xs,
   },
-  // D87 record flag. Gold tint, never the primary amber: the Log set fill is
-  // the screen's one amber (one-amber rule), and gold is already the app's
-  // record colour (PRCelebration trophy).
+  // D87 / D150 record callout. The shell mirrors NowCard's prefillRow (the
+  // Last session strip) exactly - radius.md, 1px hairline, spacing.md
+  // horizontal inset, spacing.sm vertical, 36dp minimum - so the two rows
+  // that bracket the steppers share one silhouette. Colour lives in `live`
+  // (surface2 on the card's surface: tonal separation, no tinted fill).
+  // marginTop lifts the container's 2dp gap to the card's own 4dp step,
+  // the same air the strip has above the steppers.
   recordRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: spacing.xs,
-    backgroundColor: withAlpha(colors.gold, alpha.soft),
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
+    gap: spacing.sm,
+    marginTop: spacing.xxs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: 36,
   },
-  recordCopy: { flex: 1, gap: 1 },
-  recordHeadline: { ...type.label, color: colors.gold },
-  recordWhy: { ...type.caption, color: colors.textSecondary },
+  // 16dp glyph centred on the headline's 18dp line (label = 13 x 1.35).
+  recordIcon: { marginTop: spacing.hair },
+  recordCopy: { flex: 1, minWidth: 0, gap: spacing.hair },
+  recordHeadline: { ...type.label, color: colors.textPrimary },
+  recordWhy: { ...type.num('caption'), color: colors.textSecondary },
   stepper: {
     flex: 1,
     flexDirection: 'row',
