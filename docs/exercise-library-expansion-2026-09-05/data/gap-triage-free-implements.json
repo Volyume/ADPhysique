@@ -1,0 +1,4900 @@
+{
+ "group": "free-implements",
+ "generatedAt": "2026-09-05",
+ "counts": {
+  "add": 22,
+  "alias": 18,
+  "not_distinct": 183,
+  "false_positive": 298,
+  "out_of_scope": 23,
+  "junk": 18
+ },
+ "verdicts": [
+  {
+   "name": "assisted motion russian twist",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Weighted Russian Twist (Medicine Ball)",
+   "why": "exact match to the existing corpus row."
+  },
+  {
+   "name": "band alternating v-up",
+   "dataset": "exercises-dataset",
+   "verdict": "junk",
+   "why": "bands are not a standard loading method for a V-up (no practical anchor point); unattested as a common resistance-training technique."
+  },
+  {
+   "name": "band assisted wheel rollerout",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Band Assisted Ab Wheel Rollout",
+    "primaryMuscle": "abs",
+    "secondaryMuscles": [
+     "front_delts",
+     "back"
+    ],
+    "equipment": "band",
+    "movementPattern": "core",
+    "isCompound": true,
+    "repMin": 8,
+    "repMax": 15,
+    "fatigueCost": 3,
+    "sfr": 4,
+    "subregion": "anti_extension",
+    "aliases": [
+     "Band-Assisted Ab Rollout"
+    ],
+    "tier": "specialist",
+    "laterality": "bilateral",
+    "loadCharacter": "grind",
+    "difficulty": 2,
+    "distinctFrom": {
+     "existing": null,
+     "why": "a band anchored overhead/behind reduces the resistance through the hardest part of an ab wheel rollout, the same assistance concept the family already uses for Band Assisted Pull-Up and Band Assisted Dip, letting more people access the movement safely"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): \"band assisted wheel rollerout\""
+    ],
+    "demandOverrides": {
+     "position": "kneeling",
+     "floorAccess": true,
+     "overheadPosition": false,
+     "gripDemand": "bar",
+     "unilateralLoadable": false,
+     "bilateralUpper": true,
+     "bilateralLower": false,
+     "axialLoad": false,
+     "impact": false,
+     "balanceDemand": "high",
+     "weightBearingHands": true
+    },
+    "derivedNullAxes": [],
+    "notes": "Matches Band Assisted Pull-Up/Dip precedent for band-as-assistance."
+   },
+   "why": "matches the family's existing band-as-assistance pattern (Band Assisted Pull-Up/Dip); genuine gap, see candidate."
+  },
+  {
+   "name": "band bent-over hip extension",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Band Good Morning",
+   "why": "a bent-over hip-hinge extension pattern is the same stimulus as the existing Band Good Morning."
+  },
+  {
+   "name": "band bicycle crunch",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Bicycle Crunch",
+   "why": "a band does not meaningfully load a bicycle crunch in standard practice; same bodyweight ab stimulus."
+  },
+  {
+   "name": "band close-grip pulldown",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Band Lat Pulldown",
+   "why": "grip width is cosmetic under EL-2 for this movement."
+  },
+  {
+   "name": "band fixed back close grip pulldown",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Band Lat Pulldown",
+   "why": "grip width is cosmetic."
+  },
+  {
+   "name": "band fixed back underhand pulldown",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Band Lat Pulldown",
+   "why": "grip is cosmetic."
+  },
+  {
+   "name": "band hip lift",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Hip Thrust",
+   "why": "alternate naming for the same movement."
+  },
+  {
+   "name": "band jack knife sit-up",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Sit-Up",
+   "why": "a band does not meaningfully load a jack-knife sit-up in standard practice."
+  },
+  {
+   "name": "band kneeling one arm pulldown",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Band Lat Pulldown",
+   "why": "single-arm/kneeling is a cosmetic position variant."
+  },
+  {
+   "name": "band kneeling twisting crunch",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Kneeling Cable Crunch",
+   "why": "generic ab-rotation crunch, band not a meaningfully distinct loading tool."
+  },
+  {
+   "name": "band lying hip internal rotation",
+   "dataset": "exercises-dataset",
+   "verdict": "out_of_scope",
+   "why": "hip internal/external rotation is rotator-cuff-style prehab/mobility work; \"hip_flexors\"/rotator-cuff-equivalent muscles are not in the closed primaryMuscle vocabulary and this class of movement is absent from all 552 existing corpus rows."
+  },
+  {
+   "name": "band lying straight leg raise",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Leg Raise",
+   "why": "bodyweight ab movement; band not a standard loading tool for this exercise."
+  },
+  {
+   "name": "band one arm overhead biceps curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Standing Curl (Single-Arm)",
+   "why": "\"overhead\" describes arm position during a standing curl, not a different exercise."
+  },
+  {
+   "name": "band one arm single leg split squat",
+   "dataset": "exercises-dataset",
+   "verdict": "junk",
+   "why": "bands are not a standard, well-attested loading method for a split squat (no practical anchor point); no established candidate in the band family covers lunges/split squats."
+  },
+  {
+   "name": "band one arm standing low row",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Row (Single-Arm)",
+   "why": "exact match to the existing candidate."
+  },
+  {
+   "name": "band one arm twisting chest press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Chest Press (Single-Arm)",
+   "why": "twisting is a cosmetic wrist-rotation add-on to the existing single-arm press."
+  },
+  {
+   "name": "band one arm twisting seated row",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Row (Single-Arm)",
+   "why": "twisting is cosmetic."
+  },
+  {
+   "name": "band push sit-up",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Push-Up (Band-Resisted)",
+   "why": "matches the existing candidate; dataset naming quirk."
+  },
+  {
+   "name": "band reverse fly",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Rear Delt Fly",
+   "why": "alternate naming for the same movement."
+  },
+  {
+   "name": "band seated hip internal rotation",
+   "dataset": "exercises-dataset",
+   "verdict": "out_of_scope",
+   "why": "rotator-cuff-style hip rotation prehab/mobility work; no muscle-group home in the closed vocabulary."
+  },
+  {
+   "name": "band seated twist",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Band Woodchop (High-to-Low)",
+   "why": "a seated rotational ab movement, same anti/pro-rotation core stimulus as the existing woodchop candidates."
+  },
+  {
+   "name": "band shrug",
+   "dataset": "exercises-dataset",
+   "verdict": "junk",
+   "why": "a band cannot provide meaningful axial load for a shrug at typical resistance levels; not something a coach would separately programme for trap training."
+  },
+  {
+   "name": "band side triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Overhead Tricep Extension",
+   "why": "alternate naming for the same movement."
+  },
+  {
+   "name": "band single leg calf raise",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Single-Leg Calf Raise (Dumbbell)",
+   "why": "a band is not the standard progressive-loading tool for calf raises; same stimulus as the existing single-leg calf raise."
+  },
+  {
+   "name": "band single leg reverse calf raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Tibialis Raise",
+   "why": "\"reverse\" calf raise = tibialis raise, an existing corpus row."
+  },
+  {
+   "name": "band single leg split squat",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Band Goblet Squat",
+   "why": "same general banded-squat-pattern stimulus already covered by Band Goblet Squat; band split squats are not a well-established anchored technique."
+  },
+  {
+   "name": "band squat row",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Band Row",
+   "why": "a squat-to-row combo circuit move; the component movements (Band Goblet Squat, Band Row) already exist separately, not a single distinct lift under EL-2."
+  },
+  {
+   "name": "band standing crunch",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Standing Cable Crunch",
+   "why": "generic standing ab-flexion movement."
+  },
+  {
+   "name": "band standing rear delt row",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Band Rear Delt Fly",
+   "why": "a high-anchored band pulled apart at rear-delt height is the existing rear delt fly/pull-apart family."
+  },
+  {
+   "name": "band standing twisting crunch",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Standing Cable Crunch",
+   "why": "generic ab rotation."
+  },
+  {
+   "name": "band step-up",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Step-Up (Dumbbell)",
+   "why": "a band is not the standard loading tool for step-ups; same stimulus."
+  },
+  {
+   "name": "band straight back stiff leg deadlift",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Romanian Deadlift (Bilateral)",
+   "why": "stiff-leg deadlift is the RDL hip-hinge pattern."
+  },
+  {
+   "name": "band two legs calf raise - (band under both legs) v. 2",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Calf Raise (Standing)",
+   "why": "a band is not the standard progressive-loading tool for calf raises."
+  },
+  {
+   "name": "band underhand pulldown",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Lat Pulldown",
+   "why": "grip is cosmetic."
+  },
+  {
+   "name": "band v-up",
+   "dataset": "exercises-dataset",
+   "verdict": "junk",
+   "why": "same as \"band alternating v-up\"; bands are not a standard loading method for this movement."
+  },
+  {
+   "name": "battling ropes",
+   "dataset": "exercises-dataset",
+   "verdict": "out_of_scope",
+   "why": "battle ropes are conditioning per explicit task instruction, not counted resistance training."
+  },
+  {
+   "name": "deep push up",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Push-Up",
+   "why": "Closest existing match by name overlap (\"Push-Up\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell alternate biceps curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell alternate biceps curl (with arm blaster)",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell alternate hammer preacher curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "grip/position cosmetic variant of the existing preacher curl candidate."
+  },
+  {
+   "name": "dumbbell alternate seated hammer curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Hammer Curl",
+   "why": "neutral-grip curl variant, cosmetic position noise around the existing candidate."
+  },
+  {
+   "name": "dumbbell alternate side press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Alternating Dumbbell Bench Press",
+   "why": "Closest existing match by name overlap (\"Alternating Dumbbell Bench Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell alternating bicep curl with leg raised on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell alternating seated bicep curl on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell around pullover",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Pullover",
+   "why": "cosmetic prop/position noise around the existing pullover."
+  },
+  {
+   "name": "dumbbell bench squat",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Front Squat (Dumbbell)",
+   "why": "cosmetic combo/prop noise around the existing dumbbell squat."
+  },
+  {
+   "name": "dumbbell bicep curl lunge with bowling motion",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell bicep curl on exercise ball with leg raised",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell bicep curl with stork stance",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell biceps curl (with arm blaster)",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell biceps curl squat",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell biceps curl v sit on bosu ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell clean",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Dumbbell Clean",
+    "primaryMuscle": "traps",
+    "secondaryMuscles": [
+     "quads",
+     "glutes",
+     "back"
+    ],
+    "equipment": "dumbbell",
+    "movementPattern": "power",
+    "isCompound": true,
+    "repMin": 3,
+    "repMax": 6,
+    "fatigueCost": 5,
+    "sfr": 3,
+    "subregion": null,
+    "aliases": [
+     "Double Dumbbell Clean",
+     "Dumbbell Clean"
+    ],
+    "tier": "never_auto",
+    "laterality": "bilateral",
+    "loadCharacter": "ballistic",
+    "difficulty": 3,
+    "distinctFrom": {
+     "existing": null,
+     "why": "floor-to-shoulder pull with two dumbbells, matching the corpus's existing Power Clean (barbell) classification pattern but with an implement the dumbbell family currently has none of"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): \"dumbbell clean\" / \"Dumbbell Clean\"; standard functional-training/CrossFit-style movement"
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": true,
+     "overheadPosition": false,
+     "gripDemand": "bar",
+     "unilateralLoadable": false,
+     "bilateralUpper": true,
+     "bilateralLower": true,
+     "axialLoad": true,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": true
+    },
+    "derivedNullAxes": [],
+    "notes": "Classified on Power Clean (barbell) precedent. Never_auto per EL-5 (Olympic-derived/ballistic)."
+   },
+   "why": "standard functional-training movement; genuine gap."
+  },
+  {
+   "name": "dumbbell contralateral forward lunge",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lunge",
+   "why": "cosmetic combo/prop noise around the existing lunge."
+  },
+  {
+   "name": "dumbbell deadlift",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Romanian Deadlift (Dumbbell)",
+   "why": "cosmetic naming variant of the existing RDL."
+  },
+  {
+   "name": "dumbbell decline one arm hammer press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "One-Arm Dumbbell Bench Press",
+   "why": "matches the existing candidate."
+  },
+  {
+   "name": "dumbbell decline shrug",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Shrug",
+   "why": "cosmetic position/grip noise around the existing shrug."
+  },
+  {
+   "name": "dumbbell decline shrug v. 2",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Shrug",
+   "why": "cosmetic position/grip noise around the existing shrug."
+  },
+  {
+   "name": "dumbbell decline triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell finger curls",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell fly on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell forward lunge triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell full can lateral raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lateral Raise",
+   "why": "cosmetic position/support noise around the existing lateral raise."
+  },
+  {
+   "name": "dumbbell hammer curl on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell hammer curls (with arm blaster)",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Hammer Curl",
+   "why": "neutral-grip curl variant, cosmetic position noise around the existing candidate."
+  },
+  {
+   "name": "dumbbell high curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell incline breeding",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Incline Dumbbell Curl",
+   "why": "likely OCR/scraping corruption of \"inner biceps\" curl cue on the existing incline curl."
+  },
+  {
+   "name": "dumbbell incline fly on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell incline hammer press on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell incline one arm fly on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Incline Dumbbell Fly (Single-Arm)",
+    "primaryMuscle": "chest",
+    "secondaryMuscles": [
+     "front_delts"
+    ],
+    "equipment": "dumbbell",
+    "movementPattern": "isolation",
+    "isCompound": false,
+    "repMin": 10,
+    "repMax": 15,
+    "fatigueCost": 3,
+    "sfr": 4,
+    "subregion": "incline",
+    "aliases": [
+     "One-Arm Incline Dumbbell Fly"
+    ],
+    "tier": "niche",
+    "laterality": "unilateral",
+    "loadCharacter": "grind",
+    "difficulty": 2,
+    "distinctFrom": {
+     "existing": "Single-Arm Dumbbell Fly",
+     "why": "incline angle shifts emphasis to the upper chest, same laterality change the corpus already recognises for the flat single-arm fly"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): \"dumbbell incline one arm fly on exercise ball\" (ball-support noise stripped)"
+    ],
+    "demandOverrides": {
+     "position": "lying",
+     "floorAccess": false,
+     "overheadPosition": false,
+     "gripDemand": "none",
+     "unilateralLoadable": true,
+     "bilateralUpper": false,
+     "bilateralLower": false,
+     "axialLoad": false,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Direct incline analogue of the existing flat Single-Arm Dumbbell Fly."
+   },
+   "why": "ball is instability noise; core movement is the incline single-arm fly."
+  },
+  {
+   "name": "dumbbell incline one arm hammer press",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Incline Dumbbell Press (Single-Arm)",
+    "primaryMuscle": "chest",
+    "secondaryMuscles": [
+     "front_delts",
+     "triceps"
+    ],
+    "equipment": "dumbbell",
+    "movementPattern": "push",
+    "isCompound": true,
+    "repMin": 6,
+    "repMax": 12,
+    "fatigueCost": 4,
+    "sfr": 4,
+    "subregion": "incline",
+    "aliases": [
+     "One-Arm Incline Dumbbell Press",
+     "Single-Arm Incline Dumbbell Bench Press",
+     "dumbbell incline one arm press",
+     "dumbbell incline one arm press on exercise ball",
+     "dumbbell one arm incline chest press"
+    ],
+    "tier": "specialist",
+    "laterality": "unilateral",
+    "loadCharacter": "grind",
+    "difficulty": 2,
+    "distinctFrom": {
+     "existing": "Single-Arm Dumbbell Bench Press",
+     "why": "incline angle changes the loading vector toward the upper chest/front delts, same laterality change (unilateral vs bilateral) the corpus already recognises at flat bench"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): repeated \"dumbbell incline one arm press\" / \"dumbbell one arm incline chest press\" naming"
+    ],
+    "demandOverrides": {
+     "position": "lying",
+     "floorAccess": false,
+     "overheadPosition": false,
+     "gripDemand": "bar",
+     "unilateralLoadable": true,
+     "bilateralUpper": false,
+     "bilateralLower": false,
+     "axialLoad": false,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Direct incline analogue of the existing flat Single-Arm Dumbbell Bench Press."
+   },
+   "why": "\"hammer\" (neutral) grip is cosmetic on the same new incline single-arm press."
+  },
+  {
+   "name": "dumbbell incline one arm hammer press on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell incline one arm lateral raise",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Lateral Raise",
+   "why": "unilateral vs bilateral does not meaningfully change the isolation stimulus of a raise the way it does for compound presses/rows."
+  },
+  {
+   "name": "dumbbell incline one arm press",
+   "dataset": "exercises-dataset",
+   "verdict": "alias",
+   "target": "Incline Dumbbell Press (Single-Arm)",
+   "why": "Same new movement as another row in this file, proposed once as \"Incline Dumbbell Press (Single-Arm)\"; this name folds in as one of its aliases. direct incline analogue of existing flat Single-Arm Dumbbell Bench Press."
+  },
+  {
+   "name": "dumbbell incline one arm press on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "alias",
+   "target": "Incline Dumbbell Press (Single-Arm)",
+   "why": "Same new movement as another row in this file, proposed once as \"Incline Dumbbell Press (Single-Arm)\"; this name folds in as one of its aliases. ball is instability noise; core movement is the incline single-arm press."
+  },
+  {
+   "name": "dumbbell incline palm-in press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Incline Dumbbell Press",
+   "why": "Closest existing match by name overlap (\"Incline Dumbbell Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell incline press on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell incline raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Front Raise",
+   "why": "bare \"raise\" defaults to the front raise family."
+  },
+  {
+   "name": "dumbbell incline rear lateral raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lateral Raise",
+   "why": "cosmetic position/support noise around the existing lateral raise."
+  },
+  {
+   "name": "dumbbell incline row",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Row",
+   "why": "Closest existing match by name overlap (\"Dumbbell Row\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell incline shoulder raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Front Raise",
+   "why": "bare \"raise\" defaults to the front raise family."
+  },
+  {
+   "name": "dumbbell incline t-raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Front Raise",
+   "why": "bare \"raise\" defaults to the front raise family."
+  },
+  {
+   "name": "dumbbell incline triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell incline twisted flyes",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Incline Dumbbell Fly",
+   "why": "cosmetic prop/twist noise around the existing incline fly."
+  },
+  {
+   "name": "dumbbell incline two arm extension",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Incline Dumbbell Curl",
+   "why": "Closest existing match by name overlap (\"Incline Dumbbell Curl\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell iron cross",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Fly",
+   "why": "same as above."
+  },
+  {
+   "name": "dumbbell kickback",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Tricep Kickback",
+   "why": "kickbacks are already single-arm by convention in the existing corpus row."
+  },
+  {
+   "name": "dumbbell kickbacks on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Tricep Kickback",
+   "why": "kickbacks are already single-arm by convention in the existing corpus row."
+  },
+  {
+   "name": "dumbbell kneeling bicep curl exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell lateral to front raise",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Dumbbell Lateral to Front Raise",
+    "primaryMuscle": "side_delts",
+    "secondaryMuscles": [
+     "front_delts"
+    ],
+    "equipment": "dumbbell",
+    "movementPattern": "isolation",
+    "isCompound": false,
+    "repMin": 10,
+    "repMax": 15,
+    "fatigueCost": 2,
+    "sfr": 4,
+    "subregion": "lateral_raise",
+    "aliases": [
+     "Lateral to Front Raise",
+     "Side-to-Front Raise",
+     "Side Laterals to Front Raise",
+     "Lateral-to-Front Raises"
+    ],
+    "tier": "niche",
+    "laterality": "bilateral",
+    "loadCharacter": "grind",
+    "difficulty": 2,
+    "distinctFrom": {
+     "existing": "Dumbbell Lateral Raise",
+     "why": "a single continuous arc that sweeps from the side to the front plane each rep, working front and side delts together rather than isolating one plane, unlike a plain lateral or front raise"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): \"dumbbell lateral to front raise\""
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": false,
+     "overheadPosition": false,
+     "gripDemand": "none",
+     "unilateralLoadable": true,
+     "bilateralUpper": true,
+     "bilateralLower": false,
+     "axialLoad": false,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Combo-plane isolation raise; corpus precedent for combo raises is Y-Raise/W-Raise (dumbbell)."
+   },
+   "why": "combo-plane raise; corpus precedent is Y-Raise/W-Raise."
+  },
+  {
+   "name": "dumbbell lunge with bicep curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell lying alternate extension",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "EZ Bar Skull Crusher",
+   "why": "Closest existing match by name overlap (\"Lying Triceps Extension\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell lying elbow press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Decline Dumbbell Press",
+   "why": "Closest existing match by name overlap (\"Decline Dumbbell Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell lying extension (across face)",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Floor Skull Crusher",
+   "why": "an across-the-face lying tricep extension is the existing floor skull crusher."
+  },
+  {
+   "name": "dumbbell lying external shoulder rotation",
+   "dataset": "exercises-dataset",
+   "verdict": "out_of_scope",
+   "why": "rotator-cuff work; no muscle-group home in the closed vocabulary."
+  },
+  {
+   "name": "dumbbell lying femoral",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Lying Dumbbell Leg Curl",
+   "why": "Closest existing match by name overlap (\"Lying Dumbbell Leg Curl\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell lying hammer press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Decline Dumbbell Press",
+   "why": "Closest existing match by name overlap (\"Decline Dumbbell Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell lying on floor rear delt raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Rear Delt Fly",
+   "why": "cosmetic position noise around the existing rear delt fly."
+  },
+  {
+   "name": "dumbbell lying one arm deltoid rear",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Lateral Raise",
+   "why": "unilateral isolation raise variant, same stimulus as bilateral."
+  },
+  {
+   "name": "dumbbell lying one arm press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "One-Arm Dumbbell Bench Press",
+   "why": "matches the existing candidate."
+  },
+  {
+   "name": "dumbbell lying one arm press v. 2",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "One-Arm Dumbbell Bench Press",
+   "why": "matches the existing candidate."
+  },
+  {
+   "name": "dumbbell lying one arm pronated triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell lying one arm rear lateral raise",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Lateral Raise",
+   "why": "unilateral vs bilateral does not meaningfully change the isolation stimulus of a raise the way it does for compound presses/rows."
+  },
+  {
+   "name": "dumbbell lying one arm supinated triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell lying pronation",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Pronation/Supination",
+   "why": "position/prop noise around the existing candidate."
+  },
+  {
+   "name": "dumbbell lying pronation on floor",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Pronation/Supination",
+   "why": "position/prop noise around the existing candidate."
+  },
+  {
+   "name": "dumbbell lying pullover on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell lying rear lateral raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lateral Raise",
+   "why": "cosmetic position/support noise around the existing lateral raise."
+  },
+  {
+   "name": "dumbbell lying single extension",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Single-Arm Overhead Dumbbell Tricep Extension",
+   "why": "Closest existing match by name overlap (\"Single-Arm Overhead Dumbbell Tricep Extension\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell lying supination",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Pronation/Supination",
+   "why": "position/prop noise around the existing candidate."
+  },
+  {
+   "name": "dumbbell lying supination on floor",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Pronation/Supination",
+   "why": "position/prop noise around the existing candidate."
+  },
+  {
+   "name": "dumbbell lying supine biceps curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell lying supine curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell lying wide curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell one arm bent-over row",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Single-Arm Dumbbell Row (Bench-Supported)",
+   "why": "candidate alias list includes \"One-Arm Dumbbell Row\"."
+  },
+  {
+   "name": "dumbbell one arm chest fly on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell one arm concentration curl (on stability ball)",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell one arm decline chest press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "One-Arm Dumbbell Bench Press",
+   "why": "matches the existing candidate."
+  },
+  {
+   "name": "dumbbell one arm fly on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell one arm french press on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell one arm hammer preacher curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "grip/position cosmetic variant of the existing preacher curl candidate."
+  },
+  {
+   "name": "dumbbell one arm hammer press on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell one arm incline chest press",
+   "dataset": "exercises-dataset",
+   "verdict": "alias",
+   "target": "Incline Dumbbell Press (Single-Arm)",
+   "why": "Same new movement as another row in this file, proposed once as \"Incline Dumbbell Press (Single-Arm)\"; this name folds in as one of its aliases. same movement."
+  },
+  {
+   "name": "dumbbell one arm kickback",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Tricep Kickback",
+   "why": "kickbacks are already single-arm by convention in the existing corpus row."
+  },
+  {
+   "name": "dumbbell one arm lateral raise",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Lateral Raise",
+   "why": "unilateral vs bilateral does not meaningfully change the isolation stimulus of a raise the way it does for compound presses/rows."
+  },
+  {
+   "name": "dumbbell one arm lateral raise with support",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Lateral Raise",
+   "why": "unilateral vs bilateral does not meaningfully change the isolation stimulus of a raise the way it does for compound presses/rows."
+  },
+  {
+   "name": "dumbbell one arm press on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell one arm prone curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell one arm prone hammer curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Hammer Curl",
+   "why": "neutral-grip curl variant, cosmetic position noise around the existing candidate."
+  },
+  {
+   "name": "dumbbell one arm pullover on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell one arm reverse fly (with support)",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Single-Arm Dumbbell Fly",
+   "why": "cosmetic prop noise around the existing fly."
+  },
+  {
+   "name": "dumbbell one arm reverse grip press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "One-Arm Dumbbell Bench Press",
+   "why": "matches the existing candidate."
+  },
+  {
+   "name": "dumbbell one arm reverse preacher curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "grip/position cosmetic variant of the existing preacher curl candidate."
+  },
+  {
+   "name": "dumbbell one arm reverse spider curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Spider Curl (Dumbbell)",
+   "why": "cosmetic variant of the existing candidate."
+  },
+  {
+   "name": "dumbbell one arm reverse wrist curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Reverse Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "dumbbell one arm seated bicep curl on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell one arm seated hammer curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Hammer Curl",
+   "why": "neutral-grip curl variant, cosmetic position noise around the existing candidate."
+  },
+  {
+   "name": "dumbbell one arm seated neutral wrist curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "dumbbell one arm shoulder press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Single-Arm Dumbbell Press",
+   "why": "matches the existing seated/standing single-arm press family."
+  },
+  {
+   "name": "dumbbell one arm shoulder press v. 2",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Single-Arm Dumbbell Press",
+   "why": "matches the existing seated/standing single-arm press family."
+  },
+  {
+   "name": "dumbbell one arm snatch",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Dumbbell Snatch (Single-Arm)",
+    "primaryMuscle": "back",
+    "secondaryMuscles": [
+     "glutes",
+     "hamstrings",
+     "front_delts"
+    ],
+    "equipment": "dumbbell",
+    "movementPattern": "power",
+    "isCompound": true,
+    "repMin": 5,
+    "repMax": 10,
+    "fatigueCost": 4,
+    "sfr": 4,
+    "subregion": "upper_mid_row",
+    "aliases": [
+     "Single-Arm Dumbbell Snatch",
+     "One-Arm Dumbbell Snatch",
+     "dumbbell snatch"
+    ],
+    "tier": "never_auto",
+    "laterality": "unilateral",
+    "loadCharacter": "ballistic",
+    "difficulty": 3,
+    "distinctFrom": {
+     "existing": null,
+     "why": "the dumbbell family currently has zero ballistic/power movements; this is a standard functional-training single-arm floor-to-overhead pull, mechanically distinct from every existing hypertrophy-accessory row in the family (matches Kettlebell Snatch's classification pattern, adapted for the dumbbell implement)"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): \"dumbbell snatch\" / \"Dumbbell Snatch\"; widely documented in functional-training and CrossFit-style strength programming"
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": true,
+     "overheadPosition": true,
+     "gripDemand": "bar",
+     "unilateralLoadable": true,
+     "bilateralUpper": false,
+     "bilateralLower": true,
+     "axialLoad": true,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Ballistic/power movement per EL-5, never_auto. Classified on Kettlebell Snatch precedent."
+   },
+   "why": "a dumbbell snatch is inherently single-arm; \"one arm\" is a redundant explicit descriptor of the same new movement."
+  },
+  {
+   "name": "dumbbell one arm standing curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell one arm standing hammer curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Hammer Curl",
+   "why": "neutral-grip curl variant, cosmetic position noise around the existing candidate."
+  },
+  {
+   "name": "dumbbell one arm triceps extension (on bench)",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell one arm wrist curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "dumbbell one arm zottman preacher curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "grip/position cosmetic variant of the existing preacher curl candidate."
+  },
+  {
+   "name": "dumbbell one leg fly on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell over bench neutral wrist curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "dumbbell over bench one arm neutral wrist curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "dumbbell over bench one arm reverse wrist curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Reverse Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "dumbbell over bench one arm wrist curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "dumbbell over bench revers wrist curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Reverse Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "dumbbell over bench wrist curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "dumbbell palm rotational bent over row",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Row",
+   "why": "Closest existing match by name overlap (\"Bent-Over Dumbbell Row\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell palms in incline bench press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Bench Press",
+   "why": "cosmetic grip/prop noise around the existing bench press."
+  },
+  {
+   "name": "dumbbell peacher hammer curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Hammer Curl",
+   "why": "neutral-grip curl variant, cosmetic position noise around the existing candidate."
+  },
+  {
+   "name": "dumbbell plyo squat",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Dumbbell Jump Squat",
+    "primaryMuscle": "quads",
+    "secondaryMuscles": [
+     "glutes",
+     "calves"
+    ],
+    "equipment": "dumbbell",
+    "movementPattern": "plyometric",
+    "isCompound": true,
+    "repMin": 5,
+    "repMax": 10,
+    "fatigueCost": 4,
+    "sfr": 3,
+    "subregion": null,
+    "aliases": [
+     "Loaded Jump Squat (Dumbbell)"
+    ],
+    "tier": "never_auto",
+    "laterality": "bilateral",
+    "loadCharacter": "ballistic",
+    "difficulty": 2,
+    "distinctFrom": {
+     "existing": "Front Squat (Dumbbell)",
+     "why": "plyometric/impact character (leaves the ground) is a distinct ballistic-vs-grind axis EL-2 recognises; matches the corpus's existing bodyweight Jump Squat, adapted for external load"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): \"dumbbell plyo squat\"; corpus already carries a bodyweight Jump Squat as direct precedent"
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": false,
+     "overheadPosition": false,
+     "gripDemand": "none",
+     "unilateralLoadable": false,
+     "bilateralUpper": false,
+     "bilateralLower": true,
+     "axialLoad": false,
+     "impact": true,
+     "balanceDemand": "stable",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Plyometric per EL-5, never_auto. Classified on corpus bodyweight Jump Squat precedent."
+   },
+   "why": "matches corpus's existing bodyweight Jump Squat precedent, loaded variant."
+  },
+  {
+   "name": "dumbbell preacher curl over exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "grip/position cosmetic variant of the existing preacher curl candidate."
+  },
+  {
+   "name": "dumbbell press on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell pronate-grip triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell prone incline hammer curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Hammer Curl",
+   "why": "neutral-grip curl variant, cosmetic position noise around the existing candidate."
+  },
+  {
+   "name": "dumbbell pullover hip extension on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell pullover on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Front Raise",
+   "why": "bare \"raise\" defaults to the front raise family."
+  },
+  {
+   "name": "dumbbell rear delt raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Rear Delt Fly",
+   "why": "cosmetic position noise around the existing rear delt fly."
+  },
+  {
+   "name": "dumbbell rear delt row_shoulder",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Rear Delt Fly",
+   "why": "cosmetic position noise around the existing rear delt fly."
+  },
+  {
+   "name": "dumbbell rear lateral raise (support head)",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lateral Raise",
+   "why": "cosmetic position/support noise around the existing lateral raise."
+  },
+  {
+   "name": "dumbbell rear lunge",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lunge",
+   "why": "lunge-direction cosmetic variant already covered by the family's lunge rows."
+  },
+  {
+   "name": "dumbbell revers grip biceps curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell reverse fly",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Fly",
+   "why": "cosmetic prop noise around the existing fly."
+  },
+  {
+   "name": "dumbbell reverse grip incline bench one arm row",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Single-Arm Dumbbell Row (Bench-Supported)",
+   "why": "candidate alias list includes \"One-Arm Dumbbell Row\"."
+  },
+  {
+   "name": "dumbbell reverse grip incline bench two arm row",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Two-Arm Bent-Over Dumbbell Row",
+   "why": "grip/bench-angle cosmetic variant of the existing corpus-recognised two-arm row."
+  },
+  {
+   "name": "dumbbell reverse grip row (female)",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Row",
+   "why": "Closest existing match by name overlap (\"Dumbbell Row\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell rotation reverse fly",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Fly",
+   "why": "cosmetic prop noise around the existing fly."
+  },
+  {
+   "name": "dumbbell scott press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Decline Dumbbell Press",
+   "why": "Closest existing match by name overlap (\"Decline Dumbbell Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell seated alternate front raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Front Raise",
+   "why": "cosmetic position noise around the existing front raise."
+  },
+  {
+   "name": "dumbbell seated alternate hammer curl on exercise ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell seated alternate shoulder",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Shoulder Press",
+   "why": "Closest existing match by name overlap (\"Dumbbell Shoulder Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell seated bench extension",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Bench Press",
+   "why": "Closest existing match by name overlap (\"Dumbbell Bench Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell seated bent arm lateral raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lateral Raise",
+   "why": "cosmetic position/support noise around the existing lateral raise."
+  },
+  {
+   "name": "dumbbell seated bent over alternate kickback",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Tricep Kickback",
+   "why": "kickbacks are already single-arm by convention in the existing corpus row."
+  },
+  {
+   "name": "dumbbell seated bent over triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell seated biceps curl (on stability ball)",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell seated biceps curl to shoulder press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell seated kickback",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Tricep Kickback",
+   "why": "kickbacks are already single-arm by convention in the existing corpus row."
+  },
+  {
+   "name": "dumbbell seated neutral wrist curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "dumbbell seated one arm bicep curl on exercise ball with leg raised",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": null,
+   "why": "unstable-surface prop variant; same primary training stimulus as the base movement, added balance demand is not an EL-2 loading-vector change."
+  },
+  {
+   "name": "dumbbell seated one arm kickback",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Tricep Kickback",
+   "why": "kickbacks are already single-arm by convention in the existing corpus row."
+  },
+  {
+   "name": "dumbbell seated one arm rotate",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Seated One-Arm Dumbbell Press",
+   "why": "a seated single-arm rotational press cue on the existing seated single-arm press."
+  },
+  {
+   "name": "dumbbell seated one leg calf raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Seated Dumbbell Calf Raise",
+   "why": "cosmetic grip/position noise around the existing calf raise."
+  },
+  {
+   "name": "dumbbell seated one leg calf raise - hammer grip",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Seated Dumbbell Calf Raise",
+   "why": "cosmetic grip/position noise around the existing calf raise."
+  },
+  {
+   "name": "dumbbell seated one leg calf raise - palm up",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Seated Dumbbell Calf Raise",
+   "why": "cosmetic grip/position noise around the existing calf raise."
+  },
+  {
+   "name": "dumbbell seated palms up wrist curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "dumbbell seated revers grip concentration curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Concentration Curl",
+   "why": "cosmetic position variant."
+  },
+  {
+   "name": "dumbbell seated reverse grip one arm overhead tricep extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Single-Arm Overhead Dumbbell Tricep Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell seated shoulder press (parallel grip)",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Shoulder Press",
+   "why": "cosmetic position noise around the existing shoulder press."
+  },
+  {
+   "name": "dumbbell seated triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell side lying one hand raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Front Raise",
+   "why": "bare \"raise\" defaults to the front raise family."
+  },
+  {
+   "name": "dumbbell side plank with rear fly",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Fly",
+   "why": "cosmetic prop noise around the existing fly."
+  },
+  {
+   "name": "dumbbell single arm overhead carry",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Overhead Carry",
+   "why": "exact match to the existing carries-sleds-power candidate (single-arm is the standard way this carry is loaded)."
+  },
+  {
+   "name": "dumbbell single leg deadlift with stepbox support",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Romanian Deadlift (Dumbbell)",
+   "why": "cosmetic naming variant of the existing RDL."
+  },
+  {
+   "name": "dumbbell single leg split squat",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Front Squat (Dumbbell)",
+   "why": "cosmetic combo/prop noise around the existing dumbbell squat."
+  },
+  {
+   "name": "dumbbell single leg squat",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Front Squat (Dumbbell)",
+   "why": "cosmetic combo/prop noise around the existing dumbbell squat."
+  },
+  {
+   "name": "dumbbell squat",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Front Squat (Dumbbell)",
+   "why": "cosmetic combo/prop noise around the existing dumbbell squat."
+  },
+  {
+   "name": "dumbbell standing alternate hammer curl and press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Hammer Curl",
+   "why": "neutral-grip curl variant, cosmetic position noise around the existing candidate."
+  },
+  {
+   "name": "dumbbell standing alternate overhead press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Shoulder Press",
+   "why": "cosmetic position noise around the existing shoulder press."
+  },
+  {
+   "name": "dumbbell standing alternate raise",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Front Raise",
+   "why": "bare \"raise\" defaults to the front raise family."
+  },
+  {
+   "name": "dumbbell standing alternating tricep kickback",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Tricep Kickback",
+   "why": "kickbacks are already single-arm by convention in the existing corpus row."
+  },
+  {
+   "name": "dumbbell standing around world",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Standing Dumbbell Woodchop",
+   "why": "cosmetic naming variant of the existing woodchop."
+  },
+  {
+   "name": "dumbbell standing bent over one arm triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell standing bent over two arm triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell standing biceps curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell standing concentration curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Concentration Curl",
+   "why": "cosmetic position variant."
+  },
+  {
+   "name": "dumbbell standing front raise above head",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Front Raise",
+   "why": "cosmetic position noise around the existing front raise."
+  },
+  {
+   "name": "dumbbell standing inner biceps curl v. 2",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell standing kickback",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Tricep Kickback",
+   "why": "kickbacks are already single-arm by convention in the existing corpus row."
+  },
+  {
+   "name": "dumbbell standing one arm concentration curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Concentration Curl",
+   "why": "cosmetic position variant."
+  },
+  {
+   "name": "dumbbell standing one arm curl (over incline bench)",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell standing one arm curl over incline bench",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell standing one arm extension",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Single-Arm Overhead Dumbbell Tricep Extension",
+   "why": "standing position variant of the existing single-arm overhead tricep extension."
+  },
+  {
+   "name": "dumbbell standing one arm palm in press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "One-Arm Dumbbell Bench Press",
+   "why": "matches the existing candidate."
+  },
+  {
+   "name": "dumbbell standing one arm reverse curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Reverse Curl",
+   "why": "exact match to the existing candidate."
+  },
+  {
+   "name": "dumbbell standing overhead press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Shoulder Press",
+   "why": "cosmetic position noise around the existing shoulder press."
+  },
+  {
+   "name": "dumbbell standing palms in press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Shoulder Press",
+   "why": "neutral-grip cosmetic variant of the existing shoulder press."
+  },
+  {
+   "name": "dumbbell standing triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "dumbbell standing zottman preacher curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "grip/position cosmetic variant of the existing preacher curl candidate."
+  },
+  {
+   "name": "dumbbell step up single leg balance with bicep curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbell step-up split squat",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Step-Up (Dumbbell)",
+   "why": "cosmetic variant of the existing step-up."
+  },
+  {
+   "name": "dumbbell straight arm pullover",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Pullover",
+   "why": "cosmetic prop/position noise around the existing pullover."
+  },
+  {
+   "name": "dumbbell sumo pull through",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Band Pull-Through",
+   "why": "Closest existing match by name overlap (\"Band Pull-Through\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell supported squat",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Front Squat (Dumbbell)",
+   "why": "cosmetic combo/prop noise around the existing dumbbell squat."
+  },
+  {
+   "name": "dumbbell tricep kickback with stork stance",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Tricep Kickback",
+   "why": "kickbacks are already single-arm by convention in the existing corpus row."
+  },
+  {
+   "name": "dumbbell upright shoulder external rotation",
+   "dataset": "exercises-dataset",
+   "verdict": "out_of_scope",
+   "why": "rotator-cuff work; no muscle-group home in the closed vocabulary."
+  },
+  {
+   "name": "dumbbell w-press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Decline Dumbbell Press",
+   "why": "Closest existing match by name overlap (\"Decline Dumbbell Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "dumbbell waiter biceps curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "dumbbells seated triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "exercise ball on the wall calf raise",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Calf Raise on Steps",
+   "why": "wall/ball are props for balance; same standing calf-raise stimulus."
+  },
+  {
+   "name": "exercise ball on the wall calf raise (tennis ball between ankles)",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Calf Raise on Steps",
+   "why": "wall/ball are props for balance; same standing calf-raise stimulus. Tennis ball is an adductor-squeeze cue, not a different exercise."
+  },
+  {
+   "name": "exercise ball on the wall calf raise (tennis ball between knees)",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Calf Raise on Steps",
+   "why": "same as above."
+  },
+  {
+   "name": "exercise ball supine triceps extension",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "hack calf raise",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Calf Raise on Leg Press Sled",
+   "why": "same machine calf-raise movement, alternate naming."
+  },
+  {
+   "name": "hack one leg calf raise",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Leg Press Calf Raise",
+   "why": "single-leg variant of the existing corpus row."
+  },
+  {
+   "name": "hyght dumbbell fly",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Dumbbell Fly",
+   "why": "cosmetic prop noise around the existing fly."
+  },
+  {
+   "name": "kettlebell advanced windmill",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Kettlebell Windmill (High)",
+   "why": "\"advanced\" windmill = the overhead-loaded/extended variant already covered by the candidate Kettlebell Windmill (High)."
+  },
+  {
+   "name": "kettlebell alternating press on floor",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Kettlebell Floor Press (Alternating)",
+    "primaryMuscle": "chest",
+    "secondaryMuscles": [
+     "triceps",
+     "front_delts",
+     "abs"
+    ],
+    "equipment": "kettlebell",
+    "movementPattern": "push",
+    "isCompound": true,
+    "repMin": 6,
+    "repMax": 12,
+    "fatigueCost": 3,
+    "sfr": 4,
+    "subregion": "flat",
+    "aliases": [
+     "Alternating Kettlebell Floor Press",
+     "Alternating Floor Press"
+    ],
+    "tier": "niche",
+    "laterality": "alternating",
+    "loadCharacter": "grind",
+    "difficulty": 2,
+    "distinctFrom": {
+     "existing": "Kettlebell Floor Press",
+     "why": "two bells, alternating reps hand to hand while lying, adding an anti-rotation core-bracing demand the bilateral simultaneous floor press does not have (direct floor-position analogue of the standing See-Saw Kettlebell Press)"
+    },
+    "sources": [
+     "exercises-dataset + free-exercise-db (open datasets, checklist-only, independent corroboration)"
+    ],
+    "demandOverrides": {
+     "position": "lying",
+     "floorAccess": true,
+     "overheadPosition": false,
+     "gripDemand": "bar",
+     "unilateralLoadable": true,
+     "bilateralUpper": false,
+     "bilateralLower": false,
+     "axialLoad": false,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Direct analogue of See-Saw Kettlebell Press (standing) applied to the floor position."
+   },
+   "why": "corroborated by two independent datasets; genuine gap, see candidate."
+  },
+  {
+   "name": "kettlebell alternating row",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Gorilla Row",
+   "why": "bent-over stance rowing one bell at a time while the other rests/anchors on the floor is exactly the existing Gorilla Row candidate."
+  },
+  {
+   "name": "kettlebell arnold press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Press (Single-Arm)",
+   "why": "a kettlebell's rack position is already semi-rotated by the handle geometry; an added Arnold-style rotation does not change the shoulder path the way it does with a straight dumbbell handle, and is not attested in serious kettlebell coaching literature (StrongFirst/RKC/kettlebell sport), only general fitness databases."
+  },
+  {
+   "name": "kettlebell bent press",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Kettlebell Bent Press",
+    "primaryMuscle": "front_delts",
+    "secondaryMuscles": [
+     "abs",
+     "triceps",
+     "back"
+    ],
+    "equipment": "kettlebell",
+    "movementPattern": "push",
+    "isCompound": true,
+    "repMin": 3,
+    "repMax": 6,
+    "fatigueCost": 4,
+    "sfr": 3,
+    "subregion": "overhead_press",
+    "aliases": [
+     "Bent Press"
+    ],
+    "tier": "niche",
+    "laterality": "unilateral",
+    "loadCharacter": "grind",
+    "difficulty": 3,
+    "distinctFrom": {
+     "existing": "Kettlebell Press (Single-Arm)",
+     "why": "the torso bends and rotates away from the bell as the hips drive the press, a fundamentally different old-time-strongman pressing path (not a strict vertical press)"
+    },
+    "sources": [
+     "exercises-dataset + free-exercise-db (open datasets, checklist-only, independent corroboration); classic StrongFirst/RKC kettlebell lift (Pavel Tsatsouline)"
+    ],
+    "demandOverrides": {
+     "position": "mixed",
+     "floorAccess": false,
+     "overheadPosition": true,
+     "gripDemand": "bar",
+     "unilateralLoadable": true,
+     "bilateralUpper": false,
+     "bilateralLower": true,
+     "axialLoad": true,
+     "impact": false,
+     "balanceDemand": "high",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Advanced technical grind lift; difficulty 3, niche tier (EL-5 \"when in doubt, safer tier\")."
+   },
+   "why": "classic attested RKC/StrongFirst lift; genuine gap, see candidate."
+  },
+  {
+   "name": "kettlebell bottoms up clean from the hang position",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Bottoms-Up Clean (rejected)",
+   "why": "already rejected in inventory-kettlebell.json (\"the bottoms-up demand is already represented by Bottoms-Up Kettlebell Press and Bottoms-Up Kettlebell Carry\"), upheld by lead-overrides.json."
+  },
+  {
+   "name": "kettlebell double alternating hang clean",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Kettlebell Hang Clean (Double, Alternating)",
+    "primaryMuscle": "traps",
+    "secondaryMuscles": [
+     "back",
+     "glutes",
+     "forearms"
+    ],
+    "equipment": "kettlebell",
+    "movementPattern": "power",
+    "isCompound": true,
+    "repMin": 5,
+    "repMax": 10,
+    "fatigueCost": 4,
+    "sfr": 3,
+    "subregion": null,
+    "aliases": [
+     "Double Kettlebell Alternating Hang Clean",
+     "Alternating Hang Clean"
+    ],
+    "tier": "never_auto",
+    "laterality": "alternating",
+    "loadCharacter": "ballistic",
+    "difficulty": 3,
+    "distinctFrom": {
+     "existing": "Kettlebell Hang Clean",
+     "why": "a bell is held in each hand and cleaned one at a time in alternation, the idle bell acting as a counterweight the family already treats as a distinct demand (matches Gorilla Row, Kettlebell Swing (Alternating), Kettlebell Renegade Row precedent)"
+    },
+    "sources": [
+     "exercises-dataset + free-exercise-db (open datasets, checklist-only, independent corroboration)"
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": false,
+     "overheadPosition": false,
+     "gripDemand": "bar",
+     "unilateralLoadable": true,
+     "bilateralUpper": true,
+     "bilateralLower": true,
+     "axialLoad": true,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": true
+    },
+    "derivedNullAxes": [],
+    "notes": "Never_auto per EL-5."
+   },
+   "why": "corroborated by two independent datasets; genuine gap, see candidate."
+  },
+  {
+   "name": "kettlebell double jerk",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Kettlebell Jerk (Double)",
+    "primaryMuscle": "front_delts",
+    "secondaryMuscles": [
+     "triceps",
+     "quads",
+     "glutes"
+    ],
+    "equipment": "kettlebell",
+    "movementPattern": "power",
+    "isCompound": true,
+    "repMin": 3,
+    "repMax": 8,
+    "fatigueCost": 5,
+    "sfr": 3,
+    "subregion": "overhead_press",
+    "aliases": [
+     "Double Kettlebell Jerk",
+     "Two-Arm Kettlebell Jerk"
+    ],
+    "tier": "never_auto",
+    "laterality": "bilateral",
+    "loadCharacter": "ballistic",
+    "difficulty": 3,
+    "distinctFrom": {
+     "existing": "Kettlebell Jerk",
+     "why": "driving two bells overhead simultaneously removes the option to stagger leg drive between sides, a materially different bilateral stabilisation demand (matches the family's Double Kettlebell Clean/Press precedent); a standard kettlebell-sport (girevoy sport) competition lift, arguably more standard than the single-bell version"
+    },
+    "sources": [
+     "exercises-dataset + free-exercise-db (open datasets, checklist-only, independent corroboration)"
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": false,
+     "overheadPosition": true,
+     "gripDemand": "bar",
+     "unilateralLoadable": false,
+     "bilateralUpper": true,
+     "bilateralLower": true,
+     "axialLoad": true,
+     "impact": true,
+     "balanceDemand": "stable",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Never_auto per EL-5."
+   },
+   "why": "corroborated by two independent datasets; genuine gap, see candidate."
+  },
+  {
+   "name": "kettlebell double snatch",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Kettlebell Double Snatch",
+    "primaryMuscle": "back",
+    "secondaryMuscles": [
+     "glutes",
+     "hamstrings"
+    ],
+    "equipment": "kettlebell",
+    "movementPattern": "power",
+    "isCompound": true,
+    "repMin": 5,
+    "repMax": 10,
+    "fatigueCost": 5,
+    "sfr": 3,
+    "subregion": "upper_mid_row",
+    "aliases": [
+     "Double Kettlebell Snatch"
+    ],
+    "tier": "never_auto",
+    "laterality": "bilateral",
+    "loadCharacter": "ballistic",
+    "difficulty": 3,
+    "distinctFrom": {
+     "existing": "Alternating Kettlebell Snatch",
+     "why": "both bells are thrown to overhead lockout simultaneously rather than one at a time, a genuinely different bilateral stabilisation demand (matches the family's existing bilateral-vs-alternating distinction for swings, clean and press)"
+    },
+    "sources": [
+     "exercises-dataset + free-exercise-db (open datasets, checklist-only, independent corroboration); recognised kettlebell-sport (girevoy sport) movement"
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": false,
+     "overheadPosition": true,
+     "gripDemand": "bar",
+     "unilateralLoadable": false,
+     "bilateralUpper": true,
+     "bilateralLower": true,
+     "axialLoad": true,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Never_auto per EL-5. Named explicitly in 08-OPEN-DATASET-GAPS.md notable-misses list."
+   },
+   "why": "corroborated by two independent datasets and named in 08-OPEN-DATASET-GAPS.md notable misses; genuine gap, see candidate."
+  },
+  {
+   "name": "kettlebell double windmill",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Windmill (High)",
+   "why": "a light counterweight bell in the reaching hand does not materially change the hip-hinge/overhead-lockout stimulus of the existing Low/High windmill."
+  },
+  {
+   "name": "kettlebell extended range one arm press on floor",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Floor Press (Single-Arm)",
+   "why": "a deficit/extended-range variant of the single-arm floor press this triage already adds; folded in rather than tracked as a further separate row given only single-axis (range) difference from that new candidate."
+  },
+  {
+   "name": "kettlebell figure 8",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Figure 8 (rejected)",
+   "why": "already rejected in inventory-kettlebell.json (\"a coordination/flow drill...no single coach-countable stimulus\"), upheld by lead-overrides.json."
+  },
+  {
+   "name": "kettlebell lunge pass through",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Around-the-World",
+   "why": "a coordination/flow pass-around drill layered onto a lunge stance, same category as the already-rejected Kettlebell Figure 8; no single coach-countable stimulus distinct from Kettlebell Around-the-World."
+  },
+  {
+   "name": "kettlebell one arm clean and jerk",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Kettlebell Clean and Jerk",
+    "primaryMuscle": "front_delts",
+    "secondaryMuscles": [
+     "glutes",
+     "traps",
+     "quads"
+    ],
+    "equipment": "kettlebell",
+    "movementPattern": "power",
+    "isCompound": true,
+    "repMin": 3,
+    "repMax": 8,
+    "fatigueCost": 5,
+    "sfr": 3,
+    "subregion": "overhead_press",
+    "aliases": [
+     "Kettlebell Clean & Jerk",
+     "One-Arm Kettlebell Clean and Jerk"
+    ],
+    "tier": "never_auto",
+    "laterality": "unilateral",
+    "loadCharacter": "ballistic",
+    "difficulty": 3,
+    "distinctFrom": {
+     "existing": "Kettlebell Clean and Press",
+     "why": "the overhead delivery is a ballistic leg-driven jerk rather than a grind press, the same ballistic-vs-grind distinction EL-2 recognises; matches the corpus's own precedent of treating a clean-plus-overhead-delivery combo as one canonical row rather than two exercises programmed back to back"
+    },
+    "sources": [
+     "exercises-dataset + free-exercise-db (open datasets, checklist-only, independent corroboration, as \"One-Arm Kettlebell Clean and Jerk\")"
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": true,
+     "overheadPosition": true,
+     "gripDemand": "bar",
+     "unilateralLoadable": true,
+     "bilateralUpper": false,
+     "bilateralLower": true,
+     "axialLoad": true,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Never_auto per EL-5 (ballistic, kettlebell Olympic-derived work)."
+   },
+   "why": "matches corpus precedent (Kettlebell Clean and Press) for a combo clean+overhead-delivery lift; genuine gap, see candidate."
+  },
+  {
+   "name": "kettlebell one arm floor press",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Kettlebell Floor Press (Single-Arm)",
+    "primaryMuscle": "chest",
+    "secondaryMuscles": [
+     "triceps",
+     "front_delts",
+     "abs"
+    ],
+    "equipment": "kettlebell",
+    "movementPattern": "push",
+    "isCompound": true,
+    "repMin": 6,
+    "repMax": 12,
+    "fatigueCost": 3,
+    "sfr": 5,
+    "subregion": "flat",
+    "aliases": [
+     "One-Arm Kettlebell Floor Press"
+    ],
+    "tier": "specialist",
+    "laterality": "unilateral",
+    "loadCharacter": "grind",
+    "difficulty": 1,
+    "distinctFrom": {
+     "existing": "Kettlebell Floor Press",
+     "why": "one bell only, free hand braced on the floor; adds an anti-rotation core demand the bilateral version does not have, the same laterality distinction the family already draws for the standing press (Kettlebell Press (Single-Arm) vs Double Kettlebell Press)"
+    },
+    "sources": [
+     "exercises-dataset + free-exercise-db (open datasets, checklist-only, independent corroboration)"
+    ],
+    "demandOverrides": {
+     "position": "lying",
+     "floorAccess": true,
+     "overheadPosition": false,
+     "gripDemand": "bar",
+     "unilateralLoadable": true,
+     "bilateralUpper": false,
+     "bilateralLower": false,
+     "axialLoad": false,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Likely the more commonly used single-bell floor press (most home users own one bell)."
+   },
+   "why": "corroborated by two independent datasets; genuine gap, see candidate."
+  },
+  {
+   "name": "kettlebell one arm jerk",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Kettlebell Jerk",
+   "why": "Kettlebell Jerk is already unilateral by default; \"one arm\" adds no new laterality."
+  },
+  {
+   "name": "kettlebell one arm military press to the side",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Kettlebell Press (Single-Arm)",
+   "why": "the candidate's own alias list includes \"Military Kettlebell Press\"; \"to the side\" describes the standard single-arm press body lean, not a different bar path."
+  },
+  {
+   "name": "kettlebell one arm push press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Kettlebell Push Press",
+   "why": "Kettlebell Push Press is already unilateral by default."
+  },
+  {
+   "name": "kettlebell one arm snatch",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Kettlebell Snatch",
+   "why": "aliasesForExisting in inventory-kettlebell.json already lists \"Single-Arm Kettlebell Snatch\" as an alias of Kettlebell Snatch."
+  },
+  {
+   "name": "kettlebell pirate supper legs",
+   "dataset": "exercises-dataset",
+   "verdict": "junk",
+   "why": "garbled/corrupted name (likely a scraping artefact); not evaluable as a specific movement."
+  },
+  {
+   "name": "kettlebell pistol squat",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Kettlebell Pistol Squat",
+    "primaryMuscle": "quads",
+    "secondaryMuscles": [
+     "glutes",
+     "hamstrings",
+     "calves"
+    ],
+    "equipment": "kettlebell",
+    "movementPattern": "squat",
+    "isCompound": true,
+    "repMin": 5,
+    "repMax": 10,
+    "fatigueCost": 4,
+    "sfr": 3,
+    "subregion": null,
+    "aliases": [
+     "Kettlebell Pistol Squat"
+    ],
+    "tier": "specialist",
+    "laterality": "unilateral",
+    "loadCharacter": "grind",
+    "difficulty": 3,
+    "distinctFrom": {
+     "existing": "Pistol Squat",
+     "why": "a held kettlebell (goblet-style counterweight or resistance) is a different implement family from bodyweight-only, changing both the balance profile (counterweight assists balance) and the loading (assist or added resistance) an EL-2 implement-family change"
+    },
+    "sources": [
+     "exercises-dataset + free-exercise-db (open datasets, checklist-only, independent corroboration); widely used counterbalanced-pistol-squat coaching progression"
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": false,
+     "overheadPosition": false,
+     "gripDemand": "bar",
+     "unilateralLoadable": true,
+     "bilateralUpper": false,
+     "bilateralLower": false,
+     "axialLoad": false,
+     "impact": false,
+     "balanceDemand": "high",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Bodyweight Pistol Squat already exists; this is the loaded/counterbalanced implement variant."
+   },
+   "why": "corroborated by two independent datasets; genuine gap, see candidate."
+  },
+  {
+   "name": "kettlebell plyo push-up",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Push-Up",
+   "why": "the kettlebells are used purely as elevated hand supports; the load is still bodyweight, no kettlebell training stimulus is added."
+  },
+  {
+   "name": "kettlebell seated two arm military press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Seated Kettlebell Press",
+   "why": "single-dataset source only; the bilateral/seated combination is a plausible extension of the existing unilateral Seated Kettlebell Press but not independently corroborated, so folded in rather than added separately."
+  },
+  {
+   "name": "kettlebell seesaw press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "See-Saw Kettlebell Press",
+   "why": "exact existing candidate, alias \"Alternating Kettlebell Press\"."
+  },
+  {
+   "name": "kettlebell turkish get up (squat style)",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Turkish Get-Up",
+   "why": "a stance-style descriptor of the standing-up phase of the existing Turkish Get-Up, not a distinct movement."
+  },
+  {
+   "name": "kettlebell two arm clean",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Double Kettlebell Clean",
+   "why": "the candidate's own alias is \"Single Kettlebell Clean\"; a base clean with one bell in each hand is the standard \"two-arm\"/double reading, but per the family's Double Kettlebell Clean candidate this is that movement by another name."
+  },
+  {
+   "name": "kettlebell two arm military press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Double Kettlebell Press",
+   "why": "candidate alias list includes \"Double Kettlebell Military Press\"."
+  },
+  {
+   "name": "kettlebell two arm row",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Gorilla Row",
+   "why": "candidate alias \"Kettlebell Gorilla Row\" already covers a two-bell bent-over row."
+  },
+  {
+   "name": "kettlebell windmill",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Kettlebell Windmill (Low)",
+   "why": "unqualified windmill defaults to the low/standard variant."
+  },
+  {
+   "name": "london bridge",
+   "dataset": "exercises-dataset",
+   "verdict": "junk",
+   "why": "unattested/unclear name; does not correspond to a recognised resistance movement."
+  },
+  {
+   "name": "medicine ball chest push from 3 point stance",
+   "dataset": "exercises-dataset",
+   "verdict": "out_of_scope",
+   "why": "football-specific athletic-stance testing drill, sport drill."
+  },
+  {
+   "name": "medicine ball chest push multiple response",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Medicine Ball Chest Pass",
+   "why": "\"multiple response\" is sports-testing-battery terminology for repeated reps of the same throw."
+  },
+  {
+   "name": "medicine ball chest push single response",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Medicine Ball Chest Pass",
+   "why": "same testing terminology."
+  },
+  {
+   "name": "medicine ball chest push with run release",
+   "dataset": "exercises-dataset",
+   "verdict": "out_of_scope",
+   "why": "a throw-then-sprint agility/testing drill, not a repeatable resistance-training set."
+  },
+  {
+   "name": "medicine ball close grip push up",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Close-Grip Push-Up",
+   "why": "the medicine balls are used as elevated hand supports; load is still bodyweight."
+  },
+  {
+   "name": "medicine ball supine chest throw",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Medicine Ball Chest Pass",
+   "why": "lying position variant of the existing chest pass, same throw stimulus."
+  },
+  {
+   "name": "one arm slam (with medicine ball)",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Medicine Ball Slam",
+   "why": "the standard two-hand slam already covers the core power-throw stimulus; a one-arm variant is not independently corroborated."
+  },
+  {
+   "name": "push-up close-grip off dumbbell",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Close-Grip Push-Up",
+   "why": "Closest existing match by name overlap (\"Close-Grip Push-Up\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "push-up medicine ball",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Close-Grip Push-Up",
+   "why": "ball used as a hand support, bodyweight load unchanged."
+  },
+  {
+   "name": "reclining big toe pose with rope",
+   "dataset": "exercises-dataset",
+   "verdict": "out_of_scope",
+   "why": "a named yoga pose (Supta Padangusthasana) using a strap; yoga."
+  },
+  {
+   "name": "resistance band hip thrusts on knees (female)",
+   "dataset": "exercises-dataset",
+   "verdict": "out_of_scope",
+   "why": "gendered duplicate; mechanically the same as the existing Band Hip Thrust."
+  },
+  {
+   "name": "resistance band leg extension",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Band Leg Extension",
+    "primaryMuscle": "quads",
+    "secondaryMuscles": [],
+    "equipment": "band",
+    "movementPattern": "isolation",
+    "isCompound": false,
+    "repMin": 12,
+    "repMax": 20,
+    "fatigueCost": 2,
+    "sfr": 4,
+    "subregion": "knee_extension",
+    "aliases": [
+     "Resistance Band Leg Extension"
+    ],
+    "tier": "niche",
+    "laterality": "unilateral",
+    "loadCharacter": "grind",
+    "difficulty": 1,
+    "distinctFrom": {
+     "existing": null,
+     "why": "a band anchored behind the ankle resisting knee extension while seated; the direct quad-isolation mirror of the already-accepted Band Leg Curl (hamstrings), giving the band family a knee-extension analogue when no leg extension machine is available"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): \"resistance band leg extension\""
+    ],
+    "demandOverrides": {
+     "position": "seated",
+     "floorAccess": false,
+     "overheadPosition": false,
+     "gripDemand": "none",
+     "unilateralLoadable": true,
+     "bilateralUpper": false,
+     "bilateralLower": false,
+     "axialLoad": false,
+     "impact": false,
+     "balanceDemand": "supported",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Direct mirror of the already-accepted Band Leg Curl candidate."
+   },
+   "why": "direct mirror-image movement to the already-accepted Band Leg Curl candidate; genuine gap, see candidate."
+  },
+  {
+   "name": "resistance band seated biceps curl",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Bicep Curl",
+   "why": "seated is a cosmetic position variant."
+  },
+  {
+   "name": "resistance band seated chest press",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Chest Press",
+   "why": "exact match to the existing corpus row."
+  },
+  {
+   "name": "resistance band seated hip abduction",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Band Standing Hip Abduction",
+   "why": "seated vs standing does not meaningfully change a pure hip-abduction isolation stimulus."
+  },
+  {
+   "name": "resistance band seated straight back row",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Band Seated Row",
+   "why": "exact match to the existing candidate."
+  },
+  {
+   "name": "rope climb",
+   "dataset": "exercises-dataset",
+   "verdict": "out_of_scope",
+   "why": "no equipment vocabulary category exists for a climbing rope/apparatus; functionally a bodyweight vertical-pull gymnastic skill closer to a conditioning/skill test than standard resistance programming as presented in this dataset. Vocabulary gap flagged."
+  },
+  {
+   "name": "sled 45 degrees one leg press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Leg Press",
+   "why": "single-leg variant of the standard leg press machine."
+  },
+  {
+   "name": "sled 45° leg press (side pov)",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Leg Press",
+   "why": "camera-angle duplicate of the standard 45-degree leg press machine."
+  },
+  {
+   "name": "sled 45в° calf press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Calf Raise on Leg Press Sled",
+   "why": "encoding-corrupted \"45°\"; same existing calf-raise-on-leg-press-sled movement."
+  },
+  {
+   "name": "sled 45в° leg press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Leg Press",
+   "why": "encoding-corrupted \"45°\"; standard leg press machine."
+  },
+  {
+   "name": "sled 45в° leg press (back pov)",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Leg Press",
+   "why": "camera-angle duplicate."
+  },
+  {
+   "name": "sled 45в° leg wide press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Leg Press",
+   "why": "wide-stance cosmetic variant."
+  },
+  {
+   "name": "sled closer hack squat",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Hack Squat Machine",
+   "why": "close-stance cosmetic variant."
+  },
+  {
+   "name": "sled forward angled calf raise",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Calf Raise on Leg Press Sled",
+   "why": "same movement, angle descriptor."
+  },
+  {
+   "name": "sled hack squat",
+   "dataset": "exercises-dataset",
+   "verdict": "false_positive",
+   "target": "Hack Squat Machine",
+   "why": "\"sled\" here names the leg-press-sled/hack-squat machine, not a loaded-carry sled; corpus already has \"Hack Squat\" as an alias of Hack Squat Machine."
+  },
+  {
+   "name": "sled lying calf press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Calf Raise on Leg Press Sled",
+   "why": "lying position is the normal leg-press-sled posture; same movement."
+  },
+  {
+   "name": "sled lying squat",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Leg Press",
+   "why": "lying on an angled sled pressing a platform with the legs is the leg press machine by another name."
+  },
+  {
+   "name": "sled one leg calf press on leg press",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Calf Raise on Leg Press Sled",
+   "why": "single-leg variant of the existing corpus row."
+  },
+  {
+   "name": "sledge hammer",
+   "dataset": "exercises-dataset",
+   "verdict": "out_of_scope",
+   "why": "sledgehammer-on-tyre strikes are a fixed-implement, time/rep conditioning drill, not a progressively loaded resistance exercise."
+  },
+  {
+   "name": "spell caster",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Dumbbell Spellcaster",
+    "primaryMuscle": "side_delts",
+    "secondaryMuscles": [
+     "abs",
+     "front_delts"
+    ],
+    "equipment": "dumbbell",
+    "movementPattern": "core",
+    "isCompound": true,
+    "repMin": 10,
+    "repMax": 15,
+    "fatigueCost": 3,
+    "sfr": 4,
+    "subregion": "rotation",
+    "aliases": [
+     "Spellcaster",
+     "Spell Caster"
+    ],
+    "tier": "niche",
+    "laterality": "bilateral",
+    "loadCharacter": "grind",
+    "difficulty": 2,
+    "distinctFrom": {
+     "existing": "Standing Dumbbell Woodchop",
+     "why": "a continuous circular pass of the dumbbell around and in front of the body through a full rotational arc, rather than a single diagonal chop plane"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): \"spell caster\" / \"Spell Caster\"; documented functional-training rotational-power movement (e.g. Onnit-style unconventional strength content)"
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": false,
+     "overheadPosition": false,
+     "gripDemand": "bar",
+     "unilateralLoadable": false,
+     "bilateralUpper": true,
+     "bilateralLower": false,
+     "axialLoad": false,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Rotational core/shoulder movement; niche given specialised technique."
+   },
+   "why": "documented functional-training rotational movement; genuine gap."
+  },
+  {
+   "name": "tire flip",
+   "dataset": "exercises-dataset",
+   "verdict": "add",
+   "candidate": {
+    "name": "Tyre Flip",
+    "primaryMuscle": "back",
+    "secondaryMuscles": [
+     "glutes",
+     "hamstrings",
+     "quads",
+     "traps"
+    ],
+    "equipment": "sled",
+    "movementPattern": "power",
+    "isCompound": true,
+    "repMin": 3,
+    "repMax": 8,
+    "fatigueCost": 6,
+    "sfr": 3,
+    "subregion": null,
+    "aliases": [
+     "Tire Flip"
+    ],
+    "tier": "never_auto",
+    "laterality": "bilateral",
+    "loadCharacter": "ballistic",
+    "difficulty": 3,
+    "distinctFrom": {
+     "existing": null,
+     "why": "a classic strongman full-body pull-then-push power lift; genuinely attested as resistance/power training (not conditioning) in strength & conditioning and strongman literature, unlike battle ropes or sledgehammer-on-tyre work"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): \"tire flip\"; standard strongman/athletic-development lift; src/lib/exerciseMetadata.js already pattern-matches \"tyre flip\" in its conditioning/strongman-implement regex, confirming the app's own code already anticipates this movement name"
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": true,
+     "overheadPosition": false,
+     "gripDemand": "bar",
+     "unilateralLoadable": false,
+     "bilateralUpper": true,
+     "bilateralLower": true,
+     "axialLoad": true,
+     "impact": true,
+     "balanceDemand": "high",
+     "weightBearingHands": true
+    },
+    "derivedNullAxes": [
+     "gripDemand"
+    ],
+    "notes": "VOCAB GAP: the equipment enum has no \"tire\"/\"tyre\" value; \"sled\" used as the closest coarse fit (EL-4 lumps sleds and loaded carries together). Flagged for lead review."
+   },
+   "why": "genuinely attested strongman resistance/power lift, distinct from battle ropes/sledgehammer conditioning work; see candidate (vocabulary gap flagged: no \"tire\" equipment value)."
+  },
+  {
+   "name": "weighted seated bicep curl (on stability ball)",
+   "dataset": "exercises-dataset",
+   "verdict": "not_distinct",
+   "target": "Seated Dumbbell Curl",
+   "why": "the stability ball is a seat/prop; \"weighted\" curl load is not the medicine ball itself in standard practice."
+  },
+  {
+   "name": "Advanced Kettlebell Windmill",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Kettlebell Windmill (High)",
+   "why": "same as exercises-dataset row; cross-dataset duplicate."
+  },
+  {
+   "name": "Alternate Hammer Curl",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Hammer Curl",
+   "why": "alternating arms is the standard default way hammer curls are performed."
+  },
+  {
+   "name": "Alternating Deltoid Raise",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Front Raise",
+   "why": "bare \"raise\" defaults to the front raise family."
+  },
+  {
+   "name": "Alternating Floor Press",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Kettlebell Floor Press (Alternating)",
+   "why": "Same new movement as another row in this file, proposed once as \"Kettlebell Floor Press (Alternating)\"; this name folds in as one of its aliases. corroborated by two independent datasets; genuine gap, see candidate."
+  },
+  {
+   "name": "Alternating Hang Clean",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Kettlebell Hang Clean (Double, Alternating)",
+   "why": "Same new movement as another row in this file, proposed once as \"Kettlebell Hang Clean (Double, Alternating)\"; this name folds in as one of its aliases. no \"double\" qualifier in this dataset's naming, but an alternating hang clean necessarily holds a bell in each hand; same movement as the corroborated Double Kettlebell Alternating Hang Clean."
+  },
+  {
+   "name": "Alternating Kettlebell Row",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Gorilla Row",
+   "why": "same as exercises-dataset row; cross-dataset duplicate."
+  },
+  {
+   "name": "Alternating Renegade Row",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Kettlebell Renegade Row",
+   "why": "exact match to the existing candidate."
+  },
+  {
+   "name": "Around The Worlds",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Standing Dumbbell Woodchop",
+   "why": "a circular-arm coordination drill; not independently corroborated as distinct from existing rotational dumbbell work."
+  },
+  {
+   "name": "Back Flyes - With Bands",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Band Rear Delt Fly",
+   "why": "exact match to the existing candidate."
+  },
+  {
+   "name": "Band Good Morning (Pull Through)",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Band Good Morning",
+   "why": "exact match; corpus also separately has Band Pull-Through."
+  },
+  {
+   "name": "Band Skull Crusher",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Band Overhead Tricep Extension",
+   "why": "a band anchored overhead extending behind the head is mechanically the existing overhead tricep extension."
+  },
+  {
+   "name": "Bent Over Dumbbell Rear Delt Raise With Head On Bench",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Rear Delt Fly",
+   "why": "cosmetic position noise around the existing rear delt fly."
+  },
+  {
+   "name": "Bent Over Two-Dumbbell Row With Palms In",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Row",
+   "why": "Closest existing match by name overlap (\"Bent-Over Dumbbell Row\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Bent Press",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Kettlebell Bent Press",
+   "why": "Same new movement as another row in this file, proposed once as \"Kettlebell Bent Press\"; this name folds in as one of its aliases. same movement as exercises-dataset row; cross-dataset duplicate."
+  },
+  {
+   "name": "Bent-Arm Dumbbell Pullover",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Pullover",
+   "why": "cosmetic prop/position noise around the existing pullover."
+  },
+  {
+   "name": "Bottoms-Up Clean From The Hang Position",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Bottoms-Up Clean (rejected)",
+   "why": "same movement as exercises-dataset row; ruling upheld by lead-overrides.json."
+  },
+  {
+   "name": "Calf Raise On A Dumbbell",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Calf Raise (Standing)",
+   "why": "the dumbbell is used purely as an elevation step for a full-ROM calf raise, not as the resistance load."
+  },
+  {
+   "name": "Calf Raises - With Bands",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Calf Raise (Standing)",
+   "why": "a band is not the standard progressive-loading tool for calf raises."
+  },
+  {
+   "name": "Catch and Overhead Throw",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Medicine Ball Overhead Throw",
+   "why": "exact match to the existing candidate."
+  },
+  {
+   "name": "Chest Push (multiple response)",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Medicine Ball Chest Pass",
+   "why": "sports-testing-battery terminology."
+  },
+  {
+   "name": "Chest Push (single response)",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Medicine Ball Chest Pass",
+   "why": "sports-testing-battery terminology for the existing chest pass."
+  },
+  {
+   "name": "Chest Push from 3 point stance",
+   "dataset": "free-exercise-db",
+   "verdict": "out_of_scope",
+   "why": "football-specific athletic-stance testing drill."
+  },
+  {
+   "name": "Chest Push with Run Release",
+   "dataset": "free-exercise-db",
+   "verdict": "out_of_scope",
+   "why": "throw-then-sprint agility/testing drill."
+  },
+  {
+   "name": "Cross Over - With Bands",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Band Chest Fly (Standing)",
+   "why": "a banded cable-crossover-style chest fly matches the existing candidate."
+  },
+  {
+   "name": "Decline Dumbbell Flyes",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Fly",
+   "why": "cosmetic prop noise around the existing fly."
+  },
+  {
+   "name": "Decline Dumbbell Triceps Extension",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "Double Kettlebell Alternating Hang Clean",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Kettlebell Hang Clean (Double, Alternating)",
+   "why": "Same new movement as another row in this file, proposed once as \"Kettlebell Hang Clean (Double, Alternating)\"; this name folds in as one of its aliases. corroborated by two independent datasets; genuine gap, see candidate."
+  },
+  {
+   "name": "Double Kettlebell Jerk",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Kettlebell Jerk (Double)",
+   "why": "Same new movement as another row in this file, proposed once as \"Kettlebell Jerk (Double)\"; this name folds in as one of its aliases. corroborated by two independent datasets; genuine gap, see candidate."
+  },
+  {
+   "name": "Double Kettlebell Snatch",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Kettlebell Double Snatch",
+   "why": "Same new movement as another row in this file, proposed once as \"Kettlebell Double Snatch\"; this name folds in as one of its aliases. corroborated by two independent datasets; genuine gap, see candidate."
+  },
+  {
+   "name": "Double Kettlebell Windmill",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Windmill (High)",
+   "why": "same as exercises-dataset row; cross-dataset duplicate."
+  },
+  {
+   "name": "Dumbbell Alternate Bicep Curl",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "Dumbbell Clean",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Dumbbell Clean",
+   "why": "Same new movement as another row in this file, proposed once as \"Dumbbell Clean\"; this name folds in as one of its aliases. same movement, cross-dataset."
+  },
+  {
+   "name": "Dumbbell Flyes",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Fly",
+   "why": "cosmetic prop noise around the existing fly."
+  },
+  {
+   "name": "Dumbbell Incline Row",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Row",
+   "why": "Closest existing match by name overlap (\"Dumbbell Row\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Dumbbell Incline Shoulder Raise",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Front Raise",
+   "why": "bare \"raise\" defaults to the front raise family."
+  },
+  {
+   "name": "Dumbbell Lying One-Arm Rear Lateral Raise",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Lateral Raise",
+   "why": "unilateral vs bilateral does not meaningfully change the isolation stimulus of a raise the way it does for compound presses/rows."
+  },
+  {
+   "name": "Dumbbell Lying Pronation",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Pronation/Supination",
+   "why": "position/prop noise around the existing candidate."
+  },
+  {
+   "name": "Dumbbell Lying Rear Lateral Raise",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lateral Raise",
+   "why": "cosmetic position/support noise around the existing lateral raise."
+  },
+  {
+   "name": "Dumbbell Lying Supination",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Pronation/Supination",
+   "why": "position/prop noise around the existing candidate."
+  },
+  {
+   "name": "Dumbbell One-Arm Shoulder Press",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Single-Arm Dumbbell Press",
+   "why": "matches the existing seated/standing single-arm press family."
+  },
+  {
+   "name": "Dumbbell One-Arm Triceps Extension",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "Dumbbell Raise",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Front Raise",
+   "why": "bare \"raise\" defaults to the front raise family."
+  },
+  {
+   "name": "Dumbbell Rear Lunge",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lunge",
+   "why": "lunge-direction cosmetic variant already covered by the family's lunge rows."
+  },
+  {
+   "name": "Dumbbell Scaption",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Front Raise",
+   "why": "scaption is a raise performed in the scapular plane (roughly 30 degrees forward of pure lateral); same front-raise-family isolation stimulus, angle is a minor cue."
+  },
+  {
+   "name": "Dumbbell Seated Box Jump",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Box Jump",
+   "why": "Closest existing match by name overlap (\"Box Jump\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Dumbbell Seated One-Leg Calf Raise",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Seated Dumbbell Calf Raise",
+   "why": "cosmetic grip/position noise around the existing calf raise."
+  },
+  {
+   "name": "Dumbbell Squat",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Front Squat (Dumbbell)",
+   "why": "cosmetic combo/prop noise around the existing dumbbell squat."
+  },
+  {
+   "name": "Dumbbell Squat To A Bench",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Front Squat (Dumbbell)",
+   "why": "cosmetic combo/prop noise around the existing dumbbell squat."
+  },
+  {
+   "name": "Dumbbell Step Ups",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Step-Up (Dumbbell)",
+   "why": "cosmetic variant of the existing step-up."
+  },
+  {
+   "name": "Dumbbell Tricep Extension -Pronated Grip",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "Extended Range One-Arm Kettlebell Floor Press",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Floor Press (Single-Arm)",
+   "why": "same as exercises-dataset row; cross-dataset duplicate."
+  },
+  {
+   "name": "External Rotation",
+   "dataset": "free-exercise-db",
+   "verdict": "out_of_scope",
+   "why": "rotator-cuff work; no muscle-group home in the closed vocabulary."
+  },
+  {
+   "name": "External Rotation with Band",
+   "dataset": "free-exercise-db",
+   "verdict": "out_of_scope",
+   "why": "rotator-cuff isolation has no muscle-group home in the closed primaryMuscle vocabulary and is absent from all 552 existing corpus rows across every equipment family."
+  },
+  {
+   "name": "Front Squats With Two Kettlebells",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Kettlebell Front Rack Squat (Double)",
+   "why": "exact match to the existing candidate."
+  },
+  {
+   "name": "Hammer Grip Incline DB Bench Press",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Bench Press",
+   "why": "cosmetic grip/prop noise around the existing bench press."
+  },
+  {
+   "name": "Hip Extension with Bands",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Band Hip Thrust",
+   "why": "alternate naming for the same movement."
+  },
+  {
+   "name": "Hip Flexion with Band",
+   "dataset": "free-exercise-db",
+   "verdict": "out_of_scope",
+   "why": "hip flexor isolation has no muscle-group home in the closed primaryMuscle vocabulary and is rarely programmed as primary resistance training."
+  },
+  {
+   "name": "Hip Lift with Band",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Band Hip Thrust",
+   "why": "alternate naming for the same movement."
+  },
+  {
+   "name": "Incline Dumbbell Bench With Palms Facing In",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Incline Dumbbell Press",
+   "why": "neutral-grip cosmetic variant of the existing incline press."
+  },
+  {
+   "name": "Incline Dumbbell Flyes",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Incline Dumbbell Fly",
+   "why": "cosmetic prop/twist noise around the existing incline fly."
+  },
+  {
+   "name": "Incline Dumbbell Flyes - With A Twist",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Incline Dumbbell Fly",
+   "why": "cosmetic prop/twist noise around the existing incline fly."
+  },
+  {
+   "name": "Incline Inner Biceps Curl",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Incline Dumbbell Curl",
+   "why": "arm-position cue on the existing incline curl."
+  },
+  {
+   "name": "Internal Rotation with Band",
+   "dataset": "free-exercise-db",
+   "verdict": "out_of_scope",
+   "why": "same as External Rotation with Band; no muscle-group home in the closed vocabulary."
+  },
+  {
+   "name": "Iron Cross",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Fly",
+   "why": "a straight-arm overhead-to-side arc; same general chest/shoulder arc stimulus as the existing fly."
+  },
+  {
+   "name": "Kettlebell Arnold Press",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Press (Single-Arm)",
+   "why": "same as exercises-dataset row; cross-dataset duplicate."
+  },
+  {
+   "name": "Kettlebell Figure 8",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Figure 8 (rejected)",
+   "why": "same movement as exercises-dataset row; ruling upheld by lead-overrides.json."
+  },
+  {
+   "name": "Kettlebell Halo with Overhead Extension",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Halo",
+   "why": "the existing Kettlebell Halo candidate already circles the bell around the head; an added overhead extension is a minor combo, not a distinct stimulus."
+  },
+  {
+   "name": "Kettlebell One-Legged Deadlift",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Kettlebell Single-Leg Deadlift",
+   "why": "exact match to the existing candidate."
+  },
+  {
+   "name": "Kettlebell Overhead Triceps Extension",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Single-Arm Overhead Dumbbell Tricep Extension",
+   "why": "overhead tricep extension mechanics are implement-agnostic between a kettlebell and a dumbbell; same stimulus as the existing dumbbell row."
+  },
+  {
+   "name": "Kettlebell Pass Between The Legs",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Around-the-World",
+   "why": "a figure-8/pass-around coordination drill, same category as the already-rejected Kettlebell Figure 8."
+  },
+  {
+   "name": "Kettlebell Pirate Ships",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Figure 8 (rejected)",
+   "why": "a rocking coordination/warm-up flow drill, same \"no single coach-countable stimulus\" category as the already-rejected Kettlebell Figure 8."
+  },
+  {
+   "name": "Kettlebell Pistol Squat",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Kettlebell Pistol Squat",
+   "why": "Same new movement as another row in this file, proposed once as \"Kettlebell Pistol Squat\"; this name folds in as one of its aliases. corroborated by two independent datasets; genuine gap, see candidate."
+  },
+  {
+   "name": "Kettlebell Seesaw Press",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "See-Saw Kettlebell Press",
+   "why": "same as exercises-dataset row."
+  },
+  {
+   "name": "Kettlebell Turkish Get-Up (Lunge style)",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Turkish Get-Up",
+   "why": "stance-style descriptor of the existing Turkish Get-Up."
+  },
+  {
+   "name": "Kettlebell Turkish Get-Up (Squat style)",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Turkish Get-Up",
+   "why": "stance-style descriptor of the existing Turkish Get-Up."
+  },
+  {
+   "name": "Kettlebell Windmill",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Kettlebell Windmill (Low)",
+   "why": "same as exercises-dataset row."
+  },
+  {
+   "name": "Leg-Over Floor Press",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Floor Press",
+   "why": "a leg-bent/leg-crossed floor press stance variant, same pressing stimulus as the existing bilateral floor press."
+  },
+  {
+   "name": "Lunge Pass Through",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Around-the-World",
+   "why": "same as exercises-dataset row; cross-dataset duplicate."
+  },
+  {
+   "name": "Lying One-Arm Lateral Raise",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Lateral Raise",
+   "why": "unilateral vs bilateral does not meaningfully change the isolation stimulus of a raise the way it does for compound presses/rows."
+  },
+  {
+   "name": "Lying Rear Delt Raise",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Rear Delt Fly",
+   "why": "cosmetic position noise around the existing rear delt fly."
+  },
+  {
+   "name": "Lying Supine Dumbbell Curl",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "Medicine Ball Full Twist",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Weighted Russian Twist (Medicine Ball)",
+   "why": "alternate naming."
+  },
+  {
+   "name": "Medicine Ball Scoop Throw",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Medicine Ball Scoop Toss",
+   "why": "existing candidate, alias \"Rotational Scoop Toss\"."
+  },
+  {
+   "name": "Middle Back Shrug",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Shrug",
+   "why": "a scapular-retraction-flavoured shrug cue, same core elevation movement."
+  },
+  {
+   "name": "One Arm Dumbbell Preacher Curl",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "grip/position cosmetic variant of the existing preacher curl candidate."
+  },
+  {
+   "name": "One Arm Pronated Dumbbell Triceps Extension",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "One Arm Supinated Dumbbell Triceps Extension",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "One-Arm Flat Bench Dumbbell Flye",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Fly",
+   "why": "cosmetic prop noise around the existing fly."
+  },
+  {
+   "name": "One-Arm Incline Lateral Raise",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Lateral Raise",
+   "why": "unilateral vs bilateral does not meaningfully change the isolation stimulus of a raise the way it does for compound presses/rows."
+  },
+  {
+   "name": "One-Arm Kettlebell Clean",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Kettlebell Clean",
+   "why": "candidate alias \"Single Kettlebell Clean\" already covers this."
+  },
+  {
+   "name": "One-Arm Kettlebell Clean and Jerk",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Kettlebell Clean and Jerk",
+   "why": "Same new movement as another row in this file, proposed once as \"Kettlebell Clean and Jerk\"; this name folds in as one of its aliases. corroborated by two independent datasets; genuine gap, see candidate."
+  },
+  {
+   "name": "One-Arm Kettlebell Floor Press",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Kettlebell Floor Press (Single-Arm)",
+   "why": "Same new movement as another row in this file, proposed once as \"Kettlebell Floor Press (Single-Arm)\"; this name folds in as one of its aliases. corroborated by two independent datasets; genuine gap, see candidate."
+  },
+  {
+   "name": "One-Arm Kettlebell Jerk",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Kettlebell Jerk",
+   "why": "same as exercises-dataset row."
+  },
+  {
+   "name": "One-Arm Kettlebell Military Press To The Side",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Kettlebell Press (Single-Arm)",
+   "why": "same as exercises-dataset row."
+  },
+  {
+   "name": "One-Arm Kettlebell Para Press",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Press (Single-Arm)",
+   "why": "\"para press\" is not a recognised distinct technique in kettlebell coaching literature; folded to the existing single-arm press."
+  },
+  {
+   "name": "One-Arm Kettlebell Push Press",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Kettlebell Push Press",
+   "why": "same as exercises-dataset row."
+  },
+  {
+   "name": "One-Arm Kettlebell Snatch",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Kettlebell Snatch",
+   "why": "same as exercises-dataset row."
+  },
+  {
+   "name": "One-Arm Kettlebell Split Jerk",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Jerk",
+   "why": "split-stance jerk delivery is a footwork/stance technique variant of the existing jerk, the same way this triage folds the Turkish Get-Up \"squat style\"/\"lunge style\" stance descriptors."
+  },
+  {
+   "name": "One-Arm Kettlebell Split Snatch",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Kettlebell Snatch",
+   "why": "split-stance footwork variant of the existing snatch."
+  },
+  {
+   "name": "One-Arm Medicine Ball Slam",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Medicine Ball Slam",
+   "why": "same as \"one arm slam\"."
+  },
+  {
+   "name": "One-Arm Open Palm Kettlebell Clean",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Clean",
+   "why": "\"open palm\" is a grip/catch technique cue (reducing forearm pump), not a distinct movement."
+  },
+  {
+   "name": "One-Arm Overhead Kettlebell Squats",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Kettlebell Overhead Squat",
+   "why": "existing candidate is already unilateral by default."
+  },
+  {
+   "name": "One-Arm Side Laterals",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "One-Arm Dumbbell Fly",
+   "why": "unilateral variant of an existing compound/upper-body movement; folded to the closest existing single-arm candidate given ambiguous base movement."
+  },
+  {
+   "name": "Open Palm Kettlebell Clean",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Clean",
+   "why": "grip/catch technique cue, not a distinct movement."
+  },
+  {
+   "name": "Overhead Slam",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Medicine Ball Slam",
+   "why": "candidate alias \"Overhead Medicine Ball Slam\"."
+  },
+  {
+   "name": "Palms-Down Dumbbell Wrist Curl Over A Bench",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "Palms-Up Dumbbell Wrist Curl Over A Bench",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "Plie Dumbbell Squat",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Front Squat (Dumbbell)",
+   "why": "cosmetic combo/prop noise around the existing dumbbell squat."
+  },
+  {
+   "name": "Plyo Kettlebell Pushups",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Push-Up",
+   "why": "same as exercises-dataset row."
+  },
+  {
+   "name": "Power Partials",
+   "dataset": "free-exercise-db",
+   "verdict": "junk",
+   "why": "names a partial-range training technique/protocol, not a single distinct exercise."
+  },
+  {
+   "name": "Return Push from Stance",
+   "dataset": "free-exercise-db",
+   "verdict": "junk",
+   "why": "too vague to identify as a specific distinct movement (likely a testing-battery protocol label)."
+  },
+  {
+   "name": "Reverse Flyes",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Fly",
+   "why": "cosmetic prop noise around the existing fly."
+  },
+  {
+   "name": "Reverse Flyes With External Rotation",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Rear Delt Fly",
+   "why": "the rear delt fly component is the existing movement; the added external-rotation flourish has no muscle-group home in the closed vocabulary and is folded out."
+  },
+  {
+   "name": "Seated Bent-Over One-Arm Dumbbell Triceps Extension",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "Seated Bent-Over Two-Arm Dumbbell Triceps Extension",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "Seated Dumbbell Palms-Down Wrist Curl",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "Seated Dumbbell Palms-Up Wrist Curl",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "Seated One-Arm Dumbbell Palms-Down Wrist Curl",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "Seated One-Arm Dumbbell Palms-Up Wrist Curl",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Wrist Curl",
+   "why": "grip/position cosmetic variant of the existing wrist curl family."
+  },
+  {
+   "name": "Seated Triceps Press",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Seated Dumbbell Press",
+   "why": "Closest existing match by name overlap (\"Seated Dumbbell Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "See-Saw Press (Alternating Side Press)",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "See-Saw Kettlebell Press",
+   "why": "Closest existing match by name overlap (\"See-Saw Kettlebell Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Side Lateral Raise",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lateral Raise",
+   "why": "cosmetic position/support noise around the existing lateral raise."
+  },
+  {
+   "name": "Side Laterals to Front Raise",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Dumbbell Lateral to Front Raise",
+   "why": "Same new movement as another row in this file, proposed once as \"Dumbbell Lateral to Front Raise\"; this name folds in as one of its aliases. same movement."
+  },
+  {
+   "name": "Single Dumbbell Raise",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Front Raise",
+   "why": "bare \"raise\" defaults to the front raise family."
+  },
+  {
+   "name": "Speed Band Overhead Triceps",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Band Overhead Tricep Extension",
+   "why": "alternate naming."
+  },
+  {
+   "name": "Spell Caster",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Dumbbell Spellcaster",
+   "why": "Same new movement as another row in this file, proposed once as \"Dumbbell Spellcaster\"; this name folds in as one of its aliases. same movement, cross-dataset."
+  },
+  {
+   "name": "Standing Alternating Dumbbell Press",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Alternating Dumbbell Bench Press",
+   "why": "Closest existing match by name overlap (\"Alternating Dumbbell Bench Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Standing Bent-Over One-Arm Dumbbell Triceps Extension",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "Standing Bent-Over Two-Arm Dumbbell Triceps Extension",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "Standing Dumbbell Press",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Decline Dumbbell Press",
+   "why": "Closest existing match by name overlap (\"Decline Dumbbell Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Standing Dumbbell Straight-Arm Front Delt Raise Above Head",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Front Raise",
+   "why": "Closest existing match by name overlap (\"Dumbbell Front Raise\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Standing Dumbbell Triceps Extension",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "Standing Inner-Biceps Curl",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Curl",
+   "why": "an arm-position cue (curling with the elbow tucked/rotated in) on the existing curl."
+  },
+  {
+   "name": "Standing One-Arm Dumbbell Curl Over Incline Bench",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "Standing One-Arm Dumbbell Triceps Extension",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Lying Triceps Extension",
+   "why": "grip/position cosmetic variant of the existing tricep extension family."
+  },
+  {
+   "name": "Standing Palm-In One-Arm Dumbbell Press",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "One-Arm Dumbbell Bench Press",
+   "why": "matches the existing candidate."
+  },
+  {
+   "name": "Standing Palms-In Dumbbell Press",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Shoulder Press",
+   "why": "neutral-grip cosmetic variant of the existing shoulder press."
+  },
+  {
+   "name": "Standing Two-Arm Overhead Throw",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Medicine Ball Overhead Throw",
+   "why": "exact match."
+  },
+  {
+   "name": "Stiff-Legged Dumbbell Deadlift",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Romanian Deadlift (Dumbbell)",
+   "why": "cosmetic naming variant of the existing RDL."
+  },
+  {
+   "name": "Straight-Arm Dumbbell Pullover",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Dumbbell Pullover",
+   "why": "cosmetic prop/position noise around the existing pullover."
+  },
+  {
+   "name": "Supine Chest Throw",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Medicine Ball Chest Pass",
+   "why": "lying position variant."
+  },
+  {
+   "name": "Supine One-Arm Overhead Throw",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Medicine Ball Overhead Throw",
+   "why": "lying/one-arm position variant, same power-throw stimulus."
+  },
+  {
+   "name": "Supine Two-Arm Overhead Throw",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Medicine Ball Overhead Throw",
+   "why": "lying position variant."
+  },
+  {
+   "name": "Two-Arm Dumbbell Preacher Curl",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "grip/position cosmetic variant of the existing preacher curl candidate."
+  },
+  {
+   "name": "Two-Arm Kettlebell Clean",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Double Kettlebell Clean",
+   "why": "same as exercises-dataset row."
+  },
+  {
+   "name": "Two-Arm Kettlebell Jerk",
+   "dataset": "free-exercise-db",
+   "verdict": "alias",
+   "target": "Kettlebell Jerk (Double)",
+   "why": "Same new movement as another row in this file, proposed once as \"Kettlebell Jerk (Double)\"; this name folds in as one of its aliases. same bilateral simultaneous jerk as the corroborated Double Kettlebell Jerk gap."
+  },
+  {
+   "name": "Two-Arm Kettlebell Military Press",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Double Kettlebell Press",
+   "why": "same as exercises-dataset row."
+  },
+  {
+   "name": "Two-Arm Kettlebell Row",
+   "dataset": "free-exercise-db",
+   "verdict": "false_positive",
+   "target": "Gorilla Row",
+   "why": "same as exercises-dataset row."
+  },
+  {
+   "name": "Vertical Swing",
+   "dataset": "free-exercise-db",
+   "verdict": "junk",
+   "why": "dumbbells are not a well-attested serious swinging implement (unlike kettlebells, whose handle geometry is designed for it); not something a good coach would prescribe."
+  },
+  {
+   "name": "Weighted Crunches",
+   "dataset": "free-exercise-db",
+   "verdict": "not_distinct",
+   "target": "Weighted Dumbbell Crunch",
+   "why": "a weighted crunch is the same movement regardless of whether a medicine ball or dumbbell is held against the chest."
+  },
+  {
+   "name": "2 Handed Kettlebell Swing",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Kettlebell Swing",
+   "why": "aliasesForExisting in inventory-kettlebell.json already lists \"Two-Hand Kettlebell Swing\" as an alias."
+  },
+  {
+   "name": "45° lateral raises",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lateral Raise",
+   "why": "cosmetic position/support noise around the existing lateral raise."
+  },
+  {
+   "name": "Alternating Biceps Curls With Dumbbell",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "Alternating bicep curls",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "Alternating dumbbell hammer curl",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Hammer Curl",
+   "why": "neutral-grip curl variant, cosmetic position noise around the existing candidate."
+  },
+  {
+   "name": "Alternative DB Gorilla rows",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Two-Arm Bent-Over Dumbbell Row",
+   "why": "bent-over alternating floor row; covered by the existing dumbbell row family (aliasesForExisting already lists \"Two-Arm Bent-Over Dumbbell Row\")."
+  },
+  {
+   "name": "Arnold Shoulder Press",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Shoulder Press",
+   "why": "cosmetic position noise around the existing shoulder press."
+  },
+  {
+   "name": "Axe Hold",
+   "dataset": "wger",
+   "verdict": "junk",
+   "why": "unclear/unattested specific static-hold movement as named."
+  },
+  {
+   "name": "Band pull-apart with external rotation",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Band Pull-Apart",
+   "why": "combining pull-apart with an external-rotation add-on is a cosmetic extension of the same movement."
+  },
+  {
+   "name": "Banded Clamshell",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Band Clamshell",
+   "why": "exact match, spelling only."
+  },
+  {
+   "name": "Banded Scapular Retraction",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Band Pull-Apart",
+   "why": "scapular retraction is the pull-apart mechanic."
+  },
+  {
+   "name": "Banded Shoulder Drills",
+   "dataset": "wger",
+   "verdict": "junk",
+   "why": "too vague/generic a name to identify a single distinct movement (could describe many different drills)."
+  },
+  {
+   "name": "Barbell Clean and press",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Clean and Press",
+   "why": "mislabelled equipment (tagged Dumbbell but named Barbell); the combo clean-and-press movement already exists in the corpus for kettlebell, and a barbell version is a barbell-family concern, not this triage's dumbbell scope."
+  },
+  {
+   "name": "Bear crawl pull through",
+   "dataset": "wger",
+   "verdict": "junk",
+   "why": "unclear combo name; not a single well-defined movement."
+  },
+  {
+   "name": "Benchpress Dumbbells",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Bench Press",
+   "why": "reordered wording of the existing corpus row."
+  },
+  {
+   "name": "Bent High Pulls",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Upright Row",
+   "why": "bent-over high-pull elbow path is a position variant of the existing upright-row candidate family."
+  },
+  {
+   "name": "Biceps Curls With Dumbbell",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "Bizeps Curls Trifecta",
+   "dataset": "wger",
+   "verdict": "junk",
+   "why": "\"trifecta\" names a three-exercise training protocol/technique, not a single distinct movement."
+  },
+  {
+   "name": "Bulgarian Squat with Dumbbells",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Front Squat (Dumbbell)",
+   "why": "cosmetic combo/prop noise around the existing dumbbell squat."
+  },
+  {
+   "name": "Chest-Supported Rear Delt Raise",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Rear Delt Fly",
+   "why": "cosmetic position noise around the existing rear delt fly."
+  },
+  {
+   "name": "Cross-Bench Dumbbell Pullovers",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Pullover",
+   "why": "cosmetic prop/position noise around the existing pullover."
+  },
+  {
+   "name": "Curl  - With Shoulder Elevated",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Curl",
+   "why": "shoulder-elevated is a minor position cue on the existing curl, not a distinct movement."
+  },
+  {
+   "name": "Curl with kettlebell two hands",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Curl",
+   "why": "a kettlebell held with both hands for a curl is mechanically the same isolation curl regardless of implement."
+  },
+  {
+   "name": "DB Floor Press (5kg Single Arm)",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "One-Arm Dumbbell Fly",
+   "why": "unilateral variant of an existing compound/upper-body movement; folded to the closest existing single-arm candidate given ambiguous base movement."
+  },
+  {
+   "name": "DB Hammer Curls (5kg)",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Hammer Curl",
+   "why": "neutral-grip curl variant, cosmetic position noise around the existing candidate."
+  },
+  {
+   "name": "DB Single-Arm Row (5kg)",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Single-Arm Dumbbell Row (Bench-Supported)",
+   "why": "candidate alias list includes \"One-Arm Dumbbell Row\"."
+  },
+  {
+   "name": "DB Upper Chest Variation",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Pullover (Chest)",
+   "why": "Closest existing match by name overlap (\"Dumbbell Pullover (Chest)\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "DB Wrist Extension",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Band Wrist Extension",
+   "why": "Closest existing match by name overlap (\"Band Wrist Extension\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Devil’s Press",
+   "dataset": "wger",
+   "verdict": "add",
+   "candidate": {
+    "name": "Dumbbell Devil's Press",
+    "primaryMuscle": "front_delts",
+    "secondaryMuscles": [
+     "chest",
+     "quads",
+     "triceps",
+     "abs"
+    ],
+    "equipment": "dumbbell",
+    "movementPattern": "power",
+    "isCompound": true,
+    "repMin": 5,
+    "repMax": 10,
+    "fatigueCost": 6,
+    "sfr": 2,
+    "subregion": "overhead_press",
+    "aliases": [
+     "Devil's Press"
+    ],
+    "tier": "never_auto",
+    "laterality": "bilateral",
+    "loadCharacter": "ballistic",
+    "difficulty": 3,
+    "distinctFrom": {
+     "existing": null,
+     "why": "a burpee into a two-dumbbell snatch-to-overhead in one continuous rep; not a combination of two existing rows programmed back to back but a single named, widely-recognised conditioning/power lift with its own technique"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): \"Devil’s Press\"; extremely widely documented functional-training/CrossFit movement"
+    ],
+    "demandOverrides": {
+     "position": "mixed",
+     "floorAccess": true,
+     "overheadPosition": true,
+     "gripDemand": "bar",
+     "unilateralLoadable": false,
+     "bilateralUpper": true,
+     "bilateralLower": true,
+     "axialLoad": true,
+     "impact": true,
+     "balanceDemand": "high",
+     "weightBearingHands": true
+    },
+    "derivedNullAxes": [],
+    "notes": "Never_auto per EL-5 (ballistic power movement, high fatigue cost/low SFR reflects the burpee component)."
+   },
+   "why": "extremely widely documented functional/CrossFit movement; genuine gap."
+  },
+  {
+   "name": "Drop Curl",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "Dumbbell Bent Over Face Pull",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Face Pull",
+   "why": "Closest existing match by name overlap (\"Face Pull\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Dumbbell Crunches",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Weighted Dumbbell Crunch",
+   "why": "cosmetic variant of the existing candidate."
+  },
+  {
+   "name": "Dumbbell Deadlift",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Romanian Deadlift (Dumbbell)",
+   "why": "cosmetic naming variant of the existing RDL."
+  },
+  {
+   "name": "Dumbbell Frog Press",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Decline Dumbbell Press",
+   "why": "Closest existing match by name overlap (\"Decline Dumbbell Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Dumbbell Hang Power Cleans",
+   "dataset": "wger",
+   "verdict": "add",
+   "candidate": {
+    "name": "Dumbbell Hang Clean",
+    "primaryMuscle": "traps",
+    "secondaryMuscles": [
+     "quads",
+     "glutes",
+     "back"
+    ],
+    "equipment": "dumbbell",
+    "movementPattern": "power",
+    "isCompound": true,
+    "repMin": 3,
+    "repMax": 6,
+    "fatigueCost": 5,
+    "sfr": 3,
+    "subregion": null,
+    "aliases": [
+     "Dumbbell Hang Power Clean"
+    ],
+    "tier": "never_auto",
+    "laterality": "bilateral",
+    "loadCharacter": "ballistic",
+    "difficulty": 3,
+    "distinctFrom": {
+     "existing": "Dumbbell Clean",
+     "why": "starts from a mid-thigh hang position rather than the floor, a range/depth-class distinction EL-2 explicitly recognises, matching how Kettlebell Hang Clean is already distinct from Kettlebell Clean"
+    },
+    "sources": [
+     "free-exercise-db (open dataset, checklist-only): \"Dumbbell Hang Power Cleans\""
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": false,
+     "overheadPosition": false,
+     "gripDemand": "bar",
+     "unilateralLoadable": false,
+     "bilateralUpper": true,
+     "bilateralLower": true,
+     "axialLoad": true,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": true
+    },
+    "derivedNullAxes": [],
+    "notes": "Never_auto per EL-5. Corpus does not yet have a kettlebell-family style hang/floor split for dumbbell."
+   },
+   "why": "hang position is an EL-2 range/depth-class distinction from Dumbbell Clean."
+  },
+  {
+   "name": "Dumbbell Hex Press",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Decline Dumbbell Press",
+   "why": "Closest existing match by name overlap (\"Decline Dumbbell Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Dumbbell Rear Lunge",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lunge",
+   "why": "lunge-direction cosmetic variant already covered by the family's lunge rows."
+  },
+  {
+   "name": "Dumbbell Scaption",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Front Raise",
+   "why": "scaption is a raise performed in the scapular plane (roughly 30 degrees forward of pure lateral); same front-raise-family isolation stimulus, angle is a minor cue."
+  },
+  {
+   "name": "Dumbbell Shoulder Rotations",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Shoulder Press",
+   "why": "Closest existing match by name overlap (\"Dumbbell Shoulder Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Dumbbell Thruster",
+   "dataset": "wger",
+   "verdict": "add",
+   "candidate": {
+    "name": "Dumbbell Thruster",
+    "primaryMuscle": "quads",
+    "secondaryMuscles": [
+     "front_delts",
+     "glutes",
+     "triceps"
+    ],
+    "equipment": "dumbbell",
+    "movementPattern": "squat",
+    "isCompound": true,
+    "repMin": 8,
+    "repMax": 15,
+    "fatigueCost": 5,
+    "sfr": 3,
+    "subregion": "squat_press",
+    "aliases": [
+     "Dumbbell Squat to Press"
+    ],
+    "tier": "specialist",
+    "laterality": "bilateral",
+    "loadCharacter": "grind",
+    "difficulty": 2,
+    "distinctFrom": {
+     "existing": "Front Squat (Dumbbell)",
+     "why": "the squat's stretch reflex/leg drive feeds directly into an overhead press in one continuous rep; a combined squat-to-press stimulus the family has no equivalent of (matches the corpus's own combo-lift precedent, Kettlebell Clean and Press)"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): \"Dumbbell Thruster\"; one of the most standard functional/general-fitness dumbbell movements"
+    ],
+    "demandOverrides": {
+     "position": "standing",
+     "floorAccess": false,
+     "overheadPosition": true,
+     "gripDemand": "bar",
+     "unilateralLoadable": false,
+     "bilateralUpper": true,
+     "bilateralLower": true,
+     "axialLoad": true,
+     "impact": false,
+     "balanceDemand": "stable",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Grind, not never_auto: leg-drive-assisted but controlled, unlike a true ballistic clean/snatch."
+   },
+   "why": "one of the most standard functional dumbbell movements; genuine gap."
+  },
+  {
+   "name": "Dumbbell Underhand Dead Row",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Row",
+   "why": "Closest existing match by name overlap (\"Dumbbell Row\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Dumbbell bicep curl to press",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "Dumbbell farmer's carry",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Farmer's Carry",
+   "why": "Closest existing match by name overlap (\"Kettlebell Farmer's Carry\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Dumbbell rear delt row",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Rear Delt Fly",
+   "why": "cosmetic position noise around the existing rear delt fly."
+  },
+  {
+   "name": "Dumbbell wide bicep curls",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "Dumbbells on Scott Machine",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "\"Scott machine\"/\"Scott bench\" is the preacher-curl bench; matches the existing candidate."
+  },
+  {
+   "name": "Dumbell Tate Press",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Tate Press",
+   "why": "Closest existing match by name overlap (\"Tate Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Dynamic side hold",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Side Plank with Hip Dip (Dynamic)",
+   "why": "existing corpus row; the kettlebell tag reflects an optional added-load variant of the same movement."
+  },
+  {
+   "name": "Elbows Tucked DB Bench Press",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Bench Press",
+   "why": "cosmetic grip/prop noise around the existing bench press."
+  },
+  {
+   "name": "Exercise Band Dorsiflexion",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Band Ankle Dorsiflexion",
+   "why": "exact match, wording only."
+  },
+  {
+   "name": "Exercise Band Plantarflexion",
+   "dataset": "wger",
+   "verdict": "add",
+   "candidate": {
+    "name": "Band Ankle Plantarflexion",
+    "primaryMuscle": "calves",
+    "secondaryMuscles": [],
+    "equipment": "band",
+    "movementPattern": "isolation",
+    "isCompound": false,
+    "repMin": 15,
+    "repMax": 25,
+    "fatigueCost": 1,
+    "sfr": 5,
+    "subregion": "gastro",
+    "aliases": [
+     "Seated Band Calf Raise",
+     "Band Plantar Flexion"
+    ],
+    "tier": "niche",
+    "laterality": "unilateral",
+    "loadCharacter": "grind",
+    "difficulty": 1,
+    "distinctFrom": {
+     "existing": "Band Ankle Dorsiflexion",
+     "why": "mirror-image ankle movement (pointing the foot rather than flexing it toward the shin), targeting calves rather than tibialis; direct complementary pair to the already-accepted dorsiflexion candidate"
+    },
+    "sources": [
+     "exercises-dataset (open dataset, checklist-only): \"Exercise Band Plantarflexion\""
+    ],
+    "demandOverrides": {
+     "position": "seated",
+     "floorAccess": false,
+     "overheadPosition": false,
+     "gripDemand": "none",
+     "unilateralLoadable": true,
+     "bilateralUpper": false,
+     "bilateralLower": false,
+     "axialLoad": false,
+     "impact": false,
+     "balanceDemand": "supported",
+     "weightBearingHands": false
+    },
+    "derivedNullAxes": [],
+    "notes": "Low fatigue cost, low load ceiling with a band; niche accessory."
+   },
+   "why": "direct mirror-image movement to the already-accepted Band Ankle Dorsiflexion candidate; genuine gap, see candidate."
+  },
+  {
+   "name": "Face pulls with yellow/green band",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Band Face Pull",
+   "why": "band colour is a resistance-level descriptor, not a different exercise."
+  },
+  {
+   "name": "Forearm Curls (underhand grip)",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "Glute Bridge Single-Arm Press",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "One-Arm Dumbbell Bench Press",
+   "why": "matches the existing candidate."
+  },
+  {
+   "name": "Hip Airplane",
+   "dataset": "wger",
+   "verdict": "out_of_scope",
+   "why": "a balance/hip-mobility stability drill (single-leg rotational control), not primarily a resistance movement; the kettlebell is used as an optional counterbalance, not a training load."
+  },
+  {
+   "name": "Incline Bench Reverse Fly",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Incline Dumbbell Fly",
+   "why": "cosmetic prop/twist noise around the existing incline fly."
+  },
+  {
+   "name": "Incline Dumbbell Row",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Row",
+   "why": "Closest existing match by name overlap (\"Dumbbell Row\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Incline Static Hold",
+   "dataset": "wger",
+   "verdict": "junk",
+   "why": "too vague/generic a name (an isometric hold at an unspecified position/movement) to identify a single distinct exercise."
+  },
+  {
+   "name": "Jalon caballero unialteral",
+   "dataset": "wger",
+   "verdict": "junk",
+   "why": "garbled foreign-language text; not evaluable as a specific movement."
+  },
+  {
+   "name": "Kettlebell One Legged Deadlift",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Kettlebell Single-Leg Deadlift",
+   "why": "exact match to the existing candidate."
+  },
+  {
+   "name": "Kong Curl",
+   "dataset": "wger",
+   "verdict": "junk",
+   "why": "not a recognised standard exercise name; unattested."
+  },
+  {
+   "name": "Kreis Press DB",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Decline Dumbbell Press",
+   "why": "Closest existing match by name overlap (\"Decline Dumbbell Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Lat Pull DB",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Pullover",
+   "why": "a straight-arm lat-focused pulling motion matches the existing dumbbell pullover family."
+  },
+  {
+   "name": "Lateral Raises",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Lateral Raise",
+   "why": "cosmetic position/support noise around the existing lateral raise."
+  },
+  {
+   "name": "Lateral-to-Front Raises",
+   "dataset": "wger",
+   "verdict": "alias",
+   "target": "Dumbbell Lateral to Front Raise",
+   "why": "Same new movement as another row in this file, proposed once as \"Dumbbell Lateral to Front Raise\"; this name folds in as one of its aliases. same movement."
+  },
+  {
+   "name": "Leg curl with elastic",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Band Leg Curl",
+   "why": "exact match, \"elastic\" = band."
+  },
+  {
+   "name": "Lying Dumbbell Row SS Seated Shrug",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Shrug",
+   "why": "cosmetic position/grip noise around the existing shrug."
+  },
+  {
+   "name": "Lying Hamstring Stretch with Band",
+   "dataset": "wger",
+   "verdict": "out_of_scope",
+   "why": "explicitly named a stretch."
+  },
+  {
+   "name": "Lying Rotator Cuff Exercise",
+   "dataset": "wger",
+   "verdict": "out_of_scope",
+   "why": "explicitly named rotator-cuff work; no muscle-group home in the closed vocabulary."
+  },
+  {
+   "name": "Lying Triceps Kickback",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Tricep Kickback",
+   "why": "kickbacks are already single-arm by convention in the existing corpus row."
+  },
+  {
+   "name": "No Leg Drive Dumbbell Chest Press",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Bench Press",
+   "why": "cosmetic grip/prop noise around the existing bench press."
+  },
+  {
+   "name": "One-Arm Heavy Row",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Single-Arm Dumbbell Row (Bench-Supported)",
+   "why": "candidate alias list includes \"One-Arm Dumbbell Row\"."
+  },
+  {
+   "name": "Patadas traseras",
+   "dataset": "wger",
+   "verdict": "junk",
+   "why": "garbled Spanish (\"back kicks\"); not evaluable as a specific distinct movement."
+  },
+  {
+   "name": "Plantarflexion Stretch with Band",
+   "dataset": "wger",
+   "verdict": "out_of_scope",
+   "why": "explicitly named a stretch."
+  },
+  {
+   "name": "Preacher Curl - Externally Rotated",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "forearm rotation cue on the existing preacher curl."
+  },
+  {
+   "name": "Preacher Curl - Internally Rotated",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "forearm rotation cue."
+  },
+  {
+   "name": "Preacher Curl Isometric",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "an isometric-hold training technique applied to the existing preacher curl, not a distinct movement."
+  },
+  {
+   "name": "Pullover",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Pullover",
+   "why": "cosmetic prop/position noise around the existing pullover."
+  },
+  {
+   "name": "Quadruped Hip Abduction",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Band Fire Hydrant (Kneeling)",
+   "why": "a quadruped straight-leg abduction is essentially the existing Band Fire Hydrant (Kneeling) candidate."
+  },
+  {
+   "name": "Seated Dumbbell Side Lateral",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Lateral Raise",
+   "why": "Closest existing match by name overlap (\"Dumbbell Lateral Raise\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Seated Triceps Press",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Seated Dumbbell Press",
+   "why": "Closest existing match by name overlap (\"Seated Dumbbell Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Seated W Curl",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "Seated rear delt rise",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Rear Delt Fly",
+   "why": "cosmetic position noise around the existing rear delt fly."
+  },
+  {
+   "name": "Shoulder Dumbbell Pendular Exercise",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Shoulder Press",
+   "why": "Closest existing match by name overlap (\"Dumbbell Shoulder Press\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Shoulder External Rotation with Dumbbell",
+   "dataset": "wger",
+   "verdict": "out_of_scope",
+   "why": "rotator-cuff work; no muscle-group home in the closed vocabulary."
+  },
+  {
+   "name": "Shoulder Raise (Dumbbell)",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Front Raise",
+   "why": "Closest existing match by name overlap (\"Dumbbell Front Raise\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Shoulder Raise Side and Front DB",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Front Raise",
+   "why": "Closest existing match by name overlap (\"Dumbbell Front Raise\"); treated as a cosmetic/descriptor variant given the volume of near-identical noise in this equipment group."
+  },
+  {
+   "name": "Side Bends on Machine",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Dumbbell Side Bend",
+   "why": "mislabelled equipment (machine, not dumbbell); same oblique side-bend stimulus."
+  },
+  {
+   "name": "Side Dumbbell Trunk Flexion",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Side Bend",
+   "why": "alternate naming."
+  },
+  {
+   "name": "Side bend",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Side Bend",
+   "why": "exact match to the existing corpus row."
+  },
+  {
+   "name": "Side-laying interior rotation",
+   "dataset": "wger",
+   "verdict": "out_of_scope",
+   "why": "internal rotation is rotator-cuff-style prehab work with no muscle-group home in the closed vocabulary."
+  },
+  {
+   "name": "Single Arm Plank to Row",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Kettlebell Row (Single-Arm)",
+   "why": "a plank-position row, mechanically the same as Kettlebell Renegade Row (already a candidate) performed from a static plank rather than moving between reps."
+  },
+  {
+   "name": "Single-Leg Lunge with Kettlebell:",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Kettlebell Reverse Lunge (Rack Position)",
+   "why": "a single-leg lunge holding a kettlebell matches the existing rack-position lunge candidate family."
+  },
+  {
+   "name": "Single-arm Preacher Curl",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Preacher Curl (Dumbbell)",
+   "why": "grip/position cosmetic variant of the existing preacher curl candidate."
+  },
+  {
+   "name": "Skullcrusher Dumbbells",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Skull Crusher",
+   "why": "reordered wording of the existing corpus row."
+  },
+  {
+   "name": "Standing Bicep Curl",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "cosmetic position/stance/prop noise around the existing curl."
+  },
+  {
+   "name": "Supine Hip Abduction",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Cable Hip Abduction",
+   "why": "same isolated hip-abduction stimulus; a dumbbell resting on the leg while lying is an impractical, uncommon loading choice for this movement."
+  },
+  {
+   "name": "Trap press",
+   "dataset": "wger",
+   "verdict": "not_distinct",
+   "target": "Trap Bar Floor Press",
+   "why": "mislabelled equipment; a trap-bar press is a barbell/specialty-bar movement, not this triage's dumbbell scope."
+  },
+  {
+   "name": "Tricep Pull-Down",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Band Tricep Pushdown",
+   "why": "aliasesForExisting in inventory-band.json already lists \"Band Pushdown\" as an alias."
+  },
+  {
+   "name": "Weighted Crunch",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Weighted Dumbbell Crunch",
+   "why": "exact match to the existing candidate."
+  },
+  {
+   "name": "YTWL Exercise",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "YTW",
+   "why": "corpus already has \"YTW\"; an added \"L\" position is a minor combo extension of the same drill."
+  },
+  {
+   "name": "dumbbell snatch",
+   "dataset": "wger",
+   "verdict": "alias",
+   "target": "Dumbbell Snatch (Single-Arm)",
+   "why": "Same new movement as another row in this file, proposed once as \"Dumbbell Snatch (Single-Arm)\"; this name folds in as one of its aliases. standard functional-training movement; family has zero ballistic/power rows."
+  },
+  {
+   "name": "lento avanti seduto",
+   "dataset": "wger",
+   "verdict": "junk",
+   "why": "garbled Italian (\"slow forward seated\"); not evaluable as a specific movement."
+  },
+  {
+   "name": "one-handed kettlebell curls",
+   "dataset": "wger",
+   "verdict": "false_positive",
+   "target": "Dumbbell Curl",
+   "why": "a kettlebell held by the handle for a bicep curl is mechanically the same isolation curl as a dumbbell curl; not a distinct kettlebell-specific stimulus."
+  }
+ ]
+}

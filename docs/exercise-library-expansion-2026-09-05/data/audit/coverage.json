@@ -2086,9 +2086,8 @@
       "kneeling": 21
     },
     "floorAccess": {
-      "false": 496,
-      "true": 66,
-      "null": 2
+      "false": 498,
+      "true": 66
     },
     "overheadPosition": {
       "false": 492,
@@ -2115,9 +2114,9 @@
       "true": 169
     },
     "axialLoad": {
-      "false": 426,
+      "false": 434,
       "true": 126,
-      "null": 12
+      "null": 4
     },
     "impact": {
       "false": 556,
@@ -2136,23 +2135,20 @@
   },
   "demandAxisNullRowCounts": {
     "position": 0,
-    "floorAccess": 2,
+    "floorAccess": 0,
     "overheadPosition": 0,
     "gripDemand": 3,
     "unilateralLoadable": 27,
     "bilateralUpper": 2,
     "bilateralLower": 0,
-    "axialLoad": 12,
+    "axialLoad": 4,
     "impact": 0,
     "balanceDemand": 0,
     "weightBearingHands": 16
   },
   "demandAxisNullRows": {
     "position": [],
-    "floorAccess": [
-      "Landmine Press",
-      "Landmine Press (Abs)"
-    ],
+    "floorAccess": [],
     "overheadPosition": [],
     "gripDemand": [
       "Bodyweight Squat",
@@ -2197,15 +2193,7 @@
       "Single-Arm Dumbbell Row",
       "Bodyweight Squat",
       "Box Step-Up",
-      "Lunge",
-      "Band Assisted Pull-Up",
-      "Band Chest Press",
-      "Band Lat Pulldown",
-      "Band Row",
-      "Band Shoulder Press",
-      "Seated Band Lat Pulldown",
-      "Seated Band Row",
-      "TRX Row"
+      "Lunge"
     ],
     "impact": [],
     "balanceDemand": [],
