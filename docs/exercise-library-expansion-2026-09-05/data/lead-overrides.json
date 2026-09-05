@@ -103,5 +103,9 @@
       "verdictNow": "not_distinct",
       "why": "A technique drill, not a training exercise a coach programmes for load."
     }
-  ]
+  ],
+  "tierProposals": {
+    "file": "data/tier-proposals.json",
+    "ruling": "All 88 proposals accepted as proposed (83 SPECIALIST, 5 NICHE neck rows). The integration agent applies them to the registry lists."
+  }
 }
