@@ -32,16 +32,21 @@ function stringsFrom(src, regex) {
   return out;
 }
 
-test('the 551 exercise names carry no R2-blacklisted term', () => {
-  const seedSrc = read('lib/seedExercises.js');
-  const start = seedSrc.indexOf('const RAW = [');
-  const body = seedSrc.slice(start, seedSrc.indexOf('\n];', start));
-  const names = stringsFrom(body, /^\s*\['([^']+)'/gm);
-  expect(names.length).toBeGreaterThanOrEqual(551);
+// Re-anchored EL-14 (exercise-library-expansion-2026-09-05): the RAW tuple
+// block is retired; the corpus module is the source of truth, and the sweep
+// now covers every live name, alias and cue rather than names alone.
+test('every corpus exercise name, alias and cue carries no R2-blacklisted term', () => {
+  // eslint-disable-next-line global-require
+  const { CORPUS } = require('../lib/exerciseCorpus');
+  const live = CORPUS.filter((e) => !e.retiredInto);
+  expect(live.length).toBeGreaterThanOrEqual(551);
   const violations = [];
-  for (const name of names) {
-    for (const re of BLACKLIST) {
-      if (re.test(name)) violations.push({ name, term: String(re) });
+  for (const entry of live) {
+    const texts = [entry.name, ...(entry.aliases || []), entry.cue || ''];
+    for (const text of texts) {
+      for (const re of BLACKLIST) {
+        if (re.test(text)) violations.push({ name: entry.name, text: text.slice(0, 60), term: String(re) });
+      }
     }
   }
   expect(violations).toEqual([]);
