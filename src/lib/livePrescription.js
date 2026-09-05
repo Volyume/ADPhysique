@@ -434,6 +434,15 @@ function normalizeWorkingRows(rowsRaw, exerciseId) {
     const setType = r.setType ?? r.set_type ?? 'straight';
     if (NEVER_ELIGIBLE_TYPES.has(setType)) continue;
     if (!CAPABILITY_TYPES.has(setType)) continue; // unknown/unhandled types: conservatively ineligible
+    // EL-7 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+    // any row with a non-null evidence_class (circuit / ballistic /
+    // circuit_ballistic) is never structure or capability evidence - a
+    // circuit round's transition-rest stations and a ballistic movement's
+    // non-maximal reps are not a top-set strength effort. Excluded here,
+    // at the single row-ingestion gate, rather than re-checked at every
+    // CAPABILITY_TYPES/STRUCTURE_TYPES read site below.
+    const evidenceClass = r.evidenceClass ?? r.evidence_class ?? null;
+    if (evidenceClass != null) continue;
     const weight = num(r.weight);
     const reps = num(r.actualReps ?? r.actual_reps ?? r.reps);
     // Malformed-row exclusion: non-finite/negative weight, non-finite/non-positive reps.
@@ -701,9 +710,16 @@ export async function buildEvidencePacket({
 // ── resolveSetPrescription internals ───────────────────────────────────────
 
 function normalizePosition(position) {
-  if (typeof position === 'number') return { index: position, setType: 'straight' };
+  if (typeof position === 'number') return { index: position, setType: 'straight', evidenceClass: null };
   const index = Number.isFinite(position?.index) ? position.index : 1;
-  return { index, setType: position?.setType ?? 'straight' };
+  return {
+    index,
+    setType: position?.setType ?? 'straight',
+    // EL-7/EL-10: the position CURRENTLY being prescribed, when it sits
+    // inside a circuit group or on a ballistic exercise. Read defensively;
+    // absent for every non-campaign caller.
+    evidenceClass: position?.evidenceClass ?? position?.evidence_class ?? null,
+  };
 }
 
 // Defensive re-normalisation so resolveSetPrescription is robust to
@@ -908,8 +924,12 @@ export function resolveSetPrescription(packet, position) {
 
   // 2. TYPE GATE (§15): excluded constructs get history only, no intelligence.
   const excludedExerciseType = p.exercise.exerciseType === 'duration' || p.exercise.exerciseType === 'distance';
+  // EL-10 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+  // circuit progression is a display rule, not an automatic load step - a
+  // position inside a circuit group, or on a ballistic exercise, gets
+  // history only, same as an excluded set type.
   const excludedSetType = pos.setType === 'dropset' || pos.setType === 'myo_reps'
-    || pos.setType === 'rest_pause' || pos.setType === 'warmup';
+    || pos.setType === 'rest_pause' || pos.setType === 'warmup' || pos.evidenceClass != null;
   if (excludedExerciseType || excludedSetType) {
     return {
       weight: null,

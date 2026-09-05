@@ -14,6 +14,7 @@
  */
 
 import { getSupabaseClient } from './supabase';
+import { CIRCUIT_SYNC_COLUMNS_ENABLED } from './sync/featureFlags';
 import {
   getAllWorkouts,
   getWorkoutById,
@@ -521,6 +522,12 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     // bilateral set. actual_reps already holds the lower side.
     left_reps: s.leftReps ?? null,
     right_reps: s.rightReps ?? null,
+    // EL-7 evidence class (docs/exercise-library-expansion-2026-09-05/
+    // 05-DECISIONS.md). Cloud counterpart migrate_159 is written but NOT
+    // applied, so this is OMITTED from the payload entirely while
+    // CIRCUIT_SYNC_COLUMNS_ENABLED is false - an unknown column fails the
+    // whole upsert chunk.
+    ...(CIRCUIT_SYNC_COLUMNS_ENABLED ? { evidence_class: s.evidenceClass ?? null } : {}),
     // PD-6 (bundle 2 prelude): carry the set's TRUE creation time to the
     // cloud. Without this the cloud column held its first-push NOW()
     // default, so a restore could only ever guess. Forward-only: rows
@@ -977,6 +984,16 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
           // applied; the retry below removes only this field so the rest of
           // the routine still syncs on an older cloud schema.
           selection_reason: re.selectionReason ?? null,
+          // EL-9 circuit columns (docs/exercise-library-expansion-2026-09-05/
+          // 05-DECISIONS.md). Cloud counterpart migrate_158 is written but
+          // NOT applied, so these are OMITTED from the payload entirely
+          // while CIRCUIT_SYNC_COLUMNS_ENABLED is false - an unknown column
+          // fails the whole upsert chunk, not just this field, so a retry-
+          // on-error strip (like selection_reason below) is not safe here.
+          ...(CIRCUIT_SYNC_COLUMNS_ENABLED ? {
+            group_kind: re.groupKind ?? null,
+            round_rest_seconds: re.roundRestSeconds ?? null,
+          } : {}),
           // F5 Phase A: previously pushed with NO updated_at, so the cloud
           // value never moved on upsert and delta pulls could not see edits.
           updated_at: new Date(re.updatedAt ?? re.createdAt ?? Date.now()).toISOString(),

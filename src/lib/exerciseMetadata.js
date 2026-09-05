@@ -50,6 +50,12 @@ export function deriveEquipmentCategory(name, equipment) {
     case 'kettlebell':    return 'kettlebell';
     case 'ez_bar':        return 'barbell'; // an EZ bar is a barbell variant for selection
     case 'bodyweight':    return 'bodyweight';
+    // EL-21 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+    // a suspension trainer (TRX, gymnastics rings) is its own equipment
+    // family, not bodyweight — before this it had no category of its own
+    // and fell through to 'other', which the pool generator drops entirely
+    // (generatePoolFromLibrary skips equipmentCategory === 'other').
+    case 'suspension':    return 'suspension';
     case 'machine':
       if (CONDITIONING_RE.test(n)) return 'other';
       if (PLATE_LOADED_RE.test(n)) return 'machine_plate_loaded';
@@ -74,6 +80,11 @@ const PROFILES_BY_CATEGORY = {
   landmine:             ['full_gym', 'barbell_plates'],
   band:                 ['bodyweight'],
   bodyweight:           ['bodyweight'],
+  // EL-21: a suspension trainer is cheap, portable home equipment, not a
+  // full/machines-only or barbell-only context, and not the bare-bodyweight
+  // profile either (the strap is required). full_gym and home_gym are the
+  // two profiles that plausibly carry one.
+  suspension:           ['full_gym', 'home_gym'],
   other:                ['full_gym'],
 };
 
@@ -152,15 +163,27 @@ export function deriveForce(movementPattern, primaryMuscle) {
 // bilateral / unilateral, for correct volume accounting (a unilateral set
 // is per side) and balance. Detected from the name.
 const UNILATERAL_RE = /single-arm|single-leg|one-arm|one-leg|bulgarian|split squat|\blunge\b|pistol|b-stance|concentration|kickback|step-up|curtsy|single arm|single leg|cossack|skater|shrimp/i;
+// EL-21: "Alternating" (e.g. "Alternating Dumbbell Curl") is its own
+// laterality value — one side works at a time like a unilateral movement,
+// but both sides load across the set, which a plain 'unilateral' tag would
+// misrepresent for volume accounting. Checked before the unilateral regex
+// so an alternating name never falls through to 'unilateral'.
+const ALTERNATING_RE = /\balternating\b/i;
 
 export function deriveLaterality(name) {
-  return UNILATERAL_RE.test(String(name || '')) ? 'unilateral' : 'bilateral';
+  const n = String(name || '');
+  if (ALTERNATING_RE.test(n)) return 'alternating';
+  return UNILATERAL_RE.test(n) ? 'unilateral' : 'bilateral';
 }
 
 // ── Machine type ────────────────────────────────────────────────────────
 // Controlled vocab (table C), set only for resistance machines so the
 // machine-only pathway can verify coverage. Keyed by exact seed name.
-const MACHINE_TYPE_BY_NAME = {
+// Exported (EL-14/07-CORPUS-FORMAT.md section 6) so the corpus guard can
+// verify every name referenced here exists in the corpus or is a retired
+// name — a rename that silently drops the override must fail the build,
+// not fail closed to "no machine type".
+export const MACHINE_TYPE_BY_NAME = {
   'Machine Chest Press':            'chest_press',
   'Incline Machine Press':          'incline_press',
   'Decline Machine Press':          'decline_press',
@@ -238,6 +261,7 @@ const DIFFICULTY_BASE = {
   landmine:             2,
   band:                 1,
   bodyweight:           2,
+  suspension:           2,
   other:                1,
 };
 

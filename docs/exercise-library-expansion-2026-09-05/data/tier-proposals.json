@@ -1,0 +1,447 @@
+{
+  "note": "EL-5/EL-21: proposed tiers for the 88 rows unlisted in canonicality.js (data/audit/eligibility.json unlistedDefaultSpecialist). Every one of these stays coded as SPECIALIST in src/lib/exercise/canonicality.js regardless of what is proposed here (agents may only propose; STAPLE/COMMON proposals require lead review, and none are proposed here). Runtime default is unaffected.",
+  "count": 88,
+  "nonSpecialistProposalCount": 5,
+  "proposals": [
+    {
+      "name": "Decline Dumbbell Fly",
+      "proposedTier": "specialist",
+      "reason": "Legitimate but its primary target/role is disputed or narrow (pullover: chest vs lats, per canonicality.js CONTESTED reasoning); not a default fly slot."
+    },
+    {
+      "name": "Dumbbell Pullover",
+      "proposedTier": "specialist",
+      "reason": "Already resolved via canonicality.js CONTESTED (held SPECIALIST or NICHE); listed here only because the audit script does not read CONTESTED. No change proposed."
+    },
+    {
+      "name": "Conventional Deadlift",
+      "proposedTier": "specialist",
+      "reason": "Already resolved via canonicality.js CONTESTED (held SPECIALIST or NICHE); listed here only because the audit script does not read CONTESTED. No change proposed."
+    },
+    {
+      "name": "Sumo Deadlift",
+      "proposedTier": "specialist",
+      "reason": "Already resolved via canonicality.js CONTESTED (held SPECIALIST or NICHE); listed here only because the audit script does not read CONTESTED. No change proposed."
+    },
+    {
+      "name": "Rack Pull",
+      "proposedTier": "specialist",
+      "reason": "Already resolved via canonicality.js CONTESTED (held SPECIALIST or NICHE); listed here only because the audit script does not read CONTESTED. No change proposed."
+    },
+    {
+      "name": "Trap Bar Deadlift",
+      "proposedTier": "specialist",
+      "reason": "Already resolved via canonicality.js CONTESTED (held SPECIALIST or NICHE); listed here only because the audit script does not read CONTESTED. No change proposed."
+    },
+    {
+      "name": "Good Morning (Barbell)",
+      "proposedTier": "specialist",
+      "reason": "Already resolved via canonicality.js CONTESTED (held SPECIALIST or NICHE); listed here only because the audit script does not read CONTESTED. No change proposed."
+    },
+    {
+      "name": "JM Press",
+      "proposedTier": "specialist",
+      "reason": "Already resolved via canonicality.js CONTESTED (held SPECIALIST or NICHE); listed here only because the audit script does not read CONTESTED. No change proposed."
+    },
+    {
+      "name": "Nordic Curl",
+      "proposedTier": "specialist",
+      "reason": "Already resolved via canonicality.js CONTESTED (held SPECIALIST or NICHE); listed here only because the audit script does not read CONTESTED. No change proposed."
+    },
+    {
+      "name": "Nordic Hamstring Curl",
+      "proposedTier": "specialist",
+      "reason": "No clear default-plan role identified; SPECIALIST default confirmed pending lead review."
+    },
+    {
+      "name": "Good Morning",
+      "proposedTier": "specialist",
+      "reason": "A real hinge/posterior-chain movement with a higher skill or fatigue cost than the RDL/leg-curl staples already covering hamstrings; reached only when the programme specifically calls for it."
+    },
+    {
+      "name": "Glute Ham Raise",
+      "proposedTier": "specialist",
+      "reason": "Already resolved via canonicality.js CONTESTED (held SPECIALIST or NICHE); listed here only because the audit script does not read CONTESTED. No change proposed."
+    },
+    {
+      "name": "Cable Pull-Through",
+      "proposedTier": "specialist",
+      "reason": "Already resolved via canonicality.js CONTESTED (held SPECIALIST or NICHE); listed here only because the audit script does not read CONTESTED. No change proposed."
+    },
+    {
+      "name": "Deadlift (Conventional)",
+      "proposedTier": "specialist",
+      "reason": "A real hinge/posterior-chain movement with a higher skill or fatigue cost than the RDL/leg-curl staples already covering hamstrings; reached only when the programme specifically calls for it."
+    },
+    {
+      "name": "Deadlift (Sumo)",
+      "proposedTier": "specialist",
+      "reason": "A real hinge/posterior-chain movement with a higher skill or fatigue cost than the RDL/leg-curl staples already covering hamstrings; reached only when the programme specifically calls for it."
+    },
+    {
+      "name": "Trap Bar Deadlift (Hamstring)",
+      "proposedTier": "specialist",
+      "reason": "A real hinge/posterior-chain movement with a higher skill or fatigue cost than the RDL/leg-curl staples already covering hamstrings; reached only when the programme specifically calls for it."
+    },
+    {
+      "name": "Reverse Hyperextension (Glute)",
+      "proposedTier": "specialist",
+      "reason": "A real hinge/posterior-chain movement with a higher skill or fatigue cost than the RDL/leg-curl staples already covering hamstrings; reached only when the programme specifically calls for it."
+    },
+    {
+      "name": "Sumo Deadlift (Glute Focus)",
+      "proposedTier": "specialist",
+      "reason": "A real hinge/posterior-chain movement with a higher skill or fatigue cost than the RDL/leg-curl staples already covering hamstrings; reached only when the programme specifically calls for it."
+    },
+    {
+      "name": "Sumo Deadlift (Wide Stance)",
+      "proposedTier": "specialist",
+      "reason": "A real hinge/posterior-chain movement with a higher skill or fatigue cost than the RDL/leg-curl staples already covering hamstrings; reached only when the programme specifically calls for it."
+    },
+    {
+      "name": "Cable Pull-Through (Glute)",
+      "proposedTier": "specialist",
+      "reason": "A real hinge/posterior-chain movement with a higher skill or fatigue cost than the RDL/leg-curl staples already covering hamstrings; reached only when the programme specifically calls for it."
+    },
+    {
+      "name": "Romanian Deadlift (Glute)",
+      "proposedTier": "specialist",
+      "reason": "A real hinge/posterior-chain movement with a higher skill or fatigue cost than the RDL/leg-curl staples already covering hamstrings; reached only when the programme specifically calls for it."
+    },
+    {
+      "name": "Tibialis Raise (Wall)",
+      "proposedTier": "specialist",
+      "reason": "Tibialis-specific prehab/accessory work, reached only for a named lower-leg weak point."
+    },
+    {
+      "name": "Tibialis Raise (Slant Board)",
+      "proposedTier": "specialist",
+      "reason": "Tibialis-specific prehab/accessory work, reached only for a named lower-leg weak point."
+    },
+    {
+      "name": "Toe Walk",
+      "proposedTier": "specialist",
+      "reason": "A distance/hold-based tibialis-adjacent movement, reached only for a named lower-leg weak point, not a default accessory."
+    },
+    {
+      "name": "Pallof Press (Kneeling)",
+      "proposedTier": "specialist",
+      "reason": "Anti-rotation core work is real and useful but not a default ab slot next to flexion/anti-extension staples already covering abs."
+    },
+    {
+      "name": "Farmer's Walk",
+      "proposedTier": "specialist",
+      "reason": "A loaded carry: real trap/grip stimulus but a conditioning-adjacent movement pattern, not a standard primary trap accessory."
+    },
+    {
+      "name": "Barbell Wrist Curl",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Reverse Wrist Curl",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Dumbbell Wrist Curl",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Plate Pinch",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Dead Hang",
+      "proposedTier": "specialist",
+      "reason": "No clear default-plan role identified; SPECIALIST default confirmed pending lead review."
+    },
+    {
+      "name": "Thick Bar Curl",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Cable Reverse Curl (Forearms)",
+      "proposedTier": "specialist",
+      "reason": "No clear default-plan role identified; SPECIALIST default confirmed pending lead review."
+    },
+    {
+      "name": "Farmer Walk (Forearms)",
+      "proposedTier": "specialist",
+      "reason": "A loaded carry: real trap/grip stimulus but a conditioning-adjacent movement pattern, not a standard primary trap accessory."
+    },
+    {
+      "name": "Towel Pull-Up",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Fat Grip Curl",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Hand Gripper",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Rice Bucket",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Pinch Grip Carry",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Cable Wrist Curl",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Cable Reverse Wrist Curl",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Neck Flexion (Machine)",
+      "proposedTier": "specialist",
+      "reason": "Neck isolation work is a real but narrow region-specific need (SPECIALIST fits its own definition: useful when a specific region justifies it), not a default accessory slot."
+    },
+    {
+      "name": "Neck Extension (Machine)",
+      "proposedTier": "specialist",
+      "reason": "Neck isolation work is a real but narrow region-specific need (SPECIALIST fits its own definition: useful when a specific region justifies it), not a default accessory slot."
+    },
+    {
+      "name": "Neck Lateral Flexion",
+      "proposedTier": "specialist",
+      "reason": "Neck isolation work is a real but narrow region-specific need (SPECIALIST fits its own definition: useful when a specific region justifies it), not a default accessory slot."
+    },
+    {
+      "name": "Neck Curl",
+      "proposedTier": "specialist",
+      "reason": "Neck isolation work is a real but narrow region-specific need (SPECIALIST fits its own definition: useful when a specific region justifies it), not a default accessory slot."
+    },
+    {
+      "name": "Neck Bridge",
+      "proposedTier": "niche",
+      "reason": "Requires dedicated neck-harness equipment or a risk-sensitive bodyweight bridge most commercial gyms and coaches avoid as a default."
+    },
+    {
+      "name": "Plate Neck Curl",
+      "proposedTier": "specialist",
+      "reason": "Neck isolation work is a real but narrow region-specific need (SPECIALIST fits its own definition: useful when a specific region justifies it), not a default accessory slot."
+    },
+    {
+      "name": "Plate Neck Extension",
+      "proposedTier": "specialist",
+      "reason": "Neck isolation work is a real but narrow region-specific need (SPECIALIST fits its own definition: useful when a specific region justifies it), not a default accessory slot."
+    },
+    {
+      "name": "Neck Harness Flexion",
+      "proposedTier": "niche",
+      "reason": "Requires dedicated neck-harness equipment or a risk-sensitive bodyweight bridge most commercial gyms and coaches avoid as a default."
+    },
+    {
+      "name": "Neck Harness Extension",
+      "proposedTier": "niche",
+      "reason": "Requires dedicated neck-harness equipment or a risk-sensitive bodyweight bridge most commercial gyms and coaches avoid as a default."
+    },
+    {
+      "name": "Manual Resistance Neck Flexion",
+      "proposedTier": "niche",
+      "reason": "Needs a training partner to apply resistance by hand; not a solo-gym default."
+    },
+    {
+      "name": "Manual Resistance Neck Extension",
+      "proposedTier": "niche",
+      "reason": "Needs a training partner to apply resistance by hand; not a solo-gym default."
+    },
+    {
+      "name": "Neck Rotation (Resistance)",
+      "proposedTier": "specialist",
+      "reason": "Neck isolation work is a real but narrow region-specific need (SPECIALIST fits its own definition: useful when a specific region justifies it), not a default accessory slot."
+    },
+    {
+      "name": "Barbell Good Morning",
+      "proposedTier": "specialist",
+      "reason": "A real hinge/posterior-chain movement with a higher skill or fatigue cost than the RDL/leg-curl staples already covering hamstrings; reached only when the programme specifically calls for it."
+    },
+    {
+      "name": "Hip Extension (Cable)",
+      "proposedTier": "specialist",
+      "reason": "No clear default-plan role identified; SPECIALIST default confirmed pending lead review."
+    },
+    {
+      "name": "Heel Walk",
+      "proposedTier": "specialist",
+      "reason": "A distance/hold-based tibialis-adjacent movement, reached only for a named lower-leg weak point, not a default accessory."
+    },
+    {
+      "name": "Seated Tibialis Raise",
+      "proposedTier": "specialist",
+      "reason": "Tibialis-specific prehab/accessory work, reached only for a named lower-leg weak point."
+    },
+    {
+      "name": "Dumbbell Pronation/Supination",
+      "proposedTier": "specialist",
+      "reason": "Forearm rotational accessory, reached only for a named forearm weak point."
+    },
+    {
+      "name": "Gripper Walks",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Half-Kneeling Pallof Press",
+      "proposedTier": "specialist",
+      "reason": "Anti-rotation core work is real and useful but not a default ab slot next to flexion/anti-extension staples already covering abs."
+    },
+    {
+      "name": "Tall-Kneeling Pallof Press",
+      "proposedTier": "specialist",
+      "reason": "Anti-rotation core work is real and useful but not a default ab slot next to flexion/anti-extension staples already covering abs."
+    },
+    {
+      "name": "Hip Adduction Machine",
+      "proposedTier": "specialist",
+      "reason": "Adductor-specific or adductor-biased variant, reached only for a named inner-thigh weak point."
+    },
+    {
+      "name": "Cable Hip Adduction",
+      "proposedTier": "specialist",
+      "reason": "Adductor-specific or adductor-biased variant, reached only for a named inner-thigh weak point."
+    },
+    {
+      "name": "Copenhagen Adduction",
+      "proposedTier": "specialist",
+      "reason": "Adductor-specific or adductor-biased variant, reached only for a named inner-thigh weak point."
+    },
+    {
+      "name": "Cossack Squat",
+      "proposedTier": "specialist",
+      "reason": "Adductor-specific or adductor-biased variant, reached only for a named inner-thigh weak point."
+    },
+    {
+      "name": "Sumo Squat (Adductor Focus)",
+      "proposedTier": "specialist",
+      "reason": "Adductor-specific or adductor-biased variant, reached only for a named inner-thigh weak point."
+    },
+    {
+      "name": "Side-Lying Adduction",
+      "proposedTier": "specialist",
+      "reason": "Adductor-specific or adductor-biased variant, reached only for a named inner-thigh weak point."
+    },
+    {
+      "name": "Lateral Lunge",
+      "proposedTier": "specialist",
+      "reason": "Adductor-specific or adductor-biased variant, reached only for a named inner-thigh weak point."
+    },
+    {
+      "name": "Plate-Loaded Decline Press",
+      "proposedTier": "specialist",
+      "reason": "No clear default-plan role identified; SPECIALIST default confirmed pending lead review."
+    },
+    {
+      "name": "Band Tibialis Raise",
+      "proposedTier": "specialist",
+      "reason": "Tibialis-specific prehab/accessory work, reached only for a named lower-leg weak point."
+    },
+    {
+      "name": "Band Wrist Curl",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Band Wrist Extension",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Cable Reverse Woodchop (Kneeling)",
+      "proposedTier": "specialist",
+      "reason": "Anti-rotation core work is real and useful but not a default ab slot next to flexion/anti-extension staples already covering abs."
+    },
+    {
+      "name": "Cable Woodchop (Half-Kneeling)",
+      "proposedTier": "specialist",
+      "reason": "Anti-rotation core work is real and useful but not a default ab slot next to flexion/anti-extension staples already covering abs."
+    },
+    {
+      "name": "Single-Arm Cable Woodchop (Standing)",
+      "proposedTier": "specialist",
+      "reason": "Anti-rotation core work is real and useful but not a default ab slot next to flexion/anti-extension staples already covering abs."
+    },
+    {
+      "name": "Single-Arm Cable Wrist Curl",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Single-Leg Tibialis Raise",
+      "proposedTier": "specialist",
+      "reason": "Tibialis-specific prehab/accessory work, reached only for a named lower-leg weak point."
+    },
+    {
+      "name": "Adductor Squeeze (Ball)",
+      "proposedTier": "specialist",
+      "reason": "Adductor-specific or adductor-biased variant, reached only for a named inner-thigh weak point."
+    },
+    {
+      "name": "Wide-Stance Goblet Squat (Adductor Bias)",
+      "proposedTier": "specialist",
+      "reason": "Adductor-specific or adductor-biased variant, reached only for a named inner-thigh weak point."
+    },
+    {
+      "name": "Zercher Sumo Squat (Adductor Focus)",
+      "proposedTier": "specialist",
+      "reason": "Adductor-specific or adductor-biased variant, reached only for a named inner-thigh weak point."
+    },
+    {
+      "name": "Adductor Rock-Back (Kneeling)",
+      "proposedTier": "specialist",
+      "reason": "Adductor-specific or adductor-biased variant, reached only for a named inner-thigh weak point."
+    },
+    {
+      "name": "Dumbbell Tibialis Raise (Seated)",
+      "proposedTier": "specialist",
+      "reason": "Tibialis-specific prehab/accessory work, reached only for a named lower-leg weak point."
+    },
+    {
+      "name": "Tib Bar Raise (Machine)",
+      "proposedTier": "specialist",
+      "reason": "Tibialis-specific prehab/accessory work, reached only for a named lower-leg weak point."
+    },
+    {
+      "name": "Plate Neck Lateral Flexion",
+      "proposedTier": "specialist",
+      "reason": "Neck isolation work is a real but narrow region-specific need (SPECIALIST fits its own definition: useful when a specific region justifies it), not a default accessory slot."
+    },
+    {
+      "name": "Neck Machine Lateral Flexion",
+      "proposedTier": "specialist",
+      "reason": "Neck isolation work is a real but narrow region-specific need (SPECIALIST fits its own definition: useful when a specific region justifies it), not a default accessory slot."
+    },
+    {
+      "name": "Behind-the-Back Wrist Curl (Barbell)",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Wrist Roller",
+      "proposedTier": "specialist",
+      "reason": "Forearm/grip-specific accessory work, reached only when grip is a named weak point, matching the existing forearm SPECIALIST pattern in this library."
+    },
+    {
+      "name": "Cable Anti-Rotation Hold (Half-Kneeling)",
+      "proposedTier": "specialist",
+      "reason": "Anti-rotation core work is real and useful but not a default ab slot next to flexion/anti-extension staples already covering abs."
+    }
+  ]
+}

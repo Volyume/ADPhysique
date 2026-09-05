@@ -87,6 +87,12 @@ const NAME_FLOOR = /\bfloor\b|\bpush-?up\b|\bplank\b|\bcrunch\b|\bsit-?up\b|\bde
 // the constraint is about (the canonical shoulder case, section 8.2).
 const NAME_OVERHEAD = /\boverhead\b|\bshoulder press\b|\bmilitary\b|\bpush press\b|\barnold\b|\bpull-?up\b|\bchin-?up\b|\bpulldown\b|\bpullover\b|\bsnatch\b|\bjerk\b|\bhandstand\b|\blandmine press\b|\by-raise\b|\bwall ?ball\b|\bviking press\b|\bbehind[- ]the[- ]neck\b/i;
 
+// EL-21: "behind-the-neck" barbell/machine lifts (Behind-the-Neck Press,
+// Behind-the-Neck Lat Pulldown) hold a bar or handle throughout the rep —
+// the grip-none "neck" name rule below exists for neck-ISOLATION exercises
+// (Neck Curl, Neck Flexion (Machine)) and must not fire on these.
+const NAME_BEHIND_NECK = /\bbehind[- ]the[- ]neck\b/i;
+
 // Impact: airborne / repeated landing.
 const NAME_IMPACT = /\bjump\b|\bhop\b|\bbound\b|\bsprint\b|\bplyo|\bbroad jump\b|\bbox jump\b|\bstair running\b|\bskater\b|\bburpee\b/i;
 
@@ -452,7 +458,13 @@ export function deriveDemandMetadata(ex = {}) {
     out.gripDemand = DEMAND_GRIP.BAR;
   } else if (NAME_MACHINE_SUPPORTIVE.test(name)) {
     out.gripDemand = DEMAND_GRIP.SUPPORTIVE;
-  } else if (/\bband(ed)? (lateral walk|monster)|\bmonster walk\b|\bbanded lateral walk\b|\bheel walk\b|\btoe walk\b|\btibialis raise\b|\badductor squeeze\b|\bneck\b(?!.*harness)|\bglute squeeze\b|\bbear crawl\b|\bstir the pot\b|\bdonkey kick\b(?!back)/i.test(name)) {
+  } else if (/\bband(ed)? (lateral walk|monster)|\bmonster walk\b|\bbanded lateral walk\b|\bheel walk\b|\btoe walk\b|\btibialis raise\b|\badductor squeeze\b|\bneck\b(?!.*harness)|\bglute squeeze\b|\bbear crawl\b|\bstir the pot\b|\bdonkey kick\b(?!back)/i.test(name)
+    // EL-21: "neck" here means a NECK-ISOLATION exercise (Neck Curl, Neck
+    // Flexion (Machine)) with no hand grip involved, not a barbell/machine
+    // lift performed "behind the neck" (Behind-the-Neck Press, Behind-the-
+    // Neck Lat Pulldown) — those hold a bar/handle throughout and must not
+    // be misread as grip-free.
+    && !NAME_BEHIND_NECK.test(name)) {
     out.gripDemand = DEMAND_GRIP.NONE;
   } else if (equipment && (SINGLE_IMPLEMENT.has(equipment) || FIXED_IMPLEMENT.has(equipment) || equipment === 'ez_bar')) {
     // Holding the implement IS the interface: a closed working grip.

@@ -272,6 +272,10 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
 
   for (const set of sets) {
     if (!isHardSet(set)) continue;
+    // EL-7: a ballistic set is not hypertrophy evidence and never counts
+    // toward per-muscle set volume; a circuit set (real loaded working
+    // sets) still does, exactly like an ordinary set.
+    if (isBallisticEvidenceRow(set)) continue;
 
     const exerciseId = set.exerciseId || set.exercise_id;
     const exercise = exerciseMap[exerciseId];
@@ -383,7 +387,36 @@ export function defaultIncrement(weight, units = 'kg', category = 'compound') {
  */
 export function isE1rmEligibleRow(row) {
   const t = row?.setType ?? row?.set_type ?? 'straight';
-  return t !== 'warmup' && t !== 'myo_reps' && t !== 'rest_pause';
+  if (t === 'warmup' || t === 'myo_reps' || t === 'rest_pause') return false;
+  // EL-7 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md): a
+  // ballistic set (light load, high reps, non-maximal effort) is not a
+  // strength-effort row - Epley on it fabricates an e1RM exactly as a
+  // cluster row's summed reps did (C6 P11-1). 'circuit_ballistic' is
+  // caught by the substring check too; a plain 'circuit' row stays
+  // eligible here so PR detection (below) still counts a circuit set.
+  const ec = row?.evidenceClass ?? row?.evidence_class ?? null;
+  if (typeof ec === 'string' && ec.includes('ballistic')) return false;
+  return true;
+}
+
+/**
+ * EL-7: e1RM-eligible AND not a circuit set. Circuit sets ARE PR-eligible
+ * (isE1rmEligibleRow above; a PR is a PR, CAP-14 precedent) but must NOT
+ * feed trend/plateau detection - the deferredToManual/constrained skip
+ * precedent, judging nothing, teaching nothing. Use this instead of
+ * isE1rmEligibleRow anywhere that reads TREND (detectPlateau,
+ * detectProgressionConsistency), never for PR detection itself.
+ */
+export function isTrendEligibleRow(row) {
+  if (!isE1rmEligibleRow(row)) return false;
+  const ec = row?.evidenceClass ?? row?.evidence_class ?? null;
+  return ec !== 'circuit';
+}
+
+/** EL-7: true for 'ballistic' or 'circuit_ballistic'; false for everything else. */
+export function isBallisticEvidenceRow(row) {
+  const ec = row?.evidenceClass ?? row?.evidence_class ?? null;
+  return typeof ec === 'string' && ec.includes('ballistic');
 }
 
 export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
@@ -1391,7 +1424,10 @@ export function buildSessionAdjustmentInput({
 export function sessionBestE1rm(sets = []) {
   let best = 0;
   for (const s of Array.isArray(sets) ? sets : []) {
-    if (!isE1rmEligibleRow(s)) continue;
+    // EL-7: this is a TREND representative (detectPlateau,
+    // detectProgressionConsistency below), never a PR check, so circuit
+    // sets are excluded here too - isTrendEligibleRow, not isE1rmEligibleRow.
+    if (!isTrendEligibleRow(s)) continue;
     const weight = Number(s?.weight) || 0;
     const reps = Number(s?.actualReps ?? s?.actual_reps) || 0;
     if (weight <= 0 || reps <= 0) continue;
@@ -1447,8 +1483,11 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
   // insufficient/no-plateau state is returned - never a compensating
   // relaxation of the evidence requirement.
   const NONE = { plateau: false, consecutiveStalls: 0, resolution: null, weeks: null, sessions: 0, spanDays: 0 };
+  // EL-7: isTrendEligibleRow, not isE1rmEligibleRow - a circuit set is
+  // PR-eligible but must never decide a plateau (judging nothing, teaching
+  // nothing).
   const eligibleSessions = (Array.isArray(exerciseSessions) ? exerciseSessions : [])
-    .map((sets) => (Array.isArray(sets) ? sets.filter(isE1rmEligibleRow) : []))
+    .map((sets) => (Array.isArray(sets) ? sets.filter(isTrendEligibleRow) : []))
     .filter((sets) => sets.length > 0);
   if (eligibleSessions.length < 3) return NONE;
 
@@ -1597,8 +1636,9 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
  * @returns {{status:'progressing'|'holding'|'insufficient', gains:number, comparisons:number}}
  */
 export function detectProgressionConsistency(exerciseSessions = []) {
+  // EL-7: isTrendEligibleRow - a circuit set is never trend evidence.
   const eligible = (Array.isArray(exerciseSessions) ? exerciseSessions : [])
-    .map((sets) => (Array.isArray(sets) ? sets.filter(isE1rmEligibleRow) : []))
+    .map((sets) => (Array.isArray(sets) ? sets.filter(isTrendEligibleRow) : []))
     .filter((sets) => sets.length > 0);
   // Same observation floor as detectPlateau: fewer than three sessions is
   // not a trend, it is a couple of data points.

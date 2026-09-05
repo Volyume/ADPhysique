@@ -349,6 +349,99 @@ const NEVER_AUTO = [
   'Snatch Grip Deadlift', 'Deficit Deadlift',
 ];
 
+// ─── SPECIALIST ──────────────────────────────────────────────────────────
+// EL-5/EL-21 (exercise-library-expansion-2026-09-05): every one of these
+// was previously UNLISTED and silently defaulting to SPECIALIST via
+// autoTier()'s fallback (data/audit/eligibility.json
+// unlistedDefaultSpecialist, 88 rows) — now explicit, so the guard
+// (validate-corpus.mjs) can fail the build on a genuinely unclassified
+// name instead of a name that happens to want the default anyway. Adding a
+// name here changes nothing behaviourally: autoTier() already returned
+// SPECIALIST for it. Agent-proposed alternative tiers for "obvious" cases
+// live in docs/exercise-library-expansion-2026-09-05/data/tier-proposals.json
+// for lead review; nothing here is promoted to STAPLE/COMMON without that
+// review (EL-5: "SPECIALIST / NICHE / NEVER_AUTO by agents under the rule
+// 'when in doubt, the safer tier'").
+const SPECIALIST = [
+  // Contested elsewhere: canonicality.js's own CONTESTED list already
+  // resolves these (SPECIALIST or NICHE); listed here too only because the
+  // audit script that found "88 unlisted" reads REGISTRY_LISTS, not
+  // CONTESTED. Harmless: CONTESTED always wins in buildRegistry().
+  'Conventional Deadlift', 'Sumo Deadlift', 'Rack Pull', 'Trap Bar Deadlift',
+  'Good Morning (Barbell)', 'JM Press', 'Glute Ham Raise',
+  'Cable Pull-Through', 'Nordic Curl', 'Dumbbell Pullover',
+
+  // Deadlift/hinge/posterior-chain variants with a higher skill or fatigue
+  // cost than the RDL/leg-curl staples already covering hamstrings.
+  'Nordic Hamstring Curl', 'Good Morning', 'Deadlift (Conventional)',
+  'Deadlift (Sumo)', 'Trap Bar Deadlift (Hamstring)',
+  'Reverse Hyperextension (Glute)', 'Sumo Deadlift (Glute Focus)',
+  'Sumo Deadlift (Wide Stance)', 'Cable Pull-Through (Glute)',
+  'Romanian Deadlift (Glute)', 'Barbell Good Morning',
+  'Hip Extension (Cable)',
+
+  // Chest: disputed primary target / narrow role.
+  'Decline Dumbbell Fly',
+
+  // Loaded carry: real stimulus, conditioning-adjacent pattern.
+  "Farmer's Walk", 'Farmer Walk (Forearms)', 'Pinch Grip Carry',
+
+  // Tibialis-specific accessory/prehab.
+  'Tibialis Raise (Wall)', 'Tibialis Raise (Slant Board)', 'Toe Walk',
+  'Heel Walk', 'Seated Tibialis Raise', 'Band Tibialis Raise',
+  'Single-Leg Tibialis Raise', 'Dumbbell Tibialis Raise (Seated)',
+  'Tib Bar Raise (Machine)',
+
+  // Anti-rotation core: real but not a default ab slot alongside the
+  // flexion/anti-extension staples.
+  'Pallof Press (Kneeling)', 'Half-Kneeling Pallof Press',
+  'Tall-Kneeling Pallof Press', 'Cable Reverse Woodchop (Kneeling)',
+  'Cable Woodchop (Half-Kneeling)', 'Single-Arm Cable Woodchop (Standing)',
+  'Cable Anti-Rotation Hold (Half-Kneeling)',
+
+  // Forearm/grip-specific.
+  'Barbell Wrist Curl', 'Reverse Wrist Curl', 'Dumbbell Wrist Curl',
+  'Plate Pinch', 'Dead Hang', 'Thick Bar Curl',
+  'Cable Reverse Curl (Forearms)', 'Towel Pull-Up', 'Fat Grip Curl',
+  'Hand Gripper', 'Rice Bucket', 'Cable Wrist Curl',
+  'Cable Reverse Wrist Curl', 'Gripper Walks', 'Band Wrist Curl',
+  'Band Wrist Extension', 'Single-Arm Cable Wrist Curl',
+  'Behind-the-Back Wrist Curl (Barbell)', 'Wrist Roller',
+  'Dumbbell Pronation/Supination',
+
+  // Neck-specific (isolation and rotation).
+  'Neck Flexion (Machine)', 'Neck Extension (Machine)',
+  'Neck Lateral Flexion', 'Neck Curl', 'Plate Neck Curl',
+  'Plate Neck Extension', 'Neck Rotation (Resistance)',
+  'Plate Neck Lateral Flexion', 'Neck Machine Lateral Flexion',
+
+  // Neck: needs a partner or dedicated harness, held below plain isolation.
+  'Neck Bridge', 'Neck Harness Flexion', 'Neck Harness Extension',
+  'Manual Resistance Neck Flexion', 'Manual Resistance Neck Extension',
+
+  // Adductor-specific or adductor-biased.
+  'Hip Adduction Machine', 'Cable Hip Adduction', 'Copenhagen Adduction',
+  'Cossack Squat', 'Sumo Squat (Adductor Focus)', 'Side-Lying Adduction',
+  'Lateral Lunge', 'Adductor Squeeze (Ball)',
+  'Wide-Stance Goblet Squat (Adductor Bias)',
+  'Zercher Sumo Squat (Adductor Focus)', 'Adductor Rock-Back (Kneeling)',
+
+  // Chest: plate-loaded decline press, narrow machine-availability slot
+  // next to the already-tiered decline machine press.
+  'Plate-Loaded Decline Press',
+
+  // Template-scaffolding rows folded into the corpus (EL-15). Newly
+  // canonical; not yet lead-reviewed for a tier, so SPECIALIST by the same
+  // "safer default" rule as any other unclassified row.
+  'HS Plate-Loaded Lat Pulldown', 'Underhand Lat Pulldown',
+  'Plate-Loaded Seated Row', 'HS ISO High Row', 'Cable Serratus Punch',
+  'Cable Lateral Raise (Low Pulley)', 'Facing-In Shoulder Press',
+  'Cable Fly (Low to Mid, Incline)', 'Cable Fly (Mid Height, Cuff)',
+  'Box Step-Up', 'Single-Arm Dumbbell Row', 'Trap Bar Deadlift (Low Handle)',
+  'Hip Thrust (Barbell)', 'Dumbbell Goblet Squat', 'Lunge',
+  'Bodyweight Squat', 'Seated Band Row', 'Seated Band Lat Pulldown',
+];
+
 // ─── CONTESTED (held at the safer tier, awaiting a founder ruling) ────────
 // Genuinely arguable calls. Each is currently classified at the more
 // conservative of the two defensible tiers, so nothing surprising can
@@ -423,6 +516,7 @@ function buildRegistry() {
   add(COMMON, AUTO_TIER.COMMON);
   add(NICHE, AUTO_TIER.NICHE);
   add(NEVER_AUTO, AUTO_TIER.NEVER_AUTO);
+  add(SPECIALIST, AUTO_TIER.SPECIALIST);
   // Contested entries win, because their whole purpose is to sit at the
   // safer tier until ruled on.
   for (const [name, tier] of CONTESTED_TIERS) map.set(name, tier);
@@ -432,7 +526,7 @@ function buildRegistry() {
 const REGISTRY = buildRegistry();
 
 /** Exported for the curation guard test, not for selection. */
-export const REGISTRY_LISTS = Object.freeze({ STAPLE, COMMON, NICHE, NEVER_AUTO });
+export const REGISTRY_LISTS = Object.freeze({ STAPLE, COMMON, NICHE, NEVER_AUTO, SPECIALIST });
 
 /**
  * The auto-generation tier for an exercise NAME.

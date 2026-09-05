@@ -319,10 +319,20 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
   // the seed chain skip it) and erases nothing (the hold keeps the
   // previous dose). Baseline rules never reach here (CAP-1): the caller
   // derives eligibility from episode scope only.
-  if (input.eligibility === 'constrained') {
-    evidence.push({ signal: 'insufficient', value: 'capability' });
+  //
+  // EL-7 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md)
+  // extends the SAME skip to eligibility:'circuit' - a muscle trained
+  // through a circuit this block is confounded evidence for ordinary
+  // top-set capacity in the same "judges nothing, teaches nothing, erases
+  // nothing" sense, so it shares this one branch rather than a parallel
+  // one; only the rationale copy differs, since the cause is different.
+  if (input.eligibility === 'constrained' || input.eligibility === 'circuit') {
+    const isCircuit = input.eligibility === 'circuit';
+    evidence.push({ signal: 'insufficient', value: isCircuit ? 'circuit' : 'capability' });
     return finish(BLOCK_CLASS.INSUFFICIENT_DATA, previousStart, plannedPeak, null,
-      `${name} trained around your temporary change this block, so nothing was judged from it`);
+      isCircuit
+        ? `${name} was trained as part of a circuit this block, so nothing was judged from it`
+        : `${name} trained around your temporary change this block, so nothing was judged from it`);
   }
 
   // ── INSUFFICIENT_DATA gates ─────────────────────────────────────────────
@@ -475,7 +485,10 @@ export function buildBlockLedger({
     // old block teaches without touching its frozen judgement.
     .map((m) => ({
       ...classifyMuscleBlock(m, ctx),
-      eligibility: m.eligibility === 'constrained' ? 'constrained' : 'normal',
+      // EL-7: preserve 'circuit' alongside 'constrained' - collapsing
+      // anything else to 'normal' would silently erase the gather-time
+      // circuit stamp every downstream consumer reads.
+      eligibility: (m.eligibility === 'constrained' || m.eligibility === 'circuit') ? m.eligibility : 'normal',
     }));
 
   // §3.4 + founder Stage 7: the longer recovery window is only PROPOSED,

@@ -30,6 +30,7 @@
  *
  * PURE. No I/O, no clock.
  */
+import { isNonLearningEligibility } from './blockLedgerGather';
 
 /** Completed blocks on one structure before it has demonstrated anything. */
 export const MIN_BLOCKS_FOR_STRUCTURE = 3;
@@ -125,8 +126,9 @@ export const MIN_JUDGED_MUSCLES = 2;
  */
 export function blockOutcomeFromLedger(ledger, { executionGood = false } = {}) {
   const entries = Array.isArray(ledger?.entries) ? ledger.entries : [];
-  // A split cannot be judged by a constrained run of it (CC30, section 7 matrix).
-  if (entries.length && entries.some((e) => e?.eligibility === 'constrained')) {
+  // A split cannot be judged by a constrained or circuit run of it (CC30,
+  // section 7 matrix; EL-7 extends the same skip set to 'circuit').
+  if (entries.length && entries.some((e) => isNonLearningEligibility(e?.eligibility))) {
     return { judgeable: false };
   }
   const judged = entries.filter((e) => {

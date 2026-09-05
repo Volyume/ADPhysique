@@ -25,7 +25,7 @@
  *   deload (mesocycle_weeks.is_deload on a non-final week). Mid-block
  *   means before the peak week (D91 ruling 4).
  */
-import { allocateExerciseVolume, VOLUME_LANDMARKS } from './algorithms';
+import { allocateExerciseVolume, isBallisticEvidenceRow, VOLUME_LANDMARKS } from './algorithms';
 import { localDaysElapsed } from './mesocycle';
 import { computeLandmarks } from './planEngine';
 import { phaseToNutritionKey } from './coachingGoals';
@@ -269,6 +269,9 @@ export function sumCompletedSets(sets = [], exercisesById = null, muscle) {
   let total = 0;
   for (const row of sets) {
     if ((row?.setType ?? row?.set_type) === 'warmup') continue;
+    // EL-7: a ballistic set is not hypertrophy evidence and never counts
+    // toward per-muscle set volume; a circuit set still does.
+    if (isBallisticEvidenceRow(row)) continue;
     const reps = num(row?.actualReps ?? row?.actual_reps ?? row?.reps, 0);
     if (!(reps > 0)) continue;
     const ex = lookup(row?.exerciseId ?? row?.exercise_id);
@@ -280,6 +283,38 @@ export function sumCompletedSets(sets = [], exercisesById = null, muscle) {
     } catch (_e) { /* unallocatable exercise: no credit */ }
   }
   return total;
+}
+
+/**
+ * EL-7 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md): a
+ * muscle whose block contains any circuit set is skipped by learnedRange,
+ * block seeding, adapted landmarks, inter-block response and programme-
+ * structure memory exactly as a 'constrained' entry is (CC30 precedent) -
+ * one shared skip-set predicate so every consumer broadens the SAME check
+ * rather than growing a parallel branch. Circuit sets still count as
+ * achieved volume (sumCompletedSets/computeAchievedWeeklyPeak above are
+ * unaffected); this only gates the LEARNING consumers.
+ */
+export const NON_LEARNING_ELIGIBILITY = new Set(['constrained', 'circuit']);
+export function isNonLearningEligibility(eligibility) {
+  return NON_LEARNING_ELIGIBILITY.has(eligibility);
+}
+
+/** True if any row credited to `muscle` in `sets` is a circuit/circuit_ballistic set. */
+export function blockHasCircuitSetForMuscle(sets = [], exercisesById = null, muscle) {
+  const lookup = (id) => (exercisesById instanceof Map
+    ? exercisesById.get(id)
+    : (Object.prototype.hasOwnProperty.call(exercisesById ?? {}, id) ? exercisesById[id] : undefined));
+  for (const row of sets) {
+    const ec = row?.evidenceClass ?? row?.evidence_class ?? null;
+    if (ec !== 'circuit' && ec !== 'circuit_ballistic') continue;
+    const ex = lookup(row?.exerciseId ?? row?.exercise_id);
+    if (!ex) continue;
+    try {
+      if (allocateExerciseVolume(ex).some((a) => a.muscle === muscle)) return true;
+    } catch (_e) { /* unallocatable exercise: no signal */ }
+  }
+  return false;
 }
 
 /**
@@ -357,6 +392,8 @@ export function computeAchievedWeeklyPeak({
     const w = weekOf(blockStart, at);
     if (!accumSet.has(w)) continue;
     if ((row?.setType ?? row?.set_type) === 'warmup') continue;
+    // EL-7: ballistic rows never contribute to achieved peak volume.
+    if (isBallisticEvidenceRow(row)) continue;
     const reps = num(row?.actualReps ?? row?.actual_reps ?? row?.reps, 0);
     if (!(reps > 0)) continue;
     const credit = creditFor(row?.exerciseId ?? row?.exercise_id);

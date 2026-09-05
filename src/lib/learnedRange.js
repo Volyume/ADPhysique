@@ -58,6 +58,7 @@
  */
 import { ABSOLUTE_WEEKLY_SET_CEILING } from './coachApply';
 import { BLOCK_CLASS } from './interBlock';
+import { isNonLearningEligibility } from './blockLedgerGather';
 
 const MIN_ENTRY_CONFIDENCE = 0.6;
 const CEILING_STEP_MAX = 2;
@@ -150,9 +151,10 @@ export function computeLearnedRange({
     // user's chosen numbers must not launder into "learned from your
     // history" once the override is removed.
     if (raw.proposal?.deferredToManual) continue;
-    // Constrained entries are skipped exactly like deferredToManual — a block
-    // trained under a temporary capability episode never moves the learned range (CC30).
-    if (raw.eligibility === 'constrained') continue;
+    // Constrained/circuit entries are skipped exactly like deferredToManual
+    // — a block trained under a temporary capability episode, or as a
+    // circuit, never moves the learned range (CC30; EL-7).
+    if (isNonLearningEligibility(raw.eligibility)) continue;
     if (classification !== BLOCK_CLASS.RESPONSIVE
       && classification !== BLOCK_CLASS.OVERREACHED
       && classification !== BLOCK_CLASS.STALE

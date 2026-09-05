@@ -4181,8 +4181,9 @@ export async function createWorkoutSet(data) {
     `INSERT INTO workout_sets
       (id, user_id, workout_id, exercise_id, exercise_name, set_number, set_type,
        target_reps_min, target_reps_max, actual_reps, weight, rir, rpe,
-       failed, notes, is_amrap, amrap_reps, left_reps, right_reps, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       failed, notes, is_amrap, amrap_reps, left_reps, right_reps, evidence_class,
+       created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.userId,
@@ -4203,6 +4204,11 @@ export async function createWorkoutSet(data) {
       data.amrapReps ?? null,
       data.leftReps ?? null,
       data.rightReps ?? null,
+      // EL-7 (05-DECISIONS.md): null = conventional | 'circuit' |
+      // 'ballistic' | 'circuit_ballistic'. Stamped by the caller
+      // (ActiveWorkoutScreen) from structure + exercise metadata, never
+      // chosen by the user.
+      data.evidenceClass ?? null,
       now,
       now,
     ],
@@ -7594,6 +7600,11 @@ export async function getAdaptiveLandmarkHistory(userId) {
          ) AS avg_missed
        FROM workouts w
        JOIN workout_sets ws ON ws.workout_id = w.id AND ws.set_type != 'warmup'
+         -- EL-7 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+         -- adapted landmarks are a learning consumer; a circuit or ballistic
+         -- set is confounded evidence for this muscle's ordinary training
+         -- response and must not shape the adapted band. NULL = conventional.
+         AND ws.evidence_class IS NULL
        JOIN exercises e ON e.id = ws.exercise_id
        WHERE w.user_id = ? AND w.is_completed = 1 AND w.overall_pump IS NOT NULL
        GROUP BY w.id, e.primary_muscle
@@ -10374,8 +10385,9 @@ export async function insertWorkoutSetFromCloud(userId, s) {
       (id, user_id, workout_id, exercise_id, exercise_name, set_number, set_type,
        target_reps_min, target_reps_max, actual_reps, weight, rir, rpe,
        failed, notes, post_set_pump, post_set_muscle_connection, joint_discomfort,
-       is_amrap, amrap_reps, missed_reps, left_reps, right_reps, created_at, updated_at, deleted_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+       is_amrap, amrap_reps, missed_reps, left_reps, right_reps, evidence_class,
+       created_at, updated_at, deleted_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
       s.id, userId, s.workout_id, exerciseId, exerciseName,
       s.set_number ?? 1, s.set_type ?? 'straight',
@@ -10387,6 +10399,10 @@ export async function insertWorkoutSetFromCloud(userId, s) {
       s.is_amrap ? 1 : 0, s.amrap_reps ?? null,
       s.missed_reps ?? null,
       s.left_reps ?? null, s.right_reps ?? null,
+      // EL-7: absent on a cloud row (column not yet applied, or the push
+      // omitted it under CIRCUIT_SYNC_COLUMNS_ENABLED=false) degrades to
+      // null - conventional, same as pre-campaign.
+      s.evidence_class ?? null,
       createdAt, cloudMs ?? Date.now(),
       s.deleted_at ? new Date(s.deleted_at).getTime() : null,
     ],

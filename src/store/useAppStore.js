@@ -1720,6 +1720,9 @@ const useAppStore = create((set, get) => ({
         isAmrap: payload.setType === 'amrap',
         leftReps: null,
         rightReps: null,
+        // EL-7: a watch-applied set carries no circuit/ballistic context of
+        // its own; passthrough only, defaulting to conventional.
+        evidenceClass: payload.evidenceClass ?? null,
       });
 
       get().addSetToCurrentExercise(savedSet || {

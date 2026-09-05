@@ -66,6 +66,8 @@ import {
   profileAdjustedPrior,
   priorLedgerEntries,
   trailingStaleCount,
+  isNonLearningEligibility,
+  blockHasCircuitSetForMuscle,
 } from './blockLedgerGather';
 import { computeLearnedRange } from './learnedRange';
 import { resolveSeedRange } from './blockSeed';
@@ -119,8 +121,9 @@ function judgedEvidenceAgeByMuscle(mesos, nowMs) {
       for (const e of JSON.parse(m.blockLedger)?.entries ?? []) {
         if (!e?.muscle) continue;
         if (e.classification === BLOCK_CLASS.INSUFFICIENT_DATA) continue;
-        // Skip constrained entries — they are never recent judged evidence (CC30).
-        if (e.eligibility === 'constrained') continue;
+        // Skip constrained/circuit entries — they are never recent judged
+        // evidence (CC30; EL-7 extends the same skip set to 'circuit').
+        if (isNonLearningEligibility(e.eligibility)) continue;
         byMuscle.set(e.muscle, { entry: e, weeksOverdue: overdue });
       }
     } catch (_e) { /* unparseable prior ledger: no evidence */ }
@@ -417,8 +420,13 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
 
       return {
         muscle,
-        // CC30: the gather-time stamp (section 7 matrix, EA column).
-        eligibility: constrainedMuscles.has(muscle) ? 'constrained' : 'normal',
+        // CC30: the gather-time stamp (section 7 matrix, EA column). EL-7
+        // extends it: a muscle not capability-constrained but trained
+        // through a circuit this block is stamped 'circuit' - same skip
+        // treatment (learns nothing), different provenance.
+        eligibility: constrainedMuscles.has(muscle)
+          ? 'constrained'
+          : (blockHasCircuitSetForMuscle(training.sets, exercisesById, muscle) ? 'circuit' : 'normal'),
         landmarks: effective[muscle] ?? VOLUME_LANDMARKS[muscle],
         researchMev: VOLUME_LANDMARKS[muscle]?.mev ?? null,
         learnedCeiling: learned.isLearned ? learned.ceiling : null,
@@ -698,7 +706,14 @@ export async function restampLedgerEligibility(userId) {
         : new Set();
       let changed = false;
       for (const e of ledger.entries) {
-        const next = constrained.has(e.muscle) ? 'constrained' : 'normal';
+        // This pass restamps ONLY the capability-derived half of the
+        // eligibility stamp (CC-D17): a frozen 'circuit' stamp (EL-7,
+        // decided once from the block's own training rows at finish time)
+        // is never recomputed here and is preserved unless capability now
+        // takes precedence.
+        const next = constrained.has(e.muscle)
+          ? 'constrained'
+          : (e.eligibility === 'circuit' ? 'circuit' : 'normal');
         if ((e.eligibility ?? 'normal') !== next) { e.eligibility = next; changed = true; }
       }
       ledger.capabilityWatermark = wm;
@@ -851,9 +866,10 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
         // The RECENT ACTIVATION SEED. Withheld entirely under
         // suppression: a flagged or calm user's activation must never
         // start above the ramp they would otherwise have been given.
-        // Constrained entries are also excluded — a block trained under a
-        // capability episode does not seed the next block (CC30).
-        ledgerEntry: (fresh && !suppressed && recent.entry?.eligibility !== 'constrained') ? recent.entry : null,
+        // Constrained/circuit entries are also excluded — a block trained
+        // under a capability episode, or as a circuit, does not seed the
+        // next block (CC30; EL-7).
+        ledgerEntry: (fresh && !suppressed && !isNonLearningEligibility(recent.entry?.eligibility)) ? recent.entry : null,
         learnedRange: (learned.isLearned && fresh) ? learned : null,
         profileAdjusted: profileAdjustedPrior(muscle, userProfile),
         research,
@@ -948,10 +964,10 @@ export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', u
       const { recent, fresh: learnedFresh } = learnedActionability(freshnessByMuscle, muscle);
       const manualControls = isManualEdit(manualEntry, research);
       const ledgerEntry = ledger?.entries?.find?.((e) => e.muscle === muscle) ?? null;
-      // Constrained entries do not seed the next block (CC30).
+      // Constrained/circuit entries do not seed the next block (CC30; EL-7).
       ranges[muscle] = resolveSeedRange({
         manual: manualControls ? manualEntry : null,
-        ledgerEntry: ledgerEntry?.eligibility === 'constrained' ? null : ledgerEntry,
+        ledgerEntry: isNonLearningEligibility(ledgerEntry?.eligibility) ? null : ledgerEntry,
         learnedRange: (learned.isLearned && learnedFresh) ? learned : null,
         profileAdjusted: profileAdjustedPrior(muscle, userProfile),
         research,
