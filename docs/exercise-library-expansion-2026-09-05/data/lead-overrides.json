@@ -185,5 +185,134 @@
     },
     "note": "Ab Crunch Machine is retired into Machine Crunch (EL-21), so only the survivor needs the override. Machine Crunch derived position=lying AND floorAccess=true from the word 'crunch': a seated machine misrouted as a floor exercise. Apply as entry overrides (demands.position / demands.floorAccess / force) in the family modules once integration has landed.",
     "sweep": "After integration, list every machine, cable, smith or plate-loaded row whose derived position is lying or floorAccess is true, for lead review; the 'crunch' and 'row' name rules are the suspected causes."
+  },
+  "tierRulings": {
+    "authority": "EL-5, lead review of data/new-candidate-tier-proposals.json (94 rows)",
+    "staple": [
+      "Bodyweight Split Squat",
+      "Bodyweight Reverse Lunge",
+      "Bodyweight Walking Lunge",
+      "Single-Leg Glute Bridge"
+    ],
+    "common": [
+      "Band Chest Press (Single-Arm)",
+      "Band Chest Fly (Standing)",
+      "Band Rear Delt Fly",
+      "Band Shoulder Press (Seated)",
+      "Band Row (Single-Arm)",
+      "Band Seated Row",
+      "Band Pull-Apart (Overhead)",
+      "Band Hammer Curl",
+      "Band Standing Curl (Single-Arm)",
+      "Band Tricep Kickback",
+      "Band Front Raise",
+      "Band Goblet Squat",
+      "Band Romanian Deadlift (Bilateral)",
+      "Band Glute Bridge",
+      "Band Clamshell",
+      "Band Monster Walk",
+      "Band Glute Kickback",
+      "Band Standing Hip Abduction",
+      "Band Pallof Press",
+      "Band Woodchop (High-to-Low)",
+      "Band Woodchop (Low-to-High)",
+      "Band Assisted Dip",
+      "Wide-Grip Bench Press",
+      "Floor Press (Barbell)",
+      "Seated Barbell Overhead Press",
+      "Low-Bar Back Squat",
+      "Barbell Glute Bridge",
+      "Knee Push-Up",
+      "Pike Push-Up",
+      "Close-Grip Pull-Up",
+      "Weighted Chin-Up",
+      "Straight Bar Dip (Chest-Lean)",
+      "Bench Dip (Feet Elevated)",
+      "Inverted Row (Feet Elevated)",
+      "Inverted Row (High Bar)",
+      "Inverted Row (Low Bar)",
+      "Inverted Row (Underhand Grip)",
+      "Bodyweight Curtsy Lunge",
+      "Bodyweight Lateral Step-Up",
+      "Bodyweight Box Squat",
+      "Marching Glute Bridge (Alternating)",
+      "Bird Dog",
+      "Single-Arm Cable Fly (Standing)",
+      "Seated Cable Row (Rope)",
+      "Standing Cable Row (Single-Arm)",
+      "Cross-Body Cable Lateral Raise",
+      "Single-Arm Cable Curl (Low Pulley)",
+      "Cable Pushdown (V-Bar)",
+      "Seated Bent-Over Rear Delt Raise",
+      "Single-Arm Dumbbell Row (Bench-Supported)",
+      "Single-Arm Overhead Dumbbell Tricep Extension",
+      "Dumbbell Glute Bridge",
+      "Weighted Dumbbell Crunch",
+      "Kettlebell Goblet Squat",
+      "Kettlebell Row (Single-Arm)",
+      "Converging Chest Press Machine",
+      "Converging Shoulder Press Machine",
+      "Plate-Loaded T-Bar Row (Chest-Supported)",
+      "Horizontal Leg Press",
+      "Reverse Hack Squat",
+      "Smith Machine Split Squat",
+      "Smith Machine Romanian Deadlift",
+      "Horizontal Back Extension",
+      "Machine Shrug",
+      "TRX Row (Single-Arm)",
+      "TRX Face Pull",
+      "TRX Reverse Fly",
+      "TRX Chest Press",
+      "TRX Knee Tuck",
+      "TRX Plank (Feet Suspended)",
+      "TRX Hamstring Curl",
+      "TRX Hip Press",
+      "TRX Assisted Squat",
+      "TRX Rear-Foot Elevated Lunge",
+      "Clamshell (Side-Lying)"
+    ],
+    "staySpecialist": [
+      "Paused Bench Press",
+      "Negative Pull-Up (Eccentric-Only)",
+      "Scapular Pull-Up",
+      "Scapular Push-Up",
+      "Flutter Kick",
+      "Scissor Kick",
+      "Plank Shoulder Tap",
+      "Plank to Push-Up (Walk-Up)",
+      "Side Plank with Hip Dip (Dynamic)",
+      "TRX Mountain Climber (Feet Suspended)",
+      "Band Fire Hydrant (Kneeling)",
+      "Band Standing Hip Adduction",
+      "Arch Hold (Superman)"
+    ],
+    "why": "Bodyweight, band and suspension rows are reachable only through the bodyweight and home profiles, whose pools are thin, so their genuine everyday movements earn COMMON and the four bodyweight lower-body patterns earn STAPLE. Programming tools (paused reps, eccentric-only, scapular drills), core filler and conditioning-shaped rows stay SPECIALIST."
+  },
+  "duplicateDrops": [
+    {
+      "drop": "Bodyweight Forward Lunge",
+      "aliasOf": "Lunge",
+      "why": "The existing bodyweight 'Lunge' row IS a forward lunge; same stimulus under EL-2. Never shipped, so it is dropped rather than retired."
+    },
+    {
+      "drop": "Bodyweight Step-Up",
+      "aliasOf": "Box Step-Up",
+      "why": "The existing 'Box Step-Up' row is the bodyweight step-up. Dropped, name kept as an alias."
+    }
+  ],
+  "subregionRuling": {
+    "add": {
+      "rear_delts": [
+        "rotation"
+      ],
+      "front_delts": [
+        "rotation"
+      ]
+    },
+    "apply": {
+      "Cable External Rotation": "rotation",
+      "Cable Internal Rotation": "rotation"
+    },
+    "why": "Shoulder rotation is a real function of the shoulder complex that no existing subregion names; no plan requirement consumes it, so it cannot distort coverage. Replaces the horiz_abduction placeholder."
   }
 }
