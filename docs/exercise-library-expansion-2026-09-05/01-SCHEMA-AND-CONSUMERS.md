@@ -342,7 +342,7 @@ consumers.
 | bilateral upper | `bilateral_upper` | **Yes** | false 300, true 251, **1 null** | same |
 | bilateral lower | `bilateral_lower` | **Yes** | false 387, true 165, 0 null today | n/a for the current corpus |
 | adapted-setup class | — | n/a, computed on read | `materialContextsFor` returns 0-4 of the 7 `SETUP_CONTEXT` values per row; `ADAPTED-SETUP-COVERAGE.md` puts materially-needing rows well under the full corpus | rows needing none carry a recorded reason (10 categories), not silence |
-| logging/exercise type | `exercise_type` | No | weight_reps 527, duration 15, weighted_bodyweight 10 | n/a (CHECK-constrained set: also `reps_only`, `distance` exist as UI options in `ExercisePickerModal.js:64-69` for **custom** exercises but no canonical row uses them) |
+| logging/exercise type | `exercise_type` | No | weight_reps 527, duration 15, weighted_bodyweight 10 | n/a. No local SQLite CHECK constraint on this column (only a cloud-side one, per the `ExercisePickerModal.js:59-60` comment referencing `supabase/migrate_091_exercise_type.sql`); `reps_only` and `distance` also exist as UI options in `ExercisePickerModal.js:64-69` for **custom** exercises but no canonical row uses either |
 | load semantics | `load_semantics` | No (defaults `'total'`) | total 467, per_hand 73, added_bodyweight 10, assisted 2 | n/a |
 | rep/set defaults | `default_rep_min`/`default_rep_max` | No | integers per row, from tuple positions 6-7 | n/a |
 | priority/score — fatigue | `fatigue_cost` | No | integer 1-10 per row (tuple position 8) | n/a for canonical; **NULL is a deliberate value for a custom exercise** (`sync.js:257-260`: "NULL is a DELIBERATE value... no claimed SFR/fatigue judgement") |
