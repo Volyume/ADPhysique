@@ -1,6 +1,27 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-05 — EXERCISE LIBRARY & ALTERNATIVE TRAINING EXPANSION (campaign, landing) ★
+
+Founder brief (one autonomous end-to-end task). Campaign folder
+`docs/exercise-library-expansion-2026-09-05/` (README = document map;
+`05-DECISIONS.md` EL-1 to EL-25 = every ruling with rationale;
+`10-VERIFICATION.md` = performance figures + device checklist). State at
+this banner: corpus moved to `src/lib/exerciseCorpus/` (structured, one
+module per family, guard `scripts/exercise-library/validate-corpus.mjs`
++ Jest mirror); 552 -> 918 live canonical rows (21 retired into
+survivors with history merged by the top-up; 6 template-scaffolding rows
+folded in), every row with aliases, tier, demands, adapted setup and an
+original cue; circuits as a named superset group with rounds and round
+rest; `workout_sets.evidence_class` with EL-7 consumer exclusions; five
+kettlebell and three circuit library plans in style pools with
+style-constrained swaps; picker ranking with aliases and recent/staple
+sections; custom-exercise delete and existing-match suggestion. Two
+cloud migrations WRITTEN, NOT APPLIED (158, 159; push omits the columns
+behind `CIRCUIT_SYNC_COLUMNS_ENABLED`). Full regression and closure
+follow on the campaign branch, then merge to main.
+
+===============================================================================
 ## ★ 2026-09-05 — NO SPLASH SCREEN (D149); 1.3.4 BUMPED ★
 
 Founder order: straight into Welcome. The native launch frame is now a
