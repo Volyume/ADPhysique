@@ -79,7 +79,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on the band, feet hip width apart, holding the handles by your thighs.",
     execution: "Push your hips back and lower the handles down your shins, then drive forward to standing.",
-    watch: "Rounding the lower back instead of hinging is the main fault.",
+    watch: "Rounding your lower back instead of hinging takes the pull off the hamstrings.",
   },
   {
     name: "Band Face Pull",
@@ -127,7 +127,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back with the band across your hips, feet flat on the floor.",
     execution: "Drive your hips up by squeezing your glutes, then lower under control.",
-    watch: "Arching the lower back for extra height is the common fault.",
+    watch: "Arching your lower back for extra height fakes the range your glutes should make.",
   },
   {
     name: "Band Lat Pulldown",
@@ -143,7 +143,7 @@ export default [
     loadCharacter: "grind",
     setup: "Anchor the band overhead, kneeling and facing it, holding the ends above your head.",
     execution: "Pull your hands down towards your chest leading with your elbows, then let it return slowly.",
-    watch: "Pulling with the arms alone reduces the effect.",
+    watch: "Pulling with the arms alone leaves your lats out, so drive the elbows down.",
   },
   {
     name: "Band Lateral Raise",
@@ -267,7 +267,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on the band, feet shoulder width apart, holding the handles at your shoulders.",
     execution: "Bend your knees and hips to lower down, then drive back up to standing.",
-    watch: "Letting the knees cave inward as you stand is the main fault to watch for.",
+    watch: "Letting the knees fall inward as you stand up wastes the drive out of the bottom.",
   },
   {
     name: "Band Tibialis Raise",
@@ -283,7 +283,7 @@ export default [
     loadCharacter: "grind",
     setup: "Anchor the band low in front and loop it around one foot, standing on the other leg.",
     execution: "Pull your toes up towards your shin against the band, then lower slowly.",
-    watch: "Rushing the lowering reduces the effect.",
+    watch: "Snapping the toes back down skips the half of the rep the band resists.",
   },
   {
     name: "Band Tricep Pushdown",
@@ -314,7 +314,7 @@ export default [
     loadCharacter: "grind",
     setup: "Hold the band under one foot, gripping the other end palm up, forearm resting on your thigh.",
     execution: "Curl your wrist upward, then lower it slowly under control.",
-    watch: "Moving the whole forearm instead of just the wrist reduces the effect.",
+    watch: "Moving the whole forearm hides the small wrist range that does the work.",
   },
   {
     name: "Band Wrist Extension",
@@ -360,7 +360,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit tall with the band anchored overhead, gripped wide in both hands.",
     execution: "Pull it down towards your upper chest by driving your elbows down and back, then let it return with control.",
-    watch: "Leaning back to use bodyweight is the common shortcut.",
+    watch: "Leaning back to use your bodyweight turns the pulldown into a row.",
   },
   {
     name: "Seated Band Row",
@@ -431,7 +431,7 @@ export default [
     overrides: {"difficulty":2,"demands":{"position":"kneeling","floorAccess":true,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"high","weightBearingHands":true}},
     setup: "Kneel and loop a band over a high anchor and around the ab wheel to reduce the load.",
     execution: "Roll the wheel forward keeping hips level and back flat, then pull back to kneeling.",
-    watch: "Letting the hips sag towards the floor is the main fault.",
+    watch: "Letting the hips sag towards the floor takes the rollout off your abs.",
   },
   {
     name: "Band Assisted Dip",
@@ -497,7 +497,7 @@ export default [
     overrides: {"laterality":"unilateral","demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"unilateralLoadable":true,"bilateralLower":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":false}},
     setup: "Lie on your side with knees bent and a band looped around your thighs, feet stacked together.",
     execution: "Keeping your feet touching, lift your top knee towards the ceiling, then lower it back.",
-    watch: "Rolling your hips backward loses the position fastest.",
+    watch: "Rolling your hips backwards lets the leg open without the glute doing it.",
   },
   {
     name: "Band Concentration Curl",
@@ -529,7 +529,7 @@ export default [
     overrides: {"laterality":"unilateral","demands":{"position":"kneeling","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"unilateralLoadable":true,"bilateralLower":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":true}},
     setup: "Kneel on all fours with a band looped around your thighs just above the knees.",
     execution: "Lift one knee out to the side keeping your hips square, then lower it back.",
-    watch: "Letting the hips rotate open is the main compensation to watch.",
+    watch: "Letting the hips rotate open lets your back lift the leg instead of the glute.",
   },
   {
     name: "Band Front Raise",
@@ -559,7 +559,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back with knees bent and a band looped around your thighs, feet flat on the floor.",
     execution: "Drive your hips up while pressing your knees out against the band, squeezing at the top.",
-    watch: "Knees collapsing inward is the fault to expose.",
+    watch: "Letting the knees collapse inward takes the tension off the band and the glutes.",
   },
   {
     name: "Band Glute Kickback",
@@ -621,7 +621,7 @@ export default [
     overrides: {"difficulty":2,"demands":{"balanceDemand":"supported"}},
     setup: "Sit with your upper back against a bench, a band anchored low behind you and looped around your hips.",
     execution: "Drive through one heel to lift your hips, other leg lifted, then lower with control.",
-    watch: "Twisting towards the working leg is the common fault.",
+    watch: "Twisting towards the working leg lets the other hip drop, so keep them level.",
   },
   {
     name: "Band Incline Press",
@@ -670,7 +670,7 @@ export default [
     overrides: {"laterality":"alternating","demands":{"gripDemand":"none","weightBearingHands":false,"axialLoad":false}},
     setup: "Loop a band around your thighs or ankles and drop into a quarter squat, knees pressed slightly out.",
     execution: "Step sideways in small steps keeping tension on the band, then repeat the other way.",
-    watch: "Letting the knees drift inward loses the point of it.",
+    watch: "Letting the knees drift inward releases the band and the glutes with it.",
   },
   {
     name: "Band Pallof Press",
@@ -686,7 +686,7 @@ export default [
     overrides: {"laterality":"unilateral","demands":{"position":"standing"}},
     setup: "Stand side on to the anchor with the band at chest height, both hands together in front of your sternum.",
     execution: "Press your hands out away from your chest without rotating the torso towards the anchor, then return.",
-    watch: "Twisting is what it resists.",
+    watch: "Letting your chest turn towards the anchor gives away the rotation you are holding.",
   },
   {
     name: "Band Pull-Apart (Overhead)",
@@ -718,7 +718,7 @@ export default [
     loadCharacter: "grind",
     setup: "Anchor the band in front of you at chest height, an end in each hand, arms extended.",
     execution: "Pull your hands out and back in a wide arc, squeezing your shoulder blades, then return slowly.",
-    watch: "Bending the elbows too much shifts the work elsewhere.",
+    watch: "Bending the elbows too much turns the fly into a row.",
   },
   {
     name: "Band Romanian Deadlift (Bilateral)",
@@ -734,7 +734,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on the band, feet hip-width apart, an end in each hand in front of your thighs.",
     execution: "Push your hips back and lower the band down your legs with a soft knee bend, then drive forward to stand.",
-    watch: "Rounding the lower back is the main fault.",
+    watch: "Rounding your lower back at the bottom means the hinge has run out, so stop higher.",
   },
   {
     name: "Band Romanian Deadlift (Single-Leg)",
@@ -750,7 +750,7 @@ export default [
     overrides: {"difficulty":2,"demands":{"balanceDemand":"high","axialLoad":false}},
     setup: "Stand on the band with one foot, an end in each hand, weight shifted onto that leg.",
     execution: "Hinge forward at the hip while the other leg extends back for balance, then return to standing.",
-    watch: "Letting the hips rotate open signals losing control.",
+    watch: "Letting the top hip rotate open turns the hinge into a twist, so keep it facing down.",
   },
   {
     name: "Band Row (Single-Arm)",
@@ -868,7 +868,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on the band, feet wide and toes turned out, an end in each hand between your legs.",
     execution: "Push your hips back and bend your knees into the wide stance, then drive through your heels to stand tall.",
-    watch: "Knees caving inward is the fault.",
+    watch: "Letting the knees cave in takes the work off the glutes, so drive them out over your toes.",
   },
   {
     name: "Band T-Raise",
