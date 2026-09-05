@@ -952,6 +952,20 @@ export async function generateAndSavePlan(userId, profile, {
     structureMemory = await readDemonstratedStructure(userId, inputs.daysPerWeek);
   } catch (_) { structureMemory = null; }
 
+  // EL-8/EL-11 (09-STYLE-PLANS.md section 1): "Adjust plan" regenerates the
+  // athlete's CURRENT programme, so a style-tagged plan (one of the
+  // kettlebell/circuit library templates the athlete activated) keeps its
+  // style constraint across the regeneration rather than silently
+  // widening back to the full library the moment they touch their goal or
+  // days. Best-effort and additive: a read failure or an untagged current
+  // plan leaves generation exactly as it was (stylePool omitted).
+  let styleKey = null;
+  try {
+    const currentPlan = await getActivePlan(userId);
+    styleKey = styleKeyFromTags(currentPlan?.tags);
+  } catch (_) { styleKey = null; }
+  const stylePool = styleKey ? stylePoolFor(styleKey) : null;
+
   let plan;
   try {
     plan = generatePlan({
@@ -959,6 +973,7 @@ export async function generateAndSavePlan(userId, profile, {
       demonstratedStructure: structureMemory,
       exerciseLibrary: generationLibrary,
       canonicalNames: canonicalNameSet(allExercises, replacementIds),
+      ...(stylePool ? { stylePool } : {}),
       // CC33 D112 R5 (closes audit T1-16's caller half): the pre-call
       // fact buildWhyThis consumes - did the capability lane drop
       // anything from the pool this plan is built from? Known BEFORE the
@@ -1187,6 +1202,16 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
     structureMemory = await readDemonstratedStructure(userId, inputs.daysPerWeek);
   } catch (_) { structureMemory = null; }
 
+  // EL-8/EL-11: the preview must reflect the same style constraint the
+  // commit path applies (see generateAndSavePlan above) so it never shows
+  // exercises the commit would refuse to seed.
+  let styleKey = null;
+  try {
+    const currentPlan = await getActivePlan(userId);
+    styleKey = styleKeyFromTags(currentPlan?.tags);
+  } catch (_) { styleKey = null; }
+  const stylePool = styleKey ? stylePoolFor(styleKey) : null;
+
   let plan;
   try {
     plan = generatePlan({
@@ -1194,6 +1219,7 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
       demonstratedStructure: structureMemory,
       exerciseLibrary: generationLibrary,
       canonicalNames: canonicalNameSet(allExercises, replacementIds),
+      ...(stylePool ? { stylePool } : {}),
       // CC33 D112 R5 (audit T1-16): same fact as the commit path above -
       // the preview must explain the same plan the commit will build.
       capabilityShaped: (filteredLibrary.dropped ?? [])

@@ -29,7 +29,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hug the sandbag tightly against your chest with both arms wrapped around it. Sit your hips back and down into a squat, chest tall, then drive back up. Letting the bag slide down your chest as you fatigue is the common fault.",
   },
   {
     name: "Sandbag Bent-Over Row",
@@ -43,7 +43,7 @@ export default [
     subregion: "horizontal_lat",
     loadCharacter: "grind",
     overrides: { demands: { axialLoad: true } },
-    cue: "",
+    cue: "Hinge forward with a flat back, gripping the sandbag handles or the bag itself in front of your shins. Pull the bag up towards your torso, then lower under control. Rounding the back to lift it off the floor is the main fault.",
   },
   {
     name: "Sandbag Clean",
@@ -57,7 +57,7 @@ export default [
     subregion: "spinal_erector",
     loadCharacter: "ballistic",
     overrides: { difficulty: 3, demands: { overheadPosition: false } },
-    cue: "",
+    cue: "Stand over the sandbag, feet shoulder-width apart, hips hinged, gripping the bag. Pull it up explosively and catch it against your chest or shoulders, absorbing the weight with bent knees. Catching with straight legs sends impact upward.",
   },
   {
     name: "Sandbag Front Carry",
@@ -71,7 +71,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: { exerciseType: "duration" },
-    cue: "",
+    cue: "Hug the sandbag against your chest with both arms wrapped around it, shoulders pulled back and down. Walk forward with even steps, keeping your torso upright. The bag pulling your shoulders forward is the main thing to correct.",
   },
   {
     name: "Sandbag Get-Up",
@@ -88,7 +88,7 @@ export default [
       laterality: "alternating", difficulty: 3,
       demands: { position: "mixed", floorAccess: true, overheadPosition: false, axialLoad: false, balanceDemand: "high" },
     },
-    cue: "",
+    cue: "Lie on your back with the sandbag held against your chest. Roll to one side and use that arm to push yourself up through kneeling to standing, keeping the bag close throughout. Letting the bag swing away makes the transitions harder.",
   },
   {
     name: "Sandbag Lunge (Bear Hug)",
@@ -102,7 +102,7 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: { laterality: "alternating" },
-    cue: "",
+    cue: "Hug the sandbag tightly against your chest. Step forward into a lunge, bending both knees until your back knee nears the floor, then push back to standing. Letting the bag pull your torso forward and down is the common fault.",
   },
   {
     name: "Sandbag Shouldering",
@@ -119,7 +119,7 @@ export default [
       laterality: "alternating", difficulty: 3,
       demands: { position: "standing", floorAccess: false, overheadPosition: false, axialLoad: true, balanceDemand: "stable" },
     },
-    cue: "",
+    cue: "Stand over the sandbag, feet shoulder-width apart, hips hinged. Pull it up explosively and rotate it onto one shoulder in one motion, catching it with bent knees to absorb the weight. Catching with straight legs sends impact into your back.",
   },
   {
     name: "Sandbag Zercher Carry",
@@ -133,6 +133,6 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: { exerciseType: "duration" },
-    cue: "",
+    cue: "Cradle the sandbag in the crooks of your elbows, hands together at your chest. Walk forward with even steps, keeping your torso upright and the bag pulled in close. The bag riding low and pulling your shoulders down is the common fault.",
   },
 ];

@@ -197,3 +197,13 @@ export function isInStylePool(poolKey, name) {
   const pool = stylePoolFor(poolKey);
   return !!pool && pool.includes(name);
 }
+
+// Short, calm, user-facing word for the swap sheet's "Showing <label>
+// exercises" line (EL-11). Not a full label registry - just enough to name
+// the two families of style pool this campaign ships.
+export function styleLabelFor(key) {
+  if (!key) return null;
+  if (key.startsWith('kettlebell')) return 'kettlebell';
+  if (key.startsWith('circuit')) return 'circuit';
+  return key.replace(/_/g, ' ');
+}

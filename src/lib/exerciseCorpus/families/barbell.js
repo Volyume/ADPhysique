@@ -29,7 +29,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the pins at the bottom of your squat and start each rep from a dead stop with no bounce. Brace, drive up through your whole foot, then lower back onto the pins. Resting too long between reps loses the tension you built.",
   },
   {
     name: "B-Stance Hip Thrust",
@@ -42,7 +42,7 @@ export default [
     fatigueCost: 3, sfr: 5,
     subregion: "activator",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit against a bench with the bar over your hips, one foot flat and the other resting lightly on its toes. Drive through the flat heel to lift your hips, squeezing that glute at the top. Letting the back foot help defeats the point.",
   },
   {
     name: "B-Stance Romanian Deadlift",
@@ -55,7 +55,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with the bar at your thighs, one foot forward taking most load, the other staggered back for balance. Push your hips back and lower the bar down your legs, then stand tall. Rounding the back near the knee is common.",
   },
   {
     name: "Barbell Back Squat",
@@ -69,7 +69,7 @@ export default [
     subregion: "squat_press",
     aliases: ["BB Back Squat","Back Squat","High-Bar Back Squat","High Bar Squat"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the bar across your upper back, brace and unrack it, then set your stance. Bend the hips and knees together to sit down and back, then drive up through the middle of your foot. Letting the knees cave inward on the way up is common.",
   },
   {
     name: "Barbell Bench Press",
@@ -83,7 +83,7 @@ export default [
     subregion: "flat",
     aliases: ["BB Bench Press","Bench Press","Seated Bench Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie back with your feet planted and the bar over your eyes. Lower the bar to the lower chest with elbows tucked slightly, then press it back over your shoulders. Let the touch point drift towards your neck and the press only gets harder.",
   },
   {
     name: "Barbell Curl",
@@ -97,7 +97,7 @@ export default [
     subregion: "short_head",
     aliases: ["BB Curl","Biceps Curls With Barbell"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall holding the bar with an underhand grip and elbows pinned to your sides. Curl the bar up by bending the elbow alone, then lower under control. Swinging the hips to sling the bar up takes the work off the biceps.",
   },
   {
     name: "Barbell Drag Curl",
@@ -111,7 +111,7 @@ export default [
     subregion: "long_head",
     aliases: ["BB Drag Curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the bar at your thighs, underhand grip. Drag it straight up your body, letting the elbows travel back rather than forward, then lower the same path. Letting the bar swing away from your torso turns it into a regular curl.",
   },
   {
     name: "Barbell Front Raise",
@@ -125,7 +125,7 @@ export default [
     subregion: null,
     aliases: ["BB Front Raise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the bar in front of your thighs with an overhand grip. Keeping elbows softly locked, raise the bar to shoulder height, then lower under control. Heaving it up with the lower back is the usual shortcut.",
   },
   {
     name: "Barbell Front Squat",
@@ -139,7 +139,7 @@ export default [
     subregion: "squat_press",
     aliases: ["BB Front Squat","Front Squat","Front Squat (Clean Grip)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Rest the bar across the front of your shoulders, elbows lifted high. Squat down keeping your torso upright, then drive back up through the middle of your foot. Letting the elbows drop pitches you forward and drops the bar.",
   },
   {
     name: "Barbell Good Morning",
@@ -153,7 +153,7 @@ export default [
     subregion: "hip_extension",
     aliases: ["BB Good Morning"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the bar across your upper back as for a squat, soft bend in the knees. Push your hips back and lower your torso towards horizontal, bar over your feet, then stand tall. Rounding the back instead of hinging is common.",
   },
   {
     name: "Barbell Hip Thrust",
@@ -167,7 +167,7 @@ export default [
     subregion: "activator",
     aliases: ["BB Hip Thrust","Hip Thrust","Unilateral Hip Thrust"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit on the floor with your upper back against a bench and the bar over your hips. Drive through your heels to lift until your body forms a straight line from shoulders to knees, then lower. Overextending the lower back at the top is common.",
   },
   {
     name: "Barbell Lunge",
@@ -181,7 +181,7 @@ export default [
     subregion: "squat_press",
     aliases: ["BB Lunge"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall with the bar across your upper back and step forward. Lower your back knee towards the floor, front shin close to vertical, then push back to standing. Letting the front knee pass far over the toes loads the joint too much.",
   },
   {
     name: "Barbell Overhead Press",
@@ -195,7 +195,7 @@ export default [
     subregion: "overhead_press",
     aliases: ["BB Overhead Press","OHP","Military Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with the bar on your front shoulders, grip just outside shoulder width. Press it straight up, letting your head move back to clear it, then lower it back down. Pressing the bar forward instead of straight up stalls the lockout.",
   },
   {
     name: "Barbell Row (Bent Over)",
@@ -209,7 +209,7 @@ export default [
     subregion: "upper_mid_row",
     aliases: ["BB Row (Bent Over)","Bent-Over Row","Bent Over Rowing"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hinge forward with a flat back and let the bar hang under your shoulders. Pull it up towards your lower ribs, driving the elbows back, then lower with control. Standing up out of the hinge as you pull turns the row into a shrug.",
   },
   {
     name: "Barbell Row (Supinated)",
@@ -223,7 +223,7 @@ export default [
     subregion: "horizontal_lat",
     aliases: ["BB Row (Supinated)","Yates Row","Underhand Barbell Row","Reverse Grip Bent-Over Rows","Bent Over Rowing Reverse"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hinge forward with a flat back and take an underhand grip just outside your hips. Pull the bar to your lower ribs by driving your elbows back and down, then lower it. Letting the torso rise as you pull shortens the range.",
   },
   {
     name: "Barbell Shrug",
@@ -237,7 +237,7 @@ export default [
     subregion: null,
     aliases: ["BB Shrug"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall holding the bar at arm's length in front of your thighs. Lift your shoulders straight up towards your ears, pause, then lower them fully. Rolling the shoulders in a circle wastes the tension.",
   },
   {
     name: "Barbell Skull Crusher",
@@ -251,7 +251,7 @@ export default [
     subregion: "overhead",
     aliases: ["BB Skull Crusher"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench holding the bar over your chest, shoulder-width grip. Bend your elbows to lower the bar towards your forehead, upper arms still, then extend back up. Letting the elbows flare turns it into a different press.",
   },
   {
     name: "Barbell Upright Row (Wide)",
@@ -265,7 +265,7 @@ export default [
     subregion: "upper_mid_row",
     aliases: ["BB Upright Row (Wide)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the bar with a wide overhand grip in front of your thighs. Pull it straight up towards your collarbone, leading with your elbows out to the sides, then lower with control. A narrow grip on this version pulls stress into the wrists.",
   },
   {
     name: "Barbell Wrist Curl",
@@ -279,7 +279,7 @@ export default [
     subregion: null,
     aliases: ["BB Wrist Curl","Curl De Muñeca Con Barra"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit and rest your forearms on your thighs, wrists past your knees, palms up, holding the bar. Curl your wrists up as far as comfortable, then lower until the bar rolls to your fingertips. Swinging the forearm defeats the isolation.",
   },
   {
     name: "Behind-the-Back Barbell Shrug",
@@ -293,7 +293,7 @@ export default [
     subregion: null,
     aliases: ["Behind-the-Back BB Shrug"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall holding the bar behind you at arm's length, resting against your glutes. Shrug your shoulders straight up towards your ears, then lower fully. This grip has a shorter bar path, so do not force the height of the front version.",
   },
   {
     name: "Behind-the-Back Wrist Curl (Barbell)",
@@ -307,7 +307,7 @@ export default [
     subregion: null,
     aliases: ["Behind-the-Back Wrist Curl (BB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall holding the bar behind your hips, overhand grip. Curl your wrists upward, letting the bar roll towards your fingers first, then reverse to extend back down. Moving the shoulders to help the lift takes work off the forearms.",
   },
   {
     name: "Board Press",
@@ -320,7 +320,7 @@ export default [
     fatigueCost: 3, sfr: 3,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench with a block or boards resting on your chest, bar held above. Lower the bar until it touches the board, pause, then press back up. Bouncing off the board instead of pausing removes the point of the drill.",
   },
   {
     name: "Box Squat",
@@ -333,7 +333,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set a box or bench at your target squat depth and stand in front of it, bar on your back. Sit back onto the box under control, pause without relaxing, then drive back up. Collapsing down onto the box jars the lower back.",
   },
   {
     name: "Bradford Press",
@@ -347,7 +347,7 @@ export default [
     subregion: null,
     aliases: ["barbell seated bradford rocky press","Bradford/Rocky Presses"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the bar at shoulder height in front of your face. Press just above your head and lower behind your neck to shoulder height, then reverse the path. Pressing too high defeats the short bar path this move relies on.",
   },
   {
     name: "Cambered Bar Squat",
@@ -360,7 +360,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the curved bar across your upper back, noting the load hangs lower and swings more than a straight bar. Squat down, torso upright, knees tracking your toes, then stand. Fighting the sway instead of staying braced feels unstable.",
   },
   {
     name: "Chest-Supported Row (Barbell)",
@@ -374,7 +374,7 @@ export default [
     subregion: "upper_mid_row",
     aliases: ["Chest-Supported Row (BB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on an inclined bench with the bar held underneath you, arms hanging straight. Row it up to your torso, elbows back, then lower fully. Lifting your chest off the pad removes the point of the support.",
   },
   {
     name: "Chest-Supported T-Bar Row",
@@ -387,7 +387,7 @@ export default [
     fatigueCost: 3, sfr: 5,
     subregion: "horizontal_lat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie chest-down on the pad, arms hanging straight to the handles. Row them up towards your torso, leading with your elbows, then lower under full control. Jerking the weight up instead of a smooth pull shortens the range you actually use.",
   },
   {
     name: "Clean Pull",
@@ -400,7 +400,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: null,
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "Stand over the bar, shins close to it, hips higher than in a deadlift. Drive through the floor to pull the bar up your legs, finishing tall with shoulders shrugged, without catching it. Bending the elbows early turns this into a poor row.",
   },
   {
     name: "Close-Grip Bench Press",
@@ -414,7 +414,7 @@ export default [
     subregion: "pushdown",
     aliases: ["Close-grip Press-ups"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on the bench and take a grip just inside shoulder width. Lower the bar to your lower chest keeping elbows tucked close, then press back up. Letting the elbows flare wide turns this into a normal bench press.",
   },
   {
     name: "Close-Grip Floor Press",
@@ -427,7 +427,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on the floor with knees bent, close grip on the bar held over your chest. Lower your elbows until your upper arms touch the floor, then press back up. Letting the elbows flare out at the bottom shifts load away from the triceps.",
   },
   {
     name: "Conventional Deadlift",
@@ -441,7 +441,7 @@ export default [
     subregion: "spinal_erector",
     aliases: ["Deadlift"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with the bar over the middle of your feet, grip outside your legs, hips set, flat back. Drive through the floor to stand tall, bar close to your shins and thighs throughout. Letting the bar drift forward rounds the back under load.",
   },
   {
     name: "Cyclist Squat",
@@ -454,7 +454,7 @@ export default [
     fatigueCost: 4, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with your heels elevated on plates or a wedge, feet close together, bar on your back. Squat straight down, torso upright, knees tracking forward, then stand back up. Letting the heels lift further off the wedge strains the ankles.",
   },
   {
     name: "Deadlift (Conventional)",
@@ -467,7 +467,7 @@ export default [
     fatigueCost: 5, sfr: 3,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with the bar over the middle of your feet, grip outside your legs, hips set, flat back. Drive through the floor to stand tall, bar close to your shins and thighs throughout. Letting the bar drift forward rounds the back under load.",
   },
   {
     name: "Deadlift (Sumo)",
@@ -480,7 +480,7 @@ export default [
     fatigueCost: 5, sfr: 3,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with a wide stance, toes turned out, gripping the bar inside your knees, flat back. Push your knees out towards your toes and drive through the floor to stand. Letting the hips shoot up faster than the chest makes this stiff-legged.",
   },
   {
     name: "Decline Barbell Bench Press",
@@ -494,7 +494,7 @@ export default [
     subregion: "decline",
     aliases: ["Decline BB Bench Press","Decline Bench Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a decline bench with your feet secured, shoulder-width grip on the bar. Lower it to your lower chest, then press back up over your shoulders. Losing tightness in your feet and hips lets the whole body slide during the press.",
   },
   {
     name: "Decline Skull Crusher",
@@ -507,7 +507,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "overhead",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a decline bench holding the bar over your chest, shoulder-width grip. Bend your elbows to lower it towards your forehead, upper arms still, then extend back up. Letting the elbows drift wide changes what the exercise loads.",
   },
   {
     name: "Deficit Deadlift",
@@ -520,7 +520,7 @@ export default [
     fatigueCost: 5, sfr: 3,
     subregion: "spinal_erector",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on a small platform so the bar starts lower than usual, feet under the bar, hips set, flat back. Drive through the floor to stand tall, bar close through the longer range. Using full deadlift weight too soon rounds the back early.",
   },
   {
     name: "EZ Bar Curl",
@@ -534,7 +534,7 @@ export default [
     subregion: "short_head",
     aliases: ["EZ Curl","Biceps Curls With SZ-bar"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the angled bar on its outer grips, elbows at your sides. Curl it up towards your shoulders, then lower under control. Letting the elbows drift forward as the weight gets heavy turns the curl into a swinging motion.",
   },
   {
     name: "EZ Bar Drag Curl",
@@ -547,7 +547,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "long_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the angled bar, elbows at your sides. Drag it up close to your body, letting your elbows travel back rather than staying still, then lower the same path. Letting the bar swing away turns this into a normal curl.",
   },
   {
     name: "EZ Bar Preacher Curl",
@@ -561,7 +561,7 @@ export default [
     subregion: "short_head",
     aliases: ["Preacher Curls"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit at the preacher bench, upper arms resting on the pad, bar held with an underhand grip. Curl it up towards your shoulders, then lower until your arms are almost straight. Lifting your upper arms off the pad hurts the movement.",
   },
   {
     name: "EZ Bar Skull Crusher",
@@ -575,7 +575,7 @@ export default [
     subregion: "overhead",
     aliases: ["Skull Crusher","EZ-Bar Skullcrusher","Skullcrusher SZ-bar"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench holding the angled bar over your chest, hands on the angled grips. Bend your elbows to lower it towards your forehead, upper arms still, then extend back up. Letting the elbows flare out spreads load away from the triceps.",
   },
   {
     name: "Fat Grip Curl",
@@ -588,7 +588,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding a bar fitted with thick grips or wrapped padding, elbows at your sides. Curl it up towards your shoulders, then lower, keeping a firm grip. Letting the grip loosen partway is why this version feels harder.",
   },
   {
     name: "Good Morning",
@@ -601,7 +601,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the bar across your upper back as for a squat, soft bend in the knees. Push your hips back and lower your torso towards horizontal, bar over your feet, then stand tall. Rounding the back instead of hinging is common.",
   },
   {
     name: "Good Morning (Barbell)",
@@ -615,7 +615,7 @@ export default [
     subregion: "hip_extension",
     aliases: ["Good Morning (BB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the bar across your upper back as for a squat, soft bend in the knees. Push your hips back and lower your torso towards horizontal, bar over your feet, then stand tall. Rounding the back instead of hinging is common.",
   },
   {
     name: "Guillotine Press",
@@ -628,7 +628,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench and lower the bar to your upper chest or collarbone rather than the usual spot, elbows flared slightly. Press it back up over your shoulders. This path asks more of the front shoulder, so use a lighter weight.",
   },
   {
     name: "Hatfield Squat",
@@ -641,7 +641,7 @@ export default [
     fatigueCost: 4, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the bar on your back and hold light supports or a rack in front of you for balance. Squat down, torso upright, using the supports only to stay steady, not to pull yourself up. Leaning on them to lift the weight makes this assisted.",
   },
   {
     name: "Heel-Elevated Squat",
@@ -654,7 +654,7 @@ export default [
     fatigueCost: 4, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with your heels raised on a wedge or plates, bar across your upper back. Squat down, torso more upright than a flat-footed squat, then stand. Letting the knees stay back instead of tracking forward undoes the point.",
   },
   {
     name: "Hex Bar Shrug",
@@ -667,7 +667,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand inside the hex bar holding the handles at your sides. Lift your shoulders straight up towards your ears, pause, then lower fully. Bending the knees to heave the weight up turns the shrug into a partial deadlift.",
   },
   {
     name: "Hip Thrust (Barbell)",
@@ -681,7 +681,7 @@ export default [
     subregion: "activator",
     aliases: ["Hip Thrust (BB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your upper back on a bench and the bar over your hips. Drive through your heels until your body is straight, then squeeze at the top. Letting the bar roll down your thighs is common.",
   },
   {
     name: "Incline Barbell Bench Press",
@@ -695,7 +695,7 @@ export default [
     subregion: "incline",
     aliases: ["Incline BB Bench Press","Incline Bench Press","Incline Bench Press - MP","Legend Incline Bench Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie back on an inclined bench with the bar over your upper chest. Lower it to your upper chest, elbows tucked slightly, then press back up over your shoulders. Letting the bar drift towards your neck strains the shoulder.",
   },
   {
     name: "Jefferson Squat",
@@ -708,7 +708,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Straddle the bar with one foot forward and one back, gripping it between your legs. Squat straight down, torso upright, then drive back up through both feet evenly. Letting more weight shift onto the front leg makes the lift uneven.",
   },
   {
     name: "JM Press",
@@ -721,7 +721,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench holding the bar with a shoulder-width grip over your chest. Lower it towards your neck by bending the elbows, keeping them tucked, then press back up the same path. Losing the tucked elbow turns it into a bench press.",
   },
   {
     name: "Kickstand Hip Thrust",
@@ -734,7 +734,7 @@ export default [
     fatigueCost: 3, sfr: 5,
     subregion: "activator",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit against a bench with the bar over your hips, most weight on one flat foot, the other back on its toes for light support. Drive through the flat heel to lift your hips, then lower. Letting the back foot bear weight loses the emphasis.",
   },
   {
     name: "Kneeling Squat",
@@ -747,7 +747,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel on a pad with the bar across your upper back, sitting your hips back towards your heels. Push your hips forward to rise back up to the kneeling start. This is a smaller range than a standing squat, so adding too much depth is common.",
   },
   {
     name: "Meadows Row",
@@ -760,7 +760,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "horizontal_lat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side-on to a landmine bar, hinge forward at the hips, and grip the bar close to the sleeve with one hand. Pull it up towards your hip, driving your elbow back, then lower. Rotating the torso to help the pull hurts the single arm.",
   },
   {
     name: "Pause Squat",
@@ -773,7 +773,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the bar on your back and squat down as usual. At the bottom, hold the position without bouncing for a moment, then drive back up. Relaxing the tension during the pause makes the drive back up much harder.",
   },
   {
     name: "Pendlay Row",
@@ -787,7 +787,7 @@ export default [
     subregion: "upper_mid_row",
     aliases: ["Pendelay Rows"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set up bent over with a flat back and the bar resting on the floor between reps. Pull it explosively up to your lower ribs, elbows back, then return it fully to the floor. Letting the hips rise as you pull makes this a half deadlift.",
   },
   {
     name: "Pin Squat",
@@ -800,7 +800,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the safety pins in a rack at your target depth and stand under the bar racked just above them. Squat down until the bar touches the pins, pause without resting it down, then drive back up. Letting the weight settle changes the exercise.",
   },
   {
     name: "Pinch Grip Carry",
@@ -814,7 +814,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Pinch a pair of weight plates between your fingers and thumb, smooth sides out. Stand tall and walk forward with short, controlled steps. Letting your fingers curl the plate against your palm removes the point of the exercise.",
   },
   {
     name: "Plate Front Raise",
@@ -827,7 +827,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding a weight plate with both hands in front of your thighs. Raise it in front of you to around shoulder height with straight arms, then lower under control. Heaving it up with the lower back is the common shortcut under fatigue.",
   },
   {
     name: "Plate Lateral Raise",
@@ -840,7 +840,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "lateral_raise",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding a weight plate vertically in front of you with both hands. Raise it out to shoulder height, keeping it roughly vertical, then lower. Letting the plate tip flat changes the leverage and makes the raise easier than intended.",
   },
   {
     name: "Plate Neck Curl",
@@ -853,7 +853,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench with your head hanging off the end, holding a light plate against your forehead. Tuck your chin towards your chest to curl your head forward, then return to neutral. Using more than a very light plate is the common overreach.",
   },
   {
     name: "Plate Neck Extension",
@@ -866,7 +866,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on a bench with your head hanging off the end, a light plate held against the back of your head. Lift your head back to extend your neck, then lower to neutral. Jerking the head up instead of moving smoothly is common.",
   },
   {
     name: "Plate Neck Lateral Flexion",
@@ -879,7 +879,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your side on a bench with your head hanging off the end, a light plate held against the side of your head. Lift your head sideways towards your shoulder, then lower to neutral. Using too heavy a plate for this small range is common.",
   },
   {
     name: "Plate Pinch",
@@ -894,7 +894,7 @@ export default [
     aliases: ["Plate Pinch Hold"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Pinch two weight plates together between your fingers and thumb, smooth sides facing out. Hold the plates steady at your side for the duration rather than moving them. Letting the plates rotate and slip means your grip has loosened.",
   },
   {
     name: "Power Clean",
@@ -907,7 +907,7 @@ export default [
     fatigueCost: 5, sfr: 3,
     subregion: null,
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "Start with the bar over the middle of your feet, hips set, back flat. Pull the bar up explosively, extending through the hips, then drop under it to catch it across your front shoulders. Catching it too high is the common miss.",
   },
   {
     name: "Preacher Curl (Barbell)",
@@ -921,7 +921,7 @@ export default [
     subregion: "short_head",
     aliases: ["Preacher Curl (BB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit at the preacher bench, upper arms resting on the pad, bar held with an underhand grip. Curl it up towards your shoulders, then lower until your arms are almost straight. Lifting your upper arms off the pad hurts the movement.",
   },
   {
     name: "Preacher Curl (EZ Bar)",
@@ -934,7 +934,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "short_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit at the preacher bench, upper arms resting on the pad, the angled bar held with an underhand grip. Curl it up towards your shoulders, then lower until your arms are almost straight. Lifting your upper arms off the pad hurts the movement.",
   },
   {
     name: "Push Press",
@@ -947,7 +947,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "overhead_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with the bar racked on your front shoulders, feet hip-width apart. Dip at the knees, then drive up through your legs to help press the bar overhead, finishing locked out. Pressing with the arms alone makes this a strict press.",
   },
   {
     name: "Rack Pull",
@@ -960,7 +960,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "spinal_erector",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the bar on pins at around knee height and stand close to it, flat back. Drive through the floor to stand tall, bar close to your legs throughout. Starting with the hips too low for this height makes the pull an awkward half squat.",
   },
   {
     name: "Rack Pull (Traps)",
@@ -973,7 +973,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the bar on pins at around knee height and stand close to it, flat back. Drive through the floor to stand tall, then finish each rep with a strong shrug. Skipping the shrug at lockout misses the point of this version.",
   },
   {
     name: "Reverse Curl",
@@ -987,7 +987,7 @@ export default [
     subregion: "brachialis",
     aliases: ["Reverse Grip Barbell Curls"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding a bar with an overhand grip, elbows at your sides. Curl it up towards your shoulders keeping your wrists firm, then lower under control. Letting the wrists bend or flick during the curl takes tension away from the forearms.",
   },
   {
     name: "Reverse Wrist Curl",
@@ -1000,7 +1000,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit and rest your forearms on your thighs, palms down, holding a bar or dumbbells. Lift your knuckles up as far as comfortable, then lower until your wrists are fully bent the other way. Swinging the forearm reduces the isolation.",
   },
   {
     name: "Reverse-Grip Bench Press",
@@ -1013,7 +1013,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on the bench and take an underhand grip on the bar, hands shoulder-width apart. Lower it to your upper chest, elbows tucked, then press back up. Letting the elbows flare wide on this grip strains the shoulders more than usual.",
   },
   {
     name: "Romanian Deadlift",
@@ -1027,7 +1027,7 @@ export default [
     subregion: "hip_extension",
     aliases: ["RDL"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the bar at your thighs, flat back, soft bend in the knees. Push your hips back and lower the bar down your legs until you feel a stretch in the hamstrings, then stand. Rounding the back near the knee is the usual fault.",
   },
   {
     name: "Romanian Deadlift (Barbell)",
@@ -1041,7 +1041,7 @@ export default [
     subregion: "hip_extension",
     aliases: ["Romanian Deadlift (BB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the bar at your thighs, flat back, soft bend in the knees. Push your hips back and lower the bar down your legs until you feel a stretch in the hamstrings, then stand. Rounding the back near the knee is the usual fault.",
   },
   {
     name: "Romanian Deadlift (Glute)",
@@ -1054,7 +1054,7 @@ export default [
     fatigueCost: 4, sfr: 4,
     subregion: "stretcher",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the bar at your thighs, flat back, soft bend in the knees. Push your hips back further than a standard hinge, lower the bar, then squeeze your glutes hard to drive forward and stand. Too little hip push loses the glute focus.",
   },
   {
     name: "Safety Bar Squat",
@@ -1067,7 +1067,7 @@ export default [
     fatigueCost: 4, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the padded bar across your shoulders, gripping the front handles, and stand tall. Squat down, torso upright, then drive back up. The forward handles pull your torso forward more, so bracing hard matters more here.",
   },
   {
     name: "Seal Row",
@@ -1080,7 +1080,7 @@ export default [
     fatigueCost: 3, sfr: 5,
     subregion: "upper_mid_row",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on a raised bench with the bar or dumbbells hanging below you, feet off the floor. Row the weight up towards your torso, elbows back, then lower fully. Kicking the legs to help means the weight is too heavy for strict control.",
   },
   {
     name: "Seated Calf Raise (Barbell)",
@@ -1094,7 +1094,7 @@ export default [
     subregion: "soleus",
     aliases: ["Seated Calf Raise (BB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with the balls of your feet on a raised block and a padded bar resting across your knees. Rise up onto your toes as high as you can, pause, then lower your heels for a full stretch. Bouncing at the bottom takes tension off the calf.",
   },
   {
     name: "Seated Twist (Plate)",
@@ -1108,7 +1108,7 @@ export default [
     subregion: "flexion",
     aliases: ["Plate Twist"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit on the floor or a bench with your knees bent, holding a weight plate in front of your chest. Rotate your torso to tap the plate down on one side, then rotate through to the other. Fast momentum reduces the work on the obliques.",
   },
   {
     name: "Snatch Grip Deadlift",
@@ -1121,7 +1121,7 @@ export default [
     fatigueCost: 5, sfr: 3,
     subregion: "spinal_erector",
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "Stand with a very wide grip on the bar, hips set lower than a conventional deadlift, back flat. Drive through the floor to stand tall, bar close to your shins. The wide grip can pull your shoulders forward and round the upper back.",
   },
   {
     name: "Snatch Grip Shrug",
@@ -1134,7 +1134,7 @@ export default [
     fatigueCost: 3, sfr: 3,
     subregion: null,
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "Stand tall holding the bar with a very wide grip in front of your thighs. Lift your shoulders straight up towards your ears, pause, then lower fully. Bending the elbows to help the weight up takes tension off the traps.",
   },
   {
     name: "Spider Curl",
@@ -1147,7 +1147,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "long_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on an inclined bench with your arms hanging straight down over the top, holding the bar. Curl it up towards your forehead, then lower fully under control. This position removes any swing, so momentum simply will not work here.",
   },
   {
     name: "Split Squat",
@@ -1161,7 +1161,7 @@ export default [
     subregion: "squat_press",
     aliases: ["suspended split squat"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with one foot forward and one back in a staggered stance, bar across your upper back. Lower your back knee towards the floor by bending both legs, then push back up through the front foot. Letting the front knee cave inward is common.",
   },
   {
     name: "SSB Squat",
@@ -1174,7 +1174,7 @@ export default [
     fatigueCost: 4, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the padded bar across your shoulders, gripping the front handles, and stand tall. Squat down, torso upright, then drive back up. The forward handles pull your torso forward more, so bracing hard matters more here.",
   },
   {
     name: "Standing Calf Raise (Barbell)",
@@ -1188,7 +1188,7 @@ export default [
     subregion: "gastro",
     aliases: ["Standing Calf Raise (BB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with the bar across your upper back and the balls of your feet on a raised edge. Rise up onto your toes as high as you can, pause, then lower your heels for a full stretch. Bouncing at the bottom loosens the calf tension.",
   },
   {
     name: "Step-Up (Barbell)",
@@ -1202,7 +1202,7 @@ export default [
     subregion: "squat_press",
     aliases: ["Step-Up (BB)","Barbell Step Ups"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a box or bench with the bar across your upper back. Step one foot fully onto the box and drive through it to stand tall on top, then step back down. Pushing off the trailing foot takes effort away from the leg on the box.",
   },
   {
     name: "Stiff-Leg Deadlift",
@@ -1216,7 +1216,7 @@ export default [
     subregion: "hip_extension",
     aliases: ["Stiff-Legged Barbell Deadlift","Stiff-legged Deadlifts"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the bar at your thighs with your knees only slightly bent, more locked than a Romanian deadlift. Push your hips back and lower the bar, flat back, then drive forward to stand. Rounding the lower back to reach lower is common.",
   },
   {
     name: "Sumo Deadlift",
@@ -1229,7 +1229,7 @@ export default [
     fatigueCost: 5, sfr: 3,
     subregion: "spinal_erector",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with a wide stance, toes turned out, gripping the bar inside your knees, flat back. Push your knees out towards your toes and drive through the floor to stand. Letting the hips shoot up faster than the chest makes this stiff-legged.",
   },
   {
     name: "Sumo Deadlift (Glute Focus)",
@@ -1242,7 +1242,7 @@ export default [
     fatigueCost: 5, sfr: 3,
     subregion: "stretcher",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with a wide stance, toes turned out, gripping the bar inside your knees, flat back. Drive through the floor and squeeze the glutes hard as you finish tall, pushing the hips through. Skipping the glute squeeze loses the focus.",
   },
   {
     name: "Sumo Deadlift (Wide Stance)",
@@ -1255,7 +1255,7 @@ export default [
     fatigueCost: 5, sfr: 3,
     subregion: "stretcher",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with a wide stance, toes turned out, gripping the bar inside your knees, flat back. Push your knees out towards your toes and drive through the floor to stand. Letting the hips shoot up faster than the chest makes this stiff-legged.",
   },
   {
     name: "Sumo Squat",
@@ -1268,7 +1268,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with a wide stance and toes turned out, bar across your upper back or held at your chest. Squat straight down, pushing your knees out over your toes, then stand. Letting the knees collapse inward is common with a wide stance.",
   },
   {
     name: "Svend Press",
@@ -1282,7 +1282,7 @@ export default [
     subregion: "flat",
     aliases: ["weighted svend press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding a weight plate pressed flat between both palms at chest height, squeezing it throughout. Press it out in front of you without letting go of the squeeze, then bring it back. Easing the squeeze removes the point of the exercise.",
   },
   {
     name: "T-Bar Row",
@@ -1295,7 +1295,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "horizontal_lat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Straddle the bar or machine, hinge forward at the hips, flat back, and grip the handles. Pull the weight up towards your torso, driving your elbows back, then lower fully. Standing up out of the hinge as you pull turns the row into a shrug.",
   },
   {
     name: "Thick Bar Curl",
@@ -1308,7 +1308,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding a bar fitted with a thick grip or wrapped padding, elbows at your sides. Curl it up towards your shoulders, then lower, keeping a firm grip. Letting the grip loosen partway is why this version feels harder.",
   },
   {
     name: "Trap Bar Deadlift",
@@ -1322,7 +1322,7 @@ export default [
     subregion: "spinal_erector",
     aliases: ["Hex Bar Deadlift"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand inside the hex-shaped bar, feet under the handles, flat back. Drive through the floor to stand tall, weight close to your body throughout. Letting the hips rise faster than the chest makes this a stiff-legged pull.",
   },
   {
     name: "Trap Bar Deadlift (Hamstring)",
@@ -1335,7 +1335,7 @@ export default [
     fatigueCost: 5, sfr: 4,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand inside the hex-shaped bar, feet under the handles, hips set slightly lower than usual, flat back. Push your hips back more than forward as you drive up, feeling the hamstring stretch. Letting the knees lead makes this quad-dominant.",
   },
   {
     name: "Trap Bar Deadlift (Low Handle)",
@@ -1348,7 +1348,7 @@ export default [
     fatigueCost: 5, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand inside the bar with shins close to the low handles. Push the floor away as hips and knees extend together, keeping the bar close. The low handles need more knee bend than the high setting.",
   },
   {
     name: "Trap Bar Shrug",
@@ -1361,7 +1361,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand inside the hex bar holding the handles at your sides. Lift your shoulders straight up towards your ears, pause, then lower fully. Bending the knees to heave the weight up turns the shrug into a partial deadlift.",
   },
   {
     name: "Upright Row",
@@ -1374,7 +1374,7 @@ export default [
     fatigueCost: 3, sfr: 3,
     subregion: "lateral_raise",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding a bar with a shoulder-width overhand grip in front of your thighs. Pull it straight up towards your collarbone, elbows leading out to the sides, then lower. Pulling too high above the collarbone strains the shoulder joint.",
   },
   {
     name: "Weighted Plank (Plate on Back)",
@@ -1388,7 +1388,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Get into a forearm plank with a weight plate placed flat across your upper back. Hold your body in a straight line from head to heels without letting your hips sag or pike up. Sagging under the extra load is the first sign of breakdown.",
   },
   {
     name: "Weighted Sit-Up",
@@ -1401,7 +1401,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: "flexion",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back with knees bent and feet anchored, holding a weight plate against your chest. Curl your torso up until you are sitting upright, then lower back down. Yanking the head and neck forward to start hurts the abs.",
   },
   {
     name: "Wrist Roller",
@@ -1414,7 +1414,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the roller out in front of you at shoulder height, a weight hanging from the cord. Roll the handle forward with your wrists to wind the cord up, then roll it back down. Dropping your arms below shoulder level loosens the forearm work.",
   },
   {
     name: "Z-Press",
@@ -1427,7 +1427,7 @@ export default [
     fatigueCost: 3, sfr: 3,
     subregion: "overhead_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit on the floor with your legs straight out in front of you, holding the bar at shoulder height. Press it straight overhead without leaning back, then lower to shoulder height. Leaning back is the compensation this position removes.",
   },
   {
     name: "Zercher Squat",
@@ -1441,7 +1441,7 @@ export default [
     subregion: "squat_press",
     aliases: ["barbell full zercher squat"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the bar in the crooks of your elbows against your torso, feet shoulder-width apart. Squat down, torso upright, then drive back up. Letting the bar roll down towards your wrists makes the hold uncomfortable and unstable.",
   },
   {
     name: "Zercher Sumo Squat (Adductor Focus)",
@@ -1454,7 +1454,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the bar in the crooks of your elbows against your torso, with a wide stance and toes turned out. Squat down, pushing your knees out over your toes, then stand. Knees tracking less than the toes loses the inner-thigh emphasis.",
   },
   // ── INTEGRATION STAGE 2 (exercise-library-expansion-2026-09-05) — generated by scripts/exercise-library/integrate-inventories.mjs; rerun the script to regenerate, do not hand-edit below this line ──
   {
@@ -1470,7 +1470,7 @@ export default [
     aliases: ["Fat Bar Deadlift","Thick Bar Deadlift"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Grip the thick bar with feet hip width, hips back and chest up. Drive the floor away and stand tall, keeping the bar brushing your legs. The wide grip gives out before your legs do, so let go before straining to hold on.",
   },
   {
     name: "Band-Resisted Bench Press",
@@ -1485,7 +1485,7 @@ export default [
     aliases: ["Banded Bench Press"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Set up as usual with bands anchored below and looped over the bar ends. Lower the bar to your chest, then press against the growing tension. It gets much harder near lockout, so keep the bar path steady.",
   },
   {
     name: "Band-Resisted Deadlift",
@@ -1500,7 +1500,7 @@ export default [
     aliases: ["Banded Deadlift"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Loop bands from the floor onto each end of the loaded bar, then pull as normal. Resistance builds the higher the bar travels. Rushing off the floor before feeling that tension throws the bar path forward.",
   },
   {
     name: "Band-Resisted Squat",
@@ -1515,7 +1515,7 @@ export default [
     aliases: ["Banded Barbell Squat"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Anchor bands to the floor and loop them over the bar before unracking it. Squat and drive up as usual, pushing through the extra pull near the top. The bands can drag you forward, so keep your chest up.",
   },
   {
     name: "Barbell Clean and Jerk",
@@ -1530,7 +1530,7 @@ export default [
     aliases: ["Clean & Jerk","Clean and Jerk OL"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"weightBearingHands":true}},
-    cue: "",
+    cue: "Pull the bar from the floor to your shoulders in one motion, then dip and drive it overhead to lockout in a second. It rewards timing over strength, so rushing the transitions before you are set usually costs the lift.",
   },
   {
     name: "Barbell Clean High Pull",
@@ -1545,7 +1545,7 @@ export default [
     aliases: ["Barbell High Pull"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"overheadPosition":false}},
-    cue: "",
+    cue: "Set up as for a clean, then drive your hips forward and pull the bar up with elbows high, keeping it close to your body. Trying to muscle it up with the arms before the hips finish wastes most of the power.",
   },
   {
     name: "Barbell Glute Bridge",
@@ -1558,7 +1558,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "activator",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your upper back against a bench and the bar across your hips, knees bent. Drive your hips up until straight, squeeze your glutes, then lower. Pushing through the toes instead of the heels loses the point.",
   },
   {
     name: "Barbell Hack Squat",
@@ -1572,7 +1572,7 @@ export default [
     subregion: "squat_press",
     aliases: ["Behind-the-Back Barbell Squat","Hack Squat (Barbell)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the bar behind your legs with both hands. Bend your knees to lower it down the back of your legs, then drive back up. Rounding the lower back to keep the bar close is the usual mistake.",
   },
   {
     name: "Barbell Hang Power Clean",
@@ -1587,7 +1587,7 @@ export default [
     aliases: ["Hang Clean"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"overheadPosition":false}},
-    cue: "",
+    cue: "Start with the bar at mid thigh, hinge slightly, then drive your hips forward and pull the bar up, catching it on your shoulders in a quarter squat. Catching too low or too upright both waste the hip drive.",
   },
   {
     name: "Barbell Hang Snatch",
@@ -1601,7 +1601,7 @@ export default [
     subregion: null,
     aliases: ["Hang Snatch (Below the Knee)","Hang Snatch"],
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "Hold the bar at mid thigh with a wide grip, then extend your hips hard and pull it overhead in one motion, catching it with straight arms in a shallow squat. Letting the bar drift forward makes the catch far harder.",
   },
   {
     name: "Barbell Muscle Snatch",
@@ -1615,7 +1615,7 @@ export default [
     subregion: null,
     aliases: ["Muscle Snatch"],
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "Take a wide grip with the bar at your thighs, then pull it in one continuous motion all the way to overhead without dropping under it. Slowing down partway through the turnover usually stalls the bar before lockout.",
   },
   {
     name: "Barbell Power Snatch",
@@ -1629,7 +1629,7 @@ export default [
     subregion: null,
     aliases: ["Snatch OL"],
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "With a wide grip, pull the bar from the floor explosively overhead, catching it with locked arms in a shallow squat rather than a full one. Catching too deep defeats the point of the power version.",
   },
   {
     name: "Barbell Push Jerk",
@@ -1644,7 +1644,7 @@ export default [
     aliases: ["Push Jerk","Power Jerk"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"weightBearingHands":true}},
-    cue: "",
+    cue: "Dip a few inches with the bar in a front rack, then drive up hard and press it overhead, catching with locked arms in a shallow squat. Leaning back during the dip sends the bar forward instead of straight up.",
   },
   {
     name: "Barbell Reverse Lunge",
@@ -1658,7 +1658,7 @@ export default [
     subregion: "squat_press",
     aliases: ["Reverse Lunge (Barbell)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "With the bar on your upper back, step one foot backward and lower that knee towards the floor, weight mostly through the front leg. Push back to standing through the front heel and reset before the next step.",
   },
   {
     name: "Barbell Rollout",
@@ -1673,7 +1673,7 @@ export default [
     aliases: ["Barbell Ab Rollout","barbell rollerout","barbell standing ab rollerout"],
     loadCharacter: "grind",
     overrides: {"demands":{"overheadPosition":false}},
-    cue: "",
+    cue: "Kneel holding a loaded bar in front of you. Roll it forward, core braced and hips still, until your body is nearly straight, then pull it back. Letting your lower back sag as you roll out is the main fault.",
   },
   {
     name: "Barbell Snatch Balance",
@@ -1686,7 +1686,7 @@ export default [
     fatigueCost: 4, sfr: 2,
     subregion: "squat_press",
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "With the bar on your back, dip your knees, then drive it overhead while dropping quickly into an overhead squat to catch it. Hesitating during the drop usually means missing the bar out front or back.",
   },
   {
     name: "Barbell Snatch Pull",
@@ -1701,7 +1701,7 @@ export default [
     aliases: ["Snatch Pull","Front pull wide"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"overheadPosition":false}},
-    cue: "",
+    cue: "Set up over the bar as for a snatch, then pull it from the floor to full extension with an aggressive shrug, without turning over into a catch. Letting the bar swing away from your legs is the most common fault.",
   },
   {
     name: "Barbell Split Jerk",
@@ -1716,7 +1716,7 @@ export default [
     aliases: ["Split Jerk"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"weightBearingHands":true}},
-    cue: "",
+    cue: "From a front rack, dip slightly then drive the bar overhead while splitting one foot forward and one back to catch it. Splitting unevenly or too late after the drive throws the catch off balance.",
   },
   {
     name: "Barbell Thruster",
@@ -1730,7 +1730,7 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"balanceDemand":"stable"}},
-    cue: "",
+    cue: "Hold the bar in a front rack, squat down, then drive up and continue that momentum straight into an overhead press as your legs finish extending. Pausing between the squat and press loses the transfer of power.",
   },
   {
     name: "Barbell Walking Lunge",
@@ -1744,7 +1744,7 @@ export default [
     subregion: "squat_press",
     aliases: ["Walking Lunge (Barbell)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "With the bar on your upper back, step forward into a lunge, lower your rear knee towards the floor, then push off your front leg into the next step. Taking too short a step forces the front knee too far forward.",
   },
   {
     name: "Barbell Zercher Carry",
@@ -1758,7 +1758,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Cradle the bar in the crooks of your elbows, held tight against your body, then stand tall. Walk forward with controlled steps, core braced. Letting your torso lean forward to ease the discomfort is the fault to avoid.",
   },
   {
     name: "Behind-the-Neck Press",
@@ -1773,7 +1773,7 @@ export default [
     aliases: ["Behind the Neck Press","Standing Barbell Press Behind Neck"],
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"gripDemand":"bar","axialLoad":true}},
-    cue: "",
+    cue: "With the bar resting on your upper back, press it straight overhead then lower it back to the same spot. This needs good shoulder mobility, so only lower as far as you can control without your elbows flaring out.",
   },
   {
     name: "Block Pull (Deadlift)",
@@ -1787,7 +1787,7 @@ export default [
     subregion: "spinal_erector",
     aliases: ["Deadlift from Blocks"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the bar on blocks so it starts higher than the floor, then pull it as a normal deadlift, standing tall at the top. The shorter range can feel faster, so keep your usual brace rather than snatching the bar up.",
   },
   {
     name: "Bulgarian Split Squat (Barbell)",
@@ -1801,7 +1801,7 @@ export default [
     subregion: "squat_press",
     aliases: ["Barbell Rear-Foot-Elevated Split Squat"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Rest the bar on your upper back, one foot behind you on a bench, and lower your back knee towards the floor over your front leg. Push back up through the front heel, keeping most of your weight on that leg.",
   },
   {
     name: "Cambered Bar Bench Press",
@@ -1816,7 +1816,7 @@ export default [
     aliases: ["Cambered Bar Press"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Set up on the bench as usual, though with the curved bar the weight hangs lower at the bottom of the lift. Lower it under control and press back up. Bouncing at the extra dip rather than controlling it is the mistake.",
   },
   {
     name: "Chain-Loaded Bench Press",
@@ -1831,7 +1831,7 @@ export default [
     aliases: ["Chain Bench Press"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Set up with chains draped over the bar ends so links stack on the floor as you lower it. Press up as usual, feeling the load build near the top as the chains lift clear. Losing bar speed near lockout is common.",
   },
   {
     name: "Chain-Loaded Deadlift",
@@ -1846,7 +1846,7 @@ export default [
     aliases: ["Chain Deadlift"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Attach chains so they stack on the floor at the bottom of the lift and lift off as the bar rises. Pull as normal, expecting the load to feel heavier higher up. Slowing right down near lockout under the growing weight is common.",
   },
   {
     name: "Chain-Loaded Squat",
@@ -1861,7 +1861,7 @@ export default [
     aliases: ["Chain Squat"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Hang chains from the bar so most of their length rests on the floor at the bottom of your squat. Squat and drive up as normal, load increasing as you rise. Slowing excessively near the top fighting the extra weight is common.",
   },
   {
     name: "Chaos Bench Press",
@@ -1876,7 +1876,7 @@ export default [
     aliases: ["Chaos Bar Bench Press","Bamboo Bar Bench Press"],
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Set up with bands or chains hanging loosely from the bar so it wobbles slightly as you press. Lower and press as usual, actively resisting the side to side movement. Letting the bar tip rather than fighting it back defeats the point.",
   },
   {
     name: "Cheat Curl",
@@ -1890,7 +1890,7 @@ export default [
     subregion: "short_head",
     aliases: ["Cheat Curls"],
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "Hold a bar with an underhand grip, then use a small hip drive to help swing it past the sticking point, lowering it back down slowly and under full control. The slow lowering is where the work happens.",
   },
   {
     name: "Close-Grip Barbell Curl",
@@ -1904,7 +1904,7 @@ export default [
     subregion: "long_head",
     aliases: ["Close Grip Curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the bar with hands closer than shoulder width, elbows tucked by your sides. Curl it up without swinging your body, then lower slowly. Letting the elbows drift forward takes tension off the arms.",
   },
   {
     name: "Close-Grip Decline Bench Press",
@@ -1918,7 +1918,7 @@ export default [
     subregion: "pushdown",
     aliases: ["Decline Close-Grip Bench Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a decline bench and grip the bar with hands close together, just inside shoulder width. Lower it to your lower chest with elbows tucked, then press up. Letting the elbows flare wide takes emphasis off the triceps.",
   },
   {
     name: "Close-Grip Incline Bench Press",
@@ -1932,7 +1932,7 @@ export default [
     subregion: "pushdown",
     aliases: ["Incline Close-Grip Bench Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the bench to a slight incline and grip the bar with hands close together. Lower to your upper chest, elbows tucked in, then press back up. Flaring the elbows wide is the main way this loses its purpose.",
   },
   {
     name: "Donkey Calf Raise (Barbell)",
@@ -1946,7 +1946,7 @@ export default [
     subregion: "gastro",
     aliases: ["Barbell Donkey Calf Raise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Bend forward at the hips with the bar across your lower back and the balls of your feet on a raised platform. Lower your heels as far as comfortable, then rise onto your toes. Cutting the bottom range short misses much of the benefit.",
   },
   {
     name: "Floor Press (Barbell)",
@@ -1959,7 +1959,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie flat on the floor with the bar over your chest. Lower it until your upper arms touch the floor, pause, then press back up. Relaxing fully at the bottom rather than pausing with tension is the common shortcut.",
   },
   {
     name: "Incline Skull Crusher (Barbell)",
@@ -1974,7 +1974,7 @@ export default [
     aliases: ["Incline Barbell Skull Crusher"],
     loadCharacter: "grind",
     overrides: {"demands":{"overheadPosition":true}},
-    cue: "",
+    cue: "Lie on an incline bench holding the bar above your face with straight arms. Bend only your elbows to lower it towards your forehead, then extend back up. Letting the upper arms drift changes the movement entirely.",
   },
   {
     name: "Larsen Press",
@@ -1989,7 +1989,7 @@ export default [
     aliases: ["Larsen Bench Press"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"lying","floorAccess":false,"axialLoad":false,"balanceDemand":"supported"}},
-    cue: "",
+    cue: "Lie on the bench with your legs straight and off the floor, removing leg drive from the lift. Lower the bar to your chest and press back up using only your upper body. Bracing your feet against anything defeats the point.",
   },
   {
     name: "Log Press",
@@ -2004,7 +2004,7 @@ export default [
     aliases: ["Log Clean and Press"],
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Grip the handles inside the log with a neutral grip and clean it to your chest, then dip your knees and drive it overhead to lockout. Pressing too soon before your legs finish driving wastes the momentum.",
   },
   {
     name: "Low-Bar Back Squat",
@@ -2018,7 +2018,7 @@ export default [
     subregion: "squat_press",
     aliases: ["Low Bar Squat","Powerlifting Squat"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the bar lower on your back, across the rear delts, with a slightly wider grip than a high bar squat. Sit back with a bit more forward lean, then drive up through your whole foot. Staying too upright strains the lower back.",
   },
   {
     name: "Overhead Squat",
@@ -2032,7 +2032,7 @@ export default [
     subregion: "squat_press",
     aliases: ["OHS"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the bar locked out overhead with a wide grip, then squat down keeping it directly above your midfoot and torso upright. Letting the bar drift forward as you descend is the main thing to guard against.",
   },
   {
     name: "Paused Bench Press",
@@ -2046,7 +2046,7 @@ export default [
     subregion: "flat",
     aliases: ["Dead-Stop Bench Press","Pause Bench"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lower the bar to your chest as normal, then hold it motionless for a moment before pressing back up. Keep full tension through the pause rather than resting on your chest. Bouncing out of the pause misses the point.",
   },
   {
     name: "Paused Deadlift",
@@ -2060,7 +2060,7 @@ export default [
     subregion: "spinal_erector",
     aliases: ["Dead-Stop Pause Deadlift"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Pull the bar from the floor as usual, but stop briefly at a set point, often just below the knee, before continuing to lock out. Resuming with a jerky yank rather than smoothly is the common fault.",
   },
   {
     name: "Pin Press (Bench)",
@@ -2075,7 +2075,7 @@ export default [
     aliases: ["Pin Bench Press"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"lying","floorAccess":false,"axialLoad":false,"balanceDemand":"supported"}},
-    cue: "",
+    cue: "Set safety pins in the rack and lower the bar to rest on them, then press it up from a complete dead stop with no bounce. Reset your brace before each rep, since there is no stretch reflex to help you.",
   },
   {
     name: "Pin Press (Overhead Press)",
@@ -2089,7 +2089,7 @@ export default [
     subregion: "overhead_press",
     aliases: ["Overhead Pin Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the bar on rack pins at shoulder height, grip it, then press it overhead from a dead stop with no dip or leg drive. Leaning back excessively to shift the dead weight is the main fault to watch for.",
   },
   {
     name: "Reverse Band Bench Press",
@@ -2103,7 +2103,7 @@ export default [
     subregion: "flat",
     loadCharacter: "grind",
     overrides: {"difficulty":3},
-    cue: "",
+    cue: "Anchor bands above the bar, stretched down to reduce the load at the chest while adding resistance near lockout. Lower and press as normal, pressing actively through the bottom rather than relying on the assist.",
   },
   {
     name: "Reverse Band Deadlift",
@@ -2117,7 +2117,7 @@ export default [
     subregion: "spinal_erector",
     loadCharacter: "grind",
     overrides: {"difficulty":3},
-    cue: "",
+    cue: "Anchor bands above the bar so they lighten the load off the floor while resistance builds as the bar rises. Pull the bar as normal, staying tight rather than letting the bands do the early work for you.",
   },
   {
     name: "Reverse Band Squat",
@@ -2132,7 +2132,7 @@ export default [
     aliases: ["Reverse Band Power Squat"],
     loadCharacter: "grind",
     overrides: {"difficulty":3},
-    cue: "",
+    cue: "Attach bands from overhead down to the bar so they lighten the bottom position and add resistance near the top. Squat as normal, still controlling the descent actively rather than letting the bands pull you up.",
   },
   {
     name: "Seated Barbell Overhead Press",
@@ -2147,7 +2147,7 @@ export default [
     aliases: ["Seated Barbell Military Press","Seated Barbell Shoulder Press"],
     loadCharacter: "grind",
     overrides: {"demands":{"axialLoad":true}},
-    cue: "",
+    cue: "Sit upright holding the bar at shoulder height. Press it straight overhead until your arms lock out, then lower back to the shoulders. Arching the lower back to help the bar up is the common way this goes wrong.",
   },
   {
     name: "Snatch-Grip Romanian Deadlift",
@@ -2161,7 +2161,7 @@ export default [
     subregion: "hip_extension",
     aliases: ["Snatch Grip RDL"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the bar with a wide grip and stand tall. Push your hips back and lower the bar down your legs, slight knee bend, until you feel a hamstring stretch, then drive your hips forward. The wide grip tests upper back tightness.",
   },
   {
     name: "Spoto Press",
@@ -2176,7 +2176,7 @@ export default [
     aliases: ["Spoto Bench Press"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"lying","floorAccess":false,"axialLoad":false,"balanceDemand":"supported"}},
-    cue: "",
+    cue: "Lower the bar to just above your chest, an inch or two off the touch point, and pause without resting on your body, then press back up. Sinking lower to rest before pressing turns it into a normal paused press.",
   },
   {
     name: "Standing Barbell Overhead Tricep Extension",
@@ -2190,7 +2190,7 @@ export default [
     subregion: "overhead",
     aliases: ["Standing Barbell French Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the bar overhead with a narrow grip and straight arms. Bend only your elbows to lower it behind your head, then extend back to the top. Letting the elbows flare outward reduces the stretch on the triceps.",
   },
   {
     name: "Swiss Bar Bench Press",
@@ -2205,7 +2205,7 @@ export default [
     aliases: ["Neutral-Grip Bench Press","Football Bar Bench Press"],
     loadCharacter: "grind",
     overrides: {"difficulty":1,"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Lie on the bench holding the neutral handles at chest height. Lower to your chest and press back up, palms facing each other throughout. Twisting your wrists to fight the handle position undoes the point of the fixed grip.",
   },
   {
     name: "Swiss Bar Row",
@@ -2220,7 +2220,7 @@ export default [
     aliases: ["Neutral-Grip Barbell Row"],
     loadCharacter: "grind",
     overrides: {"difficulty":1,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Hinge forward holding the neutral handles, then pull the bar up towards your stomach, squeezing your shoulder blades together, and lower with control. Using hip momentum rather than pulling with your back is common.",
   },
   {
     name: "Trap Bar Carry",
@@ -2235,7 +2235,7 @@ export default [
     aliases: ["Hex Bar Carry"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","difficulty":1,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand inside the trap bar, grip the handles, and stand tall by driving through your legs. Walk forward with short, controlled steps, chest up. Letting your shoulders round forward under the load is the main fault.",
   },
   {
     name: "Trap Bar Floor Press",
@@ -2249,7 +2249,7 @@ export default [
     subregion: "flat",
     loadCharacter: "grind",
     overrides: {"difficulty":1,"demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Lie on the floor holding the trap bar handles at chest height with a neutral grip. Lower your upper arms to the floor, pause briefly, then press back up. Twisting the wrists to compensate defeats the comfortable grip.",
   },
   {
     name: "Trap Bar Row",
@@ -2263,7 +2263,7 @@ export default [
     subregion: "upper_mid_row",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand over the trap bar, hinge at the hips with a flat back, and grip the handles. Pull the bar up towards your body, squeezing your back, then lower under control. Rounding the lower back as you pull is the main fault.",
   },
   {
     name: "Wide-Grip Barbell Curl",
@@ -2277,7 +2277,7 @@ export default [
     subregion: "short_head",
     aliases: ["Wide Grip Curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the bar with hands wider than shoulder width. Curl it up keeping your elbows still by your sides, then lower slowly. Swinging your body to help the bar up takes tension away from the muscle.",
   },
   {
     name: "Wide-Grip Bench Press",
@@ -2291,7 +2291,7 @@ export default [
     subregion: "flat",
     aliases: ["Wide Grip Barbell Bench Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on the bench and grip the bar wider than shoulder width. Lower it to your chest and press back up. The wider grip shortens the range, so flaring the elbows too far can put unwanted strain through the shoulders.",
   },
   {
     name: "Zercher Deadlift",
@@ -2305,7 +2305,7 @@ export default [
     subregion: "hip_extension",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand over the bar with feet close together, cradle it in the crooks of your elbows as you stand up, torso as upright as possible, then lower with control. Letting the back round to ease the awkward hold is the main fault.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];

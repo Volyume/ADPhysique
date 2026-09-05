@@ -33,7 +33,7 @@ export default [
     aliases: ["Medicine Ball Push Pass","medicine ball chest push multiple response","medicine ball chest push single response","Chest Push (multiple response)","Chest Push (single response)"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Hold the ball at your chest, elbows bent, facing a wall or partner. Extend your arms explosively to throw it straight out, then catch it as it returns and absorb it back to your chest. Pushing only with the arms loses most of the power.",
   },
   {
     name: "Medicine Ball Overhead Throw",
@@ -48,7 +48,7 @@ export default [
     aliases: ["Overhead Soccer Throw","Medicine Ball Backward Overhead Throw","Catch and Overhead Throw","Standing Two-Arm Overhead Throw"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Hold the ball overhead with arms extended, feet slightly staggered. Snap your torso forward and throw the ball down and forward into the floor or a wall with full effort. Throwing only with the arms loses most of the power.",
   },
   {
     name: "Medicine Ball Rotational Throw",
@@ -63,7 +63,7 @@ export default [
     aliases: ["Medicine Ball Side Throw","Rotational Med Ball Throw"],
     loadCharacter: "ballistic",
     overrides: {"laterality":"unilateral","demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand side on to a wall holding the ball at your hip with both hands. Rotate your hips and torso together and release the ball explosively towards the wall, then catch the rebound and reset. Arms alone take power off the throw.",
   },
   {
     name: "Medicine Ball Scoop Toss",
@@ -78,7 +78,7 @@ export default [
     aliases: ["Rotational Scoop Toss","Medicine Ball Scoop Throw"],
     loadCharacter: "ballistic",
     overrides: {"laterality":"unilateral","difficulty":3,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand with the ball held low near one hip, knees bent. Drive up through your legs and swing the ball diagonally across your body, releasing it up and out at the top. Using only the arms loses most of the power.",
   },
   {
     name: "Medicine Ball Slam",
@@ -93,7 +93,7 @@ export default [
     aliases: ["Overhead Medicine Ball Slam","Overhead Slam"],
     loadCharacter: "ballistic",
     overrides: {"difficulty":1,"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Hold the ball overhead with arms extended, feet shoulder-width apart. Slam it down into the floor as hard as you can by driving through your torso, then catch the bounce or pick it back up. Slamming with only the arms loses power.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];

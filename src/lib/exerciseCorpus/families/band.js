@@ -30,7 +30,7 @@ export default [
     subregion: "vertical_pull",
     aliases: ["Assisted Pull-Up (Band)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Loop a band around the bar and place a knee or foot inside it. Pull yourself up until your chin clears the bar, then lower under control. Letting the band do all the work instead of pulling actively defeats the point.",
   },
   {
     name: "Band Bicep Curl",
@@ -44,7 +44,7 @@ export default [
     subregion: "short_head",
     aliases: ["Band Curl","resistance band seated biceps curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the band, feet shoulder width apart, palms facing forward. Curl your hands towards your shoulders with elbows pinned to your sides, then lower slowly. Swinging the elbows forward turns it into a shoulder movement.",
   },
   {
     name: "Band Chest Press",
@@ -58,7 +58,7 @@ export default [
     subregion: "flat",
     aliases: ["Legend Chest Press","resistance band seated chest press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Anchor the band behind you at chest height, standing facing away, arms bent with tension in the band. Press your hands forward to full extension, then return under control. Letting the shoulders round forward takes tension off the chest.",
   },
   {
     name: "Band Deadlift",
@@ -71,7 +71,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the band, feet hip width apart, holding the handles by your thighs. Push your hips back and lower the handles down your shins, then drive forward to standing. Rounding the lower back instead of hinging is the main fault.",
   },
   {
     name: "Band Face Pull",
@@ -85,7 +85,7 @@ export default [
     subregion: "face_pull",
     aliases: ["Face pulls with yellow/green band"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Anchor the band at head height and hold it with both hands, arms extended in front. Pull it towards your face leading with your elbows so they finish wide. Pulling with straight arms misses the rear shoulders.",
   },
   {
     name: "Band Good Morning",
@@ -99,7 +99,7 @@ export default [
     subregion: "hip_extension",
     aliases: ["Band Good Morning (Pull Through)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the band with it looped over your shoulders, feet hip width apart. Hinge forward from the hips with a soft bend in the knees, then return to standing. Bending the knees too much turns the movement into a squat.",
   },
   {
     name: "Band Hip Thrust",
@@ -113,7 +113,7 @@ export default [
     subregion: "activator",
     aliases: ["band hip lift","Hip Extension with Bands","Hip Lift with Band"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back with the band across your hips, feet flat on the floor. Drive your hips up by squeezing your glutes, then lower under control. Arching the lower back for extra height is the common fault.",
   },
   {
     name: "Band Lat Pulldown",
@@ -127,7 +127,7 @@ export default [
     subregion: "vertical_pull",
     aliases: ["band underhand pulldown"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Anchor the band overhead, kneeling and facing it, holding the ends above your head. Pull your hands down towards your chest leading with your elbows, then let it return slowly. Pulling with the arms alone reduces the effect.",
   },
   {
     name: "Band Lateral Raise",
@@ -140,7 +140,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the band holding a handle in each hand by your sides. Raise your arms out to shoulder height with a slight bend in the elbows, then lower slowly. Shrugging the shoulders up towards the ears takes work off the side of the shoulder.",
   },
   {
     name: "Band Leg Curl",
@@ -154,7 +154,7 @@ export default [
     subregion: "knee_flexion",
     aliases: ["Leg Curl","Leg curl with elastic"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Anchor the band low behind you and loop it around one ankle, standing tall. Bend that knee to curl your heel towards your glute, then lower with control. Letting the hips sway hides how little work is happening.",
   },
   {
     name: "Band Overhead Tricep Extension",
@@ -168,7 +168,7 @@ export default [
     subregion: "overhead",
     aliases: ["band side triceps extension","Speed Band Overhead Triceps"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Anchor the band low and hold it with both hands overhead, elbows pointing forward. Straighten your arms fully, then bend to lower the band behind your head. Letting the elbows flare out to the sides takes tension off the triceps.",
   },
   {
     name: "Band Pull-Apart",
@@ -182,7 +182,7 @@ export default [
     subregion: "horiz_abduction",
     aliases: ["Banded Scapular Retraction"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the band with both hands out in front at shoulder height. Pull it apart by drawing your hands out to the sides until it reaches your chest. Bending the elbows to help pull it apart reduces the work on the rear shoulders.",
   },
   {
     name: "Band Pull-Through",
@@ -195,7 +195,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Anchor the band low behind you and stand facing away with it running between your legs. Hinge forward slightly, then drive your hips forward, squeezing your glutes at the top. Standing too far forward loses the hip hinge that makes it work.",
   },
   {
     name: "Band Row",
@@ -208,7 +208,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "upper_mid_row",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Anchor the band at chest height and step back until there is tension. Pull your hands towards your ribs, squeezing your shoulder blades together, then return slowly. Rounding the shoulders forward reduces the stretch on the back.",
   },
   {
     name: "Band Shoulder Press",
@@ -222,7 +222,7 @@ export default [
     subregion: null,
     aliases: ["Band Overhead Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the band with a handle at each shoulder, palms facing forward. Press both hands overhead to full extension, then lower back to the shoulders. Arching the lower back to help the press up takes the work off the shoulders.",
   },
   {
     name: "Band Squat",
@@ -235,7 +235,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the band, feet shoulder width apart, holding the handles at your shoulders. Bend your knees and hips to lower down, then drive back up to standing. Letting the knees cave inward as you stand is the main fault to watch for.",
   },
   {
     name: "Band Tibialis Raise",
@@ -249,7 +249,7 @@ export default [
     subregion: null,
     aliases: ["band single leg reverse calf raise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Anchor the band low in front and loop it around one foot, standing on the other leg. Pull your toes up towards your shin against the band, then lower slowly. Rushing the lowering reduces the effect.",
   },
   {
     name: "Band Tricep Pushdown",
@@ -263,7 +263,7 @@ export default [
     subregion: "pushdown",
     aliases: ["Band Pushdown","Tricep Pull-Down"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Anchor the band overhead, holding the ends with elbows tucked at your sides. Straighten your arms down fully, then let them bend back up under control. Letting the elbows drift forward turns it into a chest movement.",
   },
   {
     name: "Band Wrist Curl",
@@ -276,7 +276,7 @@ export default [
     fatigueCost: 1, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the band under one foot, gripping the other end palm up, forearm resting on your thigh. Curl your wrist upward, then lower it slowly under control. Moving the whole forearm instead of just the wrist reduces the effect.",
   },
   {
     name: "Band Wrist Extension",
@@ -289,7 +289,7 @@ export default [
     fatigueCost: 1, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold the band under one foot, gripping the end palm down, forearm resting on your thigh. Lift your knuckles upward against the band, then lower slowly. Letting the elbow lift off the thigh takes the work away from the wrist.",
   },
   {
     name: "Banded Lateral Walk",
@@ -303,7 +303,7 @@ export default [
     subregion: "pumper",
     aliases: ["Band Lateral Walk","Monster Walk (Band)","Lateral Walk"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Loop a band around your ankles or above your knees and bend into a slight squat. Step sideways keeping tension in the band, then bring the trailing foot in without slack. Standing tall between steps lets the band lose its tension.",
   },
   {
     name: "Seated Band Lat Pulldown",
@@ -316,7 +316,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "vertical_pull",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit tall with the band anchored overhead, gripped wide in both hands. Pull it down towards your upper chest by driving your elbows down and back, then let it return with control. Leaning back to use bodyweight is the common shortcut.",
   },
   {
     name: "Seated Band Row",
@@ -329,7 +329,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "horizontal_lat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with legs extended and the band looped around your feet, an end in each hand. Pull your elbows back past your ribs while keeping your chest tall, then extend forward. Rounding the back to add range loses tension in the target muscles.",
   },
   // ── INTEGRATION STAGE 2 (exercise-library-expansion-2026-09-05) — generated by scripts/exercise-library/integrate-inventories.mjs; rerun the script to regenerate, do not hand-edit below this line ──
   {
@@ -345,7 +345,7 @@ export default [
     aliases: ["Exercise Band Dorsiflexion"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"seated","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"unilateralLoadable":true,"bilateralLower":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Sit with the band looped around the top of one foot, anchored in front of you. Pull your toes up towards your shin against the band, then release slowly. Using the whole leg to yank the band cuts the ankle out of it.",
   },
   {
     name: "Band Ankle Plantarflexion",
@@ -360,7 +360,7 @@ export default [
     aliases: ["Seated Band Calf Raise","Band Plantar Flexion"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"none","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Sit with legs extended, the band looped around the ball of one foot, held taut in your hands. Point your toes away from you against the band, then return with control. Bending the knee to help the push takes work off the calf.",
   },
   {
     name: "Band Assisted Ab Wheel Rollout",
@@ -375,7 +375,7 @@ export default [
     aliases: ["Band-Assisted Ab Rollout"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"kneeling","floorAccess":true,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"high","weightBearingHands":true}},
-    cue: "",
+    cue: "Kneel and loop a band over a high anchor and around the ab wheel to reduce the load. Roll the wheel forward keeping hips level and back flat, then pull back to kneeling. Letting the hips sag towards the floor is the main fault.",
   },
   {
     name: "Band Assisted Dip",
@@ -389,7 +389,7 @@ export default [
     subregion: "pushdown",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"mixed","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Loop a band around the dip bars and place a knee or foot in the loop for support. Lower your body by bending your elbows, then press back up to full lock out. Leaning too far forward shifts work from triceps towards the chest.",
   },
   {
     name: "Band Chest Fly (Standing)",
@@ -403,7 +403,7 @@ export default [
     subregion: "flat",
     aliases: ["Cross Over - With Bands"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Anchor the band behind you at chest height, an end in each hand, arms out to the sides with a slight elbow bend. Bring your hands together in front of your chest in a wide arc, then return slowly. More elbow bend turns it into a press.",
   },
   {
     name: "Band Chest Press (Single-Arm)",
@@ -418,7 +418,7 @@ export default [
     aliases: ["band one arm twisting chest press"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"unilateralLoadable":true,"bilateralUpper":false,"axialLoad":false}},
-    cue: "",
+    cue: "Anchor the band behind you at chest height, standing in a staggered stance holding one end at chest level. Press your hand forward until the arm is straight, then return with control. Twisting the torso to help takes work off the chest.",
   },
   {
     name: "Band Clamshell",
@@ -433,7 +433,7 @@ export default [
     aliases: ["Banded Clamshell"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"unilateralLoadable":true,"bilateralLower":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Lie on your side with knees bent and a band looped around your thighs, feet stacked together. Keeping your feet touching, lift your top knee towards the ceiling, then lower it back. Rolling your hips backward loses the position fastest.",
   },
   {
     name: "Band Concentration Curl",
@@ -447,7 +447,7 @@ export default [
     subregion: "short_head",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"seated","unilateralLoadable":true,"bilateralUpper":false}},
-    cue: "",
+    cue: "Sit with the band anchored under your foot, elbow braced against the inside of your thigh. Curl your hand up towards your shoulder, then lower fully under control. Letting the elbow drift off the thigh brings the shoulder into the lift.",
   },
   {
     name: "Band Fire Hydrant (Kneeling)",
@@ -461,7 +461,7 @@ export default [
     subregion: "pumper",
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"kneeling","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"unilateralLoadable":true,"bilateralLower":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":true}},
-    cue: "",
+    cue: "Kneel on all fours with a band looped around your thighs just above the knees. Lift one knee out to the side keeping your hips square, then lower it back. Letting the hips rotate open is the main compensation to watch.",
   },
   {
     name: "Band Front Raise",
@@ -474,7 +474,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the band, feet hip-width apart, an end in each hand in front of your thighs. Raise your arms straight in front to shoulder height, then lower with control. Swinging from the hips to launch the band takes work off the shoulders.",
   },
   {
     name: "Band Glute Bridge",
@@ -487,7 +487,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "activator",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back with knees bent and a band looped around your thighs, feet flat on the floor. Drive your hips up while pressing your knees out against the band, squeezing at the top. Knees collapsing inward is the fault to expose.",
   },
   {
     name: "Band Glute Kickback",
@@ -501,7 +501,7 @@ export default [
     subregion: "stretcher",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"kneeling","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"unilateralLoadable":true,"bilateralLower":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":true}},
-    cue: "",
+    cue: "Get on all fours with the band looped around one foot, anchored under the other knee or a fixed point. Extend the banded leg straight back and up without arching your back, then return. Arching the spine for height loses glute work.",
   },
   {
     name: "Band Goblet Squat",
@@ -514,7 +514,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the centre of the band, feet shoulder-width apart, both ends held at chest height like a goblet. Sit your hips back and down into a squat, chest tall, then drive back up. The band pulling your shoulders forward rounds the back.",
   },
   {
     name: "Band Hammer Curl",
@@ -527,7 +527,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "brachialis",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the band, feet hip-width apart, an end in each hand with palms facing your body. Curl your hands up towards your shoulders keeping your palms in, then lower fully. Swinging the elbows forward turns the curl into a shoulder move.",
   },
   {
     name: "Band Hip Thrust (Single-Leg)",
@@ -541,7 +541,7 @@ export default [
     subregion: "activator",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"balanceDemand":"supported"}},
-    cue: "",
+    cue: "Sit with your upper back against a bench, a band anchored low behind you and looped around your hips. Drive through one heel to lift your hips, other leg lifted, then lower with control. Twisting towards the working leg is the common fault.",
   },
   {
     name: "Band Incline Press",
@@ -555,7 +555,7 @@ export default [
     subregion: "incline",
     loadCharacter: "grind",
     overrides: {"difficulty":2},
-    cue: "",
+    cue: "Anchor the band low behind you, an end in each hand at shoulder height, staggered stance leaning slightly forward. Press your hands up and forward at an incline angle, then return slowly. Arching the back for range takes work off the chest.",
   },
   {
     name: "Band Leg Extension",
@@ -570,7 +570,7 @@ export default [
     aliases: ["Resistance Band Leg Extension"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"none","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Sit tall with the band anchored behind you and looped around one ankle. Extend that knee straight out in front against the band, then lower with control. Leaning back to use momentum takes the work away from the quad.",
   },
   {
     name: "Band Monster Walk",
@@ -584,7 +584,7 @@ export default [
     subregion: "pumper",
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","demands":{"gripDemand":"none","weightBearingHands":false,"axialLoad":false}},
-    cue: "",
+    cue: "Loop a band around your thighs or ankles and drop into a quarter squat, knees pressed slightly out. Step sideways in small steps keeping tension on the band, then repeat the other way. Letting the knees drift inward loses the point of it.",
   },
   {
     name: "Band Pallof Press",
@@ -598,7 +598,7 @@ export default [
     subregion: "rotation",
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"standing"}},
-    cue: "",
+    cue: "Stand side on to the anchor with the band at chest height, both hands together in front of your sternum. Press your hands out away from your chest without rotating the torso towards the anchor, then return. Twisting is what it resists.",
   },
   {
     name: "Band Pull-Apart (Overhead)",
@@ -612,7 +612,7 @@ export default [
     subregion: "horiz_abduction",
     loadCharacter: "grind",
     overrides: {"demands":{"overheadPosition":true}},
-    cue: "",
+    cue: "Hold the band overhead, hands wider than shoulder width, arms straight. Pull the band apart by driving your hands out and slightly down, squeezing your shoulder blades, then return. Bending the elbows turns it into a pulldown.",
   },
   {
     name: "Band Rear Delt Fly",
@@ -626,7 +626,7 @@ export default [
     subregion: "horiz_abduction",
     aliases: ["band reverse fly","Back Flyes - With Bands"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Anchor the band in front of you at chest height, an end in each hand, arms extended. Pull your hands out and back in a wide arc, squeezing your shoulder blades, then return slowly. Bending the elbows too much shifts the work elsewhere.",
   },
   {
     name: "Band Romanian Deadlift (Bilateral)",
@@ -640,7 +640,7 @@ export default [
     subregion: "hip_extension",
     aliases: ["band straight back stiff leg deadlift"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the band, feet hip-width apart, an end in each hand in front of your thighs. Push your hips back and lower the band down your legs with a soft knee bend, then drive forward to stand. Rounding the lower back is the main fault.",
   },
   {
     name: "Band Romanian Deadlift (Single-Leg)",
@@ -654,7 +654,7 @@ export default [
     subregion: "hip_extension",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"balanceDemand":"high","axialLoad":false}},
-    cue: "",
+    cue: "Stand on the band with one foot, an end in each hand, weight shifted onto that leg. Hinge forward at the hip while the other leg extends back for balance, then return to standing. Letting the hips rotate open signals losing control.",
   },
   {
     name: "Band Row (Single-Arm)",
@@ -669,7 +669,7 @@ export default [
     aliases: ["band one arm standing low row","band one arm twisting seated row"],
     loadCharacter: "grind",
     overrides: {"demands":{"unilateralLoadable":true,"bilateralUpper":false,"axialLoad":false}},
-    cue: "",
+    cue: "Anchor the band at chest height and stand side on, holding one end in a staggered stance. Pull your elbow back past your ribs keeping your torso still, then extend forward. Rotating the torso to help takes tension off the back.",
   },
   {
     name: "Band Seated Row",
@@ -684,7 +684,7 @@ export default [
     aliases: ["resistance band seated straight back row"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"seated","axialLoad":false}},
-    cue: "",
+    cue: "Sit on the floor with legs extended, the band anchored at foot height, an end in each hand. Pull your elbows straight back close to your ribs, squeezing the shoulder blades, then extend forward. Leaning back loses mid-back tension.",
   },
   {
     name: "Band Shoulder Press (Seated)",
@@ -698,7 +698,7 @@ export default [
     subregion: "overhead_press",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"seated","axialLoad":false}},
-    cue: "",
+    cue: "Sit tall on a chair or bench, band anchored under the seat, an end in each hand at shoulder height. Press hands straight overhead, then lower back to shoulder height. Arching the back for height takes work off the shoulders.",
   },
   {
     name: "Band Standing Curl (Single-Arm)",
@@ -713,7 +713,7 @@ export default [
     aliases: ["band one arm overhead biceps curl"],
     loadCharacter: "grind",
     overrides: {"demands":{"unilateralLoadable":true,"bilateralUpper":false}},
-    cue: "",
+    cue: "Stand on the band with one foot, holding the free end in the same-side hand, arm extended. Curl your hand up towards your shoulder without swinging the elbow forward, then lower fully. Leaning back shifts work away from the biceps.",
   },
   {
     name: "Band Standing Hip Abduction",
@@ -727,7 +727,7 @@ export default [
     subregion: "pumper",
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"gripDemand":"supportive","weightBearingHands":false,"unilateralLoadable":true}},
-    cue: "",
+    cue: "Stand side on to the anchor, band around your ankle, a wall or support nearby for balance. Lift the banded leg straight out to the side without leaning your torso, then lower with control. Leaning away lets momentum do the work.",
   },
   {
     name: "Band Standing Hip Adduction",
@@ -741,7 +741,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"gripDemand":"supportive","weightBearingHands":false,"unilateralLoadable":true}},
-    cue: "",
+    cue: "Stand side on to the anchor, band around your ankle, anchor on the same side as the working leg. Pull the leg across your body towards the midline, then return under control. Rotating the hips to help takes tension off the inner thigh.",
   },
   {
     name: "Band Straight-Arm Pulldown",
@@ -755,7 +755,7 @@ export default [
     subregion: "vertical_pull",
     loadCharacter: "grind",
     overrides: {"demands":{"overheadPosition":true}},
-    cue: "",
+    cue: "Stand facing a high anchor, holding the band with arms extended in front at shoulder height. Pull your hands down towards your thighs keeping your elbows straight, then let it return slowly. Bending the elbows turns it into a pushdown.",
   },
   {
     name: "Band Sumo Deadlift",
@@ -768,7 +768,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "stretcher",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the band, feet wide and toes turned out, an end in each hand between your legs. Push your hips back and bend your knees into the wide stance, then drive through your heels to stand tall. Knees caving inward is the fault.",
   },
   {
     name: "Band T-Raise",
@@ -782,7 +782,7 @@ export default [
     subregion: "horiz_abduction",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"balanceDemand":"stable"}},
-    cue: "",
+    cue: "Hinge forward with a flat back, band anchored in front of you, an end in each hand. Raise your arms out to the sides until level with your shoulders, forming a T, then lower with control. Heaving with the back takes work off the shoulders.",
   },
   {
     name: "Band Tricep Kickback",
@@ -796,7 +796,7 @@ export default [
     subregion: "pushdown",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","unilateralLoadable":true,"bilateralUpper":false}},
-    cue: "",
+    cue: "Hinge forward with a flat back, upper arm close to your body and elbow bent, band anchored behind you. Straighten your elbow to extend your hand back, then return under control. Swinging the upper arm turns it into a shoulder movement.",
   },
   {
     name: "Band Upright Row",
@@ -810,7 +810,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"axialLoad":false}},
-    cue: "",
+    cue: "Stand on the band, feet hip-width apart, an end in each hand in front of your thighs. Pull your hands up towards your collarbone leading with your elbows, then lower with control. Shrugging up for height takes work off the target muscles.",
   },
   {
     name: "Band W-Raise",
@@ -823,7 +823,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the band, an end in each hand at your sides. Pull your hands up and out into a W shape by bending your elbows and squeezing your shoulder blades, then return. Dropping the elbows below shoulder height turns the W into a shrug.",
   },
   {
     name: "Band Woodchop (High-to-Low)",
@@ -837,7 +837,7 @@ export default [
     subregion: "rotation",
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral"},
-    cue: "",
+    cue: "Anchor the band up high and stand side on, both hands together near the anchor. Pull the band down and across your body towards your opposite hip, rotating through the torso, then return slowly. Moving only the arms skips the core.",
   },
   {
     name: "Band Woodchop (Low-to-High)",
@@ -851,7 +851,7 @@ export default [
     subregion: "rotation",
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral"},
-    cue: "",
+    cue: "Anchor the band down low and stand side on, both hands together near the anchor. Pull the band up and across your body towards the opposite shoulder, rotating through the torso, then return slowly. Arms alone leave the core out of it.",
   },
   {
     name: "Band Y-Raise",
@@ -865,7 +865,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"demands":{"overheadPosition":true}},
-    cue: "",
+    cue: "Stand on the band, feet hip-width apart, an end in each hand in front of your thighs. Raise your arms up and out into a Y shape above your head, then lower with control. Arching the lower back for height takes work off the shoulders.",
   },
   {
     name: "Band Y-T-W Raise",
@@ -879,7 +879,7 @@ export default [
     subregion: "horiz_abduction",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"overheadPosition":true,"position":"standing","floorAccess":false,"balanceDemand":"stable"}},
-    cue: "",
+    cue: "Stand on the band or anchor it in front of you, an end in each hand. Move through a Y, then a T, then a W shape, keeping your torso still throughout. Using momentum to swing through each position takes the work off the shoulders and back.",
   },
   {
     name: "Push-Up (Band-Resisted)",
@@ -894,7 +894,7 @@ export default [
     aliases: ["band push sit-up"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":true}},
-    cue: "",
+    cue: "Loop a band across your upper back and under your hands in a push-up position. Lower your chest to the floor as normal, then press up hard against the extra tension near the top. Letting the band pull your shoulders forward rounds the back.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];

@@ -195,6 +195,16 @@ export function buildSwapReason(original, candidate) {
  *                       (Assisted Pull-Up etc). Set for intermediate+ lifters so
  *                       a beginner crutch is never offered as a swap. Off by
  *                       default; a true beginner still sees them.
+ * @param {string[]|null} options.stylePool - EL-11 (docs/exercise-library-
+ *                       expansion-2026-09-05/05-DECISIONS.md): canonical
+ *                       names to restrict candidates to, when the exercise
+ *                       being swapped belongs to a style-tagged plan
+ *                       (resolved by the caller via
+ *                       src/lib/exercise/stylePools.js's stylePoolFor).
+ *                       null (default) = no restriction, unchanged
+ *                       behaviour for every ordinary plan. The sheet's
+ *                       explicit "Show all exercises" relaxes this by
+ *                       simply omitting the option on that call.
  * @returns {{ exercise: object, score: number, reason: string }[]}
  */
 export function rankSwaps(originalExercise, allExercises, options = {}) {
@@ -203,13 +213,18 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
     numResults = 5,
     excludeIds = [],
     excludeAssisted = false,
+    stylePool = null,
   } = options;
 
   const excludeSet = new Set([originalExercise.id, ...excludeIds]);
+  const styleSet = Array.isArray(stylePool) && stylePool.length ? new Set(stylePool) : null;
 
   const scored = allExercises
     // Mandatory exclusions
     .filter((ex) => !excludeSet.has(ex.id))
+    // EL-11: a style-tagged plan's swap candidates never leave the pool,
+    // unless the sheet's "Show all exercises" relaxation omitted stylePool.
+    .filter((ex) => !styleSet || styleSet.has(ex.name))
     // Assisted-regression filter (intermediate+). Never applied to the original
     // itself: if the user is on an assisted lift and wants alternatives, they
     // still get loaded ones.

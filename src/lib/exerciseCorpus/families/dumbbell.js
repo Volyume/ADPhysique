@@ -29,7 +29,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "overhead_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Start with dumbbells at shoulder height, palms facing you. Press up while rotating your palms forward to finish overhead, then reverse on the way down. Rushing the rotation turns it into a plain press.",
   },
   {
     name: "Batwing Row",
@@ -42,7 +42,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "upper_mid_row",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on an inclined bench holding dumbbells, arms hanging straight down. Row both up, elbows back, pinching your shoulder blades, then lower fully. Letting the chest lift off the bench brings the lower back in.",
   },
   {
     name: "Bench Press (Close Grip, Dumbbell)",
@@ -56,7 +56,7 @@ export default [
     subregion: "pushdown",
     aliases: ["Bench Press (Close Grip, DB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench holding two dumbbells together over your chest, palms facing each other. Lower them to the sides of your chest keeping elbows tucked, then press back up and together. Letting them drift apart turns it into a regular press.",
   },
   {
     name: "Bulgarian Split Squat",
@@ -69,7 +69,7 @@ export default [
     fatigueCost: 4, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand a stride ahead of a bench and rest your back foot on it, holding dumbbells at your sides. Lower your back knee towards the floor by bending the front leg, then push back up. Letting the front knee cave inward is common.",
   },
   {
     name: "Chest-Supported Row (Dumbbell)",
@@ -83,7 +83,7 @@ export default [
     subregion: "upper_mid_row",
     aliases: ["Chest-Supported Row (DB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on an inclined bench holding dumbbells, arms hanging straight down. Row both up towards your ribs, squeezing your shoulder blades, then lower fully. Shrugging instead of pulling with the back is common.",
   },
   {
     name: "Concentration Curl",
@@ -97,7 +97,7 @@ export default [
     subregion: "short_head",
     aliases: ["dumbbell seated revers grip concentration curl","dumbbell standing concentration curl","dumbbell standing one arm concentration curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit on a bench, lean forward and brace your elbow against the inside of your thigh, dumbbell hanging below. Curl the weight up towards your shoulder, then lower fully. Letting the elbow drift off the thigh turns it into a standing curl.",
   },
   {
     name: "Cross-Body Hammer Curl",
@@ -110,7 +110,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "brachialis",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding a dumbbell with your palm facing your body. Curl it up and across towards the opposite shoulder, then lower back down the same path. Letting the elbow swing away from your side turns this into a swinging motion.",
   },
   {
     name: "Cuban Press",
@@ -123,7 +123,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding dumbbells and raise them until your upper arms are level with your shoulders, elbows bent. Rotate your forearms up until the dumbbells point overhead, press to full extension, then reverse. Rushing skips the point.",
   },
   {
     name: "Curtsy Lunge",
@@ -136,7 +136,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall and step one leg diagonally behind and across the other, lowering into a lunge. Push back through the front leg to return to standing. Letting the front knee twist inward as you step across is the main fault.",
   },
   {
     name: "Curtsy Lunge (Glute Focus)",
@@ -149,7 +149,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "stretcher",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall and step one leg diagonally behind and across the other, sitting your hips back as you lower. Drive through the front heel to stand, torso slightly forward to load the glute. Rushing up onto the toes loses the tension.",
   },
   {
     name: "Decline Dumbbell Fly",
@@ -163,7 +163,7 @@ export default [
     subregion: "decline",
     aliases: ["Decline DB Fly"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a decline bench holding dumbbells above your chest, elbows slightly bent. Lower them out to the sides in a wide arc until you feel a stretch, then bring them together. Bending the elbows more turns the fly into a press.",
   },
   {
     name: "Decline Dumbbell Press",
@@ -177,7 +177,7 @@ export default [
     subregion: "decline",
     aliases: ["Decline DB Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a decline bench holding dumbbells at chest height, feet secured. Press them up and slightly together, then lower back to the sides of your chest. Letting them drift out wide at the bottom strains the shoulders.",
   },
   {
     name: "Deficit Reverse Lunge (Glute Focus)",
@@ -190,7 +190,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "stretcher",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on a small platform holding dumbbells, step one leg back and down off it into a lunge. Push through the front heel to stand, torso leaning slightly forward. Rushing the step back loses the extra range the deficit adds.",
   },
   {
     name: "Dumbbell Bench Press",
@@ -204,7 +204,7 @@ export default [
     subregion: "flat",
     aliases: ["DB Bench Press","dumbbell decline one arm hammer press","dumbbell lying one arm press","dumbbell lying one arm press v. 2","dumbbell one arm decline chest press","dumbbell one arm reverse grip press","dumbbell palms in incline bench press","dumbbell standing one arm palm in press","Hammer Grip Incline DB Bench Press","Standing Palm-In One-Arm Dumbbell Press","Benchpress Dumbbells","Elbows Tucked DB Bench Press","Glute Bridge Single-Arm Press","No Leg Drive Dumbbell Chest Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench holding dumbbells over your chest, palms facing your feet. Lower them to the sides of your chest, elbows at roughly a right angle, then press back up. Dropping too low can strain the shoulders, so stop at a stretch.",
   },
   {
     name: "Dumbbell Calf Raise (Standing)",
@@ -218,7 +218,7 @@ export default [
     subregion: "gastro",
     aliases: ["DB Calf Raise (Standing)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding dumbbells with the balls of your feet on a raised edge. Rise up onto your toes as high as you can, pause, then lower your heels below the edge for a full stretch. Bouncing at the bottom takes tension off the calf.",
   },
   {
     name: "Dumbbell Curl",
@@ -232,7 +232,7 @@ export default [
     subregion: "short_head",
     aliases: ["DB Curl","dumbbell alternate biceps curl","dumbbell alternate biceps curl (with arm blaster)","dumbbell bicep curl lunge with bowling motion","dumbbell bicep curl with stork stance","dumbbell biceps curl (with arm blaster)","dumbbell biceps curl squat","dumbbell finger curls","dumbbell high curl","dumbbell kneeling bicep curl exercise ball","dumbbell lunge with bicep curl","dumbbell lying supine biceps curl","dumbbell lying supine curl","dumbbell lying wide curl","dumbbell one arm prone curl","dumbbell one arm standing curl","dumbbell revers grip biceps curl","dumbbell seated biceps curl to shoulder press","dumbbell standing biceps curl","dumbbell standing inner biceps curl v. 2","dumbbell standing one arm curl (over incline bench)","dumbbell standing one arm curl over incline bench","dumbbell step up single leg balance with bicep curl","dumbbell waiter biceps curl","Dumbbell Alternate Bicep Curl","Lying Supine Dumbbell Curl","Standing One-Arm Dumbbell Curl Over Incline Bench","Alternating Biceps Curls With Dumbbell","Alternating bicep curls","Biceps Curls With Dumbbell","Drop Curl","Dumbbell bicep curl to press","Dumbbell wide bicep curls","Forearm Curls (underhand grip)","Seated W Curl","Standing Bicep Curl","one-handed kettlebell curls"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding a dumbbell in each hand, palms facing forward, elbows at your sides. Curl the weights up towards your shoulders, then lower under control. Swinging the shoulders to help the weight up takes work away from the biceps.",
   },
   {
     name: "Dumbbell Floor Skull Crusher",
@@ -246,7 +246,7 @@ export default [
     subregion: "overhead",
     aliases: ["DB Floor Skull Crusher","dumbbell lying extension (across face)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on the floor with knees bent, holding dumbbells above your chest, arms extended. Bend your elbows to lower them towards your head until your upper arms touch the floor, then extend up. Flaring the elbows changes the target.",
   },
   {
     name: "Dumbbell Fly",
@@ -260,7 +260,7 @@ export default [
     subregion: "flat",
     aliases: ["DB Fly","dumbbell reverse fly","dumbbell rotation reverse fly","dumbbell side plank with rear fly","hyght dumbbell fly","Decline Dumbbell Flyes","Dumbbell Flyes","One-Arm Flat Bench Dumbbell Flye","One-Arm Side Laterals","Reverse Flyes","DB Floor Press (5kg Single Arm)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench holding dumbbells above your chest, a slight bend in the elbows. Lower them out to the sides in a wide arc until you feel a stretch, then bring them together above you. Bending the elbows more turns the fly into a press.",
   },
   {
     name: "Dumbbell Front Raise",
@@ -274,7 +274,7 @@ export default [
     subregion: null,
     aliases: ["DB Front Raise","dumbbell incline raise","dumbbell incline shoulder raise","dumbbell incline t-raise","dumbbell raise","dumbbell seated alternate front raise","dumbbell side lying one hand raise","dumbbell standing alternate raise","dumbbell standing front raise above head","Alternating Deltoid Raise","Single Dumbbell Raise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding dumbbells in front of your thighs, palms facing your legs. Raise one or both to around shoulder height, then lower under control. Leaning back to help the weight up shifts effort onto the lower back.",
   },
   {
     name: "Dumbbell Goblet Squat",
@@ -288,7 +288,7 @@ export default [
     subregion: "squat_press",
     aliases: ["DB Goblet Squat"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold a dumbbell vertically against your chest with both hands. Squat down between your knees, chest up, elbows brushing your inner knees, then drive back up. Letting the dumbbell drift away from your chest pulls you forward.",
   },
   {
     name: "Dumbbell Hip Thrust",
@@ -302,7 +302,7 @@ export default [
     subregion: "activator",
     aliases: ["DB Hip Thrust"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit against a bench with a dumbbell on your hips, feet flat on the floor. Drive through your heels to lift your hips into a straight line, squeezing your glutes at the top, then lower. Pushing through the toes pulls the work into the quads.",
   },
   {
     name: "Dumbbell Lateral Raise",
@@ -316,7 +316,7 @@ export default [
     subregion: "lateral_raise",
     aliases: ["DB Lateral Raise","dumbbell full can lateral raise","dumbbell incline rear lateral raise","dumbbell lying rear lateral raise","dumbbell rear lateral raise (support head)","dumbbell seated bent arm lateral raise","Side Lateral Raise","45° lateral raises","Lateral Raises"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding dumbbells at your sides, a slight bend in the elbows. Raise your arms out to the sides until they reach shoulder height, then lower under control. Swinging the weights up past shoulder height takes tension off the shoulder.",
   },
   {
     name: "Dumbbell Lunge",
@@ -330,7 +330,7 @@ export default [
     subregion: "squat_press",
     aliases: ["DB Lunge","dumbbell contralateral forward lunge","dumbbell rear lunge"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall holding dumbbells at your sides and step forward into a lunge. Lower your back knee towards the floor, front shin close to vertical, then push back to standing. Letting the front knee pass far over the toes strains the joint.",
   },
   {
     name: "Dumbbell Overhead Tricep Extension",
@@ -344,7 +344,7 @@ export default [
     subregion: "overhead",
     aliases: ["DB Overhead Tricep Extension","Overhead Dumbbell Extension"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand or sit holding a dumbbell with both hands behind your head, elbows pointing forward. Extend your arms to press it overhead, then lower back behind your head. Letting the elbows flare outward spreads the load away from the triceps.",
   },
   {
     name: "Dumbbell Pronation/Supination",
@@ -358,7 +358,7 @@ export default [
     subregion: null,
     aliases: ["DB Pronation/Supination","dumbbell lying pronation","dumbbell lying pronation on floor","dumbbell lying supination","dumbbell lying supination on floor"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your forearm on your thigh, holding a dumbbell loaded to one side like a hammer. Rotate your forearm from palm down to palm up and back, elbow still. Letting the elbow lift off your thigh brings the shoulder into it.",
   },
   {
     name: "Dumbbell Pullover",
@@ -372,7 +372,7 @@ export default [
     subregion: "flat",
     aliases: ["DB Pullover","dumbbell around pullover","dumbbell straight arm pullover","Bent-Arm Dumbbell Pullover","Straight-Arm Dumbbell Pullover","Cross-Bench Dumbbell Pullovers","Pullover"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie across a bench with your head supported and hips low, holding a dumbbell above your chest. Lower it behind your head in an arc, elbows slightly bent, then pull back over your chest. Letting the hips sag loosens the target muscles.",
   },
   {
     name: "Dumbbell Pullover (Chest)",
@@ -386,7 +386,7 @@ export default [
     subregion: "flat",
     aliases: ["DB Pullover (Chest)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie across a bench with your head supported and hips low, holding a dumbbell above your chest. Lower it behind your head in an arc, elbows slightly bent, then pull back over your chest. Letting the hips sag loosens the target muscles.",
   },
   {
     name: "Dumbbell Rear Delt Fly",
@@ -400,7 +400,7 @@ export default [
     subregion: "horiz_abduction",
     aliases: ["DB Rear Delt Fly","dumbbell lying on floor rear delt raise","dumbbell rear delt raise","dumbbell rear delt row_shoulder","Bent Over Dumbbell Rear Delt Raise With Head On Bench","Lying Rear Delt Raise","Chest-Supported Rear Delt Raise","Dumbbell rear delt row","Seated rear delt rise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on an inclined bench holding dumbbells hanging straight below you. Raise your arms out to the sides, squeezing your shoulder blades together, then lower under control. Bending the elbows heavily turns the fly into a row.",
   },
   {
     name: "Dumbbell Row",
@@ -414,7 +414,7 @@ export default [
     subregion: "horizontal_lat",
     aliases: ["DB Row","Two-Arm Bent-Over Dumbbell Row","Bent-Over Dumbbell Row","dumbbell reverse grip incline bench two arm row"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Rest one knee and hand on a bench, back flat, and hold a dumbbell in the other hand below your shoulder. Pull it up towards your hip, elbow back, then lower fully. Twisting the torso to help takes work away from the back.",
   },
   {
     name: "Dumbbell Shoulder Press",
@@ -428,7 +428,7 @@ export default [
     subregion: "overhead_press",
     aliases: ["DB Shoulder Press","dumbbell seated shoulder press (parallel grip)","dumbbell standing alternate overhead press","dumbbell standing overhead press","Arnold Shoulder Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit or stand holding dumbbells at shoulder height, palms forward. Press them straight up until your arms extend, then lower back to shoulder height. Arching the back to help the press puts strain where the shoulders should work.",
   },
   {
     name: "Dumbbell Shrug",
@@ -442,7 +442,7 @@ export default [
     subregion: null,
     aliases: ["DB Shrug","dumbbell decline shrug","dumbbell decline shrug v. 2","Lying Dumbbell Row SS Seated Shrug"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall holding a dumbbell in each hand at your sides. Lift your shoulders straight up towards your ears, pause, then lower fully. Bending the elbows to help the weight up takes tension off the traps.",
   },
   {
     name: "Dumbbell Side Bend",
@@ -456,7 +456,7 @@ export default [
     subregion: "rotation",
     aliases: ["DB Side Bend","Side Dumbbell Trunk Flexion","Side bend"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall holding a dumbbell in one hand at your side, the other hand on your hip or head. Bend sideways towards the weighted side as far as comfortable, then return upright. Twisting the torso as you bend changes the exercise.",
   },
   {
     name: "Dumbbell Side-Lying Rear Delt",
@@ -470,7 +470,7 @@ export default [
     subregion: "horiz_abduction",
     aliases: ["DB Side-Lying Rear Delt"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your side on a bench or floor, holding a dumbbell above your hip, elbow slightly bent. Raise it towards the ceiling, leading with the back of your shoulder, then lower. Rolling the torso back loosens the target area.",
   },
   {
     name: "Dumbbell Single-Leg RDL",
@@ -484,7 +484,7 @@ export default [
     subregion: "hip_extension",
     aliases: ["DB Single-Leg RDL"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on one leg holding a dumbbell in the opposite hand, soft bend in the standing knee. Hinge forward at the hip, free leg rising behind you for balance, torso close to horizontal. Rounding the back as balance wobbles is common.",
   },
   {
     name: "Dumbbell Skull Crusher",
@@ -498,7 +498,7 @@ export default [
     subregion: "overhead",
     aliases: ["DB Skull Crusher","Skullcrusher Dumbbells"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench holding dumbbells above your chest, arms extended. Bend your elbows to lower them towards your head, upper arms still, then extend back up. Letting the elbows drift outward spreads effort away from the triceps.",
   },
   {
     name: "Dumbbell Squeeze Press",
@@ -512,7 +512,7 @@ export default [
     subregion: "flat",
     aliases: ["DB Squeeze Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench holding two dumbbells pressed together over your chest, squeezing them throughout. Lower to your chest keeping the squeeze on, then press back up without letting them separate. Easing the squeeze removes the point.",
   },
   {
     name: "Dumbbell Tibialis Raise (Seated)",
@@ -526,7 +526,7 @@ export default [
     subregion: null,
     aliases: ["DB Tibialis Raise (Seated)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your heels on the floor and a dumbbell across the top of your feet near the toes. Lift your toes and the front of your feet upward against the weight, then lower. Lifting the heels off the floor takes the work off the shin muscles.",
   },
   {
     name: "Dumbbell Wrist Curl",
@@ -540,7 +540,7 @@ export default [
     subregion: null,
     aliases: ["DB Wrist Curl","dumbbell one arm seated neutral wrist curl","dumbbell one arm wrist curl","dumbbell over bench neutral wrist curl","dumbbell over bench one arm neutral wrist curl","dumbbell over bench one arm wrist curl","dumbbell over bench wrist curl","dumbbell seated neutral wrist curl","dumbbell seated palms up wrist curl","Palms-Down Dumbbell Wrist Curl Over A Bench","Palms-Up Dumbbell Wrist Curl Over A Bench","Seated Dumbbell Palms-Down Wrist Curl","Seated Dumbbell Palms-Up Wrist Curl","Seated One-Arm Dumbbell Palms-Down Wrist Curl","Seated One-Arm Dumbbell Palms-Up Wrist Curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit and rest your forearms on your thighs, palms up, a dumbbell in each hand. Curl your wrists up as far as comfortable, then lower until the dumbbells roll towards your fingertips. Moving the whole forearm reduces the isolation.",
   },
   {
     name: "Dumbbell Y-Raise",
@@ -554,7 +554,7 @@ export default [
     subregion: null,
     aliases: ["DB Y-Raise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding light dumbbells and raise your arms up and out to form a Y above your head, thumbs leading. Lower back down, slight bend in the elbows throughout. Using weight too heavy for the shoulder turns the raise into a shrug.",
   },
   {
     name: "Egyptian Lateral Raise",
@@ -567,7 +567,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side-on to a support, holding it with your free hand and leaning your torso away from the raising arm. Raise the dumbbell out to the side, letting the lean add range, then lower. Standing upright removes the extra stretch.",
   },
   {
     name: "Farmer Walk (Forearms)",
@@ -581,7 +581,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Stand between two heavy dumbbells or handles, grip them firmly and stand up tall. Walk forward with short controlled steps, shoulders back and grip locked on. Letting the shoulders round forward is the first sign of losing form.",
   },
   {
     name: "Farmer's Walk",
@@ -596,7 +596,7 @@ export default [
     aliases: ["Farmer Carry"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Stand between two heavy dumbbells or handles, grip them firmly and stand tall. Walk forward with short controlled steps, shoulders back, torso upright. Letting the weights swing wildly wastes energy and strains the grip.",
   },
   {
     name: "Floor Press (Dumbbell)",
@@ -610,7 +610,7 @@ export default [
     subregion: "flat",
     aliases: ["Floor Press (DB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on the floor with knees bent, holding dumbbells above your chest, arms extended. Lower them until your upper arms touch the floor, pause, then press back up. Bouncing off the floor instead of pausing skips the point of the pause.",
   },
   {
     name: "Front Squat (Dumbbell)",
@@ -624,7 +624,7 @@ export default [
     subregion: "squat_press",
     aliases: ["Front Squat (DB)","dumbbell bench squat","dumbbell single leg split squat","dumbbell single leg squat","dumbbell squat","dumbbell supported squat","Dumbbell Squat To A Bench","Plie Dumbbell Squat","Bulgarian Squat with Dumbbells"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold dumbbells up at your shoulders, resting against the front of them, elbows lifted. Squat down, torso upright, then drive back up. Letting the elbows drop lets the dumbbells slide down and pulls you forward.",
   },
   {
     name: "Goblet Squat",
@@ -637,7 +637,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold a dumbbell vertically against your chest cupping the top end. Squat down between your knees, torso upright, then drive back up to standing. Letting the weight pull your torso forward is the common breakdown as depth increases.",
   },
   {
     name: "Gripper Walks",
@@ -651,7 +651,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Hold a dumbbell or handle in each hand and squeeze your grip firmly before walking. Walk forward with steady steps, shoulders back, grip locked the whole way. Letting the grip loosen between steps defeats the drill.",
   },
   {
     name: "Half-Kneeling Shoulder Press",
@@ -664,7 +664,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "overhead_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel on one knee, the other foot planted in front, holding a dumbbell at shoulder height on the same side. Press it straight overhead, then lower back to shoulder height. Letting the hips shift sideways removes the stability challenge.",
   },
   {
     name: "Hammer Curl",
@@ -678,7 +678,7 @@ export default [
     subregion: "brachialis",
     aliases: ["TRX hammer curl","dumbbell alternate seated hammer curl","dumbbell hammer curls (with arm blaster)","dumbbell one arm prone hammer curl","dumbbell one arm seated hammer curl","dumbbell one arm standing hammer curl","dumbbell peacher hammer curl","dumbbell prone incline hammer curl","dumbbell standing alternate hammer curl and press","Alternate Hammer Curl","Alternating dumbbell hammer curl","DB Hammer Curls (5kg)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding a dumbbell in each hand, palms facing your body throughout. Curl them up towards your shoulders, then lower. Rotating the wrists during the curl turns it into a regular curl and misses the point of the neutral grip.",
   },
   {
     name: "Helms Row",
@@ -691,7 +691,7 @@ export default [
     fatigueCost: 3, sfr: 5,
     subregion: "horizontal_lat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set an incline bench and lie face down with dumbbells hanging below your shoulders. Row them up towards your hips, elbows back and slightly out, then lower fully. Rowing towards the chest instead of the hip changes which muscles work.",
   },
   {
     name: "Incline Dumbbell Curl",
@@ -705,7 +705,7 @@ export default [
     subregion: "long_head",
     aliases: ["Incline DB Curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit back on an inclined bench, arms hanging straight down, a dumbbell in each hand. Curl them up towards your shoulders without the elbows moving forward, then lower fully. The incline stretches the muscle, so do not cut that phase short.",
   },
   {
     name: "Incline Dumbbell Fly",
@@ -719,7 +719,7 @@ export default [
     subregion: "incline",
     aliases: ["Incline DB Fly","dumbbell incline twisted flyes","Incline Dumbbell Flyes","Incline Dumbbell Flyes - With A Twist","Incline Bench Reverse Fly"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on an inclined bench holding dumbbells above your chest, elbows slightly bent. Lower them out to the sides in a wide arc until you feel a stretch, then bring them together. Bending the elbows more turns the fly into a press.",
   },
   {
     name: "Incline Dumbbell Press",
@@ -733,7 +733,7 @@ export default [
     subregion: "incline",
     aliases: ["Incline DB Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie back on an inclined bench holding dumbbells at your upper chest, palms facing your feet. Press them up and slightly together, then lower to the sides of your upper chest. Too steep a bench shifts the work onto the front shoulders.",
   },
   {
     name: "Incline Hammer Curl",
@@ -746,7 +746,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "long_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit back on an inclined bench, arms hanging straight down, dumbbells with palms facing each other. Curl them up towards your shoulders, then lower fully. Letting the elbows drift forward reduces the stretch this position gives.",
   },
   {
     name: "Incline Shrug",
@@ -759,7 +759,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on an inclined bench holding dumbbells hanging straight below your shoulders. Lift your shoulders straight up towards your ears, pause, then lower fully. Rowing the elbows back instead of shrugging up changes the exercise.",
   },
   {
     name: "Jefferson Curl",
@@ -772,7 +772,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on a raised platform holding a light dumbbell or plate, feet close together. Round your spine forward one bone at a time, lowering the weight towards your feet, then reverse to stand. A heavier load defeats the slow purpose.",
   },
   {
     name: "Keg Carry",
@@ -786,7 +786,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Hug a keg or heavy sandbag tightly against your chest and stand up straight before moving. Walk forward with short, controlled steps, torso upright and the load pulled in close. Letting the load drift away strains the lower back.",
   },
   {
     name: "Kneeling Dumbbell Press",
@@ -800,7 +800,7 @@ export default [
     subregion: "overhead_press",
     aliases: ["Kneeling DB Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel upright on both knees holding dumbbells at shoulder height. Press them straight overhead without leaning back, then lower under control. Arching the lower back to help the press is the usual compensation when the core is not braced.",
   },
   {
     name: "Kroc Row",
@@ -813,7 +813,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "horizontal_lat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Rest one knee and hand on a bench, holding a heavy dumbbell in the other hand below your shoulder. Pull it up towards your hip with a little body swing allowed, then lower under control. Losing control on the way down wastes the load.",
   },
   {
     name: "Lateral Lunge",
@@ -826,7 +826,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall and take a wide step out to one side, sitting your hips back and bending that knee while the other leg stays straight. Push back through the bent leg to stand. Letting the knee drift inward instead of over the foot strains it.",
   },
   {
     name: "Leaning Lateral Raise",
@@ -839,7 +839,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "lateral_raise",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold a support with one hand and lean your torso away so the raising arm hangs free with a dumbbell. Raise it out to the side, letting the lean add range, then lower. Standing upright removes the extra stretch this position gives.",
   },
   {
     name: "Lying Rear Delt Row",
@@ -852,7 +852,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on an inclined bench, arms hanging straight down holding dumbbells. Row them up towards your ribs, driving your elbows out and back, then lower fully. Lifting the chest off the pad to help the pull hurts the movement.",
   },
   {
     name: "Lying Tricep Extension",
@@ -866,11 +866,12 @@ export default [
     subregion: "overhead",
     aliases: ["dumbbell decline triceps extension","dumbbell forward lunge triceps extension","dumbbell incline triceps extension","dumbbell lying one arm pronated triceps extension","dumbbell lying one arm supinated triceps extension","dumbbell one arm triceps extension (on bench)","dumbbell pronate-grip triceps extension","dumbbell seated bent over triceps extension","dumbbell seated triceps extension","dumbbell standing bent over one arm triceps extension","dumbbell standing bent over two arm triceps extension","dumbbell standing triceps extension","dumbbells seated triceps extension","exercise ball supine triceps extension","Decline Dumbbell Triceps Extension","Dumbbell One-Arm Triceps Extension","Dumbbell Tricep Extension -Pronated Grip","One Arm Pronated Dumbbell Triceps Extension","One Arm Supinated Dumbbell Triceps Extension","Seated Bent-Over One-Arm Dumbbell Triceps Extension","Seated Bent-Over Two-Arm Dumbbell Triceps Extension","Standing Bent-Over One-Arm Dumbbell Triceps Extension","Standing Bent-Over Two-Arm Dumbbell Triceps Extension","Standing Dumbbell Triceps Extension","Standing One-Arm Dumbbell Triceps Extension"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench holding dumbbells above your chest, arms extended. Bend your elbows to lower them towards your head, upper arms still, then extend back up. Letting the elbows travel backward past your head changes where the tension sits.",
   },
   {
     name: "Overhead Dumbbell Extension",
     retiredInto: "Dumbbell Overhead Tricep Extension",
+    cue: "Stand or sit holding a dumbbell with both hands behind your head, elbows pointing forward. Extend your arms to press it overhead, then lower back behind your head. Letting the elbows flare outward spreads the load away from the triceps.",
   },
   {
     name: "Plank Row",
@@ -883,7 +884,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "anti_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold a plank position with your hands on dumbbells, feet set wide for stability. Row one dumbbell up towards your hip keeping your hips square to the floor, then lower and repeat. Letting the hips rotate takes the challenge off the core.",
   },
   {
     name: "Preacher Curl (Dumbbell)",
@@ -897,7 +898,7 @@ export default [
     subregion: "short_head",
     aliases: ["Preacher Curl (DB)","dumbbell alternate hammer preacher curl","dumbbell one arm hammer preacher curl","dumbbell one arm reverse preacher curl","dumbbell one arm zottman preacher curl","dumbbell preacher curl over exercise ball","dumbbell standing zottman preacher curl","One Arm Dumbbell Preacher Curl","Two-Arm Dumbbell Preacher Curl","Dumbbells on Scott Machine","Single-arm Preacher Curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit at the preacher bench with one upper arm resting on the pad, holding a dumbbell. Curl it up towards your shoulder, then lower until your arm is almost straight. Lifting the upper arm off the pad takes the strictness out of the movement.",
   },
   {
     name: "Prone Incline Curl",
@@ -910,7 +911,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "long_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on an inclined bench, arms hanging straight down, holding dumbbells. Curl them up towards your shoulders without the elbows moving forward, then lower fully. This position removes swing, so momentum will not work here.",
   },
   {
     name: "Prone Incline T-Raise",
@@ -923,7 +924,7 @@ export default [
     fatigueCost: 1, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on an inclined bench holding light dumbbells hanging below you. Raise your arms out to the sides to form a T, squeezing your shoulder blades together, then lower. Bending the elbows eases the rear shoulder work.",
   },
   {
     name: "Prone Incline Y-Raise",
@@ -936,7 +937,7 @@ export default [
     fatigueCost: 1, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on an inclined bench holding light dumbbells hanging straight below you. Raise your arms up and out to form a Y above your head, then lower. Using too much weight makes it impossible to hold the Y position throughout.",
   },
   {
     name: "Renegade Row",
@@ -949,7 +950,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "upper_mid_row",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold a plank position with your hands on dumbbells, feet set wide for stability. Row one dumbbell up towards your hip keeping your hips square to the floor, then lower and repeat. Letting the hips rotate takes the challenge off the core.",
   },
   {
     name: "Reverse Lunge",
@@ -962,7 +963,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall and step one leg backward, lowering your back knee towards the floor with your front shin close to vertical. Push through the front foot to return to standing. Letting the front knee travel far past the toes strains the joint.",
   },
   {
     name: "Reverse Lunge (Glute Focus)",
@@ -975,7 +976,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "stretcher",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall and step one leg backward, sitting your hips down and back as you lower rather than straight down. Drive through the front heel to stand, torso slightly forward. Standing up onto the front toes loses the tension.",
   },
   {
     name: "Romanian Deadlift (Dumbbell)",
@@ -989,7 +990,7 @@ export default [
     subregion: "hip_extension",
     aliases: ["Romanian Deadlift (DB)","dumbbell deadlift","dumbbell single leg deadlift with stepbox support","Stiff-Legged Dumbbell Deadlift"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding dumbbells at your thighs, flat back, soft bend in the knees. Push your hips back and lower them down your legs until you feel a stretch in the hamstrings, then stand. Rounding the back near the knee is the usual fault.",
   },
   {
     name: "Seated Dumbbell Calf Raise",
@@ -1003,7 +1004,7 @@ export default [
     subregion: "soleus",
     aliases: ["Seated DB Calf Raise","dumbbell seated one leg calf raise","dumbbell seated one leg calf raise - hammer grip","dumbbell seated one leg calf raise - palm up","Dumbbell Seated One-Leg Calf Raise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with the balls of your feet on a raised block and dumbbells resting on your knees. Rise up onto your toes as high as you can, pause, then lower your heels for a full stretch. Bouncing at the bottom takes tension off the calf.",
   },
   {
     name: "Seated Dumbbell Curl",
@@ -1017,7 +1018,7 @@ export default [
     subregion: "short_head",
     aliases: ["Seated DB Curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit on a bench holding a dumbbell in each hand, arms hanging at your sides. Curl them up towards your shoulders, then lower under control. Leaning back against the bench to swing the weight up removes the strictness sitting is meant to add.",
   },
   {
     name: "Seated Dumbbell Press",
@@ -1031,7 +1032,7 @@ export default [
     subregion: "overhead_press",
     aliases: ["Seated DB Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit on a bench holding dumbbells at shoulder height, back supported. Press them straight up until your arms extend, then lower back to shoulder height. Arching away from the back support to help the press changes the angle of the lift.",
   },
   {
     name: "Seated Lateral Raise",
@@ -1044,7 +1045,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "lateral_raise",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit on a bench holding dumbbells at your sides, elbows slightly bent. Raise your arms out to the sides until they reach shoulder height, then lower. Sitting removes the ability to cheat with a lean, so too much weight shows up quickly.",
   },
   {
     name: "Single-Arm Dumbbell Press",
@@ -1058,7 +1059,7 @@ export default [
     subregion: "overhead_press",
     aliases: ["Single-Arm DB Press","dumbbell one arm shoulder press","dumbbell one arm shoulder press v. 2","Dumbbell One-Arm Shoulder Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand or sit holding a dumbbell at shoulder height on one side, torso braced. Press it straight overhead without leaning to the opposite side, then lower. Letting the torso tip away from the working arm is common as it gets heavy.",
   },
   {
     name: "Single-Arm Dumbbell Row",
@@ -1072,7 +1073,7 @@ export default [
     subregion: "horizontal_lat",
     aliases: ["Single-Arm DB Row"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Rest one knee and hand on a bench, holding a dumbbell in the other hand with your arm hanging straight. Pull it up towards your hip, squeezing your back, then lower with control. Twisting your torso to help the weight up loses the point.",
   },
   {
     name: "Single-Arm Dumbbell Shrug",
@@ -1086,7 +1087,7 @@ export default [
     subregion: null,
     aliases: ["Single-Arm DB Shrug"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall holding a dumbbell in one hand at your side. Lift that shoulder straight up towards your ear, pause, then lower it fully. Leaning the torso towards the working side takes the isolation out of the shrug.",
   },
   {
     name: "Single-Arm Farmer Carry",
@@ -1100,7 +1101,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Stand holding a heavy dumbbell in one hand, standing tall with the other side braced against leaning. Walk forward with short, controlled steps, resisting the pull to one side. Letting the torso tip towards the load means the core relaxed.",
   },
   {
     name: "Single-Leg Calf Raise (Dumbbell)",
@@ -1114,7 +1115,7 @@ export default [
     subregion: "gastro",
     aliases: ["Single-Leg Calf Raise (DB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on one foot with the ball of that foot on a raised edge, holding a dumbbell in the same-side hand. Rise up onto your toes as high as you can, pause, then lower for a full stretch. Letting the other foot bear weight reduces the load.",
   },
   {
     name: "Single-Leg Romanian Deadlift",
@@ -1127,7 +1128,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on one leg holding a dumbbell in the opposite hand, soft bend in the standing knee. Hinge forward at the hip, free leg rising behind you for balance, torso close to horizontal. Rounding the back as balance wobbles is common.",
   },
   {
     name: "Single-Leg Romanian Deadlift (DB)",
@@ -1140,7 +1141,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on one leg holding a dumbbell in the opposite hand, soft bend in the standing knee. Hinge forward at the hip, free leg rising behind you for balance, torso close to horizontal. Rounding the back as balance wobbles is common.",
   },
   {
     name: "Step-Up (Dumbbell)",
@@ -1154,7 +1155,7 @@ export default [
     subregion: "squat_press",
     aliases: ["Step-Up (DB)","Poliquin Step-Up","dumbbell step-up split squat","Dumbbell Step Ups"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a box or bench holding dumbbells at your sides. Step one foot fully onto the box and drive through it to stand tall on top, then step back down. Pushing off the trailing foot takes effort away from the leg on the box.",
   },
   {
     name: "Step-Up (Glute Focus)",
@@ -1168,7 +1169,7 @@ export default [
     subregion: "stretcher",
     aliases: ["Peterson Step-Up"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a taller box holding dumbbells, step up leading with a slight forward lean from the hips. Drive through the heel of the leading foot to stand tall on top, then step down. Standing too upright shifts work onto the quad.",
   },
   {
     name: "Step-Up (Weighted)",
@@ -1181,7 +1182,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a box or bench holding dumbbells at your sides. Step one foot fully onto the box and drive through it to stand tall on top, then step back down. Pushing off the trailing foot takes effort away from the leg on the box.",
   },
   {
     name: "Stiff-Leg Deadlift (Dumbbell)",
@@ -1195,7 +1196,7 @@ export default [
     subregion: "hip_extension",
     aliases: ["Stiff-Leg Deadlift (DB)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding dumbbells at your thighs with your knees only slightly bent, more locked than a Romanian deadlift. Push your hips back and lower, flat back, then drive forward to stand. Rounding the lower back to reach lower is common.",
   },
   {
     name: "Stiff-Leg Deadlift (Single-Leg)",
@@ -1208,7 +1209,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on one leg holding a dumbbell in the opposite hand, knee only slightly bent. Hinge forward at the hip, free leg rising behind you for balance, until you feel a stretch in the hamstring. Rounding the back as balance wobbles is common.",
   },
   {
     name: "Suitcase Carry",
@@ -1222,7 +1223,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Stand holding a dumbbell in one hand at your side, as if carrying a suitcase, torso upright. Walk forward with short, controlled steps, resisting the pull to one side. Letting the torso lean towards the load means the core has relaxed.",
   },
   {
     name: "Sumo Squat (Adductor Focus)",
@@ -1235,7 +1236,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with a wide stance, toes turned out further than a standard sumo squat, holding a dumbbell at your chest. Squat down, pushing your knees out over your toes, then stand. Knees tracking less than the toes loses the inner-thigh emphasis.",
   },
   {
     name: "Sumo Squat (Glute Focus)",
@@ -1248,7 +1249,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "stretcher",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with a wide stance and toes turned out, holding a dumbbell at your chest. Squat down and drive up through your heels, squeezing the glutes hard at the top. Rising onto the toes at the top shifts the finish away from the glutes.",
   },
   {
     name: "Tate Press",
@@ -1261,7 +1262,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench holding dumbbells above your chest, palms facing your feet. Bend your elbows out to the sides to lower them towards your chest, then extend back up. Letting the elbows drop back towards your head changes the exercise.",
   },
   {
     name: "Tricep Kickback",
@@ -1275,7 +1276,7 @@ export default [
     subregion: "pushdown",
     aliases: ["dumbbell kickback","dumbbell kickbacks on exercise ball","dumbbell one arm kickback","dumbbell seated bent over alternate kickback","dumbbell seated kickback","dumbbell seated one arm kickback","dumbbell standing alternating tricep kickback","dumbbell standing kickback","dumbbell tricep kickback with stork stance","Lying Triceps Kickback"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hinge forward with a flat back, upper arm close to your side and parallel to the floor, elbow bent. Extend your arm straight back until locked out, then bend it back. Letting the upper arm drop or swing forward removes the isolation.",
   },
   {
     name: "W-Raise",
@@ -1288,7 +1289,7 @@ export default [
     fatigueCost: 1, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand or lie face down holding light dumbbells hanging below you. Raise your arms out and up into a W shape, squeezing your shoulder blades together at the top, then lower. Too much weight to hold the shape turns this into a shrug.",
   },
   {
     name: "Waiter Curl",
@@ -1301,7 +1302,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "short_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding a dumbbell vertically under the top plate with both hands, as if balancing a tray. Curl it up towards your shoulders keeping it upright, then lower. Letting the dumbbell tip sideways shows the grip and wrist have broken down.",
   },
   {
     name: "Walking Lunge",
@@ -1314,7 +1315,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall holding dumbbells and step forward into a lunge, then push off the back foot into the next lunge. Keep your front shin close to vertical as you travel forward. Letting the knee pass far over the toes strains it.",
   },
   {
     name: "Walking Lunge (Glute Focus)",
@@ -1327,7 +1328,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "stretcher",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall holding dumbbells and step forward into a lunge with a slight forward lean, pushing through the front heel into the next step. Driving through the heel keeps the glute emphasis. Standing upright shifts work to the quads.",
   },
   {
     name: "Wall Ball Squat",
@@ -1340,7 +1341,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold a weighted ball at your chest and squat down between your knees,, torso upright. Drive back up through the middle of your foot to standing. Letting the ball drift away from the chest pulls your torso forward and shortens your depth.",
   },
   {
     name: "Weighted Frog Pump",
@@ -1353,7 +1354,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "activator",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back with the soles of your feet together and knees dropped out to the sides, a dumbbell on your hips. Drive your hips up, squeezing your glutes hard at the top, then lower. Knees drifting together loses the glute focus.",
   },
   {
     name: "Weighted Russian Twist (Medicine Ball)",
@@ -1367,7 +1368,7 @@ export default [
     subregion: "rotation",
     aliases: ["Medicine ball twist","assisted motion russian twist","Medicine Ball Full Twist"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your knees bent and feet on the floor or lifted, leaning back slightly, holding the ball at your chest. Rotate your torso to tap the ball down on one side, then rotate through. Fast momentum reduces the work on the obliques.",
   },
   {
     name: "Wide-Stance Goblet Squat (Adductor Bias)",
@@ -1380,7 +1381,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold a dumbbell against your chest and stand with a wide stance, toes turned out further than a standard goblet squat. Squat down, pushing your knees out over your toes, then stand. Knees tracking less than the toes loses the emphasis.",
   },
   {
     name: "Windmill",
@@ -1393,7 +1394,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "anti_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with a kettlebell pressed overhead in one hand, feet turned slightly away from that side. Hinge sideways, sliding your free hand down your leg while watching the kettlebell, then reverse to stand. A drifting pressed arm feels awkward.",
   },
   {
     name: "YTW",
@@ -1407,7 +1408,7 @@ export default [
     subregion: "horiz_abduction",
     aliases: ["YTWL Exercise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on an inclined bench holding light dumbbells hanging below you. Raise your arms to form a Y, then a T, then a W in sequence, lowering fully between each, weight light throughout. Too much weight makes each shape hard to hold.",
   },
   {
     name: "Zottman Curl",
@@ -1420,7 +1421,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "brachialis",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding dumbbells with palms facing up. Curl them up towards your shoulders, then rotate your palms to face down before lowering. Forgetting to rotate before lowering turns this back into a normal curl and misses the point.",
   },
   {
     name: "Zottman Preacher Curl",
@@ -1433,7 +1434,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "short_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit at the preacher bench, upper arms resting on the pad, holding dumbbells with palms up. Curl them up towards your shoulders, then rotate your palms down before lowering. Forgetting to rotate turns this into a normal preacher curl.",
   },
   // ── INTEGRATION STAGE 2 (exercise-library-expansion-2026-09-05) — generated by scripts/exercise-library/integrate-inventories.mjs; rerun the script to regenerate, do not hand-edit below this line ──
   {
@@ -1448,7 +1449,7 @@ export default [
     subregion: "flat",
     aliases: ["Alternating Dumbbell Press (Chest)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on the bench holding a dumbbell in each hand at chest height. Press one up while the other stays low, then swap, alternating sides. Letting your torso rock side to side with each press is the main thing to control.",
   },
   {
     name: "Alternating Dumbbell Front Raise",
@@ -1462,7 +1463,7 @@ export default [
     subregion: null,
     aliases: ["Alternating Front Raise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding a dumbbell in each hand at your thighs. Raise one arm straight in front to shoulder height while the other stays down, then lower and switch sides. Using momentum from the hips to swing the arm up is the common shortcut.",
   },
   {
     name: "Cossack Squat (Dumbbell)",
@@ -1476,7 +1477,7 @@ export default [
     subregion: null,
     aliases: ["Lateral Squat"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand wide holding a dumbbell at your chest. Shift your weight to one side and sink into a full squat on that leg while the other stays straight with the foot flat, then push back to centre. Letting the straight leg's heel lift is common.",
   },
   {
     name: "Deficit Dumbbell Calf Raise (Standing)",
@@ -1490,7 +1491,7 @@ export default [
     subregion: "gastro",
     aliases: ["Dumbbell Calf Raise (Deficit)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on a raised block with heels off the edge, holding dumbbells at your sides. Lower your heels below the platform for a deep stretch, then rise onto your toes. Bouncing out of the stretch rather than pausing is common.",
   },
   {
     name: "Dumbbell Clean",
@@ -1505,7 +1506,7 @@ export default [
     aliases: ["Double Dumbbell Clean"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":true}},
-    cue: "",
+    cue: "Stand holding dumbbells at your sides, hinge slightly, then drive your hips forward and pull them to your shoulders, dropping into a slight squat to catch them. Muscling the weights up with your arms wastes the hip drive.",
   },
   {
     name: "Dumbbell Dead Bug",
@@ -1519,7 +1520,7 @@ export default [
     subregion: "anti_extension",
     aliases: ["Weighted Dead Bug"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back, arms reaching to the ceiling, knees bent at ninety degrees. Lower one arm and the opposite leg towards the floor, keeping your back pressed down, then switch sides. Letting the back arch off the floor is the main fault.",
   },
   {
     name: "Dumbbell Devil's Press",
@@ -1534,7 +1535,7 @@ export default [
     aliases: ["Devil's Press"],
     loadCharacter: "ballistic",
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":true,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":true,"balanceDemand":"high","weightBearingHands":true}},
-    cue: "",
+    cue: "Start with dumbbells on the floor, perform a burpee, then clean the dumbbells to your shoulders and press them overhead in one motion. Rushing the transition between the burpee and the press breaks the rhythm.",
   },
   {
     name: "Dumbbell Drag Curl",
@@ -1547,7 +1548,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "long_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding dumbbells at your thighs. Curl them up while keeping them close against your body, letting your elbows drift backward rather than forward. Letting the dumbbells swing away from your torso turns it into a normal curl.",
   },
   {
     name: "Dumbbell Front Rack Carry",
@@ -1562,7 +1563,7 @@ export default [
     aliases: ["Double Front Rack Carry"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Hold a dumbbell at each shoulder, elbows pointing forward and down, then stand tall and walk with controlled steps. Keep your core braced throughout. Letting the elbows drop and the dumbbells slide down your chest is the common fault.",
   },
   {
     name: "Dumbbell Glute Bridge",
@@ -1575,7 +1576,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "activator",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back with a dumbbell resting across your hips, knees bent and feet flat. Drive your hips up until your body is straight, squeeze your glutes, then lower. Pushing through your toes instead of your heels loses the target.",
   },
   {
     name: "Dumbbell Hang Clean",
@@ -1590,7 +1591,7 @@ export default [
     aliases: ["Dumbbell Hang Power Clean"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":true}},
-    cue: "",
+    cue: "Stand holding dumbbells at mid thigh, hinge slightly, then drive your hips forward and pull the dumbbells up to your shoulders, catching them in a slight squat. Catching the weights too high or too stiff wastes the hip drive.",
   },
   {
     name: "Dumbbell Jump Squat",
@@ -1605,7 +1606,7 @@ export default [
     aliases: ["Loaded Jump Squat (Dumbbell)"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"none","unilateralLoadable":false,"bilateralUpper":false,"bilateralLower":true,"axialLoad":false,"impact":true,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Hold dumbbells at your sides and squat down, then drive up explosively into a jump, landing softly back into the squat position. Landing stiff legged rather than absorbing the landing through the knees and hips is the main risk.",
   },
   {
     name: "Dumbbell Lateral to Front Raise",
@@ -1620,7 +1621,7 @@ export default [
     aliases: ["Lateral to Front Raise","Side-to-Front Raise","Side Laterals to Front Raise","Lateral-to-Front Raises"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"none","unilateralLoadable":true,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand holding a dumbbell in each hand at your sides. Raise both arms out to the sides to shoulder height, then continue the arc round to the front before lowering. Using momentum to swing the weights rather than a controlled arc is common.",
   },
   {
     name: "Dumbbell Overhead Carry",
@@ -1635,7 +1636,7 @@ export default [
     aliases: ["Waiter’s Overhead Carry","dumbbell single arm overhead carry"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","laterality":"unilateral","difficulty":3,"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Press a dumbbell in each hand overhead with arms locked out, then walk forward with controlled steps, keeping your ribs down and core braced. Letting the arms drift forward of your ears is the main thing to correct.",
   },
   {
     name: "Dumbbell Reverse Curl",
@@ -1649,7 +1650,7 @@ export default [
     subregion: "brachialis",
     aliases: ["dumbbell standing one arm reverse curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding dumbbells with your palms facing down. Curl them up towards your shoulders keeping your elbows tucked, then lower slowly. Letting the wrists bend back to help the weight up takes tension off the forearms and arms.",
   },
   {
     name: "Dumbbell Reverse Wrist Curl",
@@ -1663,7 +1664,7 @@ export default [
     subregion: null,
     aliases: ["Reverse Wrist Curl (Dumbbell)","dumbbell one arm reverse wrist curl","dumbbell over bench one arm reverse wrist curl","dumbbell over bench revers wrist curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Rest your forearm on a bench or your thigh with your palm facing down, holding a light dumbbell. Lift the back of your hand up as far as comfortable, then lower slowly. Using a heavy weight and jerking it up is the common mistake.",
   },
   {
     name: "Dumbbell Snatch (Single-Arm)",
@@ -1678,7 +1679,7 @@ export default [
     aliases: ["Single-Arm Dumbbell Snatch","One-Arm Dumbbell Snatch","dumbbell snatch"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Start with the dumbbell between your feet, hinge and pull it up close to your body, then punch your hand through under it to catch it overhead in one motion. Pulling the dumbbell away from the body is the usual fault.",
   },
   {
     name: "Dumbbell Spellcaster",
@@ -1693,7 +1694,7 @@ export default [
     aliases: ["Spellcaster","Spell Caster"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Hold a dumbbell with both hands at your hips. Swing it up and across your body in a wide arc, rotating through your torso, then swing back to the other side. Bending the knees instead of rotating the trunk misses the target.",
   },
   {
     name: "Dumbbell Thruster",
@@ -1708,7 +1709,7 @@ export default [
     aliases: ["Dumbbell Squat to Press"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Hold a dumbbell at each shoulder and squat down, then drive up out of the squat and continue that momentum straight into pressing the dumbbells overhead. Pausing between the squat and the press loses the transfer of power.",
   },
   {
     name: "Dumbbell Upright Row",
@@ -1722,7 +1723,7 @@ export default [
     subregion: "lateral_raise",
     aliases: ["DB Upright Row"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding dumbbells in front of your thighs. Pull them straight up towards your chin, leading with your elbows, then lower with control. Pulling the elbows too high above shoulder height is a common thing to avoid.",
   },
   {
     name: "Dumbbell Waiter's Carry",
@@ -1737,7 +1738,7 @@ export default [
     aliases: ["Waiter's Walk"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","laterality":"unilateral","difficulty":3,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Hold a dumbbell overhead on one open palm, arm locked out, and walk with controlled steps, keeping your ribs down and core braced. Letting the dumbbell drift forward off your palm is the main thing to correct.",
   },
   {
     name: "Dumbbell Woodchop",
@@ -1752,7 +1753,7 @@ export default [
     aliases: ["Standing Dumbbell Woodchop"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral"},
-    cue: "",
+    cue: "Stand holding a dumbbell with both hands near one hip. Rotate through your torso to swing it diagonally up and across to the opposite shoulder, then return with control. Moving only the arms without rotating the trunk misses the target.",
   },
   {
     name: "Floor Fly (Dumbbell)",
@@ -1766,7 +1767,7 @@ export default [
     subregion: "flat",
     aliases: ["Dumbbell Floor Fly"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on the floor holding dumbbells above your chest with a slight bend in your elbows. Lower your arms out to the sides until your upper arms touch the floor, then bring them back in an arc. Bending the elbows more turns this into a press.",
   },
   {
     name: "Incline Dumbbell Fly (Single-Arm)",
@@ -1781,7 +1782,7 @@ export default [
     aliases: ["One-Arm Incline Dumbbell Fly"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"none","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Lie on an incline bench holding one dumbbell above your chest with a slight elbow bend, the other hand braced on the bench. Lower it to the side until you feel a stretch, then bring it back. Losing the elbow bend turns this into a press.",
   },
   {
     name: "Incline Dumbbell Press (Single-Arm)",
@@ -1796,7 +1797,7 @@ export default [
     aliases: ["One-Arm Incline Dumbbell Press","Single-Arm Incline Dumbbell Bench Press","dumbbell incline one arm press","dumbbell incline one arm press on exercise ball","dumbbell one arm incline chest press"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Lie on an incline bench holding one dumbbell at shoulder height, the other hand resting on your torso for balance. Press until the arm locks out, then lower with control. Letting your torso rotate to help the press is a common fault.",
   },
   {
     name: "Incline Dumbbell Pullover",
@@ -1810,7 +1811,7 @@ export default [
     subregion: "incline",
     aliases: ["Dumbbell Incline Pullover"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on an incline bench holding one dumbbell with both hands above your chest, arms slightly bent. Lower it behind your head for a stretch through your chest, then pull it back over your chest. Bending the elbows more reduces the stretch.",
   },
   {
     name: "Incline Lateral Raise (Bench)",
@@ -1824,7 +1825,7 @@ export default [
     subregion: "lateral_raise",
     aliases: ["Prone Incline Lateral Raise","Chest-Supported Lateral Raise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your side on an incline bench, holding a dumbbell in the top hand down by your leg. Raise it out to shoulder height with a soft bend in your elbow, then lower slowly. Swinging the dumbbell up using momentum is the common fault.",
   },
   {
     name: "Lying Dumbbell Leg Curl",
@@ -1838,7 +1839,7 @@ export default [
     subregion: "knee_flexion",
     aliases: ["Dumbbell Leg Curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down holding a dumbbell between your feet or ankles. Curl your heels up towards your glutes, then lower with control. Lifting your hips off the floor to help the dumbbell up takes work away from the hamstrings.",
   },
   {
     name: "Neutral-Grip Dumbbell Bench Press",
@@ -1852,7 +1853,7 @@ export default [
     subregion: "flat",
     loadCharacter: "grind",
     overrides: {"difficulty":1},
-    cue: "",
+    cue: "Lie on the bench holding dumbbells with your palms facing each other. Lower them to your chest, elbows tucked slightly, then press back up. Letting the dumbbells drift apart at the top reduces the tension through the chest.",
   },
   {
     name: "Seal Row (Dumbbell)",
@@ -1866,7 +1867,7 @@ export default [
     subregion: "upper_mid_row",
     aliases: ["Dumbbell Seal Row"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on a raised bench with dumbbells hanging straight down. Pull them up towards your hips, squeezing your back, then lower with control. Since your body is supported, using a heave to move the weight is the fault to avoid.",
   },
   {
     name: "Seated Bent-Over Rear Delt Raise",
@@ -1880,7 +1881,7 @@ export default [
     subregion: "horiz_abduction",
     aliases: ["Seated Bent-Over Lateral Raise","Seated Rear Delt Raise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit on the edge of a bench and fold forward at the hips, holding a dumbbell in each hand below your knees. Raise your arms out to shoulder height, then lower slowly. Sitting up out of the fold as the weight gets heavy is common.",
   },
   {
     name: "Seated Dumbbell Shrug",
@@ -1893,7 +1894,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit holding a dumbbell in each hand at your sides. Shrug your shoulders straight up towards your ears, hold briefly, then lower with control. Rolling the shoulders in a circle rather than moving straight up and down is the mistake.",
   },
   {
     name: "Seated Single-Arm Dumbbell Press",
@@ -1908,7 +1909,7 @@ export default [
     aliases: ["Seated One-Arm Dumbbell Press"],
     loadCharacter: "grind",
     overrides: {"demands":{"axialLoad":true}},
-    cue: "",
+    cue: "Sit upright holding a dumbbell at shoulder height in one hand, the other braced on the bench or your thigh. Press it overhead until your arm locks out, then lower back down. Leaning to the opposite side to help the press is the usual fault.",
   },
   {
     name: "Single-Arm Dumbbell Bench Press",
@@ -1922,7 +1923,7 @@ export default [
     subregion: "flat",
     aliases: ["One-Arm Dumbbell Bench Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on the bench holding one dumbbell at chest height, the other arm resting on your torso. Press it up until your arm locks out, then lower with control. Letting your torso twist to help the weight up is the fault to avoid.",
   },
   {
     name: "Single-Arm Dumbbell Fly",
@@ -1936,7 +1937,7 @@ export default [
     subregion: "flat",
     aliases: ["One-Arm Dumbbell Fly","dumbbell one arm reverse fly (with support)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on the bench holding one dumbbell above your chest with a slight elbow bend, the other hand on your torso. Lower it out to the side for a stretch, then bring it back in an arc. Rotating the torso to assist is common.",
   },
   {
     name: "Single-Arm Dumbbell Row (Bench-Supported)",
@@ -1951,7 +1952,7 @@ export default [
     aliases: ["One-Arm Dumbbell Row","Bench-Supported Dumbbell Row","one arm towel row","dumbbell one arm bent-over row","dumbbell reverse grip incline bench one arm row","DB Single-Arm Row (5kg)","One-Arm Heavy Row"],
     loadCharacter: "grind",
     overrides: {"demands":{"axialLoad":false}},
-    cue: "",
+    cue: "Kneel with one hand on a bench, holding a dumbbell in the other hand, arm hanging straight and back flat. Pull it up towards your hip, squeezing your back, then lower with control. Twisting your torso to help the weight up loses the point.",
   },
   {
     name: "Single-Arm Dumbbell Skull Crusher",
@@ -1966,7 +1967,7 @@ export default [
     aliases: ["One-Arm Dumbbell Skull Crusher"],
     loadCharacter: "grind",
     overrides: {"demands":{"overheadPosition":true}},
-    cue: "",
+    cue: "Lie on a bench holding one dumbbell above your face with a straight arm. Bend only your elbow to lower it towards your forehead, then extend back up. Letting the upper arm drift forward or backward changes the exercise entirely.",
   },
   {
     name: "Single-Arm Overhead Dumbbell Tricep Extension",
@@ -1980,7 +1981,7 @@ export default [
     subregion: "overhead",
     aliases: ["One-Arm Overhead Extension","dumbbell seated reverse grip one arm overhead tricep extension"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand or sit holding one dumbbell overhead with a straight arm, the other hand supporting your elbow. Bend the elbow to lower it behind your head, then extend back up. Letting the elbow flare outward reduces the stretch on the triceps.",
   },
   {
     name: "Spider Curl (Dumbbell)",
@@ -1994,7 +1995,7 @@ export default [
     subregion: "long_head",
     aliases: ["Dumbbell Spider Curl","dumbbell one arm reverse spider curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lean chest first against an incline bench, arms hanging straight down holding dumbbells. Curl them up towards your shoulders without letting your upper arms move, then lower slowly. Letting the elbows drift back loses the effect.",
   },
   {
     name: "Weighted Dumbbell Crunch",
@@ -2008,7 +2009,7 @@ export default [
     subregion: "flexion",
     aliases: ["Dumbbell Crunch","Weighted Crunch (Dumbbell)","weighted crunch","Dumbbell Crunches"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back with knees bent, holding a dumbbell against your chest or overhead. Curl your shoulders up off the floor, squeezing your abs, then lower back down. Pulling on your neck instead of using your abs is a common fault.",
   },
   {
     name: "Z-Press (Dumbbell)",
@@ -2023,7 +2024,7 @@ export default [
     aliases: ["Dumbbell Z-Press"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"seated","floorAccess":true,"axialLoad":true,"balanceDemand":"stable"}},
-    cue: "",
+    cue: "Sit on the floor, legs straight out with no back support, holding dumbbells at shoulder height. Press them straight overhead without leaning back, then lower with control. Leaning back to help the press up is the main thing to avoid.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];

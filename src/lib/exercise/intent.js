@@ -435,11 +435,14 @@ export function approvedDefaultFor(state, fromExerciseId, routineId = null, { ge
  */
 export function swapEvidenceFor(state, fromExerciseId, { routineId = null } = {}) {
   // Forced substitutions are not preference (CAP-13, CC30); the cause field
-  // is stamped at write time by the logger.
+  // is stamped at write time by the logger. EL-11: a swap taken to stay
+  // within a style plan's pool ('style') is excluded the same way -
+  // staying inside the kettlebell/circuit pool is not a statement that the
+  // athlete prefers the target exercise in general.
   const rows = (state?.swaps ?? []).filter(
     (r) => r.fromExerciseId === fromExerciseId
       && (routineId == null || r.routineId == null || r.routineId === routineId)
-      && r.cause !== 'constraint',
+      && r.cause !== 'constraint' && r.cause !== 'style',
   );
   const byTarget = new Map();
   for (const r of rows) {
@@ -469,9 +472,11 @@ export function swapEvidenceFor(state, fromExerciseId, { routineId = null } = {}
  */
 export function swappedAwayCount(state, exerciseId) {
   // Forced substitutions are not preference (CAP-13, CC30); the cause field
-  // is stamped at write time by the logger.
+  // is stamped at write time by the logger. EL-11: 'style' excluded the
+  // same way (swapEvidenceFor above).
   return (state?.swaps ?? []).filter(
-    (r) => r.fromExerciseId === exerciseId && r.scope === SWAP_SCOPE.PROGRAMME && r.cause !== 'constraint',
+    (r) => r.fromExerciseId === exerciseId && r.scope === SWAP_SCOPE.PROGRAMME
+      && r.cause !== 'constraint' && r.cause !== 'style',
   ).length;
 }
 

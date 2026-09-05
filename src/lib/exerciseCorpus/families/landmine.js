@@ -29,7 +29,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the end of the landmine bar at shoulder height with one hand, feet staggered. Press it forward and up until your arm extends, then bring it back. Twisting the torso to help removes the single-arm isolation.",
   },
   {
     name: "Landmine Front Raise",
@@ -42,7 +42,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the end of the landmine bar with both hands in front of your thighs. Raise it in front of you to around shoulder height with straight arms, then lower. Heaving it up with the lower back is the common shortcut under fatigue.",
   },
   {
     name: "Landmine Lateral Raise",
@@ -55,7 +55,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "lateral_raise",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side-on to the landmine, holding the end of the bar with the arm furthest from it. Raise it out to the side to around shoulder height, then lower. Letting the torso lean away to help the lift takes tension off the shoulder.",
   },
   {
     name: "Landmine Press",
@@ -69,7 +69,7 @@ export default [
     subregion: "incline",
     aliases: ["Two-Arm Landmine Press","Landmine Shoulder Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the end of the landmine bar at shoulder height, feet staggered. Press it forward and up until your arms extend, then bring it back to your shoulder. Leaning too far forward to help changes the angle the shoulder works through.",
   },
   {
     name: "Landmine Press (Abs)",
@@ -82,7 +82,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "flexion",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel or stand holding the end of the landmine bar at chest height, core braced. Press it forward and slightly up while resisting any twist or lean in your torso, then bring it back. Letting the hips rotate with the press hurts the core.",
   },
   {
     name: "Landmine Rear Delt Row",
@@ -95,7 +95,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand over the landmine bar bent forward at the hips, gripping underneath near the collar. Pull it up towards your chest, driving your elbows out wide, then lower. Standing too upright removes the forward lean this row depends on.",
   },
   {
     name: "Landmine Romanian Deadlift",
@@ -109,7 +109,7 @@ export default [
     subregion: "hip_extension",
     aliases: ["Landmine RDL"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand over the landmine bar bent forward slightly, holding the end close to your body. Push your hips back and lower it down your legs, flat back, then stand. Letting the bar drift away from your legs pulls the back out of position.",
   },
   {
     name: "Landmine Rotation",
@@ -122,7 +122,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "rotation",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the end of the landmine bar at chest height, arms extended. Rotate your torso and hips to swing the bar from one side towards the floor, then reverse to the other side. Bending the arms removes the core work.",
   },
   {
     name: "Landmine Row",
@@ -135,7 +135,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "horizontal_lat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand over the landmine bar, hinge forward at the hips, and grip underneath near the collar. Pull it up towards your ribs, driving your elbow back, then lower. Standing up out of the hinge as you pull turns the row into a shrug.",
   },
   {
     name: "Landmine Squat",
@@ -148,7 +148,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the end of the landmine bar with both hands close to your chest. Squat down keeping your torso upright, then drive back up through the middle of your foot. Letting the bar drift away from the chest pulls your torso forward.",
   },
   {
     name: "Landmine Tricep Extension",
@@ -161,7 +161,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "overhead",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel facing away from the landmine, holding the end of the bar behind your head. Extend your arms to press it up and forward, then lower back behind your head. Letting the elbows flare outward spreads the load away from the triceps.",
   },
   {
     name: "Landmine Twist",
@@ -174,7 +174,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "rotation",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding the end of the landmine bar at chest height, arms extended. Rotate your torso and hips to swing the bar from one side towards the floor, then reverse to the other side. Bending the arms to help removes the core work.",
   },
   {
     name: "Single-Arm Landmine Row",
@@ -188,7 +188,7 @@ export default [
     subregion: "horizontal_lat",
     aliases: ["Landmine Row (Single-Arm)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand over the landmine bar, hinge forward at the hips, and grip underneath the bar near the collar with one hand. Pull it up towards your ribs, driving your elbow back, then lower. Rotating the torso to help the pull hurts the single arm.",
   },
   // ── INTEGRATION STAGE 2 (exercise-library-expansion-2026-09-05) — generated by scripts/exercise-library/integrate-inventories.mjs; rerun the script to regenerate, do not hand-edit below this line ──
   {
@@ -203,7 +203,7 @@ export default [
     subregion: "incline",
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"kneeling","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Kneel with one knee down, holding the landmine end at your shoulder with the same-side hand. Press the bar up and slightly forward along its arc until your arm locks out, then lower back. Leaning sideways takes stability off the core.",
   },
   {
     name: "Landmine Anti-Rotation Press (Half-Kneeling)",
@@ -218,7 +218,7 @@ export default [
     aliases: ["Half-Kneeling Landmine Chop Press","Landmine Pallof-Style Press"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"kneeling","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Kneel with one knee down, the landmine end held with both hands at your chest. Press the bar straight out without letting your torso rotate towards it, then pull back to your chest. Letting the hips or shoulders twist is what it resists.",
   },
   {
     name: "Landmine Chest-Supported Row",
@@ -232,7 +232,7 @@ export default [
     subregion: "horizontal_lat",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Lie chest down on an incline bench with the landmine bar passing beneath you, holding the end with both hands. Pull it up towards your chest, squeezing your shoulder blades, then lower under control. A raised chest loses tension.",
   },
   {
     name: "Landmine Clean",
@@ -246,7 +246,7 @@ export default [
     subregion: "hip_extension",
     loadCharacter: "ballistic",
     overrides: {"laterality":"unilateral","demands":{"gripDemand":"bar","overheadPosition":false}},
-    cue: "",
+    cue: "Stand over the landmine bar, feet shoulder-width apart, hips hinged, gripping the end with both hands. Pull it up close to your body and rotate your wrists to catch it at your shoulders. A wide swing makes the catch land harder.",
   },
   {
     name: "Landmine Floor Press",
@@ -260,7 +260,7 @@ export default [
     subregion: "flat",
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","difficulty":1,"demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Lie on your back with knees bent, the landmine end at your shoulder, upper arm resting on the floor. Press it up and forward along its arc until locked out, then lower until your elbow lightly touches down. Drifting wide shifts the load.",
   },
   {
     name: "Landmine Hack Squat",
@@ -275,7 +275,7 @@ export default [
     aliases: ["Landmine Hack Squat (Behind the Back)"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Face away from the landmine, holding the end between your legs with both hands, bar resting against your shoulders or held low. Sit your hips back and down into a squat, torso upright, then drive back up. Heels lifting is the fault.",
   },
   {
     name: "Landmine Meadows Row",
@@ -289,7 +289,7 @@ export default [
     subregion: "horizontal_lat",
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand side on to the landmine bar, hips hinged and back flat, gripping the end with one hand. Pull it up towards your hip along its natural arc, then lower under control. Rounding the back to reach further is the common fault.",
   },
   {
     name: "Landmine Reverse Lunge",
@@ -304,7 +304,7 @@ export default [
     aliases: ["Landmine Reverse Lunge (Front Rack)"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"high","weightBearingHands":false}},
-    cue: "",
+    cue: "Hold the landmine end at your shoulder or chest with both hands. Step backward into a lunge, bending both knees until your back knee nears the floor, then push through your front foot to stand. The front knee drifting inward is the fault.",
   },
   {
     name: "Landmine Shrug",
@@ -318,7 +318,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"difficulty":1,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand over the landmine bar holding the end with both hands at hip height, arms straight. Shrug your shoulders straight up towards your ears, then lower with control. Bending the elbows to help turns the shrug into a row.",
   },
   {
     name: "Landmine Split Squat",
@@ -333,7 +333,7 @@ export default [
     aliases: ["Landmine Bulgarian Split Squat"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"high","weightBearingHands":false}},
-    cue: "",
+    cue: "Set your feet in a staggered stance, landmine end held at your shoulder or chest. Lower your back knee towards the floor by bending both knees, then drive through your front foot to stand. A front knee past the toes shifts balance.",
   },
   {
     name: "Landmine Sumo Squat",
@@ -348,7 +348,7 @@ export default [
     aliases: ["Landmine Sumo Squat (Adductor Focus)"],
     loadCharacter: "grind",
     overrides: {"difficulty":1,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand with feet wide and toes turned out, holding the landmine end with both hands between your legs. Sit your hips back and down into a squat, chest tall, then drive back up. Knees caving inward on the way up is the common fault.",
   },
   {
     name: "Landmine Thruster",
@@ -363,7 +363,7 @@ export default [
     aliases: ["Landmine Squat to Press"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Hold the landmine end at your shoulders with both hands. Sit your hips back and down into a squat, then drive up explosively and press the bar forward and up as your legs straighten. Pausing between squat and press loses drive.",
   },
   {
     name: "Landmine Zercher Squat",
@@ -377,7 +377,7 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Cradle the landmine end in the crooks of your elbows, hands together at your chest. Sit your hips back and down into a squat, torso upright, then drive back up. Elbows dropping and the bar sliding down your forearms is the common fault.",
   },
   {
     name: "Rotational Landmine Press",
@@ -392,7 +392,7 @@ export default [
     aliases: ["Landmine Punch Press","Half-Kneeling Rotational Landmine Press"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand side on to the landmine, the end held at your chest with both hands. Press the bar out and across your body while rotating through your torso and hips together, then return. Moving only your arms takes power away from the exercise.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];

@@ -29,7 +29,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "long_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing away from a low pulley with your arm extended behind your torso. Curl the handle up towards your shoulder, keeping the elbow pinned behind you. Letting the elbow drift forward loses the stretch that makes this curl useful.",
   },
   {
     name: "Bent-Over Cable Rear Delt Fly",
@@ -42,7 +42,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a low cable and hinge forward from the hips with soft knees. Sweep both arms out and back in an arc, leading with your elbows, then return slowly. Heaving the weight with your back instead of your shoulders is the common fault.",
   },
   {
     name: "Cable Anti-Rotation Hold (Half-Kneeling)",
@@ -56,7 +56,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Kneel on one knee side-on to a cable at chest height, holding the handle with both hands out in front. Press the handle out and hold it there, resisting the pull towards the machine. Letting your hips twist open defeats the hold.",
   },
   {
     name: "Cable Behind-the-Back Shrug",
@@ -69,7 +69,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing away from a low cable, holding the handle behind your hips with straight arms. Shrug your shoulders straight up towards your ears, then lower slowly. Rolling the shoulders back instead of lifting straight up is the usual fault.",
   },
   {
     name: "Cable Chest Press (Standing)",
@@ -82,7 +82,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand in a split stance facing away from the machine, a handle in each hand at chest height. Press both handles forward until your arms extend, then return slowly. Leaning your whole body forward to help the press is the common fault.",
   },
   {
     name: "Cable Concentration Curl",
@@ -95,7 +95,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "short_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand or sit side-on to a low pulley, bracing your arm against your inner thigh. Curl the handle up towards your shoulder without swinging the elbow, then lower slowly. Letting the elbow drift off your leg turns this into a swing.",
   },
   {
     name: "Cable Crossover (High to Low)",
@@ -109,7 +109,7 @@ export default [
     subregion: "flat",
     aliases: ["Cable Crossover"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set both pulleys above head height, a handle in each hand, leaning slightly forward. Pull both handles down and together in front of your hips, squeezing your chest. Bending the elbows too much turns the fly into a press.",
   },
   {
     name: "Cable Crunch",
@@ -123,7 +123,7 @@ export default [
     subregion: "flexion",
     aliases: ["Crunches With Cable"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel below a high pulley holding a rope beside your head, hips stacked over your knees. Curl your ribs down towards your hips, then let the weight pull you back up. Bending only at the hips instead of the spine misses the abs.",
   },
   {
     name: "Cable Curl",
@@ -136,7 +136,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "short_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a low pulley with a bar attached, elbows pinned to your sides. Curl the bar up towards your shoulders without the elbows drifting forward, then lower slowly. Swinging your torso to start the curl is the common fault.",
   },
   {
     name: "Cable Donkey Kickback",
@@ -149,7 +149,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "pumper",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Attach an ankle strap to a low pulley, face the machine, and lean forward slightly for balance. Kick the leg back and up, squeezing the glute at the top, then return slowly. Arching your back for extra height takes work off the glute.",
   },
   {
     name: "Cable Face Pull",
@@ -162,7 +162,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "face_pull",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set a rope at head height and step back for tension, arms out in front. Pull it towards your face, splitting the ends and elbows wide, then return slowly. Pulling straight into the chest instead of splitting the rope misses the rear delts.",
   },
   {
     name: "Cable Face Pull (Rope)",
@@ -175,7 +175,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "face_pull",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Attach a rope at head height and step back so the cable is taut, arms out in front. Pull it apart towards your face, elbows high and wide, then return slowly. Shrugging your shoulders instead of drawing the elbows back is the usual fault.",
   },
   {
     name: "Cable Face Pull (Upper Back)",
@@ -188,7 +188,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "upper_mid_row",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set a rope at head height and step back with tension in the cable, palms facing each other. Pull it towards your forehead, elbows back and down, squeezing your upper back. Letting the elbows rise too high turns this into a shoulder move.",
   },
   {
     name: "Cable Fly (Chest Height)",
@@ -202,7 +202,7 @@ export default [
     subregion: "flat",
     aliases: ["Bent over Cable Flye"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set both pulleys level with your chest, a handle in each hand, elbows slightly bent. Bring your hands together in a wide arc in front of your chest, then open back out slowly. Bending the elbows more as it gets hard turns this into a press.",
   },
   {
     name: "Cable Fly (High to Low)",
@@ -215,7 +215,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set both pulleys above head height, a handle in each hand, elbows slightly bent. Sweep your hands down and together towards your hips, feeling the stretch across your chest. Letting the handles drift towards your face misses the target.",
   },
   {
     name: "Cable Fly (Low to High)",
@@ -228,7 +228,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "incline",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set both pulleys low, a handle in each hand, elbows slightly bent. Sweep your hands up and together in front of your upper chest, then return down and out. Using your legs to throw the handles up takes the work off the chest.",
   },
   {
     name: "Cable Fly (Low to Mid, Incline)",
@@ -241,7 +241,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "incline",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set both pulleys low, grip the handles, and lie back on an incline bench. Bring your hands together and slightly up in an arc until they meet above your chest, then return with control. Bending the elbows more turns it into a press.",
   },
   {
     name: "Cable Fly (Mid Height, Cuff)",
@@ -254,7 +254,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Attach cuffs at mid height and stand between the towers. Bring your hands together in front of your chest in a wide arc, keeping a slight bend in your elbows, then return with control. Bending the elbows more reduces the chest stretch.",
   },
   {
     name: "Cable Fly (Neutral)",
@@ -267,7 +267,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set both pulleys level with your chest, palms facing each other throughout. Sweep your hands together in a wide arc in front of your chest, then open back out slowly. Letting your wrists rotate during the movement is the common fault.",
   },
   {
     name: "Cable Front Raise",
@@ -280,7 +280,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing away from a low pulley, the handle held in front of your thighs, elbows softly bent. Raise the handle straight out to roughly shoulder height, then lower slowly. Heaving the weight up with your lower back is the common fault.",
   },
   {
     name: "Cable Hammer Curl (Rope)",
@@ -293,7 +293,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "brachialis",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a low pulley with a rope attached, palms facing each other. Curl the rope up towards your shoulders with elbows pinned to your sides, then lower slowly. Letting the elbows swing forward turns this into a shoulder move.",
   },
   {
     name: "Cable High Row",
@@ -307,7 +307,7 @@ export default [
     subregion: "upper_mid_row",
     aliases: ["Remo alto polea alta"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the pulley above shoulder height and stand back, holding the handle at arm's length. Pull it towards your upper chest, elbows back and up, then extend slowly. Shrugging your shoulders towards your ears is the common fault.",
   },
   {
     name: "Cable Hip Abduction",
@@ -320,7 +320,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "pumper",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit in the machine or attach an ankle strap to a low pulley, bracing with your hands. Push the working leg out to the side against it, then bring it back slowly. Leaning your torso away to help the leg move is the common fault.",
   },
   {
     name: "Cable Hip Adduction",
@@ -334,7 +334,7 @@ export default [
     subregion: null,
     aliases: ["Standing Adduction (Cable)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Attach an ankle strap to a low pulley out to the side, standing with the working leg out wide. Pull the leg across your body against it, then let it return slowly. Rotating your hips instead of moving the leg straight is the usual fault.",
   },
   {
     name: "Cable Iron Cross",
@@ -347,7 +347,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set both pulleys low and stand between them, arms extended out to the sides holding a handle each. Pull both handles up and across to meet in front of your chest, then return slowly. Bending the elbows too early turns this into a curl.",
   },
   {
     name: "Cable Kickback",
@@ -360,7 +360,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "pumper",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Attach an ankle strap to a low pulley and face the machine, hinging forward slightly with a flat back. Drive the leg back and up, squeezing the glute, then lower slowly. Arching your back for range takes work off the glute.",
   },
   {
     name: "Cable Kickback (Triceps)",
@@ -373,7 +373,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing away from a low pulley with your elbow pinned high and close to your body. Extend your forearm back until your arm straightens, then return slowly. Letting the elbow drop as you extend takes the tension off the triceps.",
   },
   {
     name: "Cable Lat Pullover",
@@ -386,7 +386,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "shoulder_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench facing away from a high pulley, arms extended overhead holding a straight bar. Pull the bar down in an arc to your thighs, elbows slightly bent, then return slowly. Bending the elbows more turns this into a pulldown.",
   },
   {
     name: "Cable Lateral Raise",
@@ -399,7 +399,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "lateral_raise",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand beside a low pulley with the cable crossing your body, arm hanging by your hip. Raise your arm out to shoulder height, leading with the elbow, then lower slowly. Shrugging your shoulder up is the common fault.",
   },
   {
     name: "Cable Lateral Raise (Behind the Back)",
@@ -412,7 +412,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with the cable set low behind you, running to your working hand. Raise your arm out to shoulder height, then lower slowly for the extra stretch. Shrugging the shoulder instead of leading with the elbow is the usual fault.",
   },
   {
     name: "Cable Lateral Raise (Low Pulley)",
@@ -425,7 +425,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side on to a low pulley, holding the handle across your body in the far hand. Raise your arm out to the side to shoulder height, then lower with control. Shrugging the shoulder up to help the raise is the common fault.",
   },
   {
     name: "Cable Overhead Bicep Curl",
@@ -438,7 +438,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "short_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set the pulley high, raise your arm out to the side at shoulder height, elbow bent. Curl your hand towards your head, keeping your upper arm still, then extend back out. Dropping the elbow instead of holding it in place is the common fault.",
   },
   {
     name: "Cable Overhead Tricep Extension",
@@ -452,7 +452,7 @@ export default [
     subregion: "overhead",
     aliases: ["Triceps Extensions on Cable"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing away from a low pulley with a rope held behind your head, elbows pointing forward. Extend your arms forward and up until they straighten, then return slowly. Letting the elbows flare out to the sides takes work off the triceps.",
   },
   {
     name: "Cable Pull-Through",
@@ -466,11 +466,12 @@ export default [
     subregion: "activator",
     aliases: ["Cable Pull-Through (Glute)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Face away from a low pulley with a rope between your legs and hinge forward. Drive your hips forward to standing, squeezing your glutes, then hinge back slowly. Squatting the weight up instead of hinging is the usual fault.",
   },
   {
     name: "Cable Pull-Through (Glute)",
     retiredInto: "Cable Pull-Through",
+    cue: "Face away from a low pulley with a rope between your legs and hinge forward until you feel a stretch. Drive your hips forward hard, pausing to squeeze your glutes. Bending your knees to squat the weight up is the common fault.",
   },
   {
     name: "Cable Pushdown (Straight Bar)",
@@ -483,7 +484,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a high pulley with a straight bar attached, elbows tucked to your sides. Push the bar down until your arms straighten, then let it rise slowly. Letting the elbows drift away from your body is the common fault.",
   },
   {
     name: "Cable Rear Delt Fly",
@@ -496,7 +497,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand between two low pulleys, crossing the handles to opposite hands, leaning slightly forward. Sweep your arms out and back to shoulder height, then return slowly. Heaving with your back instead of your rear delts is the usual fault.",
   },
   {
     name: "Cable Reverse Curl",
@@ -509,7 +510,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: "brachialis",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a low pulley with an overhand grip, elbows tucked to your sides. Curl the handle up towards your shoulders keeping your wrists firm, then lower fully. Letting the wrists bend during the curl takes tension off the forearms.",
   },
   {
     name: "Cable Reverse Curl (Forearms)",
@@ -522,7 +523,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a low pulley with an overhand grip, elbows pinned to your sides. Curl up keeping your wrists straight and firm, then lower slowly. Letting the wrists flick forward is the common fault.",
   },
   {
     name: "Cable Reverse Woodchop (Kneeling)",
@@ -535,7 +536,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "rotation",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel side-on to a low pulley, holding the handle with both hands near your hip. Pull it diagonally up and across your body, rotating through your torso, then return slowly. Using only your arms instead of rotating is the usual fault.",
   },
   {
     name: "Cable Reverse Wrist Curl",
@@ -548,7 +549,7 @@ export default [
     fatigueCost: 1, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Rest your forearm on your thigh with your palm facing down, holding the handle loosely. Curl your wrist up towards you, then lower it fully slowly. Using your forearm instead of just the wrist is the common fault.",
   },
   {
     name: "Cable Reverse-Grip Pulldown",
@@ -562,7 +563,7 @@ export default [
     subregion: "vertical_pull",
     aliases: ["Underhand Cable Pulldowns"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your thighs under the pads, take an underhand grip on the bar, arms extended overhead. Pull the bar down to your upper chest, elbows down and back, then return slowly. Leaning back excessively is the usual fault.",
   },
   {
     name: "Cable Rope Hammer Curl",
@@ -576,7 +577,7 @@ export default [
     subregion: "brachialis",
     aliases: ["Hammercurls on Cable"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a low pulley holding a rope with a neutral grip, elbows tucked to your sides. Curl the rope up towards your shoulders, then lower fully slowly. Letting the elbows swing forward once it gets harder is the common fault.",
   },
   {
     name: "Cable Rope Straight-Arm Pulldown (Single-Arm)",
@@ -593,7 +594,7 @@ export default [
     // (lead-overrides.json): performed standing at the high pulley, not
     // seated.
     overrides: { demands: { position: "standing" } },
-    cue: "",
+    cue: "Sit or kneel facing a high pulley with a rope in one hand, arm extended overhead. Pull the rope down to your hip, keeping your arm straight, then return slowly. Bending the elbow to help pull turns this into a pushdown.",
   },
   {
     name: "Cable Row (Wide Grip)",
@@ -606,7 +607,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "upper_mid_row",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your feet on the platform and take a wide bar, arms extended with a tall spine. Pull the bar towards your torso with elbows out wide, then extend back out slowly. Rounding your back at the start is the common fault.",
   },
   {
     name: "Cable Serratus Punch",
@@ -619,7 +620,7 @@ export default [
     fatigueCost: 1, sfr: 5,
     subregion: "flexion",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold a low or mid height cable handle at chest level with a straight arm. Punch your hand forward and let your shoulder blade rotate around your ribs at the end, then return. Bending the elbow to reach further misses the point.",
   },
   {
     name: "Cable Shrug",
@@ -632,7 +633,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a low pulley with the handle held at your hips, arms straight. Shrug your shoulders straight up towards your ears, then lower slowly. Rolling the shoulders instead of moving straight up and down is the common fault.",
   },
   {
     name: "Cable Side Bend",
@@ -645,7 +646,7 @@ export default [
     fatigueCost: 1, sfr: 3,
     subregion: "rotation",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side-on to a low pulley holding the handle at your hip. Bend sideways away from the machine, then pull back up to standing using your side abs. Twisting your torso instead of bending straight sideways is the usual fault.",
   },
   {
     name: "Cable Squat (Standing)",
@@ -658,7 +659,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Face a low pulley with the handle held at your chest with both hands, feet shoulder width apart. Squat down keeping your chest up, then drive back up through your heels. Letting your knees cave inward on the way up is the common fault.",
   },
   {
     name: "Cable Straight-Arm Pulldown",
@@ -676,7 +677,7 @@ export default [
     // (lead-overrides.json): performed standing at the high pulley, not
     // seated.
     overrides: { demands: { position: "standing" } },
-    cue: "",
+    cue: "Stand facing a high pulley with a straight bar held at arm's length, a slight bend in the elbows. Pull the bar down in an arc to your thighs, then let it rise slowly. Bending the elbows more as it comes down turns this into a pushdown.",
   },
   {
     name: "Cable Upright Row",
@@ -689,7 +690,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a low pulley with an overhand grip on the bar, arms hanging in front. Pull the bar up towards your chin, leading with your elbows, then lower slowly. Shrugging instead of leading with the elbows is the common fault.",
   },
   {
     name: "Cable Upright Row (Traps)",
@@ -702,7 +703,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a low pulley with a close overhand grip. Pull the bar up towards your chin, leading with your elbows and shrugging at the top, then lower slowly. A wide grip instead of a close one shifts work off the traps.",
   },
   {
     name: "Cable Woodchop",
@@ -716,7 +717,7 @@ export default [
     subregion: "rotation",
     aliases: ["Standing Cable Wood Chop","Cable Woodchoppers","dumbbell standing around world"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side-on to a high pulley, holding the handle with both hands away from your body. Pull it down and across your body, rotating through your torso, then return slowly. Using only your arms instead of your core is the common fault.",
   },
   {
     name: "Cable Woodchop (Half-Kneeling)",
@@ -729,7 +730,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "rotation",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel on the outside knee side-on to a high pulley, holding the handle with both hands. Pull the handle down and across your body, rotating through your torso, then return slowly. Letting the back knee lift off the floor is the usual fault.",
   },
   {
     name: "Cable Woodchop (High to Low)",
@@ -742,7 +743,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "rotation",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side-on to a high pulley, holding the handle away from your body. Pull it down and across your body in a diagonal line, rotating through your torso, then return slowly. Using only your arms instead of your core is the fault.",
   },
   {
     name: "Cable Woodchop (Low to High)",
@@ -755,7 +756,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "rotation",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side-on to a low pulley, holding the handle near your hip. Pull it up and across your body in a diagonal line, rotating through your torso, then return slowly. Standing too square instead of rotating fully is the usual fault.",
   },
   {
     name: "Cable Wrist Curl",
@@ -768,7 +769,7 @@ export default [
     fatigueCost: 1, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Rest your forearm on your thigh with your palm facing up, holding the handle at your fingertips. Curl your wrist up towards you, then lower it fully to stretch the forearm. Moving your elbow instead of your wrist is the common fault.",
   },
   {
     name: "Cable Y-Raise (Prone)",
@@ -781,7 +782,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on an incline bench holding light handles below you, arms straight. Raise your arms up and out to form a Y shape, squeezing your upper back, then lower slowly. Bending the elbows to cheat the weight up is the common fault.",
   },
   {
     name: "Cable Y-Raise (Standing)",
@@ -798,7 +799,7 @@ export default [
     // (lead-overrides.json): a Y-raise pulls the cable through a diagonal,
     // not a pushing pattern; the derivation had it as push.
     overrides: { force: "pull" },
-    cue: "",
+    cue: "Stand facing away from two low pulleys, a handle in each hand at your hips. Raise both arms up and out into a Y shape above your head, then lower slowly. Shrugging instead of raising through the arms is the common fault.",
   },
   {
     name: "Cross-Body Cable Tricep Extension",
@@ -811,7 +812,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side-on to a low pulley, holding the handle across your body with your elbow bent. Extend your arm down and across your body until it straightens, then return slowly. Letting the elbow drift away from your side is the common fault.",
   },
   {
     name: "Face Pull",
@@ -825,7 +826,7 @@ export default [
     subregion: "face_pull",
     aliases: ["Facepull"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set a rope at head height and step back for tension, arms out in front. Pull it towards your face, splitting the ends and driving your elbows wide, then return slowly. Pulling low into the chest instead of high misses the target.",
   },
   {
     name: "Face Pull (Rope)",
@@ -838,7 +839,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "face_pull",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Attach a rope at head height and step back so the cable is taut, arms extended in front. Pull it apart towards your face, keeping your elbows high, then return slowly. Letting the elbows drop low turns this into a row.",
   },
   {
     name: "Face Pull (Traps)",
@@ -851,7 +852,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set a rope at head height and step back with tension in the cable. Pull it towards your face while shrugging your shoulders up at the finish, then lower slowly. Skipping the shrug at the top misses the traps.",
   },
   {
     name: "Half-Kneeling Cable Row",
@@ -864,7 +865,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "horizontal_lat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel on one knee facing a low pulley, the other foot forward, holding the handle at arm's length. Pull the handle towards your ribs, driving your elbow back, then extend slowly. Twisting your torso to help the pull is the common fault.",
   },
   {
     name: "Half-Kneeling Pallof Press",
@@ -877,7 +878,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "anti_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel on one knee side-on to a cable at chest height, the handle held with both hands against your chest. Press it straight out and hold, without letting your torso twist. Letting your hips or shoulders rotate open defeats the hold.",
   },
   {
     name: "High Cable Curl",
@@ -890,7 +891,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "short_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand between two high pulleys with a handle in each hand, arms out at shoulder height. Curl both hands towards your head, keeping your upper arms still, then extend back out. Dropping the elbows during the curl is the common fault.",
   },
   {
     name: "High Cable Fly",
@@ -903,7 +904,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set both pulleys above head height, a handle in each hand, elbows slightly bent. Pull your hands down and together in front of your hips, squeezing your lower chest. Letting the handles rise towards your face misses the target.",
   },
   {
     name: "Hip Extension (Cable)",
@@ -916,7 +917,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "activator",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Attach an ankle strap to a low pulley, face the machine, and hold on with a flat back. Drive the working leg straight back and up, squeezing the glute, then return slowly. Arching your lower back for extra height takes work off the glute.",
   },
   {
     name: "Incline Cable Chest Press",
@@ -929,7 +930,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "incline",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie back on an incline bench facing away from low pulleys, a handle in each hand at chest height. Press both handles up and forward until your arms extend, then return slowly. Letting the handles drift towards your face is the common fault.",
   },
   {
     name: "Incline Cable Fly",
@@ -943,7 +944,7 @@ export default [
     subregion: "incline",
     aliases: ["Incline Cable Flye"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie back on an incline bench between two low pulleys, a handle in each hand, elbows slightly bent. Bring your hands together above your chest in a wide arc, then open back out slowly. Bending the elbows more turns this into a press.",
   },
   {
     name: "Kneeling Cable Crunch",
@@ -956,7 +957,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "flexion",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel below a high pulley holding a rope beside your head, hips stacked over your knees. Curl your ribs down towards your hips, then let the weight pull you back up. Bending at the hips instead of the spine misses the abs.",
   },
   {
     name: "Lat Pulldown (Close Grip)",
@@ -969,7 +970,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "vertical_pull",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your thighs under the pads and take a close grip on the handle above you. Pull the handle down towards your upper chest, driving your elbows down, then extend slowly. Leaning back excessively to help the pull is the usual fault.",
   },
   {
     name: "Lat Pulldown (Neutral Grip)",
@@ -983,7 +984,7 @@ export default [
     subregion: "vertical_pull",
     aliases: ["twin handle parallel grip lat pulldown","Neutral-grip chest pulldown"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your thighs under the pads and take a neutral grip on the handles above you. Pull the handles down towards your upper chest, driving your elbows down, then extend slowly. Using momentum from leaning back is the common fault.",
   },
   {
     name: "Lat Pulldown (Wide Grip)",
@@ -997,7 +998,7 @@ export default [
     subregion: "vertical_pull",
     aliases: ["Jalón al pecho con agarre ancho"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your thighs under the pads and take a wide overhand grip on the bar above you. Pull the bar down towards your upper chest, driving your elbows down and out, then extend slowly. Pulling the bar behind your neck is the usual fault.",
   },
   {
     name: "Leaning Cable Lateral Raise",
@@ -1010,7 +1011,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "lateral_raise",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hold onto a post and lean your body away from a low pulley on the other side. Raise your arm out to the side to shoulder height, leading with the elbow, then lower slowly. Standing upright instead of leaning away limits the stretch.",
   },
   {
     name: "Leg Curl (Cable)",
@@ -1023,7 +1024,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "knee_flexion",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Attach an ankle strap to a low pulley and stand facing the machine, holding on for balance. Curl your heel up towards your glute against the resistance, then lower slowly. Swinging your hips to help the curl is the common fault.",
   },
   {
     name: "Low Cable Fly",
@@ -1036,7 +1037,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "incline",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set both pulleys low, a handle in each hand, elbows slightly bent. Sweep your hands up and together in front of your upper chest, then return down and out. Using your legs to throw the handles up takes work off the chest.",
   },
   {
     name: "Lying Cable Curl",
@@ -1049,7 +1050,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "long_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on the floor or a bench facing a low pulley, arms extended towards the machine. Curl the handle up towards your shoulders, keeping your elbows still, then lower slowly. Letting the elbows lift off the floor is the common fault.",
   },
   {
     name: "Overhead Cable Rope Extension",
@@ -1062,7 +1063,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "overhead",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing away from a low pulley with a rope held behind your head, elbows pointing up. Extend your arms forward and up until they straighten, then return slowly. Letting the elbows flare out to the sides takes work off the triceps.",
   },
   {
     name: "Overhead Cable Tricep Extension",
@@ -1075,7 +1076,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "overhead",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing away from a low pulley, arms bent overhead holding the handle behind your head. Extend your arms up until they straighten, keeping your elbows still, then lower slowly. Letting the elbows drift wide is the common fault.",
   },
   {
     name: "Pallof Press",
@@ -1089,7 +1090,7 @@ export default [
     subregion: "anti_extension",
     aliases: ["Cable Pallof Press"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side-on to a cable at chest height, holding the handle with both hands against your chest. Press it straight out and hold, without letting your torso twist. Letting your hips or shoulders rotate towards the machine defeats the hold.",
   },
   {
     name: "Pallof Press (Kneeling)",
@@ -1102,7 +1103,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "anti_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel side-on to a cable at chest height, holding the handle with both hands against your chest. Press it straight out and hold, without letting your torso twist. Rocking your hips instead of bracing your core is the common fault.",
   },
   {
     name: "Reverse Cable Crossover",
@@ -1115,7 +1116,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand centred between two low pulleys, a handle in each hand with arms crossed in front. Sweep your arms up and out to the sides, squeezing your shoulder blades, then return slowly. Swinging your torso to lift the handles is the fault.",
   },
   {
     name: "Reverse Grip Cable Pushdown",
@@ -1129,11 +1130,12 @@ export default [
     subregion: "pushdown",
     aliases: ["Reverse Grip Triceps Pushdown"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a high pulley with an underhand grip on the bar, elbows tucked to your sides. Push the bar down until your arms straighten, then let it rise slowly. Letting the elbows flare out to the sides is the usual fault.",
   },
   {
     name: "Rope Pushdown",
     retiredInto: "Tricep Pushdown (Rope)",
+    cue: "Stand facing a high pulley with a rope attached, elbows tucked close to your sides. Push the rope down and spread the ends apart as your arms straighten, then return slowly. Letting the elbows drift away from your body is the common fault.",
   },
   {
     name: "Seated Cable Row",
@@ -1147,7 +1149,7 @@ export default [
     subregion: "horizontal_lat",
     aliases: ["Cable Row","Long-Pulley (low Row)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your feet on the platform, knees slightly bent, holding the handle with arms extended. Pull it towards your torso, keeping your back upright, then extend back out slowly. Rounding your back to reach further is the common fault.",
   },
   {
     name: "Serratus Punch",
@@ -1161,7 +1163,7 @@ export default [
     subregion: "flexion",
     aliases: [],
         loadCharacter: "grind",
-    cue: "",
+    cue: "Hold a light handle in one hand, arm extended in front of your chest. Punch your arm further forward by reaching with your shoulder blade, then return slowly. Bending the elbow instead of reaching through the shoulder blade is the fault.",
   },
   {
     name: "Single Arm Cable Extension",
@@ -1175,7 +1177,7 @@ export default [
     subregion: "pushdown",
     aliases: ["One Arm Triceps Extensions on Cable"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing away from a low pulley, holding the handle behind your head with one arm, elbow bent. Extend your arm up until it straightens, keeping the elbow tucked, then lower slowly. Letting the elbow flare out is the usual fault.",
   },
   {
     name: "Single-Arm Cable Lateral Raise",
@@ -1188,7 +1190,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side-on to a low pulley, arm hanging across your body holding the handle. Raise your arm out to the side to shoulder height, leading with the elbow, then lower slowly. Shrugging your shoulder up towards your ear is the usual fault.",
   },
   {
     name: "Single-Arm Cable Rear Delt Fly",
@@ -1201,7 +1203,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side-on to a pulley, holding the handle across your body with one arm. Sweep your arm out and back to shoulder height, squeezing your shoulder blade, then return slowly. Swinging your torso to help move the handle is the common fault.",
   },
   {
     name: "Single-Arm Cable Row",
@@ -1214,7 +1216,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "horizontal_lat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit or stand facing a pulley, holding one handle with arm extended and your torso square. Pull the handle towards your ribs, driving your elbow back, then extend out slowly. Rotating your torso to help pull the handle in is the usual fault.",
   },
   {
     name: "Single-Arm Cable Woodchop (Standing)",
@@ -1227,7 +1229,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "rotation",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand side-on to a pulley, holding the handle with one hand away from your body. Rotate through your hips and torso to pull the handle across your body, then return slowly. Bending the arm instead of rotating through the core is the fault.",
   },
   {
     name: "Single-Arm Cable Wrist Curl",
@@ -1240,7 +1242,7 @@ export default [
     fatigueCost: 1, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Rest your forearm on your thigh with your palm facing up, holding the handle at your fingertips. Curl your wrist up towards you, then lower it fully to stretch the forearm. Moving your elbow instead of just the wrist is the usual mistake.",
   },
   {
     name: "Single-Arm Lat Pulldown",
@@ -1254,7 +1256,7 @@ export default [
     subregion: "vertical_pull",
     aliases: ["cable one arm pulldown","One Arm Lat Pulldown"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your thighs under the pads, grip a single handle above you, arm extended. Pull the handle down to the side of your chest, driving your elbow down, then extend back up. Leaning away from the handle to generate the pull is the fault.",
   },
   {
     name: "Single-Arm Overhead Cable Extension",
@@ -1267,7 +1269,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "overhead",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing away from a low pulley, holding the handle overhead with one arm, elbow bent behind your head. Extend your arm up until it straightens, elbow tucked, then lower slowly. Letting the elbow drift out wide is the usual fault.",
   },
   {
     name: "Standing Cable Chest Press (Single-Arm)",
@@ -1280,7 +1282,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing away from a low pulley with one foot forward, holding the handle at chest height with one arm. Press the handle forward until your arm extends, then return slowly. Rotating your torso to add power is the fault.",
   },
   {
     name: "Tall-Kneeling Pallof Press",
@@ -1293,7 +1295,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "anti_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel upright with your hips fully extended, side-on to a cable at chest height, the handle against your chest. Press it straight out and hold, without letting your hips sway. Letting your torso rotate towards the machine is the fault.",
   },
   {
     name: "Tricep Pushdown (Bar)",
@@ -1307,7 +1309,7 @@ export default [
     subregion: "pushdown",
     aliases: ["Triceps Pushdown"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a high pulley with a straight bar attached, elbows tucked close to your sides. Push the bar down until your arms straighten, then let it rise slowly. Letting the elbows drift away from your sides is the usual fault.",
   },
   {
     name: "Tricep Pushdown (Rope)",
@@ -1321,7 +1323,7 @@ export default [
     subregion: "pushdown",
     aliases: ["Rope Pushdown","cable pushdown (with rope attachment)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a high pulley with a rope attached, leaning slightly forward, elbows pinned to your sides. Push the rope down, splitting the ends apart, then let it rise slowly. Leaning on the stack, not your triceps, is the fault.",
   },
   {
     name: "Underhand Lat Pulldown",
@@ -1334,7 +1336,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "vertical_pull",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit at the lat pulldown with an underhand, shoulder width grip on the bar. Pull it down to your upper chest, squeezing your back, then let it rise back with control. Leaning back too far and turning it into a rowing motion is common.",
   },
   {
     name: "V-Bar Pulldown",
@@ -1347,7 +1349,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "vertical_pull",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your thighs under the pads and grip the V-shaped handle, palms facing each other. Pull the handle down to your upper chest, driving your elbows down and back, then extend back up. Leaning back excessively is the common fault.",
   },
   {
     name: "Wide-Grip Cable Row",
@@ -1360,7 +1362,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "upper_mid_row",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with your feet on the platform and take a wide bar attachment, arms extended with a tall spine. Pull the bar towards your torso with elbows out wide, then extend back out slowly. Rounding your back at the start is the common fault.",
   },
   // ── INTEGRATION STAGE 2 (exercise-library-expansion-2026-09-05) — generated by scripts/exercise-library/integrate-inventories.mjs; rerun the script to regenerate, do not hand-edit below this line ──
   {
@@ -1375,7 +1377,7 @@ export default [
     subregion: "vertical_pull",
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"position":"seated","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Sit at the lat pulldown machine and pull the bar down behind your head to the base of your neck, then let it rise back with control. This needs good mobility, so only pull as low as you can manage without straining your neck forward.",
   },
   {
     name: "Cable Drag Curl",
@@ -1389,7 +1391,7 @@ export default [
     subregion: "long_head",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand facing a low pulley holding the handle at your thighs. Curl it up while keeping it close to your body, letting your elbows drift backward rather than forward. Letting the handle swing away from your torso turns it into a normal curl.",
   },
   {
     name: "Cable External Rotation",
@@ -1406,7 +1408,7 @@ export default [
     aliases: ["Cable Shoulder External Rotation","cable standing shoulder external rotation","External Rotation with Cable","Shoulder External Rotation (Cable)"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"unilateralLoadable":true,"bilateralUpper":false}},
-    cue: "",
+    cue: "Stand side on to a low pulley, elbow tucked at your side and bent to ninety degrees, holding the handle across your stomach. Rotate your forearm outward, then return with control. Letting the elbow drift from your side is common.",
   },
   {
     name: "Cable Hip Flexion (Standing)",
@@ -1421,7 +1423,7 @@ export default [
     aliases: ["Cable Knee Raise"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Attach a cuff to your ankle at a low pulley and stand facing away from the tower. Lift your knee up towards your chest, then lower with control. Leaning your torso back to help lift the leg is the common fault to avoid.",
   },
   {
     name: "Cable Incline Curl",
@@ -1435,7 +1437,7 @@ export default [
     subregion: "long_head",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Set the pulley low and sit on an incline bench facing it, arm hanging straight down. Curl the handle up towards your shoulder, then lower slowly, feeling the stretch at the bottom. Letting the upper arm drift forward reduces that stretch.",
   },
   {
     name: "Cable Internal Rotation",
@@ -1452,7 +1454,7 @@ export default [
     aliases: ["Cable Shoulder Internal Rotation","cable seated shoulder internal rotation","Shoulder Internal Rotation (Cable)"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"unilateralLoadable":true,"bilateralUpper":false}},
-    cue: "",
+    cue: "Stand side on to a low pulley, elbow tucked at your side and bent to ninety degrees, holding the handle out to the side. Rotate your forearm inward, then return with control. Letting the elbow drift from your side is common.",
   },
   {
     name: "Cable Pushdown (V-Bar)",
@@ -1467,7 +1469,7 @@ export default [
     aliases: ["V-Bar Tricep Pushdown"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand facing the machine holding a V-bar at chest height, elbows tucked by your sides. Push the bar down until your arms straighten, then let it rise back with control. Letting the elbows drift forward as you push is common.",
   },
   {
     name: "Cable Romanian Deadlift",
@@ -1482,7 +1484,7 @@ export default [
     aliases: ["Cable RDL"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand facing away from a low pulley with the handle at your thighs. Push your hips back and lower the weight down your legs with a slight knee bend, then drive your hips forward to stand. Rounding the lower back near the bottom is common.",
   },
   {
     name: "Cable Shoulder Press (Standing)",
@@ -1496,7 +1498,7 @@ export default [
     subregion: "overhead_press",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand between two low to mid pulleys, holding a handle at each shoulder. Press both straight overhead until your arms lock out, then lower with control. Arching your lower back to help the press is the common fault to avoid.",
   },
   {
     name: "Cable Squeeze Press (Chest)",
@@ -1511,7 +1513,7 @@ export default [
     aliases: ["Cable Chest Squeeze"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand facing away from the machine holding two handles together at chest height, palms pressed against each other. Press forward while squeezing the handles together, then return with control. Letting the hands separate loses the squeeze.",
   },
   {
     name: "Cable Tibialis Raise (Seated)",
@@ -1525,7 +1527,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"none","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Sit with a low cable attached across the top of one foot, heel resting on a support. Pull your toes up towards your shin, then lower with control. Using your whole leg to help rather than just the ankle is the common mistake.",
   },
   {
     name: "Cross-Body Cable Lateral Raise",
@@ -1540,7 +1542,7 @@ export default [
     aliases: ["Cross-Body Lateral Raise (Cable)"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand side on to a low pulley, holding the handle across the front of your body with the near hand. Raise your arm out and up to shoulder height in an arc, then lower with control. Shrugging your shoulder to help the raise is common.",
   },
   {
     name: "Decline Cable Chest Press",
@@ -1555,7 +1557,7 @@ export default [
     aliases: ["Hammerstrength Decline Chest Press"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Set a bench to a decline angle between two high pulleys, holding a handle in each hand at chest height. Press them forward and together, then return with control. Letting the elbows flare too wide can strain the shoulders unnecessarily.",
   },
   {
     name: "Incline Cable Chest Press (Single-Arm)",
@@ -1569,7 +1571,7 @@ export default [
     subregion: "incline",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Set a bench to an incline between two low pulleys, holding one handle at chest height, the other hand braced on the bench. Press it forward and across your body, then return with control. Twisting your torso to help the press is common.",
   },
   {
     name: "Overhead Cable Tricep Extension (Bar)",
@@ -1583,7 +1585,7 @@ export default [
     subregion: "overhead",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Face away from a low pulley holding a bar or rope overhead with straight arms. Bend only your elbows to lower it behind your head, then extend back up. Letting the elbows flare outward reduces the stretch on the triceps.",
   },
   {
     name: "Rope Lat Pulldown",
@@ -1597,7 +1599,7 @@ export default [
     subregion: "vertical_pull",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"seated","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Sit at the lat pulldown with a rope attachment, arms extended overhead. Pull the rope down towards your chest, splitting the ends apart as it passes your face, then let it rise back with control. Leaning back too far turns it into a row.",
   },
   {
     name: "Seated Cable Row (Rope)",
@@ -1612,7 +1614,7 @@ export default [
     aliases: ["Rope Seated Cable Row"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Sit at the low pulley with feet braced and knees soft, holding a rope attachment. Pull it towards your stomach, squeezing your shoulder blades together, then extend back with control. Rounding the lower back to reach forward is common.",
   },
   {
     name: "Single-Arm Cable Curl (Low Pulley)",
@@ -1626,7 +1628,7 @@ export default [
     subregion: "short_head",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand facing away from a low pulley, holding the handle in one hand with your arm hanging straight. Curl it up towards your shoulder without swinging your body, then lower slowly. Letting the elbow drift forward reduces the work on the arm.",
   },
   {
     name: "Single-Arm Cable Fly (Standing)",
@@ -1641,7 +1643,7 @@ export default [
     aliases: ["Single-Arm Cable Chest Fly"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand side on to a mid height pulley, holding the handle in the far hand across your chest. Extend your arm out with a slight elbow bend, then bring it back across your body. Letting the shoulder roll forward at the end is common.",
   },
   {
     name: "Single-Arm Cable Front Raise",
@@ -1655,7 +1657,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand facing away from a low pulley, holding the handle in one hand at your thigh. Raise your straight arm forward to shoulder height, then lower with control. Using momentum from the hips to swing the arm up is the common shortcut.",
   },
   {
     name: "Standing Cable Crunch",
@@ -1670,7 +1672,7 @@ export default [
     aliases: ["Standing Rope Crunch"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"none","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand facing a high pulley holding a rope by your head, and step back slightly. Crunch down by bending at the waist, bringing your elbows towards your knees, then rise back with control. Bending at the hips rather than the abs is common.",
   },
   {
     name: "Standing Cable Row (Single-Arm)",
@@ -1685,7 +1687,7 @@ export default [
     aliases: ["Standing Single-Arm Cable Row"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand facing a low pulley, feet staggered, holding the handle in one hand. Pull it towards your hip, squeezing your shoulder blade, then extend back with control. Twisting your torso to help the pull is the fault to avoid.",
   },
   {
     name: "Standing Calf Raise (Cable)",
@@ -1699,7 +1701,7 @@ export default [
     subregion: "gastro",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand on a low platform with the balls of your feet on the edge, a cable attached at your waist or shoulders. Lower your heels below the platform, then rise onto your toes and squeeze. Bouncing at the bottom rather than pausing is common.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];

@@ -33,7 +33,7 @@ export default [
     aliases: ["Lateral Sled Drag"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":false,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Stand side on to the sled with the strap or rope attached, athletic stance with knees bent. Step sideways to drag the sled across the floor, keeping your hips low and chest up throughout. Standing too upright takes tension off the legs.",
   },
   {
     name: "Sled Reverse Drag",
@@ -48,7 +48,7 @@ export default [
     aliases: ["Backward Sled Drag"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","difficulty":1,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":false,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Face the sled and hold the strap with both hands, athletic stance with knees bent. Walk backward to drag the sled towards you, taking controlled steps and keeping tension on the strap. Letting the strap go slack loses the constant tension.",
   },
   {
     name: "Sled Row",
@@ -63,7 +63,7 @@ export default [
     aliases: ["Sled Rope Row"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","difficulty":1,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "",
+    cue: "Face away from the sled attached by a strap or rope, in a split or athletic stance. Pull the handles towards your ribs, then extend your arms forward to let the sled slide back before pulling again. Walking the pull loses back tension.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];

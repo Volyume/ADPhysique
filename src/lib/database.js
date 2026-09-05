@@ -5272,8 +5272,9 @@ export async function getLibraryPlans() {
 export async function getLibraryPlanExerciseRows() {
   const d = await db();
   const rows = await d.getAllAsync(
-    `SELECT r.programme_id, re.exercise_id,
-            e.id, e.name, e.primary_muscle, e.subregion, e.is_custom,
+    `SELECT r.programme_id, r.id AS routine_id, re.exercise_id,
+            re.recommended_sets, re.rest_seconds,
+            e.id, e.name, e.primary_muscle, e.subregion, e.is_custom, e.equipment,
             e.position, e.floor_access, e.overhead_position, e.grip_demand,
             e.unilateral_loadable, e.bilateral_upper, e.bilateral_lower,
             e.axial_load, e.impact, e.balance_demand, e.weight_bearing_hands
@@ -11345,11 +11346,19 @@ export async function recordExerciseSwap(userId, fromExerciseId, toExerciseId, {
   // motivated action by the user's own declaration - central derivation
   // legitimately finds no rule and returns NULL, and the swap then
   // teaches the preference lane that the user dislikes the movement.
-  // causeOverride accepts exactly 'constraint' (nothing else), only ADDS
+  // causeOverride accepts 'constraint' or 'style' (nothing else), only ADDS
   // provenance (it never suppresses a derived cause), and stays honest:
   // the user tapped a sheet whose whole meaning is "this movement is a
-  // capability problem today".
-  let cause = causeOverride === 'constraint' ? 'constraint' : null;
+  // capability problem today", or made a swap inside a style-constrained
+  // plan (EL-11, docs/exercise-library-expansion-2026-09-05/
+  // 05-DECISIONS.md): a swap taken to stay within the plan's kettlebell/
+  // circuit pool is not a statement of preference either, so it is
+  // excluded from durable preference evidence the same way (intent.js).
+  // The capability derivation below still wins if it also applies -
+  // 'constraint' is the more specific, mechanically-forced reason.
+  let cause = causeOverride === 'constraint' ? 'constraint'
+    : causeOverride === 'style' ? 'style'
+    : null;
   try {
     // eslint-disable-next-line global-require
     const { loadCapabilityResolveState, capabilityBlockReason, capabilityKnown } = require('./capability/resolve');

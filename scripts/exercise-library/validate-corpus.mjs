@@ -169,19 +169,52 @@ for (const entry of CORPUS) {
   }
 
   // ── 10. Cue rules ────────────────────────────────────────────────────────
+  // Enforced for every non-empty cue now (integration job 4); once
+  // corpus-floor.json sets cuesRequired: true, an empty cue on a live row
+  // also fails (see cuesRequired() below).
   const cue = row.cue ?? '';
   if (cue) {
-    if (cue.length < 40 || cue.length > 240) fail(`${ctx}: cue length ${cue.length} outside 40-240`);
-    if (/—/.test(cue)) fail(`${ctx}: cue contains an em dash`);
-    const banned = ['safe', 'injury', 'rehab', 'arthritis', 'pain', 'doctor', 'physio', 'therapy', 'medical', 'condition'];
-    const lower = cue.toLowerCase();
-    for (const word of banned) {
-      if (lower.includes(word)) fail(`${ctx}: cue contains banned word "${word}"`);
-    }
-    if (!/[.!?]$/.test(cue.trim())) fail(`${ctx}: cue does not end with a full stop`);
+    validateCueText(cue, ctx);
   } else if (cuesRequired()) {
     fail(`${ctx}: empty cue, but data/corpus-floor.json sets cuesRequired: true`);
   }
+}
+
+// exercise-library-expansion-2026-09-05 integration job 4: length, British
+// spelling, no em dash, no banned (safety/medical-adjacent) words, no
+// exclamation marks, sentence-final full stops only (not "?"/"!").
+const CUE_BANNED_WORDS = [
+  'safe', 'safely', 'injury', 'injure', 'rehab', 'arthritis', 'pain',
+  'doctor', 'physio', 'therapy', 'medical', 'condition', 'hurt',
+];
+// Common American spellings a cue author might reach for. Not exhaustive
+// (full locale-aware spellchecking is out of scope) but covers the words
+// most likely to appear in short exercise-setup/execution prose.
+const AMERICAN_SPELLINGS = [
+  'color', 'favorite', 'favorable', 'center', 'centered',
+  'fiber', 'gray', 'defense', 'offense', 'behavior', 'neighbor', 'honor',
+  'armor', 'vapor', 'rumor', 'humor', 'odor', 'vigor', 'labor', 'flavor',
+  'theater', 'liter', 'jewelry', 'skeptic', 'traveled', 'traveling',
+  'canceled', 'canceling', 'modeling', 'signaling', 'leveled', 'fueled',
+  'organize', 'organized', 'organizing', 'stabilize', 'stabilized',
+  'stabilizing', 'maximize', 'maximizing', 'minimize', 'minimizing',
+  'utilize', 'utilizing', 'realize', 'specialize', 'analyze', 'analyzing',
+  'recognize', 'summarize', 'emphasize', 'optimize', 'normalize',
+  'customize', 'apologize',
+];
+const AMERICAN_SPELLING_RE = new RegExp(`\\b(${AMERICAN_SPELLINGS.join('|')})\\b`, 'i');
+
+function validateCueText(cue, ctx) {
+  if (cue.length < 40 || cue.length > 240) fail(`${ctx}: cue length ${cue.length} outside 40-240`);
+  if (/—/.test(cue)) fail(`${ctx}: cue contains an em dash`);
+  if (/!/.test(cue)) fail(`${ctx}: cue contains an exclamation mark`);
+  const lower = cue.toLowerCase();
+  for (const word of CUE_BANNED_WORDS) {
+    if (new RegExp(`\\b${word}\\b`).test(lower)) fail(`${ctx}: cue contains banned word "${word}"`);
+  }
+  const americanHit = cue.match(AMERICAN_SPELLING_RE);
+  if (americanHit) fail(`${ctx}: cue contains a likely American spelling "${americanHit[0]}" (use British spelling)`);
+  if (!/\.$/.test(cue.trim())) fail(`${ctx}: cue does not end with a full stop`);
 }
 
 function cuesRequired() {

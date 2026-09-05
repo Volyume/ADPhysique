@@ -29,7 +29,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "anti_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel with your hands on the wheel or bar in front of you. Brace your stomach and roll forward until your body is almost flat, then pull back to kneeling. Letting the lower back sag as you roll out is the common fault.",
   },
   {
     name: "Ab Wheel (Kneeling)",
@@ -43,7 +43,7 @@ export default [
     subregion: "anti_extension",
     aliases: ["Ab wheel"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel behind the wheel and grip the handles with arms straight. Brace your stomach, roll it forward a short distance, then draw it back using your abs rather than your arms. Rolling out further than you can control is the common mistake.",
   },
   {
     name: "Ab Wheel Rollout",
@@ -57,7 +57,7 @@ export default [
     subregion: "anti_extension",
     aliases: ["wheel rollerout"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel with the wheel under your shoulders and roll it out until your body is close to the floor. Draw it back by bracing your stomach and pulling with your arms and hips. Letting the hips sag on the way out takes work off your abs.",
   },
   {
     name: "Adductor Rock-Back (Kneeling)",
@@ -70,7 +70,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel with one leg out wide, hands on the floor for balance. Rock your hips back towards your heel until you feel a stretch on the inner thigh of the straight leg, then return forward. Rounding the back instead of the hips is the fault.",
   },
   {
     name: "Adductor Squeeze (Ball)",
@@ -84,7 +84,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Sit tall with a ball or firm cushion held between your knees. Squeeze your knees together hard and hold briefly, then ease off. Pushing through the feet instead of the knees is the common fault.",
   },
   {
     name: "Agility Ladder Drills",
@@ -98,7 +98,7 @@ export default [
     subregion: "gastro",
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Stand at one end of a floor ladder, feet ready to move. Step through each square with quick, light steps on the balls of your feet. Looking down at your feet instead of ahead throws off the rhythm.",
   },
   {
     name: "Archer Push-Up",
@@ -111,7 +111,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set up in a wide push-up position, hands further apart than usual. Lower towards one side, bending that elbow while the other arm stays straight, then push back to centre. Letting the hips twist is the common fault.",
   },
   {
     name: "Bear Crawl",
@@ -125,7 +125,7 @@ export default [
     subregion: "anti_extension",
     aliases: ["Bear Walk 2"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Start on hands and feet with your knees hovering just off the floor. Move opposite hand and foot together to crawl forward, keeping your hips low and steady. Letting the hips rise up or rock side to side is the common fault.",
   },
   {
     name: "Bench Dip",
@@ -139,7 +139,7 @@ export default [
     subregion: "pushdown",
     aliases: ["three bench dip","weighted bench dip"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit on the edge of a bench, hands beside your hips and feet out in front. Lower your body by bending your elbows to about a right angle, then push back up. Letting the elbows flare out wide instead of pointing back reduces the effect.",
   },
   {
     name: "Bicycle Crunch",
@@ -152,7 +152,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "flexion",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back, hands lightly behind your head, knees bent towards your chest. Bring one elbow towards the opposite knee while straightening the other leg, switching sides steadily. Yanking on the neck is the common fault.",
   },
   {
     name: "Bodyweight Bulgarian Split Squat",
@@ -165,7 +165,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand a stride away from a bench with the top of your rear foot resting on it. Bend your front knee to lower your back knee towards the floor, then push back up. Leaning too far forward shifts the work off the front leg.",
   },
   {
     name: "Bodyweight Single-Leg RDL",
@@ -178,7 +178,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on one leg with a soft bend in the knee. Hinge forward at the hip while your other leg extends back, keeping your back flat, then return to standing. Rounding the back instead of hinging at the hip is the main fault to fix.",
   },
   {
     name: "Bodyweight Squat",
@@ -191,7 +191,7 @@ export default [
     fatigueCost: 1, sfr: 3,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with feet shoulder width apart. Bend your hips and knees together to sit down and back, keeping your chest up, then drive back up through your whole foot. Letting your knees cave inward on the way up is common.",
   },
   {
     name: "Box Jump",
@@ -205,7 +205,7 @@ export default [
     subregion: "gastro",
     aliases: ["Front Box Jump","Lateral Box Jump"],
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "Stand facing a sturdy box or step, feet shoulder width apart. Swing your arms, bend your knees, then jump up and land softly on the box with both feet. Landing with straight, stiff legs instead of bending the knees is the common fault.",
   },
   {
     name: "Box Step-Up",
@@ -222,7 +222,7 @@ export default [
     // alias carried over.
     aliases: ["Bodyweight Step-Up", "Step-ups"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand facing a sturdy box or step. Place one foot fully on top, then drive through that foot to stand up, bringing the other leg to meet it. Pushing off the trailing foot rather than driving through the top leg is common.",
   },
   {
     name: "Broad Jump",
@@ -235,7 +235,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "Stand with feet shoulder width apart, arms back and knees bent ready to spring. Swing your arms forward and jump out as far as you can, landing softly on both feet. Landing stiff legged instead of bending the knees is what to watch for.",
   },
   {
     name: "Calf Raise on Steps",
@@ -248,7 +248,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "gastro",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on a step with the balls of your feet on the edge and heels hanging off. Rise up onto your toes, then lower your heels below the step level. Rushing the lowering phase instead of controlling it is the common fault.",
   },
   {
     name: "Chin-Up",
@@ -263,7 +263,7 @@ export default [
     aliases: ["Underhand Pull-Up"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"weighted_bodyweight"},
-    cue: "",
+    cue: "Hang from a bar with an underhand grip, hands about shoulder width apart. Pull your chin above the bar by driving your elbows down, then lower to a full hang. Swinging the body for momentum reduces the effect.",
   },
   {
     name: "Chin-Up (Supinated)",
@@ -276,7 +276,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "long_head",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hang from a bar with an underhand grip, hands close together. Pull yourself up until your chin clears the bar, then lower fully under control. Stopping short of a full hang at the bottom shortens the range and reduces the effect.",
   },
   {
     name: "Close-Grip Push-Up",
@@ -290,7 +290,7 @@ export default [
     subregion: "flat",
     aliases: ["close-grip push-up (on knees)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Start in a press-up position with your hands close together under your chest. Lower your chest towards your hands with elbows tucked close to your sides, then push back up. Letting the elbows flare out wide turns it into a standard push-up.",
   },
   {
     name: "Copenhagen Adduction",
@@ -303,7 +303,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your side, top foot resting on a bench and bottom leg hovering underneath. Lift your bottom leg towards the bench by squeezing your inner thigh, then lower under control. Rushing instead of pausing at the top reduces the effect.",
   },
   {
     name: "Copenhagen Plank",
@@ -317,7 +317,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Lie on your side propped on your forearm, top foot resting on a bench. Lift your hips and bottom leg off the floor so your body forms a straight line, and hold. Letting the hips sag or twist forward is the common fault.",
   },
   {
     name: "Cossack Squat",
@@ -330,7 +330,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with feet wide apart, toes turned slightly out. Shift your weight to one side, bending that knee and sitting back while the other leg stays straight, then push back to centre. Letting the bent knee's heel lift off is the fault.",
   },
   {
     name: "Crunch",
@@ -344,7 +344,7 @@ export default [
     subregion: "flexion",
     aliases: ["Crunches"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back, knees bent, feet flat, hands lightly behind your head. Curl your shoulders up off the floor by squeezing your stomach, then lower back down under control. Pulling on your neck with your hands is the common fault.",
   },
   {
     name: "Dead Bug",
@@ -358,7 +358,7 @@ export default [
     subregion: "anti_extension",
     aliases: ["Deadbug"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back, arms reaching up, knees bent to a right angle above your hips. Lower one arm behind you and the opposite leg straight, keeping your lower back on the floor, then switch. Letting the back arch off the floor is the fault.",
   },
   {
     name: "Dead Hang",
@@ -373,7 +373,7 @@ export default [
     aliases: ["Passive Hang","Bar Hang","Deadhang"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Jump or step up to grip a pull-up bar, hands shoulder width apart. Let your body hang fully extended, shoulders relaxed rather than shrugged up, and hold. Gripping too tightly with clenched shoulders tires your forearms fast.",
   },
   {
     name: "Decline Crunch",
@@ -387,7 +387,7 @@ export default [
     subregion: "flexion",
     aliases: ["Decline Oblique Crunch","Decline Reverse Crunch"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie back on a decline bench with your feet secured near the top. Curl your shoulders and upper back up towards your knees, then lower back down under control. Using momentum to swing up rather than curling is the common fault.",
   },
   {
     name: "Decline Push-Up",
@@ -402,7 +402,7 @@ export default [
     aliases: ["Push-Ups | Decline"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"weighted_bodyweight"},
-    cue: "",
+    cue: "Place your feet up on a bench or step, hands on the floor under your shoulders. Lower your chest towards the floor with elbows at a moderate angle, then push back up. Letting the hips sag towards the floor takes tension off the chest.",
   },
   {
     name: "Deficit Push-Up",
@@ -416,7 +416,7 @@ export default [
     subregion: "flat",
     aliases: ["Deficit Push ups"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Place your hands on two blocks or handles slightly wider than shoulder width, feet on the floor behind you. Lower your chest below the level of your hands, then press back up. Rushing the lower portion wastes the extra range.",
   },
   {
     name: "Depth Jump",
@@ -430,7 +430,7 @@ export default [
     subregion: "squat_press",
     aliases: ["Depth Jump Leap","Linear Depth Jump"],
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "Stand on a low box or step, feet shoulder width apart. Step off and land on both feet, then jump up as high as you can as soon as you touch down. Pausing too long on the ground instead of jumping straight away changes the drill.",
   },
   {
     name: "Diamond Push-Up",
@@ -444,7 +444,7 @@ export default [
     subregion: "pushdown",
     aliases: ["Diamond push ups"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Start in a press-up position with thumbs and index fingers touching in a diamond under your chest. Lower towards your hands, elbows close to your sides, then push back up. Letting the elbows flare wide loses the emphasis on the triceps.",
   },
   {
     name: "Donkey Calf Raise",
@@ -458,7 +458,7 @@ export default [
     subregion: "gastro",
     aliases: ["one leg donkey calf raise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Bend forward at the hips resting your upper body on a support, balls of your feet on a raised edge. Rise up onto your toes, then lower your heels below the edge. A fast bouncing rhythm instead of a controlled lowering reduces the effect.",
   },
   {
     name: "Donkey Kick",
@@ -471,7 +471,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "pumper",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Start on hands and knees with your back flat. Keeping your knee bent, drive one foot up towards the ceiling by squeezing your glute, then lower without touching the floor. Arching the lower back to gain height is the common fault.",
   },
   {
     name: "Dragon Flag",
@@ -485,7 +485,7 @@ export default [
     subregion: "anti_extension",
     aliases: ["flag"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a bench and grip behind your head for support, body straight. Keeping your body rigid and legs together, lower them slowly without letting your lower back round, then raise up. Letting the hips bend first is the common fault.",
   },
   {
     name: "Eccentric Calf Raise (Bodyweight)",
@@ -498,7 +498,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "gastro",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the balls of both feet on a step, heels hanging off. Rise up using both legs, then shift your weight to one leg and lower that heel down slowly. Lowering quickly instead of taking your time defeats the purpose.",
   },
   {
     name: "Exercise Ball Crunch",
@@ -512,7 +512,7 @@ export default [
     subregion: "flexion",
     aliases: ["crunch (on stability ball)","Crunch - Legs On Exercise Ball","Ball crunches"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit on a stability ball and walk your feet forward until your lower back rests on the ball. Curl your shoulders up towards your hips by squeezing your stomach, then lower back down. Letting the ball roll around makes it unstable.",
   },
   {
     name: "Frog Pump",
@@ -525,7 +525,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "activator",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back with the soles of your feet together, knees dropped out to the sides. Drive your hips up by squeezing your glutes, then lower under control. Arching the lower back instead of using the glutes is the common fault.",
   },
   {
     name: "Glute Bridge",
@@ -539,7 +539,7 @@ export default [
     subregion: "activator",
     aliases: ["Floor Bridge","glute bridge march"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back, knees bent, feet flat, hip width apart. Drive your hips up towards the ceiling by squeezing your glutes, then lower under control. Pushing through the toes shifts the work into the calves.",
   },
   {
     name: "Glute Squeeze Hold",
@@ -553,7 +553,7 @@ export default [
     subregion: "activator",
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Stand tall or lie on your front with your legs straight. Squeeze your glutes together as hard as you can and hold the contraction, then release. Holding your breath throughout the hold is a common habit to avoid.",
   },
   {
     name: "Hanging Knee Raise",
@@ -566,7 +566,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "flexion",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hang from a bar with arms straight, legs extended below you. Bend your knees and lift them up towards your chest, then lower back to a full hang. Swinging your body for momentum instead of lifting with your stomach reduces the effect.",
   },
   {
     name: "Hanging Leg Raise",
@@ -580,7 +580,7 @@ export default [
     subregion: "flexion",
     aliases: ["hanging straight leg hip raise","weighted hanging leg-hip raise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hang from a bar with arms straight, legs together beneath you. Keeping your legs mostly straight, raise them towards hip height or higher, then lower under control. Using a big swing instead of a controlled lift is the common fault.",
   },
   {
     name: "Hanging Oblique Raise",
@@ -593,7 +593,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "flexion",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hang from a bar with legs together beneath you. Raise your knees up and across to one side towards your ribs, then lower and repeat on the other side. Twisting mainly at the shoulders instead of through the waist reduces the effect.",
   },
   {
     name: "Heel Walk",
@@ -607,7 +607,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"exerciseType":"distance"},
-    cue: "",
+    cue: "Stand tall and lift your toes and the front of your feet off the floor, balancing on your heels. Walk forward keeping your toes lifted the whole time. Letting the toes drop back down between steps is the common fault.",
   },
   {
     name: "Hollow Body Hold",
@@ -622,7 +622,7 @@ export default [
     aliases: ["Hollow Hold"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Lie on your back, arms extended overhead, legs straight. Press your lower back into the floor and lift your shoulders and legs slightly off the ground, holding the position. Letting the lower back arch off the floor is the fault.",
   },
   {
     name: "Incline Board Sit-Up",
@@ -635,7 +635,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: "flexion",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie back on an inclined board with your feet secured near the top. Curl your body up towards your knees using your stomach, then lower back down under control. Pulling on your neck instead of curling from the stomach is the common fault.",
   },
   {
     name: "Incline Push-Up (Hands Elevated)",
@@ -648,7 +648,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: "incline",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Place your hands on a bench or step, feet on the floor behind you. Lower your chest towards your hands keeping your body in a straight line, then push back up. Letting the hips sag or pike up breaks the straight line through the body.",
   },
   {
     name: "Inverted Row",
@@ -662,7 +662,7 @@ export default [
     subregion: "upper_mid_row",
     aliases: ["Australian Pull-Up","Bodyweight Row","bodyweight squatting row","Bodyweight Mid Row","Australian pull-ups"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set a bar at waist height and lie underneath it, gripping it shoulder width apart, body straight. Pull your chest towards the bar by squeezing your shoulder blades together, then lower under control. Letting the hips sag is the fault.",
   },
   {
     name: "Jump Squat",
@@ -676,7 +676,7 @@ export default [
     subregion: "squat_press",
     aliases: ["Freehand Jump Squat"],
     loadCharacter: "ballistic",
-    cue: "",
+    cue: "Stand with feet shoulder width apart. Bend your knees and hips into a squat, then drive up explosively into a jump, landing softly back in the squat. Landing with stiff, straight legs instead of absorbing it is the common fault.",
   },
   {
     name: "Kneeling Ab Rollout",
@@ -689,7 +689,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "anti_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel with your hands on a roller or slider out in front of your knees. Brace your stomach and roll forward a controlled distance, then draw back using your abs. Arching the lower back as you roll out is the common fault.",
   },
   {
     name: "L-Sit Hold",
@@ -704,7 +704,7 @@ export default [
     aliases: ["L Hold","L-sit"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Support your body on parallel bars or the floor with straight arms. Lift your legs straight out in front of you until your body forms an L shape, and hold. Letting the shoulders creep up towards the ears is the common fault.",
   },
   {
     name: "Leg Raise",
@@ -717,7 +717,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "flexion",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back, legs straight, hands by your sides or under your hips. Keeping your legs mostly straight, raise them towards the ceiling, then lower slowly without touching down. Letting the lower back arch is the common fault.",
   },
   {
     name: "Leg Raise (Flat Bench)",
@@ -731,7 +731,7 @@ export default [
     subregion: "flexion",
     aliases: ["Decline Bench Leg Raise"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on a flat bench, hands gripping the edges behind your head for support. Raise your straight legs towards the ceiling, then lower slowly until just before your feet reach the bench. Swinging the legs down quickly loses the effect.",
   },
   {
     name: "Lunge",
@@ -748,7 +748,7 @@ export default [
     // row) and its own alias carried over.
     aliases: ["Bodyweight Forward Lunge", "forward lunge (male)"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand tall, then step forward and lower your back knee towards the floor while your front knee stays roughly over your ankle. Push through your front heel to return standing. Letting the front knee cave inward is the main thing to watch.",
   },
   {
     name: "Manual Resistance Neck Extension",
@@ -761,7 +761,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit tall and place both hands on the back of your head. Press your head back against your hands while your hands press forward to match, keeping the resistance steady. Jerking instead of applying steady pressure is the common fault.",
   },
   {
     name: "Manual Resistance Neck Flexion",
@@ -774,7 +774,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit tall and place both hands on your forehead. Press your head forward against your hands while your hands press back to match, keeping the resistance steady. Rushing instead of applying smooth, even pressure is the common fault.",
   },
   {
     name: "Monster Walk",
@@ -787,7 +787,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "pumper",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Loop a band around your ankles and bend into a slight squat, feet shoulder width apart. Step forward and out at a slight diagonal, keeping tension in the band each step. Steps too small to keep tension reduces the effect.",
   },
   {
     name: "Mountain Climber",
@@ -801,7 +801,7 @@ export default [
     subregion: "flexion",
     loadCharacter: "grind",
     overrides: {"exerciseType":"reps_only"},
-    cue: "",
+    cue: "Start in a press-up position with your hands under your shoulders. Drive one knee towards your chest, then quickly switch legs in a running motion, keeping your hips low. Letting your hips rise reduces the work on your stomach.",
   },
   {
     name: "Neck Bridge",
@@ -814,7 +814,7 @@ export default [
     fatigueCost: 2, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back and place the top of your head on the floor, hands nearby for balance. Press through your feet and the crown of your head to lift and arch your body, then lower slowly. Rushing before building control is the common fault.",
   },
   {
     name: "Neck Curl",
@@ -827,7 +827,7 @@ export default [
     fatigueCost: 1, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back, head hanging slightly off the edge of a bench, hands resting nearby for balance. Tuck your chin towards your chest to curl your head forward, then lower back slowly. A fast, jerky motion is the common fault.",
   },
   {
     name: "Neck Lateral Flexion",
@@ -840,7 +840,7 @@ export default [
     fatigueCost: 1, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your side, head hanging slightly off the edge of a bench. Lower your head towards the floor, then lift it back up towards your shoulder using the side of your neck. Letting the shoulder shrug up to help lift is the common fault.",
   },
   {
     name: "Neck Rotation (Resistance)",
@@ -853,7 +853,7 @@ export default [
     fatigueCost: 1, sfr: 3,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit tall and place one hand on the side of your head above the ear. Turn your head against your hand's resistance to one side, then return and repeat on the other. Moving too fast instead of applying steady resistance is the common fault.",
   },
   {
     name: "Neutral Grip Pull-Up",
@@ -868,7 +868,7 @@ export default [
     aliases: ["Pull-Ups (Neutral Grip)"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"weighted_bodyweight"},
-    cue: "",
+    cue: "Grip parallel handles with palms facing each other, hanging with arms straight. Pull yourself up until your chin clears the handles, then lower back to a full hang. Only completing half the range at the bottom reduces the effect.",
   },
   {
     name: "Nordic Curl",
@@ -882,7 +882,7 @@ export default [
     subregion: "knee_flexion",
     aliases: ["Nordic Hamstring Curl"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel with your ankles secured under a bar, body straight from knees to head. Lower your torso forward as slowly as you can, resisting with your hamstrings, catching yourself near the floor. Dropping quickly misses the point.",
   },
   {
     name: "Nordic Glute Curl",
@@ -895,11 +895,12 @@ export default [
     fatigueCost: 3, sfr: 5,
     subregion: "stretcher",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel with your ankles secured, torso upright, arms crossed over your chest. Lower your torso forward slowly, then use your hamstrings and glutes to pull back up. Letting the hips pike back at the top breaks the straight line.",
   },
   {
     name: "Nordic Hamstring Curl",
     retiredInto: "Nordic Curl",
+    cue: "Kneel with your ankles held firmly, body upright from the knees up. Lean forward slowly, controlling the descent with your hamstrings before catching yourself with your hands. Bending sharply at the hips turns it into a fall.",
   },
   {
     name: "Oblique V-Up",
@@ -912,7 +913,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "rotation",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your side, legs stacked, one arm extended overhead. Lift your top leg and top arm together, bringing them towards each other in a V shape, then lower back down. Rolling onto your back reduces the effect.",
   },
   {
     name: "Plank",
@@ -926,7 +927,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Prop yourself up on your forearms and toes, body in a straight line from head to heels. Brace your stomach and hold the position, keeping your hips level. Letting the hips sag or pike up into the air is the common fault.",
   },
   {
     name: "Prone Reverse Fly",
@@ -939,7 +940,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie face down on a bench or the floor with your arms hanging straight down. Raise your arms out to the sides to roughly body level, squeezing your shoulder blades together, then lower slowly. Bending the elbows turns it into a row instead.",
   },
   {
     name: "Pull-Up",
@@ -954,7 +955,7 @@ export default [
     aliases: ["Overhand Pull-Up","Strict Pull-Up","Pullups","Pull-ups"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"weighted_bodyweight"},
-    cue: "",
+    cue: "Hang from a bar with an overhand grip, hands slightly wider than shoulder width. Pull yourself up until your chin clears the bar, then lower back to a full hang. A kicking or swinging motion reduces the effect.",
   },
   {
     name: "Push-Up",
@@ -969,7 +970,7 @@ export default [
     aliases: ["Press-Up","Pushups"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"weighted_bodyweight"},
-    cue: "",
+    cue: "Start in a plank position, hands under your shoulders, body in a straight line. Lower your chest towards the floor bending your elbows, then press back up. Letting the hips sag breaks the straight line through the body.",
   },
   {
     name: "Push-Up Plus",
@@ -982,7 +983,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Start in a push-up position with arms straight, body in a straight line. After the usual push-up, round your upper back further by pushing your shoulder blades apart before returning. Skipping the extra push at the top misses the point.",
   },
   {
     name: "Reverse Crunch",
@@ -996,7 +997,7 @@ export default [
     subregion: "flexion",
     aliases: ["suspended reverse crunch"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back, knees bent towards your chest, hands by your sides. Curl your hips up off the floor by drawing your knees towards your chest, then lower under control. Swinging the legs reduces the effect.",
   },
   {
     name: "Reverse Nordic Curl",
@@ -1009,7 +1010,7 @@ export default [
     fatigueCost: 3, sfr: 5,
     subregion: "knee_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel upright with your feet secured, body straight from the knees up. Lean back slowly from the knees, keeping your hips extended, then return to upright using your quads. Bending at the hips changes the movement.",
   },
   {
     name: "Reverse Plank",
@@ -1023,7 +1024,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Sit with legs straight out in front and hands behind your hips, fingers pointing towards your feet. Push through your hands and heels to lift your hips into a straight line, and hold. Letting the hips drop is the common fault.",
   },
   {
     name: "Rice Bucket",
@@ -1037,7 +1038,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Sit with a bucket of rice or similar material in front of you. Plunge your hand in and open and close your fingers or rotate your wrist against the resistance. Rushing through fast reps instead of working with control reduces the effect.",
   },
   {
     name: "Rope Jump",
@@ -1051,7 +1052,7 @@ export default [
     subregion: "gastro",
     loadCharacter: "ballistic",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Hold the rope handles at hip height with a slight bend in your elbows. Turn the rope with your wrists and jump just high enough to clear it, landing softly on the balls of your feet. Jumping too high with stiff legs tires you out faster.",
   },
   {
     name: "Russian Twist",
@@ -1065,7 +1066,7 @@ export default [
     subregion: "rotation",
     aliases: ["weighted russian twist"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with knees bent, leaning back slightly so your torso is at an angle, feet lifted or on the floor. Rotate your torso to touch the floor on one side, then the other, keeping your chest up. A small range of motion reduces the effect.",
   },
   {
     name: "Seated Bodyweight Calf Raise",
@@ -1079,7 +1080,7 @@ export default [
     subregion: "soleus",
     aliases: ["Sitting Calf Raises"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Sit with the balls of your feet on a raised edge, knees bent to about a right angle. Rise up onto your toes, then lower your heels below the edge under control. Bouncing at the bottom rather than pausing there reduces the effect.",
   },
   {
     name: "Side Plank",
@@ -1094,7 +1095,7 @@ export default [
     aliases: ["Adductor Side Plank","Dynamic side plank","Side plank right"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Lie on your side and prop yourself up on one forearm, feet stacked or staggered. Lift your hips so your body forms a straight line, and hold the position. Letting the hips drop towards the floor or rotate forward is the common fault.",
   },
   {
     name: "Side-Lying Adduction",
@@ -1107,7 +1108,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your side, bottom leg straight and top leg bent with the foot flat on the floor in front. Lift your bottom leg towards the ceiling, then lower slowly under control. Rotating the hip forward reduces the effect.",
   },
   {
     name: "Single Leg Hip Thrust",
@@ -1120,7 +1121,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "activator",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back, one foot flat on the floor and the other leg extended straight out. Drive your hips up by squeezing the glute of the planted leg, then lower back down under control. Letting the hips twist to one side is the common fault.",
   },
   {
     name: "Single-Arm Push-Up",
@@ -1134,7 +1135,7 @@ export default [
     subregion: "flat",
     aliases: ["One-Arm Push-Up"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Start in a press-up position, one hand on the floor and the other tucked behind your back, feet set wide for balance. Lower your chest bending the working elbow, then press back up. Letting the hips or shoulders rotate open reduces control.",
   },
   {
     name: "Single-Leg Calf Raise (Bodyweight)",
@@ -1147,7 +1148,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "gastro",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on one leg with the ball of that foot on a step, heel hanging off. Rise up onto your toes, then lower your heel below the step under control. Using the other leg to help push reduces the work on the standing leg.",
   },
   {
     name: "Single-Leg Tibialis Raise",
@@ -1160,7 +1161,7 @@ export default [
     fatigueCost: 1, sfr: 5,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on one leg with your other foot lifted slightly off the floor. Pull your toes up towards your shin, then lower slowly under control. Rushing the reps instead of controlling the lowering phase reduces the effect.",
   },
   {
     name: "Sissy Squat",
@@ -1174,7 +1175,7 @@ export default [
     subregion: "knee_extension",
     aliases: ["weighted sissy squat"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand holding something stable for balance, heels anchored or raised slightly. Lean back and bend your knees, lowering your hips while keeping a straight line from knees to shoulders, then rise up. Bending at the hips changes the movement.",
   },
   {
     name: "Sit-Up",
@@ -1188,7 +1189,7 @@ export default [
     subregion: "flexion",
     aliases: ["Sit-ups"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back, knees bent, feet flat, hands lightly crossed on your chest. Curl your entire torso up towards your knees, then lower under control. Yanking the body up with momentum is the common fault.",
   },
   {
     name: "Skater Squat",
@@ -1201,7 +1202,7 @@ export default [
     fatigueCost: 3, sfr: 5,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on one leg with the other leg lifted behind you. Bend the standing knee to lower down, letting the lifted leg reach back for balance, then push back up. Letting the standing knee cave inward is the common fault.",
   },
   {
     name: "Slider Leg Curl (Bodyweight)",
@@ -1215,7 +1216,7 @@ export default [
     subregion: "knee_flexion",
     aliases: ["Floor Glider Hamstring Curls"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back, heels on sliders, hips lifted slightly off the floor. Slide your heels away to straighten your legs, then curl them back in towards you. Letting the hips drop as the legs extend reduces the work on the hamstrings.",
   },
   {
     name: "Spanish Squat",
@@ -1228,7 +1229,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "knee_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Loop a band around a sturdy anchor at knee height and step into it so it sits in the crease of your knees. Lean back against the tension and bend your knees to squat, then push back up. Torso collapsing forward reduces the effect.",
   },
   {
     name: "Stair Running",
@@ -1242,7 +1243,7 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Stand at the bottom of a flight of stairs facing upward. Run up the steps with quick, light strides, using your arms to help drive the pace. Looking down at your feet instead of ahead throws off your rhythm and footing.",
   },
   {
     name: "Standing Calf Raise (Bodyweight)",
@@ -1255,7 +1256,7 @@ export default [
     fatigueCost: 1, sfr: 3,
     subregion: "gastro",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on the balls of both feet on a raised edge, heels hanging off. Rise up onto your toes, then lower your heels below the edge under control. Bouncing quickly instead of pausing at the top and bottom reduces the effect.",
   },
   {
     name: "Stir the Pot",
@@ -1268,7 +1269,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "anti_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Prop yourself on your forearms on a stability ball in a plank position. Keeping your body braced, move your forearms in small circles as if stirring a pot. Letting the hips sway or drop to keep up with the circles is the common fault.",
   },
   {
     name: "Swiss Ball Leg Curl",
@@ -1281,7 +1282,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "knee_flexion",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back, heels on a stability ball, hips lifted slightly off the floor. Roll the ball towards you by bending your knees, then roll it back out by straightening your legs. Letting the hips drop as the legs extend reduces the effect.",
   },
   {
     name: "Terminal Knee Extension",
@@ -1294,7 +1295,7 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "knee_extension",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Anchor a band behind one knee and stand facing away with a slight bend in that knee. Straighten the knee fully by squeezing the front of the thigh, then let it bend back slightly. Locking the knee out harshly reduces control.",
   },
   {
     name: "Tibialis Raise (Slant Board)",
@@ -1307,7 +1308,7 @@ export default [
     fatigueCost: 1, sfr: 5,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand on a slant board with your heels lower than your toes. Pull your toes up towards your shins as far as you can, then lower slowly under control. Rushing the lowering phase instead of controlling it reduces the effect.",
   },
   {
     name: "Tibialis Raise (Wall)",
@@ -1320,7 +1321,7 @@ export default [
     fatigueCost: 1, sfr: 5,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lean your back against a wall, heels a short step out in front, feet flat. Pull your toes up towards your shins as far as you can, then lower slowly. Letting the heels lift off the floor instead of staying planted reduces the effect.",
   },
   {
     name: "Toe Walk",
@@ -1334,7 +1335,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"exerciseType":"distance"},
-    cue: "",
+    cue: "Stand tall and rise up onto the balls of your feet, lifting your heels as high as you can. Walk forward staying up on your toes the whole time. Letting the heels drop down between steps is the common fault.",
   },
   {
     name: "Toe-to-Bar",
@@ -1348,7 +1349,7 @@ export default [
     subregion: "flexion",
     aliases: ["Toes-to-Bar"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hang from a bar with arms straight, legs together beneath you. Keeping your legs straight, raise them until your toes touch the bar, then lower under control. Swinging the body to throw the legs up is the common fault.",
   },
   {
     name: "Towel Pull-Up",
@@ -1361,7 +1362,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "",
+    cue: "Drape a towel over a pull-up bar and grip one end in each hand. Pull yourself up until your chin clears the bar, then lower back to a full hang. Letting your grip slip on the towel instead of holding it firmly is the common fault.",
   },
   {
     name: "Tricep Dip (Parallel Bars)",
@@ -1374,7 +1375,7 @@ export default [
     fatigueCost: 3, sfr: 3,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Support your body on parallel bars, arms straight, knees bent and crossed behind you. Lower your body until your upper arms are roughly level with the bars, then push back up. Letting the elbows flare wide shifts work off the triceps.",
   },
   {
     name: "V-Up",
@@ -1387,7 +1388,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "flexion",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back with arms extended overhead and legs straight. Lift your legs and upper body together to meet in a V shape, reaching your hands towards your feet, then lower back down. Bending the knees too much reduces the effect.",
   },
   {
     name: "Wall Sit",
@@ -1402,7 +1403,7 @@ export default [
     aliases: ["Wall Squat","march sit (wall)"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration"},
-    cue: "",
+    cue: "Lean your back against a wall and walk your feet out, then slide down until your knees are bent to about a right angle. Hold with your thighs roughly level with the floor. Letting the knees drift past the toes is the common fault.",
   },
   {
     name: "Weighted Dips (Chest)",
@@ -1416,7 +1417,7 @@ export default [
     subregion: "decline",
     loadCharacter: "grind",
     overrides: {"exerciseType":"weighted_bodyweight"},
-    cue: "",
+    cue: "Support your body on parallel bars, arms straight, torso leaning forward slightly, legs bent behind you. Lower your body until you feel a stretch across the chest, then push back up. Staying too upright shifts the work away from the chest.",
   },
   {
     name: "Weighted Dips (Triceps)",
@@ -1429,7 +1430,7 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Support your body on parallel bars, arms straight, torso upright, legs bent behind you. Lower your body by bending your elbows close to your sides, then push back up. Leaning the torso forward shifts the work towards the chest instead.",
   },
   {
     name: "Weighted Pull-Up",
@@ -1444,7 +1445,7 @@ export default [
     aliases: ["Weighted Pull Ups"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"weighted_bodyweight"},
-    cue: "",
+    cue: "Attach extra weight with a belt or hold it between your feet, then hang from the bar with an overhand grip. Pull yourself up until your chin clears the bar, then lower under control. Rushing the lowering phase wastes the extra load.",
   },
   {
     name: "Wide-Grip Pull-Up",
@@ -1459,7 +1460,7 @@ export default [
     aliases: ["Pull-Ups (Wide Grip)"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"weighted_bodyweight"},
-    cue: "",
+    cue: "Hang from a bar with hands set wider than shoulder width, overhand grip. Pull yourself up until your chin clears the bar, then lower back to a full hang. Only using a short range of motion instead of a full hang reduces the effect.",
   },
   {
     name: "Wide-Grip Push-Up",
@@ -1473,7 +1474,7 @@ export default [
     subregion: "flat",
     loadCharacter: "grind",
     overrides: {"exerciseType":"weighted_bodyweight"},
-    cue: "",
+    cue: "Start in a press-up position with hands set wider than shoulder width. Lower your chest towards the floor, letting your elbows flare out more than usual, then push back up. Letting the hips sag breaks the straight line through the body.",
   },
   // ── INTEGRATION STAGE 2 (exercise-library-expansion-2026-09-05) — generated by scripts/exercise-library/integrate-inventories.mjs; rerun the script to regenerate, do not hand-edit below this line ──
   {
@@ -1489,7 +1490,7 @@ export default [
     aliases: ["upward facing dog","Kneeling Superman","Superman","Towel Superman"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","demands":{"position":"lying","floorAccess":true,"overheadPosition":true,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Lie face down with arms extended overhead. Lift your arms, chest and legs off the floor together, holding the arched position briefly, then lower with control. Yanking the head up rather than lifting smoothly through the back is common.",
   },
   {
     name: "Archer Pull-Up",
@@ -1503,7 +1504,7 @@ export default [
     subregion: "vertical_pull",
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","difficulty":3,"demands":{"unilateralLoadable":true}},
-    cue: "",
+    cue: "Hang from the bar with a wide grip. Pull yourself up towards one hand, keeping that arm bent while the other stays straight out to the side, then lower and switch sides. Letting the straight arm bend to help defeats the point.",
   },
   {
     name: "Assisted Pistol Squat (Chair-Assisted)",
@@ -1517,7 +1518,7 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"balanceDemand":"stable","gripDemand":"supportive","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Stand in front of a chair or rail, holding it lightly with one hand, one leg extended in front of you. Squat down on the standing leg as far as comfortable, then push back up. Gripping the support too hard to pull yourself up is common.",
   },
   {
     name: "Back Lever (Tuck)",
@@ -1532,7 +1533,7 @@ export default [
     aliases: ["back lever"],
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Hang from the bar, then roll back and under so your body faces the floor, knees tucked to your chest, arms straight and back parallel to the ground. Hold the position, then return to hanging. Letting the hips sag out of the tuck is common.",
   },
   {
     name: "Bench Dip (Feet Elevated)",
@@ -1546,7 +1547,7 @@ export default [
     subregion: "pushdown",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"mixed","floorAccess":false,"gripDemand":"supportive","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported","overheadPosition":false}},
-    cue: "",
+    cue: "Sit between two benches, hands gripping the edge behind you and heels resting on the other bench. Lower your body by bending your elbows, then press back up. Letting the shoulders roll forward and up towards your ears is common.",
   },
   {
     name: "Bird Dog",
@@ -1560,7 +1561,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","demands":{"position":"kneeling","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"unilateralLoadable":true,"bilateralLower":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":true}},
-    cue: "",
+    cue: "Start on all fours with hands under shoulders and knees under hips. Extend one arm forward and the opposite leg back until both are level with your torso, then return and switch sides. Letting the hips twist to one side is the main fault.",
   },
   {
     name: "Bodyweight Box Squat",
@@ -1574,7 +1575,7 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: {"difficulty":1,"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Stand in front of a box or bench with feet shoulder width apart. Sit back and down until you touch the box lightly, then drive back up to standing. Collapsing your weight fully onto the box rather than touching lightly is common.",
   },
   {
     name: "Bodyweight Curtsy Lunge",
@@ -1588,7 +1589,7 @@ export default [
     subregion: "pumper",
     loadCharacter: "grind",
     overrides: {"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Stand tall, then step one leg diagonally behind and across the other, bending both knees until your back knee nears the floor. Push through the front foot to return to standing. Letting the front knee cave inward is the main fault.",
   },
   {
     name: "Bodyweight Lateral Step-Up",
@@ -1602,7 +1603,7 @@ export default [
     subregion: "pumper",
     loadCharacter: "grind",
     overrides: {"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Stand side on to a sturdy box or step. Place the near foot fully on top and drive through it to stand up on the box, then step back down under control. Pushing off the ground foot to help rather than driving through the top leg is common.",
   },
   {
     name: "Bodyweight Reverse Lunge",
@@ -1616,7 +1617,7 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: {"difficulty":1,"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Stand tall, then step one foot backward and lower that knee towards the floor, weight mostly through the front leg. Push back to standing through the front heel. Letting the front knee cave inward is the main thing to watch for.",
   },
   {
     name: "Bodyweight Split Squat",
@@ -1630,7 +1631,7 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: {"difficulty":1,"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Stand in a staggered stance with one foot forward and one back on the floor or a raised support. Lower your back knee towards the floor, then push back up through the front heel. Letting the front heel lift off the ground is common.",
   },
   {
     name: "Bodyweight Walking Lunge",
@@ -1644,7 +1645,7 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","difficulty":1,"demands":{"unilateralLoadable":false,"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Stand tall, then step forward into a lunge, lowering your rear knee towards the floor, and push off your front leg to step into the next lunge. Taking too short a step forces the front knee too far forward.",
   },
   {
     name: "Clamshell (Side-Lying)",
@@ -1659,7 +1660,7 @@ export default [
     aliases: ["Clamshells","Side-Lying Clamshell"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","difficulty":1,"demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"none","unilateralLoadable":false,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Lie on your side with knees bent and stacked, feet together. Keeping your feet touching, raise your top knee up towards the ceiling, then lower with control. Rolling your hips backward to help the knee up is the common fault.",
   },
   {
     name: "Clap Push-Up",
@@ -1673,7 +1674,7 @@ export default [
     subregion: "flat",
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"impact":true,"position":"mixed","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"stable","axialLoad":false,"weightBearingHands":true}},
-    cue: "",
+    cue: "Start in a push-up position. Lower your chest to the floor, then push up explosively so your hands leave the floor and clap together before you land back into position. Letting your hips sag as you land loses control of the movement.",
   },
   {
     name: "Close-Grip Pull-Up",
@@ -1686,7 +1687,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "vertical_pull",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hang from the bar with your hands close together, palms facing away from you. Pull yourself up until your chin clears the bar, then lower with control. Letting the elbows flare out wide takes away from the close grip's purpose.",
   },
   {
     name: "Commando Pull-Up",
@@ -1701,7 +1702,7 @@ export default [
     aliases: ["side-to-side chin","Side To Side Chins","commando pull-ups"],
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","difficulty":3,"demands":{"unilateralLoadable":true}},
-    cue: "",
+    cue: "Hang from the bar with one hand in front of the other, gripping it lengthwise. Pull yourself up so your head passes to one side of the bar, then lower and alternate sides on the next rep. Twisting the torso excessively to help is common.",
   },
   {
     name: "Elevated Pike Push-Up",
@@ -1715,7 +1716,7 @@ export default [
     subregion: "overhead_press",
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high"}},
-    cue: "",
+    cue: "Place your feet on a raised bench and hands on the floor, hips lifted high so your body forms an inverted V. Lower your head towards the floor by bending your elbows, then press back up. Letting the hips drop out of the pike is common.",
   },
   {
     name: "Flutter Kick",
@@ -1729,7 +1730,7 @@ export default [
     subregion: "flexion",
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","laterality":"alternating","difficulty":1,"demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Lie on your back with legs straight and lifted slightly off the floor, hands by your sides. Alternate small up and down kicks with your legs, keeping your lower back pressed down. Letting the back arch off the floor is the main fault.",
   },
   {
     name: "Freestanding Handstand Hold",
@@ -1744,7 +1745,7 @@ export default [
     aliases: ["handstand"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","demands":{"position":"mixed","floorAccess":true,"overheadPosition":true,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":true}},
-    cue: "",
+    cue: "Kick up into a handstand away from any wall, stacking your shoulders over your wrists and squeezing your whole body tight. Hold the balance, making small hand adjustments to stay upright. Letting the hips pike or arch excessively is common.",
   },
   {
     name: "Freestanding Handstand Push-Up",
@@ -1759,7 +1760,7 @@ export default [
     aliases: ["Handstand Push-Ups","Handstand Pushup"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"mixed","floorAccess":true,"overheadPosition":true,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","weightBearingHands":true}},
-    cue: "",
+    cue: "From a freestanding handstand, bend your elbows to lower your head towards the floor, then press back up to full lockout without losing your balance. Letting the hips pike as you lower is the common way balance is lost.",
   },
   {
     name: "Front Lever (Full)",
@@ -1773,7 +1774,7 @@ export default [
     subregion: "vertical_pull",
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Hang from the bar, then pull your straight body up until horizontal to the ground, facing upward, legs fully extended. Hold the position, then lower back to hanging with control. Letting the hips sag below the body line is common.",
   },
   {
     name: "Front Lever (Tuck)",
@@ -1788,7 +1789,7 @@ export default [
     aliases: ["front lever"],
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Hang from the bar, then pull your knees towards your chest while leaning your straight body back until it is roughly horizontal, facing upward. Hold the position, then return to hanging. Letting the hips sag out of the tuck is common.",
   },
   {
     name: "Full Planche Hold",
@@ -1803,7 +1804,7 @@ export default [
     aliases: ["Straight-Arm Planche"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"mixed","floorAccess":true,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"high","weightBearingHands":true}},
-    cue: "",
+    cue: "Lean forward from a straight arm floor position until your feet lift off the ground and your body is horizontal, supported only on your hands. Hold with your body straight. Letting the hips pike is how the hold usually breaks down.",
   },
   {
     name: "Gironda Sternum Chin-Up",
@@ -1818,7 +1819,7 @@ export default [
     aliases: ["Sternum Chin-Up","Gironda Chin-Up","Gironda Sternum Chins"],
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"high"}},
-    cue: "",
+    cue: "Hang from the bar with an underhand grip, leaning back slightly. Pull yourself up and lean your head back so your chest, near the sternum, reaches the bar, then lower with control. Failing to lean back through the pull is the common fault.",
   },
   {
     name: "Hanging L-Sit",
@@ -1832,7 +1833,7 @@ export default [
     subregion: "flexion",
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","weightBearingHands":false}},
-    cue: "",
+    cue: "Hang from the bar with straight arms. Raise both legs straight out in front until they are level with your hips, forming an L shape, then hold before lowering with control. Letting the knees bend to make it easier defeats the purpose.",
   },
   {
     name: "Hindu Push-Up",
@@ -1846,7 +1847,7 @@ export default [
     subregion: "flat",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported"}},
-    cue: "",
+    cue: "Start in a downward dog position, hips high. Dive your chest forward and down in an arc close to the floor, ending with your hips low and chest lifted, then reverse the arc back to the start. Letting the hips drag on the floor is common.",
   },
   {
     name: "Human Flag",
@@ -1860,7 +1861,7 @@ export default [
     subregion: "rotation",
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Grip a vertical pole with one hand high and one low, then lift your straight body until horizontal to the ground, held only by your arms. Hold the position, then lower with control. Letting the hips sag below the body line is common.",
   },
   {
     name: "Human Flag (Tuck Progression)",
@@ -1874,7 +1875,7 @@ export default [
     subregion: "rotation",
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Grip a vertical pole with one hand high and one low, then lift your hips and tuck your knees to your chest until your body is roughly horizontal. Hold the position, then lower with control. Letting the shoulders dip is the common fault.",
   },
   {
     name: "Inverted Row (Feet Elevated)",
@@ -1887,7 +1888,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "upper_mid_row",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set a bar at around waist height, lie underneath with heels on a raised bench and body straight. Pull your chest up towards the bar, squeezing your shoulder blades together, then lower with control. Letting the hips sag is a common fault.",
   },
   {
     name: "Inverted Row (High Bar)",
@@ -1901,7 +1902,7 @@ export default [
     subregion: "upper_mid_row",
     loadCharacter: "grind",
     overrides: {"difficulty":1},
-    cue: "",
+    cue: "Set a bar high, lie underneath with your body at a shallow angle, heels on the floor and torso close to vertical. Pull your chest up towards the bar, then lower with control. Letting the hips sag out of a straight line is the common fault.",
   },
   {
     name: "Inverted Row (Low Bar)",
@@ -1914,7 +1915,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "upper_mid_row",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set a bar low, lie underneath with your body close to horizontal, heels on the floor. Pull your chest up towards the bar, squeezing your shoulder blades together, then lower with control. Letting the hips sag is the common fault to avoid.",
   },
   {
     name: "Inverted Row (Underhand Grip)",
@@ -1928,7 +1929,7 @@ export default [
     subregion: "upper_mid_row",
     loadCharacter: "grind",
     overrides: {"difficulty":1},
-    cue: "",
+    cue: "Set a bar at around waist height, lie underneath and grip it with palms facing you. Pull your chest up towards the bar, keeping your body straight, then lower with control. Letting the hips sag out of a straight line is a common fault.",
   },
   {
     name: "Isometric Pull-Up Hold (Flexed Arm Hang)",
@@ -1942,7 +1943,7 @@ export default [
     subregion: "vertical_pull",
     loadCharacter: "grind",
     overrides: {"difficulty":2},
-    cue: "",
+    cue: "Pull yourself up to the top of a pull-up with your chin above the bar, then hold without moving. Keep your shoulders pulled down rather than shrugged towards your ears. Sinking slowly rather than holding still is the common failure point.",
   },
   {
     name: "Jump Lunge (Alternating)",
@@ -1956,7 +1957,7 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: {"demands":{"bilateralLower":false,"axialLoad":false}},
-    cue: "",
+    cue: "Start in a lunge, then jump up and switch your legs mid air, landing in a lunge with the opposite leg forward. Keep alternating with each jump. Landing stiff legged rather than absorbing through the knees and hips is the main risk.",
   },
   {
     name: "Knee Push-Up",
@@ -1970,7 +1971,7 @@ export default [
     subregion: "flat",
     aliases: ["kneeling push-up (male)","knee push-ups"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Kneel with hands under your shoulders and a straight line from head to knees. Lower your chest to the floor with elbows at a slight angle, then push back up. Letting the hips sag turns it into a poor plank.",
   },
   {
     name: "L-Sit Pull-Up",
@@ -1985,7 +1986,7 @@ export default [
     aliases: ["L-Sit Pull-ups"],
     loadCharacter: "grind",
     overrides: {"difficulty":3},
-    cue: "",
+    cue: "Hang from the bar with legs lifted in front, toes pointed, holding an L shape. Pull your chin over the bar while keeping the legs raised, then lower with control. Dropping the legs midway loses the position fastest.",
   },
   {
     name: "Long-Lever Plank",
@@ -1999,7 +2000,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"difficulty":2},
-    cue: "",
+    cue: "Set up in a forearm plank but walk your elbows further out in front of your shoulders. Brace your abs and hold a straight line from head to heels. Letting the hips drop removes most of the challenge.",
   },
   {
     name: "Marching Glute Bridge (Alternating)",
@@ -2012,7 +2013,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "activator",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Lie on your back with knees bent and feet flat, then lift your hips into a bridge. Keeping the hips level, raise one knee towards your chest and swap sides while staying lifted. Letting the raised hip drop is the main fault.",
   },
   {
     name: "Mixed Grip Pull-Up",
@@ -2025,7 +2026,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "vertical_pull",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Hang from the bar with one palm facing you and the other facing away. Pull yourself up until your chin clears the bar, then lower under control. Swap grip sides evenly rather than always leading with the same hand.",
   },
   {
     name: "Muscle-Up (Bar)",
@@ -2040,7 +2041,7 @@ export default [
     aliases: ["muscle up","muscle-up (on vertical bar)","weighted muscle up (on bar)"],
     loadCharacter: "grind",
     overrides: {"demands":{"overheadPosition":true,"weightBearingHands":false}},
-    cue: "",
+    cue: "Hang from the bar with active shoulders, then pull explosively while leaning forward over it. Roll your wrists over as your chest clears the bar and press out to lock your arms. Slowing down mid-pull tends to strand you under the bar.",
   },
   {
     name: "Neck Bridge (Front)",
@@ -2054,7 +2055,7 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"demands":{"position":"kneeling","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"unilateralLoadable":false,"bilateralLower":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Kneel and rest your forehead on a soft mat, walking your feet back until weight sits gently on your head and hands. Rock forward and back through a small range while your neck supports the load. Rushing the range is the common error.",
   },
   {
     name: "Negative Pull-Up (Eccentric-Only)",
@@ -2068,7 +2069,7 @@ export default [
     subregion: "vertical_pull",
     loadCharacter: "grind",
     overrides: {"difficulty":1},
-    cue: "",
+    cue: "Jump or step up so your chin is above the bar, then lower yourself as slowly as you can manage. Keep your shoulders engaged rather than letting your body drop loosely. Rushing the lowering phase defeats the point of the drill.",
   },
   {
     name: "Parallette Push-Up (Deep Range)",
@@ -2082,7 +2083,7 @@ export default [
     subregion: "flat",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"gripDemand":"supportive"}},
-    cue: "",
+    cue: "Grip the parallettes with hands under your shoulders, body in a straight line. Lower your chest below hand height for a deeper range than the floor allows, then press back up. Flaring the elbows wide at the bottom loses chest tension.",
   },
   {
     name: "Pike Push-Up",
@@ -2097,7 +2098,7 @@ export default [
     aliases: ["Pike Push Ups"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"mixed","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"stable"}},
-    cue: "",
+    cue: "Start in a pike position, hips high, hands and feet on the floor forming an inverted V. Bend your elbows to lower the top of your head towards the floor, then press back up. Letting the hips drop turns this into a regular push-up.",
   },
   {
     name: "Pistol Squat",
@@ -2112,7 +2113,7 @@ export default [
     aliases: ["one leg squat"],
     loadCharacter: "grind",
     overrides: {"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Stand on one leg with the other reaching out in front, arms forward for balance. Bend the standing knee to lower until your hip nears your heel, then drive back up. Letting the knee cave inward is the common breakdown under fatigue.",
   },
   {
     name: "Planche Lean",
@@ -2127,7 +2128,7 @@ export default [
     aliases: ["Planche Lean Hold"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","difficulty":2,"demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":true}},
-    cue: "",
+    cue: "Get into a push-up position and shift your shoulders forward over your hands, arms staying straight. Hold the lean at the point where your heels just lift, then return. Bending the elbows to compensate removes the point of the drill.",
   },
   {
     name: "Plank Shoulder Tap",
@@ -2142,7 +2143,7 @@ export default [
     aliases: ["shoulder tap"],
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","difficulty":2},
-    cue: "",
+    cue: "Hold a high plank with hands under your shoulders and feet set wide for stability. Tap one shoulder with the opposite hand while keeping your hips still, then alternate. Rocking the hips side to side means the core is coasting.",
   },
   {
     name: "Plank to Push-Up (Walk-Up)",
@@ -2156,7 +2157,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","difficulty":2},
-    cue: "",
+    cue: "Start in a forearm plank, then press up onto one hand at a time until you reach a high plank, and reverse the sequence. Keep your hips steady throughout. Letting the hips twist or sag gives away the point of the drill.",
   },
   {
     name: "Pseudo-Planche Push-Up",
@@ -2169,7 +2170,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "",
+    cue: "Set up in a push-up position, hands turned slightly inward and set further back near your hips. Lean your shoulders forward past your hands as you lower, then press back up. Hands drifting forward turns it back into a normal push-up.",
   },
   {
     name: "RKC Plank",
@@ -2183,7 +2184,7 @@ export default [
     subregion: "anti_extension",
     loadCharacter: "grind",
     overrides: {"difficulty":2},
-    cue: "",
+    cue: "Hold a forearm plank while actively squeezing your glutes and pulling your elbows towards your toes without moving them. Brace hard for a shorter hold than a standard plank. Relaxing the squeeze partway through loses most of the benefit.",
   },
   {
     name: "Scapular Pull-Up",
@@ -2198,7 +2199,7 @@ export default [
     aliases: ["Scapula Pulls"],
     loadCharacter: "grind",
     overrides: {"difficulty":1,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Hang from the bar with straight arms and relaxed shoulders. Without bending your elbows, pull your shoulder blades down and together to lift a small amount, then release. Bending the arms turns this into a small pull-up.",
   },
   {
     name: "Scapular Push-Up",
@@ -2212,7 +2213,7 @@ export default [
     subregion: "upper_mid_row",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported","axialLoad":false,"weightBearingHands":true}},
-    cue: "",
+    cue: "Start in a push-up position with straight arms. Let your shoulder blades pinch together to lower your chest slightly, then push the floor away to round your upper back. Bending the elbows takes the movement away from the shoulder blades.",
   },
   {
     name: "Scissor Kick",
@@ -2227,7 +2228,7 @@ export default [
     aliases: ["Scissors"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","laterality":"alternating","difficulty":1,"demands":{"position":"lying","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Lie on your back with legs straight, lifted a little off the floor, hands under your lower back for support. Cross one leg over the other, alternating which leg is on top. Letting your lower back arch off the floor loses abs tension.",
   },
   {
     name: "Shrimp Squat",
@@ -2241,7 +2242,7 @@ export default [
     subregion: "squat_press",
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
+    cue: "Stand on one leg holding the other foot behind you with the same-side hand. Bend the standing knee to lower until the back knee nearly touches the floor, then stand back up. Pitching the torso too far forward makes the balance far harder.",
   },
   {
     name: "Side Plank with Hip Dip (Dynamic)",
@@ -2256,7 +2257,7 @@ export default [
     aliases: ["Dynamic side hold"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","difficulty":2},
-    cue: "",
+    cue: "Prop yourself on one forearm in a side plank, feet stacked. Lower your hip towards the floor and lift it back to the start line, keeping the movement small and controlled. Twisting the torso forward turns this into a rock, not a hip dip.",
   },
   {
     name: "Single-Arm Inverted Row",
@@ -2270,7 +2271,7 @@ export default [
     subregion: "upper_mid_row",
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"unilateralLoadable":true,"bilateralUpper":false}},
-    cue: "",
+    cue: "Lie under a bar set at hip height and grip it with one hand, body straight from head to heels. Pull your chest towards the bar while keeping your body rigid, then lower under control. Letting the hips sag shifts the load away from the back.",
   },
   {
     name: "Single-Leg Glute Bridge",
@@ -2284,7 +2285,7 @@ export default [
     subregion: "activator",
     loadCharacter: "grind",
     overrides: {"demands":{"balanceDemand":"supported"}},
-    cue: "",
+    cue: "Lie on your back with one knee bent and foot flat, the other leg extended straight or held to the chest. Drive through the planted heel to lift your hips, squeezing the glute at the top. Letting the hips tilt to one side is the main fault.",
   },
   {
     name: "Spiderman Push-Up",
@@ -2298,7 +2299,7 @@ export default [
     subregion: "flat",
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","difficulty":2},
-    cue: "",
+    cue: "Start in a push-up position and, as you lower your chest, bring one knee towards the same-side elbow. Return the leg as you press back up, then alternate sides. Barely bringing the knee to the elbow undoes the point of the drive.",
   },
   {
     name: "Stability Ball Knee Tuck",
@@ -2313,7 +2314,7 @@ export default [
     aliases: ["Exercise Ball Pull-In","Stability Ball Pike (Knee Tuck)"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"mixed","floorAccess":true,"overheadPosition":false,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":false,"impact":false,"balanceDemand":"high","weightBearingHands":false}},
-    cue: "",
+    cue: "Place your shins on a stability ball in a push-up position, hands under your shoulders. Roll the ball towards you by drawing your knees to your chest, then extend back out. Hips piking up too early takes the challenge off the core.",
   },
   {
     name: "Staggered Hands Push-Up",
@@ -2327,7 +2328,7 @@ export default [
     subregion: "flat",
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","difficulty":2},
-    cue: "",
+    cue: "Get into a push-up position with one hand set further forward than the other. Lower your chest towards the floor and press back up, keeping the stagger throughout. Letting the hips rotate towards the back hand is the common fault.",
   },
   {
     name: "Straight Bar Dip (Chest-Lean)",
@@ -2341,7 +2342,7 @@ export default [
     subregion: "decline",
     aliases: ["chest dip on straight bar"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Grip a straight bar and support yourself with arms locked, leaning your torso forward from the shoulders. Bend your elbows to lower your chest towards the bar, then press back up. Staying upright shifts the emphasis away from the chest.",
   },
   {
     name: "Tuck Jump",
@@ -2355,7 +2356,7 @@ export default [
     subregion: "squat_press",
     aliases: ["Knee Tuck Jump"],
     loadCharacter: "grind",
-    cue: "",
+    cue: "Stand with feet hip-width apart and knees soft. Jump straight up and drive both knees towards your chest at the top, then land softly with bent knees. Landing with straight, locked knees is the biggest thing to correct.",
   },
   {
     name: "Tuck Planche Hold",
@@ -2370,7 +2371,7 @@ export default [
     aliases: ["Tuck planche"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"mixed","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":true}},
-    cue: "",
+    cue: "Sit tall with hands beside your hips and knees drawn tightly to your chest. Press down through your hands to lift your whole body off the floor, arms staying straight. Hips drifting behind your shoulders makes the hold much harder.",
   },
   {
     name: "Typewriter Pull-Up",
@@ -2385,7 +2386,7 @@ export default [
     aliases: ["Typewriter Pull-ups"],
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","difficulty":3,"demands":{"unilateralLoadable":true}},
-    cue: "",
+    cue: "Pull yourself up until your chin is above the bar, then shift sideways towards one hand while staying up, and back across to the other. Keep your chin above the bar throughout. Dropping down between sides splits it into two pull-ups.",
   },
   {
     name: "Typewriter Push-Up",
@@ -2399,7 +2400,7 @@ export default [
     subregion: "flat",
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","difficulty":3,"demands":{"unilateralLoadable":true,"bilateralUpper":false}},
-    cue: "",
+    cue: "Lower into a wide push-up until your chest nears the floor, then shift sideways towards one bent arm while the other stays straight. Slide back across before pressing up. Letting the chest rise during the shift undoes the drill.",
   },
   {
     name: "V-Sit",
@@ -2413,7 +2414,7 @@ export default [
     subregion: "flexion",
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":true,"overheadPosition":false,"gripDemand":"none","bilateralUpper":true,"balanceDemand":"high","weightBearingHands":true}},
-    cue: "",
+    cue: "Sit on the floor and lean back slightly, lifting your legs straight so your body forms a V with your torso. Hold the position with arms reaching forward or resting beside you. Rounding through the lower back is the usual compensation.",
   },
   {
     name: "Wall Handstand Hold",
@@ -2428,7 +2429,7 @@ export default [
     aliases: ["Wall Handstand"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","difficulty":2,"demands":{"position":"mixed","floorAccess":true,"overheadPosition":true,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","axialLoad":false,"weightBearingHands":true}},
-    cue: "",
+    cue: "Kick up into a handstand facing a wall, walking your hands back until upright and braced against it. Press firmly through your hands and hold the position steady. Letting the lower back arch heavily is the most common thing to tidy up.",
   },
   {
     name: "Wall Handstand Push-Up",
@@ -2442,7 +2443,7 @@ export default [
     subregion: "overhead_press",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"mixed","floorAccess":true,"overheadPosition":true,"gripDemand":"none","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","weightBearingHands":true}},
-    cue: "",
+    cue: "Set up in a wall handstand, hands slightly wider than shoulder width. Bend your elbows to lower the top of your head towards the floor, then press back to full lock out. Flaring the elbows wide takes work away from the shoulders.",
   },
   {
     name: "Weighted Chin-Up",
@@ -2456,7 +2457,7 @@ export default [
     subregion: "vertical_pull",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "",
+    cue: "Hang from the bar with palms facing you and a weight at your waist or between your feet. Pull your chin above the bar leading with your chest, then lower fully under control. Rushing the lowering under the extra load is the main fault.",
   },
   {
     name: "Windshield Wiper (Hanging)",
@@ -2470,7 +2471,7 @@ export default [
     subregion: "rotation",
     loadCharacter: "grind",
     overrides: {"laterality":"alternating","difficulty":3,"demands":{"position":"mixed","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","bilateralUpper":true,"unilateralLoadable":false,"balanceDemand":"high","weightBearingHands":false}},
-    cue: "",
+    cue: "Hang from the bar and raise your straight legs to hip height in front of you. Rotate your legs together side to side like a windscreen wiper, keeping your shoulders stable. Swinging from momentum rather than the abs is the main fault.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];
