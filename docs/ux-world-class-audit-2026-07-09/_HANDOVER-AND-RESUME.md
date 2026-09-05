@@ -1,7 +1,7 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-09-05 — FINAL WHOLE-PRODUCT CERTIFICATION (campaign, in flight) ★
+## ★ 2026-09-05 — FINAL WHOLE-PRODUCT CERTIFICATION (COMPLETE, on main) ★
 
 Founder brief (in chat): one autonomous adversarial certification of the
 whole product. Campaign folder `docs/final-certification-2026-09-05/`
@@ -12,11 +12,13 @@ founder: "injury" and "disability" may be used freely); the P0
 library-plan copy path that dropped circuit structure and tags; five
 navigation dead ends; search ranking and alias repair; kettlebell bell
 ladder; ballistic-aware insights; two band library plans; Methodology
-truth. In flight: circuit logger semantics, Today week-complete and
+truth. Also landed: circuit logger semantics, Today week-complete and
 block-finished states, style-aware capability substitutes, kettlebell
-and band equipment routes, Adjust-training disclosure. Board block
-carries the recovery path. Certification report lands as
-`10-CERTIFICATION.md`.
+and band equipment routes with style locks on both rebuild screens, and
+the five final-pass fixes. Certification: `10-CERTIFICATION.md`
+(CERTIFIED with three qualifications: store listings to re-paste, the
+Article 9 founder-debug line, device-only visual review). Founder
+device checklist: `DEVICE-CHECKLIST.md`. No build dispatched.
 
 ===============================================================================
 ## ★ 2026-09-05 — EXERCISE LIST ROW, EXERCISE SHEET, INSTRUCTION CONTRACT (D151) ★

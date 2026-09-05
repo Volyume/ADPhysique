@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## FINAL WHOLE-PRODUCT CERTIFICATION (2026-09-05) — IN FLIGHT. Record D152 + `docs/final-certification-2026-09-05/07-FINDINGS.md` (F-01..F-20); evidence `01`..`06` same folder.
+## FINAL WHOLE-PRODUCT CERTIFICATION (2026-09-05) — COMPLETE, MERGED TO MAIN. Report `docs/final-certification-2026-09-05/10-CERTIFICATION.md`; device checklist `DEVICE-CHECKLIST.md`. Record D152 + `docs/final-certification-2026-09-05/07-FINDINGS.md` (F-01..F-20); evidence `01`..`06` same folder.
 
 Founder brief in chat 2026-09-05 (one autonomous end-to-end task: discover,
 attack, prove, fix, re-exercise, certify). Branch
@@ -49,12 +49,9 @@ Landed on main (all green, lint + 16,372 tests):
 - [x] F-12: low-volume insight suppressed on excluded evidence; heatmap says explosive lifts are not counted.
 - [x] F-16 point 2: two band library plans (`seedRoutines.bandPlans.js`), seed key v16.
 - [x] F-19: Methodology tells the truth about Coached mode. Copy scan: "towards".
-In flight (agents, Opus, disjoint lanes; recovery = relaunch from the F-ruling in 07-FINDINGS.md):
-- [ ] F-13 + F-17 circuit semantics (ActiveWorkout, LoggedSetRow, notification text, RoutineDetail edit sheet, PlanDetail preview).
-- [ ] F-18 Today: week-complete hero, block-finished hero, plan-with-no-sessions state; D-2 coach note.
-- [ ] F-14 style- and equipment-aware capability substitutes (effective.js, sessionEffective.js).
-- [ ] F-15 + F-16 points 1 and 3: Kettlebells/Bands equipment answers route to library plans; Adjust training on style plans discloses and routes; circuit-flatten disclosure.
-Then: final adversarial journey pass (`09-FINAL-PASS.md`), full regression, certification report (`10-CERTIFICATION.md`), device checklist for the founder.
+- [x] F-13 + F-17 circuit semantics; F-18 Today states; F-14 style- and equipment-aware substitutes; F-15 + F-16 equipment routes and style locks.
+- [x] Final adversarial pass (`09-FINAL-PASS.md`): five stop-ship-class findings fixed in-pass (Eat naming, bell ladder wiring, delt-press overhead demand, goal-screen dead route, summary advice on excluded work).
+- [x] Closing regression green: lint, 16,581 Jest tests passing, tsc, corpus validator, identity invariant. Certification report landed.
 
 Founder-side actions raised by this campaign (section 3 mirror):
 - Re-paste the store listings (`docs/PLAY_STORE_LISTING.md`, `docs/APP_STORE_CONNECT_LISTING.md`) so the live listings say "Injuries & limitations".
