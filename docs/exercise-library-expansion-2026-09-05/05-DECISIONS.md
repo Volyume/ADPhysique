@@ -369,3 +369,26 @@ circuit-tagged plan is the one the user explicitly chose for grouped
 work (user intent outranks inference, EL-11), and its groups must be
 circuits only (`group_kind = 'circuit'`), never plain supersets. The
 guard is re-anchored to pin exactly that.
+
+## EL-25 Word-order duplicates
+
+Fact (02 audit, normalised-name pass, lead review): ten pairs are the
+same exercise named in two word orders. Nine pairs shipped in the
+original corpus; one is a new band row that re-created a folded template
+row.
+
+Ruling: retire into the name that follows the corpus convention
+`[Implement] [Angle] [Movement] ([Modifier])`: "Good Morning (Barbell)"
+into "Barbell Good Morning"; "Deadlift (Conventional)" into
+"Conventional Deadlift"; "Deadlift (Sumo)" into "Sumo Deadlift";
+"Preacher Curl (EZ Bar)" into "EZ Bar Preacher Curl"; "Cable Hammer Curl
+(Rope)" into "Cable Rope Hammer Curl"; "Overhead Cable Tricep Extension"
+into "Cable Overhead Tricep Extension"; "Cable Row (Wide Grip)" into
+"Wide-Grip Cable Row"; "Lateral Raise Machine" into "Machine Lateral
+Raise"; "Incline Smith Machine Press" into "Smith Machine Incline
+Press". The never-shipped "Band Seated Row" is dropped and becomes an
+alias of "Seated Band Row". The corpus guard gains a normalised-name
+collision rule (case, punctuation, brackets and word order folded;
+retired names exempt) so a word-order duplicate can never be added
+again. The direction pairs (high-to-low vs low-to-high) are distinct and
+stay.
