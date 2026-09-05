@@ -31,6 +31,7 @@ import sandbag from './families/sandbag.js';
 import { deriveExerciseMetadata } from '../exerciseMetadata.js';
 import { deriveDemandMetadata } from '../capability/demands.js';
 import { deriveLoadSemantics } from '../exercise/loadSemantics.js';
+import { joinInstructions } from './instructionContract.js';
 
 export const FAMILY_NAMES = Object.freeze([
   'barbell', 'dumbbell', 'cable', 'machine', 'smith', 'bodyweight', 'band',
@@ -131,7 +132,11 @@ export function corpusEntryToSeedRow(entry) {
     incrementKg: deriveIncrementKg(entry.compound, equipMeta.equipmentCategory),
     aliases: entry.aliases ?? [],
     loadCharacter: entry.loadCharacter ?? 'grind',
-    cue: entry.cue ?? '',
+    // D151: the `cue` column is the joined plain-text form of the
+    // structured setup/execution/watch fields (instructionContract.js), so
+    // every legacy single-paragraph reader keeps working unchanged while
+    // the detail surfaces render the fields themselves.
+    cue: joinInstructions(entry),
   };
 
   if (overrides.laterality != null) row.laterality = overrides.laterality;

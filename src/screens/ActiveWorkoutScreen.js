@@ -92,7 +92,8 @@ import {
   loadUnilateralAsked, markUnilateralAsked,
   perSideRestPlan, halfRestSeconds,
 } from '../lib/unilateral';
-import { formTipFor } from '../lib/formTips';
+import { instructionsFor } from '../lib/exerciseInstructions';
+import { equipmentDisplayLabel } from '../lib/exerciseDisplay';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
@@ -5800,10 +5801,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {showExecution ? (
             <>
               <Text style={[styles.sheetTitle, live.sheetTitle]}>{exercise?.name}</Text>
+              {/* D151: metadata as "Back · Cable" (display names, middle
+                  dot), never the raw enum with a hyphen. */}
               {exercise?.primaryMuscle ? (
                 <Text style={[styles.infoMuscle, live.infoMuscle]}>
-                  {MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ?? ((exercise.primaryMuscle || '').charAt(0).toUpperCase() + (exercise.primaryMuscle || '').slice(1).replace('_', ' '))}
-                  {exercise.equipment ? ` - ${exercise.equipment}` : ''}
+                  {[
+                    MUSCLE_DISPLAY_NAMES[exercise.primaryMuscle] ?? ((exercise.primaryMuscle || '').charAt(0).toUpperCase() + (exercise.primaryMuscle || '').slice(1).replace('_', ' ')),
+                    equipmentDisplayLabel(exercise),
+                  ].filter(Boolean).join(' · ')}
                 </Text>
               ) : null}
               {routineExercise?.recommendedSets ? (
@@ -5870,10 +5875,50 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 </View>
               ) : null}
 
-              <Text style={[styles.infoNotesLabel, live.infoNotesLabel]}>How to do it</Text>
-              <Text style={[styles.infoNotes, live.infoNotes]}>
-                {routineExercise?.notes || formTipFor(exercise) || exercise?.notes || 'No coaching notes yet for this exercise.\n\nIf you\'re not sure how much weight to use, start light. Pick something you could comfortably lift 15 to 20 times. Getting comfortable with the movement matters more than the weight, especially early on.\n\nFocus on controlled movement, feel the target muscle working, and stop a couple of reps before you truly cannot do any more.'}
-              </Text>
+              {/* D151: structured instructions from the corpus (Setup /
+                  Execution / Watch), the first layer readable in seconds.
+                  A routine's own notes for this exercise render above them
+                  when present; a custom exercise falls back to its notes or
+                  one calm line. */}
+              {(() => {
+                const instructions = instructionsFor(exercise);
+                const routineNotes = routineExercise?.notes || null;
+                return (
+                  <View style={styles.infoInstructions}>
+                    {routineNotes ? (
+                      <View style={styles.infoInstruction}>
+                        <Text style={[styles.infoNotesLabel, live.infoNotesLabel]}>Plan note</Text>
+                        <Text style={[styles.infoNotes, live.infoNotes]}>{routineNotes}</Text>
+                      </View>
+                    ) : null}
+                    {instructions ? (
+                      <>
+                        <View style={styles.infoInstruction}>
+                          <Text style={[styles.infoNotesLabel, live.infoNotesLabel]}>Setup</Text>
+                          <Text style={[styles.infoNotes, live.infoNotes]}>{instructions.setup}</Text>
+                        </View>
+                        <View style={styles.infoInstruction}>
+                          <Text style={[styles.infoNotesLabel, live.infoNotesLabel]}>Execution</Text>
+                          <Text style={[styles.infoNotes, live.infoNotes]}>{instructions.execution}</Text>
+                        </View>
+                        {instructions.watch ? (
+                          <View style={styles.infoInstruction}>
+                            <Text style={[styles.infoNotesLabel, live.infoNotesLabel]}>Watch</Text>
+                            <Text style={[styles.infoNotes, live.infoNotes]}>{instructions.watch}</Text>
+                          </View>
+                        ) : null}
+                      </>
+                    ) : (
+                      <View style={styles.infoInstruction}>
+                        <Text style={[styles.infoNotesLabel, live.infoNotesLabel]}>How to do it</Text>
+                        <Text style={[styles.infoNotes, live.infoNotes]}>
+                          {exercise?.notes || 'No instructions for this exercise yet. Start light, move with control and stop a couple of reps short of failure.'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
             </>
           ) : null}
         </WorkoutBottomSheet>
@@ -6446,15 +6491,25 @@ const styles = StyleSheet.create({
   reorderSheetChevronBtnDisabled: { opacity: 0.3 },
   infoTargetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md },
   infoTarget: { ...type.label, color: colors.primary },
-  infoMuscle: { ...type.caption, color: colors.textMuted, marginBottom: spacing.sm },
-  infoNotesLabel: { ...type.captionStrong, color: colors.textMuted, marginBottom: spacing.xs, marginTop: spacing.sm },
-  infoNotes: { ...type.bodySm, color: colors.textSecondary },
+  // D151 sheet polish: metadata one step up from muted so "Back · Cable"
+  // reads as information under the title; the instruction sections are a
+  // labelled stack (Setup / Execution / Watch), label in the quiet
+  // captionStrong, body at bodySm in the primary ink because it IS the
+  // content of the sheet; spacing.md between sections, spacing.xxs inside.
+  infoMuscle: { ...type.caption, color: colors.textSecondary, marginBottom: spacing.sm },
+  infoInstructions: { gap: spacing.md, marginTop: spacing.sm },
+  infoInstruction: { gap: spacing.xxs },
+  infoNotesLabel: { ...type.captionStrong, color: colors.textMuted },
+  infoNotes: { ...type.bodySm, color: colors.textPrimary },
   // COMP-015 "Adjusted today" section in the info sheet
+  // D151 accent restraint: the adjusted/eased box is a tonal surface with
+  // a hairline (the sheet's one amber stays on the prescription line and
+  // the section titles), not an amber-tinted card.
   adjustedSection: {
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface2,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.376),
+    borderColor: colors.borderSubtle,
     padding: spacing.md,
     gap: spacing.xs,
     marginTop: spacing.sm,
@@ -6684,10 +6739,10 @@ function buildLiveStyles(t) {
     reorderSheetSupersetChipText: { ...t.type.captionStrong, color: t.colors.primary },
     reorderSheetChevronBtn: { backgroundColor: t.colors.surface2 },
     infoTarget: { ...t.type.label, color: t.colors.primary },
-    infoMuscle: { ...t.type.caption, color: t.colors.textMuted },
+    infoMuscle: { ...t.type.caption, color: t.colors.textSecondary },
     infoNotesLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
-    infoNotes: { ...t.type.bodySm, color: t.colors.textSecondary },
-    adjustedSection: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.376) },
+    infoNotes: { ...t.type.bodySm, color: t.colors.textPrimary },
+    adjustedSection: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
     adjustedTitle: { ...t.type.captionStrong, color: t.colors.primary },
     adjustedReason: { ...t.type.bodySm, color: t.colors.textPrimary },
     adjustedSignal: { ...t.type.caption, color: t.colors.textMuted },

@@ -41,6 +41,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
 import { formTipFor } from '../lib/formTips';
+import { instructionsFor } from '../lib/exerciseInstructions';
 import { adaptedSetupFor } from '../lib/exercise/adaptedSetup';
 import InfoTooltip from '../components/InfoTooltip';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
@@ -594,7 +595,6 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   const equipmentLabel = equipmentDisplayLabel(exercise);
   const difficultyLabel = difficultyDisplayLabel(exercise);
   const subregionLabel = subregionDisplayLabel(exercise.subregion);
-  const coachingCue = exercise.cue || null;
 
   const allTimeSets = history.flat();
   const best1RM = allTimeSets.reduce((best, s) => {
@@ -1101,17 +1101,35 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           </View>
         )}
 
-        {coachingCue && (
-          <View style={styles.section}>
-            <View style={[styles.cueCard, live.cueCard]}>
-              <Ionicons name="bulb-outline" size={16} color={t.colors.primary} />
-              <Text style={[styles.cueText, live.cueText]}>{coachingCue}</Text>
-            </View>
-          </View>
-        )}
-
-        {(formTip || exercise.notes) && (() => {
+        {/* D151: structured instructions from the corpus, the same three
+            fields the active-workout sheet shows (Setup / Execution / Watch)
+            so the two surfaces never disagree. A custom exercise (no corpus
+            row) keeps the numbered-steps rendering of its own notes. The
+            separate amber "cue" card is gone: it repeated this text. */}
+        {(() => {
+          const instructions = instructionsFor(exercise);
+          if (instructions) {
+            const blocks = [
+              ['Setup', instructions.setup],
+              ['Execution', instructions.execution],
+              instructions.watch ? ['Watch', instructions.watch] : null,
+            ].filter(Boolean);
+            return (
+              <View style={styles.section}>
+                <SectionLabel>How to do it</SectionLabel>
+                <Card radius="md" style={styles.notesCard}>
+                  {blocks.map(([label, text], i) => (
+                    <View key={label} style={i > 0 ? styles.stepRowSpaced : null}>
+                      <Text style={[styles.adaptedLabel, live.adaptedLabel]} accessibilityRole="header">{label}</Text>
+                      <Text style={[styles.stepText, live.stepText]}>{text}</Text>
+                    </View>
+                  ))}
+                </Card>
+              </View>
+            );
+          }
           const instructionText = formTip ?? exercise.notes;
+          if (!instructionText) return null;
           const steps = splitInstructionSteps(instructionText);
           return (
             <View style={styles.section}>
@@ -1440,17 +1458,6 @@ const styles = StyleSheet.create({
   },
   stepNumberText: { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.primary },
   stepText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
-  cueCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    backgroundColor: colors.primaryBg,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.314),
-  },
-  cueText: { ...type.bodySm, flex: 1, color: colors.textPrimary },
   plateauBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1629,8 +1636,6 @@ function buildLiveStyles(t) {
     stepNumber: { backgroundColor: t.colors.primaryBg },
     stepNumberText: { fontSize: t.fontSize.xs, color: t.colors.primary },
     stepText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    cueCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.314) },
-    cueText: { ...t.type.bodySm, color: t.colors.textPrimary },
     plateauBanner: { backgroundColor: t.colors.warningBg },
     plateauTitle: { ...t.type.label, color: t.colors.warning },
     plateauBody: { ...t.type.bodySm, color: t.colors.textSecondary },

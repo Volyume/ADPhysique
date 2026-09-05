@@ -1,6 +1,24 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-05 — EXERCISE LIST ROW, EXERCISE SHEET, INSTRUCTION CONTRACT (D151) ★
+
+Founder brief (in chat). The outline's current row is a tonal surface2
+band with the amber dot and a white set count (the full-row amber tint is
+gone); the exercise sheet shows "Back · Cable" from the display labels
+and renders the corpus instructions as Setup / Execution / Watch with a
+"Plan note" above when the routine carries one; the adjusted/eased box is
+tonal. Instructions: every corpus entry now carries structured
+`setup` / `execution` / optional `watch` under the shared contract
+`src/lib/exerciseCorpus/instructionContract.js` (validator rule 10 + Jest
+mirror read the same module); the `cue` column is derived; the 545-entry
+hand-written FORM_TIPS map is RETIRED; the detail screen's duplicate cue
+card is gone; `METADATA_REDERIVE_KEY` is v4. Audit: `scripts/exercise-
+library/audit-instructions.mjs` (report in the campaign `data/`
+folder); family rewrites by Opus agents against `INSTRUCTION-BRIEF.md`
+with lead sample review. Register: D151. Device checklist on the board.
+
+===============================================================================
 ## ★ 2026-09-05 — LIVE PR CALLOUT RESTYLED (D150); LOG SET TROPHY RETIRED ★
 
 Founder brief (in chat): the "Record set if you hit this" row under the

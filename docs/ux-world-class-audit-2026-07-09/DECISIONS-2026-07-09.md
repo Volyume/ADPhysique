@@ -6197,3 +6197,90 @@ detectPR are unchanged; no engine, threshold, ED-safety, consent or
 billing code is touched. Guards: `workoutRecordLine.test.js` (copy
 contract, one pattern per line, retired phrasing absent) and
 `loggerVisualArchitecture.guard.test.js` (no trophy on the primary).
+
+## D151 — Exercise list current row, exercise sheet polish, and the instruction contract (founder brief, 2026-09-05)
+
+**Founder brief.** Preserve the active-workout exercise list architecture
+(counts, check state, current state, instant switching, hierarchy); test a
+more restrained current-row treatment than the full-row amber fill. Keep
+the exercise detail bottom sheet's interaction; refine typography,
+spacing, metadata ("Back · Cable", not "Back - cable"), instructional copy
+and accent restraint. Audit every built-in exercise instruction under a
+shared content contract (original, accurate, concise, British, useful at
+the rack, no AI prose, consistent Setup / Execution structure, no
+automatic mistakes or anatomy sections) using scripts and agents for
+coverage, with the lead reviewing samples and ambiguous movements.
+
+**What was observed.**
+- `WorkoutOutline.js`: the current row was `primaryBg` (12 % amber) across
+  the full row plus an 8 px amber dot and a semibold name; every other
+  surface in the refined system separates with a tonal step, not a tint.
+- The exercise info sheet showed `Back - cable` from the raw enum, a
+  captionStrong "How to do it" label and one `bodySm` paragraph in
+  `textSecondary`; the adjusted/eased box was an amber-tinted card with a
+  37 % amber border.
+- Instructions: every one of the 918 live corpus rows carried a single
+  `cue` string written under EL-17 as setup, execution, then the one fault
+  (187 to 240 characters; validated for British spelling, banned words, no
+  em dash). But `src/lib/formTips.js` still held a 545-entry hand-written
+  `FORM_TIPS` map that took precedence over the cue on BOTH surfaces: long
+  paragraphs, en dashes, safety wording ("protect your joints", "rotator
+  cuff health"), a different register from the other ~373 rows. The
+  detail screen also rendered the cue a second time in an amber "bulb"
+  card above the numbered steps. Measured over the split cues: setup 28 to
+  160 chars, execution 29 to 146, watch 24 to 111 (885 rows carried one);
+  no filler phrases, no dashes; 264 watch lines ended in a bare label
+  ("... is the common fault.") with no consequence or correction.
+
+**Rulings.**
+1. **Current row.** `surface2` on the outline's surface, the same tonal
+   step the Last session strip and the record callout use; the amber dot,
+   the semibold white name and (new) a white set count mark the row. No
+   edge stripe: the NowCard accent stripe was retired as decoration on
+   2026-08-17 and the dot plus band plus weight already read unambiguously.
+2. **Sheet.** Metadata renders `${muscle} · ${equipmentDisplayLabel}` with
+   the shared display labels (Smith machine, Resistance band, Plate-loaded
+   machine). Instructions render as a labelled stack: Setup, Execution and,
+   where present, Watch; label `captionStrong` muted, body `bodySm` in the
+   primary ink because it IS the sheet's content; sections spaced
+   `spacing.md`. A routine's own exercise note renders first as "Plan
+   note" instead of replacing the instructions. The adjusted/eased box is a
+   tonal surface with a hairline; amber stays on the prescription line and
+   section titles. Fallback copy for a custom exercise is one calm line.
+3. **Instruction contract.** Every live corpus entry carries `setup`
+   (required, 25 to 160 chars, at most two sentences), `execution` (same)
+   and an optional one-sentence `watch` (20 to 120 chars) that names the
+   fault that most changes the lift AND what it costs or what to do
+   instead; a bare "is the common fault" tail is a violation. All fields:
+   capital start, full stop end, no em or en dash, no exclamation or
+   question marks, no set or rep counts, the banned safety/medical words,
+   the filler list, British spelling. The rule lives once in
+   `src/lib/exerciseCorpus/instructionContract.js` and is read by the
+   validator (rule 10), the Jest mirror and the corpus index. The `cue`
+   column is derived as the joined paragraph so legacy readers are
+   unchanged; no entry carries a `cue` literal. `scripts/exercise-library/
+   split-cues.mjs` performed the one-off mechanical split;
+   `audit-instructions.mjs` is the reviewer's per-family view.
+4. **FORM_TIPS retired.** One source of instructions per exercise. The
+   detail screen's duplicate cue card is removed; custom exercises keep
+   the numbered-steps rendering of their own notes.
+5. **The watch line is kept, on merit, not by default.** The founder brief
+   says not to add "common mistakes" automatically. These lines were
+   authored per movement under EL-17, and a single specific fault with its
+   consequence is what a coach says at the rack. The contract makes the
+   line earn its place (specific, consequential, one sentence) and lets an
+   agent delete it where nothing does; the surfaces render it only when
+   present. Reversal is one condition in the two renderers if the founder
+   prefers Setup and Execution alone.
+6. **Audit execution.** Agents on Opus, two at a time, one lane per family
+   group, editing only their family files against the brief
+   (`INSTRUCTION-BRIEF.md`); the lead reviewed representative before/after
+   pairs, the ambiguous lists and the least-sure lists. Figures at
+   landing are in the audit report
+   (`docs/exercise-library-expansion-2026-09-05/data/instruction-audit.json`)
+   and in the taskboard block. `METADATA_REDERIVE_KEY` bumped to v4 so
+   existing installs take the rewritten text once.
+
+**Bounds.** Presentation, copy and content only. No engine, threshold,
+ED-safety, consent, billing, schema or sync change (canonical exercises
+are local and never pushed, EL-19).

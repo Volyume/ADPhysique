@@ -1,39 +1,37 @@
 /**
- * Form-tip coverage: EVERY exercise in the library must have a coaching note,
- * or the active-workout sheet falls back to "No coaching notes yet for this
- * exercise" (founder, 2026-06-20). This reads the source files directly so a
- * newly added exercise without a tip fails the build until one is written.
+ * Instruction coverage: EVERY built-in exercise must carry structured
+ * instructions, or the active-workout sheet and the detail screen fall
+ * back to generic copy (founder, 2026-06-20; re-anchored D151 2026-09-05).
+ * The hand-written FORM_TIPS map is retired, so the contract is now
+ * "setup and execution on every live corpus row", read from the corpus
+ * module so a newly added exercise without them fails the build until
+ * they are written.
  */
-const fs = require('fs');
-const path = require('path');
+const { CORPUS } = require('../exerciseCorpus');
+const { instructionsFor } = require('../exerciseInstructions');
 
-// Re-anchored EL-14/EL-17 (exercise-library-expansion-2026-09-05): the
-// library is the corpus module, and every live row carries a cue, so the
-// contract is "a hand-written tip OR a non-empty cue" for every row.
-function libraryExerciseNames() {
-  // eslint-disable-next-line global-require
-  const { CORPUS } = require('../exerciseCorpus');
-  return CORPUS.filter((e) => !e.retiredInto).map((e) => e.name);
-}
-
-function corpusCueNames() {
-  // eslint-disable-next-line global-require
-  const { CORPUS } = require('../exerciseCorpus');
-  return new Set(CORPUS.filter((e) => !e.retiredInto && typeof e.cue === 'string' && e.cue.trim()).map((e) => e.name));
-}
-
-function formTipKeys() {
-  const tips = fs.readFileSync(path.join(__dirname, '../formTips.js'), 'utf8');
-  // keys are single-quoted, may contain escaped apostrophes (\')
-  const keys = [...tips.matchAll(/^\s*'((?:[^'\\]|\\.)*)':/gm)].map((m) => m[1].replace(/\\'/g, "'"));
-  return new Set(keys);
-}
-
-test('every library exercise has a form tip', () => {
-  const names = libraryExerciseNames();
-  const keys = formTipKeys();
-  expect(names.length).toBeGreaterThan(400); // sanity: the library actually parsed
-  const cued = corpusCueNames();
-  const missing = names.filter((n) => !keys.has(n) && !cued.has(n));
+test('every library exercise has setup and execution instructions', () => {
+  const live = CORPUS.filter((e) => !e.retiredInto);
+  expect(live.length).toBeGreaterThan(400); // sanity: the library actually parsed
+  const missing = live
+    .filter((e) => !(typeof e.setup === 'string' && e.setup.trim() && typeof e.execution === 'string' && e.execution.trim()))
+    .map((e) => e.name);
   expect(missing).toEqual([]);
+});
+
+test('instructionsFor resolves every live row and refuses custom rows', () => {
+  const live = CORPUS.filter((e) => !e.retiredInto);
+  for (const e of live) {
+    const ins = instructionsFor({ name: e.name });
+    expect(ins && ins.setup === e.setup && ins.execution === e.execution).toBe(true);
+  }
+  expect(instructionsFor({ name: live[0].name, isCustom: 1 })).toBeNull();
+  expect(instructionsFor({ name: 'Not A Real Exercise' })).toBeNull();
+});
+
+test('the hand-written FORM_TIPS map stays retired (D151)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '../formTips.js'), 'utf8');
+  expect(src).not.toMatch(/export const FORM_TIPS/);
 });

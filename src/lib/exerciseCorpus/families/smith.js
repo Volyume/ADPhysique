@@ -34,7 +34,9 @@ export default [
     fatigueCost: 3, sfr: 3,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "Lie on a bench under the bar, feet flat on the floor, and unhook it by rotating your wrists. Lower the bar to your chest, then press it back up to straight arms. Setting the bench too far forward or back forces an awkward pressing angle.",
+    setup: "Lie on a bench under the bar, feet flat on the floor, and unhook it by rotating your wrists.",
+    execution: "Lower the bar to your chest, then press it back up to straight arms.",
+    watch: "Setting the bench too far forward or back forces an awkward pressing angle.",
   },
   {
     name: "Smith Machine Calf Raise",
@@ -47,7 +49,9 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "gastro",
     loadCharacter: "grind",
-    cue: "Stand with the bar resting across your upper back and the balls of your feet on a block. Rise up onto your toes as high as possible, pause, then lower for a full stretch. Bouncing quickly instead of pausing at the top is the usual mistake.",
+    setup: "Stand with the bar resting across your upper back and the balls of your feet on a block.",
+    execution: "Rise up onto your toes as high as possible, pause, then lower for a full stretch.",
+    watch: "Bouncing quickly instead of pausing at the top is the usual mistake.",
   },
   {
     name: "Smith Machine Close-Grip Press",
@@ -60,7 +64,9 @@ export default [
     fatigueCost: 3, sfr: 3,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "Lie on a bench under the bar with your hands close together, and unhook it by rotating your wrists. Lower the bar to your lower chest with your elbows tucked in, then press back up. Letting the elbows wing out wide is the common fault.",
+    setup: "Lie on a bench under the bar with your hands close together, and unhook it by rotating your wrists.",
+    execution: "Lower the bar to your lower chest with your elbows tucked in, then press back up.",
+    watch: "Letting the elbows wing out wide is the common fault.",
   },
   {
     name: "Smith Machine Front Squat",
@@ -73,7 +79,9 @@ export default [
     fatigueCost: 4, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "Rack the bar across the front of your shoulders, crossing your arms or using a clean grip, then unhook it. Squat down keeping your torso upright, then drive back up to standing. Letting your elbows drop lets the bar roll forward.",
+    setup: "Rack the bar across the front of your shoulders, crossing your arms or using a clean grip, then unhook it.",
+    execution: "Squat down keeping your torso upright, then drive back up to standing.",
+    watch: "Letting your elbows drop lets the bar roll forward.",
   },
   {
     name: "Smith Machine Hip Thrust",
@@ -86,7 +94,9 @@ export default [
     fatigueCost: 3, sfr: 5,
     subregion: "activator",
     loadCharacter: "grind",
-    cue: "Sit on the floor with your upper back against a bench and the bar across your hips, feet flat. Drive your hips up until your body forms a straight line, then lower slowly. Arching at the top instead of stopping level is the common fault.",
+    setup: "Sit on the floor with your upper back against a bench and the bar across your hips, feet flat.",
+    execution: "Drive your hips up until your body forms a straight line, then lower slowly.",
+    watch: "Arching at the top instead of stopping level is the common fault.",
   },
   {
     name: "Smith Machine Incline Press",
@@ -100,7 +110,9 @@ export default [
     subregion: "incline",
     aliases: ["Incline Smith Machine Press"],
     loadCharacter: "grind",
-    cue: "Set the bench to a shallow incline under the bar and lie back, unhooking the bar by rotating your wrists. Lower it to your upper chest, then press back up to straight arms. A bench angled too steep shifts work onto the shoulders.",
+    setup: "Set the bench to a shallow incline under the bar and lie back, unhooking the bar by rotating your wrists.",
+    execution: "Lower it to your upper chest, then press back up to straight arms.",
+    watch: "A bench angled too steep shifts work onto the shoulders.",
   },
   {
     name: "Smith Machine Row",
@@ -117,7 +129,9 @@ export default [
     // (lead-overrides.json): the "row" name rule derives seated; this is a
     // standing bent-over row on the Smith bar.
     overrides: { demands: { position: "standing" } },
-    cue: "Sit or stand braced under the bar set at hip height, holding it with an underhand or overhand grip. Pull the bar towards your torso, driving your elbows back, then extend slowly. Leaning back excessively to help the pull is the usual fault.",
+    setup: "Sit or stand braced under the bar set at hip height, holding it with an underhand or overhand grip.",
+    execution: "Pull the bar towards your torso, driving your elbows back, then extend slowly.",
+    watch: "Leaning back excessively to help the pull is the usual fault.",
   },
   {
     name: "Smith Machine Shrug",
@@ -130,7 +144,9 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    cue: "Stand holding the bar at hip height, arms straight, and unhook it from the rack. Shrug your shoulders straight up towards your ears, then lower slowly. Rolling the shoulders instead of moving straight up and down is the common fault.",
+    setup: "Stand holding the bar at hip height, arms straight, and unhook it from the rack.",
+    execution: "Shrug your shoulders straight up towards your ears, then lower slowly.",
+    watch: "Rolling the shoulders instead of moving straight up and down is the common fault.",
   },
   {
     name: "Smith Machine Squat",
@@ -143,7 +159,9 @@ export default [
     fatigueCost: 4, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    cue: "Rack the bar across your upper back, feet slightly forward of the bar path, then unhook it. Squat down keeping your torso upright, then drive back up to standing. Feet directly under the bar fights the fixed path.",
+    setup: "Rack the bar across your upper back, feet slightly forward of the bar path, then unhook it.",
+    execution: "Squat down keeping your torso upright, then drive back up to standing.",
+    watch: "Feet directly under the bar fights the fixed path.",
   },
   // ── INTEGRATION STAGE 2 (exercise-library-expansion-2026-09-05) — generated by scripts/exercise-library/integrate-inventories.mjs; rerun the script to regenerate, do not hand-edit below this line ──
   {
@@ -158,7 +176,9 @@ export default [
     subregion: "overhead_press",
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":true,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "Stand or sit under the fixed bar at shoulder height, gripping just outside shoulder width. Press it straight up until your arms lock out, then lower back to the shoulders. Leaning back to compensate for the fixed path is common.",
+    setup: "Stand or sit under the fixed bar at shoulder height, gripping just outside shoulder width.",
+    execution: "Press it straight up until your arms lock out, then lower back to the shoulders.",
+    watch: "Leaning back to compensate for the fixed path is common.",
   },
   {
     name: "Smith Machine Romanian Deadlift",
@@ -173,7 +193,9 @@ export default [
     aliases: ["Smith Machine RDL"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "Stand holding the fixed bar at your thighs. Push your hips back and lower the bar down your legs with a slight knee bend, then drive your hips forward to stand. Letting your hips drift back too far unbalances you on the fixed rail.",
+    setup: "Stand holding the fixed bar at your thighs.",
+    execution: "Push your hips back and lower the bar down your legs with a slight knee bend, then drive your hips forward to stand.",
+    watch: "Letting your hips drift back too far unbalances you on the fixed rail.",
   },
   {
     name: "Smith Machine Split Squat",
@@ -188,7 +210,9 @@ export default [
     aliases: ["Smith Machine Bulgarian Split Squat"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"high","weightBearingHands":false}},
-    cue: "Stand with the fixed bar across your upper back, one foot forward and one back in a split stance. Lower your back knee towards the floor, then push back up through the front heel. Letting the front knee drift far past the toes is common.",
+    setup: "Stand with the fixed bar across your upper back, one foot forward and one back in a split stance.",
+    execution: "Lower your back knee towards the floor, then push back up through the front heel.",
+    watch: "Letting the front knee drift far past the toes is common.",
   },
   {
     name: "Smith Machine Upright Row",
@@ -202,7 +226,9 @@ export default [
     subregion: null,
     loadCharacter: "grind",
     overrides: {"difficulty":3,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "Stand holding the fixed bar in front of your thighs. Pull it straight up towards your chin, leading with your elbows, then lower with control. Pulling the elbows too high above shoulder height is a common thing to avoid.",
+    setup: "Stand holding the fixed bar in front of your thighs.",
+    execution: "Pull it straight up towards your chin, leading with your elbows, then lower with control.",
+    watch: "Pulling the elbows too high above shoulder height is a common thing to avoid.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];

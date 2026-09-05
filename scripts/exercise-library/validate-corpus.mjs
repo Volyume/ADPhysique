@@ -22,11 +22,14 @@
  *     NICHE/NEVER_AUTO/SPECIALIST list plus CONTESTED).
  *  9. Any demand axis null after derivation+overrides, unless the entry
  *     declares `unknownAxes: [{ axis, reason }]`.
- * 10. cue rules for every NON-EMPTY cue (integration job 4): 40-240 chars,
- *     no em dash, no exclamation marks, sentence-final full stop, no
- *     banned safety/medical-adjacent words, no likely American spelling.
- *     An EMPTY cue is accepted unless data/corpus-floor.json sets
- *     cuesRequired: true, at which point every live row must have one.
+ * 10. Instruction contract (D151, src/lib/exerciseCorpus/
+ *     instructionContract.js): every live row carries `setup` and
+ *     `execution` (25-160 chars, at most two sentences each) and an
+ *     optional one-sentence `watch` (20-120 chars, never a formulaic
+ *     "is the common fault" tail); every field British English, no em or
+ *     en dash, no exclamation or question mark, sentence-final full stop,
+ *     no banned safety/medical-adjacent words, no filler phrases, no set
+ *     or rep counts; no legacy `cue` literal on any entry.
  * 11. Every name referenced by CURATED_DEMANDS, ADAPTED_SETUP,
  *     MACHINE_TYPE_BY_NAME, FAMILY_LISTS, the tier registry and the
  *     library plans exists in the corpus (live or retired).
@@ -57,6 +60,7 @@ const {
   MUSCLES, EQUIPMENT, MOVEMENT_PATTERNS, LATERALITY, LOAD_CHARACTER,
   EXERCISE_TYPES, SUBREGIONS_BY_MUSCLE, MUSCLES_REQUIRING_SUBREGION, DEMAND_FIELDS,
 } = await import(join(ROOT, 'src/lib/exerciseCorpus/vocab.js'));
+const { validateInstructions } = await import(join(ROOT, 'src/lib/exerciseCorpus/instructionContract.js'));
 const { CURATED_DEMANDS } = await import(join(ROOT, 'src/lib/capability/demands.js'));
 const { ADAPTED_SETUP } = await import(join(ROOT, 'src/lib/exercise/adaptedSetup.js'));
 const { MACHINE_TYPE_BY_NAME } = await import(join(ROOT, 'src/lib/exerciseMetadata.js'));
@@ -147,43 +151,6 @@ const baselineNames = new Set(
   JSON.parse(readFileSync(join(ROOT, 'docs/exercise-library-expansion-2026-09-05/data/corpus-baseline-names.json'), 'utf8')).names,
 );
 
-// exercise-library-expansion-2026-09-05 integration job 4: length, British
-// spelling, no em dash, no banned (safety/medical-adjacent) words, no
-// exclamation marks, sentence-final full stops only (not "?"/"!").
-const CUE_BANNED_WORDS = [
-  'safe', 'safely', 'injury', 'injure', 'rehab', 'arthritis', 'pain',
-  'doctor', 'physio', 'therapy', 'medical', 'condition', 'hurt',
-];
-// Common American spellings a cue author might reach for. Not exhaustive
-// (full locale-aware spellchecking is out of scope) but covers the words
-// most likely to appear in short exercise-setup/execution prose.
-const AMERICAN_SPELLINGS = [
-  'color', 'favorite', 'favorable', 'center', 'centered',
-  'fiber', 'gray', 'defense', 'offense', 'behavior', 'neighbor', 'honor',
-  'armor', 'vapor', 'rumor', 'humor', 'odor', 'vigor', 'labor', 'flavor',
-  'theater', 'liter', 'jewelry', 'skeptic', 'traveled', 'traveling',
-  'canceled', 'canceling', 'modeling', 'signaling', 'leveled', 'fueled',
-  'organize', 'organized', 'organizing', 'stabilize', 'stabilized',
-  'stabilizing', 'maximize', 'maximizing', 'minimize', 'minimizing',
-  'utilize', 'utilizing', 'realize', 'specialize', 'analyze', 'analyzing',
-  'recognize', 'summarize', 'emphasize', 'optimize', 'normalize',
-  'customize', 'apologize',
-];
-const AMERICAN_SPELLING_RE = new RegExp(`\\b(${AMERICAN_SPELLINGS.join('|')})\\b`, 'i');
-
-function validateCueText(cue, ctx) {
-  if (cue.length < 40 || cue.length > 240) fail(`${ctx}: cue length ${cue.length} outside 40-240`);
-  if (/—/.test(cue)) fail(`${ctx}: cue contains an em dash`);
-  if (/!/.test(cue)) fail(`${ctx}: cue contains an exclamation mark`);
-  const lower = cue.toLowerCase();
-  for (const word of CUE_BANNED_WORDS) {
-    if (new RegExp(`\\b${word}\\b`).test(lower)) fail(`${ctx}: cue contains banned word "${word}"`);
-  }
-  const americanHit = cue.match(AMERICAN_SPELLING_RE);
-  if (americanHit) fail(`${ctx}: cue contains a likely American spelling "${americanHit[0]}" (use British spelling)`);
-  if (!/\.$/.test(cue.trim())) fail(`${ctx}: cue does not end with a full stop`);
-}
-
 let nullAxisCount = 0;
 for (const entry of CORPUS) {
   const row = corpusEntryToSeedRow(entry);
@@ -237,15 +204,13 @@ for (const entry of CORPUS) {
     }
   }
 
-  // ── 10. Cue rules ────────────────────────────────────────────────────────
-  // Enforced for every non-empty cue now (integration job 4); once
-  // corpus-floor.json sets cuesRequired: true, an empty cue on a live row
-  // also fails (see cuesRequired() below).
-  const cue = row.cue ?? '';
-  if (cue) {
-    validateCueText(cue, ctx);
-  } else if (cuesRequired()) {
-    fail(`${ctx}: empty cue, but data/corpus-floor.json sets cuesRequired: true`);
+  // ── 10. Instruction contract (D151) ─────────────────────────────────────
+  // The rule itself lives in instructionContract.js so this script, the
+  // Jest mirror and the corpus index agree by construction. Every live
+  // row must carry setup and execution; corpus-floor.json's cuesRequired
+  // flag is honoured as the "instructions required" switch it has become.
+  if (cuesRequired() || entry.setup !== undefined || entry.execution !== undefined || entry.cue !== undefined) {
+    for (const v of validateInstructions(entry, ctx)) fail(v);
   }
 }
 

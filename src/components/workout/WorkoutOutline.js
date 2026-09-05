@@ -14,7 +14,10 @@
  *
  * Laws carried forward unchanged:
  *   - completed = QUIET (muted check + n/n; no bars, no cards);
- *   - current = one amber marker on a faint tint;
+ *   - current = one amber marker on a tonal row (D151: surface2, the same
+ *     step the Last session strip and the record callout use - the old
+ *     full-row amber tint read heavier than the rest of the refined
+ *     system; the dot, the weight and the white count keep it unmistakable);
  *   - upcoming = plainly tappable; skipped-for-time dimmed but tappable;
  *   - tap = JUMP ONLY; long-press (strip or row) = the ONE reorder path;
  *   - supersets read from a small link glyph, never a pill;
@@ -188,7 +191,7 @@ export default function WorkoutOutline({
                 key={item.key}
                 style={[
                   styles.row,
-                  isCurrent && { backgroundColor: t.colors.primaryBg },
+                  isCurrent && { backgroundColor: t.colors.surface2 },
                   item.skipped && styles.rowSkipped,
                 ]}
                 onPress={() => { onSelect?.(i); setExpanded(false); }}
@@ -230,7 +233,7 @@ export default function WorkoutOutline({
                 {item.groupLabel ? (
                   <Ionicons name="link" size={12} color={t.colors.textMuted} />
                 ) : null}
-                <Text style={[styles.count, { ...t.type.num('caption'), color: t.colors.textMuted }]}>
+                <Text style={[styles.count, { ...t.type.num('caption'), color: isCurrent ? t.colors.textPrimary : t.colors.textMuted }]}>
                   {item.skipped ? '–' : `${item.done}/${item.total}`}
                 </Text>
               </TouchableOpacity>

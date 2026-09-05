@@ -50,15 +50,26 @@ demand axes) used by the guard.
     machineType: null,
     demands: { gripDemand: 'bar', unilateralLoadable: true },
   },
-  cue: 'Hinge, not squat. Snap the hips and let the bell float to chest height. Keep the free hand clear of the bell.',
+  // D151 instruction contract (src/lib/exerciseCorpus/instructionContract.js)
+  setup: 'Stand with the bell a foot in front of you, feet just wider than hips.',
+  execution: 'Hike it back between your legs, then snap the hips forward and let it float to chest height with one arm.',
+  watch: 'Pulling with the arm turns the swing into a front raise, so let the hips do the work.',  // optional
 }
 ```
 Rules: `name` never changes once shipped; `aliases` unique across the
 whole corpus and never equal to any canonical name; `overrides` only
-where the derivation is wrong or null for that row; `cue` 40 to 240
-characters, British English, no em dash, no words from the banned list
-(safe, injury, rehab, arthritis, pain, doctor, physio, therapy, medical,
-condition), sentences end with full stops.
+where the derivation is wrong or null for that row. Instructions (D151,
+superseding the single `cue` string of EL-17): `setup` and `execution`
+required, 25 to 160 characters and at most two sentences each; `watch`
+optional, one sentence of 20 to 120 characters that names the fault
+that most changes the lift and what it costs or what to do instead
+(never a bare "... is the common fault" label); every field British
+English, no em or en dash, no exclamation or question mark, no set or
+rep counts, no words from the banned list (safe, injury, rehab,
+arthritis, pain, doctor, physio, therapy, medical, condition, hurt), no
+filler phrases (the list in instructionContract.js), sentence-final full
+stops. No entry carries a `cue` literal; the `cue` column is derived as
+the joined paragraph by `corpusEntryToSeedRow`.
 
 ## 3. Mapping (corpusEntryToSeedRow)
 

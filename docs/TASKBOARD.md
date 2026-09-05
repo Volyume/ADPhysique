@@ -3496,6 +3496,28 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## EXERCISE LIST + DETAIL POLISH + INSTRUCTION CONTRACT (2026-09-05) — IN FLIGHT. Record D151.
+
+Founder brief in chat 2026-09-05. Branch `claude/active-workout-pb-callout-fsbyf5`.
+Lanes: (1) outline current-row treatment (`WorkoutOutline.js`, lead);
+(2) exercise info sheet + detail screen structured instructions
+(`ActiveWorkoutScreen.js`, `ExerciseDetailScreen.js`, lead); (3) corpus
+instruction contract (`instructionContract.js`, validator rule 10,
+`split-cues.mjs` conversion LANDED on the branch) and the family audit
+by agents (opus, two at a time, brief `INSTRUCTION-BRIEF.md`):
+- [ ] A. machine + smith + sled + medicine_ball + sandbag. Recovery:
+  relaunch from INSTRUCTION-BRIEF.md; partial edits are in the family
+  files on the branch, the audit script shows what remains.
+- [ ] B. cable + band + suspension. Recovery: same.
+- [ ] C. bodyweight. Recovery: same.
+- [ ] D. barbell + landmine. Recovery: same.
+- [ ] E. dumbbell + kettlebell. Recovery: same.
+Gate: `node scripts/exercise-library/validate-corpus.mjs` green (the
+corpus guard Jest mirror fails until every family is at 0 violations),
+lead sample review of each report's before/after pairs and ambiguous
+list, `METADATA_REDERIVE_KEY` bumped so existing installs take the new
+text, then lint + test, docs, merge.
+
 ## LIVE PR CALLOUT RESTYLED; LOG SET TROPHY RETIRED (2026-09-05) — COMPLETE, MERGED TO MAIN. Record D150.
 
 The record row under the weight/reps controls keeps its place and the

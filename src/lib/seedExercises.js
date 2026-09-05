@@ -23,7 +23,10 @@ const METADATA_BACKFILL_KEY = '@volyume_exercise_metadata_backfilled_v1';
 // aliases, load_character, cue, exercise_category, increment_kg and coarse
 // equipment (band/landmine/suspension reclassification) via the corpus
 // mapping, on top of the columns v1/v2 already covered.
-const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v3';
+// v4 (D151, instruction contract): the cue column is now the joined
+// setup/execution/watch text and the family audit rewrote many watch
+// lines, so every canonical row takes the new instructions once.
+const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v4';
 // Bumped when exercises are added to the corpus so the top-up scans for the
 // new canonical IDs once on installs that already seeded an earlier list.
 // v4 (EL-14/EL-15, exercise-library-expansion-2026-09-05): the corpus

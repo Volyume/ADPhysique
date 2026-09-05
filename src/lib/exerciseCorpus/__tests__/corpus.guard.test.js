@@ -18,6 +18,7 @@ const {
   MUSCLES, EQUIPMENT, MOVEMENT_PATTERNS, LATERALITY, LOAD_CHARACTER,
   EXERCISE_TYPES, SUBREGIONS_BY_MUSCLE, MUSCLES_REQUIRING_SUBREGION, DEMAND_FIELDS,
 } = require('../vocab');
+const { validateInstructions } = require('../instructionContract');
 const { CURATED_DEMANDS } = require('../../capability/demands');
 const { ADAPTED_SETUP } = require('../../exercise/adaptedSetup');
 const { MACHINE_TYPE_BY_NAME } = require('../../exerciseMetadata');
@@ -37,27 +38,6 @@ const MUSCLE_SET = new Set(MUSCLES);
 const LATERALITY_SET = new Set(LATERALITY);
 const LOAD_CHARACTER_SET = new Set(LOAD_CHARACTER);
 const EXERCISE_TYPE_SET = new Set(EXERCISE_TYPES);
-// Kept in exact sync with validate-corpus.mjs's CUE_BANNED_WORDS /
-// AMERICAN_SPELLINGS (exercise-library-expansion-2026-09-05 integration
-// job 4) — word-boundary matched, not substring, so "safety pins" does not
-// trip "safe".
-const BANNED_CUE_WORDS = [
-  'safe', 'safely', 'injury', 'injure', 'rehab', 'arthritis', 'pain',
-  'doctor', 'physio', 'therapy', 'medical', 'condition', 'hurt',
-];
-const AMERICAN_SPELLINGS = [
-  'color', 'favorite', 'favorable', 'center', 'centered',
-  'fiber', 'gray', 'defense', 'offense', 'behavior', 'neighbor', 'honor',
-  'armor', 'vapor', 'rumor', 'humor', 'odor', 'vigor', 'labor', 'flavor',
-  'theater', 'liter', 'jewelry', 'skeptic', 'traveled', 'traveling',
-  'canceled', 'canceling', 'modeling', 'signaling', 'leveled', 'fueled',
-  'organize', 'organized', 'organizing', 'stabilize', 'stabilized',
-  'stabilizing', 'maximize', 'maximizing', 'minimize', 'minimizing',
-  'utilize', 'utilizing', 'realize', 'specialize', 'analyze', 'analyzing',
-  'recognize', 'summarize', 'emphasize', 'optimize', 'normalize',
-  'customize', 'apologize',
-];
-const AMERICAN_SPELLING_RE = new RegExp(`\\b(${AMERICAN_SPELLINGS.join('|')})\\b`, 'i');
 
 // Kept in exact sync with validate-corpus.mjs's foldExerciseName (EL-25):
 // case/punctuation/brackets/hyphens/DB-BB-KB abbreviations/word order all
@@ -186,27 +166,22 @@ describe('exercise corpus guard (EL-3, EL-14, 07-CORPUS-FORMAT.md section 6)', (
     expect(violations).toEqual([]);
   });
 
-  test('cue rules: length/British-spelling/banned-words/no-em-dash/no-exclamation/full-stop when present, or accepted empty per corpus-floor.json', () => {
+  test('instruction contract (D151): every live row carries setup and execution that pass instructionContract.js, and no legacy cue literal', () => {
     const violations = [];
     for (const entry of CORPUS) {
-      const row = corpusEntryToSeedRow(entry);
-      const cue = row.cue ?? '';
-      if (cue) {
-        if (cue.length < 40 || cue.length > 240) violations.push(`${entry.name}: cue length ${cue.length}`);
-        if (/—/.test(cue)) violations.push(`${entry.name}: cue has an em dash`);
-        if (/!/.test(cue)) violations.push(`${entry.name}: cue has an exclamation mark`);
-        const lower = cue.toLowerCase();
-        for (const word of BANNED_CUE_WORDS) {
-          if (new RegExp(`\\b${word}\\b`).test(lower)) violations.push(`${entry.name}: cue has banned word "${word}"`);
-        }
-        const americanHit = cue.match(AMERICAN_SPELLING_RE);
-        if (americanHit) violations.push(`${entry.name}: cue has a likely American spelling "${americanHit[0]}"`);
-        if (!/\.$/.test(cue.trim())) violations.push(`${entry.name}: cue missing a full stop`);
-      } else if (corpusFloor.cuesRequired === true) {
-        violations.push(`${entry.name}: empty cue, cuesRequired is true`);
+      if (corpusFloor.cuesRequired === true || entry.setup !== undefined || entry.execution !== undefined || entry.cue !== undefined) {
+        violations.push(...validateInstructions(entry, entry.name));
       }
     }
     expect(violations).toEqual([]);
+  });
+
+  test('the cue column is the joined plain-text form of the structured fields', () => {
+    for (const entry of CORPUS.slice(0, 50)) {
+      const row = corpusEntryToSeedRow(entry);
+      const expected = [entry.setup, entry.execution, entry.watch].filter(Boolean).join(' ');
+      expect(row.cue).toBe(expected);
+    }
   });
 
   test('every CURATED_DEMANDS/ADAPTED_SETUP/MACHINE_TYPE_BY_NAME/FAMILY_LISTS/registry/CONTESTED name exists in the corpus', () => {
