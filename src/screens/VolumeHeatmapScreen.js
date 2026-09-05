@@ -24,7 +24,8 @@ import { GOAL_LABELS } from '../lib/coachingGoals';
 import { logError } from '../lib/errorLog';
 import { syncUserPref, notePrefWrite } from '../lib/sync';
 import {
-  calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES, getVolumeStatus,
+  calculateWeeklyVolume, calculateExcludedWeeklyVolume, VOLUME_LANDMARKS,
+  MUSCLE_DISPLAY_NAMES, getVolumeStatus,
 } from '../lib/algorithms';
 import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
@@ -97,6 +98,11 @@ export default function VolumeHeatmapScreen() {
   const [trendData, setTrendData] = useState([]);
   const [lastTrainedMap, setLastTrainedMap] = useState({});
   const [hasAnyCompletedSets, setHasAnyCompletedSets] = useState(false);
+  // A7 (docs/final-certification-2026-09-05/04-TRAINING-STYLES.md): true when
+  // the window being shown contains work calculateWeeklyVolume threw away for
+  // its evidence class, so the heatmap can say so instead of reading
+  // near-empty with no explanation for a kettlebell user.
+  const [hasExcludedVolumeWork, setHasExcludedVolumeWork] = useState(false);
   // COMP-019: the volume trend section gets its own window (4W/8W/3M/6M). Kept
   // at 4W by default to preserve the section's current shape; chips widen it.
   const [trendWindowKey, setTrendWindowKey] = useState('4W');
@@ -134,6 +140,7 @@ export default function VolumeHeatmapScreen() {
       setTrendData([]);
       setLastTrainedMap({});
       setHasAnyCompletedSets(false);
+      setHasExcludedVolumeWork(false);
       setDivisionMarkers(null);
       setDivisionLabel(null);
       setLoadError(false);
@@ -162,6 +169,9 @@ export default function VolumeHeatmapScreen() {
       const prevVolume = calculateWeeklyVolume(prevSets, exerciseMap);
       setWeeklyVolume(volume);
       setPreviousVolume(prevVolume);
+      // Same inputs as the volume read, counting only what it excluded.
+      const excluded = calculateExcludedWeeklyVolume(recentSets, exerciseMap);
+      setHasExcludedVolumeWork(Object.keys(excluded).length > 0);
 
       const trendWin = windowByKey(VOLUME_WINDOWS, trendWindowKey) ?? windowByKey(VOLUME_WINDOWS, '4W');
       const trend = await getWeeklyVolumeByMuscle(user.id, trendWin.weeks);
@@ -286,6 +296,7 @@ export default function VolumeHeatmapScreen() {
       setTrendData([]);
       setLastTrainedMap({});
       setHasAnyCompletedSets(false);
+      setHasExcludedVolumeWork(false);
       setDivisionMarkers(null);
       setDivisionLabel(null);
       setLoadError(true);
@@ -575,6 +586,20 @@ export default function VolumeHeatmapScreen() {
           <Ionicons name="time-outline" size={14} color={t.colors.textMuted} />
           <Text style={[styles.windowNoteText, live.windowNoteText]}>{windowNoteText}</Text>
         </View>
+
+        {/* A7: explosive lifts are dropped from the volume read (EL-7
+            ballistic exclusion, algorithms.js calculateWeeklyVolume). Say so
+            when the window actually contains some, so a swing-heavy week is
+            not read as an empty one. Circuit rounds DO count toward volume,
+            so they are not named here. */}
+        {hasExcludedVolumeWork && (
+          <View style={styles.windowNote}>
+            <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
+            <Text style={[styles.windowNoteText, live.windowNoteText]}>
+              Explosive lifts like swings, cleans, snatches and jumps are not counted here. Volyume does not judge those for weekly volume.
+            </Text>
+          </View>
+        )}
 
         {showNoVolumeGuidance && (
           <EmptyState

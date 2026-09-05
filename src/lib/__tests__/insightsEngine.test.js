@@ -116,3 +116,92 @@ describe('generateInsights, robustness', () => {
     expect(() => generateInsights({ workouts, sets, exerciseMap, now: NOW })).not.toThrow();
   });
 });
+
+describe('A7 (final certification 2026-09-05): no advice off excluded evidence', () => {
+  // Ruling A7 (docs/final-certification-2026-09-05/04-TRAINING-STYLES.md):
+  // calculateWeeklyVolume drops every ballistic set (EL-7), so a
+  // swing-heavy kettlebell week reads as under-trained for the muscles the
+  // swings actually hammered, and the user was told to "add a set or two"
+  // for work they had already done. The nudge is now SUPPRESSED for any
+  // muscle whose window contains work the volume read threw away. Nothing
+  // replaces it.
+  const kbExerciseMap = {
+    ...exerciseMap,
+    // Ballistic: excluded from the volume read entirely.
+    kb_swing: {
+      id: 'kb_swing', name: 'Kettlebell Swing',
+      primary_muscle: 'hamstrings', secondary_muscles: '[]',
+    },
+    // Grind: fully comparable, credits hamstrings as a secondary (0.5).
+    kb_goblet: {
+      id: 'kb_goblet', name: 'Kettlebell Goblet Squat',
+      primary_muscle: 'quads', secondary_muscles: '["hamstrings"]',
+    },
+  };
+
+  // >= 6 completed sessions spanning >= 3 weeks, so the 3-week base passes.
+  const WORKOUTS = [1, 2, 8, 9, 15, 16, 22].map(d => mkWorkout(d));
+  const WEEK_DAYS = [1, 8, 15];
+
+  function goblets() {
+    return WEEK_DAYS.flatMap(d => [
+      mkSet(d, 'kb_goblet'),
+      mkSet(d, 'kb_goblet'),
+    ]);
+  }
+
+  function swings() {
+    return WEEK_DAYS.flatMap(d => Array.from({ length: 10 }, () => (
+      mkSet(d, 'kb_swing', { evidence_class: 'ballistic', weight: 24, actualReps: 15 })
+    )));
+  }
+
+  test('a swing-heavy 3-week window no longer says "adding a set or two" for the swing muscles', () => {
+    const insights = generateInsights({
+      workouts: WORKOUTS,
+      sets: [...goblets(), ...swings()],
+      exerciseMap: kbExerciseMap,
+      now: NOW,
+    });
+    const hamstrings = insights.find(i => i.key === 'under_mev_hamstrings');
+    expect(hamstrings).toBeUndefined();
+    // Per-muscle, not a blanket mute: quads carry no excluded work in this
+    // window, so their own low-volume nudge is untouched.
+    expect(insights.find(i => i.key === 'under_mev_quads')).toBeDefined();
+  });
+
+  test('the same window without the swings still gets the nudge', () => {
+    const insights = generateInsights({
+      workouts: WORKOUTS,
+      sets: goblets(),
+      exerciseMap: kbExerciseMap,
+      now: NOW,
+    });
+    const hamstrings = insights.find(i => i.key === 'under_mev_hamstrings');
+    expect(hamstrings).toBeDefined();
+    expect(hamstrings.copy).toContain('Adding a set or two this week');
+  });
+
+  test('circuit sets do not suppress the nudge (EL-7: they COUNT toward volume)', () => {
+    const insights = generateInsights({
+      workouts: WORKOUTS,
+      sets: goblets().map(s => ({ ...s, evidence_class: 'circuit' })),
+      exerciseMap: kbExerciseMap,
+      now: NOW,
+    });
+    expect(insights.find(i => i.key === 'under_mev_hamstrings')).toBeDefined();
+  });
+
+  test('a swing logged inside a circuit is ballistic too, and suppresses', () => {
+    const insights = generateInsights({
+      workouts: WORKOUTS,
+      sets: [
+        ...goblets(),
+        ...swings().map(s => ({ ...s, evidence_class: 'circuit_ballistic' })),
+      ],
+      exerciseMap: kbExerciseMap,
+      now: NOW,
+    });
+    expect(insights.find(i => i.key === 'under_mev_hamstrings')).toBeUndefined();
+  });
+});

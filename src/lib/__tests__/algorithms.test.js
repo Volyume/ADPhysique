@@ -5,6 +5,7 @@ import {
   MUSCLE_DISPLAY_NAMES,
   muscleDisplayName,
   calculateWeeklyVolume,
+  calculateExcludedWeeklyVolume,
   getVolumeStatus,
   detectLaggingMuscles,
   defaultIncrement,
@@ -615,5 +616,66 @@ describe('D-4: one muscleDisplayName, three converged call sites', () => {
       expect(source).not.toMatch(/charAt\(0\)\.toUpperCase\(\)/);
       expect(source).toMatch(/muscleDisplayName/);
     }
+  });
+});
+
+// ─── A7: what the volume read threw away ────────────────────────────────────
+describe('calculateExcludedWeeklyVolume (A7, final certification 2026-09-05)', () => {
+  // Ruling A7: advice must not be built on evidence the engine has
+  // deliberately excluded, so consumers need a way to see the sets
+  // calculateWeeklyVolume dropped. This helper is ADDITIVE: it must never
+  // change what calculateWeeklyVolume itself reports.
+  const exerciseMap = {
+    swing: { primary_muscle: 'hamstrings', secondary_muscles: '["glutes"]' },
+    row: { primary_muscle: 'back', secondary_muscles: '[]' },
+  };
+  const mkSet = (exerciseId, evidenceClass) => ({
+    exerciseId,
+    set_type: 'straight',
+    weight: 24,
+    actualReps: 15,
+    ...(evidenceClass ? { evidence_class: evidenceClass } : {}),
+  });
+
+  test('counts ballistic sets with the same allocation the volume read would have used', () => {
+    const out = calculateExcludedWeeklyVolume(
+      [mkSet('swing', 'ballistic'), mkSet('swing', 'ballistic')],
+      exerciseMap,
+    );
+    expect(out.hamstrings.excludedSets).toBe(2);
+    // Secondary muscles are credited at their contribution, exactly as in
+    // calculateWeeklyVolume.
+    expect(out.glutes.excludedSets).toBe(1);
+  });
+
+  test('counts circuit_ballistic, ignores plain circuit and ordinary sets', () => {
+    const out = calculateExcludedWeeklyVolume(
+      [mkSet('swing', 'circuit_ballistic'), mkSet('row', 'circuit'), mkSet('row', null)],
+      exerciseMap,
+    );
+    expect(out.hamstrings.excludedSets).toBe(1);
+    // EL-7: a circuit set COUNTS toward volume, so nothing was excluded.
+    expect(out.back).toBeUndefined();
+  });
+
+  test('warm-ups are not "excluded work" (the volume read never counted them)', () => {
+    const out = calculateExcludedWeeklyVolume(
+      [{ ...mkSet('swing', 'ballistic'), set_type: 'warmup' }],
+      exerciseMap,
+    );
+    expect(out).toEqual({});
+  });
+
+  test('is additive: calculateWeeklyVolume still excludes ballistic and counts circuit', () => {
+    const sets = [mkSet('swing', 'ballistic'), mkSet('row', 'circuit'), mkSet('row', null)];
+    const vol = calculateWeeklyVolume(sets, exerciseMap);
+    expect(vol.hamstrings).toBeUndefined();
+    expect(vol.back.workingSets).toBe(2);
+  });
+
+  test('tolerates malformed input without throwing', () => {
+    expect(calculateExcludedWeeklyVolume(null, exerciseMap)).toEqual({});
+    expect(calculateExcludedWeeklyVolume([null, undefined], exerciseMap)).toEqual({});
+    expect(calculateExcludedWeeklyVolume([mkSet('missing_ex', 'ballistic')], exerciseMap)).toEqual({});
   });
 });

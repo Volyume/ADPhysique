@@ -11,7 +11,9 @@
  *                recovery_warn | deload_due | gentle_rhythm
  */
 
-import { calculateWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES } from './algorithms';
+import {
+  calculateWeeklyVolume, calculateExcludedWeeklyVolume, VOLUME_LANDMARKS, MUSCLE_DISPLAY_NAMES,
+} from './algorithms';
 import { computeRecoveryEMAs, emaWeekOverWeekPct } from './recoveryEMA';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -85,6 +87,14 @@ export function generateInsights(rawArgs = {}) {
     if (!lm || lm.mev <= 0) continue;
     let trainedAtAll = false;
     let allWeeksLow = true;
+    // A7 (docs/final-certification-2026-09-05/04-TRAINING-STYLES.md): the
+    // volume read below drops every ballistic set (EL-7), so a swing-heavy
+    // kettlebell week looks under-trained for the muscles the swings hit.
+    // Advice must not be built on evidence the engine deliberately excluded,
+    // so if any of the three weeks contains work this muscle did that the
+    // read threw away, the nudge is SUPPRESSED for that muscle. Nothing
+    // replaces it: the engine judges nothing it cannot see.
+    let hasExcludedWork = false;
     for (let wk = 0; wk < 3; wk++) {
       const end = now - wk * WEEK_MS;
       const start = end - WEEK_MS;
@@ -96,8 +106,10 @@ export function generateInsights(rawArgs = {}) {
       const wSets = vol[muscleKey]?.workingSets ?? 0;
       if (wSets > 0) trainedAtAll = true;
       if (wSets >= lm.mev) allWeeksLow = false;
+      const excluded = calculateExcludedWeeklyVolume(weekSets, exerciseMap);
+      if ((excluded[muscleKey]?.excludedSets ?? 0) > 0) hasExcludedWork = true;
     }
-    if (trainedAtAll && allWeeksLow) {
+    if (trainedAtAll && allWeeksLow && !hasExcludedWork) {
       const name = MUSCLE_DISPLAY_NAMES[muscleKey] ?? muscleKey;
       insights.push(mkInsight(
         'under_mev_muscle', 1,

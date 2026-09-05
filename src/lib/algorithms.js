@@ -302,6 +302,49 @@ export function calculateWeeklyVolume(sets, exerciseMap = {}) {
   return volumeByMuscle;
 }
 
+/**
+ * EL-7 / A7 (docs/final-certification-2026-09-05/04-TRAINING-STYLES.md):
+ * calculateWeeklyVolume silently DROPS every ballistic set, so a swing-heavy
+ * week reads as barely trained. Advice must never be built on evidence the
+ * engine has deliberately excluded, so consumers need a way to see what was
+ * dropped. This is a pure, additive companion read: the same inputs and the
+ * same allocation as calculateWeeklyVolume, counting ONLY the sets it skipped
+ * for evidence class. calculateWeeklyVolume's own output is untouched.
+ *
+ * Plain 'circuit' sets are NOT counted here: EL-7 rules that a circuit set
+ * COUNTS toward per-muscle volume (real loaded working sets), so nothing was
+ * excluded for it. 'circuit_ballistic' is ballistic and is counted.
+ *
+ * @param {Array} sets - logged sets, same shape calculateWeeklyVolume takes
+ * @param {Object} exerciseMap - { [exerciseId]: exercise }
+ * @returns {Object} { [muscle]: { excludedSets: number } } where excludedSets
+ *   is the allocation-weighted count (primary 1.0, each secondary at its
+ *   contribution), matching how the volume read would have credited them.
+ *   Muscles with nothing excluded are absent.
+ */
+export function calculateExcludedWeeklyVolume(sets, exerciseMap = {}) {
+  const excludedByMuscle = {};
+  if (!Array.isArray(sets)) return excludedByMuscle;
+
+  for (const set of sets) {
+    if (!set || typeof set !== 'object') continue;
+    if (!isHardSet(set)) continue;
+    if (!isBallisticEvidenceRow(set)) continue;
+
+    const exerciseId = set.exerciseId || set.exercise_id;
+    const exercise = exerciseMap[exerciseId];
+    if (!exercise) continue;
+
+    for (const { muscle, sets: contribution } of allocateExerciseVolume(exercise)) {
+      if (!muscle) continue;
+      if (!excludedByMuscle[muscle]) excludedByMuscle[muscle] = { excludedSets: 0 };
+      excludedByMuscle[muscle].excludedSets += contribution;
+    }
+  }
+
+  return excludedByMuscle;
+}
+
 // Algorithm 5: Volume Status
 // Returns a status string, not a colour: this module is pure and must not import
 // the theme. Callers resolve the colour with volumeStatusColor(status) from

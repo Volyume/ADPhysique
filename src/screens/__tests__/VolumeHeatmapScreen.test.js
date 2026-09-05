@@ -288,3 +288,67 @@ describe('R2 (2026-07-11) design-cohesion census', () => {
     expect(VOLUME_HEATMAP_SOURCE).toMatch(/currentCount: \{ fontSize: t\.fontSize\.xs, fontVariant: \['tabular-nums'\] \}/);
   });
 });
+
+describe('A7 (final certification 2026-09-05): the heatmap says what it does not count', () => {
+  // Ruling A7: advice and readouts must not be built on evidence the engine
+  // has deliberately excluded. calculateWeeklyVolume drops every ballistic
+  // set (EL-7), so a swing-heavy week reads near-empty. The line below is
+  // shown ONLY when the displayed window actually contains such work.
+  function swingSets(count) {
+    return Array.from({ length: count }, (_, i) => ({
+      id: `swing-${i}`,
+      exerciseId: 'kbswing',
+      createdAt: Date.now(),
+      set_type: 'straight',
+      evidence_class: 'ballistic',
+      actualReps: 15,
+      weight: 24,
+    }));
+  }
+
+  const NOTE = 'Explosive lifts like swings, cleans, snatches and jumps are not counted here. '
+    + 'Volyume does not judge those for weekly volume.';
+
+  test('names the excluded work when the window contains ballistic sets', async () => {
+    getAllExercises.mockResolvedValue([
+      { id: 'bench', primary_muscle: 'chest', secondary_muscles: '[]' },
+      { id: 'kbswing', primary_muscle: 'hamstrings', secondary_muscles: '[]' },
+    ]);
+    getCompletedWorkoutSets.mockResolvedValueOnce([...chestSets(11), ...swingSets(10)]);
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    expect(flattenText(tree.toJSON())).toContain(NOTE);
+  });
+
+  test('stays silent on an ordinary week', async () => {
+    getCompletedWorkoutSets.mockResolvedValueOnce(chestSets(11));
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    expect(flattenText(tree.toJSON())).not.toContain('Explosive lifts');
+  });
+
+  test('a circuit set alone never triggers the line (EL-7: circuit sets DO count)', async () => {
+    getCompletedWorkoutSets.mockResolvedValueOnce(
+      chestSets(11).map((s) => ({ ...s, evidence_class: 'circuit' })),
+    );
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    expect(flattenText(tree.toJSON())).not.toContain('Explosive lifts');
+  });
+
+  test('the sentence claims nothing the volume read does not actually exclude', () => {
+    // Source guard: circuit rounds are counted by calculateWeeklyVolume, so
+    // the copy must never tell the user they are dropped. British English,
+    // no em dash (CLAUDE.md section 3).
+    const line = VOLUME_HEATMAP_SOURCE.match(/Explosive lifts like[^\n]*/)?.[0] ?? '';
+    expect(line).toContain('swings, cleans, snatches and jumps are not counted here');
+    expect(line).not.toMatch(/circuit/i);
+    expect(line).not.toContain('—');
+  });
+});
