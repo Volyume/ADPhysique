@@ -1,7 +1,7 @@
 {
-  "totalCount": 936,
+  "totalCount": 934,
   "perEquipment": {
-    "bodyweight": 178,
+    "bodyweight": 176,
     "barbell": 161,
     "dumbbell": 145,
     "cable": 123,
@@ -18,7 +18,7 @@
   },
   "perPrimaryMuscle": {
     "back": 142,
-    "quads": 116,
+    "quads": 114,
     "chest": 112,
     "abs": 107,
     "front_delts": 66,
@@ -43,12 +43,12 @@
     "hinge": 94,
     "power": 27,
     "carry": 21,
-    "lunge": 15,
+    "lunge": 13,
     "plyometric": 8,
     "core": 6
   },
   "perEquipmentCategory": {
-    "bodyweight": 178,
+    "bodyweight": 176,
     "barbell": 160,
     "dumbbell": 145,
     "cable": 123,
@@ -65,14 +65,14 @@
     "sled": 3
   },
   "perTier": {
-    "specialist": 315,
+    "common": 279,
     "niche": 246,
-    "common": 204,
+    "specialist": 234,
     "never_auto": 105,
-    "staple": 66
+    "staple": 70
   },
   "perExerciseType": {
-    "weight_reps": 869,
+    "weight_reps": 867,
     "duration": 54,
     "weighted_bodyweight": 10,
     "distance": 2,
@@ -80,25 +80,25 @@
   },
   "perLaterality": {
     "bilateral": 733,
-    "unilateral": 174,
+    "unilateral": 172,
     "alternating": 29
   },
   "perPosition": {
-    "standing": 481,
-    "lying": 196,
-    "seated": 131,
+    "standing": 483,
+    "lying": 192,
+    "seated": 130,
     "mixed": 99,
-    "kneeling": 29
+    "kneeling": 30
   },
   "perAdaptedSetupClass": {
     "none": 498,
     "strap_cuff": 171,
-    "supported": 87,
+    "supported": 85,
     "one_arm+seated": 47,
     "seated": 46,
-    "one_arm+strap_cuff": 16,
+    "one_arm+strap_cuff": 15,
     "strap_cuff+supported": 14,
-    "one_arm+seated+strap_cuff": 11,
+    "one_arm+seated+strap_cuff": 12,
     "seated+strap_cuff": 10,
     "reduced_range": 7,
     "reduced_range+strap_cuff": 7,
@@ -115,7 +115,7 @@
   },
   "perMovementFamily": {
     "null": 132,
-    "squat_press": 107,
+    "squat_press": 105,
     "flat": 81,
     "anti_extension": 49,
     "upper_mid_row": 48,
@@ -124,11 +124,11 @@
     "hip_extension": 39,
     "flexion": 33,
     "pushdown": 33,
-    "horiz_abduction": 31,
+    "horiz_abduction": 29,
     "horizontal_lat": 28,
     "activator": 27,
+    "rotation": 27,
     "short_head": 26,
-    "rotation": 25,
     "incline": 22,
     "spinal_erector": 21,
     "gastro": 20,

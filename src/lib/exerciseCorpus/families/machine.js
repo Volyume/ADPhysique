@@ -248,6 +248,10 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "flexion",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 position-sweep: hips are
+    // locked into the GHD apparatus, not on the floor; the "sit-up" name
+    // rule derived floorAccess true.
+    overrides: { demands: { floorAccess: false } },
     cue: "Lie back on the GHD with your hips supported and feet locked under the footplates. Curl your torso up until you are upright, then lower back down slowly. Swinging up with momentum instead of curling through the abs is the common fault.",
   },
   {
@@ -587,6 +591,11 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "activator",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 position-sweep: a dedicated
+    // hip-thrust machine (seat/backrest, no floor contact), unlike the
+    // barbell/dumbbell version done on the floor; the "hip thrust" name
+    // rule derived floorAccess true regardless of equipment.
+    overrides: { demands: { floorAccess: false } },
     cue: "Lie back into the machine with the pad resting across your hips. Drive your hips up until your body forms a straight line, squeezing your glutes, then lower slowly. Arching your lower back at the top instead of stopping level is the fault.",
   },
   {
@@ -839,6 +848,10 @@ export default [
     fatigueCost: 3, sfr: 5,
     subregion: "activator",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 position-sweep: a dedicated
+    // plate-loaded hip-thrust machine, no floor contact; same fault as
+    // "Machine Hip Thrust".
+    overrides: { demands: { floorAccess: false } },
     cue: "Lie back into the machine with the pad across your hips, plates loaded evenly. Drive your hips up until your body forms a straight line, squeezing your glutes, then lower slowly. Arching your lower back at the top is the common fault.",
   },
   {
@@ -891,7 +904,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "overhead",
     loadCharacter: "grind",
-    cue: "Sit with your arms overhead gripping the handles, plates loaded evenly on the machine. Lower the handles behind your head by bending your elbows, then extend back up. Letting the elbows flare out wide is the usual fault.",
+    cue: "Sit with your arms overhead gripping the handles, plates loaded evenly on the machine. Lower the handles behind your head by bending your elbows, then extend back up. Letting the elbows wing out wide is the usual fault.",
   },
   {
     name: "Plate-Loaded Preacher Curl",
@@ -1062,7 +1075,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "Sit in the machine and grip the handles beside you, feet flat on the floor or footrest. Push the handles down until your arms straighten, then return slowly. Letting the elbows flare out wide is the common fault.",
+    cue: "Sit in the machine and grip the handles beside you, feet flat on the floor or footrest. Push the handles down until your arms straighten, then return slowly. Letting the elbows wing out wide is the common fault.",
   },
   {
     name: "Seated Leg Curl",
@@ -1387,7 +1400,10 @@ export default [
     subregion: "shoulder_extension",
     aliases: ["Nautilus Pullover"],
     loadCharacter: "grind",
-    overrides: {"demands":{"position":"lying","floorAccess":false,"overheadPosition":true,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
+    // exercise-library-expansion-2026-09-05 position-sweep: the existing
+    // override said "lying"; the cue (sit with your back against the pad)
+    // says seated, the standard Nautilus/pullover-machine setup.
+    overrides: {"demands":{"position":"seated","floorAccess":false,"overheadPosition":true,"gripDemand":"supportive","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     cue: "Sit with your back against the pad, forearms resting on the padded bar above your head. Pull it down and forward in an arc to your torso, then let it rise back with control. Using your lower back to help pull is common.",
   },
   {

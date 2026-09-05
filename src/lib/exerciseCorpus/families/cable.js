@@ -123,6 +123,11 @@ export default [
     subregion: "flexion",
     aliases: ["Crunches With Cable"],
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 position-sweep (data/audit/
+    // position-sweep.json): the "crunch" name rule derived lying/floor; the
+    // cue (kneeling below a high pulley) says otherwise, same fault as
+    // Machine Crunch.
+    overrides: { demands: { position: "kneeling", floorAccess: false } },
     cue: "Kneel below a high pulley holding a rope beside your head, hips stacked over your knees. Curl your ribs down towards your hips, then let the weight pull you back up. Bending only at the hips instead of the spine misses the abs.",
   },
   {
@@ -452,7 +457,7 @@ export default [
     subregion: "overhead",
     aliases: ["Triceps Extensions on Cable"],
     loadCharacter: "grind",
-    cue: "Stand facing away from a low pulley with a rope held behind your head, elbows pointing forward. Extend your arms forward and up until they straighten, then return slowly. Letting the elbows flare out to the sides takes work off the triceps.",
+    cue: "Stand facing away from a low pulley with a rope held behind your head, elbows pointing forward. Extend your arms forward and up until they straighten, then return slowly. Letting the elbows wing out to the sides takes work off the triceps.",
   },
   {
     name: "Cable Pull-Through",
@@ -957,6 +962,10 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "flexion",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 position-sweep: position
+    // derives correctly (kneeling), but floorAccess derived true off the
+    // "crunch"/floor rule; a cable station has no floor access.
+    overrides: { demands: { floorAccess: false } },
     cue: "Kneel below a high pulley holding a rope beside your head, hips stacked over your knees. Curl your ribs down towards your hips, then let the weight pull you back up. Bending at the hips instead of the spine misses the abs.",
   },
   {
@@ -1063,7 +1072,7 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "overhead",
     loadCharacter: "grind",
-    cue: "Stand facing away from a low pulley with a rope held behind your head, elbows pointing up. Extend your arms forward and up until they straighten, then return slowly. Letting the elbows flare out to the sides takes work off the triceps.",
+    cue: "Stand facing away from a low pulley with a rope held behind your head, elbows pointing up. Extend your arms forward and up until they straighten, then return slowly. Letting the elbows wing out to the sides takes work off the triceps.",
   },
   {
     name: "Overhead Cable Tricep Extension",
@@ -1103,6 +1112,10 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "anti_extension",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 position-sweep: kneeling at a
+    // cable stack, not floor-based; floorAccess derived true off the
+    // "kneeling" name rule.
+    overrides: { demands: { floorAccess: false } },
     cue: "Kneel side-on to a cable at chest height, holding the handle with both hands against your chest. Press it straight out and hold, without letting your torso twist. Rocking your hips instead of bracing your core is the common fault.",
   },
   {
@@ -1130,7 +1143,7 @@ export default [
     subregion: "pushdown",
     aliases: ["Reverse Grip Triceps Pushdown"],
     loadCharacter: "grind",
-    cue: "Stand facing a high pulley with an underhand grip on the bar, elbows tucked to your sides. Push the bar down until your arms straighten, then let it rise slowly. Letting the elbows flare out to the sides is the usual fault.",
+    cue: "Stand facing a high pulley with an underhand grip on the bar, elbows tucked to your sides. Push the bar down until your arms straighten, then let it rise slowly. Letting the elbows wing out to the sides is the usual fault.",
   },
   {
     name: "Rope Pushdown",
@@ -1177,7 +1190,7 @@ export default [
     subregion: "pushdown",
     aliases: ["One Arm Triceps Extensions on Cable"],
     loadCharacter: "grind",
-    cue: "Stand facing away from a low pulley, holding the handle behind your head with one arm, elbow bent. Extend your arm up until it straightens, keeping the elbow tucked, then lower slowly. Letting the elbow flare out is the usual fault.",
+    cue: "Stand facing away from a low pulley, holding the handle behind your head with one arm, elbow bent. Extend your arm up until it straightens, keeping the elbow tucked, then lower slowly. Letting the elbow wing out is the usual fault.",
   },
   {
     name: "Single-Arm Cable Lateral Raise",
@@ -1436,7 +1449,10 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "long_head",
     loadCharacter: "grind",
-    overrides: {"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
+    // exercise-library-expansion-2026-09-05 position-sweep: the existing
+    // override said "lying"; the cue (sit on an incline bench) says
+    // seated, matching every other seated-incline-bench entry.
+    overrides: {"demands":{"position":"seated","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
     cue: "Set the pulley low and sit on an incline bench facing it, arm hanging straight down. Curl the handle up towards your shoulder, then lower slowly, feeling the stretch at the bottom. Letting the upper arm drift forward reduces that stretch.",
   },
   {
@@ -1557,7 +1573,7 @@ export default [
     aliases: ["Hammerstrength Decline Chest Press"],
     loadCharacter: "grind",
     overrides: {"difficulty":2,"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "Set a bench to a decline angle between two high pulleys, holding a handle in each hand at chest height. Press them forward and together, then return with control. Letting the elbows flare too wide can strain the shoulders unnecessarily.",
+    cue: "Set a bench to a decline angle between two high pulleys, holding a handle in each hand at chest height. Press them forward and together, then return with control. Letting the elbows wing too wide can strain the shoulders unnecessarily.",
   },
   {
     name: "Incline Cable Chest Press (Single-Arm)",
@@ -1585,7 +1601,7 @@ export default [
     subregion: "overhead",
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    cue: "Face away from a low pulley holding a bar or rope overhead with straight arms. Bend only your elbows to lower it behind your head, then extend back up. Letting the elbows flare outward reduces the stretch on the triceps.",
+    cue: "Face away from a low pulley holding a bar or rope overhead with straight arms. Bend only your elbows to lower it behind your head, then extend back up. Letting the elbows wing outward reduces the stretch on the triceps.",
   },
   {
     name: "Rope Lat Pulldown",

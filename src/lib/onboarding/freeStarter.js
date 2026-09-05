@@ -83,6 +83,14 @@ export function planEquipmentAllows(plan, equipment) {
   const eq = equipment === 'home' ? 'bodyweight' : equipment;
   const isDumbbell = hasTag(plan, 'equipment:dumbbell');
   const isBodyweight = hasTag(plan, 'equipment:bodyweight');
+  // EL-12 (docs/exercise-library-expansion-2026-09-05/09-STYLE-PLANS.md
+  // section 4): the kettlebell/circuit style plans carry their own
+  // equipment:* tag, distinct from dumbbell/bodyweight - someone who
+  // answers "Kettlebells" or "Bands" gets exactly those plans, not a
+  // dumbbell or bodyweight fallback (kit that will not do the job).
+  if (eq === 'kettlebell') return hasTag(plan, 'equipment:kettlebell');
+  if (eq === 'band') return hasTag(plan, 'equipment:band');
+  if (eq === 'suspension') return hasTag(plan, 'equipment:suspension');
   if (eq === 'bodyweight') return isBodyweight;
   if (eq === 'dumbbell') return isDumbbell || isBodyweight;
   return true; // full gym, or no answer: everything is performable
@@ -118,6 +126,8 @@ export function scorePlanRecommendation(plan, answers, { includeDivisions = fals
   const equipment = answers?.equipment === 'home' ? 'bodyweight' : answers?.equipment;
   const isDumbbell = hasTag(plan, 'equipment:dumbbell');
   const isBodyweight = hasTag(plan, 'equipment:bodyweight');
+  const isKettlebell = hasTag(plan, 'equipment:kettlebell');
+  const isBand = hasTag(plan, 'equipment:band');
   let score = 0;
 
   if (includeDivisions) {
@@ -130,6 +140,8 @@ export function scorePlanRecommendation(plan, answers, { includeDivisions = fals
   if (equipment === 'full_gym' && !isDumbbell && !isBodyweight) score += 3;
   if (equipment === 'dumbbell' && isDumbbell) score += 3;
   if (equipment === 'bodyweight' && isBodyweight) score += 3;
+  if (equipment === 'kettlebell' && isKettlebell) score += 3;
+  if (equipment === 'band' && isBand) score += 3;
 
   // Goal fit.
   if (goal === 'build_muscle' && hasTag(plan, 'goal:build_muscle')) score += 3;

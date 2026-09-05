@@ -37,7 +37,27 @@ const MUSCLE_SET = new Set(MUSCLES);
 const LATERALITY_SET = new Set(LATERALITY);
 const LOAD_CHARACTER_SET = new Set(LOAD_CHARACTER);
 const EXERCISE_TYPE_SET = new Set(EXERCISE_TYPES);
-const BANNED_CUE_WORDS = ['safe', 'injury', 'rehab', 'arthritis', 'pain', 'doctor', 'physio', 'therapy', 'medical', 'condition'];
+// Kept in exact sync with validate-corpus.mjs's CUE_BANNED_WORDS /
+// AMERICAN_SPELLINGS (exercise-library-expansion-2026-09-05 integration
+// job 4) — word-boundary matched, not substring, so "safety pins" does not
+// trip "safe".
+const BANNED_CUE_WORDS = [
+  'safe', 'safely', 'injury', 'injure', 'rehab', 'arthritis', 'pain',
+  'doctor', 'physio', 'therapy', 'medical', 'condition', 'hurt',
+];
+const AMERICAN_SPELLINGS = [
+  'color', 'favorite', 'favorable', 'center', 'centered',
+  'fiber', 'gray', 'defense', 'offense', 'behavior', 'neighbor', 'honor',
+  'armor', 'vapor', 'rumor', 'humor', 'odor', 'vigor', 'labor', 'flavor',
+  'theater', 'liter', 'jewelry', 'skeptic', 'traveled', 'traveling',
+  'canceled', 'canceling', 'modeling', 'signaling', 'leveled', 'fueled',
+  'organize', 'organized', 'organizing', 'stabilize', 'stabilized',
+  'stabilizing', 'maximize', 'maximizing', 'minimize', 'minimizing',
+  'utilize', 'utilizing', 'realize', 'specialize', 'analyze', 'analyzing',
+  'recognize', 'summarize', 'emphasize', 'optimize', 'normalize',
+  'customize', 'apologize',
+];
+const AMERICAN_SPELLING_RE = new RegExp(`\\b(${AMERICAN_SPELLINGS.join('|')})\\b`, 'i');
 
 describe('exercise corpus guard (EL-3, EL-14, 07-CORPUS-FORMAT.md section 6)', () => {
   test('corpus count never below the committed floor', () => {
@@ -145,7 +165,7 @@ describe('exercise corpus guard (EL-3, EL-14, 07-CORPUS-FORMAT.md section 6)', (
     expect(violations).toEqual([]);
   });
 
-  test('cue rules: length/banned-words/no-em-dash/full-stop when present, or accepted empty per corpus-floor.json', () => {
+  test('cue rules: length/British-spelling/banned-words/no-em-dash/no-exclamation/full-stop when present, or accepted empty per corpus-floor.json', () => {
     const violations = [];
     for (const entry of CORPUS) {
       const row = corpusEntryToSeedRow(entry);
@@ -153,11 +173,14 @@ describe('exercise corpus guard (EL-3, EL-14, 07-CORPUS-FORMAT.md section 6)', (
       if (cue) {
         if (cue.length < 40 || cue.length > 240) violations.push(`${entry.name}: cue length ${cue.length}`);
         if (/—/.test(cue)) violations.push(`${entry.name}: cue has an em dash`);
+        if (/!/.test(cue)) violations.push(`${entry.name}: cue has an exclamation mark`);
         const lower = cue.toLowerCase();
         for (const word of BANNED_CUE_WORDS) {
-          if (lower.includes(word)) violations.push(`${entry.name}: cue has banned word "${word}"`);
+          if (new RegExp(`\\b${word}\\b`).test(lower)) violations.push(`${entry.name}: cue has banned word "${word}"`);
         }
-        if (!/[.!?]$/.test(cue.trim())) violations.push(`${entry.name}: cue missing a full stop`);
+        const americanHit = cue.match(AMERICAN_SPELLING_RE);
+        if (americanHit) violations.push(`${entry.name}: cue has a likely American spelling "${americanHit[0]}"`);
+        if (!/\.$/.test(cue.trim())) violations.push(`${entry.name}: cue missing a full stop`);
       } else if (corpusFloor.cuesRequired === true) {
         violations.push(`${entry.name}: empty cue, cuesRequired is true`);
       }
@@ -218,5 +241,27 @@ describe('exercise corpus guard (EL-3, EL-14, 07-CORPUS-FORMAT.md section 6)', (
       return !survivor || !(survivor.aliases ?? []).includes(r.name);
     }).map((r) => r.name);
     expect(missing).toEqual([]);
+  });
+
+  // Rule 14 (EL-8, 09-STYLE-PLANS.md section 1): every hand-curated style
+  // pool name resolves live, and the only NEVER_AUTO rows any pool may
+  // carry are the kettlebell ballistics stylePools.js itself lists as a
+  // deliberate exception.
+  test('style pools reference only live corpus names, and NEVER_AUTO rows are limited to the declared kettlebell exceptions', () => {
+    // eslint-disable-next-line global-require
+    const { STYLE_POOLS, KETTLEBELL_NEVER_AUTO_EXCEPTIONS } = require('../../exercise/stylePools');
+    const liveNames = new Set(CORPUS.map((e) => e.name));
+    const exceptionSet = new Set(KETTLEBELL_NEVER_AUTO_EXCEPTIONS);
+    const neverAutoSet = new Set(REGISTRY_LISTS.NEVER_AUTO);
+    const unresolved = [];
+    const disallowedNeverAuto = [];
+    for (const [poolKey, names] of Object.entries(STYLE_POOLS)) {
+      for (const name of names) {
+        if (!liveNames.has(name)) unresolved.push(`${poolKey}: ${name}`);
+        if (neverAutoSet.has(name) && !exceptionSet.has(name)) disallowedNeverAuto.push(`${poolKey}: ${name}`);
+      }
+    }
+    expect(unresolved).toEqual([]);
+    expect(disallowedNeverAuto).toEqual([]);
   });
 });

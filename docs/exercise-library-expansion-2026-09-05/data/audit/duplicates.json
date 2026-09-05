@@ -1,7 +1,7 @@
 {
   "exactDuplicateCount": 0,
   "exactDuplicates": [],
-  "exactDataDuplicateGroupCount": 138,
+  "exactDataDuplicateGroupCount": 137,
   "exactDataDuplicates": [
     {
       "names": [
@@ -913,14 +913,6 @@
     },
     {
       "names": [
-        "Bodyweight Forward Lunge",
-        "Bodyweight Reverse Lunge",
-        "Bodyweight Step-Up"
-      ],
-      "note": "Byte-identical rep range/fatigue/SFR/pattern/subregion template. Cross-check against nearDuplicatesByTuple/nearDuplicatesByNormalizedName for actual name similarity before treating as a duplicate — many groups here are legitimately distinct movements that merely share a template."
-    },
-    {
-      "names": [
         "Close-Grip Pull-Up",
         "Mixed Grip Pull-Up"
       ],
@@ -1188,9 +1180,9 @@
       "reason": "Bag-of-words identical but the pulley direction (high-to-low vs low-to-high) reverses — EL-2 names loading vector/pulley height as a distinguishing dimension, and both forms are already separate registry entries in canonicality.js."
     }
   ],
-  "nearDuplicatesByTupleCount": 551,
+  "nearDuplicatesByTupleCount": 550,
   "nearDuplicatesByTupleBreakdown": {
-    "legitimately_distinct": 551
+    "legitimately_distinct": 550
   },
   "nearDuplicatesByTupleFlaggedForLeadReviewCount": 85,
   "nearDuplicatesByTupleFlaggedForLeadReview": [
@@ -1551,7 +1543,7 @@
         "primaryMuscle": "rear_delts",
         "equipmentCategory": "cable",
         "movementPattern": "isolation",
-        "subregion": "horiz_abduction",
+        "subregion": "rotation",
         "laterality": "unilateral"
       },
       "pair": [
@@ -5129,28 +5121,6 @@
       "tuple": {
         "primaryMuscle": "quads",
         "equipmentCategory": "bodyweight",
-        "movementPattern": "lunge",
-        "subregion": "squat_press",
-        "laterality": "unilateral"
-      },
-      "pair": [
-        "Bodyweight Forward Lunge",
-        "Bodyweight Reverse Lunge"
-      ],
-      "jaccard": 0.5,
-      "diffTokens": [
-        "forward",
-        "reverse"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (reverse) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": true
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "quads",
-        "equipmentCategory": "bodyweight",
         "movementPattern": "squat",
         "subregion": "squat_press",
         "laterality": "bilateral"
@@ -5701,7 +5671,7 @@
         "primaryMuscle": "rear_delts",
         "equipmentCategory": "cable",
         "movementPattern": "isolation",
-        "subregion": "horiz_abduction",
+        "subregion": "rotation",
         "laterality": "unilateral"
       },
       "pair": [

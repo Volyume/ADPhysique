@@ -12,7 +12,9 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock, getActiveBlock, updateRoutineExerciseExercise, recordExerciseSwap } from '../lib/database';
+import { getLibraryPlans, getPlanWorkoutCounts, getLibraryPlanExerciseRows, copyPlanFromLibrary, activatePlanWithBlock, getActiveBlock, updateRoutineExerciseExercise, recordExerciseSwap } from '../lib/database';
+import { estimateWorkoutMinutes } from '../lib/planEngine';
+import { styleKeyFromTags, styleLabelFor } from '../lib/exercise/stylePools';
 import { loadExerciseIntentState, findPlanIntentConflicts } from '../lib/exercise/intent';
 import { SWAP_SCOPE } from '../lib/exercise/swapScope';
 import ExerciseConflictSheet from '../components/ExerciseConflictSheet';
@@ -33,6 +35,11 @@ import BottomSheet from '../components/BottomSheet';
 
 // ─── Collections ─────────────────────────────────────────────────────────────
 
+// EL-12 (docs/exercise-library-expansion-2026-09-05/09-STYLE-PLANS.md
+// section 4): order is meaningful here - All, Fits how you train (when
+// active), Featured, Kettlebell, Circuits, Minimal equipment, Dumbbells
+// only, Bodyweight, Bands, Short sessions, Beginner, For women, For men,
+// Bodybuilding divisions.
 const COLLECTIONS = [
   { key: 'all',       label: 'All plans' },
   // CC28 (Amendment section 13): a COMPUTED collection - plans whose
@@ -41,13 +48,18 @@ const COLLECTIONS = [
   // families appear in normal browse alongside everything else, never a
   // segregated shelf.
   { key: 'compatible', label: 'Fits how you train' },
-  { key: 'featured',  label: 'Featured' },
-  { key: 'women',     label: 'For women' },
-  { key: 'men',       label: 'For men' },
-  { key: 'beginner',  label: 'Beginner' },
-  { key: 'dumbbell',  label: 'Dumbbells only' },
-  { key: 'short',     label: 'Short sessions' },
-  { key: 'division',  label: 'Bodybuilding divisions' },
+  { key: 'featured',   label: 'Featured' },
+  { key: 'kettlebell', label: 'Kettlebell' },
+  { key: 'circuit',    label: 'Circuits' },
+  { key: 'minimal',    label: 'Minimal equipment' },
+  { key: 'dumbbell',   label: 'Dumbbells only' },
+  { key: 'bodyweight', label: 'Bodyweight' },
+  { key: 'band',       label: 'Bands' },
+  { key: 'short',      label: 'Short sessions' },
+  { key: 'beginner',   label: 'Beginner' },
+  { key: 'women',      label: 'For women' },
+  { key: 'men',        label: 'For men' },
+  { key: 'division',   label: 'Bodybuilding divisions' },
 ];
 
 // ─── Divisions ────────────────────────────────────────────────────────────────
@@ -119,6 +131,11 @@ const QUIZ_STEPS = [
     options: [
       { key: 'full_gym',   label: 'Full gym',              icon: 'fitness-outline' },
       { key: 'dumbbell',   label: 'Dumbbells only',        icon: 'barbell-outline' },
+      // EL-12: mapped onto planEquipmentAllows' equipment:kettlebell /
+      // equipment:band tags (09-STYLE-PLANS.md section 4), the same
+      // shared filter every plan-recommendation quiz reads.
+      { key: 'kettlebell', label: 'Kettlebells',           icon: 'barbell-outline' },
+      { key: 'band',       label: 'Bands',                 icon: 'body-outline' },
       { key: 'bodyweight', label: 'Home / no equipment',   icon: 'home-outline' },
     ],
   },
@@ -130,6 +147,40 @@ function hasTag(plan, tag) {
   return plan.tags ? plan.tags.toLowerCase().includes(tag.toLowerCase()) : false;
 }
 
+// EL-12: session minutes and the implements a plan needs, both derived
+// from the plan's own exercise rows (not tags) via the engine's own
+// estimator (planEngine.estimateWorkoutMinutes), so the figure is honest
+// about the plan's actual sets/rest rather than a guess from its name.
+const EQUIPMENT_IMPLEMENT_LABELS = Object.freeze({
+  barbell: 'Barbell', dumbbell: 'Dumbbells', cable: 'Cables', machine: 'Machines',
+  smith: 'Smith machine', bodyweight: 'Bodyweight', band: 'Bands',
+  suspension: 'Suspension trainer', kettlebell: 'Kettlebell', landmine: 'Landmine',
+  carries: 'Carries', power: 'Platform', specialty: 'Specialty kit',
+  medicine_ball: 'Medicine ball', sled: 'Sled', sandbag: 'Sandbag',
+});
+
+function computeLibraryPlanStats(rows) {
+  const byPlan = new Map();
+  for (const r of rows ?? []) {
+    if (!r?.programmeId) continue;
+    if (!byPlan.has(r.programmeId)) byPlan.set(r.programmeId, { byRoutine: new Map(), equipment: new Set() });
+    const entry = byPlan.get(r.programmeId);
+    if (!entry.byRoutine.has(r.routineId)) entry.byRoutine.set(r.routineId, []);
+    entry.byRoutine.get(r.routineId).push({ sets: r.recommendedSets ?? 3, restSec: r.restSeconds ?? 90 });
+    if (r.equipment) entry.equipment.add(r.equipment);
+  }
+  const out = new Map();
+  for (const [planId, { byRoutine, equipment }] of byPlan) {
+    const perRoutine = [...byRoutine.values()].map((exs) => estimateWorkoutMinutes(exs));
+    const minutes = perRoutine.length
+      ? Math.round(perRoutine.reduce((a, b) => a + b, 0) / perRoutine.length)
+      : null;
+    const implementsList = [...equipment].map((e) => EQUIPMENT_IMPLEMENT_LABELS[e] ?? null).filter(Boolean);
+    out.set(planId, { minutes, implements: [...new Set(implementsList)] });
+  }
+  return out;
+}
+
 function matchesCollection(plan, key) {
   if (key === 'all') return true;
   if (key === 'featured') return hasTag(plan, 'featured');
@@ -139,6 +190,21 @@ function matchesCollection(plan, key) {
   if (key === 'dumbbell') return hasTag(plan, 'equipment:dumbbell');
   if (key === 'short') return hasTag(plan, 'short');
   if (key === 'division') return hasTag(plan, 'category:division');
+  // EL-12: the style collections.
+  if (key === 'kettlebell') return hasTag(plan, 'equipment:kettlebell');
+  if (key === 'circuit') return hasTag(plan, 'circuit');
+  if (key === 'bodyweight') return hasTag(plan, 'equipment:bodyweight');
+  if (key === 'band') return hasTag(plan, 'equipment:band');
+  // 09 section 4: any plan tagged home, or built for dumbbell / band /
+  // suspension / kettlebell / bodyweight equipment.
+  if (key === 'minimal') {
+    return hasTag(plan, 'home')
+      || hasTag(plan, 'equipment:dumbbell')
+      || hasTag(plan, 'equipment:band')
+      || hasTag(plan, 'equipment:suspension')
+      || hasTag(plan, 'equipment:kettlebell')
+      || hasTag(plan, 'equipment:bodyweight');
+  }
   return false;
 }
 
@@ -299,6 +365,10 @@ export default function PlanLibraryScreen({ navigation }) {
   const [planConflicts, setPlanConflicts] = useState(null);
   const [conflictIntentState, setConflictIntentState] = useState(null);
   const [workoutCounts, setWorkoutCounts] = useState({});
+  // EL-12 (09-STYLE-PLANS.md section 4): planId -> { minutes, implements }.
+  // Best-effort - a read failure just leaves cards without this line,
+  // same treatment as compatibility above.
+  const [planStats, setPlanStats] = useState(new Map());
   const [query, setQuery] = useState('');
   const [activeCollection, setActiveCollection] = useState('all');
   const [selectedDivision, setSelectedDivision] = useState(null);
@@ -353,6 +423,12 @@ export default function PlanLibraryScreen({ navigation }) {
           setCompatibility(null);
         }
       } catch (_) { setCompatibility(null); }
+      // EL-12: session minutes + implements, best-effort - a read failure
+      // just leaves the card without this line, browse is unaffected.
+      try {
+        const rows = await getLibraryPlanExerciseRows();
+        setPlanStats(computeLibraryPlanStats(rows));
+      } catch (_) { setPlanStats(new Map()); }
       setLoadError(false);
     } catch (e) {
       // FF-004: a real init/storage failure must not masquerade as an empty
@@ -696,6 +772,15 @@ export default function PlanLibraryScreen({ navigation }) {
           // in the wording FreeStarter already ships.
           const days = getPlanDays(plan);
           const equipmentLabel = planEquipmentLabel(plan);
+          // EL-12: the style badge (Kettlebell/Circuit) and the honest,
+          // exercise-derived session length. equipmentLabel above (tag-
+          // derived) already names the implements a style plan needs -
+          // every kettlebell/circuit template's equipment:* tag matches
+          // its content exactly, so a second "implements" line would only
+          // repeat it.
+          const styleKey = styleKeyFromTags(plan.tags);
+          const styleLabel = styleKey ? styleLabelFor(styleKey) : null;
+          const sessionMinutes = planStats.get(plan.id)?.minutes ?? null;
 
           return (
             <Card padding="none" style={styles.planCard}>
@@ -706,10 +791,12 @@ export default function PlanLibraryScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel={[
                   planHeadingName(plan.name),
+                  styleLabel ? `${styleLabel} style` : null,
                   plan.difficulty != null ? (DIFFICULTY_LABELS[plan.difficulty] ?? 'Intermediate') : null,
                   equipmentLabel,
                   days != null ? `${days} days a week` : null,
                   wc ? `${wc} workout${wc !== 1 ? 's' : ''}` : null,
+                  sessionMinutes != null ? `around ${sessionMinutes} minutes a session` : null,
                 ].filter(Boolean).join(', ')}
                 accessibilityHint="Opens plan preview"
               >
@@ -727,6 +814,9 @@ export default function PlanLibraryScreen({ navigation }) {
                       <PlanBadge label={`${compatibility.byPlan.get(plan.id).conflicts.length + compatibility.byPlan.get(plan.id).unknowns.length} to swap`} />
                     )}
                     {isFeatured && <PlanBadge label="Featured" amber />}
+                    {/* EL-12: style badge (Kettlebell/Circuit), same slot
+                        as a division badge - a plan never carries both. */}
+                    {styleLabel && <PlanBadge label={styleLabel.charAt(0).toUpperCase() + styleLabel.slice(1)} />}
                     {division && <PlanBadge label={division.label} />}
                     {!division && isWomen && <PlanBadge label="For women" />}
                     {!division && isMen && <PlanBadge label="For men" />}
@@ -737,11 +827,13 @@ export default function PlanLibraryScreen({ navigation }) {
                         answered before adding it rather than after. */}
                     <PlanBadge label={equipmentLabel} />
                   </View>
-                  {wc || days != null ? (
+                  {wc || days != null || sessionMinutes != null ? (
                     <Text style={[styles.workoutCount, live.workoutCount]}>
                       {days != null ? `${days} days a week` : ''}
                       {days != null && wc ? ' · ' : ''}
                       {wc ? `${wc} workout${wc !== 1 ? 's' : ''}` : ''}
+                      {(days != null || wc) && sessionMinutes != null ? ' · ' : ''}
+                      {sessionMinutes != null ? `~${sessionMinutes} min` : ''}
                     </Text>
                   ) : null}
                 </View>

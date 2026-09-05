@@ -68,7 +68,7 @@ export default [
     fatigueCost: 3, sfr: 3,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "Lie on a bench under the bar with your hands close together, and unhook it by rotating your wrists. Lower the bar to your lower chest with your elbows tucked in, then press back up. Letting the elbows flare out wide is the common fault.",
+    cue: "Lie on a bench under the bar with your hands close together, and unhook it by rotating your wrists. Lower the bar to your lower chest with your elbows tucked in, then press back up. Letting the elbows wing out wide is the common fault.",
   },
   {
     name: "Smith Machine Front Squat",

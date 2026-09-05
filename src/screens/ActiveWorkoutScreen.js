@@ -42,7 +42,8 @@ import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { SWAP_SCOPE } from '../lib/exercise/swapScope';
-import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, recordExerciseSwap, getActiveBlock, EXERCISE_INTENT } from '../lib/database';
+import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, getProgrammeById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, recordExerciseSwap, getActiveBlock, EXERCISE_INTENT } from '../lib/database';
+import { styleKeyFromTags, stylePoolFor, styleLabelFor } from '../lib/exercise/stylePools';
 import {
   loadExerciseIntentState, rankPersonalised, movementFamilyOf, isFamilyBlocked,
   intentFor, familyTargetKey,
@@ -572,6 +573,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // candidates the capability lane alone narrowed out of the ranked list
   // just built, so the sheet can say so instead of silently narrowing.
   const [swapNarrowedCount, setSwapNarrowedCount] = useState(0);
+  // EL-11 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md): when
+  // this routine's plan carries a style:<pool> tag, swapStylePoolKey names
+  // it and the sheet restricts candidates to the pool by default.
+  // swapStyleShowAll is the explicit per-open relaxation ("Show all
+  // exercises"); it resets to false every time the sheet is (re)opened.
+  const [swapStylePoolKey, setSwapStylePoolKey] = useState(null);
+  const [swapStyleShowAll, setSwapStyleShowAll] = useState(false);
   // D107-2: exercise-intent state kept at screen scope (not just inside
   // handleOpenSwap's local read) so the logger can show a quiet notice when
   // the CURRENT exercise's movement pattern is being avoided - "never
@@ -1534,7 +1542,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     );
   }
 
-  async function handleOpenSwap() {
+  async function handleOpenSwap({ relaxStyle = false } = {}) {
     // Round 16 (R16-4, replacing round 15's one-directional bump): the
     // sheet's read PARTICIPATES in the sequence guard from the moment
     // of the tap - so a reload in flight at tap time cannot overwrite
@@ -1552,7 +1560,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // rankSwaps defaults to no filter. Read lazily off the store rather than
     // adding a subscription: this runs on a tap, not on render.
     const swapEquipment = useAppStore.getState().userProfile?.equipment ?? null;
-    const ranked = rankSwaps(exercise, allExercises, { excludeIds: alreadyInWorkout, numResults: 20, excludeAssisted: !isBeginner, equipment: swapEquipment });
+    // EL-11: does this routine's plan carry a style:<pool> tag? Best-effort
+    // and additive - a read failure just means no style restriction, same
+    // as an ordinary plan.
+    let styleKey = null;
+    try {
+      const routineId = activeWorkout?.routineId ?? null;
+      const routineRow = routineId ? await getRoutineById(routineId) : null;
+      const programmeRow = routineRow?.programmeId ? await getProgrammeById(routineRow.programmeId) : null;
+      styleKey = styleKeyFromTags(programmeRow?.tags);
+    } catch (_) { styleKey = null; }
+    setSwapStylePoolKey(styleKey);
+    setSwapStyleShowAll(relaxStyle);
+    const stylePool = (styleKey && !relaxStyle) ? stylePoolFor(styleKey) : null;
+    const ranked = rankSwaps(exercise, allExercises, {
+      excludeIds: alreadyInWorkout, numResults: 20, excludeAssisted: !isBeginner, equipment: swapEquipment,
+      stylePool,
+    });
     let ordered = ranked.slice(0, 8);
     // T2-08 (D112 R5, closes audit T2-08): declared outside the try, exactly
     // like `ordered` above, so a personalisation failure still leaves a
@@ -1689,13 +1713,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         routineId: activeWorkout?.routineId ?? null, explicit: true,
         scope: SWAP_SCOPE.SESSION,
         // T2-28a: a Work-around-sheet swap is capability-motivated by the
-        // user's own declaration, rule or no rule yet.
-        causeOverride: workAroundSwapRef.current ? 'constraint' : null,
+        // user's own declaration, rule or no rule yet. EL-11: absent that,
+        // a swap made while the sheet was still restricted to the plan's
+        // style pool (not relaxed via "Show all exercises") is recorded
+        // cause 'style' - staying inside the pool is not preference.
+        causeOverride: workAroundSwapRef.current ? 'constraint'
+          : (swapStylePoolKey && !swapStyleShowAll) ? 'style'
+          : null,
       }).catch(() => {});
     }
     workAroundSwapRef.current = false;
     cancelAutoAdvance();
     setSwapCandidates([]);
+    setSwapStylePoolKey(null);
+    setSwapStyleShowAll(false);
     setShowSwapModal(false);
     setPrevSets([]);
     setAllTimeSets([]);
@@ -5847,7 +5878,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         </WorkoutBottomSheet>
 
         {/* Exercise Swap Modal */}
-        <Modal visible={showSwapModal} animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={() => { workAroundSwapRef.current = false; setShowSwapModal(false); }}>
+        <Modal visible={showSwapModal} animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={() => { workAroundSwapRef.current = false; setSwapStylePoolKey(null); setSwapStyleShowAll(false); setShowSwapModal(false); }}>
           {showSwapModal ? (
             <>
           {/* Nested provider: a core RN <Modal> presents in its own window on
@@ -5862,7 +5893,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   {exercise?.name}
                 </Text>
               </View>
-              <TouchableOpacity style={[styles.swapCloseBtn, live.swapCloseBtn]} onPress={() => { workAroundSwapRef.current = false; setShowSwapModal(false); }} accessibilityRole="button" accessibilityLabel="Close swap">
+              <TouchableOpacity style={[styles.swapCloseBtn, live.swapCloseBtn]} onPress={() => { workAroundSwapRef.current = false; setSwapStylePoolKey(null); setSwapStyleShowAll(false); setShowSwapModal(false); }} accessibilityRole="button" accessibilityLabel="Close swap">
                 <Ionicons name="close" size={20} color={t.colors.textPrimary} />
               </TouchableOpacity>
             </View>
@@ -5875,6 +5906,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               <Text style={[styles.swapNote, live.swapNote]}>
                 {swapNarrowedCount} movement{swapNarrowedCount === 1 ? '' : 's'} left out for how you train.
               </Text>
+            ) : null}
+            {/* EL-11: user intent outranks inference - the pool is a default,
+                never a hidden restriction, so "Show all exercises" is always
+                one tap away while it applies. */}
+            {swapStylePoolKey && !swapStyleShowAll ? (
+              <View style={[styles.swapNote, live.swapNote, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+                <Text style={[styles.swapNote, live.swapNote, { marginBottom: 0 }]}>
+                  Showing {styleLabelFor(swapStylePoolKey)} exercises
+                </Text>
+                <TouchableOpacity onPress={() => handleOpenSwap({ relaxStyle: true })} accessibilityRole="button" accessibilityLabel="Show all exercises">
+                  <Text style={[styles.swapNote, live.swapNote, { marginBottom: 0, color: t.colors.primary, fontFamily: fontFamily.bold }]}>Show all exercises</Text>
+                </TouchableOpacity>
+              </View>
             ) : null}
             <FlashList
               data={swapCandidates}

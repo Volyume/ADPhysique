@@ -16,10 +16,11 @@ import { SWAP_SCOPE } from '../lib/exercise/swapScope';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
-  updateRoutineExerciseExercise, updateRoutineExerciseOrder, getActivePlan,
+  updateRoutineExerciseExercise, updateRoutineExerciseOrder, getActivePlan, getProgrammeById,
   recordExerciseSwap, setExerciseIntent, clearExerciseIntent, setExerciseSlotDefault,
   getActiveBlock, EXERCISE_INTENT,
 } from '../lib/database';
+import { styleKeyFromTags, stylePoolFor, styleLabelFor } from '../lib/exercise/stylePools';
 import {
   loadExerciseIntentState, rankPersonalised, repeatedDefaultCandidate, intentFor,
   movementFamilyOf, isFamilyBlocked,
@@ -212,6 +213,11 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // "you usually choose X here" offer, if the evidence has earned one.
   const [intentState, setIntentState] = useState(null);
   const [defaultProposal, setDefaultProposal] = useState(null);
+  // EL-11: this plan's style pool key (from its programme tags), and
+  // whether the sheet's "Show all exercises" has relaxed the restriction
+  // for the currently open sheet.
+  const [swapStylePoolKey, setSwapStylePoolKey] = useState(null);
+  const [swapStyleShowAll, setSwapStyleShowAll] = useState(false);
   const [showSwapPicker, setShowSwapPicker] = useState(false);
   // iOS cannot present a second native modal while the first is still up, so
   // the ranked swap sheet must fully dismiss BEFORE the full-library picker is
@@ -561,7 +567,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
     await loadRoutine();
   }
 
-  async function handleOpenSwap(routineExercise, exercise) {
+  async function handleOpenSwap(routineExercise, exercise, { relaxStyle = false } = {}) {
     // Round 17 (Q1): tap-time sequence participation, both directions -
     // the sheet's read wins over anything in flight at the tap, and a
     // load the user triggers after the tap wins over the sheet's.
@@ -570,6 +576,17 @@ export default function RoutineDetailScreen({ navigation, route }) {
     const otherIds = exercises
       .map(({ exercise: ex }) => ex?.id)
       .filter(id => id && id !== exercise?.id);
+    // EL-11: does this routine's plan carry a style:<pool> tag? Best-effort
+    // and additive - a read failure just means no style restriction, same
+    // as an ordinary plan.
+    let styleKey = null;
+    try {
+      const programmeRow = routine?.programmeId ? await getProgrammeById(routine.programmeId) : null;
+      styleKey = styleKeyFromTags(programmeRow?.tags);
+    } catch (_) { styleKey = null; }
+    setSwapStylePoolKey(styleKey);
+    setSwapStyleShowAll(relaxStyle);
+    const stylePool = (styleKey && !relaxStyle) ? stylePoolFor(styleKey) : null;
     // C9 Work 3: structural suitability still decides WHICH exercises are
     // valid replacements - that judgement stays in swapEngine. The personal
     // layer only re-orders inside that list and explains the order, so no
@@ -584,6 +601,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       // athlete's equipment at all and rankSwaps defaults to no filter.
       // Undefined profile means no filter, exactly as before.
       equipment: userProfile?.equipment ?? null,
+      stylePool,
     });
     let ordered = ranked.slice(0, 12);
     let proposal = null;
@@ -825,6 +843,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
       // negative preference.
       recordExerciseSwap(user.id, originalId, newExercise.id, {
         routineId, explicit: true, scope: SWAP_SCOPE.PROGRAMME,
+        // EL-11: a swap made while the sheet was still restricted to the
+        // plan's style pool (not relaxed via "Show all exercises") stays
+        // inside the pool, so it is not preference evidence.
+        causeOverride: (swapStylePoolKey && !swapStyleShowAll) ? 'style' : null,
       })
         .catch(() => {}); // best-effort: a failed record must not fail the swap
     }
@@ -832,6 +854,8 @@ export default function RoutineDetailScreen({ navigation, route }) {
     setSwapState(null);
     setSwapCandidates([]);
     setDefaultProposal(null);
+    setSwapStylePoolKey(null);
+    setSwapStyleShowAll(false);
     setShowSwapPicker(false);
     setPendingSwapPicker(false);
     await loadRoutine();
@@ -1417,7 +1441,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       <Modal
         visible={swapState != null && !pendingSwapPicker}
         animationType={reduceMotion ? 'none' : 'slide'}
-        onRequestClose={() => { setSwapState(null); setSwapCandidates([]); setPendingSwapPicker(false); }}
+        onRequestClose={() => { setSwapState(null); setSwapCandidates([]); setSwapStylePoolKey(null); setSwapStyleShowAll(false); setPendingSwapPicker(false); }}
         onDismiss={() => {
           // iOS only: fires after this sheet has fully dismissed. If the user
           // asked for the full library, present it now rather than stacking it
@@ -1433,7 +1457,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               (centred title, 44pt close, hairline rule) - the ranked-swap
               surface itself stays, it is deliberately richer than the plain
               library picker. */}
-          <ModalHeader title="Swap exercise" onClose={() => { setSwapState(null); setSwapCandidates([]); setPendingSwapPicker(false); }} />
+          <ModalHeader title="Swap exercise" onClose={() => { setSwapState(null); setSwapCandidates([]); setSwapStylePoolKey(null); setSwapStyleShowAll(false); setPendingSwapPicker(false); }} />
           <Text style={[styles.swapSubtitle, live.swapSubtitle]}>
             Replacing: <Text style={{ color: t.colors.primary }}>{swapState?.exercise?.name}</Text>
           </Text>
@@ -1448,6 +1472,23 @@ export default function RoutineDetailScreen({ navigation, route }) {
             <Text style={[styles.swapNote, live.swapNote]}>
               {swapNarrowedCount} movement{swapNarrowedCount === 1 ? '' : 's'} left out for how you train.
             </Text>
+          ) : null}
+          {/* EL-11: user intent outranks inference - the pool is a default,
+              never a hidden restriction, so "Show all exercises" is always
+              one tap away while it applies. */}
+          {swapStylePoolKey && !swapStyleShowAll ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, marginBottom: spacing.xs }}>
+              <Text style={[styles.swapNote, live.swapNote, { marginBottom: 0 }]}>
+                Showing {styleLabelFor(swapStylePoolKey)} exercises
+              </Text>
+              <TouchableOpacity
+                onPress={() => handleOpenSwap(swapState?.routineExerciseId ? { id: swapState.routineExerciseId } : null, swapState?.exercise, { relaxStyle: true })}
+                accessibilityRole="button"
+                accessibilityLabel="Show all exercises"
+              >
+                <Text style={[styles.swapNote, live.swapNote, { marginBottom: 0, color: t.colors.primary, fontFamily: fontFamily.bold }]}>Show all exercises</Text>
+              </TouchableOpacity>
+            </View>
           ) : null}
           <FlashList
             data={swapCandidates}

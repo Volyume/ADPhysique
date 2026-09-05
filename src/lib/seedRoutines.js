@@ -10,7 +10,11 @@ import { logError, logWarn, logInfo } from './errorLog';
 // buildable from the existing library's demand metadata (Amendment
 // deliverable 2). A bump adds them on existing installs; names dedupe.
 // v14 (CC28): adds the five gap-closure families (Phase E).
-const SEED_KEY = '@volyume_routines_seeded_v14';
+// v15 (EL-8/EL-9/EL-12, docs/exercise-library-expansion-2026-09-05/
+// 09-STYLE-PLANS.md): adds the five kettlebell templates and three circuit
+// templates, each carrying a style:<pool> tag (src/lib/exercise/
+// stylePools.js) that constrains its own generation and swaps.
+const SEED_KEY = '@volyume_routines_seeded_v15';
 
 // REQUIRED_EXERCISES removed (EL-15, exercise-library-expansion-2026-09-05):
 // these 18 rows are now ordinary canonical corpus entries
@@ -2048,6 +2052,350 @@ export const LIBRARY_PLANS = [
       },
     ],
   },
+
+  // ═══ Style plans (EL-8 to EL-12, 09-STYLE-PLANS.md) ═══════════════════════
+  //
+  // Every plan below carries a style:<pool> tag matching a key in
+  // src/lib/exercise/stylePools.js's STYLE_POOLS. That tag is what
+  // restricts this plan's "Adjust plan" regeneration and its swap sheet to
+  // the named pool (EL-11) - it is load-bearing, not decorative.
+  //
+  // Progression (EL-10): grind rows (squats, deadlifts, presses, rows,
+  // carries) use the existing rep-then-load double progression - climb to
+  // the top of the rep range, then move up a bell size and restart at the
+  // bottom. Ballistic rows (swings, cleans, snatches, jerks) progress reps
+  // within a fixed set count, then bell size, NEVER by speed. Circuits
+  // progress rounds first (3 -> 4 -> 5 across the block), then reps at the
+  // same load, then load; round rest is a template constant, never
+  // shortened. Every template's description states this in plain words.
+
+  // ── 30. Kettlebell Foundations, 2 Days ───────────────────────────────────
+  {
+    name: 'Kettlebell Foundations: 2 Days',
+    description: 'A two-day, single-kettlebell plan for anyone starting out with kettlebell training. Grind lifts and the two-hand swing only, no one-arm or overhead ballistic work yet: swing and the get-up come first, in that order, matching the standard kettlebell teaching progression. Progress by adding reps first. Once you hit the top of a lift’s rep range for all its sets, move up to the next kettlebell size and start that lift back at the bottom of the range. Around 30 minutes a session.',
+    tags: 'style:kettlebell_foundations equipment:kettlebell kettlebell home full_body beginner goal:build_muscle days:2 short',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Day A',
+        exercises: [
+          { name: 'Kettlebell Goblet Squat',   sets: 3, repsMin: 8,  repsMax: 12, rest: 90, notes: 'Bell held at chest, elbows tucked. Sit deep between your knees. Push the floor away to stand.' },
+          { name: 'Kettlebell Deadlift',       sets: 3, repsMin: 8,  repsMax: 12, rest: 90, notes: 'Hinge at the hips with a flat back. Bell stays close to your shins. Drive hips forward to finish.' },
+          { name: 'Kettlebell Press (Single-Arm)', sets: 3, repsMin: 6, repsMax: 10, rest: 90, notes: 'Per side. Bell racked at the shoulder. Press straight overhead, ribs down. Swap arms between sets.' },
+          { name: 'Kettlebell Row (Single-Arm)', sets: 3, repsMin: 8, repsMax: 12, rest: 75, notes: 'Per side. Flat back, brace the free hand on a bench or your knee. Pull the elbow past your ribs.' },
+          { name: "Kettlebell Farmer's Carry",  sets: 3, repsMin: 20, repsMax: 40, rest: 60, notes: 'Around 40 metres per set. Tall posture, shoulders down, bell hanging dead still at your side.' },
+          { name: 'Kettlebell Halo',            sets: 2, repsMin: 8,  repsMax: 8,  rest: 45, notes: '8 circles each direction. Bell close to the head, core braced. Keep the ribs down throughout.' },
+        ],
+      },
+      {
+        name: 'Day B',
+        exercises: [
+          { name: 'Kettlebell Reverse Lunge (Rack Position)', sets: 3, repsMin: 8, repsMax: 10, rest: 90, notes: 'Per side. Bell racked at one shoulder. Step back under control, front shin stays vertical.' },
+          { name: 'Kettlebell Romanian Deadlift', sets: 3, repsMin: 8, repsMax: 12, rest: 90, notes: 'Soft knees, push hips back. Long stretch down the hamstrings, then drive hips forward.' },
+          { name: 'Kettlebell Floor Press',     sets: 3, repsMin: 8,  repsMax: 12, rest: 90, notes: 'Lying on the floor, elbows lightly touch down between reps. Press straight up over the shoulder.' },
+          { name: 'Gorilla Row',                sets: 3, repsMin: 8,  repsMax: 12, rest: 75, notes: 'A bell in each hand on the floor. Row one side at a time, hips back, back flat throughout.' },
+          { name: 'Kettlebell Swing',           sets: 5, repsMin: 10, repsMax: 10, rest: 60, notes: 'Two hands on the bell. Hike it back, then snap the hips forward hard. This is a hinge, not a squat.' },
+          { name: 'Get-Up to Elbow',            sets: 3, repsMin: 3,  repsMax: 3,  rest: 60, notes: 'Per side. The first half of the Turkish get-up, lying to propped on your elbow. Eyes on the bell.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 31. Kettlebell Foundations, 3 Days ───────────────────────────────────
+  {
+    name: 'Kettlebell Foundations: 3 Days',
+    description: 'The same single-kettlebell foundations as the two-day plan, with a third day added for more frequency. Grind lifts and the two-hand swing only. Progress by adding reps first; once you hit the top of a lift’s rep range for all its sets, move up to the next kettlebell size and start that lift back at the bottom of the range. Around 30 minutes a session.',
+    tags: 'style:kettlebell_foundations equipment:kettlebell kettlebell home full_body beginner goal:build_muscle days:3',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Day A',
+        exercises: [
+          { name: 'Kettlebell Goblet Squat',   sets: 3, repsMin: 8,  repsMax: 12, rest: 90, notes: 'Bell held at chest, elbows tucked. Sit deep between your knees. Push the floor away to stand.' },
+          { name: 'Kettlebell Deadlift',       sets: 3, repsMin: 8,  repsMax: 12, rest: 90, notes: 'Hinge at the hips with a flat back. Bell stays close to your shins. Drive hips forward to finish.' },
+          { name: 'Kettlebell Press (Single-Arm)', sets: 3, repsMin: 6, repsMax: 10, rest: 90, notes: 'Per side. Bell racked at the shoulder. Press straight overhead, ribs down. Swap arms between sets.' },
+          { name: 'Kettlebell Row (Single-Arm)', sets: 3, repsMin: 8, repsMax: 12, rest: 75, notes: 'Per side. Flat back, brace the free hand on a bench or your knee. Pull the elbow past your ribs.' },
+          { name: "Kettlebell Farmer's Carry",  sets: 3, repsMin: 20, repsMax: 40, rest: 60, notes: 'Around 40 metres per set. Tall posture, shoulders down, bell hanging dead still at your side.' },
+          { name: 'Kettlebell Halo',            sets: 2, repsMin: 8,  repsMax: 8,  rest: 45, notes: '8 circles each direction. Bell close to the head, core braced. Keep the ribs down throughout.' },
+        ],
+      },
+      {
+        name: 'Day B',
+        exercises: [
+          { name: 'Kettlebell Reverse Lunge (Rack Position)', sets: 3, repsMin: 8, repsMax: 10, rest: 90, notes: 'Per side. Bell racked at one shoulder. Step back under control, front shin stays vertical.' },
+          { name: 'Kettlebell Romanian Deadlift', sets: 3, repsMin: 8, repsMax: 12, rest: 90, notes: 'Soft knees, push hips back. Long stretch down the hamstrings, then drive hips forward.' },
+          { name: 'Kettlebell Floor Press',     sets: 3, repsMin: 8,  repsMax: 12, rest: 90, notes: 'Lying on the floor, elbows lightly touch down between reps. Press straight up over the shoulder.' },
+          { name: 'Gorilla Row',                sets: 3, repsMin: 8,  repsMax: 12, rest: 75, notes: 'A bell in each hand on the floor. Row one side at a time, hips back, back flat throughout.' },
+          { name: 'Kettlebell Swing',           sets: 5, repsMin: 10, repsMax: 10, rest: 60, notes: 'Two hands on the bell. Hike it back, then snap the hips forward hard. This is a hinge, not a squat.' },
+          { name: 'Get-Up to Elbow',            sets: 3, repsMin: 3,  repsMax: 3,  rest: 60, notes: 'Per side. The first half of the Turkish get-up, lying to propped on your elbow. Eyes on the bell.' },
+        ],
+      },
+      {
+        name: 'Day C',
+        exercises: [
+          { name: 'Kettlebell Sumo Deadlift',   sets: 3, repsMin: 8,  repsMax: 12, rest: 90, notes: 'Feet wide, toes out, bell between your feet. Chest tall as you stand, knees track over toes.' },
+          { name: 'Seated Kettlebell Press',    sets: 3, repsMin: 8,  repsMax: 12, rest: 90, notes: 'Seated on the floor or a box, legs out in front. Press overhead without leaning back to help it.' },
+          { name: 'Kettlebell Single-Leg Deadlift', sets: 3, repsMin: 6, repsMax: 8, rest: 75, notes: 'Per side. Hinge on one leg, back leg reaches behind you for balance. Hips stay square to the floor.' },
+          { name: 'Kettlebell Suitcase Carry',  sets: 3, repsMin: 20, repsMax: 30, rest: 60, notes: 'Per side, around 30 metres. One bell at your side. Resist leaning away from the load.' },
+          { name: 'Kettlebell Swing',           sets: 5, repsMin: 10, repsMax: 10, rest: 60, notes: 'Two hands on the bell. Hike it back, then snap the hips forward hard.' },
+          { name: 'Turkish Get-Up (Half)',      sets: 3, repsMin: 3,  repsMax: 3,  rest: 75, notes: 'Per side. Lying to standing on one knee, then back down. Eyes on the bell the whole way.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 32. Kettlebell Strength, 3 Days ──────────────────────────────────────
+  {
+    name: 'Kettlebell Strength: 3 Days',
+    description: 'A three-day plan for kettlebell training with some experience already, using one or two bells. Adds the ballistic lifts (clean, snatch, swing) on top of heavier grind work, in that order of skill because each one builds on the last. Grind lifts progress by reps then bell size, same as any other plan. Ballistic lifts progress by reps within their set count, then bell size, never by going faster. Around 40 minutes a session.',
+    tags: 'style:kettlebell_experienced equipment:kettlebell kettlebell home full_body intermediate advanced goal:build_muscle days:3',
+    difficulty: 2,
+    workouts: [
+      {
+        name: 'Day A',
+        exercises: [
+          { name: 'Kettlebell Front Rack Squat (Double)', sets: 4, repsMin: 5, repsMax: 8, rest: 120, notes: 'Two bells racked at the shoulders. Elbows high, sit between your knees, drive up through the heels.' },
+          { name: 'Double Kettlebell Press',   sets: 4, repsMin: 5,  repsMax: 8,  rest: 120, notes: 'Both bells pressed together from the rack. Brace hard, ribs down, straight bar path overhead.' },
+          { name: 'Kettlebell Swing (Single-Arm)', sets: 5, repsMin: 10, repsMax: 10, rest: 75, notes: 'Per side. Same hip-snap as the two-hand swing, one hand on the bell. Switch hands between sets.' },
+          { name: 'Kettlebell Renegade Row',   sets: 3, repsMin: 6,  repsMax: 8,  rest: 90, notes: 'Per side, from a plank over two bells. Row one side while the other braces hard against the floor.' },
+          { name: 'Kettlebell Windmill (Low)', sets: 2, repsMin: 5,  repsMax: 5,  rest: 60, notes: 'Per side. Bell locked out overhead, hinge sideways towards the opposite foot. Eyes stay on the bell.' },
+        ],
+      },
+      {
+        name: 'Day B',
+        exercises: [
+          { name: 'Kettlebell Clean',          sets: 5, repsMin: 5,  repsMax: 5,  rest: 90, notes: 'Per side. Bell travels close to the body into the rack. A banged wrist means it swung out too wide.' },
+          { name: 'Kettlebell Single-Leg Deadlift', sets: 3, repsMin: 6, repsMax: 8, rest: 90, notes: 'Per side. Hinge on one leg, hips stay square. Slow and controlled, this is a balance lift too.' },
+          { name: 'Half-Kneeling Kettlebell Press', sets: 3, repsMin: 6, repsMax: 10, rest: 90, notes: 'Per side. Half-kneeling stance, back knee down. Press overhead without leaning towards the bell.' },
+          { name: 'Gorilla Row',                sets: 4, repsMin: 8,  repsMax: 12, rest: 75, notes: 'Two bells on the floor. Row one side at a time, hips back, back flat throughout.' },
+          { name: 'Kettlebell Rack Carry',      sets: 3, repsMin: 20, repsMax: 40, rest: 60, notes: 'Around 40 metres. Bell held in the rack position, elbow tucked, tall posture.' },
+        ],
+      },
+      {
+        name: 'Day C',
+        exercises: [
+          { name: 'Kettlebell Snatch',         sets: 5, repsMin: 5,  repsMax: 5,  rest: 120, notes: 'Per side. Hike, snap the hips, then punch the hand through so the bell lands soft on your wrist.' },
+          { name: 'Kettlebell Thruster (Double)', sets: 3, repsMin: 6, repsMax: 8, rest: 120, notes: 'Front squat straight into an overhead press in one motion. Use the leg drive to help the bells up.' },
+          { name: 'Turkish Get-Up',            sets: 3, repsMin: 2,  repsMax: 2,  rest: 90, notes: 'Per side. The full get-up, floor to standing and back down. Slow, deliberate, eyes on the bell.' },
+          { name: 'Double Kettlebell Swing',   sets: 4, repsMin: 8,  repsMax: 12, rest: 75, notes: 'Two bells, same hip-snap as the single swing. Keep both bells travelling together.' },
+          { name: 'Kettlebell Overhead Carry', sets: 3, repsMin: 20, repsMax: 30, rest: 60, notes: 'Per side, around 30 metres. Bell locked out overhead, ribs down, arm stacked over the shoulder.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 33. Kettlebell Strength, 4 Days ──────────────────────────────────────
+  {
+    name: 'Kettlebell Strength: 4 Days',
+    description: 'A four-day double-kettlebell plan for experienced kettlebell training: an upper day, a lower day, a full-body grind day, and a dedicated ballistic day. Grind lifts progress by reps then bell size. Ballistic lifts (clean, snatch, jerk, swing) progress by reps within their set count, then bell size, never by speed. Around 40 to 45 minutes a session.',
+    tags: 'style:kettlebell_experienced equipment:kettlebell kettlebell home upper_lower intermediate advanced goal:build_muscle days:4',
+    difficulty: 2,
+    workouts: [
+      {
+        name: 'Day 1: Upper',
+        exercises: [
+          { name: 'Double Kettlebell Press',   sets: 4, repsMin: 5,  repsMax: 8,  rest: 120, notes: 'Both bells pressed together from the rack. Brace hard, ribs down, straight bar path overhead.' },
+          { name: 'Half-Kneeling Kettlebell Press', sets: 3, repsMin: 6, repsMax: 10, rest: 90, notes: 'Per side. Half-kneeling stance. Press overhead without leaning towards the bell.' },
+          { name: 'Gorilla Row',                sets: 4, repsMin: 8,  repsMax: 12, rest: 90, notes: 'Two bells on the floor. Row one side at a time, hips back, back flat throughout.' },
+          { name: 'Kettlebell Renegade Row',   sets: 3, repsMin: 6,  repsMax: 8,  rest: 90, notes: 'Per side, from a plank over two bells. The still side braces hard against the floor.' },
+          { name: 'Kettlebell Floor Press (Alternating)', sets: 3, repsMin: 8, repsMax: 12, rest: 75, notes: 'One bell presses while the other holds locked out. Swap which arm leads each set.' },
+        ],
+      },
+      {
+        name: 'Day 2: Lower',
+        exercises: [
+          { name: 'Kettlebell Front Rack Squat (Double)', sets: 4, repsMin: 5, repsMax: 8, rest: 120, notes: 'Two bells racked at the shoulders. Elbows high, sit between your knees.' },
+          { name: 'Kettlebell Single-Leg Deadlift', sets: 3, repsMin: 6, repsMax: 8, rest: 90, notes: 'Per side. Hinge on one leg, hips stay square to the floor.' },
+          { name: 'Kettlebell Sumo Deadlift',  sets: 3, repsMin: 8,  repsMax: 12, rest: 90, notes: 'Feet wide, toes out. Chest tall as you stand, knees track over toes.' },
+          { name: 'Kettlebell Reverse Lunge (Rack Position)', sets: 3, repsMin: 8, repsMax: 10, rest: 75, notes: 'Per side. Bell racked at one shoulder. Step back under control.' },
+          { name: 'Kettlebell Rack Carry',     sets: 3, repsMin: 20, repsMax: 40, rest: 60, notes: 'Around 40 metres. Bell held in the rack, elbow tucked, tall posture.' },
+        ],
+      },
+      {
+        name: 'Day 3: Full Body Grind',
+        exercises: [
+          { name: 'Turkish Get-Up',            sets: 3, repsMin: 2,  repsMax: 2,  rest: 90, notes: 'Per side. The full get-up, floor to standing and back down. Slow and deliberate.' },
+          { name: 'Kettlebell Windmill (Low)', sets: 2, repsMin: 5,  repsMax: 5,  rest: 60, notes: 'Per side. Bell locked out overhead, hinge sideways towards the opposite foot.' },
+          { name: 'Double Kettlebell Press',   sets: 3, repsMin: 6,  repsMax: 8,  rest: 90, notes: 'Lighter than Day 1’s top set. Both bells pressed together, brace hard.' },
+          { name: 'Kettlebell Front Rack Squat (Single-Arm)', sets: 3, repsMin: 6, repsMax: 8, rest: 90, notes: 'Per side. One bell racked, brace hard against the offset load.' },
+          { name: 'Kettlebell Overhead Carry', sets: 3, repsMin: 20, repsMax: 30, rest: 60, notes: 'Per side, around 30 metres. Bell locked out overhead, arm stacked over the shoulder.' },
+        ],
+      },
+      {
+        name: 'Day 4: Ballistic',
+        exercises: [
+          { name: 'Kettlebell Clean',          sets: 5, repsMin: 5,  repsMax: 5,  rest: 90,  notes: 'Per side. Bell travels close to the body into the rack.' },
+          { name: 'Kettlebell Snatch',         sets: 5, repsMin: 5,  repsMax: 5,  rest: 120, notes: 'Per side. Hike, snap the hips, punch the hand through so the bell lands soft.' },
+          { name: 'Kettlebell Jerk',           sets: 4, repsMin: 5,  repsMax: 5,  rest: 120, notes: 'Per side. Dip, drive, and punch under the bell to lock it out overhead.' },
+          { name: 'Kettlebell Swing (Single-Arm)', sets: 5, repsMin: 10, repsMax: 10, rest: 75, notes: 'Per side. Same hip-snap as the two-hand swing, one hand on the bell.' },
+          { name: "Kettlebell Farmer's Carry", sets: 3, repsMin: 20, repsMax: 40, rest: 60, notes: 'Around 40 metres. A hard grip finisher after the ballistic work.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 34. Kettlebell Minimal: 3 Days ───────────────────────────────────────
+  {
+    name: 'Kettlebell Minimal: 3 Days',
+    description: 'A stripped-back, single-kettlebell session for when time is short. Three near-identical sessions a week, around 25 minutes each: a big set of swings, a handful of get-ups, and a set of goblet squats. Start with the two-hand swing; once your technique is solid and consistent, move to the single-arm swing (the pool this plan draws from includes it once you are ready). Progress the swing and squat by reps then bell size; the get-up progresses by moving to the full get-up once the half get-up feels easy.',
+    tags: 'style:kettlebell_experienced equipment:kettlebell kettlebell home full_body beginner intermediate advanced goal:build_muscle days:3 short minimalist',
+    difficulty: 1,
+    workouts: [
+      {
+        name: 'Day A',
+        exercises: [
+          { name: 'Kettlebell Swing',          sets: 10, repsMin: 10, repsMax: 10, rest: 30, notes: 'Ten sets of ten with a fixed 30 second rest. Two hands to start; single-arm once technique is solid.' },
+          { name: 'Turkish Get-Up (Half)',     sets: 5,  repsMin: 1,  repsMax: 1,  rest: 60, notes: 'Per side. Lying to standing on one knee and back down. Move on to the full get-up once this is easy.' },
+          { name: 'Kettlebell Goblet Squat',   sets: 3,  repsMin: 10, repsMax: 10, rest: 60, notes: 'Bell at chest, elbows tucked. Sit deep between your knees.' },
+        ],
+      },
+      {
+        name: 'Day B',
+        exercises: [
+          { name: 'Kettlebell Swing',          sets: 10, repsMin: 10, repsMax: 10, rest: 30, notes: 'Ten sets of ten with a fixed 30 second rest. Two hands to start; single-arm once technique is solid.' },
+          { name: 'Turkish Get-Up (Half)',     sets: 5,  repsMin: 1,  repsMax: 1,  rest: 60, notes: 'Per side. Lying to standing on one knee and back down.' },
+          { name: 'Kettlebell Goblet Squat',   sets: 3,  repsMin: 10, repsMax: 10, rest: 60, notes: 'Bell at chest, elbows tucked. Sit deep between your knees.' },
+        ],
+      },
+      {
+        name: 'Day C',
+        exercises: [
+          { name: 'Kettlebell Swing',          sets: 10, repsMin: 10, repsMax: 10, rest: 30, notes: 'Ten sets of ten with a fixed 30 second rest. Two hands to start; single-arm once technique is solid.' },
+          { name: 'Turkish Get-Up (Half)',     sets: 5,  repsMin: 1,  repsMax: 1,  rest: 60, notes: 'Per side. Lying to standing on one knee and back down.' },
+          { name: 'Kettlebell Goblet Squat',   sets: 3,  repsMin: 10, repsMax: 10, rest: 60, notes: 'Bell at chest, elbows tucked. Sit deep between your knees.' },
+        ],
+      },
+    ],
+  },
+
+  // ── 35. Full-Body Circuit: Dumbbells ──────────────────────────────────────
+  {
+    name: 'Full-Body Circuit: Dumbbells',
+    description: 'Three sessions a week, each built from two circuits of three exercises. Do one round of each exercise in the circuit back to back, then rest before the next round. Three rounds per circuit, 8 to 12 reps a station. Progress rounds first: move from 3 rounds to 4, then 5, across the block before adding reps or weight. Around 35 minutes a session, dumbbells only.',
+    tags: 'style:circuit_dumbbell circuit equipment:dumbbell home full_body goal:build_muscle days:3 short beginner intermediate',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Session A',
+        exercises: [
+          { name: 'Dumbbell Goblet Squat', sets: 3, repsMin: 8, repsMax: 12, rest: 0, notes: 'Circuit 1, station 1. Move straight to the next station after your reps.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Push-Up',               sets: 3, repsMin: 8, repsMax: 12, rest: 0, notes: 'Circuit 1, station 2. Knees down is a fair regression, full range either way.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Dumbbell Row',          sets: 3, repsMin: 8, repsMax: 12, rest: 0, notes: 'Circuit 1, station 3. Rest 90 seconds after this station, then repeat the circuit.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Romanian Deadlift (Dumbbell)', sets: 3, repsMin: 8,  repsMax: 12, rest: 0, notes: 'Circuit 2, station 1. Soft knees, push the hips back, long hamstring stretch.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Dumbbell Shoulder Press',      sets: 3, repsMin: 8,  repsMax: 12, rest: 0, notes: 'Circuit 2, station 2. Seated or standing, full overhead range.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Dead Bug',                     sets: 3, repsMin: 8,  repsMax: 12, rest: 0, notes: 'Circuit 2, station 3, per side. Lower back stays flat on the floor throughout.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+        ],
+      },
+      {
+        name: 'Session B',
+        exercises: [
+          { name: 'Dumbbell Lunge',         sets: 3, repsMin: 8, repsMax: 12, rest: 0, notes: 'Circuit 1, station 1, per leg. Front knee tracks over the toes.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Floor Press (Dumbbell)', sets: 3, repsMin: 8, repsMax: 12, rest: 0, notes: 'Circuit 1, station 2. Lying on the floor, elbows lightly touch down between reps.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Dumbbell Hip Thrust',    sets: 3, repsMin: 8, repsMax: 12, rest: 0, notes: 'Circuit 1, station 3. Shoulders on a bench, drive hips up, squeeze at the top.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Dumbbell Lateral Raise', sets: 3, repsMin: 12, repsMax: 15, rest: 0, notes: 'Circuit 2, station 1. Light weight, raise to shoulder height, slow and controlled.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Dumbbell Curl',          sets: 3, repsMin: 10, repsMax: 12, rest: 0, notes: 'Circuit 2, station 2. Full range, no swinging the weight up.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Plank',                  sets: 3, repsMin: 20, repsMax: 30, rest: 0, notes: 'Circuit 2, station 3. Hold for the stated seconds. Straight line from shoulders to ankles.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+        ],
+      },
+      {
+        name: 'Session C',
+        exercises: [
+          { name: 'Bulgarian Split Squat',  sets: 3, repsMin: 8,  repsMax: 12, rest: 0, notes: 'Circuit 1, station 1, per leg. Rear foot on a chair or bench.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Push-Up',                sets: 3, repsMin: 8,  repsMax: 12, rest: 0, notes: 'Circuit 1, station 2. Full range every rep.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Dumbbell Row',           sets: 3, repsMin: 8,  repsMax: 12, rest: 0, notes: 'Circuit 1, station 3. Other arm from Session A, if you alternated.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Romanian Deadlift (Dumbbell)', sets: 3, repsMin: 8, repsMax: 12, rest: 0, notes: 'Circuit 2, station 1. Soft knees, push the hips back.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Dumbbell Overhead Tricep Extension', sets: 3, repsMin: 10, repsMax: 12, rest: 0, notes: 'Circuit 2, station 2. Elbows stay close to your ears throughout.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Side Plank',             sets: 3, repsMin: 20, repsMax: 30, rest: 0, notes: 'Circuit 2, station 3, per side. Hold for the stated seconds, hips lifted and still.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+        ],
+      },
+    ],
+  },
+
+  // ── 36. Bodyweight Circuit ────────────────────────────────────────────────
+  {
+    name: 'Bodyweight Circuit',
+    description: 'Three sessions a week, no equipment needed, built from two circuits of three exercises. Do one round of each exercise back to back, then rest before the next round. Three rounds per circuit, 8 to 15 reps a station. Progress rounds first: 3 to 4 to 5 across the block, before adding reps. The inverted row needs a low bar or a sturdy table edge; if you do not have one, use a Band Row instead. Around 30 minutes a session.',
+    tags: 'style:circuit_bodyweight circuit equipment:bodyweight home full_body goal:build_muscle days:3 short beginner intermediate',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Session A',
+        exercises: [
+          { name: 'Bodyweight Squat', sets: 3, repsMin: 12, repsMax: 20, rest: 0, notes: 'Circuit 1, station 1. Sit as deep as feels comfortable, drive through the heels.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Push-Up',         sets: 3, repsMin: 8,  repsMax: 15, rest: 0, notes: 'Circuit 1, station 2. Elevate your hands on a surface to make it easier.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Inverted Row',    sets: 3, repsMin: 8,  repsMax: 15, rest: 0, notes: 'Circuit 1, station 3. Needs a low bar or a table edge. No bar? Use a Band Row instead.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Glute Bridge',    sets: 3, repsMin: 12, repsMax: 20, rest: 0, notes: 'Circuit 2, station 1. Drive the hips up, squeeze the glutes hard at the top.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Dead Bug',        sets: 3, repsMin: 8,  repsMax: 12, rest: 0, notes: 'Circuit 2, station 2, per side. Lower back stays flat on the floor throughout.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Plank',           sets: 3, repsMin: 20, repsMax: 30, rest: 0, notes: 'Circuit 2, station 3. Hold for the stated seconds. Straight line from shoulders to ankles.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+        ],
+      },
+      {
+        name: 'Session B',
+        exercises: [
+          { name: 'Bodyweight Split Squat', sets: 3, repsMin: 8, repsMax: 15, rest: 0, notes: 'Circuit 1, station 1, per leg. Rear foot on a chair or a low step.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Push-Up',                sets: 3, repsMin: 8, repsMax: 15, rest: 0, notes: 'Circuit 1, station 2. Vary hand width to change the emphasis.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Inverted Row',           sets: 3, repsMin: 8, repsMax: 15, rest: 0, notes: 'Circuit 1, station 3. Needs a low bar or a table edge. No bar? Use a Band Row instead.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Glute Bridge',           sets: 3, repsMin: 12, repsMax: 20, rest: 0, notes: 'Circuit 2, station 1. Add a 2 second hold at the top today.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Dead Bug',               sets: 3, repsMin: 8, repsMax: 12, rest: 0, notes: 'Circuit 2, station 2, per side. Move slowly, no rushing the reps.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Side Plank',             sets: 3, repsMin: 20, repsMax: 30, rest: 0, notes: 'Circuit 2, station 3, per side. Hold for the stated seconds, hips lifted and still.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+        ],
+      },
+      {
+        name: 'Session C',
+        exercises: [
+          { name: 'Bodyweight Squat', sets: 3, repsMin: 12, repsMax: 20, rest: 0, notes: 'Circuit 1, station 1. Add a pause at the bottom if this feels easy.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Push-Up',         sets: 3, repsMin: 8,  repsMax: 15, rest: 0, notes: 'Circuit 1, station 2. Try a closer hand position for more tricep work.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Inverted Row',    sets: 3, repsMin: 8,  repsMax: 15, rest: 0, notes: 'Circuit 1, station 3. Needs a low bar or a table edge. No bar? Use a Band Row instead.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Box Step-Up',     sets: 3, repsMin: 8,  repsMax: 12, rest: 0, notes: 'Circuit 2, station 1, per leg. A box or a sturdy step. Drive through the stepping foot.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Dead Bug',        sets: 3, repsMin: 8,  repsMax: 12, rest: 0, notes: 'Circuit 2, station 2, per side. Lower back stays flat throughout.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Plank',           sets: 3, repsMin: 20, repsMax: 30, rest: 0, notes: 'Circuit 2, station 3. Hold for the stated seconds.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+        ],
+      },
+    ],
+  },
+
+  // ── 37. Kettlebell Circuit ────────────────────────────────────────────────
+  {
+    name: 'Kettlebell Circuit',
+    description: 'Three sessions a week for experienced kettlebell training, built from two circuits of three exercises. Each circuit carries at most one ballistic lift (swing, clean or snatch), so grinds do the rest of the work. Three rounds per circuit, 90 seconds rest after each round. Progress rounds first: 3 to 4 to 5 across the block, before adding reps or bell size. Around 35 minutes a session.',
+    tags: 'style:kettlebell_experienced circuit equipment:kettlebell kettlebell home full_body intermediate advanced goal:build_muscle days:3',
+    difficulty: 2,
+    workouts: [
+      {
+        name: 'Session A',
+        exercises: [
+          { name: 'Kettlebell Goblet Squat',       sets: 3, repsMin: 8, repsMax: 10, rest: 0, notes: 'Circuit 1, station 1. Bell at chest, sit deep between your knees.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Row (Single-Arm)',   sets: 3, repsMin: 8, repsMax: 10, rest: 0, notes: 'Circuit 1, station 2, per side. Flat back, pull the elbow past your ribs.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Swing (Single-Arm)', sets: 3, repsMin: 8, repsMax: 10, rest: 0, notes: 'Circuit 1, station 3, per side, the one ballistic lift here. Hip-snap, not an arm swing.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Press (Single-Arm)', sets: 3, repsMin: 6, repsMax: 8, rest: 0, notes: 'Circuit 2, station 1, per side. Bell racked, press straight overhead.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Deadlift',            sets: 3, repsMin: 8, repsMax: 10, rest: 0, notes: 'Circuit 2, station 2. Hinge with a flat back, bell close to your shins.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Halo',                sets: 3, repsMin: 6, repsMax: 6, rest: 0, notes: 'Circuit 2, station 3, each direction. No ballistic lift in this circuit.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+        ],
+      },
+      {
+        name: 'Session B',
+        exercises: [
+          { name: 'Kettlebell Front Rack Squat (Double)', sets: 3, repsMin: 6, repsMax: 8, rest: 0, notes: 'Circuit 1, station 1. Two bells racked, elbows high.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Renegade Row',       sets: 3, repsMin: 6, repsMax: 8, rest: 0, notes: 'Circuit 1, station 2, per side. Plank over two bells, the still side braces hard.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Clean',              sets: 3, repsMin: 6, repsMax: 8, rest: 0, notes: 'Circuit 1, station 3, per side, the one ballistic lift here. Bell stays close to the body.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Halo',               sets: 3, repsMin: 6, repsMax: 6, rest: 0, notes: 'Circuit 2, station 1, each direction. No ballistic lift in this circuit.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Suitcase Carry',     sets: 3, repsMin: 20, repsMax: 30, rest: 0, notes: 'Circuit 2, station 2, per side, around 30 metres. Resist leaning away from the load.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Turkish Get-Up (Half)',         sets: 3, repsMin: 2, repsMax: 2, rest: 0, notes: 'Circuit 2, station 3, per side. Lying to standing on one knee and back down.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+        ],
+      },
+      {
+        name: 'Session C',
+        exercises: [
+          { name: 'Kettlebell Sumo Deadlift',      sets: 3, repsMin: 8, repsMax: 10, rest: 0, notes: 'Circuit 1, station 1. Feet wide, toes out, chest tall as you stand.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Floor Press',        sets: 3, repsMin: 8, repsMax: 10, rest: 0, notes: 'Circuit 1, station 2. Elbows lightly touch down between reps.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Snatch',             sets: 3, repsMin: 5, repsMax: 5, rest: 0, notes: 'Circuit 1, station 3, per side, the one ballistic lift here. Hike, snap, punch through.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Windmill (Low)',     sets: 3, repsMin: 5, repsMax: 5, rest: 0, notes: 'Circuit 2, station 1, per side. No ballistic lift in this circuit.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Kettlebell Rack Carry',         sets: 3, repsMin: 20, repsMax: 40, rest: 0, notes: 'Circuit 2, station 2, around 40 metres. Elbow tucked, tall posture.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Gorilla Row',                   sets: 3, repsMin: 8, repsMax: 10, rest: 0, notes: 'Circuit 2, station 3. Two bells on the floor, row one side at a time.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },
+        ],
+      },
+    ],
+  },
 ];
 
 // ─── Seed function ────────────────────────────────────────────────────────────
@@ -2137,6 +2485,13 @@ export async function seedRoutinesIfNeeded(userId) {
             logWarn('seedRoutines.exerciseNotFound', `exercise not found: ${def.name}`);
             continue;
           }
+          // EL-9 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+          // a circuit template's exercise def carries supersetGroupId,
+          // groupKind: 'circuit' and roundRestSeconds alongside the usual
+          // fields (rounds are `sets`, station transition is `rest: 0`,
+          // the between-round rest is roundRestSeconds). Every existing
+          // plan's exercises carry none of these, so this is a pure
+          // addition: they pass null/default exactly as before.
           await addExerciseToRoutine(
             routine.id,
             exercise.id,
@@ -2147,6 +2502,11 @@ export async function seedRoutinesIfNeeded(userId) {
             def.sets,
             null,
             def.rest,
+            def.supersetGroupId || null,
+            true,
+            null,
+            def.groupKind || null,
+            def.roundRestSeconds || null,
           );
         }
       }

@@ -1,0 +1,272 @@
+{
+  "generatedAt": "2026-09-05",
+  "authority": "exercise-library-expansion-2026-09-05 metadataCorrectionsVerified.sweep (lead-overrides.json): list every live row whose equipment is machine, cable, smith_machine or plate-loaded and whose derived position is lying or floorAccess is true.",
+  "note": "plate-loaded rows have coarse equipment=\"machine\" (equipmentCategory=\"machine_plate_loaded\" derives from the name); scanning equipment in {machine, cable, smith_machine} therefore already covers them. Two additional position (not floorAccess) misfires found during the same sweep (Cable Incline Curl, Machine Pullover: an existing overrides.demands.position=\"lying\" contradicted their own authored cue, which says seated) are included and fixed for completeness even though they are not the lying/floorAccess trigger pattern the ruling named.",
+  "totalReviewed": 25,
+  "misfiresFixed": 8,
+  "correctAsDerived": 17,
+  "rows": [
+    {
+      "name": "Cable Crunch",
+      "equipment": "cable",
+      "equipmentCategory": "cable",
+      "position": "kneeling",
+      "floorAccess": false,
+      "verdict": "needs override (applied)",
+      "overrideApplied": {
+        "position": "kneeling",
+        "floorAccess": false
+      }
+    },
+    {
+      "name": "Cable Lat Pullover",
+      "equipment": "cable",
+      "equipmentCategory": "cable",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Cable Y-Raise (Prone)",
+      "equipment": "cable",
+      "equipmentCategory": "cable",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Incline Cable Chest Press",
+      "equipment": "cable",
+      "equipmentCategory": "cable",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Incline Cable Fly",
+      "equipment": "cable",
+      "equipmentCategory": "cable",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Kneeling Cable Crunch",
+      "equipment": "cable",
+      "equipmentCategory": "cable",
+      "position": "kneeling",
+      "floorAccess": false,
+      "verdict": "needs override (applied)",
+      "overrideApplied": {
+        "floorAccess": false
+      }
+    },
+    {
+      "name": "Lying Cable Curl",
+      "equipment": "cable",
+      "equipmentCategory": "cable",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Pallof Press (Kneeling)",
+      "equipment": "cable",
+      "equipmentCategory": "cable",
+      "position": "kneeling",
+      "floorAccess": false,
+      "verdict": "needs override (applied)",
+      "overrideApplied": {
+        "floorAccess": false
+      }
+    },
+    {
+      "name": "Cable Incline Curl",
+      "equipment": "cable",
+      "equipmentCategory": "cable",
+      "position": "seated",
+      "floorAccess": false,
+      "verdict": "needs override (applied)",
+      "overrideApplied": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      }
+    },
+    {
+      "name": "Decline Cable Chest Press",
+      "equipment": "cable",
+      "equipmentCategory": "cable",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Incline Cable Chest Press (Single-Arm)",
+      "equipment": "cable",
+      "equipmentCategory": "cable",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "GHD Sit-Up",
+      "equipment": "machine",
+      "equipmentCategory": "machine_selectorised",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "needs override (applied)",
+      "overrideApplied": {
+        "floorAccess": false
+      }
+    },
+    {
+      "name": "Lying Leg Curl",
+      "equipment": "machine",
+      "equipmentCategory": "machine_selectorised",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Machine Hip Thrust",
+      "equipment": "machine",
+      "equipmentCategory": "machine_selectorised",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "needs override (applied)",
+      "overrideApplied": {
+        "floorAccess": false
+      }
+    },
+    {
+      "name": "Plate-Loaded Hip Thrust",
+      "equipment": "machine",
+      "equipmentCategory": "machine_plate_loaded",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "needs override (applied)",
+      "overrideApplied": {
+        "floorAccess": false
+      }
+    },
+    {
+      "name": "Prone Leg Curl",
+      "equipment": "machine",
+      "equipmentCategory": "machine_selectorised",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Reverse Hyperextension",
+      "equipment": "machine",
+      "equipmentCategory": "machine_selectorised",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Reverse Hyperextension (Glute)",
+      "equipment": "machine",
+      "equipmentCategory": "machine_selectorised",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Machine Pullover",
+      "equipment": "machine",
+      "equipmentCategory": "machine_selectorised",
+      "position": "seated",
+      "floorAccess": false,
+      "verdict": "needs override (applied)",
+      "overrideApplied": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "supportive",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      }
+    },
+    {
+      "name": "Single-Leg Lying Leg Curl",
+      "equipment": "machine",
+      "equipmentCategory": "machine_selectorised",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Incline Smith Machine Press",
+      "equipment": "smith_machine",
+      "equipmentCategory": "smith",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Smith Machine Bench Press",
+      "equipment": "smith_machine",
+      "equipmentCategory": "smith",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Smith Machine Close-Grip Press",
+      "equipment": "smith_machine",
+      "equipmentCategory": "smith",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Smith Machine Hip Thrust",
+      "equipment": "smith_machine",
+      "equipmentCategory": "smith",
+      "position": "lying",
+      "floorAccess": true,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    },
+    {
+      "name": "Smith Machine Incline Press",
+      "equipment": "smith_machine",
+      "equipmentCategory": "smith",
+      "position": "lying",
+      "floorAccess": false,
+      "verdict": "correct as derived",
+      "overrideApplied": null
+    }
+  ]
+}

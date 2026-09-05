@@ -78,8 +78,9 @@ if (conflicts.length) {
 //    integrate-inventories.mjs's patchNamedEntry technique: entries are
 //    single-object-per-line-block literals, so a plain string search for
 //    the `name: "<Name>",` line locates the enclosing `{ ... },` block.
-let appliedCount = 0;
-const appliedNames = new Set();
+let writtenCount = 0;
+let unchangedCount = 0;
+const foundNames = new Set();
 
 for (const file of FAMILY_FILES) {
   const filePath = join(FAMILIES_DIR, file);
@@ -90,6 +91,7 @@ for (const file of FAMILY_FILES) {
     const needle = `    name: ${JSON.stringify(name)},`;
     const nameIdx = src.indexOf(needle);
     if (nameIdx === -1) continue;
+    foundNames.add(name);
 
     const blockStart = src.lastIndexOf('  {', nameIdx);
     const blockEnd = src.indexOf('\n  },', nameIdx) + '\n  },'.length;
@@ -108,16 +110,17 @@ for (const file of FAMILY_FILES) {
     if (newBlock !== block) {
       src = src.slice(0, blockStart) + newBlock + src.slice(blockEnd);
       changed = true;
-      appliedCount++;
-      appliedNames.add(name);
+      writtenCount++;
+    } else {
+      unchangedCount++; // found, cue already matches (idempotent rerun)
     }
   }
 
   if (changed) writeFileSync(filePath, src);
 }
 
-const notFound = [...cueMap.keys()].filter((n) => !appliedNames.has(n));
-console.log(`apply-cues: applied ${appliedCount} cue(s) across the family modules`);
+const notFound = [...cueMap.keys()].filter((n) => !foundNames.has(n));
+console.log(`apply-cues: ${writtenCount} cue(s) written, ${unchangedCount} already up to date (found, no change needed)`);
 if (notFound.length) {
   console.log(`apply-cues: ${notFound.length} name(s) from cue files not found in any family module (typo, retired name, or not yet integrated):`);
   for (const n of notFound) console.log(`  - "${n}"`);

@@ -344,7 +344,7 @@ export default [
     subregion: "overhead",
     aliases: ["DB Overhead Tricep Extension","Overhead Dumbbell Extension"],
     loadCharacter: "grind",
-    cue: "Stand or sit holding a dumbbell with both hands behind your head, elbows pointing forward. Extend your arms to press it overhead, then lower back behind your head. Letting the elbows flare outward spreads the load away from the triceps.",
+    cue: "Stand or sit holding a dumbbell with both hands behind your head, elbows pointing forward. Extend your arms to press it overhead, then lower back behind your head. Letting the elbows wing outward spreads the load away from the triceps.",
   },
   {
     name: "Dumbbell Pronation/Supination",
@@ -871,7 +871,7 @@ export default [
   {
     name: "Overhead Dumbbell Extension",
     retiredInto: "Dumbbell Overhead Tricep Extension",
-    cue: "Stand or sit holding a dumbbell with both hands behind your head, elbows pointing forward. Extend your arms to press it overhead, then lower back behind your head. Letting the elbows flare outward spreads the load away from the triceps.",
+    cue: "Stand or sit holding a dumbbell with both hands behind your head, elbows pointing forward. Extend your arms to press it overhead, then lower back behind your head. Letting the elbows wing outward spreads the load away from the triceps.",
   },
   {
     name: "Plank Row",
@@ -1981,7 +1981,7 @@ export default [
     subregion: "overhead",
     aliases: ["One-Arm Overhead Extension","dumbbell seated reverse grip one arm overhead tricep extension"],
     loadCharacter: "grind",
-    cue: "Stand or sit holding one dumbbell overhead with a straight arm, the other hand supporting your elbow. Bend the elbow to lower it behind your head, then extend back up. Letting the elbow flare outward reduces the stretch on the triceps.",
+    cue: "Stand or sit holding one dumbbell overhead with a straight arm, the other hand supporting your elbow. Bend the elbow to lower it behind your head, then extend back up. Letting the elbow wing outward reduces the stretch on the triceps.",
   },
   {
     name: "Spider Curl (Dumbbell)",

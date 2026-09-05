@@ -827,7 +827,7 @@ export default [
     aliases: ["Windmill (Low)","Kettlebell Low Windmill","kettlebell windmill"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"supported","weightBearingHands":false}},
-    cue: "Hold the bell racked at your shoulder rather than pressed overhead, feet turned slightly away from that side. Hinge your hips and reach your free hand towards the floor while the racked arm stays steady, then return. Rushing the hinge is the fault.",
+    cue: "Hold the bell racked at your shoulder, not overhead, feet turned slightly away from that side. Hinge your hips and reach your free hand towards the floor while the racked arm stays steady, then return. Rushing the hinge is the fault.",
   },
   {
     name: "Mixed Kettlebell Carry",
@@ -886,7 +886,7 @@ export default [
     aliases: ["Half Get-Up","Half Turkish Get-Up"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"position":"mixed","floorAccess":true,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"high","weightBearingHands":true}},
-    cue: "Lie on your back holding a bell overhead in one hand, opposite knee bent, foot flat. Push through that foot and your free hand to sit up onto your propping arm, keeping the bell locked out overhead, then reverse back down. Losing eye contact with the bell is the fault.",
+    cue: "Lie on your back holding a bell overhead in one hand, opposite knee bent, foot flat. Push up through that foot and hand onto your propping arm, bell staying locked overhead, then reverse down. Losing eye contact with the bell is the fault.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];

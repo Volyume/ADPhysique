@@ -22,9 +22,11 @@
  *     NICHE/NEVER_AUTO/SPECIALIST list plus CONTESTED).
  *  9. Any demand axis null after derivation+overrides, unless the entry
  *     declares `unknownAxes: [{ axis, reason }]`.
- * 10. cue rules (length, banned words, no em dash, sentence-final stop) —
- *     only enforced once data/corpus-floor.json sets cuesRequired: true;
- *     until then an empty cue is accepted.
+ * 10. cue rules for every NON-EMPTY cue (integration job 4): 40-240 chars,
+ *     no em dash, no exclamation marks, sentence-final full stop, no
+ *     banned safety/medical-adjacent words, no likely American spelling.
+ *     An EMPTY cue is accepted unless data/corpus-floor.json sets
+ *     cuesRequired: true, at which point every live row must have one.
  * 11. Every name referenced by CURATED_DEMANDS, ADAPTED_SETUP,
  *     MACHINE_TYPE_BY_NAME, FAMILY_LISTS, the tier registry and the
  *     library plans exists in the corpus (live or retired).
@@ -115,6 +117,43 @@ const baselineNames = new Set(
   JSON.parse(readFileSync(join(ROOT, 'docs/exercise-library-expansion-2026-09-05/data/corpus-baseline-names.json'), 'utf8')).names,
 );
 
+// exercise-library-expansion-2026-09-05 integration job 4: length, British
+// spelling, no em dash, no banned (safety/medical-adjacent) words, no
+// exclamation marks, sentence-final full stops only (not "?"/"!").
+const CUE_BANNED_WORDS = [
+  'safe', 'safely', 'injury', 'injure', 'rehab', 'arthritis', 'pain',
+  'doctor', 'physio', 'therapy', 'medical', 'condition', 'hurt',
+];
+// Common American spellings a cue author might reach for. Not exhaustive
+// (full locale-aware spellchecking is out of scope) but covers the words
+// most likely to appear in short exercise-setup/execution prose.
+const AMERICAN_SPELLINGS = [
+  'color', 'favorite', 'favorable', 'center', 'centered',
+  'fiber', 'gray', 'defense', 'offense', 'behavior', 'neighbor', 'honor',
+  'armor', 'vapor', 'rumor', 'humor', 'odor', 'vigor', 'labor', 'flavor',
+  'theater', 'liter', 'jewelry', 'skeptic', 'traveled', 'traveling',
+  'canceled', 'canceling', 'modeling', 'signaling', 'leveled', 'fueled',
+  'organize', 'organized', 'organizing', 'stabilize', 'stabilized',
+  'stabilizing', 'maximize', 'maximizing', 'minimize', 'minimizing',
+  'utilize', 'utilizing', 'realize', 'specialize', 'analyze', 'analyzing',
+  'recognize', 'summarize', 'emphasize', 'optimize', 'normalize',
+  'customize', 'apologize',
+];
+const AMERICAN_SPELLING_RE = new RegExp(`\\b(${AMERICAN_SPELLINGS.join('|')})\\b`, 'i');
+
+function validateCueText(cue, ctx) {
+  if (cue.length < 40 || cue.length > 240) fail(`${ctx}: cue length ${cue.length} outside 40-240`);
+  if (/—/.test(cue)) fail(`${ctx}: cue contains an em dash`);
+  if (/!/.test(cue)) fail(`${ctx}: cue contains an exclamation mark`);
+  const lower = cue.toLowerCase();
+  for (const word of CUE_BANNED_WORDS) {
+    if (new RegExp(`\\b${word}\\b`).test(lower)) fail(`${ctx}: cue contains banned word "${word}"`);
+  }
+  const americanHit = cue.match(AMERICAN_SPELLING_RE);
+  if (americanHit) fail(`${ctx}: cue contains a likely American spelling "${americanHit[0]}" (use British spelling)`);
+  if (!/\.$/.test(cue.trim())) fail(`${ctx}: cue does not end with a full stop`);
+}
+
 let nullAxisCount = 0;
 for (const entry of CORPUS) {
   const row = corpusEntryToSeedRow(entry);
@@ -180,43 +219,6 @@ for (const entry of CORPUS) {
   }
 }
 
-// exercise-library-expansion-2026-09-05 integration job 4: length, British
-// spelling, no em dash, no banned (safety/medical-adjacent) words, no
-// exclamation marks, sentence-final full stops only (not "?"/"!").
-const CUE_BANNED_WORDS = [
-  'safe', 'safely', 'injury', 'injure', 'rehab', 'arthritis', 'pain',
-  'doctor', 'physio', 'therapy', 'medical', 'condition', 'hurt',
-];
-// Common American spellings a cue author might reach for. Not exhaustive
-// (full locale-aware spellchecking is out of scope) but covers the words
-// most likely to appear in short exercise-setup/execution prose.
-const AMERICAN_SPELLINGS = [
-  'color', 'favorite', 'favorable', 'center', 'centered',
-  'fiber', 'gray', 'defense', 'offense', 'behavior', 'neighbor', 'honor',
-  'armor', 'vapor', 'rumor', 'humor', 'odor', 'vigor', 'labor', 'flavor',
-  'theater', 'liter', 'jewelry', 'skeptic', 'traveled', 'traveling',
-  'canceled', 'canceling', 'modeling', 'signaling', 'leveled', 'fueled',
-  'organize', 'organized', 'organizing', 'stabilize', 'stabilized',
-  'stabilizing', 'maximize', 'maximizing', 'minimize', 'minimizing',
-  'utilize', 'utilizing', 'realize', 'specialize', 'analyze', 'analyzing',
-  'recognize', 'summarize', 'emphasize', 'optimize', 'normalize',
-  'customize', 'apologize',
-];
-const AMERICAN_SPELLING_RE = new RegExp(`\\b(${AMERICAN_SPELLINGS.join('|')})\\b`, 'i');
-
-function validateCueText(cue, ctx) {
-  if (cue.length < 40 || cue.length > 240) fail(`${ctx}: cue length ${cue.length} outside 40-240`);
-  if (/—/.test(cue)) fail(`${ctx}: cue contains an em dash`);
-  if (/!/.test(cue)) fail(`${ctx}: cue contains an exclamation mark`);
-  const lower = cue.toLowerCase();
-  for (const word of CUE_BANNED_WORDS) {
-    if (new RegExp(`\\b${word}\\b`).test(lower)) fail(`${ctx}: cue contains banned word "${word}"`);
-  }
-  const americanHit = cue.match(AMERICAN_SPELLING_RE);
-  if (americanHit) fail(`${ctx}: cue contains a likely American spelling "${americanHit[0]}" (use British spelling)`);
-  if (!/\.$/.test(cue.trim())) fail(`${ctx}: cue does not end with a full stop`);
-}
-
 function cuesRequired() {
   try {
     const floor = JSON.parse(readFileSync(join(ROOT, 'docs/exercise-library-expansion-2026-09-05/data/corpus-floor.json'), 'utf8'));
@@ -280,6 +282,29 @@ requireKnown(CONTESTED.map((c) => c.name), 'canonicality.js CONTESTED');
   const floor = JSON.parse(readFileSync(floorPath, 'utf8'));
   if (CORPUS.length < floor.floor) {
     fail(`corpus count ${CORPUS.length} is below the committed floor ${floor.floor} (data/corpus-floor.json)`);
+  }
+}
+
+// ── 14. Style pools (EL-8, 09-STYLE-PLANS.md section 1) ────────────────────
+// Every hand-curated pool name must resolve in the live corpus, and no
+// pool may carry a NEVER_AUTO row outside the closed kettlebell-ballistics
+// exception list stylePools.js itself declares.
+{
+  const {
+    STYLE_POOLS, KETTLEBELL_NEVER_AUTO_EXCEPTIONS,
+  } = await import(join(ROOT, 'src/lib/exercise/stylePools.js'));
+  const exceptionSet = new Set(KETTLEBELL_NEVER_AUTO_EXCEPTIONS);
+  const neverAutoSet = new Set(REGISTRY_LISTS.NEVER_AUTO);
+  for (const [poolKey, names] of Object.entries(STYLE_POOLS)) {
+    for (const name of names) {
+      const entry = CORPUS_BY_NAME.get(name);
+      if (!entry || entry.retiredInto) {
+        fail(`stylePools.js "${poolKey}" references "${name}", which is not a live corpus name`);
+      }
+      if (neverAutoSet.has(name) && !exceptionSet.has(name)) {
+        fail(`stylePools.js "${poolKey}" contains NEVER_AUTO row "${name}", which is not in KETTLEBELL_NEVER_AUTO_EXCEPTIONS`);
+      }
+    }
   }
 }
 

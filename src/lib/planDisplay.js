@@ -66,6 +66,9 @@ export function planHeadingName(planName) {
 export function planEquipmentLabel(plan) {
   const tags = plan && typeof plan.tags === 'string' ? plan.tags.toLowerCase() : '';
   if (tags.includes('equipment:bodyweight')) return 'No equipment';
+  if (tags.includes('equipment:kettlebell')) return 'Kettlebell';
+  if (tags.includes('equipment:band')) return 'Bands';
+  if (tags.includes('equipment:suspension')) return 'Suspension trainer';
   if (tags.includes('equipment:dumbbell')) return 'Dumbbells only';
   return 'Full gym';
 }

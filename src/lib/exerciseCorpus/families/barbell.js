@@ -251,7 +251,7 @@ export default [
     subregion: "overhead",
     aliases: ["BB Skull Crusher"],
     loadCharacter: "grind",
-    cue: "Lie on a bench holding the bar over your chest, shoulder-width grip. Bend your elbows to lower the bar towards your forehead, upper arms still, then extend back up. Letting the elbows flare turns it into a different press.",
+    cue: "Lie on a bench holding the bar over your chest, shoulder-width grip. Bend your elbows to lower the bar towards your forehead, upper arms still, then extend back up. Letting the elbows wing out turns it into a different press.",
   },
   {
     name: "Barbell Upright Row (Wide)",
@@ -414,7 +414,7 @@ export default [
     subregion: "pushdown",
     aliases: ["Close-grip Press-ups"],
     loadCharacter: "grind",
-    cue: "Lie on the bench and take a grip just inside shoulder width. Lower the bar to your lower chest keeping elbows tucked close, then press back up. Letting the elbows flare wide turns this into a normal bench press.",
+    cue: "Lie on the bench and take a grip just inside shoulder width. Lower the bar to your lower chest keeping elbows tucked close, then press back up. Letting the elbows wing wide turns this into a normal bench press.",
   },
   {
     name: "Close-Grip Floor Press",
@@ -427,7 +427,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "pushdown",
     loadCharacter: "grind",
-    cue: "Lie on the floor with knees bent, close grip on the bar held over your chest. Lower your elbows until your upper arms touch the floor, then press back up. Letting the elbows flare out at the bottom shifts load away from the triceps.",
+    cue: "Lie on the floor with knees bent, close grip on the bar held over your chest. Lower your elbows until your upper arms touch the floor, then press back up. Letting the elbows wing out at the bottom shifts load away from the triceps.",
   },
   {
     name: "Conventional Deadlift",
@@ -575,7 +575,7 @@ export default [
     subregion: "overhead",
     aliases: ["Skull Crusher","EZ-Bar Skullcrusher","Skullcrusher SZ-bar"],
     loadCharacter: "grind",
-    cue: "Lie on a bench holding the angled bar over your chest, hands on the angled grips. Bend your elbows to lower it towards your forehead, upper arms still, then extend back up. Letting the elbows flare out spreads load away from the triceps.",
+    cue: "Lie on a bench holding the angled bar over your chest, hands on the angled grips. Bend your elbows to lower it towards your forehead, upper arms still, then extend back up. Letting the elbows wing out spreads load away from the triceps.",
   },
   {
     name: "Fat Grip Curl",
@@ -1013,7 +1013,7 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "flat",
     loadCharacter: "grind",
-    cue: "Lie on the bench and take an underhand grip on the bar, hands shoulder-width apart. Lower it to your upper chest, elbows tucked, then press back up. Letting the elbows flare wide on this grip strains the shoulders more than usual.",
+    cue: "Lie on the bench and take an underhand grip on the bar, hands shoulder-width apart. Lower it to your upper chest, elbows tucked, then press back up. Letting the elbows wing wide on this grip strains the shoulders more than usual.",
   },
   {
     name: "Romanian Deadlift",
@@ -1918,7 +1918,7 @@ export default [
     subregion: "pushdown",
     aliases: ["Decline Close-Grip Bench Press"],
     loadCharacter: "grind",
-    cue: "Lie on a decline bench and grip the bar with hands close together, just inside shoulder width. Lower it to your lower chest with elbows tucked, then press up. Letting the elbows flare wide takes emphasis off the triceps.",
+    cue: "Lie on a decline bench and grip the bar with hands close together, just inside shoulder width. Lower it to your lower chest with elbows tucked, then press up. Letting the elbows wing wide takes emphasis off the triceps.",
   },
   {
     name: "Close-Grip Incline Bench Press",
@@ -2190,7 +2190,7 @@ export default [
     subregion: "overhead",
     aliases: ["Standing Barbell French Press"],
     loadCharacter: "grind",
-    cue: "Stand holding the bar overhead with a narrow grip and straight arms. Bend only your elbows to lower it behind your head, then extend back to the top. Letting the elbows flare outward reduces the stretch on the triceps.",
+    cue: "Stand holding the bar overhead with a narrow grip and straight arms. Bend only your elbows to lower it behind your head, then extend back to the top. Letting the elbows wing outward reduces the stretch on the triceps.",
   },
   {
     name: "Swiss Bar Bench Press",

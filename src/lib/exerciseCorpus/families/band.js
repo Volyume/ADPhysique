@@ -168,7 +168,7 @@ export default [
     subregion: "overhead",
     aliases: ["band side triceps extension","Speed Band Overhead Triceps"],
     loadCharacter: "grind",
-    cue: "Anchor the band low and hold it with both hands overhead, elbows pointing forward. Straighten your arms fully, then bend to lower the band behind your head. Letting the elbows flare out to the sides takes tension off the triceps.",
+    cue: "Anchor the band low and hold it with both hands overhead, elbows pointing forward. Straighten your arms fully, then bend to lower the band behind your head. Letting the elbows wing out to the sides takes tension off the triceps.",
   },
   {
     name: "Band Pull-Apart",

@@ -161,7 +161,7 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "overhead",
     loadCharacter: "grind",
-    cue: "Kneel facing away from the landmine, holding the end of the bar behind your head. Extend your arms to press it up and forward, then lower back behind your head. Letting the elbows flare outward spreads the load away from the triceps.",
+    cue: "Kneel facing away from the landmine, holding the end of the bar behind your head. Extend your arms to press it up and forward, then lower back behind your head. Letting the elbows wing outward spreads the load away from the triceps.",
   },
   {
     name: "Landmine Twist",
