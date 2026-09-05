@@ -72,9 +72,22 @@ Stage 3 (in flight, sonnet):
 - [ ] T1-T3. Gap triage of the 1,931 open-dataset "missing" rows by
   group (`TRIAGE-BRIEF.md`; outputs `data/gap-triage-*.json`).
   Recovery: relaunch per group.
-Stage 4: integration (`INTEGRATION-BRIEF.md`), cues lane, tier review,
-search/picker, style plans (`09-STYLE-PLANS.md`), custom-exercise
-delete, verification, closure.
+- [x] R landed (564 live + 6 retired, validate-corpus OK); X landed
+  (pre-review commit, lead review in progress); T1-T3 landed (41 adds
+  total, lead rulings in `data/lead-overrides.json`).
+Stage 4 (in flight, sonnet):
+- [ ] I. Integration per `INTEGRATION-BRIEF.md` (inventories + triage
+  adds into the corpus, tiers, derivation gaps, carries as duration).
+  Recovery: relaunch from the brief; the script is idempotent.
+- [ ] C1-C3. Cues for the existing rows (`CUE-BRIEF.md`; outputs
+  `data/cues-*.json`, written incrementally). Recovery: relaunch per
+  group; partial files are kept.
+- [ ] Founder order 2026-09-05 (landed on the branch): the "How you
+  train" group is the last item on Today.
+Stage 5: cues for new rows and cue wiring into the corpus, search and
+picker ranking (EL-20), style pools and plans (`09-STYLE-PLANS.md`),
+custom-exercise delete (EL-18), the detail-screen ballistic gap the
+circuit lane flagged, full regression, closure.
 guards, search/builder, plan architecture, kettlebell, circuits, library
 integration, evidence eligibility, verification. Entries added as they
 start.
