@@ -1,0 +1,338 @@
+{
+  "generatedFrom": "src/lib/seedExercises.js RAW, via scripts/exercise-library/loadSeed.mjs",
+  "rowCount": 552,
+  "tupleSchema": [
+    {
+      "index": 0,
+      "tuple": "name",
+      "field": "name",
+      "type": "string"
+    },
+    {
+      "index": 1,
+      "tuple": "primaryMuscle",
+      "field": "primaryMuscle",
+      "type": "string (muscle enum)"
+    },
+    {
+      "index": 2,
+      "tuple": "secondaryMuscles",
+      "field": "secondaryMuscles",
+      "type": "string[] (muscle enum), may be []"
+    },
+    {
+      "index": 3,
+      "tuple": "equipment",
+      "field": "equipment",
+      "type": "string (coarse equipment enum)"
+    },
+    {
+      "index": 4,
+      "tuple": "movementPattern",
+      "field": "movementPattern",
+      "type": "string (pattern enum)"
+    },
+    {
+      "index": 5,
+      "tuple": "isCompound",
+      "field": "compoundIsolation",
+      "type": "bool -> 'compound'|'isolation'"
+    },
+    {
+      "index": 6,
+      "tuple": "minReps",
+      "field": "defaultRepMin",
+      "type": "integer"
+    },
+    {
+      "index": 7,
+      "tuple": "maxReps",
+      "field": "defaultRepMax",
+      "type": "integer"
+    },
+    {
+      "index": 8,
+      "tuple": "fatigueCost",
+      "field": "fatigueCost",
+      "type": "integer 1-10"
+    },
+    {
+      "index": 9,
+      "tuple": "sfr",
+      "field": "stimulusToFatigueRatio",
+      "type": "integer 1-10"
+    }
+  ],
+  "enums": {
+    "primaryMuscle": {
+      "back": 65,
+      "abs": 62,
+      "quads": 57,
+      "chest": 56,
+      "triceps": 41,
+      "hamstrings": 38,
+      "glutes": 37,
+      "biceps": 36,
+      "rear_delts": 24,
+      "front_delts": 23,
+      "forearms": 22,
+      "calves": 21,
+      "traps": 19,
+      "side_delts": 17,
+      "neck": 14,
+      "adductors": 11,
+      "tibialis": 9
+    },
+    "subregion": {
+      "(null)": 151,
+      "squat_press": 43,
+      "flat": 27,
+      "pushdown": 22,
+      "horiz_abduction": 20,
+      "short_head": 20,
+      "upper_mid_row": 20,
+      "activator": 18,
+      "hip_extension": 16,
+      "horizontal_lat": 16,
+      "vertical_pull": 16,
+      "overhead": 14,
+      "anti_extension": 13,
+      "flexion": 13,
+      "gastro": 13,
+      "overhead_press": 13,
+      "rotation": 13,
+      "incline": 12,
+      "knee_flexion": 11,
+      "lateral_raise": 10,
+      "stretcher": 10,
+      "long_head": 9,
+      "pumper": 9,
+      "spinal_erector": 9,
+      "brachialis": 7,
+      "decline": 7,
+      "knee_extension": 7,
+      "face_pull": 5,
+      "soleus": 5,
+      "shoulder_extension": 3
+    },
+    "movementFamily": {
+      "(null)": 144,
+      "squat_press": 50,
+      "flat": 27,
+      "pushdown": 22,
+      "horiz_abduction": 20,
+      "short_head": 20,
+      "upper_mid_row": 20,
+      "activator": 18,
+      "hip_extension": 16,
+      "horizontal_lat": 16,
+      "vertical_pull": 16,
+      "overhead": 14,
+      "anti_extension": 13,
+      "flexion": 13,
+      "gastro": 13,
+      "overhead_press": 13,
+      "rotation": 13,
+      "incline": 12,
+      "knee_flexion": 11,
+      "lateral_raise": 10,
+      "stretcher": 10,
+      "long_head": 9,
+      "pumper": 9,
+      "spinal_erector": 9,
+      "brachialis": 7,
+      "decline": 7,
+      "knee_extension": 7,
+      "face_pull": 5,
+      "soleus": 5,
+      "shoulder_extension": 3
+    },
+    "equipment": {
+      "bodyweight": 128,
+      "barbell": 113,
+      "dumbbell": 103,
+      "cable": 97,
+      "machine": 90,
+      "smith_machine": 10,
+      "kettlebell": 6,
+      "ez_bar": 5
+    },
+    "equipmentCategory": {
+      "bodyweight": 107,
+      "barbell": 105,
+      "dumbbell": 103,
+      "cable": 97,
+      "machine_selectorised": 66,
+      "band": 21,
+      "machine_plate_loaded": 16,
+      "landmine": 13,
+      "smith": 10,
+      "other": 8,
+      "kettlebell": 6
+    },
+    "machineType": {
+      "(null)": 514,
+      "leg_press": 4,
+      "reverse_pec_deck": 3,
+      "calf_raise_seated": 2,
+      "calf_raise_standing": 2,
+      "chest_press": 2,
+      "lying_leg_curl": 2,
+      "neck_machine": 2,
+      "seated_row": 2,
+      "ab_crunch": 1,
+      "assisted_dip": 1,
+      "assisted_pullup": 1,
+      "bicep_curl_machine": 1,
+      "chest_supported_row": 1,
+      "decline_press": 1,
+      "glute_kickback": 1,
+      "hack_squat": 1,
+      "hip_abduction": 1,
+      "hip_thrust": 1,
+      "incline_press": 1,
+      "lateral_raise": 1,
+      "leg_extension": 1,
+      "pec_deck": 1,
+      "pendulum_squat": 1,
+      "seated_leg_curl": 1,
+      "shoulder_press": 1,
+      "standing_leg_curl": 1,
+      "triceps_extension": 1
+    },
+    "movementPattern": {
+      "isolation": 285,
+      "push": 68,
+      "pull": 67,
+      "squat": 59,
+      "hinge": 58,
+      "carry": 8,
+      "plyometric": 4,
+      "core": 1,
+      "lunge": 1,
+      "power": 1
+    },
+    "compoundIsolation": {
+      "isolation": 304,
+      "compound": 248
+    },
+    "force": {
+      "push": 266,
+      "pull": 218,
+      "static": 68
+    },
+    "laterality": {
+      "bilateral": 495,
+      "unilateral": 57
+    },
+    "difficulty": {
+      "1": 261,
+      "2": 266,
+      "3": 25
+    },
+    "machineOk": {
+      "false": 292,
+      "true": 260
+    },
+    "homeOk": {
+      "false": 318,
+      "true": 234
+    },
+    "exerciseType": {
+      "weight_reps": 527,
+      "duration": 15,
+      "weighted_bodyweight": 10
+    },
+    "loadSemantics": {
+      "total": 467,
+      "per_hand": 73,
+      "added_bodyweight": 10,
+      "assisted": 2
+    },
+    "exerciseCategory": {
+      "compound": 552
+    },
+    "incrementKg": {
+      "2.5": 552
+    },
+    "cue": {
+      "(null)": 552
+    },
+    "position": {
+      "standing": 284,
+      "lying": 123,
+      "seated": 96,
+      "mixed": 27,
+      "kneeling": 22
+    },
+    "floorAccess": {
+      "false": 485,
+      "true": 67
+    },
+    "overheadPosition": {
+      "false": 483,
+      "true": 69
+    },
+    "gripDemand": {
+      "bar": 393,
+      "none": 109,
+      "supportive": 50
+    },
+    "unilateralLoadable": {
+      "false": 305,
+      "true": 221,
+      "(null)": 26
+    },
+    "bilateralUpper": {
+      "false": 300,
+      "true": 251,
+      "(null)": 1
+    },
+    "bilateralLower": {
+      "false": 387,
+      "true": 165
+    },
+    "axialLoad": {
+      "false": 431,
+      "true": 121
+    },
+    "impact": {
+      "false": 544,
+      "true": 8
+    },
+    "balanceDemand": {
+      "supported": 268,
+      "stable": 255,
+      "high": 29
+    },
+    "weightBearingHands": {
+      "false": 516,
+      "true": 23,
+      "(null)": 13
+    },
+    "secondaryMuscles": {
+      "glutes": 104,
+      "biceps": 55,
+      "triceps": 53,
+      "back": 50,
+      "front_delts": 41,
+      "hamstrings": 41,
+      "quads": 28,
+      "traps": 25,
+      "side_delts": 18,
+      "chest": 13,
+      "forearms": 13,
+      "rear_delts": 12,
+      "calves": 8,
+      "abs": 7
+    },
+    "equipmentProfiles": {
+      "full_gym": 495,
+      "machines_cables": 260,
+      "barbell_plates": 191,
+      "dumbbells_only": 182,
+      "home_gym": 182,
+      "bodyweight": 125
+    }
+  }
+}
