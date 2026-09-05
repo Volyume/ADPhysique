@@ -6295,3 +6295,58 @@ coverage, with the lead reviewing samples and ambiguous movements.
 **Bounds.** Presentation, copy and content only. No engine, threshold,
 ED-safety, consent, billing, schema or sync change (canonical exercises
 are local and never pushed, EL-19).
+
+## D152 — The injuries / limitations feature is called "Injuries & limitations"; whole-product certification rulings (lead-ruled under D33 on a founder brief, 2026-09-05)
+
+**Founder brief (in chat, 2026-09-05).** One autonomous whole-product
+adversarial certification: discover, attack, prove, fix, re-exercise,
+certify. It names one confirmed P1: the feature covering injuries, pain,
+long-term conditions, disabilities and temporary limitations is surfaced
+as "How you train", which a normal person reads as split, frequency,
+style or equipment, and its populated line says "Built around 4 things
+you told it". The brief's naming direction is "Injuries & limitations",
+with the lead to verify coverage.
+
+**Ruled.** The feature is "Injuries & limitations" on every entry row,
+screen title and step label, and the vocabulary table in
+`docs/final-certification-2026-09-05/07-FINDINGS.md` (F-01) governs every
+mid-sentence use. The word "limitation" names what the lane actually
+stores: functional limits on movement (an axis, a family, an exercise),
+whichever cause lies behind them. Disability sits under "limitations",
+never under "injuries"; the subtitle names all four causes so nobody
+classifies themselves at the door. This overrides RT2-2 and D134's "the
+NAME stays". CAP-1/2 (a baseline-shaped plan is simply the plan, no
+marker) still hold on plan surfaces; they never governed the door label.
+The D112 R6 lane law holds: "injury" is never attached to a long-term
+rule, so the baseline role is now "long-term" (the wizard asks "Is this
+long-term, or temporary?"), the live-session badge is "Limitation" and
+the episode vocabulary is unchanged.
+
+The populated line: a subject where two or fewer rules are nameable
+("Leaves out overhead work and gripping a bar"), otherwise "N limitations
+saved. Used when Volyume picks exercises and builds your plan." The count
+is restriction rows only; allowances are not "things it is built around".
+"Things you told it" is retired and guard-banned. The claim in the new
+copy is exactly what the consumers do: generated plans, the picker, swaps,
+the live session and library-plan compatibility consult the lane; weekly
+coaching, notifications and Progress do not consult baseline rules and the
+copy does not say they do.
+
+**Also ruled in the same campaign (record F-02 to F-20 in 07-FINDINGS.md):**
+library-plan activation must carry circuit structure and tags (P0, fixed);
+kettlebell progression snaps to real bell sizes; advice never rests on
+excluded evidence (ballistic, circuit); the live logger speaks in rounds on
+a circuit; serve-time capability substitution respects style pool and
+equipment; Adjust plan says before it flattens a circuit; kettlebells and
+bands get an honest route at the equipment question if generation can
+build from them; Today gets a week-complete state and never re-offers
+session 1 after a block ends; widget taps open the app; partner invite
+links route; Methodology tells the truth about Coached mode; search ranks
+staples by word-start match and staple tier.
+
+**Unchanged by ruling.** Route ids, file names and function names
+(`HowYouTrain*`, `howYouTrainSummary`); the quiz-first pre-account branch
+behind `ONBOARDING_QUIZ_FIRST` (documented, reversible, deleting half of
+it would make the flag a lie); the Settings row (D134 placement); the
+ED-safety system, the deterministic engine, the free product, billing
+dormancy, identity, schema rules.
