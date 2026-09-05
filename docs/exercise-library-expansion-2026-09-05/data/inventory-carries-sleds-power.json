@@ -971,10 +971,6 @@
       "reason": "not representable (no equipment vocabulary bucket fits a sandbag: it is neither a barbell/dumbbell/kettlebell-style rigid implement nor a medicine ball; forcing it into \"medicine_ball\" would misrepresent the unstable, shifting-load handling that is the whole point of the implement)"
     },
     {
-      "name": "Bulgarian Bag Swing",
-      "reason": "not representable (same equipment-vocabulary gap as the sandbag; also overlaps mechanically with the already-covered kettlebell swing family)"
-    },
-    {
       "name": "Plate Pinch Carry",
       "reason": "duplicate of 'Pinch Grip Carry' (already seeded, barbell equipment, carry pattern)"
     },
