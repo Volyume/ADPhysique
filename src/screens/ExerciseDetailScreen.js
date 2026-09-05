@@ -40,7 +40,7 @@ import { rankSwaps } from '../lib/swapEngine';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
-import { FORM_TIPS } from '../lib/formTips';
+import { formTipFor } from '../lib/formTips';
 import { adaptedSetupFor } from '../lib/exercise/adaptedSetup';
 import InfoTooltip from '../components/InfoTooltip';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
@@ -587,7 +587,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     );
   }
 
-  const formTip = FORM_TIPS[exercise.name] ?? null;
+  const formTip = formTipFor(exercise);
   const adaptedLines = adaptedSetupFor(exercise);
   const primaryMuscle = MUSCLE_DISPLAY_NAMES[(exercise.primaryMuscle || '').toLowerCase()] || exercise.primaryMuscle;
   const secondaryMuscles = exercise.secondaryMuscles || [];

@@ -7,11 +7,19 @@
 const fs = require('fs');
 const path = require('path');
 
+// Re-anchored EL-14/EL-17 (exercise-library-expansion-2026-09-05): the
+// library is the corpus module, and every live row carries a cue, so the
+// contract is "a hand-written tip OR a non-empty cue" for every row.
 function libraryExerciseNames() {
-  const raw = fs.readFileSync(path.join(__dirname, '../seedExercises.js'), 'utf8');
-  const block = raw.slice(raw.indexOf('const RAW'));
-  const names = [...block.matchAll(/^\s*\['([^']+)'/gm)].map((m) => m[1]);
-  return [...new Set(names)];
+  // eslint-disable-next-line global-require
+  const { CORPUS } = require('../exerciseCorpus');
+  return CORPUS.filter((e) => !e.retiredInto).map((e) => e.name);
+}
+
+function corpusCueNames() {
+  // eslint-disable-next-line global-require
+  const { CORPUS } = require('../exerciseCorpus');
+  return new Set(CORPUS.filter((e) => !e.retiredInto && typeof e.cue === 'string' && e.cue.trim()).map((e) => e.name));
 }
 
 function formTipKeys() {
@@ -25,6 +33,7 @@ test('every library exercise has a form tip', () => {
   const names = libraryExerciseNames();
   const keys = formTipKeys();
   expect(names.length).toBeGreaterThan(400); // sanity: the library actually parsed
-  const missing = names.filter((n) => !keys.has(n));
+  const cued = corpusCueNames();
+  const missing = names.filter((n) => !keys.has(n) && !cued.has(n));
   expect(missing).toEqual([]);
 });

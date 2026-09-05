@@ -618,3 +618,16 @@ export const FORM_TIPS = {
   'Cable Anti-Rotation Hold (Half-Kneeling)': 'Kneel in a half-kneeling stance side-on to a chest-height cable, holding the handle at your chest with both hands. Press the handle straight out and hold, resisting the pull of the cable to rotate your torso. Keep completely still through the trunk for the set time before switching sides.',
   'Reverse Plank': 'Sit with your legs extended and hands planted behind your hips, fingers pointing towards your feet. Push through your hands and heels to lift your hips up until your body forms a straight line facing the ceiling. Hold the position, keeping your hips up and your core braced throughout.',
 };
+
+// EL-17 (exercise-library-expansion-2026-09-05): every canonical exercise
+// now carries an original setup-and-execution cue on its row. The hand-
+// written tips above stay where they exist (they are longer and older);
+// everything else falls back to the cue, so no exercise ever shows "no
+// coaching notes yet" just because it arrived with the expansion.
+export function formTipFor(exercise) {
+  if (!exercise) return null;
+  const byName = exercise.name ? FORM_TIPS[exercise.name] : null;
+  if (byName) return byName;
+  const cue = exercise.cue;
+  return typeof cue === 'string' && cue.trim() ? cue : null;
+}

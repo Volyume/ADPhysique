@@ -92,7 +92,7 @@ import {
   loadUnilateralAsked, markUnilateralAsked,
   perSideRestPlan, halfRestSeconds,
 } from '../lib/unilateral';
-import { FORM_TIPS } from '../lib/formTips';
+import { formTipFor } from '../lib/formTips';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
@@ -5871,7 +5871,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
               <Text style={[styles.infoNotesLabel, live.infoNotesLabel]}>How to do it</Text>
               <Text style={[styles.infoNotes, live.infoNotes]}>
-                {routineExercise?.notes || FORM_TIPS[exercise?.name] || exercise?.notes || 'No coaching notes yet for this exercise.\n\nIf you\'re not sure how much weight to use, start light. Pick something you could comfortably lift 15 to 20 times. Getting comfortable with the movement matters more than the weight, especially early on.\n\nFocus on controlled movement, feel the target muscle working, and stop a couple of reps before you truly cannot do any more.'}
+                {routineExercise?.notes || formTipFor(exercise) || exercise?.notes || 'No coaching notes yet for this exercise.\n\nIf you\'re not sure how much weight to use, start light. Pick something you could comfortably lift 15 to 20 times. Getting comfortable with the movement matters more than the weight, especially early on.\n\nFocus on controlled movement, feel the target muscle working, and stop a couple of reps before you truly cannot do any more.'}
               </Text>
             </>
           ) : null}
