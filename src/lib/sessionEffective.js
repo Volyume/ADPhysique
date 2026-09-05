@@ -18,6 +18,8 @@ import {
 import { loadExerciseIntentState, isEligibleExercise } from './exercise/intent';
 import { SWAP_SCOPE } from './exercise/swapScope';
 import { CONSTRAINT_SOURCE } from './capability/model';
+import { styleKeyFromTags } from './exercise/stylePools';
+import { substituteCandidateFilter } from './exercise/candidateScope';
 
 export { setConstraintEffectiveChoice };
 
@@ -64,6 +66,62 @@ export async function loadScopedIntentState(userId) {
     activeMesocycleId = block?.id ?? null;
   } catch (_e) { /* no block resolved: block-scoped avoidance simply doesn't apply */ }
   return loadExerciseIntentState(userId, { activeMesocycleId });
+}
+
+/**
+ * F-14 (final-certification-2026-09-05; evidence A6): the SCOPE question
+ * every substitute selection in this module now asks, alongside the
+ * senior question above - is the candidate even in this plan's candidate
+ * set?
+ *
+ * The defect: `bestEligibleSubstitute` ranked over `getAllExercises()`,
+ * the whole catalogue, so a "no overhead" rule on Dumbbell Shoulder
+ * Press inside "Full-Body Circuit: Dumbbells" could serve a barbell or
+ * machine press to someone training at home with dumbbells. Generation
+ * (planEngine's filterPool) and the live swap sheet (rankSwaps'
+ * stylePool + equipment options) have both narrowed to the plan's style
+ * pool and the athlete's kit for a while; serve did not. One answer,
+ * composed here in the cross-lane seam so the preview, the count, the
+ * rewrite and serve itself cannot disagree about what is reachable.
+ *
+ * Both inputs resolve BEST-EFFORT and fail OPEN, matching the surfaces
+ * this mirrors: ActiveWorkoutScreen's swap sheet treats a failed style
+ * read as "no style restriction, same as an ordinary plan", and
+ * `equipmentReachable` treats a missing profile as no claim of loss. A
+ * failure here therefore leaves the pre-F-14 behaviour, never a session
+ * with nothing servable.
+ *
+ * `planTags` is passed by the callers that already hold the programme
+ * row (the preview and the rewrite both load it), so no read is
+ * repeated; serve and the count resolve it from the active plan, which
+ * is the plan whose session they are about to serve or count. Both
+ * overrides exist for tests and for a caller that already knows, the
+ * same shape `getPlanLandmarks(userId, { userProfile })` uses; the
+ * equipment default is the store's own profile through the lazy require
+ * lib modules use to avoid an import cycle.
+ *
+ * @param {string} userId
+ * @param {{planTags?: string|null, equipment?: string|null}} [opts]
+ *   undefined means "resolve it"; an explicit null means "no constraint
+ *   from this axis", which is how a caller opts out.
+ * @returns {Promise<((exercise: object) => boolean)|null>} null when
+ *   there is nothing to narrow - the untouched pre-F-14 candidate set.
+ */
+export async function loadSubstituteScope(userId, { planTags, equipment } = {}) {
+  let tags = planTags;
+  if (tags === undefined) {
+    try {
+      tags = (await getActivePlan(userId))?.tags ?? null;
+    } catch (_e) { tags = null; /* best effort: no style restriction */ }
+  }
+  let eq = equipment;
+  if (eq === undefined) {
+    try {
+      // eslint-disable-next-line global-require
+      eq = require('../store/useAppStore').default.getState().userProfile?.equipment ?? null;
+    } catch (_e) { eq = null; /* best effort: no equipment restriction */ }
+  }
+  return substituteCandidateFilter({ styleKey: styleKeyFromTags(tags), equipment: eq });
 }
 
 /**
@@ -124,12 +182,15 @@ export async function recordEffectiveChoice(userId, constraintId, choice) {
  *   still-undecided ids collected on refresh/revisit); empty means
  *   nothing to offer, not "every rule" (unlike computeCapabilityPlanRewrite's
  *   null-means-all-baseline convention - this function is episode-scoped).
- * @param {{serveGate?: boolean}} opts
+ * @param {{serveGate?: boolean, equipment?: string|null}} opts equipment
+ *   overrides the F-14 scope's athlete-kit half (tests, and any caller
+ *   that already holds the profile); the style half comes from this
+ *   plan's own tags, which are loaded here anyway.
  * @returns {Promise<Array<{routineId: string, routineName: string|null,
  *   routineExerciseId: string|null, from: object, to: object|null,
  *   constraintIds: string[]}>>}
  */
-export async function computePlanEffectiveLines(userId, ruleIds = [], { serveGate = false } = {}) {
+export async function computePlanEffectiveLines(userId, ruleIds = [], { serveGate = false, equipment } = {}) {
   // Round 3 (R3-2): `checked` distinguishes "nothing affected" from
   // "could not check". A failed read and a genuinely unaffected plan
   // used to be the same empty array, and the vacuous-applied write
@@ -162,6 +223,11 @@ export async function computePlanEffectiveLines(userId, ruleIds = [], { serveGat
     ]);
     if (capState.empty || capState.unavailable) return { lines: out, checked: false, failSafeRoutineIds };
     checked = true;
+    // F-14: the preview names the movements serve would actually assign,
+    // so it asks serve's own scope question - this plan's style pool and
+    // the athlete's kit - or it would preview a barbell press for a
+    // dumbbell circuit and then serve something else.
+    const isCandidate = await loadSubstituteScope(userId, { planTags: plan?.tags ?? null, equipment });
     const byId = new Map((library ?? []).map((e) => [e.id, e]));
     for (const routine of routines ?? []) {
       // eslint-disable-next-line no-await-in-loop
@@ -221,7 +287,7 @@ export async function computePlanEffectiveLines(userId, ruleIds = [], { serveGat
             // order so the lines below name the movements serve would
             // actually assign, not the ones it has already spent. With no
             // substitute left, serve omits it - not served.
-            const spent = bestEligibleSubstitute(exercise, library, isEligibleRow, taken);
+            const spent = bestEligibleSubstitute(exercise, library, isEligibleRow, taken, isCandidate);
             if (spent) { taken.add(spent.id); anyServed = true; }
           } else {
             // Declined/undecided out-of-scope drivers keep the row in
@@ -230,7 +296,7 @@ export async function computePlanEffectiveLines(userId, ruleIds = [], { serveGat
           }
           continue;
         }
-        const substitute = bestEligibleSubstitute(exercise, library, isEligibleRow, taken);
+        const substitute = bestEligibleSubstitute(exercise, library, isEligibleRow, taken, isCandidate);
         if (substitute) { taken.add(substitute.id); anyServed = true; }
         routineLines.push({
           routineId: routine.id,
@@ -392,14 +458,17 @@ export async function hasCapabilityToRevisit(userId, undecidedEpisodeRuleIds = [
  * @param {string} userId
  * @param {string|null} workoutId for the omission effects record
  * @param {Array} rows the session's exercise rows
- * @param {{rowIds?: Array<string|null>}} [opts] rowIds[i] is base slot
- *   i's stable planned-row id (or null)
+ * @param {{rowIds?: Array<string|null>, planTags?: string|null,
+ *   equipment?: string|null}} [opts] rowIds[i] is base slot i's stable
+ *   planned-row id (or null). planTags/equipment override the F-14 scope
+ *   (the plan's style pool and the athlete's kit); omitted, both resolve
+ *   themselves - the active plan's tags and the stored profile.
  * @returns {Promise<{served: Array, baseIndexes: number[], untouched: boolean}>}
  *   untouched=true means the base session stands exactly as given
  *   (served IS the caller's own array); otherwise served[k] belongs to
  *   base slot baseIndexes[k].
  */
-export async function applyEffectiveViewToSession(userId, workoutId, rows, { rowIds = null } = {}) {
+export async function applyEffectiveViewToSession(userId, workoutId, rows, { rowIds = null, planTags, equipment } = {}) {
   const untouched = () => ({
     served: rows,
     baseIndexes: Array.isArray(rows) ? rows.map((_, i) => i) : [],
@@ -411,9 +480,15 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows, { row
     const hasApplied = !capState.empty && !capState.unavailable
       && (capState.restrictions ?? []).some((r) => r.role === 'episode' && r.effectiveChoice === 'applied');
     if (!hasApplied) return untouched();
-    const [intentState, library] = await Promise.all([
+    // F-14: the scope question rides beside the library read, so serve
+    // narrows to this plan's style pool and the athlete's kit BEFORE
+    // capability eligibility ranks anything. It resolves best-effort and
+    // fails open, so a plan or profile read problem leaves serve exactly
+    // as it behaved before, never empty-handed.
+    const [intentState, library, isCandidate] = await Promise.all([
       loadScopedIntentState(userId),
       getAllExercises(),
+      loadSubstituteScope(userId, { planTags, equipment }),
     ]);
     // CC33 adversarial review F1, closed at this root: the rows a live
     // session serves come from getRoutineExercisesWithDetails, whose
@@ -441,6 +516,7 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows, { row
         return { exercise: resolved ?? e, userChosen: !!e?._userAdded };
       }), library, capState,
       substituteSeniorQuestion(capState, intentState),
+      isCandidate,
     );
     if (!view.anyEffect) return untouched();
     const served = [];
@@ -545,10 +621,14 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows, { row
  *
  * @param {string} userId
  * @param {string} routineId
+ * @param {{planTags?: string|null, equipment?: string|null}} [opts]
+ *   the F-14 scope overrides, resolved the same way serve resolves them
+ *   when omitted - the mirror has to ask serve's question, or the count
+ *   and the served session disagree about what was reachable.
  * @returns {Promise<number|null>} the served row count, or null when
  *   the routine could not be read at all
  */
-export async function countEffectiveSessionRows(userId, routineId) {
+export async function countEffectiveSessionRows(userId, routineId, { planTags, equipment } = {}) {
   let baseCount = null;
   try {
     if (!userId || !routineId) return null;
@@ -566,8 +646,10 @@ export async function countEffectiveSessionRows(userId, routineId) {
       .filter((r) => r.exercise);
     if (!baseRows.length) return baseCount;
     const intentState = await loadScopedIntentState(userId);
+    const isCandidate = await loadSubstituteScope(userId, { planTags, equipment });
     const view = computeEffectiveSession(
       baseRows, library, capState, substituteSeniorQuestion(capState, intentState),
+      isCandidate,
     );
     const omitted = view.lines.filter((l) => l.effect === EFFECTIVE_EFFECT.OMITTED).length;
     // Round 5 (R5-4): serve's own never-served-empty fail-safe (D116),
@@ -606,9 +688,11 @@ export async function countEffectiveSessionRows(userId, routineId) {
  * exercise (never silently emptied) and reports itself unsolvable.
  *
  * @param {string} userId
- * @param {{ruleIds?: string[]|null}} opts limit to conflicts driven by
- *   these constraint ids (a just-created or just-promoted group); null
- *   judges every active BASELINE rule.
+ * @param {{ruleIds?: string[]|null, equipment?: string|null}} opts limit
+ *   to conflicts driven by these constraint ids (a just-created or
+ *   just-promoted group); null judges every active BASELINE rule.
+ *   equipment overrides the F-14 scope's athlete-kit half; its style
+ *   half comes from this plan's own tags, loaded here anyway.
  * @returns {Promise<{lines: Array<{routineId: string, routineName: string|null,
  *   routineExerciseId: string|null, from: object, to: object|null,
  *   constraintIds: string[]}>, substitutable: number, unsolvable: number,
@@ -617,7 +701,7 @@ export async function countEffectiveSessionRows(userId, routineId) {
  *   state, a failed routine read, or any throw. Callers must not present
  *   an unchecked empty result as "nothing needs attention".
  */
-export async function computeCapabilityPlanRewrite(userId, { ruleIds = null } = {}) {
+export async function computeCapabilityPlanRewrite(userId, { ruleIds = null, equipment } = {}) {
   const out = {
     lines: [], substitutable: 0, unsolvable: 0, checked: false,
   };
@@ -641,6 +725,11 @@ export async function computeCapabilityPlanRewrite(userId, { ruleIds = null } = 
       return out;
     }
     out.checked = true;
+    // F-14: the document is rewritten only to movements this plan's
+    // style and the athlete's kit can actually reach - the rewrite
+    // writes permanently, so a barbell press proposed into a dumbbell
+    // circuit would outlive the episode that caused it.
+    const isCandidate = await loadSubstituteScope(userId, { planTags: plan?.tags ?? null, equipment });
     const byId = new Map((library ?? []).map((e) => [e.id, e]));
     const roleById = new Map((capState.restrictions ?? []).map((r) => [r.id, r.role]));
     const isEligibleRow = substituteSeniorQuestion(capState, intentState);
@@ -673,7 +762,7 @@ export async function computeCapabilityPlanRewrite(userId, { ruleIds = null } = 
           // episode conflict is the overlay's business, not the document's.
           : conflicts.filter((c) => roleById.get(c.constraintId) === 'baseline');
         if (!conflicts.length) continue;
-        const substitute = bestEligibleSubstitute(exercise, library, isEligibleRow, taken);
+        const substitute = bestEligibleSubstitute(exercise, library, isEligibleRow, taken, isCandidate);
         if (substitute) taken.add(substitute.id);
         out.lines.push({
           routineId: routine.id,

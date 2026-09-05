@@ -88,13 +88,31 @@ export function baselineConflicts(capabilityState, exercise) {
  * whose every remaining candidate is taken falls to the next rank, and
  * when none remains it resolves null - the existing honest
  * omitted/unsolvable path, never a duplicate.
+ *
+ * `isCandidate` (F-14, final-certification-2026-09-05; evidence A6):
+ * the optional SCOPE question - is this movement even in the candidate
+ * set for the plan being served? Injected exactly like the senior
+ * question above, so this module stays pure and reaches neither the
+ * style pools nor the equipment vocabulary itself. Today the caller
+ * composes it from the plan's style pool and the athlete's equipment
+ * profile (exercise/candidateScope.js): without it, a "no overhead"
+ * rule on Dumbbell Shoulder Press inside a dumbbell circuit served a
+ * barbell or machine press, because the candidate set was the whole
+ * catalogue. It runs BEFORE the eligibility question and can only
+ * NARROW the set - a scoped-out movement is never admitted by it, and
+ * a movement the senior question refuses is never admitted despite it.
+ * Null (the default) is no scope at all: the selection is exactly what
+ * it was for an untagged plan on an athlete with no recorded kit, and a
+ * slot whose every scoped candidate is refused resolves null, which is
+ * the existing honest omitted/unsolvable path, never a wider search.
  */
-export function bestEligibleSubstitute(exercise, library, isEligibleRow, taken = null) {
+export function bestEligibleSubstitute(exercise, library, isEligibleRow, taken = null, isCandidate = null) {
   if (!exercise?.primaryMuscle || !Array.isArray(library)) return null;
   const candidates = library
     .filter((e) => e.id !== exercise.id
       && e.primaryMuscle === exercise.primaryMuscle
       && !(taken && taken.has(e.id))
+      && (!isCandidate || isCandidate(e))
       && isEligibleRow(e))
     .sort((a, b) => tierRank(a.name) - tierRank(b.name)
       || String(a.name).localeCompare(String(b.name)));
@@ -110,11 +128,15 @@ export function bestEligibleSubstitute(exercise, library, isEligibleRow, taken =
  * @param {object} capabilityState the resolver state (role-aware rows)
  * @param {(exercise: object) => boolean} isEligibleRow the SENIOR question,
  *   injected by the caller
+ * @param {((exercise: object) => boolean)|null} [isCandidate] the optional
+ *   SCOPE question (F-14): the plan's style pool and the athlete's
+ *   equipment, injected by the caller and applied before eligibility.
+ *   Null = no scope, the pre-F-14 whole-catalogue candidate set.
  * @returns {{lines: Array<{slot: number, exerciseFrom: object,
  *   effect: string, exerciseTo: object|null, constraintIds: string[],
  *   undecided: boolean}>, anyEffect: boolean, undecidedCount: number}}
  */
-export function computeEffectiveSession(baseRows, library, capabilityState, isEligibleRow) {
+export function computeEffectiveSession(baseRows, library, capabilityState, isEligibleRow, isCandidate = null) {
   const lines = [];
   let anyEffect = false;
   let undecidedCount = 0;
@@ -172,7 +194,7 @@ export function computeEffectiveSession(baseRows, library, capabilityState, isEl
       lines.push({ slot: i, exerciseFrom: exercise, effect: EFFECTIVE_EFFECT.CONFLICTED, exerciseTo: null, constraintIds, undecided });
       return;
     }
-    const substitute = bestEligibleSubstitute(exercise, library, isEligibleRow, taken);
+    const substitute = bestEligibleSubstitute(exercise, library, isEligibleRow, taken, isCandidate);
     if (substitute) taken.add(substitute.id);
     lines.push({
       slot: i,
