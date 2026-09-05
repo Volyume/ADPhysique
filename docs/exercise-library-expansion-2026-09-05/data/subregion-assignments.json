@@ -1,6 +1,6 @@
 {
   "note": "EL-21 / F6: 59 rows missing a required subregion, assigned from the movement by convert-legacy.mjs. Lead review requested.",
-  "count": 59,
+  "count": 75,
   "assignments": [
     {
       "name": "Dumbbell Pullover",
@@ -237,6 +237,70 @@
     {
       "name": "Seated Twist (Plate)",
       "subregion": "flexion"
+    },
+    {
+      "name": "Hip Thrust (Barbell)",
+      "subregion": "activator"
+    },
+    {
+      "name": "Trap Bar Deadlift (Low Handle)",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Dumbbell Goblet Squat",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Single-Arm Dumbbell Row",
+      "subregion": "horizontal_lat"
+    },
+    {
+      "name": "Cable Fly (Low to Mid, Incline)",
+      "subregion": "incline"
+    },
+    {
+      "name": "Cable Fly (Mid Height, Cuff)",
+      "subregion": "flat"
+    },
+    {
+      "name": "Cable Serratus Punch",
+      "subregion": "flexion"
+    },
+    {
+      "name": "Underhand Lat Pulldown",
+      "subregion": "vertical_pull"
+    },
+    {
+      "name": "HS ISO High Row",
+      "subregion": "upper_mid_row"
+    },
+    {
+      "name": "HS Plate-Loaded Lat Pulldown",
+      "subregion": "vertical_pull"
+    },
+    {
+      "name": "Plate-Loaded Seated Row",
+      "subregion": "horizontal_lat"
+    },
+    {
+      "name": "Bodyweight Squat",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Box Step-Up",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Lunge",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Seated Band Lat Pulldown",
+      "subregion": "vertical_pull"
+    },
+    {
+      "name": "Seated Band Row",
+      "subregion": "horizontal_lat"
     }
   ]
 }

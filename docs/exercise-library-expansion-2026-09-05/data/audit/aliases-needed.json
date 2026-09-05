@@ -1,9 +1,9 @@
 {
-  "totalRows": 552,
-  "rowsWithAtLeastOneAliasCount": 96,
-  "rowsWithNoAliasSuggestedCount": 456,
-  "totalAliasCount": 107,
-  "highConfidenceCount": 100,
+  "totalRows": 564,
+  "rowsWithAtLeastOneAliasCount": 98,
+  "rowsWithNoAliasSuggestedCount": 466,
+  "totalAliasCount": 109,
+  "highConfidenceCount": 102,
   "mediumConfidenceCount": 7,
   "skippedCollisionsCount": 2,
   "skippedCollisions": [
@@ -20,6 +20,21 @@
   ],
   "perRow": [
     {
+      "name": "Barbell Back Squat",
+      "aliases": [
+        {
+          "alias": "BB Back Squat",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
+        },
+        {
+          "alias": "Back Squat",
+          "confidence": "high",
+          "reason": "Barbell is the default/implied implement."
+        }
+      ]
+    },
+    {
       "name": "Barbell Bench Press",
       "aliases": [
         {
@@ -35,157 +50,102 @@
       ]
     },
     {
-      "name": "Incline Barbell Bench Press",
+      "name": "Barbell Curl",
       "aliases": [
         {
-          "alias": "Incline BB Bench Press",
+          "alias": "BB Curl",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Barbell Drag Curl",
+      "aliases": [
+        {
+          "alias": "BB Drag Curl",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Barbell Front Raise",
+      "aliases": [
+        {
+          "alias": "BB Front Raise",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Barbell Front Squat",
+      "aliases": [
+        {
+          "alias": "BB Front Squat",
           "confidence": "high",
           "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         },
         {
-          "alias": "Incline Bench Press",
+          "alias": "Front Squat",
           "confidence": "high",
-          "reason": "Barbell is the implied default for an unqualified \"incline bench press\"."
+          "reason": "Barbell is the default/implied implement."
         }
       ]
     },
     {
-      "name": "Decline Barbell Bench Press",
+      "name": "Barbell Good Morning",
       "aliases": [
         {
-          "alias": "Decline BB Bench Press",
+          "alias": "BB Good Morning",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Barbell Hip Thrust",
+      "aliases": [
+        {
+          "alias": "BB Hip Thrust",
           "confidence": "high",
           "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         },
         {
-          "alias": "Decline Bench Press",
+          "alias": "Hip Thrust",
           "confidence": "high",
-          "reason": "Barbell is the implied default for an unqualified \"decline bench press\"."
+          "reason": "Barbell is the default/implied loaded version."
         }
       ]
     },
     {
-      "name": "Dumbbell Bench Press",
+      "name": "Barbell Lunge",
       "aliases": [
         {
-          "alias": "DB Bench Press",
+          "alias": "BB Lunge",
           "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         }
       ]
     },
     {
-      "name": "Incline Dumbbell Press",
+      "name": "Barbell Overhead Press",
       "aliases": [
         {
-          "alias": "Incline DB Press",
+          "alias": "BB Overhead Press",
           "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Decline Dumbbell Press",
-      "aliases": [
-        {
-          "alias": "Decline DB Press",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Cable Crossover (High to Low)",
-      "aliases": [
-        {
-          "alias": "Cable Crossover",
-          "confidence": "high",
-          "reason": "Common shorthand omitting the pulley direction, which is usually implied by \"crossover\"."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Fly",
-      "aliases": [
-        {
-          "alias": "DB Fly",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Incline Dumbbell Fly",
-      "aliases": [
-        {
-          "alias": "Incline DB Fly",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Decline Dumbbell Fly",
-      "aliases": [
-        {
-          "alias": "Decline DB Fly",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Pec Deck (Machine Fly)",
-      "aliases": [
-        {
-          "alias": "Pec Deck",
-          "confidence": "high",
-          "reason": "The machine's common name, used far more often than the full label."
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         },
         {
-          "alias": "Butterfly Machine",
-          "confidence": "medium",
-          "reason": "Common older/UK gym-floor name for the same station."
-        }
-      ]
-    },
-    {
-      "name": "Push-Up",
-      "aliases": [
-        {
-          "alias": "Press-Up",
+          "alias": "OHP",
           "confidence": "high",
-          "reason": "British English term for the same movement (the corpus is British-English-first)."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Pullover",
-      "aliases": [
+          "reason": "Near-universal lifting-community abbreviation."
+        },
         {
-          "alias": "DB Pullover",
+          "alias": "Military Press",
           "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Squeeze Press",
-      "aliases": [
-        {
-          "alias": "DB Squeeze Press",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Pullover (Chest)",
-      "aliases": [
-        {
-          "alias": "DB Pullover (Chest)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+          "reason": "Long-standing common name for the standing barbell overhead press."
         }
       ]
     },
@@ -215,70 +175,60 @@
       ]
     },
     {
-      "name": "Dumbbell Row",
+      "name": "Barbell Shrug",
       "aliases": [
         {
-          "alias": "DB Row",
+          "alias": "BB Shrug",
           "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         }
       ]
     },
     {
-      "name": "Seated Cable Row",
+      "name": "Barbell Skull Crusher",
       "aliases": [
         {
-          "alias": "Cable Row",
+          "alias": "BB Skull Crusher",
           "confidence": "high",
-          "reason": "Seated is the default/implied form of a cable row."
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         }
       ]
     },
     {
-      "name": "Lat Pulldown (Wide Grip)",
+      "name": "Barbell Upright Row (Wide)",
       "aliases": [
         {
-          "alias": "Lat Pulldown",
-          "confidence": "medium",
-          "reason": "Wide grip is the most common default when a grip is not specified, but the corpus also seeds neutral/close-grip rows under the same base name, so this is not certain."
-        }
-      ]
-    },
-    {
-      "name": "Conventional Deadlift",
-      "aliases": [
-        {
-          "alias": "Deadlift",
+          "alias": "BB Upright Row (Wide)",
           "confidence": "high",
-          "reason": "Conventional stance is the default/implied form of an unqualified \"deadlift\"."
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         }
       ]
     },
     {
-      "name": "Trap Bar Deadlift",
+      "name": "Barbell Wrist Curl",
       "aliases": [
         {
-          "alias": "Hex Bar Deadlift",
+          "alias": "BB Wrist Curl",
           "confidence": "high",
-          "reason": "\"Hex bar\" and \"trap bar\" name the same implement; both terms are in everyday gym use."
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         }
       ]
     },
     {
-      "name": "Chest-Supported Row (Dumbbell)",
+      "name": "Behind-the-Back Barbell Shrug",
       "aliases": [
         {
-          "alias": "Chest-Supported Row (DB)",
+          "alias": "Behind-the-Back BB Shrug",
           "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         }
       ]
     },
     {
-      "name": "Good Morning (Barbell)",
+      "name": "Behind-the-Back Wrist Curl (Barbell)",
       "aliases": [
         {
-          "alias": "Good Morning (BB)",
+          "alias": "Behind-the-Back Wrist Curl (BB)",
           "confidence": "high",
           "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         }
@@ -295,102 +245,37 @@
       ]
     },
     {
-      "name": "Barbell Overhead Press",
+      "name": "Close-Grip Bench Press",
       "aliases": [
         {
-          "alias": "BB Overhead Press",
+          "alias": "CGBP",
+          "confidence": "medium",
+          "reason": "Lifting-forum shorthand, less universal than RDL/OHP."
+        }
+      ]
+    },
+    {
+      "name": "Conventional Deadlift",
+      "aliases": [
+        {
+          "alias": "Deadlift",
+          "confidence": "high",
+          "reason": "Conventional stance is the default/implied form of an unqualified \"deadlift\"."
+        }
+      ]
+    },
+    {
+      "name": "Decline Barbell Bench Press",
+      "aliases": [
+        {
+          "alias": "Decline BB Bench Press",
           "confidence": "high",
           "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         },
         {
-          "alias": "OHP",
+          "alias": "Decline Bench Press",
           "confidence": "high",
-          "reason": "Near-universal lifting-community abbreviation."
-        },
-        {
-          "alias": "Military Press",
-          "confidence": "high",
-          "reason": "Long-standing common name for the standing barbell overhead press."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Shoulder Press",
-      "aliases": [
-        {
-          "alias": "DB Shoulder Press",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Seated Dumbbell Press",
-      "aliases": [
-        {
-          "alias": "Seated DB Press",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Front Raise",
-      "aliases": [
-        {
-          "alias": "DB Front Raise",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Lateral Raise",
-      "aliases": [
-        {
-          "alias": "DB Lateral Raise",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Y-Raise",
-      "aliases": [
-        {
-          "alias": "DB Y-Raise",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Rear Delt Fly",
-      "aliases": [
-        {
-          "alias": "DB Rear Delt Fly",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Side-Lying Rear Delt",
-      "aliases": [
-        {
-          "alias": "DB Side-Lying Rear Delt",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Barbell Curl",
-      "aliases": [
-        {
-          "alias": "BB Curl",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
+          "reason": "Barbell is the implied default for an unqualified \"decline bench press\"."
         }
       ]
     },
@@ -401,56 +286,6 @@
           "alias": "EZ Curl",
           "confidence": "high",
           "reason": "Common shorthand dropping \"Bar\"."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Curl",
-      "aliases": [
-        {
-          "alias": "DB Curl",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Incline Dumbbell Curl",
-      "aliases": [
-        {
-          "alias": "Incline DB Curl",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Preacher Curl (Barbell)",
-      "aliases": [
-        {
-          "alias": "Preacher Curl (BB)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Preacher Curl (Dumbbell)",
-      "aliases": [
-        {
-          "alias": "Preacher Curl (DB)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Close-Grip Bench Press",
-      "aliases": [
-        {
-          "alias": "CGBP",
-          "confidence": "medium",
-          "reason": "Lifting-forum shorthand, less universal than RDL/OHP."
         }
       ]
     },
@@ -470,132 +305,47 @@
       ]
     },
     {
-      "name": "Dumbbell Skull Crusher",
+      "name": "Good Morning (Barbell)",
       "aliases": [
         {
-          "alias": "DB Skull Crusher",
+          "alias": "Good Morning (BB)",
           "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         }
       ]
     },
     {
-      "name": "Dumbbell Overhead Tricep Extension",
+      "name": "Hip Thrust (Barbell)",
       "aliases": [
         {
-          "alias": "DB Overhead Tricep Extension",
+          "alias": "Hip Thrust (BB)",
           "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         }
       ]
     },
     {
-      "name": "Overhead Dumbbell Extension",
+      "name": "Incline Barbell Bench Press",
       "aliases": [
         {
-          "alias": "Overhead DB Extension",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Barbell Back Squat",
-      "aliases": [
-        {
-          "alias": "BB Back Squat",
+          "alias": "Incline BB Bench Press",
           "confidence": "high",
           "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         },
         {
-          "alias": "Back Squat",
+          "alias": "Incline Bench Press",
           "confidence": "high",
-          "reason": "Barbell is the default/implied implement."
+          "reason": "Barbell is the implied default for an unqualified \"incline bench press\"."
         }
       ]
     },
     {
-      "name": "Barbell Front Squat",
+      "name": "Preacher Curl (Barbell)",
       "aliases": [
         {
-          "alias": "BB Front Squat",
+          "alias": "Preacher Curl (BB)",
           "confidence": "high",
           "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        },
-        {
-          "alias": "Front Squat",
-          "confidence": "high",
-          "reason": "Barbell is the default/implied implement."
-        }
-      ]
-    },
-    {
-      "name": "Hack Squat Machine",
-      "aliases": [
-        {
-          "alias": "Hack Squat",
-          "confidence": "high",
-          "reason": "Common shorthand dropping \"Machine\"."
-        }
-      ]
-    },
-    {
-      "name": "Bulgarian Split Squat",
-      "aliases": [
-        {
-          "alias": "BSS",
-          "confidence": "medium",
-          "reason": "Lifting-community abbreviation, less universal than RDL/OHP."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Lunge",
-      "aliases": [
-        {
-          "alias": "DB Lunge",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Barbell Lunge",
-      "aliases": [
-        {
-          "alias": "BB Lunge",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Step-Up (Dumbbell)",
-      "aliases": [
-        {
-          "alias": "Step-Up (DB)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Step-Up (Barbell)",
-      "aliases": [
-        {
-          "alias": "Step-Up (BB)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Front Squat (Dumbbell)",
-      "aliases": [
-        {
-          "alias": "Front Squat (DB)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
         }
       ]
     },
@@ -620,77 +370,12 @@
       ]
     },
     {
-      "name": "Romanian Deadlift (Dumbbell)",
+      "name": "Seated Calf Raise (Barbell)",
       "aliases": [
         {
-          "alias": "Romanian Deadlift (DB)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Stiff-Leg Deadlift",
-      "aliases": [
-        {
-          "alias": "SLDL",
-          "confidence": "medium",
-          "reason": "Common lifting-community abbreviation, less universal than RDL."
-        }
-      ]
-    },
-    {
-      "name": "Glute Ham Raise",
-      "aliases": [
-        {
-          "alias": "GHR",
-          "confidence": "high",
-          "reason": "Near-universal strength-coaching abbreviation."
-        }
-      ]
-    },
-    {
-      "name": "Kettlebell Swing",
-      "aliases": [
-        {
-          "alias": "KB Swing",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"KB\" for \"Kettlebell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Single-Leg RDL",
-      "aliases": [
-        {
-          "alias": "DB Single-Leg RDL",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Barbell Hip Thrust",
-      "aliases": [
-        {
-          "alias": "BB Hip Thrust",
+          "alias": "Seated Calf Raise (BB)",
           "confidence": "high",
           "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        },
-        {
-          "alias": "Hip Thrust",
-          "confidence": "high",
-          "reason": "Barbell is the default/implied loaded version."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Hip Thrust",
-      "aliases": [
-        {
-          "alias": "DB Hip Thrust",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
         }
       ]
     },
@@ -705,10 +390,90 @@
       ]
     },
     {
-      "name": "Seated Dumbbell Calf Raise",
+      "name": "Step-Up (Barbell)",
       "aliases": [
         {
-          "alias": "Seated DB Calf Raise",
+          "alias": "Step-Up (BB)",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Stiff-Leg Deadlift",
+      "aliases": [
+        {
+          "alias": "SLDL",
+          "confidence": "medium",
+          "reason": "Common lifting-community abbreviation, less universal than RDL."
+        }
+      ]
+    },
+    {
+      "name": "Trap Bar Deadlift",
+      "aliases": [
+        {
+          "alias": "Hex Bar Deadlift",
+          "confidence": "high",
+          "reason": "\"Hex bar\" and \"trap bar\" name the same implement; both terms are in everyday gym use."
+        }
+      ]
+    },
+    {
+      "name": "Bench Press (Close Grip, Dumbbell)",
+      "aliases": [
+        {
+          "alias": "Bench Press (Close Grip, DB)",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Bulgarian Split Squat",
+      "aliases": [
+        {
+          "alias": "BSS",
+          "confidence": "medium",
+          "reason": "Lifting-community abbreviation, less universal than RDL/OHP."
+        }
+      ]
+    },
+    {
+      "name": "Chest-Supported Row (Dumbbell)",
+      "aliases": [
+        {
+          "alias": "Chest-Supported Row (DB)",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Decline Dumbbell Fly",
+      "aliases": [
+        {
+          "alias": "Decline DB Fly",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Decline Dumbbell Press",
+      "aliases": [
+        {
+          "alias": "Decline DB Press",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Bench Press",
+      "aliases": [
+        {
+          "alias": "DB Bench Press",
           "confidence": "high",
           "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
         }
@@ -725,290 +490,10 @@
       ]
     },
     {
-      "name": "Single-Leg Calf Raise (Dumbbell)",
+      "name": "Dumbbell Curl",
       "aliases": [
         {
-          "alias": "Single-Leg Calf Raise (DB)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Toe-to-Bar",
-      "aliases": [
-        {
-          "alias": "T2B",
-          "confidence": "medium",
-          "reason": "Common CrossFit/gymnastics-conditioning shorthand."
-        }
-      ]
-    },
-    {
-      "name": "Barbell Shrug",
-      "aliases": [
-        {
-          "alias": "BB Shrug",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Shrug",
-      "aliases": [
-        {
-          "alias": "DB Shrug",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Behind-the-Back Barbell Shrug",
-      "aliases": [
-        {
-          "alias": "Behind-the-Back BB Shrug",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Farmer's Walk",
-      "aliases": [
-        {
-          "alias": "Farmer Carry",
-          "confidence": "high",
-          "reason": "Equally common phrasing for the same movement (\"carry\" vs \"walk\")."
-        }
-      ]
-    },
-    {
-      "name": "Barbell Wrist Curl",
-      "aliases": [
-        {
-          "alias": "BB Wrist Curl",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Wrist Curl",
-      "aliases": [
-        {
-          "alias": "DB Wrist Curl",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Kettlebell Snatch",
-      "aliases": [
-        {
-          "alias": "KB Snatch",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"KB\" for \"Kettlebell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Kettlebell Clean and Press",
-      "aliases": [
-        {
-          "alias": "KB Clean and Press",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"KB\" for \"Kettlebell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Barbell Good Morning",
-      "aliases": [
-        {
-          "alias": "BB Good Morning",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Stiff-Leg Deadlift (Dumbbell)",
-      "aliases": [
-        {
-          "alias": "Stiff-Leg Deadlift (DB)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Side Bend",
-      "aliases": [
-        {
-          "alias": "DB Side Bend",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Turkish Get-Up",
-      "aliases": [
-        {
-          "alias": "TGU",
-          "confidence": "high",
-          "reason": "Near-universal kettlebell-community abbreviation."
-        }
-      ]
-    },
-    {
-      "name": "Barbell Upright Row (Wide)",
-      "aliases": [
-        {
-          "alias": "BB Upright Row (Wide)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Barbell Front Raise",
-      "aliases": [
-        {
-          "alias": "BB Front Raise",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Kneeling Dumbbell Press",
-      "aliases": [
-        {
-          "alias": "Kneeling DB Press",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Single-Arm Dumbbell Press",
-      "aliases": [
-        {
-          "alias": "Single-Arm DB Press",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Seated Dumbbell Curl",
-      "aliases": [
-        {
-          "alias": "Seated DB Curl",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Barbell Drag Curl",
-      "aliases": [
-        {
-          "alias": "BB Drag Curl",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Barbell Skull Crusher",
-      "aliases": [
-        {
-          "alias": "BB Skull Crusher",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Pronation/Supination",
-      "aliases": [
-        {
-          "alias": "DB Pronation/Supination",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Single-Arm Dumbbell Shrug",
-      "aliases": [
-        {
-          "alias": "Single-Arm DB Shrug",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Dumbbell Tibialis Raise (Seated)",
-      "aliases": [
-        {
-          "alias": "DB Tibialis Raise (Seated)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Behind-the-Back Wrist Curl (Barbell)",
-      "aliases": [
-        {
-          "alias": "Behind-the-Back Wrist Curl (BB)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Kettlebell Shrug",
-      "aliases": [
-        {
-          "alias": "KB Shrug",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"KB\" for \"Kettlebell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Seated Calf Raise (Barbell)",
-      "aliases": [
-        {
-          "alias": "Seated Calf Raise (BB)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Kettlebell Romanian Deadlift",
-      "aliases": [
-        {
-          "alias": "KB Romanian Deadlift",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"KB\" for \"Kettlebell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Floor Press (Dumbbell)",
-      "aliases": [
-        {
-          "alias": "Floor Press (DB)",
+          "alias": "DB Curl",
           "confidence": "high",
           "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
         }
@@ -1025,472 +510,1017 @@
       ]
     },
     {
-      "name": "Bench Press (Close Grip, Dumbbell)",
+      "name": "Dumbbell Fly",
       "aliases": [
         {
-          "alias": "Bench Press (Close Grip, DB)",
+          "alias": "DB Fly",
           "confidence": "high",
           "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Front Raise",
+      "aliases": [
+        {
+          "alias": "DB Front Raise",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Goblet Squat",
+      "aliases": [
+        {
+          "alias": "DB Goblet Squat",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Hip Thrust",
+      "aliases": [
+        {
+          "alias": "DB Hip Thrust",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Lateral Raise",
+      "aliases": [
+        {
+          "alias": "DB Lateral Raise",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Lunge",
+      "aliases": [
+        {
+          "alias": "DB Lunge",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Overhead Tricep Extension",
+      "aliases": [
+        {
+          "alias": "DB Overhead Tricep Extension",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Pronation/Supination",
+      "aliases": [
+        {
+          "alias": "DB Pronation/Supination",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Pullover",
+      "aliases": [
+        {
+          "alias": "DB Pullover",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Pullover (Chest)",
+      "aliases": [
+        {
+          "alias": "DB Pullover (Chest)",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Rear Delt Fly",
+      "aliases": [
+        {
+          "alias": "DB Rear Delt Fly",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Row",
+      "aliases": [
+        {
+          "alias": "DB Row",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Shoulder Press",
+      "aliases": [
+        {
+          "alias": "DB Shoulder Press",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Shrug",
+      "aliases": [
+        {
+          "alias": "DB Shrug",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Side Bend",
+      "aliases": [
+        {
+          "alias": "DB Side Bend",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Side-Lying Rear Delt",
+      "aliases": [
+        {
+          "alias": "DB Side-Lying Rear Delt",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Single-Leg RDL",
+      "aliases": [
+        {
+          "alias": "DB Single-Leg RDL",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Skull Crusher",
+      "aliases": [
+        {
+          "alias": "DB Skull Crusher",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Squeeze Press",
+      "aliases": [
+        {
+          "alias": "DB Squeeze Press",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Tibialis Raise (Seated)",
+      "aliases": [
+        {
+          "alias": "DB Tibialis Raise (Seated)",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Wrist Curl",
+      "aliases": [
+        {
+          "alias": "DB Wrist Curl",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Dumbbell Y-Raise",
+      "aliases": [
+        {
+          "alias": "DB Y-Raise",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Farmer's Walk",
+      "aliases": [
+        {
+          "alias": "Farmer Carry",
+          "confidence": "high",
+          "reason": "Equally common phrasing for the same movement (\"carry\" vs \"walk\")."
+        }
+      ]
+    },
+    {
+      "name": "Floor Press (Dumbbell)",
+      "aliases": [
+        {
+          "alias": "Floor Press (DB)",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Front Squat (Dumbbell)",
+      "aliases": [
+        {
+          "alias": "Front Squat (DB)",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Incline Dumbbell Curl",
+      "aliases": [
+        {
+          "alias": "Incline DB Curl",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Incline Dumbbell Fly",
+      "aliases": [
+        {
+          "alias": "Incline DB Fly",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Incline Dumbbell Press",
+      "aliases": [
+        {
+          "alias": "Incline DB Press",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Kneeling Dumbbell Press",
+      "aliases": [
+        {
+          "alias": "Kneeling DB Press",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Preacher Curl (Dumbbell)",
+      "aliases": [
+        {
+          "alias": "Preacher Curl (DB)",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Romanian Deadlift (Dumbbell)",
+      "aliases": [
+        {
+          "alias": "Romanian Deadlift (DB)",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Seated Dumbbell Calf Raise",
+      "aliases": [
+        {
+          "alias": "Seated DB Calf Raise",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Seated Dumbbell Curl",
+      "aliases": [
+        {
+          "alias": "Seated DB Curl",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Seated Dumbbell Press",
+      "aliases": [
+        {
+          "alias": "Seated DB Press",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Single-Arm Dumbbell Press",
+      "aliases": [
+        {
+          "alias": "Single-Arm DB Press",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Single-Arm Dumbbell Row",
+      "aliases": [
+        {
+          "alias": "Single-Arm DB Row",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Single-Arm Dumbbell Shrug",
+      "aliases": [
+        {
+          "alias": "Single-Arm DB Shrug",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Single-Leg Calf Raise (Dumbbell)",
+      "aliases": [
+        {
+          "alias": "Single-Leg Calf Raise (DB)",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Step-Up (Dumbbell)",
+      "aliases": [
+        {
+          "alias": "Step-Up (DB)",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Stiff-Leg Deadlift (Dumbbell)",
+      "aliases": [
+        {
+          "alias": "Stiff-Leg Deadlift (DB)",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Cable Crossover (High to Low)",
+      "aliases": [
+        {
+          "alias": "Cable Crossover",
+          "confidence": "high",
+          "reason": "Common shorthand omitting the pulley direction, which is usually implied by \"crossover\"."
+        }
+      ]
+    },
+    {
+      "name": "Lat Pulldown (Wide Grip)",
+      "aliases": [
+        {
+          "alias": "Lat Pulldown",
+          "confidence": "medium",
+          "reason": "Wide grip is the most common default when a grip is not specified, but the corpus also seeds neutral/close-grip rows under the same base name, so this is not certain."
+        }
+      ]
+    },
+    {
+      "name": "Seated Cable Row",
+      "aliases": [
+        {
+          "alias": "Cable Row",
+          "confidence": "high",
+          "reason": "Seated is the default/implied form of a cable row."
+        }
+      ]
+    },
+    {
+      "name": "Glute Ham Raise",
+      "aliases": [
+        {
+          "alias": "GHR",
+          "confidence": "high",
+          "reason": "Near-universal strength-coaching abbreviation."
+        }
+      ]
+    },
+    {
+      "name": "Hack Squat Machine",
+      "aliases": [
+        {
+          "alias": "Hack Squat",
+          "confidence": "high",
+          "reason": "Common shorthand dropping \"Machine\"."
+        }
+      ]
+    },
+    {
+      "name": "Pec Deck (Machine Fly)",
+      "aliases": [
+        {
+          "alias": "Pec Deck",
+          "confidence": "high",
+          "reason": "The machine's common name, used far more often than the full label."
+        },
+        {
+          "alias": "Butterfly Machine",
+          "confidence": "medium",
+          "reason": "Common older/UK gym-floor name for the same station."
+        }
+      ]
+    },
+    {
+      "name": "Push-Up",
+      "aliases": [
+        {
+          "alias": "Press-Up",
+          "confidence": "high",
+          "reason": "British English term for the same movement (the corpus is British-English-first)."
+        }
+      ]
+    },
+    {
+      "name": "Toe-to-Bar",
+      "aliases": [
+        {
+          "alias": "T2B",
+          "confidence": "medium",
+          "reason": "Common CrossFit/gymnastics-conditioning shorthand."
+        }
+      ]
+    },
+    {
+      "name": "Kettlebell Clean and Press",
+      "aliases": [
+        {
+          "alias": "KB Clean and Press",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"KB\" for \"Kettlebell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Kettlebell Romanian Deadlift",
+      "aliases": [
+        {
+          "alias": "KB Romanian Deadlift",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"KB\" for \"Kettlebell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Kettlebell Shrug",
+      "aliases": [
+        {
+          "alias": "KB Shrug",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"KB\" for \"Kettlebell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Kettlebell Snatch",
+      "aliases": [
+        {
+          "alias": "KB Snatch",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"KB\" for \"Kettlebell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Kettlebell Swing",
+      "aliases": [
+        {
+          "alias": "KB Swing",
+          "confidence": "high",
+          "reason": "Standard gym shorthand: \"KB\" for \"Kettlebell\" is near-universal in logging apps and coaching notation."
+        }
+      ]
+    },
+    {
+      "name": "Turkish Get-Up",
+      "aliases": [
+        {
+          "alias": "TGU",
+          "confidence": "high",
+          "reason": "Near-universal kettlebell-community abbreviation."
         }
       ]
     }
   ],
   "rowsWithNoAliasSuggested": [
-    "Cable Fly (Low to High)",
-    "Machine Chest Press",
-    "Incline Machine Press",
-    "Decline Machine Press",
-    "Weighted Dips (Chest)",
-    "Wide-Grip Push-Up",
-    "Decline Push-Up",
-    "Ring Push-Up",
-    "Landmine Press",
-    "Smith Machine Bench Press",
-    "Incline Smith Machine Press",
-    "Cable Fly (Neutral)",
-    "Cable Fly (Chest Height)",
-    "High Cable Fly",
-    "Low Cable Fly",
-    "Incline Cable Fly",
-    "Svend Press",
-    "Hammer Strength Chest Press",
-    "Reverse-Grip Bench Press",
-    "Cable Fly (High to Low)",
-    "T-Bar Row",
-    "Chest-Supported T-Bar Row",
-    "Lat Pulldown (Close Grip)",
-    "Lat Pulldown (Neutral Grip)",
-    "Pull-Up",
-    "Weighted Pull-Up",
-    "Chin-Up",
-    "Neutral Grip Pull-Up",
-    "Assisted Pull-Up",
-    "Machine Row (Chest Supported)",
-    "Cable Straight-Arm Pulldown",
-    "Landmine Row",
-    "Sumo Deadlift",
-    "Rack Pull",
-    "Snatch Grip Deadlift",
-    "Deficit Deadlift",
-    "Cable High Row",
-    "Single-Arm Cable Row",
-    "Pendlay Row",
-    "Inverted Row",
-    "Cable Lat Pullover",
-    "Single-Arm Lat Pulldown",
-    "Meadows Row",
-    "Kroc Row",
-    "Seal Row",
-    "Seated Machine Row (Wide)",
-    "Face Pull (Rope)",
-    "Helms Row",
-    "Hyperextension (Back Extension)",
-    "Reverse Hyperextension",
-    "Cable Row (Wide Grip)",
-    "Machine Row (Hammer Strength)",
-    "TRX Row",
-    "Back Extension (Weighted)",
-    "Arnold Press",
-    "Z-Press",
-    "Push Press",
-    "Machine Shoulder Press",
-    "Viking Press",
-    "Cable Front Raise",
-    "Cable Lateral Raise",
-    "Machine Lateral Raise",
-    "Leaning Lateral Raise",
-    "Landmine Lateral Raise",
-    "Seated Lateral Raise",
-    "Upright Row",
-    "Leaning Cable Lateral Raise",
-    "Plate Lateral Raise",
-    "Cable Upright Row",
-    "Cable Rear Delt Fly",
-    "Machine Rear Delt Fly",
-    "Reverse Pec Deck",
-    "Cable Y-Raise (Prone)",
-    "Face Pull",
-    "W-Raise",
-    "YTW",
-    "Lying Rear Delt Row",
-    "Cable Face Pull",
-    "Cable Face Pull (Rope)",
-    "Bent-Over Cable Rear Delt Fly",
-    "Prone Incline Y-Raise",
-    "Prone Incline T-Raise",
-    "Seated Rear Delt Machine",
-    "Hammer Curl",
-    "Preacher Curl (EZ Bar)",
-    "Cable Curl",
-    "Cable Hammer Curl (Rope)",
-    "Machine Curl",
-    "Concentration Curl",
-    "Zottman Curl",
-    "Spider Curl",
-    "Cross-Body Hammer Curl",
-    "Prone Incline Curl",
-    "Reverse Curl",
-    "Cable Reverse Curl",
-    "EZ Bar Preacher Curl",
-    "Cable Rope Hammer Curl",
-    "Bayesian Curl",
-    "Waiter Curl",
-    "TRX Curl",
-    "Decline Skull Crusher",
-    "Tricep Pushdown (Rope)",
-    "Tricep Pushdown (Bar)",
-    "Cable Pushdown (Straight Bar)",
-    "Rope Pushdown",
-    "Overhead Cable Tricep Extension",
-    "Weighted Dips (Triceps)",
-    "Bench Dip",
-    "Tricep Kickback",
-    "Diamond Push-Up",
-    "JM Press",
-    "Tate Press",
-    "Lying Tricep Extension",
-    "Machine Tricep Extension",
-    "Single Arm Cable Extension",
-    "Board Press",
-    "Close-Grip Floor Press",
-    "Reverse Grip Cable Pushdown",
-    "Tricep Dip (Parallel Bars)",
-    "Cable Overhead Tricep Extension",
-    "Leg Press",
-    "Leg Extension",
-    "Sissy Squat",
-    "Goblet Squat",
-    "Walking Lunge",
-    "Wall Sit",
-    "Cyclist Squat",
-    "Smith Machine Squat",
-    "Box Squat",
-    "Pause Squat",
-    "Heel-Elevated Squat",
-    "Single Leg Press",
-    "Pendulum Squat",
-    "Spanish Squat",
-    "Leg Press (Narrow Stance)",
-    "Sumo Squat",
-    "Safety Bar Squat",
-    "Split Squat",
-    "Reverse Lunge",
-    "Curtsy Lunge",
-    "Leg Press (High Foot)",
-    "Cycling (Stationary)",
-    "Terminal Knee Extension",
-    "Nordic Curl",
-    "Nordic Hamstring Curl",
-    "Lying Leg Curl",
-    "Seated Leg Curl",
-    "Standing Leg Curl",
-    "Leg Curl (Cable)",
-    "Good Morning",
-    "Single-Leg Romanian Deadlift",
-    "Single-Leg Romanian Deadlift (DB)",
+    "Anderson Squat",
+    "B-Stance Hip Thrust",
     "B-Stance Romanian Deadlift",
-    "Swiss Ball Leg Curl",
-    "Cable Pull-Through",
+    "Board Press",
+    "Box Squat",
+    "Bradford Press",
+    "Cambered Bar Squat",
+    "Chest-Supported T-Bar Row",
+    "Clean Pull",
+    "Close-Grip Floor Press",
+    "Cyclist Squat",
     "Deadlift (Conventional)",
     "Deadlift (Sumo)",
-    "Trap Bar Deadlift (Hamstring)",
-    "Prone Leg Curl",
-    "Smith Machine Hip Thrust",
-    "Machine Hip Thrust",
-    "Glute Bridge",
-    "Single Leg Hip Thrust",
-    "Frog Pump",
-    "Cable Kickback",
-    "Donkey Kick",
-    "Abduction Machine",
-    "Cable Hip Abduction",
-    "Step-Up (Glute Focus)",
-    "Sumo Squat (Glute Focus)",
-    "Nordic Glute Curl",
-    "45-Degree Hip Extension",
-    "Reverse Hyperextension (Glute)",
-    "Sumo Deadlift (Glute Focus)",
-    "Sumo Deadlift (Wide Stance)",
-    "Cable Donkey Kickback",
-    "Donkey Kickback (Machine)",
-    "Walking Lunge (Glute Focus)",
-    "Curtsy Lunge (Glute Focus)",
-    "Kickstand Hip Thrust",
-    "Cable Pull-Through (Glute)",
-    "Romanian Deadlift (Glute)",
-    "Standing Calf Raise (Machine)",
-    "Seated Calf Raise",
-    "Seated Machine Calf Raise",
-    "Leg Press Calf Raise",
-    "Donkey Calf Raise",
-    "Single-Leg Calf Raise (Bodyweight)",
-    "Smith Machine Calf Raise",
-    "Calf Raise on Steps",
-    "Box Jump",
-    "Calf Raise on Leg Press Sled",
-    "Standing Calf Raise (Bodyweight)",
-    "Tibialis Raise (Wall)",
-    "Tibialis Raise (Slant Board)",
-    "Toe Walk",
-    "Cable Crunch",
-    "Hanging Leg Raise",
-    "Plank",
-    "Side Plank",
-    "Ab Rollout",
-    "Ab Wheel Rollout",
-    "Decline Crunch",
-    "Russian Twist",
-    "Pallof Press",
-    "Landmine Twist",
-    "Landmine Rotation",
-    "Bicycle Crunch",
-    "Crunch",
-    "Reverse Crunch",
-    "Leg Raise",
-    "Leg Raise (Flat Bench)",
-    "Dragon Flag",
-    "V-Up",
-    "Sit-Up",
-    "Cable Woodchop",
-    "Machine Crunch",
-    "Dead Bug",
-    "Hollow Body Hold",
-    "Stir the Pot",
-    "Hanging Knee Raise",
-    "Cable Woodchop (High to Low)",
-    "Cable Woodchop (Low to High)",
-    "Ab Wheel (Kneeling)",
-    "Weighted Sit-Up",
-    "L-Sit Hold",
-    "Suitcase Carry",
-    "Pallof Press (Kneeling)",
-    "Copenhagen Plank",
-    "Cable Shrug",
-    "Smith Machine Shrug",
-    "Hex Bar Shrug",
-    "Power Clean",
-    "Rack Pull (Traps)",
-    "Face Pull (Traps)",
-    "Incline Shrug",
-    "Snatch Grip Shrug",
-    "Keg Carry",
-    "Reverse Wrist Curl",
-    "Plate Pinch",
-    "Dead Hang",
-    "Thick Bar Curl",
-    "Cable Reverse Curl (Forearms)",
-    "Farmer Walk (Forearms)",
-    "Towel Pull-Up",
+    "Decline Skull Crusher",
+    "Deficit Deadlift",
+    "EZ Bar Drag Curl",
+    "EZ Bar Preacher Curl",
     "Fat Grip Curl",
-    "Hand Gripper",
-    "Rice Bucket",
+    "Good Morning",
+    "Guillotine Press",
+    "Hatfield Squat",
+    "Heel-Elevated Squat",
+    "Hex Bar Shrug",
+    "Jefferson Squat",
+    "JM Press",
+    "Kickstand Hip Thrust",
+    "Kneeling Squat",
+    "Meadows Row",
+    "Pause Squat",
+    "Pendlay Row",
+    "Pin Squat",
     "Pinch Grip Carry",
-    "Cable Wrist Curl",
-    "Cable Reverse Wrist Curl",
-    "Neck Flexion (Machine)",
-    "Neck Extension (Machine)",
-    "Neck Lateral Flexion",
-    "Neck Curl",
-    "Neck Bridge",
+    "Plate Front Raise",
+    "Plate Lateral Raise",
     "Plate Neck Curl",
     "Plate Neck Extension",
-    "Neck Harness Flexion",
-    "Neck Harness Extension",
-    "Manual Resistance Neck Flexion",
-    "Manual Resistance Neck Extension",
-    "Neck Rotation (Resistance)",
-    "Sled Push",
-    "Sled Pull",
-    "Prowler Drag",
-    "Battle Ropes",
-    "Assault Bike",
-    "Tyre Flip",
-    "Jump Squat",
-    "Broad Jump",
-    "Depth Jump",
-    "Stair Running",
-    "Clean Pull",
-    "Zercher Squat",
-    "Anderson Squat",
-    "Pin Squat",
-    "Hatfield Squat",
-    "Cambered Bar Squat",
-    "SSB Squat",
-    "Jefferson Curl",
-    "Serratus Punch",
-    "Kneeling Cable Crunch",
-    "Exercise Ball Crunch",
-    "Mountain Climber",
-    "Plank Row",
-    "Bear Crawl",
-    "Kneeling Ab Rollout",
-    "Cable Side Bend",
-    "Windmill",
-    "Close-Grip Push-Up",
-    "Archer Push-Up",
-    "Single-Arm Push-Up",
-    "Cable Chest Press (Standing)",
-    "Smith Machine Incline Press",
-    "Guillotine Press",
-    "Cable Face Pull (Upper Back)",
-    "Smith Machine Row",
-    "Half-Kneeling Cable Row",
-    "V-Bar Pulldown",
-    "Wide-Grip Cable Row",
-    "Plate Front Raise",
-    "Half-Kneeling Shoulder Press",
-    "Chin-Up (Supinated)",
-    "Lying Cable Curl",
-    "High Cable Curl",
-    "Smith Machine Close-Grip Press",
-    "Dip Machine",
-    "Cable Kickback (Triceps)",
-    "Jefferson Squat",
-    "Kneeling Squat",
-    "Skater Squat",
-    "Step-Up (Weighted)",
-    "Landmine Squat",
-    "Hip Extension (Cable)",
-    "Stiff-Leg Deadlift (Single-Leg)",
-    "Glute Squeeze Hold",
-    "Reverse Lunge (Glute Focus)",
-    "Monster Walk",
-    "Agility Ladder Drills",
-    "Rope Jump",
-    "Heel Walk",
-    "Seated Tibialis Raise",
-    "Trap Bar Shrug",
-    "Cable Upright Row (Traps)",
-    "Gripper Walks",
-    "Landmine Press (Abs)",
-    "Half-Kneeling Pallof Press",
-    "Tall-Kneeling Pallof Press",
-    "GHD Sit-Up",
-    "Incline Board Sit-Up",
-    "Hanging Oblique Raise",
+    "Plate Neck Lateral Flexion",
+    "Plate Pinch",
+    "Power Clean",
+    "Preacher Curl (EZ Bar)",
+    "Push Press",
+    "Rack Pull",
+    "Rack Pull (Traps)",
+    "Reverse Curl",
+    "Reverse Wrist Curl",
+    "Reverse-Grip Bench Press",
+    "Romanian Deadlift (Glute)",
+    "Safety Bar Squat",
+    "Seal Row",
     "Seated Twist (Plate)",
-    "Hip Adduction Machine",
-    "Cable Hip Adduction",
-    "Copenhagen Adduction",
-    "Cossack Squat",
-    "Sumo Squat (Adductor Focus)",
-    "Side-Lying Adduction",
+    "Snatch Grip Deadlift",
+    "Snatch Grip Shrug",
+    "Spider Curl",
+    "Split Squat",
+    "SSB Squat",
+    "Sumo Deadlift",
+    "Sumo Deadlift (Glute Focus)",
+    "Sumo Deadlift (Wide Stance)",
+    "Sumo Squat",
+    "Svend Press",
+    "T-Bar Row",
+    "Thick Bar Curl",
+    "Trap Bar Deadlift (Hamstring)",
+    "Trap Bar Deadlift (Low Handle)",
+    "Trap Bar Shrug",
+    "Upright Row",
+    "Weighted Plank (Plate on Back)",
+    "Weighted Sit-Up",
+    "Wrist Roller",
+    "Z-Press",
+    "Zercher Squat",
+    "Zercher Sumo Squat (Adductor Focus)",
+    "Arnold Press",
+    "Batwing Row",
+    "Concentration Curl",
+    "Cross-Body Hammer Curl",
+    "Cuban Press",
+    "Curtsy Lunge",
+    "Curtsy Lunge (Glute Focus)",
+    "Deficit Reverse Lunge (Glute Focus)",
+    "Egyptian Lateral Raise",
+    "Farmer Walk (Forearms)",
+    "Goblet Squat",
+    "Gripper Walks",
+    "Half-Kneeling Shoulder Press",
+    "Hammer Curl",
+    "Helms Row",
+    "Incline Hammer Curl",
+    "Incline Shrug",
+    "Jefferson Curl",
+    "Keg Carry",
+    "Kroc Row",
     "Lateral Lunge",
-    "Plate-Loaded Incline Press",
-    "Plate-Loaded Chest Press",
-    "Plate-Loaded Decline Press",
-    "Iso-Lateral Chest Press",
-    "Plate-Loaded Lat Pulldown",
-    "Iso-Lateral Front Pulldown",
-    "Plate-Loaded Row",
-    "Plate-Loaded High Row",
-    "Plate-Loaded Low Row",
-    "Plate-Loaded Shoulder Press",
-    "Plate-Loaded Rear Delt",
-    "Plate-Loaded Preacher Curl",
-    "Plate-Loaded Hip Thrust",
-    "Overhead Cable Rope Extension",
-    "Plate-Loaded Overhead Extension",
-    "Seated Dip Machine",
-    "Lateral Raise Machine",
-    "Preacher Curl Machine",
-    "Triceps Extension Machine",
-    "Glute Kickback Machine",
-    "Ab Crunch Machine",
-    "Assisted Dip Machine",
-    "Band Pull-Apart",
-    "Band Face Pull",
-    "Band Lateral Raise",
-    "Band Row",
-    "Band Lat Pulldown",
-    "Band Assisted Pull-Up",
-    "Band Chest Press",
-    "Band Bicep Curl",
-    "Band Tricep Pushdown",
-    "Band Squat",
-    "Band Good Morning",
-    "Band Pull-Through",
-    "Band Overhead Tricep Extension",
-    "Banded Lateral Walk",
-    "Band Deadlift",
-    "Band Tibialis Raise",
-    "Band Wrist Curl",
-    "Band Wrist Extension",
-    "Band Hip Thrust",
-    "Band Leg Curl",
-    "Band Shoulder Press",
-    "Bodyweight Single-Leg RDL",
-    "Glute-Ham Raise Machine",
-    "Prone Reverse Fly",
-    "Incline Push-Up (Hands Elevated)",
-    "Machine Shoulder Press (Front Delt Focus)",
-    "Seated Bodyweight Calf Raise",
-    "Oblique V-Up",
-    "Cable Reverse Woodchop (Kneeling)",
+    "Leaning Lateral Raise",
+    "Lying Rear Delt Row",
+    "Lying Tricep Extension",
+    "Plank Row",
+    "Prone Incline Curl",
+    "Prone Incline T-Raise",
+    "Prone Incline Y-Raise",
+    "Renegade Row",
+    "Reverse Lunge",
+    "Reverse Lunge (Glute Focus)",
+    "Seated Lateral Raise",
+    "Single-Arm Farmer Carry",
+    "Single-Leg Romanian Deadlift",
+    "Single-Leg Romanian Deadlift (DB)",
+    "Step-Up (Glute Focus)",
+    "Step-Up (Weighted)",
+    "Stiff-Leg Deadlift (Single-Leg)",
+    "Suitcase Carry",
+    "Sumo Squat (Adductor Focus)",
+    "Sumo Squat (Glute Focus)",
+    "Tate Press",
+    "Tricep Kickback",
+    "W-Raise",
+    "Waiter Curl",
+    "Walking Lunge",
+    "Walking Lunge (Glute Focus)",
+    "Wall Ball Squat",
+    "Weighted Frog Pump",
     "Weighted Russian Twist (Medicine Ball)",
+    "Wide-Stance Goblet Squat (Adductor Bias)",
+    "Windmill",
+    "YTW",
+    "Zottman Curl",
+    "Zottman Preacher Curl",
+    "Bayesian Curl",
+    "Bent-Over Cable Rear Delt Fly",
+    "Cable Anti-Rotation Hold (Half-Kneeling)",
+    "Cable Behind-the-Back Shrug",
+    "Cable Chest Press (Standing)",
+    "Cable Concentration Curl",
+    "Cable Crunch",
+    "Cable Curl",
+    "Cable Donkey Kickback",
+    "Cable Face Pull",
+    "Cable Face Pull (Rope)",
+    "Cable Face Pull (Upper Back)",
+    "Cable Fly (Chest Height)",
+    "Cable Fly (High to Low)",
+    "Cable Fly (Low to High)",
+    "Cable Fly (Low to Mid, Incline)",
+    "Cable Fly (Mid Height, Cuff)",
+    "Cable Fly (Neutral)",
+    "Cable Front Raise",
+    "Cable Hammer Curl (Rope)",
+    "Cable High Row",
+    "Cable Hip Abduction",
+    "Cable Hip Adduction",
+    "Cable Iron Cross",
+    "Cable Kickback",
+    "Cable Kickback (Triceps)",
+    "Cable Lat Pullover",
+    "Cable Lateral Raise",
+    "Cable Lateral Raise (Behind the Back)",
+    "Cable Lateral Raise (Low Pulley)",
+    "Cable Overhead Bicep Curl",
+    "Cable Overhead Tricep Extension",
+    "Cable Pull-Through",
+    "Cable Pushdown (Straight Bar)",
+    "Cable Rear Delt Fly",
+    "Cable Reverse Curl",
+    "Cable Reverse Curl (Forearms)",
+    "Cable Reverse Woodchop (Kneeling)",
+    "Cable Reverse Wrist Curl",
+    "Cable Reverse-Grip Pulldown",
+    "Cable Rope Hammer Curl",
+    "Cable Rope Straight-Arm Pulldown (Single-Arm)",
+    "Cable Row (Wide Grip)",
+    "Cable Serratus Punch",
+    "Cable Shrug",
+    "Cable Side Bend",
+    "Cable Squat (Standing)",
+    "Cable Straight-Arm Pulldown",
+    "Cable Upright Row",
+    "Cable Upright Row (Traps)",
+    "Cable Woodchop",
     "Cable Woodchop (Half-Kneeling)",
-    "Single-Arm Cable Woodchop (Standing)",
+    "Cable Woodchop (High to Low)",
+    "Cable Woodchop (Low to High)",
+    "Cable Wrist Curl",
+    "Cable Y-Raise (Prone)",
+    "Cable Y-Raise (Standing)",
+    "Cross-Body Cable Tricep Extension",
+    "Face Pull",
+    "Face Pull (Rope)",
+    "Face Pull (Traps)",
+    "Half-Kneeling Cable Row",
+    "Half-Kneeling Pallof Press",
+    "High Cable Curl",
+    "High Cable Fly",
+    "Hip Extension (Cable)",
+    "Incline Cable Chest Press",
+    "Incline Cable Fly",
+    "Kneeling Cable Crunch",
+    "Lat Pulldown (Close Grip)",
+    "Lat Pulldown (Neutral Grip)",
+    "Leaning Cable Lateral Raise",
+    "Leg Curl (Cable)",
+    "Low Cable Fly",
+    "Lying Cable Curl",
+    "Overhead Cable Rope Extension",
+    "Overhead Cable Tricep Extension",
+    "Pallof Press",
+    "Pallof Press (Kneeling)",
+    "Reverse Cable Crossover",
+    "Reverse Grip Cable Pushdown",
+    "Serratus Punch",
+    "Single Arm Cable Extension",
     "Single-Arm Cable Lateral Raise",
     "Single-Arm Cable Rear Delt Fly",
+    "Single-Arm Cable Row",
+    "Single-Arm Cable Woodchop (Standing)",
     "Single-Arm Cable Wrist Curl",
-    "Single-Arm Farmer Carry",
-    "Single-Leg Tibialis Raise",
-    "Adductor Squeeze (Ball)",
-    "Wide-Stance Goblet Squat (Adductor Bias)",
-    "Zercher Sumo Squat (Adductor Focus)",
-    "Adductor Rock-Back (Kneeling)",
-    "Tib Bar Raise (Machine)",
-    "Plate Neck Lateral Flexion",
-    "Neck Machine Lateral Flexion",
-    "Wrist Roller",
-    "Cable Behind-the-Back Shrug",
-    "Cable Y-Raise (Standing)",
-    "Egyptian Lateral Raise",
-    "Landmine Front Raise",
-    "Landmine Rear Delt Row",
-    "Machine Y-Raise",
-    "Cuban Press",
-    "Bradford Press",
-    "Cable Lateral Raise (Behind the Back)",
-    "Reverse Cable Crossover",
-    "Donkey Calf Raise (Machine)",
-    "Eccentric Calf Raise (Bodyweight)",
-    "Sissy Squat Machine",
-    "Belt Squat",
-    "Reverse Nordic Curl",
-    "Smith Machine Front Squat",
-    "Bodyweight Bulgarian Split Squat",
-    "Wall Ball Squat",
-    "Cable Squat (Standing)",
-    "Slider Leg Curl (Bodyweight)",
-    "Landmine Romanian Deadlift",
-    "B-Stance Hip Thrust",
-    "Deficit Reverse Lunge (Glute Focus)",
-    "Weighted Frog Pump",
-    "Landmine Chest Press (Single-Arm)",
-    "Deficit Push-Up",
-    "Cable Iron Cross",
-    "Incline Cable Chest Press",
-    "Push-Up Plus",
-    "Chest Press Machine (Single-Arm)",
-    "Machine Chest Fly (Single-Arm)",
-    "Standing Cable Chest Press (Single-Arm)",
-    "Batwing Row",
-    "Wide-Grip Pull-Up",
-    "Cable Reverse-Grip Pulldown",
-    "Renegade Row",
-    "Cable Rope Straight-Arm Pulldown (Single-Arm)",
-    "Single-Arm Landmine Row",
-    "Cable Concentration Curl",
-    "EZ Bar Drag Curl",
-    "Zottman Preacher Curl",
-    "Incline Hammer Curl",
-    "Cable Overhead Bicep Curl",
+    "Single-Arm Lat Pulldown",
     "Single-Arm Overhead Cable Extension",
+    "Standing Cable Chest Press (Single-Arm)",
+    "Tall-Kneeling Pallof Press",
+    "Tricep Pushdown (Bar)",
+    "Tricep Pushdown (Rope)",
+    "Underhand Lat Pulldown",
+    "V-Bar Pulldown",
+    "Wide-Grip Cable Row",
+    "45-Degree Hip Extension",
+    "Abduction Machine",
+    "Assault Bike",
+    "Assisted Dip Machine",
+    "Assisted Pull-Up",
+    "Back Extension (Weighted)",
+    "Battle Ropes",
+    "Belt Squat",
+    "Calf Raise on Leg Press Sled",
+    "Chest Press Machine (Single-Arm)",
+    "Cycling (Stationary)",
+    "Decline Machine Press",
+    "Dip Machine",
+    "Donkey Calf Raise (Machine)",
+    "Donkey Kickback (Machine)",
+    "Facing-In Shoulder Press",
+    "GHD Sit-Up",
+    "Glute Kickback Machine",
+    "Glute-Ham Raise Machine",
+    "Hammer Strength Chest Press",
+    "Hand Gripper",
+    "Hip Adduction Machine",
+    "HS ISO High Row",
+    "HS Plate-Loaded Lat Pulldown",
+    "Hyperextension (Back Extension)",
+    "Incline Machine Press",
+    "Iso-Lateral Chest Press",
+    "Iso-Lateral Front Pulldown",
+    "Lateral Raise Machine",
+    "Leg Extension",
+    "Leg Press",
+    "Leg Press (High Foot)",
+    "Leg Press (Narrow Stance)",
+    "Leg Press Calf Raise",
+    "Lying Leg Curl",
+    "Machine Chest Fly (Single-Arm)",
+    "Machine Chest Press",
+    "Machine Crunch",
+    "Machine Curl",
+    "Machine Hip Thrust",
+    "Machine Lateral Raise",
+    "Machine Rear Delt Fly",
+    "Machine Row (Chest Supported)",
+    "Machine Row (Hammer Strength)",
+    "Machine Shoulder Press",
+    "Machine Shoulder Press (Front Delt Focus)",
+    "Machine Tricep Extension",
+    "Machine Y-Raise",
+    "Neck Extension (Machine)",
+    "Neck Flexion (Machine)",
+    "Neck Harness Extension",
+    "Neck Harness Flexion",
+    "Neck Machine Lateral Flexion",
+    "Pendulum Squat",
+    "Plate-Loaded Chest Press",
+    "Plate-Loaded Decline Press",
+    "Plate-Loaded High Row",
+    "Plate-Loaded Hip Thrust",
+    "Plate-Loaded Incline Press",
+    "Plate-Loaded Lat Pulldown",
+    "Plate-Loaded Low Row",
+    "Plate-Loaded Overhead Extension",
+    "Plate-Loaded Preacher Curl",
+    "Plate-Loaded Rear Delt",
+    "Plate-Loaded Row",
+    "Plate-Loaded Seated Row",
+    "Plate-Loaded Shoulder Press",
+    "Preacher Curl Machine",
+    "Prone Leg Curl",
+    "Prowler Drag",
+    "Reverse Hyperextension",
+    "Reverse Hyperextension (Glute)",
+    "Reverse Pec Deck",
+    "Seated Calf Raise",
+    "Seated Dip Machine",
+    "Seated Leg Curl",
+    "Seated Machine Calf Raise",
+    "Seated Machine Row (Wide)",
+    "Seated Rear Delt Machine",
+    "Seated Tibialis Raise",
+    "Single Leg Press",
+    "Sissy Squat Machine",
+    "Sled Pull",
+    "Sled Push",
+    "Standing Calf Raise (Machine)",
+    "Standing Leg Curl",
+    "Tib Bar Raise (Machine)",
+    "Tyre Flip",
+    "Viking Press",
+    "Incline Smith Machine Press",
+    "Smith Machine Bench Press",
+    "Smith Machine Calf Raise",
+    "Smith Machine Close-Grip Press",
+    "Smith Machine Front Squat",
+    "Smith Machine Hip Thrust",
+    "Smith Machine Incline Press",
+    "Smith Machine Row",
+    "Smith Machine Shrug",
+    "Smith Machine Squat",
+    "Ab Rollout",
+    "Ab Wheel (Kneeling)",
+    "Ab Wheel Rollout",
+    "Adductor Rock-Back (Kneeling)",
+    "Adductor Squeeze (Ball)",
+    "Agility Ladder Drills",
+    "Archer Push-Up",
+    "Bear Crawl",
+    "Bench Dip",
+    "Bicycle Crunch",
+    "Bodyweight Bulgarian Split Squat",
+    "Bodyweight Single-Leg RDL",
+    "Bodyweight Squat",
+    "Box Jump",
+    "Box Step-Up",
+    "Broad Jump",
+    "Calf Raise on Steps",
+    "Chin-Up",
+    "Chin-Up (Supinated)",
+    "Close-Grip Push-Up",
+    "Copenhagen Adduction",
+    "Copenhagen Plank",
+    "Cossack Squat",
+    "Crunch",
+    "Dead Bug",
+    "Dead Hang",
+    "Decline Crunch",
+    "Decline Push-Up",
+    "Deficit Push-Up",
+    "Depth Jump",
+    "Diamond Push-Up",
+    "Donkey Calf Raise",
+    "Donkey Kick",
+    "Dragon Flag",
+    "Eccentric Calf Raise (Bodyweight)",
+    "Exercise Ball Crunch",
+    "Frog Pump",
+    "Glute Bridge",
+    "Glute Squeeze Hold",
+    "Hanging Knee Raise",
+    "Hanging Leg Raise",
+    "Hanging Oblique Raise",
+    "Heel Walk",
+    "Hollow Body Hold",
+    "Incline Board Sit-Up",
+    "Incline Push-Up (Hands Elevated)",
+    "Inverted Row",
+    "Jump Squat",
+    "Kneeling Ab Rollout",
+    "L-Sit Hold",
+    "Leg Raise",
+    "Leg Raise (Flat Bench)",
+    "Lunge",
+    "Manual Resistance Neck Extension",
+    "Manual Resistance Neck Flexion",
+    "Monster Walk",
+    "Mountain Climber",
+    "Neck Bridge",
+    "Neck Curl",
+    "Neck Lateral Flexion",
+    "Neck Rotation (Resistance)",
+    "Neutral Grip Pull-Up",
+    "Nordic Curl",
+    "Nordic Glute Curl",
+    "Oblique V-Up",
+    "Plank",
+    "Prone Reverse Fly",
+    "Pull-Up",
+    "Push-Up Plus",
+    "Reverse Crunch",
+    "Reverse Nordic Curl",
+    "Reverse Plank",
+    "Rice Bucket",
+    "Rope Jump",
+    "Russian Twist",
+    "Seated Bodyweight Calf Raise",
+    "Side Plank",
+    "Side-Lying Adduction",
+    "Single Leg Hip Thrust",
+    "Single-Arm Push-Up",
+    "Single-Leg Calf Raise (Bodyweight)",
+    "Single-Leg Tibialis Raise",
+    "Sissy Squat",
+    "Sit-Up",
+    "Skater Squat",
+    "Slider Leg Curl (Bodyweight)",
+    "Spanish Squat",
+    "Stair Running",
+    "Standing Calf Raise (Bodyweight)",
+    "Stir the Pot",
+    "Swiss Ball Leg Curl",
+    "Terminal Knee Extension",
+    "Tibialis Raise (Slant Board)",
+    "Tibialis Raise (Wall)",
+    "Toe Walk",
+    "Towel Pull-Up",
+    "Tricep Dip (Parallel Bars)",
+    "V-Up",
+    "Wall Sit",
+    "Weighted Dips (Chest)",
+    "Weighted Dips (Triceps)",
+    "Weighted Pull-Up",
+    "Wide-Grip Pull-Up",
+    "Wide-Grip Push-Up",
+    "Band Assisted Pull-Up",
+    "Band Bicep Curl",
+    "Band Chest Press",
+    "Band Deadlift",
+    "Band Face Pull",
+    "Band Good Morning",
+    "Band Hip Thrust",
+    "Band Lat Pulldown",
+    "Band Lateral Raise",
+    "Band Leg Curl",
+    "Band Overhead Tricep Extension",
+    "Band Pull-Apart",
+    "Band Pull-Through",
+    "Band Row",
+    "Band Shoulder Press",
+    "Band Squat",
+    "Band Tibialis Raise",
+    "Band Tricep Pushdown",
+    "Band Wrist Curl",
+    "Band Wrist Extension",
+    "Banded Lateral Walk",
+    "Seated Band Lat Pulldown",
+    "Seated Band Row",
+    "Ring Push-Up",
+    "TRX Curl",
+    "TRX Row",
+    "Landmine Chest Press (Single-Arm)",
+    "Landmine Front Raise",
+    "Landmine Lateral Raise",
+    "Landmine Press",
+    "Landmine Press (Abs)",
+    "Landmine Rear Delt Row",
+    "Landmine Romanian Deadlift",
+    "Landmine Rotation",
+    "Landmine Row",
+    "Landmine Squat",
     "Landmine Tricep Extension",
-    "Cross-Body Cable Tricep Extension",
-    "Weighted Plank (Plate on Back)",
-    "Cable Anti-Rotation Hold (Half-Kneeling)",
-    "Reverse Plank"
+    "Landmine Twist",
+    "Single-Arm Landmine Row"
   ]
 }
