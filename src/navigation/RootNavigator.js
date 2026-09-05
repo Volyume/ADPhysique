@@ -33,10 +33,10 @@ import { useNavTheme, useStackOptions } from './navTheme';
 // hides the open sheet itself.
 import { SheetIsolationBoundary } from '../lib/sheetA11yIsolation';
 import useAppStore from '../store/useAppStore';
-import { getSupabaseClient } from '../lib/supabase';
+import { getSupabaseClient, hasStoredAuthSession } from '../lib/supabase';
 // Campaign 24 Wave E: the pure boot-time auth presentation decision (the
 // startup auth-hydration flash fix — see the give-up branch in the render).
-import { classifyAuthBoot } from '../lib/authBootGate';
+import { classifyAuthBoot, classifyFreshInstall } from '../lib/authBootGate';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
 import { seedExercisesIfNeeded, topUpNewExercisesIfNeeded, backfillExerciseMetadataIfNeeded, rederiveExerciseMetadataIfNeeded } from '../lib/seedExercises';
 import * as haptics from '../lib/haptics';
@@ -955,6 +955,11 @@ export default function RootNavigator() {
   // Read fail-quiet to false: a fresh install (no marker, or a failed
   // read) behaves exactly as before this fix — straight to Welcome.
   const [hadPriorSession, setHadPriorSession] = useState(false);
+  // D149 (founder, 2026-09-05): a VERIFIED fresh install (no owner marker
+  // and no stored auth session, classifyFreshInstall) may open on Welcome
+  // at the first frame instead of behind the database open. Flips true
+  // once, only when both probes have answered 'absent'; never resets.
+  const [freshInstall, setFreshInstall] = useState(false);
   // Release-gate fix: initDatabase() (SQLCipher open + migrations) used to
   // fail INSIDE bootstrap()'s try/catch with only a log call - the app then
   // rendered normally with the local DB permanently unopened (`_db` reset to
@@ -1502,8 +1507,17 @@ export default function RootNavigator() {
     // Wave E: fast, network-free marker read — was a real athlete ever
     // signed in on this install? Governs the give-up branch only; a
     // missing marker or failed read keeps pre-fix behaviour exactly.
-    AsyncStorage.getItem('@volyume_last_supabase_user_id')
-      .then((v) => { if (v) setHadPriorSession(true); })
+    // D149: the same read, paired with the stored-session probe, also
+    // decides whether this is a verified FRESH INSTALL that may open on
+    // Welcome before the database is open (classifyFreshInstall). Both
+    // probes fail to 'unknown', and unknown never opens early.
+    const ownerMarkerRead = AsyncStorage.getItem('@volyume_last_supabase_user_id')
+      .then((v) => { if (v) setHadPriorSession(true); return v ? 'present' : 'absent'; })
+      .catch(() => 'unknown');
+    Promise.all([ownerMarkerRead, hasStoredAuthSession()])
+      .then(([ownerMarker, storedSession]) => {
+        if (classifyFreshInstall({ ownerMarker, storedSession }) === 'fresh') setFreshInstall(true);
+      })
       .catch(() => {});
 
     bootstrap().catch((e) => {
@@ -1928,13 +1942,27 @@ export default function RootNavigator() {
   // below still serves post-boot gates (the consent resolver, sign-out
   // re-gates), where the native splash is long gone.
   const bootGateResolved = splashReady && firstRunChecked && tierChecked && initialAuthResolved;
+  // D149 (founder, 2026-09-05): a verified FRESH INSTALL opens on Welcome
+  // at the first frame instead of waiting behind the database open and
+  // the first-run migrations. "Fresh" is not a guess: the device holds no
+  // owner marker AND no stored auth session (classifyFreshInstall; either
+  // probe 'unknown' keeps the frame), so there is no session to restore
+  // and Welcome is the device's honest state. The Campaign 24 law against
+  // speculative logged-out UI protects devices that MIGHT be signed in;
+  // this one cannot be. The fast AsyncStorage flags are still required,
+  // only the auth latch is bypassed, and the tree rendered is the same
+  // one the resolved gate renders, so nothing remounts when the latch
+  // lands; a sign-up from the sheet routes on live store state exactly
+  // as it does after boot.
+  const freshInstallOpen = freshInstall && splashReady && firstRunChecked && tierChecked;
+  const nativeFrameLifts = bootGateResolved || freshInstallOpen;
   useEffect(() => {
-    if (!bootGateResolved) return;
+    if (!nativeFrameLifts) return;
     try {
       // eslint-disable-next-line global-require
       require('expo-splash-screen').hideAsync().catch(() => {});
     } catch (_) { /* tolerate */ }
-  }, [bootGateResolved]);
+  }, [nativeFrameLifts]);
 
   // Splash gate fires ONLY during initial bootstrap, before splashReady,
   // firstRunChecked, tierChecked and the ONE-SHOT initialAuthResolved
@@ -1951,7 +1979,9 @@ export default function RootNavigator() {
   // that loop. The store updates (tier, firstRunComplete, user)
   // re-trigger this render naturally, so seamless transitions happen
   // without a splash.
-  if (!splashReady || !firstRunChecked || !tierChecked || !initialAuthResolved) {
+  // D149: freshInstallOpen (above) lets a verified fresh install through
+  // this gate on the fast flags alone.
+  if (!freshInstallOpen && (!splashReady || !firstRunChecked || !tierChecked || !initialAuthResolved)) {
     return <SplashScreen />;
   }
 

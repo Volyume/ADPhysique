@@ -65,7 +65,8 @@ describe('RootNavigator surfaces a failed local-database open as recoverable, no
 
   test('the render gate blocks the normal navigator tree while the flag is set', () => {
     const splashGateIdx = src.indexOf(
-      'if (!splashReady || !firstRunChecked || !tierChecked || !initialAuthResolved) {',
+      // D149 (2026-09-05): the gate carries the verified-fresh-install bypass.
+      'if (!freshInstallOpen && (!splashReady || !firstRunChecked || !tierChecked || !initialAuthResolved)) {',
     );
     expect(splashGateIdx).toBeGreaterThan(-1);
     const gateIdx = src.indexOf('if (dbInitFailed) {', splashGateIdx);

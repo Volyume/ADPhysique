@@ -26,10 +26,15 @@ const src = fs.readFileSync(
 );
 
 describe('RootNavigator initial-auth splash latch (founder defect 2026-07-12)', () => {
+  // D149 (2026-09-05): the gate now carries one bypass, freshInstallOpen,
+  // which is true only for a VERIFIED fresh install (no owner marker and
+  // no stored auth session, classifyFreshInstall) and still requires the
+  // fast flags; the auth latch remains the gate for every other device.
   test('the splash gate waits on the one-shot initialAuthResolved latch', () => {
     expect(src).toMatch(
-      /if \(!splashReady \|\| !firstRunChecked \|\| !tierChecked \|\| !initialAuthResolved\) \{\s*return <SplashScreen \/>;/
+      /if \(!freshInstallOpen && \(!splashReady \|\| !firstRunChecked \|\| !tierChecked \|\| !initialAuthResolved\)\) \{\s*return <SplashScreen \/>;/
     );
+    expect(src).toMatch(/const freshInstallOpen = freshInstall && splashReady && firstRunChecked && tierChecked;/);
   });
 
   test('every bootstrap resolution path flips the latch', () => {
@@ -69,7 +74,10 @@ describe('RootNavigator initial-auth splash latch (founder defect 2026-07-12)', 
   // themeReady (only a hard failsafe timer remains there).
   test('the native splash hides when the boot gate lifts, not on themeReady', () => {
     expect(src).toMatch(/const bootGateResolved = splashReady && firstRunChecked && tierChecked && initialAuthResolved/);
-    expect(src).toMatch(/if \(!bootGateResolved\) return;[\s\S]{0,220}?require\('expo-splash-screen'\)\.hideAsync\(\)/);
+    // D149: the frame also lifts for a verified fresh install, and for
+    // nothing else.
+    expect(src).toMatch(/const nativeFrameLifts = bootGateResolved \|\| freshInstallOpen;/);
+    expect(src).toMatch(/if \(!nativeFrameLifts\) return;[\s\S]{0,220}?require\('expo-splash-screen'\)\.hideAsync\(\)/);
     const app = fs.readFileSync(path.resolve(__dirname, '..', '..', '..', 'App.js'), 'utf8');
     // App.js's only remaining hide is inside the failsafe timer.
     expect(app).toMatch(/const failsafe = setTimeout\(\(\) => \{ SplashScreen\.hideAsync\(\)\.catch\(\(\) => \{\}\); \}, 12000\)/);

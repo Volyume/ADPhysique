@@ -61,4 +61,36 @@ export function classifyAuthBoot({
   return 'navigate';
 }
 
+/**
+ * D149 (founder, 2026-09-05: "no splash screen, straight into the Welcome
+ * screen"). The fresh-install decision. A device that holds NO owner
+ * marker (`@volyume_last_supabase_user_id`) AND NO stored auth session
+ * (the supabase-js keychain item) has no session to restore, so Welcome
+ * is its honest state and RootNavigator may open on it at the first
+ * frame, before the database open and first-run migrations, instead of
+ * holding the launch frame for them. This refines, not contradicts, the
+ * Campaign 24 law above: that law protects devices that MIGHT be signed
+ * in, and this branch applies only to a device that cannot be.
+ *
+ * Pure function of two probe results, each 'present' | 'absent' |
+ * 'unknown' (a failed or not-yet-completed read is 'unknown'):
+ *  - 'not_fresh' — either probe found something. Hold the frame exactly
+ *                  as before; the session restore decides.
+ *  - 'fresh'     — BOTH probes answered 'absent'. Open on Welcome now.
+ *  - 'unknown'   — anything else. Fail closed: hold the frame.
+ *
+ * @param {object} args
+ * @param {'present'|'absent'|'unknown'} args.ownerMarker
+ * @param {'present'|'absent'|'unknown'} args.storedSession
+ * @returns {'fresh'|'not_fresh'|'unknown'}
+ */
+export function classifyFreshInstall({
+  ownerMarker = 'unknown',
+  storedSession = 'unknown',
+} = {}) {
+  if (ownerMarker === 'present' || storedSession === 'present') return 'not_fresh';
+  if (ownerMarker === 'absent' && storedSession === 'absent') return 'fresh';
+  return 'unknown';
+}
+
 export default classifyAuthBoot;

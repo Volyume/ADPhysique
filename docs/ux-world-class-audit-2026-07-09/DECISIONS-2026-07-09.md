@@ -6095,8 +6095,37 @@ frame, which is also what the iOS guidelines ask a launch screen to be
   transparency, the absence of the old assets, and the absence of any
   minimum hold.
 
-**What the user sees.** Cold start: the OS icon animation, a charcoal
-frame for as long as the boot takes (typically well under a second), then
-Welcome fading in. Nothing reads as a splash screen.
+**Part 2 (same day, founder reaffirmed "no splash screen, straight into
+the welcome screen").** On a fresh install the charcoal frame still
+lasted the whole database open plus every local migration from
+`user_version` 0, because the boot gate refuses to render anything until
+the session restore answers (Campaign 24 law: never speculatively render
+logged-out UI). Ruling: a VERIFIED fresh install opens on Welcome at the
+first frame.
+- Two network-free probes run at boot: the owner marker
+  (`@volyume_last_supabase_user_id`, AsyncStorage) and the stored auth
+  session (the supabase-js keychain item `sb-<ref>-auth-token`,
+  `hasStoredAuthSession` in `src/lib/supabase.js`). Each answers
+  'present', 'absent' or 'unknown'; every failure is 'unknown'.
+- `classifyFreshInstall` (`src/lib/authBootGate.js`) says 'fresh' only
+  when BOTH answered 'absent'. Any 'present' or 'unknown' holds the
+  frame exactly as before. This refines the Campaign 24 law rather than
+  breaking it: the law protects a device that MIGHT be signed in; a
+  device with no session token and no owner marker cannot be.
+- RootNavigator: `freshInstallOpen` still requires the fast AsyncStorage
+  flags (first-run, tier) and bypasses only the auth latch; the native
+  frame lifts on `bootGateResolved || freshInstallOpen`; the tree
+  rendered is the same one the resolved gate renders, so nothing
+  remounts when the latch lands. The retry branch, the DB-failure
+  screen, and every post-auth route (Article 9 gate included) are
+  unchanged and unreachable from the open.
+- Guards: the fresh-install truth table and wiring pins in
+  `authBootGate.test.js`; the probe in `supabase.storedSession.test.js`;
+  the gate, hide and DB-recovery guards re-anchored to the new literals.
+
+**What the user sees.** Fresh install: the OS icon animation, then
+Welcome, with the database opening behind it. Returning user: a charcoal
+frame for as long as the session restore takes, then Today. Nothing
+reads as a splash screen.
 
 **Engine, ED-safety, consent, billing: untouched.**

@@ -3421,23 +3421,29 @@ untouched; no shaming copy added; usual chips follow the rings' gating.
 
 The native launch frame is a plain charcoal frame (transparent plugin
 image, light and dark); the 1.6 s first-run hold is gone; the old
-wordmark assets are deleted. The OS launch frame itself cannot be
-removed on either platform (D149 states why). Guard:
-`splashLogoAsset.guard.test.js`. Needs a fresh EAS build to see: the
+wordmark assets are deleted; a VERIFIED fresh install (no owner marker,
+no stored auth session) opens on Welcome at the first frame while the
+database opens behind it (D149 part 2). The OS launch frame itself
+cannot be removed on either platform (D149 states why). Guards:
+`splashLogoAsset.guard.test.js`, `authBootGate.test.js`,
+`supabase.storedSession.test.js`. Needs a fresh EAS build to see: the
 native frame is baked in at build time.
 
 **Device checklist (Android, from a green build).**
 1. Fresh install, cold start. Expected: the system icon animation, then
-   a plain charcoal screen with no V mark, then the Welcome screen fades
-   in. No wordmark frame, no second loading screen.
-2. Time it: Welcome should appear well under a second after the icon
-   animation on a normal device; nothing holds it for 1.6 s any more.
+   the Welcome screen at once. No wordmark frame, no charcoal wait, no
+   second loading screen.
+2. Tap Get started straight away and sign up. Expected: the sheet works
+   immediately; after sign-up the Article 9 gate, then the wizard, as
+   before. Nothing flashes between the sheet and the gate.
 3. Sign in with an existing account, kill the app, cold start. Expected:
    charcoal frame, then Today directly. No flash of Welcome.
 4. Aeroplane mode, cold start signed in. Expected: charcoal frame, then
    Today (local truth), never a Welcome flash; a genuinely stuck session
    read still lands on the bounded "try again" state as before.
 5. Dark and light system themes: the frame is charcoal in both.
+6. Uninstall, reinstall (no account on the device). Expected: step 1
+   again, straight to Welcome.
 ED-safety: not adjacent.
 
 ## AMBER IS ACCENT, NOT "THIS IS A BUTTON" (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D148.

@@ -173,6 +173,34 @@ const secureAuthStorage = {
 export const __secureAuthStorageForTests = secureAuthStorage;
 
 // Lazy-init: createClient is never called at module load time.
+// D149 (founder, 2026-09-05): a network-free probe for "does this device
+// hold a stored auth session at all?". RootNavigator uses it to tell a
+// verified fresh install (which may open on Welcome at the first frame)
+// from a device that might be signed in (which holds the neutral launch
+// frame until the session restore answers). Reads the exact keychain item
+// supabase-js keeps the session under: `sb-<project-ref>-auth-token`, the
+// client's default storageKey (this client sets none), derived the same
+// way supabase-js derives it (first label of the URL's hostname). Returns
+// 'present', 'absent' or 'unknown'. Every failure is 'unknown', and
+// unknown never opens early, so a locked keychain or a SecureStore fault
+// can only keep the old behaviour, never produce a Welcome flash.
+export function storedAuthSessionKey(url = process.env.EXPO_PUBLIC_SUPABASE_URL) {
+  const m = /^https?:\/\/([^./:]+)/.exec(String(url || ''));
+  return m ? `sb-${m[1]}-auth-token` : null;
+}
+
+export async function hasStoredAuthSession() {
+  const key = storedAuthSessionKey();
+  // No Supabase configured: no session can exist on this device.
+  if (!key) return 'absent';
+  try {
+    const value = await SecureStore.getItemAsync(key, KEY_OPTS);
+    return value ? 'present' : 'absent';
+  } catch (_) {
+    return 'unknown';
+  }
+}
+
 // Returns null when SUPABASE_URL / SUPABASE_ANON_KEY env vars are absent (Stage 1).
 let _client = null;
 let _initialized = false;

@@ -6,8 +6,10 @@
 Founder order: straight into Welcome. The native launch frame is now a
 plain charcoal frame (transparent expo-splash-screen image), the 1.6 s
 first-run "brand hold" in RootNavigator is gone, the wordmark splash
-assets are deleted. The OS frame itself cannot be removed (D149 records
-the platform facts). Version bumped to 1.3.4 for the next iOS build on
+assets are deleted, and a VERIFIED fresh install (no owner marker, no
+stored auth session; `classifyFreshInstall`) opens on Welcome at the
+first frame while the database opens behind it. The OS frame itself
+cannot be removed (D149 records the platform facts). Version bumped to 1.3.4 for the next iOS build on
 the founder's ask. No build dispatched; the founder must create 1.3.4 in
 App Store Connect and give the go for the build.
 
