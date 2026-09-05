@@ -29,7 +29,10 @@ import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getExerciseById, getCompletedSetHistoryForExercise, getAllExercises,
   getExerciseGoal, saveExerciseGoal, markGoalAchieved, deleteExerciseGoal,
+  deleteExercise, getRoutinesReferencingExercise,
 } from '../lib/database';
+import { appAlert } from '../components/AppAlert';
+import { useToast } from '../components/Toast';
 import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau, detectPR, isBallisticEvidenceRow, isTrendEligibleRow } from '../lib/algorithms';
 import { buildExerciseMetricSeries } from '../lib/liftProgress';
 import { equipmentDisplayLabel, difficultyDisplayLabel, subregionDisplayLabel } from '../lib/exerciseDisplay';
@@ -287,6 +290,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   const [goalSaving, setGoalSaving] = useState(false);
   const [congratsBanner, setCongratusBanner] = useState(false);
   const congratsOpacity = useRef(new Animated.Value(0)).current;
+  // EL-18: deleting a CUSTOM exercise, from its own detail screen only.
+  const [deletingExercise, setDeletingExercise] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     if (exerciseId) loadData();
@@ -486,6 +492,57 @@ export default function ExerciseDetailScreen({ navigation, route }) {
     await deleteExerciseGoal(user.id, exerciseId);
     setGoal(null);
     setGoalModalVisible(false);
+  }
+
+  // EL-18 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+  // custom exercises gain a delete affordance from their own detail
+  // screen. Soft delete (database.deleteExercise) - past workout history
+  // keeps showing this exercise exactly as logged (workout_sets and
+  // routine_exercises carry their own exercise_name snapshot, and
+  // getRoutineExercisesWithDetails' LEFT JOIN falls back to it), so the
+  // confirm can say so plainly. Chosen behaviour for a routine that still
+  // references it (the calmer, honest option over silently stripping the
+  // exercise out of the routine, or blocking the delete until the user
+  // hunts it down themselves): DISCLOSE, do not block or auto-remove -
+  // the routine keeps showing it exactly as before (the soft-deleted row
+  // still carries its full equipment/muscle metadata for that join), the
+  // user just will not be able to add it to a routine again afterwards.
+  async function handleDeleteExercise() {
+    if (!exercise?.isCustom) return;
+    const routines = await getRoutinesReferencingExercise(user.id, exercise.id).catch(() => []);
+    const routineNames = routines.map(r => r.name).filter(Boolean);
+    let usageLine = '';
+    if (routineNames.length === 1) {
+      usageLine = ` It's still used in "${routineNames[0]}" - that keeps showing it as before, but you will not be able to add it to a routine again.`;
+    } else if (routineNames.length > 1) {
+      const shown = routineNames.slice(0, 3).join('", "');
+      const more = routineNames.length > 3 ? ` and ${routineNames.length - 3} more` : '';
+      usageLine = ` It's still used in "${shown}"${more} - those keep showing it as before, but you will not be able to add it to a routine again.`;
+    }
+    appAlert(
+      `Delete ${exercise.name}?`,
+      `This removes it from your exercises.${usageLine} Your past workout history is not affected. This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setDeletingExercise(true);
+            try {
+              await deleteExercise(exercise.id);
+              toast.show(`${exercise.name} deleted`, { variant: 'success' });
+              navigation.goBack();
+            } catch (e) {
+              logError('ExerciseDetailScreen.deleteExercise', e, { exerciseId: exercise.id });
+              toast.show("Couldn't delete that exercise. Try again.", { variant: 'error' });
+            } finally {
+              setDeletingExercise(false);
+            }
+          },
+        },
+      ],
+    );
   }
 
   if (!exercise && loadError) {
@@ -1100,6 +1157,22 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             </Card>
           </View>
         )}
+
+        {/* EL-18: delete is only ever reachable for a CUSTOM exercise, from
+            its own detail screen - never for a canonical/built-in row. */}
+        {exercise?.isCustom ? (
+          <View style={styles.section}>
+            <Button
+              title="Delete exercise"
+              variant="destructive"
+              icon="trash-outline"
+              onPress={handleDeleteExercise}
+              loading={deletingExercise}
+              disabled={deletingExercise}
+              accessibilityLabel={`Delete ${exercise.name}`}
+            />
+          </View>
+        ) : null}
       </ScrollView>
 
       {/* Goal-setting bottom sheet.

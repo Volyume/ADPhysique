@@ -1,5 +1,5 @@
 {
-  "totalRows": 564,
+  "totalRows": 936,
   "trailingOrLeadingSpaceCount": 0,
   "trailingOrLeadingSpace": [],
   "doubleSpaceCount": 0,
@@ -8,12 +8,18 @@
   "emDash": [],
   "enDashInsteadOfHyphenCount": 0,
   "enDashInsteadOfHyphen": [],
-  "capitalisationIssueCount": 1,
+  "capitalisationIssueCount": 2,
   "capitalisationIssues": [
     {
       "name": "Facing-In Shoulder Press",
       "issues": [
         "\"In\" should be lower-case mid-title"
+      ]
+    },
+    {
+      "name": "Side Plank with Hip Dip (Dynamic)",
+      "issues": [
+        "\"with\" is not capitalised"
       ]
     }
   ],
@@ -23,7 +29,7 @@
   "abbreviationsInName": [
     "Single-Leg Romanian Deadlift (DB)"
   ],
-  "brandNameCount": 15,
+  "brandNameCount": 44,
   "brandNames": [
     {
       "name": "Hammer Strength Chest Press",
@@ -98,6 +104,30 @@
       "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
     },
     {
+      "name": "Smith Machine Overhead Press",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
+      "name": "Smith Machine Romanian Deadlift",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
+      "name": "Smith Machine Split Squat",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
+      "name": "Smith Machine Upright Row",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
       "name": "Swiss Ball Leg Curl",
       "brandTerm": "Swiss Ball",
       "actionable": true,
@@ -111,6 +141,156 @@
     },
     {
       "name": "TRX Row",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Assisted Pistol Squat",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Assisted Squat",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Atomic Push-Up",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Bicep Curl (Single-Arm)",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Chest Fly",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Chest Press",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Chest Press (Single-Arm)",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Face Pull",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Fallout (Rollout)",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Hamstring Curl",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Hip Press",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX I-Raise",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Knee Tuck",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Mountain Climber (Feet Suspended)",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Pike",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Plank (Feet Suspended)",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Push-Up (Feet Suspended)",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Rear-Foot Elevated Lunge",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Reverse Fly",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Row (Feet Elevated)",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Row (Single-Arm)",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX T-Raise",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Triceps Extension",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX W-Raise",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Y-Raise",
       "brandTerm": "TRX",
       "actionable": true,
       "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."

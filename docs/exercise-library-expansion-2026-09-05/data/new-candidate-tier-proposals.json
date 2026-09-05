@@ -1,0 +1,476 @@
+{
+  "note": "EL-5: STAPLE/COMMON tier proposals found among this stage's new candidates (inventory-*.json / gap-triage-*.json). Every one of these ships as SPECIALIST in canonicality.js pending lead review, exactly like the existing tier-proposals.json precedent for the pre-existing 88 unlisted rows. Promoting any of these to STAPLE/COMMON is a lead decision, never made here.",
+  "count": 94,
+  "proposals": [
+    {
+      "name": "Band Chest Press (Single-Arm)",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Chest Fly (Standing)",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Rear Delt Fly",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Shoulder Press (Seated)",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Row (Single-Arm)",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Seated Row",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Pull-Apart (Overhead)",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Hammer Curl",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Standing Curl (Single-Arm)",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Tricep Kickback",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Front Raise",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Goblet Squat",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Romanian Deadlift (Bilateral)",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Glute Bridge",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Clamshell",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Monster Walk",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Glute Kickback",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Standing Hip Abduction",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Standing Hip Adduction",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Fire Hydrant (Kneeling)",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Pallof Press",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Woodchop (High-to-Low)",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Woodchop (Low-to-High)",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Band Assisted Dip",
+      "proposedTier": "common",
+      "source": "inventory-band.json"
+    },
+    {
+      "name": "Wide-Grip Bench Press",
+      "proposedTier": "common",
+      "source": "inventory-barbell.json"
+    },
+    {
+      "name": "Paused Bench Press",
+      "proposedTier": "common",
+      "source": "inventory-barbell.json"
+    },
+    {
+      "name": "Floor Press (Barbell)",
+      "proposedTier": "common",
+      "source": "inventory-barbell.json"
+    },
+    {
+      "name": "Seated Barbell Overhead Press",
+      "proposedTier": "common",
+      "source": "inventory-barbell.json"
+    },
+    {
+      "name": "Low-Bar Back Squat",
+      "proposedTier": "common",
+      "source": "inventory-barbell.json"
+    },
+    {
+      "name": "Barbell Glute Bridge",
+      "proposedTier": "common",
+      "source": "inventory-barbell.json"
+    },
+    {
+      "name": "Knee Push-Up",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Pike Push-Up",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Scapular Push-Up",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Close-Grip Pull-Up",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Negative Pull-Up (Eccentric-Only)",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Scapular Pull-Up",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Weighted Chin-Up",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Straight Bar Dip (Chest-Lean)",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Bench Dip (Feet Elevated)",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Inverted Row (Feet Elevated)",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Inverted Row (High Bar)",
+      "proposedTier": "staple",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Inverted Row (Low Bar)",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Inverted Row (Underhand Grip)",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Bodyweight Split Squat",
+      "proposedTier": "staple",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Bodyweight Reverse Lunge",
+      "proposedTier": "staple",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Bodyweight Forward Lunge",
+      "proposedTier": "staple",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Bodyweight Walking Lunge",
+      "proposedTier": "staple",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Bodyweight Curtsy Lunge",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Bodyweight Step-Up",
+      "proposedTier": "staple",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Bodyweight Lateral Step-Up",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Bodyweight Box Squat",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Single-Leg Glute Bridge",
+      "proposedTier": "staple",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Marching Glute Bridge (Alternating)",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Arch Hold (Superman)",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Bird Dog",
+      "proposedTier": "staple",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Side Plank with Hip Dip (Dynamic)",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Flutter Kick",
+      "proposedTier": "staple",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Scissor Kick",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Plank Shoulder Tap",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Plank to Push-Up (Walk-Up)",
+      "proposedTier": "common",
+      "source": "inventory-bodyweight.json"
+    },
+    {
+      "name": "Single-Arm Cable Fly (Standing)",
+      "proposedTier": "common",
+      "source": "inventory-cable.json"
+    },
+    {
+      "name": "Seated Cable Row (Rope)",
+      "proposedTier": "common",
+      "source": "inventory-cable.json"
+    },
+    {
+      "name": "Standing Cable Row (Single-Arm)",
+      "proposedTier": "common",
+      "source": "inventory-cable.json"
+    },
+    {
+      "name": "Cross-Body Cable Lateral Raise",
+      "proposedTier": "common",
+      "source": "inventory-cable.json"
+    },
+    {
+      "name": "Single-Arm Cable Curl (Low Pulley)",
+      "proposedTier": "common",
+      "source": "inventory-cable.json"
+    },
+    {
+      "name": "Cable Pushdown (V-Bar)",
+      "proposedTier": "common",
+      "source": "inventory-cable.json"
+    },
+    {
+      "name": "Seated Bent-Over Rear Delt Raise",
+      "proposedTier": "common",
+      "source": "inventory-dumbbell.json"
+    },
+    {
+      "name": "Single-Arm Dumbbell Row (Bench-Supported)",
+      "proposedTier": "common",
+      "source": "inventory-dumbbell.json"
+    },
+    {
+      "name": "Single-Arm Overhead Dumbbell Tricep Extension",
+      "proposedTier": "common",
+      "source": "inventory-dumbbell.json"
+    },
+    {
+      "name": "Dumbbell Glute Bridge",
+      "proposedTier": "common",
+      "source": "inventory-dumbbell.json"
+    },
+    {
+      "name": "Weighted Dumbbell Crunch",
+      "proposedTier": "common",
+      "source": "inventory-dumbbell.json"
+    },
+    {
+      "name": "Kettlebell Goblet Squat",
+      "proposedTier": "common",
+      "source": "inventory-kettlebell.json"
+    },
+    {
+      "name": "Kettlebell Row (Single-Arm)",
+      "proposedTier": "common",
+      "source": "inventory-kettlebell.json"
+    },
+    {
+      "name": "Converging Chest Press Machine",
+      "proposedTier": "common",
+      "source": "inventory-machine.json"
+    },
+    {
+      "name": "Converging Shoulder Press Machine",
+      "proposedTier": "common",
+      "source": "inventory-machine.json"
+    },
+    {
+      "name": "Plate-Loaded T-Bar Row (Chest-Supported)",
+      "proposedTier": "common",
+      "source": "inventory-machine.json"
+    },
+    {
+      "name": "Horizontal Leg Press",
+      "proposedTier": "common",
+      "source": "inventory-machine.json"
+    },
+    {
+      "name": "Reverse Hack Squat",
+      "proposedTier": "common",
+      "source": "inventory-machine.json"
+    },
+    {
+      "name": "Smith Machine Split Squat",
+      "proposedTier": "common",
+      "source": "inventory-machine.json"
+    },
+    {
+      "name": "Smith Machine Romanian Deadlift",
+      "proposedTier": "common",
+      "source": "inventory-machine.json"
+    },
+    {
+      "name": "Horizontal Back Extension",
+      "proposedTier": "common",
+      "source": "inventory-machine.json"
+    },
+    {
+      "name": "Machine Shrug",
+      "proposedTier": "common",
+      "source": "inventory-machine.json"
+    },
+    {
+      "name": "TRX Row (Single-Arm)",
+      "proposedTier": "common",
+      "source": "inventory-suspension.json"
+    },
+    {
+      "name": "TRX Face Pull",
+      "proposedTier": "common",
+      "source": "inventory-suspension.json"
+    },
+    {
+      "name": "TRX Reverse Fly",
+      "proposedTier": "common",
+      "source": "inventory-suspension.json"
+    },
+    {
+      "name": "TRX Chest Press",
+      "proposedTier": "common",
+      "source": "inventory-suspension.json"
+    },
+    {
+      "name": "TRX Knee Tuck",
+      "proposedTier": "common",
+      "source": "inventory-suspension.json"
+    },
+    {
+      "name": "TRX Plank (Feet Suspended)",
+      "proposedTier": "common",
+      "source": "inventory-suspension.json"
+    },
+    {
+      "name": "TRX Mountain Climber (Feet Suspended)",
+      "proposedTier": "common",
+      "source": "inventory-suspension.json"
+    },
+    {
+      "name": "TRX Hamstring Curl",
+      "proposedTier": "common",
+      "source": "inventory-suspension.json"
+    },
+    {
+      "name": "TRX Hip Press",
+      "proposedTier": "common",
+      "source": "inventory-suspension.json"
+    },
+    {
+      "name": "TRX Assisted Squat",
+      "proposedTier": "staple",
+      "source": "inventory-suspension.json"
+    },
+    {
+      "name": "TRX Rear-Foot Elevated Lunge",
+      "proposedTier": "common",
+      "source": "inventory-suspension.json"
+    },
+    {
+      "name": "Clamshell (Side-Lying)",
+      "proposedTier": "common",
+      "source": "gap-triage-bodyweight.json"
+    }
+  ]
+}

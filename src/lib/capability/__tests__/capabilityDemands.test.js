@@ -179,3 +179,33 @@ test('no planEngine.POOL name resolves a NULL BLOCKABLE demand axis (the R3-1 ca
   }
   expect(offenders).toEqual([]);
 });
+
+// exercise-library-expansion-2026-09-05 (integration stage 2, job 3): sled,
+// medicine_ball and sandbag join the implement sets that let grip and
+// balance derive with no per-row curation needed for the common case
+// (individual rows can still override via `overrides.demands`).
+describe('sled/medicine_ball/sandbag implement sets (integration stage 2)', () => {
+  test('sled is a FIXED_IMPLEMENT (two hands on one frame, cannot be split)', () => {
+    const meta = deriveDemandMetadata({
+      name: 'Sled Row', equipment: 'sled', movementPattern: 'pull', primaryMuscle: 'back',
+    });
+    expect(meta.gripDemand).toBe('bar');
+    expect(meta.unilateralLoadable).toBe(false);
+  });
+
+  test('medicine_ball is a SINGLE_IMPLEMENT (one graspable object)', () => {
+    const meta = deriveDemandMetadata({
+      name: 'Medicine Ball Slam', equipment: 'medicine_ball', movementPattern: 'power', primaryMuscle: 'abs',
+    });
+    expect(meta.gripDemand).toBe('bar');
+    expect(meta.unilateralLoadable).toBe(true);
+  });
+
+  test('sandbag is a SINGLE_IMPLEMENT (one graspable/huggable object)', () => {
+    const meta = deriveDemandMetadata({
+      name: 'Sandbag Bear-Hug Squat', equipment: 'sandbag', movementPattern: 'squat', primaryMuscle: 'quads',
+    });
+    expect(meta.gripDemand).toBe('bar');
+    expect(meta.unilateralLoadable).toBe(true);
+  });
+});

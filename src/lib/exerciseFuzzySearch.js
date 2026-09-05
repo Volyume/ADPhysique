@@ -145,14 +145,34 @@ function scoreTokenPair(queryToken, nameToken) {
 // per exercise-list identity, never per keystroke — see the WeakMap index
 // further down). Same result either way; this is purely which side
 // re-does the tokenizing work.
-function scoreTokenised(queryTokens, nameTokens) {
+//
+// `pairCache`, when passed, memoises `scoreTokenPair(q, n)` by its two
+// token strings for the lifetime of one `fuzzySearch` call. A real
+// exercise library repeats the same handful of implement/movement words
+// (Barbell, Press, Row, Incline...) across most of its rows -- typically
+// tens of DISTINCT tokens versus 1,500+ rows -- so this collapses what
+// would be an O(rows * tokens^2) scan (thousands of repeat Levenshtein
+// calls against word pairs already scored on an earlier row) into
+// O(distinct-token-pairs^2), computed once each. Pure memoisation of a
+// pure function: identical results, far fewer calls.
+function scoreTokenised(queryTokens, nameTokens, pairCache) {
   if (queryTokens.length === 0) return 1;
   if (nameTokens.length === 0) return 0;
   let total = 0;
   for (const q of queryTokens) {
     let best = 0;
     for (const n of nameTokens) {
-      const s = scoreTokenPair(q, n);
+      let s;
+      if (pairCache) {
+        const key = `${q} ${n}`;
+        s = pairCache.get(key);
+        if (s === undefined) {
+          s = scoreTokenPair(q, n);
+          pairCache.set(key, s);
+        }
+      } else {
+        s = scoreTokenPair(q, n);
+      }
       if (s > best) best = s;
     }
     if (best === 0) return 0;
@@ -229,15 +249,16 @@ function getIndex(items, getText, getAliases) {
 /**
  * Where one indexed entry ranks against an already-tokenised query
  * (EL-20's six tiers, module doc above). Returns the tier number (0 best)
- * or null when nothing matches at all.
+ * or null when nothing matches at all. `pairCache` is the per-search
+ * token-pair memo (see `scoreTokenised` above).
  */
-function matchTier(nq, queryTokens, entry) {
+function matchTier(nq, queryTokens, entry, pairCache) {
   if (entry.nn && entry.nn === nq) return 0;
   if (entry.nn && entry.nn.startsWith(nq)) return 1;
   if (entry.aliasEntries.some(a => a.norm === nq)) return 2;
   if (entry.aliasEntries.some(a => a.norm.startsWith(nq))) return 3;
-  if (scoreTokenised(queryTokens, entry.nameTokens) > 0) return 4;
-  if (entry.aliasEntries.some(a => scoreTokenised(queryTokens, a.tokens) > 0)) return 5;
+  if (scoreTokenised(queryTokens, entry.nameTokens, pairCache) > 0) return 4;
+  if (entry.aliasEntries.some(a => scoreTokenised(queryTokens, a.tokens, pairCache) > 0)) return 5;
   return null;
 }
 
@@ -263,11 +284,12 @@ export function fuzzySearch(items, query, getText, options = {}) {
   const nq = normaliseExerciseName(q);
   const queryTokens = tokenize(q);
   const index = getIndex(items, getText, getAliases);
+  const pairCache = new Map();
   return index
     .map((entry, i) => ({
       entry,
       index: i,
-      tier: matchTier(nq, queryTokens, entry),
+      tier: matchTier(nq, queryTokens, entry, pairCache),
     }))
     .filter(x => x.tier !== null)
     .sort((a, b) => {

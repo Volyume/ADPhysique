@@ -1,16 +1,26 @@
 {
-  "seatedAndFloorAccessCount": 1,
+  "seatedAndFloorAccessCount": 3,
   "seatedAndFloorAccess": [
     {
       "name": "Z-Press",
       "detail": "position=seated with floorAccess=true",
       "knownIntentional": true,
       "note": "CURATED_DEMANDS (demands.js) sets this deliberately: \"Z-press: seated ON THE FLOOR\". Not a bug — the combination genuinely occurs for this one movement, which is exactly why validateDemandMetadata does not treat seated+floorAccess as a hard contradiction (unlike impact+seated or high-balance+lying, which it does reject)."
+    },
+    {
+      "name": "Z-Press (Dumbbell)",
+      "detail": "position=seated with floorAccess=true",
+      "knownIntentional": false
+    },
+    {
+      "name": "Band Ankle Dorsiflexion",
+      "detail": "position=seated with floorAccess=true",
+      "knownIntentional": false
     }
   ],
   "lyingAndHighBalanceCount": 0,
   "lyingAndHighBalance": [],
-  "bodyweightIsolationTotalLoadCount": 69,
+  "bodyweightIsolationTotalLoadCount": 85,
   "bodyweightIsolationTotalLoad": [
     {
       "name": "Ab Rollout",
@@ -287,11 +297,160 @@
     {
       "name": "Wall Sit",
       "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Arch Hold (Superman)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Bird Dog",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Clamshell (Side-Lying)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Flutter Kick",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Hanging L-Sit",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Long-Lever Plank",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Neck Bridge (Front)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Plank Shoulder Tap",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "RKC Plank",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Scapular Pull-Up",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Scapular Push-Up",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Scissor Kick",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Side Plank with Hip Dip (Dynamic)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Stability Ball Knee Tuck",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "V-Sit",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Windshield Wiper (Hanging)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
     }
   ],
   "bodyweightIsolationTotalLoadNote": "Not necessarily a bug: BW_LOADED_PROFILES (exerciseMetadata.js) deliberately allows unweighted bodyweight isolation staples (crunch, plank, etc.) into every plan context on the assumption a user CAN add external load. Flagged for lead confirmation that this is intended for every row listed, not asserted as wrong.",
-  "compoundButIsolationPatternCount": 0,
-  "compoundButIsolationPattern": [],
+  "compoundButIsolationPatternCount": 21,
+  "compoundButIsolationPattern": [
+    {
+      "name": "Back Lever (Tuck)",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Freestanding Handstand Hold",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Front Lever (Full)",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Front Lever (Tuck)",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Full Planche Hold",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Human Flag",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Human Flag (Tuck Progression)",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Planche Lean",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Plank to Push-Up (Walk-Up)",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Tuck Planche Hold",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Wall Handstand Hold",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Band Monster Walk",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Ring Support Hold",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Skin the Cat",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "TRX Knee Tuck",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "TRX Mountain Climber (Feet Suspended)",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "TRX Pike",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Get-Up to Elbow",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Kettlebell Windmill (High)",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Kettlebell Windmill (Low)",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    },
+    {
+      "name": "Turkish Get-Up (Half)",
+      "detail": "compoundIsolation=compound but movementPattern=isolation"
+    }
+  ],
   "secondaryContainsPrimaryCount": 0,
   "secondaryContainsPrimary": [],
   "repRangeInvertedCount": 0,
@@ -304,14 +463,6 @@
   "demandValidationFailures": [],
   "missingSubregionWhereRequiredCount": 0,
   "missingSubregionWhereRequired": [],
-  "carryTaggedWeightRepsCount": 7,
-  "carryTaggedWeightReps": [
-    "Pinch Grip Carry",
-    "Farmer Walk (Forearms)",
-    "Farmer's Walk",
-    "Gripper Walks",
-    "Keg Carry",
-    "Single-Arm Farmer Carry",
-    "Suitcase Carry"
-  ]
+  "carryTaggedWeightRepsCount": 0,
+  "carryTaggedWeightReps": []
 }

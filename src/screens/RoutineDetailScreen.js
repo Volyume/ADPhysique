@@ -1507,6 +1507,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
         onClose={() => setShowAddExercise(false)}
         onSelect={addExercise}
         saveLabel="Add to plan"
+        // EL-20: this routine's own exercises, so an empty-query browse
+        // can surface "In your plan" ahead of Staples/All exercises.
+        planExercises={exercises}
       />
 
       {/* Swap via the full library / a custom exercise, when none of the

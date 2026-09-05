@@ -133,9 +133,18 @@ const LOWER_MUSCLES = new Set(['quads', 'hamstrings', 'glutes', 'calves', 'adduc
 
 // Single-implement equipment: one hand/side can hold the whole load, so
 // the movement is one-side loadable by construction.
-const SINGLE_IMPLEMENT = new Set(['dumbbell', 'kettlebell', 'cable', 'band']);
+// 'medicine_ball' and 'sandbag' added (exercise-library-expansion-2026-09-05,
+// integration stage 2, job 3): each is a single graspable/huggable object,
+// mechanically the same "holding the implement IS the interface" case a
+// dumbbell or kettlebell already is, so grip and unilateral-loadable derive
+// instead of staying null for every row that carries no CURATED_DEMANDS
+// entry of its own.
+const SINGLE_IMPLEMENT = new Set(['dumbbell', 'kettlebell', 'cable', 'band', 'medicine_ball', 'sandbag']);
 // Two-hands-on-one-implement equipment: cannot be split.
-const FIXED_IMPLEMENT = new Set(['barbell', 'smith_machine', 'landmine', 'trap_bar']);
+// 'sled' added (same stage/job): a sled's handles are pushed or pulled as
+// one fixed frame, the same "two hands on one implement, cannot be split"
+// shape as a barbell or landmine, not an independent-per-side implement.
+const FIXED_IMPLEMENT = new Set(['barbell', 'smith_machine', 'landmine', 'trap_bar', 'sled']);
 
 // ── Curated overrides ───────────────────────────────────────────────────
 // Exact seed names whose classification a rule cannot carry with

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, Modal,
   TouchableOpacity, ScrollView, AccessibilityInfo,
@@ -17,7 +17,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
-import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds, getActiveBlock, clearExerciseIntent } from '../lib/database';
+import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds, getExerciseUsageStats, getActiveBlock, clearExerciseIntent } from '../lib/database';
 import { loadExerciseIntentState, isEligible, intentFor, isFamilyBlocked, movementFamilyOf, isEligibleExercise } from '../lib/exercise/intent';
 // CC27 (sections 9.2.6, 9.4, 8.4): the picker asks the capability lane's
 // pure questions, offers the manual-conflict flows, and hosts the
@@ -36,7 +36,9 @@ import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisp
 // CC27 (section 34.1): custom creation derives equipment metadata from the
 // owner's own choices so customs can meet the built-in pool-entry bar.
 import { deriveExerciseMetadata } from '../lib/exerciseMetadata';
-import { fuzzySearch } from '../lib/exerciseFuzzySearch';
+import { fuzzySearch, findCanonicalNameMatch } from '../lib/exerciseFuzzySearch';
+import { tierRank } from '../lib/exercise/canonicality';
+import { buildRecentAndFrequentIds, buildEmptyQuerySections, flattenSectionsForList } from '../lib/exercisePickerSections';
 import useAppStore from '../store/useAppStore';
 import * as haptics from '../lib/haptics';
 import Chip from './Chip';
@@ -179,7 +181,16 @@ function describeCapabilityConflict(capabilityState, exercise, reason) {
 // saveLabel / actionLabel are aliases for the create-form's save button text
 // (RoutineDetail/ManualBuilder pass saveLabel, ActiveWorkout passes
 // actionLabel). Either works; saveLabel wins if both are given.
-export default function ExercisePickerModal({ visible, onClose, onSelect, saveLabel, actionLabel }) {
+//
+// EL-20 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+// `planExercises` is an OPTIONAL array of the exercises already in the
+// plan/routine currently being built, passed by callers that have it
+// cheaply on hand (RoutineDetailScreen, ManualBuilderScreen). Only used to
+// promote "In your plan" ahead of "Staples" for an empty query; a caller
+// that omits it simply gets no such section, everything else unchanged.
+export default function ExercisePickerModal({
+  visible, onClose, onSelect, saveLabel, actionLabel, planExercises,
+}) {
   const toast = useToast();
   const userId = useAppStore(s => s.user?.id);
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
@@ -197,6 +208,8 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     pickerAllowAgain: { ...t.type.caption, color: t.colors.primary },
     showExcludedText: { ...t.type.caption, color: t.colors.textMuted },
     constraintsUnavailableText: { ...t.type.caption, color: t.colors.textMuted },
+    existingMatchText: { ...t.type.caption, color: t.colors.textMuted },
+    existingMatchName: { ...t.type.captionStrong, color: t.colors.primary },
     pickerEmptyText: { ...t.type.body, color: t.colors.textMuted },
     separator: { backgroundColor: t.colors.borderSubtle },
     createNewBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
@@ -216,8 +229,15 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   const [muscleFilter, setMuscleFilter] = useState('');
   const [equipmentFilter, setEquipmentFilter] = useState('');
   const [allExercises, setAll] = useState([]);
-  const [filtered, setFiltered] = useState([]);
   const [recentIds, setRecentIds] = useState([]);
+  // EL-20: per-exercise completed-session counts ({exerciseId, sessions,
+  // lastTrainedMs}), for exercises trained OFTEN but not necessarily in
+  // the last 8 (getRecentlyUsedExerciseIds' own limit) -- e.g. a staple
+  // lifted every week is "frequent" even on a week it wasn't the very
+  // last thing logged. Merged with recentIds for the empty-query "Recent"
+  // section below; recency still wins the ordering (see
+  // recentAndFrequentItems).
+  const [usageStats, setUsageStats] = useState([]);
   // C9: the user's exercise intent, and whether they have asked to see
   // what they have set aside.
   const [intentState, setIntentState] = useState(null);
@@ -294,15 +314,19 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     setShowCreate(false);
     getAllExercises().then(exs => {
       setAll(exs);
-      setFiltered(exs);
     }).catch(() => {});
     // L07-F7: most-recently-used row, add-mode only (swap already narrows to
     // search-and-select). A read failure just leaves the row empty; browsing
     // the full library still works.
     if (!isSwapAction && userId) {
       getRecentlyUsedExerciseIds(userId).then(setRecentIds).catch(() => setRecentIds([]));
+      // EL-20: frequency, from completed-session counts per exercise, for
+      // the empty-query "Recent" section (recentAndFrequentItems below).
+      // Best-effort, same fail-quiet posture as the recency read above.
+      getExerciseUsageStats(userId).then(setUsageStats).catch(() => setUsageStats([]));
     } else {
       setRecentIds([]);
+      setUsageStats([]);
     }
     // C9 Work 2/7: this picker is the shared entry point for the workout
     // builder, the plan builder, the routine editor and the swap
@@ -369,31 +393,61 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
       .filter(e => !intentState || isEligibleExercise(intentState, e))
     : [];
 
-  useEffect(() => {
-    // L07-F6: fuzzy, typo-tolerant search. Muscle/equipment chips still
-    // narrow the candidate list first (an AND with the text search); the
-    // text search itself now tolerates typos, partial words and words typed
-    // out of order (e.g. "bul garian" finds "Bulgarian Split Squat").
-    const base = allExercises.filter(e =>
-      matchesMuscleFilter(e, muscleFilter) &&
-      matchesEquipmentFilter(e, equipmentFilter) &&
-      // Hidden from SUGGESTIONS, never from the user: the toggle below
-      // brings them back, marked, with an "Allow again" action.
-      (showExcluded || !intentState || isEligible(intentState, e.id)) &&
-      // D107-2 senior enforcement: a movement-pattern avoidance hides the
-      // whole family the same way an id-level exclusion does. Kept as a
-      // separate AND term (not folded into the clause above) so the
-      // pre-existing id-level regression-guard string stays byte-exact
-      // (campaign9.generation.test.js "the shared picker honours intent").
-      (showExcluded || !intentState || !isFamilyBlocked(intentState, movementFamilyOf(e))) &&
-      // CC27 (section 9.2.6): the capability filter, default on, with its
-      // own "show anyway" toggle. A separate AND term for the same reason
-      // as the family term above: the pinned id-level clause stays intact.
-      (showIncompatible || !intentState?.capability
-        || capabilityBlockReason(intentState.capability, e) === null),
-    );
-    setFiltered(fuzzySearch(base, query, e => e.name));
-  }, [query, muscleFilter, equipmentFilter, allExercises, intentState, showExcluded, showIncompatible]);
+  // L07-F6/EL-20 perf: the equipment/muscle/intent/capability filter is
+  // independent of `query` (typing a search character never changes it),
+  // so it is its own memo -- recomputed only when a FILTER actually
+  // changes, not on every keystroke. `fuzzySearch` below then does its own
+  // per-exercise-list-identity memoisation (a WeakMap keyed on this exact
+  // `base` array reference) of name/alias tokenisation, so a keystroke
+  // pays only for the ranked comparison itself, never for re-filtering or
+  // re-tokenising the library from scratch.
+  const base = useMemo(() => allExercises.filter(e =>
+    matchesMuscleFilter(e, muscleFilter) &&
+    matchesEquipmentFilter(e, equipmentFilter) &&
+    // Hidden from SUGGESTIONS, never from the user: the toggle below
+    // brings them back, marked, with an "Allow again" action.
+    (showExcluded || !intentState || isEligible(intentState, e.id)) &&
+    // D107-2 senior enforcement: a movement-pattern avoidance hides the
+    // whole family the same way an id-level exclusion does. Kept as a
+    // separate AND term (not folded into the clause above) so the
+    // pre-existing id-level regression-guard string stays byte-exact
+    // (campaign9.generation.test.js "the shared picker honours intent").
+    (showExcluded || !intentState || !isFamilyBlocked(intentState, movementFamilyOf(e))) &&
+    // CC27 (section 9.2.6): the capability filter, default on, with its
+    // own "show anyway" toggle. A separate AND term for the same reason
+    // as the family term above: the pinned id-level clause stays intact.
+    (showIncompatible || !intentState?.capability
+      || capabilityBlockReason(intentState.capability, e) === null),
+  ), [allExercises, muscleFilter, equipmentFilter, intentState, showExcluded, showIncompatible]);
+
+  // EL-20: recent-and-frequent ids, merged and capped
+  // (exercisePickerSections.js), recomputed only when the underlying reads
+  // change (never on a keystroke).
+  const recentAndFrequentIds = useMemo(
+    () => buildRecentAndFrequentIds(recentIds, usageStats),
+    [recentIds, usageStats],
+  );
+
+  // EL-20: for a non-empty query, the alias-aware six-tier ranked search
+  // (exerciseFuzzySearch.js) - staples outrank specialists within a tier
+  // via `getTier`. For an EMPTY query (add-mode only; swap mode stays a
+  // flat alphabetical browse, matching its existing search-and-select
+  // posture), the picker's own recent/plan/staples/rest ordering, each
+  // section flattened with a header marker the renderItem below detects.
+  // `base` is already alphabetical (`getAllExercises()` is
+  // `ORDER BY name ASC`, and every filter preserves relative order), so
+  // "everything else" needs no separate sort of its own either way.
+  const listData = useMemo(() => {
+    const q = query.trim();
+    if (q || isSwapAction) {
+      return fuzzySearch(base, query, e => e.name, {
+        getAliases: e => e.aliases,
+        getTier: e => tierRank(e.name),
+      });
+    }
+    const sections = buildEmptyQuerySections({ base, recentAndFrequentIds, planExercises });
+    return flattenSectionsForList(sections);
+  }, [base, query, isSwapAction, recentAndFrequentIds, planExercises]);
 
   // CC27 (section 9.4): the manual-conflict flows. Selection of a
   // capability-conflicted movement is never silent and never hard-blocked
@@ -543,6 +597,28 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     }
   }
 
+  // EL-18: while typing a new custom exercise's name, does it already
+  // exist as a canonical row (exact name or alias, normalised)? Checked
+  // against the FULL library, not the currently-filtered `base` - a name
+  // match matters regardless of which equipment/muscle chip happens to be
+  // active. Recomputed only when the typed name or the library changes,
+  // never per render.
+  const existingMatch = useMemo(
+    () => findCanonicalNameMatch(createName, allExercises),
+    [createName, allExercises],
+  );
+
+  // EL-18: "Use it instead?" - selects the existing canonical row exactly
+  // as tapping it in the browse list would (same capability-conflict
+  // presentation via handleSelect), rather than a silent, different path.
+  function useExistingInstead() {
+    if (!existingMatch) return;
+    const capReason = intentState?.capability
+      ? capabilityBlockReason(intentState.capability, existingMatch) : null;
+    haptics.selection();
+    handleSelect(existingMatch, capReason);
+  }
+
   function openCreate() {
     setCreateName(query.trim());
     setCreateMuscle('');
@@ -617,6 +693,23 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 fieldStyle={styles.createNameInputField}
                 inputStyle={[styles.createNameInputText, live.createNameInputText]}
               />
+              {/* EL-18: a calm, non-blocking nudge toward the existing
+                  canonical row rather than a duplicate - creating anyway
+                  stays fully available below, untouched. */}
+              {existingMatch ? (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={`Looks like ${existingMatch.name} already exists. Use it instead?`}
+                  onPress={useExistingInstead}
+                  style={styles.existingMatchRow}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
+                  <Text style={[styles.existingMatchText, live.existingMatchText]}>
+                    Looks like <Text style={[styles.existingMatchName, live.existingMatchName]}>{existingMatch.name}</Text> already exists. Use it instead?
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
               <Text style={[styles.createLabel, live.createLabel]}>Muscle group</Text>
               <View style={styles.chipRow}>
                 {PICKER_MUSCLES.map(m => (
@@ -905,11 +998,28 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
             {modalShown ? (
             <View style={styles.pickerListWrap}>
             <FlashList
-              data={filtered}
-              keyExtractor={e => String(e.id)}
+              data={listData}
+              keyExtractor={item => (item.__section ? item.key : String(item.id))}
+              // EL-20: FlashList recycles cells by type (perf, matches the
+              // existing E8 rationale for this list), so a section header
+              // and an exercise row - very different shapes - never share
+              // a recycled cell.
+              getItemType={item => (item.__section ? 'sectionHeader' : 'row')}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.pickerList}
               renderItem={({ item }) => {
+                // EL-20: the empty-query list is sectioned (Recent, In your
+                // plan, Staples, All exercises); a non-empty query or swap
+                // mode stays a flat ranked/alphabetical list with no
+                // headers at all - `listData` only ever carries `__section`
+                // markers in the sectioned case.
+                if (item.__section) {
+                  return (
+                    <SectionLabel style={styles.pickerSectionLabel} heading>
+                      {item.__section}
+                    </SectionLabel>
+                  );
+                }
                 // C9: a set-aside exercise is only reachable here when the
                 // user asked to see them. It says so plainly and offers the
                 // way back, so restoring is never a hunt.
@@ -1041,6 +1151,10 @@ const styles = StyleSheet.create({
     borderColor: colors.borderSubtle,
   },
   pickerList: { paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.xxl },
+  // EL-20: the empty-query section headers (Recent / In your plan /
+  // Staples / All exercises), inside the same padded list as the rows -
+  // FlashList's contentContainerStyle padding already indents these.
+  pickerSectionLabel: { paddingTop: spacing.md, paddingBottom: spacing.xs },
   pickerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 54, paddingVertical: spacing.sm },
   pickerRowContent: { flex: 1, gap: spacing.xxs },
   pickerExName: { ...type.label, color: colors.textPrimary },
@@ -1059,6 +1173,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
   },
   constraintsUnavailableText: { ...type.caption, color: colors.textMuted, flex: 1 },
+  // EL-18: the "looks like this already exists" nudge under the new-
+  // exercise name field. Row shape matches showExcludedRow/
+  // constraintsUnavailableRow (icon + caption), so it reads as the same
+  // family of calm, low-emphasis inline notice.
+  existingMatchRow: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
+    paddingHorizontal: spacing.xs, paddingTop: spacing.xxs,
+  },
+  existingMatchText: { ...type.caption, color: colors.textMuted, flex: 1 },
+  existingMatchName: { ...type.captionStrong, color: colors.primary },
   pickerEmpty: { alignItems: 'center', paddingTop: spacing.xxxl, gap: spacing.lg, paddingHorizontal: spacing.xl },
   pickerEmptyText: { ...type.body, color: colors.textMuted },
   separator: { height: 1, backgroundColor: colors.borderSubtle },

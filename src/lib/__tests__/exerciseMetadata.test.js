@@ -45,6 +45,23 @@ describe('deriveEquipmentCategory', () => {
     expect(deriveEquipmentCategory('Assault Bike', 'machine')).toBe('other');
     expect(deriveEquipmentCategory('Sled Push', 'machine')).toBe('other');
   });
+
+  // exercise-library-expansion-2026-09-05 (integration stage 2, job 3):
+  // sled/medicine_ball/sandbag get their own category instead of falling
+  // to 'other' the way conditioning-tagged 'machine' rows do — these are
+  // real resistance-training equipment, unlike Assault Bike/Sled Push
+  // above, which stay 'other' via the CONDITIONING_RE branch under
+  // equipment 'machine' (a genuinely different, pre-existing case: those
+  // rows keep the legacy coarse equipment value 'machine').
+  test('sled/medicine_ball/sandbag equipment values get their own category, not "other"', () => {
+    expect(deriveEquipmentCategory('Sled Row', 'sled')).toBe('sled');
+    expect(deriveEquipmentCategory('Medicine Ball Slam', 'medicine_ball')).toBe('medicine_ball');
+    expect(deriveEquipmentCategory('Sandbag Clean', 'sandbag')).toBe('sandbag');
+  });
+
+  test('suspension keeps its own category (EL-21, pre-existing)', () => {
+    expect(deriveEquipmentCategory('TRX Row', 'suspension')).toBe('suspension');
+  });
 });
 
 describe('deriveEquipmentProfiles', () => {
@@ -73,6 +90,16 @@ describe('deriveEquipmentProfiles', () => {
     // kept out of every generated plan (still hand-pickable in the library).
     expect(deriveEquipmentProfiles('bodyweight', 'Weighted Pull-Up', 'compound')).toEqual([]);
     expect(deriveEquipmentProfiles('bodyweight', 'Weighted Dips (Chest)', 'compound')).toEqual([]);
+  });
+  // exercise-library-expansion-2026-09-05 (integration stage 2, job 3):
+  // sled and medicine ball need open floor space, full-gym only; a
+  // sandbag is common home/garage equipment, so it also carries home_gym.
+  test('sled and medicine_ball are full_gym only', () => {
+    expect(deriveEquipmentProfiles('sled')).toEqual(['full_gym']);
+    expect(deriveEquipmentProfiles('medicine_ball')).toEqual(['full_gym']);
+  });
+  test('sandbag reaches full_gym and home_gym', () => {
+    expect(deriveEquipmentProfiles('sandbag')).toEqual(['full_gym', 'home_gym']);
   });
   test('bands never reach a loaded plan (except the two D10-named exceptions)', () => {
     expect(deriveEquipmentProfiles('band', 'Band Curl', 'isolation')).toEqual(['bodyweight']);
@@ -247,6 +274,8 @@ describe('coverage over the whole seed library', () => {
   const VALID_CATEGORIES = new Set([
     'barbell', 'dumbbell', 'cable', 'machine_selectorised', 'machine_plate_loaded',
     'smith', 'bodyweight', 'band', 'kettlebell', 'landmine', 'suspension', 'other',
+    // exercise-library-expansion-2026-09-05 (integration stage 2, job 3).
+    'sled', 'medicine_ball', 'sandbag',
   ]);
   const VALID_PROFILES = new Set([
     'full_gym', 'machines_cables', 'dumbbells_only', 'barbell_plates', 'home_gym', 'bodyweight',
@@ -268,7 +297,9 @@ describe('coverage over the whole seed library', () => {
       if (!['push', 'pull', 'static'].includes(meta.force)) {
         problems.push(`${ex.name}: bad force ${meta.force}`);
       }
-      if (!['bilateral', 'unilateral'].includes(meta.laterality)) {
+      // 'alternating' added (EL-21): one side works at a time like
+      // unilateral, but both sides load across the set.
+      if (!['bilateral', 'unilateral', 'alternating'].includes(meta.laterality)) {
         problems.push(`${ex.name}: bad laterality ${meta.laterality}`);
       }
       if (![1, 2, 3].includes(meta.difficulty)) {

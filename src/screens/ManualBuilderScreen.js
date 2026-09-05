@@ -1151,6 +1151,9 @@ export default function ManualBuilderScreen({ navigation, route }) {
         onClose={() => setShowPicker(false)}
         onSelect={handleExerciseSelected}
         saveLabel="Add to Plan"
+        // EL-20: the day currently being built, so an empty-query browse
+        // can surface "In your plan" ahead of Staples/All exercises.
+        planExercises={pickerDayIndex !== null ? days[pickerDayIndex]?.exercises : undefined}
       />
 
       <ScrollView

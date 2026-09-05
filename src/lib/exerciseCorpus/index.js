@@ -26,6 +26,7 @@ import power from './families/power.js';
 import specialty from './families/specialty.js';
 import medicine_ball from './families/medicine_ball.js';
 import sled from './families/sled.js';
+import sandbag from './families/sandbag.js';
 
 import { deriveExerciseMetadata } from '../exerciseMetadata.js';
 import { deriveDemandMetadata } from '../capability/demands.js';
@@ -34,12 +35,13 @@ import { deriveLoadSemantics } from '../exercise/loadSemantics.js';
 export const FAMILY_NAMES = Object.freeze([
   'barbell', 'dumbbell', 'cable', 'machine', 'smith', 'bodyweight', 'band',
   'suspension', 'kettlebell', 'landmine', 'carries', 'power', 'specialty',
-  'medicine_ball', 'sled',
+  'medicine_ball', 'sled', 'sandbag',
 ]);
 
 const FAMILY_MODULES = Object.freeze({
   barbell, dumbbell, cable, machine, smith, bodyweight, band, suspension,
   kettlebell, landmine, carries, power, specialty, medicine_ball, sled,
+  sandbag,
 });
 
 // Every entry, source order, family by family — includes EL-21 retired

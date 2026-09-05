@@ -3336,7 +3336,15 @@ export function _invalidateExercisesCache() {
 export async function getAllExercises() {
   if (_allExercisesCache) return _allExercisesCache;
   const d = await db();
-  const rows = await d.getAllAsync('SELECT * FROM exercises ORDER BY name ASC');
+  // EL-18: excludes a soft-deleted custom exercise (deleteExercise sets
+  // deleted_at) from every browse/search/generation surface this feeds.
+  // A canonical row's deleted_at is never set, so this changes nothing
+  // for the built-in library. getExerciseById and the routine-exercise
+  // join deliberately stay unfiltered - a routine that still references a
+  // deleted exercise keeps resolving its name/metadata for display.
+  const rows = await d.getAllAsync(
+    'SELECT * FROM exercises WHERE deleted_at IS NULL ORDER BY name ASC',
+  );
   _allExercisesCache = rows.map(rowToCamel);
   return _allExercisesCache;
 }
@@ -3440,11 +3448,51 @@ export async function insertExerciseWithId(id, data) {
   return { id, ...data, createdAt: now, updatedAt: now };
 }
 
+// Exercise-library-expansion-2026-09-05 (EL-18): soft delete, not a hard
+// DELETE. Two reasons. First, `getRoutineExercisesWithDetails` LEFT JOINs
+// `exercises` and falls back to the denormalised `exercise_name` snapshot
+// when the join misses (:4622 area) - a routine that still references a
+// deleted exercise keeps displaying it either way, but tombstoning (row
+// stays, `deleted_at` set) keeps its full metadata (equipment, muscle) for
+// that join, rather than degrading to name-only. Second: no deletion sync
+// path exists for exercises today (`sync.syncExercises` only ever
+// upserts whatever the local `exercises` table currently holds; there is
+// no push-a-tombstone step, unlike `deleteWorkoutFromCloud`'s pattern) -
+// this is LOCAL-ONLY. A hard delete would just silently stop being
+// re-pushed and never actually remove the cloud `custom_exercises` row
+// (which itself carries a `deleted_at` per migrate_020, but nothing
+// writes it), so a soft delete is not a downgrade from the old hard
+// delete's cloud behaviour - neither ever removed the cloud copy. Scoped
+// to is_custom = 1 exactly as the old hard delete was: a canonical row is
+// never reachable here.
 export async function deleteExercise(id) {
   const d = await db();
-  await d.runAsync('DELETE FROM exercises WHERE id = ? AND is_custom = 1', [id]);
+  const now = Date.now();
+  await d.runAsync(
+    'UPDATE exercises SET deleted_at = ?, updated_at = ? WHERE id = ? AND is_custom = 1',
+    [now, now, id],
+  );
   _invalidateExercisesCache();
   _scheduleSync();
+}
+
+// EL-18: which of this user's routines still reference an exercise (used
+// by the custom-exercise delete confirm, so it can name the routines
+// rather than silently orphaning them). Undeleted routine_exercises rows,
+// on undeleted routines owned by this user only.
+export async function getRoutinesReferencingExercise(userId, exerciseId) {
+  if (!userId || !exerciseId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT DISTINCT r.id, r.name
+       FROM routine_exercises re
+       JOIN routines r ON r.id = re.routine_id
+      WHERE re.exercise_id = ? AND re.deleted_at IS NULL
+        AND r.user_id = ? AND r.deleted_at IS NULL
+      ORDER BY r.name ASC`,
+    [exerciseId, userId],
+  );
+  return rows.map(rowToCamel);
 }
 
 // Update only the derived metadata columns on an exercise. Used by the

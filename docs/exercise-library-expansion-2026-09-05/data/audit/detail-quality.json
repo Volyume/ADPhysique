@@ -1,14 +1,14 @@
 {
-  "totalRows": 564,
+  "totalRows": 936,
   "rowsWithCueCount": 0,
-  "rowsWithoutCueCount": 564,
+  "rowsWithoutCueCount": 936,
   "cueFinding": "Every canonical row has cue=null (verified: 0/552). rowToExercise() in seedExercises.js never sets `cue` for a canonical insert (loadSeed.mjs header comment, buildFullRow). This is a corpus-wide gap against EL-3's \"complete under the current field contract\" gate, not a per-row anomaly — either every row needs a cue authored, or the field is deliberately deferred, but it cannot silently ship as looking \"complete\" while 100% null.",
-  "adaptedSetupEntryCount": 367,
-  "rowsWithNoAdaptedSetup": 311,
+  "adaptedSetupEntryCount": 575,
+  "rowsWithNoAdaptedSetup": 498,
   "adaptedSetupLengthDistribution": {
-    "count": 367,
+    "count": 575,
     "min": 60,
-    "p25": 109,
+    "p25": 113,
     "median": 126,
     "p75": 126,
     "max": 141

@@ -14,7 +14,10 @@ jest.mock('expo-sqlite', () => {
     execAsync: jest.fn(() => Promise.resolve()),
     runAsync: jest.fn(() => Promise.resolve({ changes: 0, lastInsertRowId: 0 })),
     getAllAsync: jest.fn((sql) => {
-      if (typeof sql === 'string' && /SELECT \* FROM exercises ORDER BY name/.test(sql)) {
+      // EL-18: getAllExercises now filters `WHERE deleted_at IS NULL`
+      // (excludes a soft-deleted custom exercise) ahead of the ORDER BY,
+      // so the match no longer assumes they are adjacent.
+      if (typeof sql === 'string' && /SELECT \* FROM exercises\b[\s\S]*ORDER BY name/.test(sql)) {
         exercisesQueryCount += 1;
         return Promise.resolve(exerciseRows);
       }
