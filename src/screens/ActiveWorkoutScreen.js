@@ -5912,7 +5912,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       <View style={styles.infoInstruction}>
                         <Text style={[styles.infoNotesLabel, live.infoNotesLabel]}>How to do it</Text>
                         <Text style={[styles.infoNotes, live.infoNotes]}>
-                          {exercise?.notes || 'No instructions for this exercise yet. Start light, move with control and stop a couple of reps short of failure.'}
+                          {exercise?.notes || 'No instructions for this exercise yet. Start light, move with control and stop a couple of reps before you truly cannot do any more.'}
                         </Text>
                       </View>
                     )}

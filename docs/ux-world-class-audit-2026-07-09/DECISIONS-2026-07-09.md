@@ -6280,6 +6280,17 @@ coverage, with the lead reviewing samples and ambiguous movements.
    (`docs/exercise-library-expansion-2026-09-05/data/instruction-audit.json`)
    and in the taskboard block. `METADATA_REDERIVE_KEY` bumped to v4 so
    existing installs take the rewritten text once.
+   Landing figures: 918 live rows, 0 contract violations, 916
+   rows carry a watch line; 558 rows changed by the lanes plus 8 by the
+   lead's hand pass. Accuracy corrections found by the read-through
+   rather than the contract: neck harness extension/flexion had their
+   load positions reversed; the sled row faced away from the sled; the
+   barbell glute bridge described a hip thrust; the axle deadlift called
+   the bar wide; the dumbbell windmill was written for a kettlebell; and
+   about fifty rows across barbell, dumbbell, kettlebell, bodyweight and
+   cable carried the whole movement in setup with a fault sentence as
+   the execution. Near-duplicate live pairs flagged by every lane are
+   queued for an EL-21 retirement ruling on the board, not merged here.
 
 **Bounds.** Presentation, copy and content only. No engine, threshold,
 ED-safety, consent, billing, schema or sync change (canonical exercises

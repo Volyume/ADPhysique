@@ -3496,27 +3496,82 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
-## EXERCISE LIST + DETAIL POLISH + INSTRUCTION CONTRACT (2026-09-05) — IN FLIGHT. Record D151.
+## EXERCISE LIST ROW, EXERCISE SHEET, INSTRUCTION CONTRACT (2026-09-05) — COMPLETE, MERGED TO MAIN. Record D151.
 
-Founder brief in chat 2026-09-05. Branch `claude/active-workout-pb-callout-fsbyf5`.
-Lanes: (1) outline current-row treatment (`WorkoutOutline.js`, lead);
-(2) exercise info sheet + detail screen structured instructions
-(`ActiveWorkoutScreen.js`, `ExerciseDetailScreen.js`, lead); (3) corpus
-instruction contract (`instructionContract.js`, validator rule 10,
-`split-cues.mjs` conversion LANDED on the branch) and the family audit
-by agents (opus, two at a time, brief `INSTRUCTION-BRIEF.md`):
-- [ ] A. machine + smith + sled + medicine_ball + sandbag. Recovery:
-  relaunch from INSTRUCTION-BRIEF.md; partial edits are in the family
-  files on the branch, the audit script shows what remains.
-- [ ] B. cable + band + suspension. Recovery: same.
-- [ ] C. bodyweight. Recovery: same.
-- [ ] D. barbell + landmine. Recovery: same.
-- [ ] E. dumbbell + kettlebell. Recovery: same.
-Gate: `node scripts/exercise-library/validate-corpus.mjs` green (the
-corpus guard Jest mirror fails until every family is at 0 violations),
-lead sample review of each report's before/after pairs and ambiguous
-list, `METADATA_REDERIVE_KEY` bumped so existing installs take the new
-text, then lint + test, docs, merge.
+Founder brief in chat 2026-09-05. Outline current row: surface2 band,
+amber dot, semibold white name, white set count (full-row amber tint
+gone). Exercise sheet: "Back · Cable" display labels; Setup / Execution
+/ Watch stack in the primary ink with a "Plan note" above when the
+routine carries one; tonal adjusted/eased box; one calm fallback line
+for custom exercises. Detail screen: the same three fields; its
+duplicate amber cue card removed. Instructions: shared contract
+`src/lib/exerciseCorpus/instructionContract.js` (validator rule 10 +
+Jest mirror read it); every corpus entry is `setup` / `execution` /
+optional `watch`; `cue` derived; FORM_TIPS (545 legacy paragraphs)
+retired; `METADATA_REDERIVE_KEY` v4. Audit (`audit-instructions.mjs`,
+report `data/instruction-audit.json`): 918 rows, 0 violations,
+916 carry a watch line. Five Opus lanes against
+`INSTRUCTION-BRIEF.md`, each lead-reviewed on a sample plus every
+least-sure row: cable/band/suspension 111 of 216 rows changed;
+machine/smith/sled/medicine ball/sandbag 119 of 136; bodyweight 116 of
+176 (+7 by hand); barbell/landmine 116 of 188; dumbbell/kettlebell 96
+of 202 (+1 by hand). Accuracy fixes found by the read-through, not the
+contract: neck harness load positions reversed, sled row facing the
+wrong way, barbell glute bridge described as a hip thrust, axle bar
+"wide" not thick, dumbbell windmill written for a kettlebell, and
+roughly fifty rows whose setup held the whole movement with a fault
+sentence as the execution (a shape the mechanical split could not see).
+
+**FOLLOW-UP, founder decision (row identity, outside this brief).** The
+lanes flagged near-duplicate LIVE pairs that read as one movement under
+two names and survived the EL-25 normalised-name pass because the
+names differ by a bracket or a word: e.g. Cable Woodchop / Cable
+Woodchop (High to Low); Cable Wrist Curl / Single-Arm Cable Wrist Curl;
+Ab Rollout / Ab Wheel (Kneeling) / Ab Wheel Rollout / Kneeling Ab
+Rollout; Chin-Up / Chin-Up (Supinated); Nordic Curl / Nordic Glute
+Curl; Lying Leg Curl / Prone Leg Curl; Seated Calf Raise / Seated
+Machine Calf Raise; Machine Rear Delt Fly / Reverse Pec Deck / Seated
+Rear Delt Machine / Plate-Loaded Rear Delt; Good Morning / Barbell Good
+Morning; Romanian Deadlift / Romanian Deadlift (Barbell); Safety Bar
+Squat / SSB Squat; Sumo Deadlift / Sumo Deadlift (Wide Stance); Fat
+Grip Curl / Thick Bar Curl; Landmine Rotation / Landmine Twist; Meadows
+Row (barbell family) / Landmine Meadows Row; Dumbbell Pullover /
+Dumbbell Pullover (Chest); Plank Row / Renegade Row; Step-Up (Dumbbell)
+/ Step-Up (Weighted); four single-leg RDL rows. Each pair kept distinct
+instructions; nothing merged. Retirement is an EL-21 ruling with a
+founder-reviewed list (corpus-floor.json rule), so it is queued, not
+done. Also flagged: Monster Walk, Spanish Squat, Terminal Knee
+Extension and Clamshell describe a band while tagged bodyweight; Wall
+Ball Squat describes a ball while tagged dumbbell (metadata, not text).
+
+**Device checklist (Android, from a green build).**
+1. Start a multi-exercise workout, tap the outline strip. Expected: the
+   current exercise row is a slightly lighter charcoal band with an
+   amber dot and a white name and count; completed rows keep the grey
+   tick and n/n; upcoming rows keep the hollow ring; no amber wash.
+2. Tap another row. Expected: instant switch, the band moves, the list
+   collapses as before; long-press still opens reorder.
+3. Open exercise options, then Exercise info, on a library exercise.
+   Expected: title, then "Back · Cable"-style metadata (display names,
+   middle dot), the amber prescription line, then Setup, Execution and,
+   where present, Watch, each a short label over one or two sentences
+   in white. No paragraph wall, no amber tinted boxes.
+4. Same on an exercise inside a plan that carries a note (e.g. Face
+   Pull in a library plan). Expected: "Plan note" first, then the three
+   sections.
+5. On an adjusted day (or with a readiness reduction). Expected: the
+   "Adjusted today" / "Eased for today" box is charcoal with a hairline
+   and amber icon and title, not an amber-filled card; the revert
+   action still works.
+6. Create a custom exercise, open its info. Expected: "How to do it"
+   with your notes, or the one calm fallback line.
+7. Library > any exercise > detail screen. Expected: "How to do it" as
+   Setup / Execution / Watch; no separate amber bulb card above it.
+8. Existing install (not fresh): after update, open any exercise info.
+   Expected: the new wording (the v4 re-derive ran once at launch).
+9. Light theme: same structure, amber ink on the prescription line only.
+10. TalkBack on the sheet: each section label is read before its text.
+ED-safety: not adjacent (no bodyweight, food or notification copy).
 
 ## LIVE PR CALLOUT RESTYLED; LOG SET TROPHY RETIRED (2026-09-05) — COMPLETE, MERGED TO MAIN. Record D150.
 

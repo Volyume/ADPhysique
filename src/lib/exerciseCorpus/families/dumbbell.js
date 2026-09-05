@@ -45,7 +45,7 @@ export default [
     subregion: "upper_mid_row",
     loadCharacter: "grind",
     setup: "Lie face down on an inclined bench holding dumbbells, arms hanging straight down.",
-    execution: "Row both up, elbows back, pinching your shoulder blades, then lower fully.",
+    execution: "Row both up and hold at the top with your shoulder blades pinched, then lower fully.",
     watch: "Letting the chest lift off the bench brings the lower back in.",
   },
   {
@@ -77,7 +77,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand a stride ahead of a bench and rest your back foot on it, holding dumbbells at your sides.",
     execution: "Lower your back knee towards the floor by bending the front leg, then push back up.",
-    watch: "Letting the front knee cave inward is common.",
+    watch: "Letting the front knee cave inward loses the drive out of the bottom, so track it over your toes.",
   },
   {
     name: "Chest-Supported Row (Dumbbell)",
@@ -93,7 +93,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie face down on an inclined bench holding dumbbells, arms hanging straight down.",
     execution: "Row both up towards your ribs, squeezing your shoulder blades, then lower fully.",
-    watch: "Shrugging instead of pulling with the back is common.",
+    watch: "Shrugging the weights up instead of driving the elbows back moves the work to your traps.",
   },
   {
     name: "Concentration Curl",
@@ -124,7 +124,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand holding a dumbbell with your palm facing your body.",
     execution: "Curl it up and across towards the opposite shoulder, then lower back down the same path.",
-    watch: "Letting the elbow swing away from your side turns this into a swinging motion.",
+    watch: "Letting the elbow drift away from your side lets the shoulder take over the lift.",
   },
   {
     name: "Cuban Press",
@@ -139,7 +139,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand holding dumbbells and raise them until your upper arms are level with your shoulders, elbows bent.",
     execution: "Rotate your forearms up until the dumbbells point overhead, press to full extension, then reverse.",
-    watch: "Rushing skips the point.",
+    watch: "Rushing the rotation turns it into an upright row followed by a press.",
   },
   {
     name: "Curtsy Lunge",
@@ -154,7 +154,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand tall and step one leg diagonally behind and across the other, lowering into a lunge.",
     execution: "Push back through the front leg to return to standing.",
-    watch: "Letting the front knee twist inward as you step across is the main fault.",
+    watch: "Letting the front knee twist inward as you step across loses the line, so keep it over your foot.",
   },
   {
     name: "Curtsy Lunge (Glute Focus)",
@@ -280,7 +280,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on the floor with knees bent, holding dumbbells above your chest, arms extended.",
     execution: "Bend your elbows to lower them towards your head until your upper arms touch the floor, then extend up.",
-    watch: "Flaring the elbows changes the target.",
+    watch: "Flaring the elbows out shares the work with your chest and shoulders.",
   },
   {
     name: "Dumbbell Fly",
@@ -414,7 +414,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie across a bench with your head supported and hips low, holding a dumbbell above your chest.",
     execution: "Lower it behind your head in an arc, elbows slightly bent, then pull back over your chest.",
-    watch: "Letting the hips sag loosens the target muscles.",
+    watch: "Letting the ribs flare as the weight goes back turns the stretch into a lower-back arch.",
   },
   {
     name: "Dumbbell Pullover (Chest)",
@@ -430,7 +430,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie across a bench with your head supported and hips low, holding a dumbbell above your chest.",
     execution: "Lower it behind your head in an arc, elbows slightly bent, then pull back over your chest.",
-    watch: "Letting the hips sag loosens the target muscles.",
+    watch: "Letting the ribs flare as the weight goes back turns the stretch into a lower-back arch.",
   },
   {
     name: "Dumbbell Rear Delt Fly",
@@ -510,7 +510,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand tall holding a dumbbell in one hand at your side, the other hand on your hip or head.",
     execution: "Bend sideways towards the weighted side as far as comfortable, then return upright.",
-    watch: "Twisting the torso as you bend changes the exercise.",
+    watch: "Twisting as you bend takes the work off the side of your waist.",
   },
   {
     name: "Dumbbell Side-Lying Rear Delt",
@@ -526,7 +526,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your side on a bench or floor, holding a dumbbell above your hip, elbow slightly bent.",
     execution: "Raise it towards the ceiling, leading with the back of your shoulder, then lower.",
-    watch: "Rolling the torso back loosens the target area.",
+    watch: "Rolling the torso back lets the chest help, so stay stacked on your side.",
   },
   {
     name: "Dumbbell Single-Leg RDL",
@@ -542,7 +542,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on one leg holding a dumbbell in the opposite hand, soft bend in the standing knee.",
     execution: "Hinge forward at the hip, free leg rising behind you for balance, torso close to horizontal.",
-    watch: "Rounding the back as balance wobbles is common.",
+    watch: "Rounding the back when balance wobbles costs the hamstring stretch, so shorten the range.",
   },
   {
     name: "Dumbbell Skull Crusher",
@@ -574,7 +574,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on a bench holding two dumbbells pressed together over your chest, squeezing them throughout.",
     execution: "Lower to your chest keeping the squeeze on, then press back up without letting them separate.",
-    watch: "Easing the squeeze removes the point.",
+    watch: "Easing the squeeze between reps drops the chest tension the press is built on.",
   },
   {
     name: "Dumbbell Tibialis Raise (Seated)",
@@ -606,7 +606,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit and rest your forearms on your thighs, palms up, a dumbbell in each hand.",
     execution: "Curl your wrists up as far as comfortable, then lower until the dumbbells roll towards your fingertips.",
-    watch: "Moving the whole forearm reduces the isolation.",
+    watch: "Lifting the forearms off your thighs lets the arms take over from the wrists.",
   },
   {
     name: "Dumbbell Y-Raise",
@@ -653,7 +653,7 @@ export default [
     overrides: {"exerciseType":"duration"},
     setup: "Stand between two heavy dumbbells or handles, grip them firmly and stand up tall.",
     execution: "Walk forward with short controlled steps, shoulders back and grip locked on.",
-    watch: "Letting the shoulders round forward is the first sign of losing form.",
+    watch: "Letting the shoulders round forward is the first sign the load is beating your grip.",
   },
   {
     name: "Farmer's Walk",
@@ -686,7 +686,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on the floor with knees bent, holding dumbbells above your chest, arms extended.",
     execution: "Lower them until your upper arms touch the floor, pause, then press back up.",
-    watch: "Bouncing off the floor instead of pausing skips the point of the pause.",
+    watch: "Bouncing the elbows off the floor skips the dead stop that makes the press hard.",
   },
   {
     name: "Front Squat (Dumbbell)",
@@ -718,7 +718,7 @@ export default [
     loadCharacter: "grind",
     setup: "Hold a dumbbell vertically against your chest cupping the top end.",
     execution: "Squat down between your knees, torso upright, then drive back up to standing.",
-    watch: "Letting the weight pull your torso forward is the common breakdown as depth increases.",
+    watch: "Letting the weight pull your torso forward cuts your depth, so hold it tight to your chest.",
   },
   {
     name: "Gripper Walks",
@@ -796,7 +796,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit back on an inclined bench, arms hanging straight down, a dumbbell in each hand.",
     execution: "Curl them up towards your shoulders without the elbows moving forward, then lower fully.",
-    watch: "The incline stretches the muscle, so do not cut that phase short.",
+    watch: "Letting the elbows drift forward at the bottom cuts off the stretch the incline gives.",
   },
   {
     name: "Incline Dumbbell Fly",
@@ -873,7 +873,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on a raised platform holding a light dumbbell or plate, feet close together.",
     execution: "Round your spine forward one bone at a time, lowering the weight towards your feet, then reverse to stand.",
-    watch: "A heavier load defeats the slow purpose.",
+    watch: "Bending the knees to reach lower takes the stretch out of the hamstrings.",
   },
   {
     name: "Keg Carry",
@@ -920,7 +920,7 @@ export default [
     loadCharacter: "grind",
     setup: "Rest one knee and hand on a bench, holding a heavy dumbbell in the other hand below your shoulder.",
     execution: "Pull it up towards your hip with a little body swing allowed, then lower under control.",
-    watch: "Losing control on the way down wastes the load.",
+    watch: "Dropping the weight on the way down throws away half of every rep.",
   },
   {
     name: "Lateral Lunge",
@@ -933,8 +933,8 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
-    setup: "Stand tall and take a wide step out to one side, sitting your hips back and bending that knee while the other leg stays straight.",
-    execution: "Push back through the bent leg to stand.",
+    setup: "Stand tall holding a dumbbell at your chest or one in each hand by your sides, feet hip width apart.",
+    execution: "Take a wide step out to one side, sit your hips back and bend that knee while the other leg stays straight, then push back through the bent leg to stand.",
     watch: "Letting the knee drift inward instead of over the foot strains it.",
   },
   {
@@ -965,7 +965,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie face down on an inclined bench, arms hanging straight down holding dumbbells.",
     execution: "Row them up towards your ribs, driving your elbows out and back, then lower fully.",
-    watch: "Lifting the chest off the pad to help the pull hurts the movement.",
+    watch: "Lifting the chest off the pad to help the pull hands the work to your lower back.",
   },
   {
     name: "Lying Tricep Extension",
@@ -1034,7 +1034,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie face down on an inclined bench, arms hanging straight down, holding dumbbells.",
     execution: "Curl them up towards your shoulders without the elbows moving forward, then lower fully.",
-    watch: "This position removes swing, so momentum will not work here.",
+    watch: "Letting the shoulders lift off the bench brings back the swing the position removes.",
   },
   {
     name: "Prone Incline T-Raise",
@@ -1125,7 +1125,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand holding dumbbells at your thighs, flat back, soft bend in the knees.",
     execution: "Push your hips back and lower them down your legs until you feel a stretch in the hamstrings, then stand.",
-    watch: "Rounding the back near the knee is the usual fault.",
+    watch: "Rounding the back as the weights pass your knees means the hinge has run out, so stop there.",
   },
   {
     name: "Seated Dumbbell Calf Raise",
@@ -1188,7 +1188,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit on a bench holding dumbbells at your sides, elbows slightly bent.",
     execution: "Raise your arms out to the sides until they reach shoulder height, then lower.",
-    watch: "Sitting removes the ability to cheat with a lean, so too much weight shows up quickly.",
+    watch: "Swinging the torso to start the raise gives back the strictness sitting is meant to add.",
   },
   {
     name: "Single-Arm Dumbbell Press",
@@ -1204,7 +1204,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand or sit holding a dumbbell at shoulder height on one side, torso braced.",
     execution: "Press it straight overhead without leaning to the opposite side, then lower.",
-    watch: "Letting the torso tip away from the working arm is common as it gets heavy.",
+    watch: "Letting the torso tip away from the working arm hands the press to your side, so stay square.",
   },
   // EL-21/EL-23 (exercise-library-expansion-2026-09-05): retired, a
   // duplicate of "Dumbbell Row" above (both bench-supported single-arm
@@ -1273,7 +1273,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on one leg holding a dumbbell in the opposite hand, soft bend in the standing knee.",
     execution: "Hinge forward at the hip, free leg rising behind you for balance, torso close to horizontal.",
-    watch: "Rounding the back as balance wobbles is common.",
+    watch: "Rounding the back when balance goes costs the hamstring stretch, so shorten the range.",
   },
   {
     name: "Single-Leg Romanian Deadlift (DB)",
@@ -1288,7 +1288,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on one leg holding a dumbbell in the opposite hand, soft bend in the standing knee.",
     execution: "Hinge forward at the hip, free leg rising behind you for balance, torso close to horizontal.",
-    watch: "Rounding the back as balance wobbles is common.",
+    watch: "Rounding the back when balance wobbles costs the stretch, so shorten the range and reset.",
   },
   {
     name: "Step-Up (Dumbbell)",
@@ -1351,7 +1351,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand holding dumbbells at your thighs with your knees only slightly bent, more locked than a Romanian deadlift.",
     execution: "Push your hips back and lower, flat back, then drive forward to stand.",
-    watch: "Rounding the lower back to reach lower is common.",
+    watch: "Rounding the lower back to reach lower adds range you cannot control, so stop at the stretch.",
   },
   {
     name: "Stiff-Leg Deadlift (Single-Leg)",
@@ -1366,7 +1366,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on one leg holding a dumbbell in the opposite hand, knee only slightly bent.",
     execution: "Hinge forward at the hip, free leg rising behind you for balance, until you feel a stretch in the hamstring.",
-    watch: "Rounding the back as balance wobbles is common.",
+    watch: "Rounding the back when balance goes costs the stretch, so touch the free foot down and reset.",
   },
   {
     name: "Suitcase Carry",
@@ -1427,7 +1427,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on a bench holding dumbbells above your chest, palms facing your feet.",
     execution: "Bend your elbows out to the sides to lower them towards your chest, then extend back up.",
-    watch: "Letting the elbows drop back towards your head changes the exercise.",
+    watch: "Letting the elbows drop back towards your head turns it into a skull crusher.",
   },
   {
     name: "Tricep Kickback",
@@ -1486,8 +1486,8 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    setup: "Stand tall holding dumbbells and step forward into a lunge, then push off the back foot into the next lunge.",
-    execution: "Keep your front shin close to vertical as you travel forward.",
+    setup: "Stand tall holding dumbbells at your sides with your feet together.",
+    execution: "Step forward into a lunge, front shin close to vertical, then push off the back foot straight into the next step.",
     watch: "Letting the knee pass far over the toes strains it.",
   },
   {
@@ -1501,8 +1501,8 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "stretcher",
     loadCharacter: "grind",
-    setup: "Stand tall holding dumbbells and step forward into a lunge with a slight forward lean, pushing through the front heel into the next step.",
-    execution: "Driving through the heel keeps the glute emphasis.",
+    setup: "Stand tall holding dumbbells at your sides, ready to take a long step.",
+    execution: "Step forward into a long lunge with a slight forward lean, then drive through the front heel into the next step.",
     watch: "Standing upright shifts work to the quads.",
   },
   {
@@ -1516,8 +1516,8 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
     loadCharacter: "grind",
-    setup: "Hold a weighted ball at your chest and squat down between your knees,, torso upright.",
-    execution: "Drive back up through the middle of your foot to standing.",
+    setup: "Hold a weighted ball against your chest with both hands, feet about shoulder-width apart.",
+    execution: "Squat down between your knees with your torso upright, then drive back up through the middle of your foot.",
     watch: "Letting the ball drift away from the chest pulls your torso forward and shortens your depth.",
   },
   {
@@ -1577,9 +1577,9 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "anti_extension",
     loadCharacter: "grind",
-    setup: "Stand with a kettlebell pressed overhead in one hand, feet turned slightly away from that side.",
-    execution: "Hinge sideways, sliding your free hand down your leg while watching the kettlebell, then reverse to stand.",
-    watch: "A drifting pressed arm feels awkward.",
+    setup: "Stand with a dumbbell pressed overhead in one hand, feet turned slightly away from that side.",
+    execution: "Hinge sideways, sliding your free hand down your leg while watching the dumbbell, then reverse to stand.",
+    watch: "Bending at the waist rather than pushing the hips back turns it into a side bend.",
   },
   {
     name: "YTW",
@@ -1642,7 +1642,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on the bench holding a dumbbell in each hand at chest height.",
     execution: "Press one up while the other stays low, then swap, alternating sides.",
-    watch: "Letting your torso rock side to side with each press is the main thing to control.",
+    watch: "Letting your torso rock with each press hands the work to your ribs, so keep your back flat.",
   },
   {
     name: "Alternating Dumbbell Front Raise",
@@ -1658,7 +1658,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand holding a dumbbell in each hand at your thighs.",
     execution: "Raise one arm straight in front to shoulder height while the other stays down, then lower and switch sides.",
-    watch: "Using momentum from the hips to swing the arm up is the common shortcut.",
+    watch: "Swinging the hips to start the raise takes the work off the front of the shoulder.",
   },
   {
     name: "Cossack Squat (Dumbbell)",
@@ -1674,7 +1674,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand wide holding a dumbbell at your chest.",
     execution: "Shift your weight to one side and sink into a full squat on that leg while the other stays straight with the foot flat, then push back to centre.",
-    watch: "Letting the straight leg's heel lift is common.",
+    watch: "Letting the straight leg's heel lift shortens the stretch through the inner thigh.",
   },
   {
     name: "Deficit Dumbbell Calf Raise (Standing)",
@@ -1690,7 +1690,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand on a raised block with heels off the edge, holding dumbbells at your sides.",
     execution: "Lower your heels below the platform for a deep stretch, then rise onto your toes.",
-    watch: "Bouncing out of the stretch rather than pausing is common.",
+    watch: "Bouncing out of the stretch skips the deep range the deficit is there for.",
   },
   {
     name: "Dumbbell Clean",
@@ -1705,8 +1705,9 @@ export default [
     aliases: ["Double Dumbbell Clean"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":true}},
-    setup: "Stand holding dumbbells at your sides, hinge slightly, then drive your hips forward and pull them to your shoulders, dropping into a slight squat to catch them.",
-    execution: "Muscling the weights up with your arms wastes the hip drive.",
+    setup: "Stand holding dumbbells at your sides with your hips hinged back and your back flat.",
+    execution: "Drive your hips forward to pull them up to your shoulders, dropping into a slight squat to catch them.",
+    watch: "Muscling the weights up with your arms wastes the hip drive.",
   },
   {
     name: "Dumbbell Dead Bug",
@@ -1722,7 +1723,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back, arms reaching to the ceiling, knees bent at ninety degrees.",
     execution: "Lower one arm and the opposite leg towards the floor, keeping your back pressed down, then switch sides.",
-    watch: "Letting the back arch off the floor is the main fault.",
+    watch: "Letting the lower back arch off the floor means the reach has gone too far, so shorten it.",
   },
   {
     name: "Dumbbell Devil's Press",
@@ -1737,8 +1738,9 @@ export default [
     aliases: ["Devil's Press"],
     loadCharacter: "ballistic",
     overrides: {"difficulty":3,"demands":{"position":"mixed","floorAccess":true,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":true,"balanceDemand":"high","weightBearingHands":true}},
-    setup: "Start with dumbbells on the floor, perform a burpee, then clean the dumbbells to your shoulders and press them overhead in one motion.",
-    execution: "Rushing the transition between the burpee and the press breaks the rhythm.",
+    setup: "Stand over two dumbbells on the floor with your feet about shoulder-width apart.",
+    execution: "Drop into a burpee with your hands on the dumbbells, then stand and swing them from the floor to overhead in one arc.",
+    watch: "Rushing the transition between the burpee and the swing overhead breaks the rhythm.",
   },
   {
     name: "Dumbbell Drag Curl",
@@ -1768,9 +1770,9 @@ export default [
     aliases: ["Double Front Rack Carry"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    setup: "Hold a dumbbell at each shoulder, elbows pointing forward and down, then stand tall and walk with controlled steps.",
-    execution: "Keep your core braced throughout.",
-    watch: "Letting the elbows drop and the dumbbells slide down your chest is the common fault.",
+    setup: "Hold a dumbbell at each shoulder, elbows pointing forward and down, and stand tall.",
+    execution: "Walk forward with short controlled steps, ribs down and torso upright.",
+    watch: "Letting the elbows drop lets the dumbbells slide down your chest and pull you forward.",
   },
   {
     name: "Dumbbell Glute Bridge",
@@ -1800,8 +1802,9 @@ export default [
     aliases: ["Dumbbell Hang Power Clean"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":true}},
-    setup: "Stand holding dumbbells at mid thigh, hinge slightly, then drive your hips forward and pull the dumbbells up to your shoulders, catching them in a slight squat.",
-    execution: "Catching the weights too high or too stiff wastes the hip drive.",
+    setup: "Stand holding dumbbells at mid thigh with your hips hinged back and your back flat.",
+    execution: "Drive your hips forward to pull them up to your shoulders, catching them in a slight squat.",
+    watch: "Catching the weights too high or too stiff wastes the hip drive.",
   },
   {
     name: "Dumbbell Jump Squat",
@@ -1816,8 +1819,9 @@ export default [
     aliases: ["Loaded Jump Squat (Dumbbell)"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"none","unilateralLoadable":false,"bilateralUpper":false,"bilateralLower":true,"axialLoad":false,"impact":true,"balanceDemand":"stable","weightBearingHands":false}},
-    setup: "Hold dumbbells at your sides and squat down, then drive up explosively into a jump, landing softly back into the squat position.",
-    execution: "Landing stiff legged rather than absorbing the landing through the knees and hips is the main risk.",
+    setup: "Stand holding dumbbells at your sides, feet about shoulder-width apart.",
+    execution: "Squat down, drive up explosively into a jump, then land softly and sink straight back into the squat.",
+    watch: "Landing with stiff legs instead of bending the knees and hips takes the spring out of the next rep.",
   },
   {
     name: "Dumbbell Lateral to Front Raise",
@@ -1834,7 +1838,7 @@ export default [
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"none","unilateralLoadable":true,"bilateralUpper":true,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
     setup: "Stand holding a dumbbell in each hand at your sides.",
     execution: "Raise both arms out to the sides to shoulder height, then continue the arc round to the front before lowering.",
-    watch: "Using momentum to swing the weights rather than a controlled arc is common.",
+    watch: "Swinging the weights instead of tracing the arc takes the work off the shoulder.",
   },
   {
     name: "Dumbbell Overhead Carry",
@@ -1849,8 +1853,9 @@ export default [
     aliases: ["Waiter’s Overhead Carry","dumbbell single arm overhead carry"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","laterality":"unilateral","difficulty":3,"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    setup: "Press a dumbbell in each hand overhead with arms locked out, then walk forward with controlled steps, keeping your ribs down and core braced.",
-    execution: "Letting the arms drift forward of your ears is the main thing to correct.",
+    setup: "Press a dumbbell in each hand overhead with your arms locked out and your ribs down.",
+    execution: "Walk forward with short controlled steps, keeping the weights stacked above your shoulders.",
+    watch: "Letting the arms drift forward of your ears pulls your ribs up and your back into an arch.",
   },
   {
     name: "Dumbbell Reverse Curl",
@@ -1882,7 +1887,7 @@ export default [
     loadCharacter: "grind",
     setup: "Rest your forearm on a bench or your thigh with your palm facing down, holding a light dumbbell.",
     execution: "Lift the back of your hand up as far as comfortable, then lower slowly.",
-    watch: "Using a heavy weight and jerking it up is the common mistake.",
+    watch: "Jerking a heavy dumbbell up brings the elbow in and takes the work off the forearm.",
   },
   {
     name: "Dumbbell Snatch (Single-Arm)",
@@ -1897,8 +1902,9 @@ export default [
     aliases: ["Single-Arm Dumbbell Snatch","One-Arm Dumbbell Snatch","dumbbell snatch"],
     loadCharacter: "ballistic",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    setup: "Start with the dumbbell between your feet, hinge and pull it up close to your body, then punch your hand through under it to catch it overhead in one motion.",
-    execution: "Pulling the dumbbell away from the body is the usual fault.",
+    setup: "Stand with a dumbbell on the floor between your feet, hips hinged back and back flat.",
+    execution: "Pull it up close to your body, then punch your hand through underneath to lock it out overhead.",
+    watch: "Letting the dumbbell swing out away from your body turns the pull into a heave.",
   },
   {
     name: "Dumbbell Spellcaster",
@@ -1930,8 +1936,9 @@ export default [
     aliases: ["Dumbbell Squat to Press"],
     loadCharacter: "grind",
     overrides: {"demands":{"position":"standing","floorAccess":false,"overheadPosition":true,"gripDemand":"bar","unilateralLoadable":false,"bilateralUpper":true,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    setup: "Hold a dumbbell at each shoulder and squat down, then drive up out of the squat and continue that momentum straight into pressing the dumbbells overhead.",
-    execution: "Pausing between the squat and the press loses the transfer of power.",
+    setup: "Stand holding a dumbbell at each shoulder, feet about shoulder-width apart.",
+    execution: "Squat down, then drive up and carry that momentum straight into pressing the dumbbells overhead.",
+    watch: "Pausing between the squat and the press loses the transfer of power.",
   },
   {
     name: "Dumbbell Upright Row",
@@ -1947,7 +1954,7 @@ export default [
     loadCharacter: "grind",
     setup: "Stand holding dumbbells in front of your thighs.",
     execution: "Pull them straight up towards your chin, leading with your elbows, then lower with control.",
-    watch: "Pulling the elbows too high above shoulder height is a common thing to avoid.",
+    watch: "Pulling the elbows well above shoulder height jams the shoulder, so stop at chest height.",
   },
   {
     name: "Dumbbell Waiter's Carry",
@@ -1962,8 +1969,9 @@ export default [
     aliases: ["Waiter's Walk"],
     loadCharacter: "grind",
     overrides: {"exerciseType":"duration","laterality":"unilateral","difficulty":3,"demands":{"position":"standing","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":true,"axialLoad":true,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
-    setup: "Hold a dumbbell overhead on one open palm, arm locked out, and walk with controlled steps, keeping your ribs down and core braced.",
-    execution: "Letting the dumbbell drift forward off your palm is the main thing to correct.",
+    setup: "Press a dumbbell overhead on one open palm with your arm locked out and your ribs down.",
+    execution: "Walk forward with short controlled steps, keeping the weight balanced above your shoulder.",
+    watch: "Letting the dumbbell drift forward off your palm costs you the balance, so keep it above your ear.",
   },
   {
     name: "Dumbbell Woodchop",
@@ -2030,7 +2038,7 @@ export default [
     overrides: {"demands":{"position":"lying","floorAccess":false,"overheadPosition":false,"gripDemand":"bar","unilateralLoadable":true,"bilateralUpper":false,"bilateralLower":false,"axialLoad":false,"impact":false,"balanceDemand":"stable","weightBearingHands":false}},
     setup: "Lie on an incline bench holding one dumbbell at shoulder height, the other hand resting on your torso for balance.",
     execution: "Press until the arm locks out, then lower with control.",
-    watch: "Letting your torso rotate to help the press is a common fault.",
+    watch: "Letting your torso rotate to help the press takes the work off the chest, so stay flat.",
   },
   {
     name: "Incline Dumbbell Pullover",
@@ -2062,7 +2070,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your side on an incline bench, holding a dumbbell in the top hand down by your leg.",
     execution: "Raise it out to shoulder height with a soft bend in your elbow, then lower slowly.",
-    watch: "Swinging the dumbbell up using momentum is the common fault.",
+    watch: "Swinging the dumbbell up wastes the strict range the side-lying position gives.",
   },
   {
     name: "Lying Dumbbell Leg Curl",
@@ -2110,7 +2118,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie face down on a raised bench with dumbbells hanging straight down.",
     execution: "Pull them up towards your hips, squeezing your back, then lower with control.",
-    watch: "Since your body is supported, using a heave to move the weight is the fault to avoid.",
+    watch: "Heaving the weights up wastes the strictness the bench support gives.",
   },
   {
     name: "Seated Bent-Over Rear Delt Raise",
@@ -2126,7 +2134,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit on the edge of a bench and fold forward at the hips, holding a dumbbell in each hand below your knees.",
     execution: "Raise your arms out to shoulder height, then lower slowly.",
-    watch: "Sitting up out of the fold as the weight gets heavy is common.",
+    watch: "Sitting up out of the fold as the weight gets heavy moves the raise onto your traps.",
   },
   {
     name: "Seated Dumbbell Shrug",
@@ -2141,7 +2149,7 @@ export default [
     loadCharacter: "grind",
     setup: "Sit holding a dumbbell in each hand at your sides.",
     execution: "Shrug your shoulders straight up towards your ears, hold briefly, then lower with control.",
-    watch: "Rolling the shoulders in a circle rather than moving straight up and down is the mistake.",
+    watch: "Rolling the shoulders in circles adds movement the traps cannot load, so go straight up.",
   },
   {
     name: "Seated Single-Arm Dumbbell Press",
@@ -2158,7 +2166,7 @@ export default [
     overrides: {"demands":{"axialLoad":true}},
     setup: "Sit upright holding a dumbbell at shoulder height in one hand, the other braced on the bench or your thigh.",
     execution: "Press it overhead until your arm locks out, then lower back down.",
-    watch: "Leaning to the opposite side to help the press is the usual fault.",
+    watch: "Leaning to the opposite side to help the press shortens the range the shoulder works through.",
   },
   {
     name: "Single-Arm Dumbbell Bench Press",
@@ -2174,7 +2182,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on the bench holding one dumbbell at chest height, the other arm resting on your torso.",
     execution: "Press it up until your arm locks out, then lower with control.",
-    watch: "Letting your torso twist to help the weight up is the fault to avoid.",
+    watch: "Letting your torso twist to help the weight up takes the work off the chest, so stay square.",
   },
   {
     name: "Single-Arm Dumbbell Fly",
@@ -2190,7 +2198,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on the bench holding one dumbbell above your chest with a slight elbow bend, the other hand on your torso.",
     execution: "Lower it out to the side for a stretch, then bring it back in an arc.",
-    watch: "Rotating the torso to assist is common.",
+    watch: "Rotating the torso to help the weight across takes the stretch off the chest.",
   },
   {
     name: "Single-Arm Dumbbell Row (Bench-Supported)",
@@ -2207,7 +2215,7 @@ export default [
     overrides: {"demands":{"axialLoad":false}},
     setup: "Kneel with one hand on a bench, holding a dumbbell in the other hand, arm hanging straight and back flat.",
     execution: "Pull it up towards your hip, squeezing your back, then lower with control.",
-    watch: "Twisting your torso to help the weight up loses the point.",
+    watch: "Twisting your torso to help the weight up moves the pull from your back to your hips.",
   },
   {
     name: "Single-Arm Dumbbell Skull Crusher",
@@ -2256,7 +2264,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lean chest first against an incline bench, arms hanging straight down holding dumbbells.",
     execution: "Curl them up towards your shoulders without letting your upper arms move, then lower slowly.",
-    watch: "Letting the elbows drift back loses the effect.",
+    watch: "Letting the elbows drift back takes away the constant tension the position gives.",
   },
   {
     name: "Weighted Dumbbell Crunch",
@@ -2272,7 +2280,7 @@ export default [
     loadCharacter: "grind",
     setup: "Lie on your back with knees bent, holding a dumbbell against your chest or overhead.",
     execution: "Curl your shoulders up off the floor, squeezing your abs, then lower back down.",
-    watch: "Pulling on your neck instead of using your abs is a common fault.",
+    watch: "Pulling on your neck to lift your shoulders takes the work off the abs.",
   },
   {
     name: "Z-Press (Dumbbell)",
@@ -2289,7 +2297,7 @@ export default [
     overrides: {"demands":{"position":"seated","floorAccess":true,"axialLoad":true,"balanceDemand":"stable"}},
     setup: "Sit on the floor, legs straight out with no back support, holding dumbbells at shoulder height.",
     execution: "Press them straight overhead without leaning back, then lower with control.",
-    watch: "Leaning back to help the press up is the main thing to avoid.",
+    watch: "Leaning back to help the press turns it into an incline press, so stay upright.",
   },
   // ── END INTEGRATION STAGE 2 ──
 ];
