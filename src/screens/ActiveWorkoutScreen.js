@@ -726,6 +726,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const currentEntry = workoutExercises[currentExerciseIndex];
   const exercise = currentEntry?.exercise;
   const routineExercise = currentEntry?.routineExercise;
+  // EL-7/EL-9 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+  // circuit membership is a property of the ROUTINE's stored prescription
+  // (built in the manual builder), never created or mutated live - unlike
+  // an ordinary superset pairing, which handleTogglePair can create
+  // mid-session. loadCharacter is read defensively: the column is owned by
+  // a separate campaign lane and may be null/absent.
+  const isCircuitGroup = routineExercise?.groupKind === 'circuit';
+  const exerciseLoadCharacter = exercise?.loadCharacter ?? exercise?.load_character ?? null;
+  const isBallisticExercise = exerciseLoadCharacter === 'ballistic';
+  // The evidence class a set logged RIGHT NOW on this exercise would carry.
+  const currentEvidenceClass = isCircuitGroup && isBallisticExercise ? 'circuit_ballistic'
+    : isCircuitGroup ? 'circuit'
+    : isBallisticExercise ? 'ballistic'
+    : null;
   // "Last" means no exercise AFTER this one still counts: handleNextExercise
   // skips _timeCrunchSkipped slots, so a trailing time-crunched exercise must
   // not make the second-to-last slot offer a Next button that would no-op --
@@ -1288,7 +1302,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function announceGroupFocusChange(destIdx, sgi) {
     const destName = workoutExercises[destIdx]?.exercise?.name ?? '';
     const groupSize = workoutExercises.filter(e => e.supersetGroupId === sgi).length;
-    const groupLabel = groupSize > 2 ? 'Giant set' : 'Superset';
+    // EL-9: a circuit's station change is announced the same way a
+    // superset's is (this function already covers both the forward
+    // station-to-station jump and the round-return), just under its own
+    // name - the group header on screen carries the round count.
+    const destIsCircuit = workoutExercises[destIdx]?.routineExercise?.groupKind === 'circuit';
+    const groupLabel = destIsCircuit ? 'Circuit' : (groupSize > 2 ? 'Giant set' : 'Superset');
     const message = `${groupLabel}: now ${destName}`;
     hapticsVocab.selection();
     try {
@@ -1583,6 +1602,28 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         toast.show('Volyume could not check how you train just now, so nothing is filtered for it here.', { variant: 'warning' });
       }
     } catch (_) { /* personalisation is additive: the structural list stands */ }
+    // EL-11 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+    // a circuit swap keeps the group (nothing here changes membership) and
+    // must keep the group's compatibility - the existing pairing rule is
+    // "no two stations sharing a primary muscle back to back"
+    // (classifySupersetPair's tier/proximity answers a richer practicality
+    // question, not this exact exclusion, so this is the smallest filter
+    // that expresses it directly). Adjacent = the immediate neighbours in
+    // the group's cyclic rotation, wrapping round both ends.
+    if (isCircuitGroup && currentSGI != null) {
+      const members = workoutExercises.filter(e => e.supersetGroupId === currentSGI);
+      const selfIdx = members.findIndex(e => e === currentEntry);
+      if (selfIdx >= 0 && members.length > 1) {
+        const adjacentMuscles = new Set(
+          [members[(selfIdx - 1 + members.length) % members.length], members[(selfIdx + 1) % members.length]]
+            .map(m => (m?.exercise?.primaryMuscle || '').toLowerCase())
+            .filter(Boolean),
+        );
+        if (adjacentMuscles.size) {
+          ordered = ordered.filter(c => !adjacentMuscles.has((c.exercise?.primaryMuscle || '').toLowerCase()));
+        }
+      }
+    }
     setSwapCandidates(ordered);
     setSwapNarrowedCount(narrowedCount);
     setShowSwapModal(true);
@@ -2453,7 +2494,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         now: Date.now(),
       });
       const seedPos = countProgressSets(allLoggedForExercise) + 1;
-      const seedPrescription = resolveSetPrescription(localPacket, seedPos);
+      // EL-10: a circuit station or ballistic exercise never receives an
+      // automatic load-step suggestion (livePrescription's own TYPE GATE
+      // reads this and falls back to history-only).
+      const seedPrescription = resolveSetPrescription(localPacket, { index: seedPos, evidenceClass: currentEvidenceClass });
       presentedPrescriptionRef.current = { pos: seedPos, prescription: seedPrescription };
       // Founder Ruling 1 (B-plus): HIGH/MEDIUM confidence puts the
       // prescription in the REAL boxes as committed, ghost-styled values;
@@ -2622,6 +2666,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         isAmrap: currentSet.setType === 'amrap',
         leftReps: null,
         rightReps: null,
+        // EL-7 (05-DECISIONS.md): stamped from structure + exercise
+        // metadata, never chosen by the user. A warm-up never participates
+        // in a circuit's round-cycling, so it stays conventional even on a
+        // circuit-grouped or ballistic exercise (it is excluded from
+        // evidence everywhere by set_type anyway).
+        evidenceClass: currentSet.setType === 'warmup' ? null : currentEvidenceClass,
       });
 
       const setData = {
@@ -2843,7 +2893,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             now: Date.now(),
           });
           const nextPos = countProgressSets(newLoggedSets) + 1;
-          const nextPrescription = resolveSetPrescription(nextPacket, nextPos);
+          // EL-10: see the seedPrescription comment above - no automatic
+          // load step for a circuit station or ballistic exercise.
+          const nextPrescription = resolveSetPrescription(nextPacket, { index: nextPos, evidenceClass: currentEvidenceClass });
           presentedPrescriptionRef.current = { pos: nextPos, prescription: nextPrescription };
           audit('workout.prescription.presented', {
             exerciseId: exercise.id,
@@ -2914,7 +2966,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // isolation gets the ordinary full rest here, its rest-class
       // difference is only the between-sides "switch sides" prompt.
       if (autoStartRestTimer) {
-        const fullRest = routineExercise?.restSeconds || defaultRestSeconds || 90;
+        // EL-9 (05-DECISIONS.md): a circuit's own rest_seconds is always 0
+        // (the builder sets it - transition between stations). Reaching
+        // here at all means this WAS the last station in the round (an
+        // earlier station returns before this point), so the rest that
+        // fires is the group's round_rest_seconds, not the per-exercise
+        // rest_seconds or the global default.
+        const fullRest = isCircuitGroup
+          ? (routineExercise?.roundRestSeconds || defaultRestSeconds || 90)
+          : (routineExercise?.restSeconds || defaultRestSeconds || 90);
         startRestTimer(overrides.perSideCompound ? halfRestSeconds(fullRest) : fullRest);
       }
 
@@ -2980,7 +3040,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // today's readiness/senior context reactively (see the useMemo above).
       if (currentSet.setType === 'warmup') {
         warmupHintSeenRef.current = true;
-        const firstPrescription = packet ? resolveSetPrescription(packet, { index: 1, setType: 'straight' }) : null;
+        // EL-10: see the seedPrescription comment above.
+        const firstPrescription = packet ? resolveSetPrescription(packet, { index: 1, setType: 'straight', evidenceClass: currentEvidenceClass }) : null;
         if (firstPrescription) {
           presentedPrescriptionRef.current = { pos: 1, prescription: firstPrescription };
         }
@@ -3967,10 +4028,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const count = Math.max(targetSets || 0, workingLogged + 1);
     const list = [];
     for (let pos = 1; pos <= count; pos++) {
-      list.push(resolveSetPrescription(packet, pos));
+      // EL-10: no automatic load-step suggestion for a circuit station or
+      // ballistic exercise - every upcoming-set preview stays history-only.
+      list.push(resolveSetPrescription(packet, { index: pos, evidenceClass: currentEvidenceClass }));
     }
     return list;
-  }, [packet, targetSets, workingLogged]);
+  }, [packet, targetSets, workingLogged, currentEvidenceClass]);
 
   // Campaign 20 Phase 2 Stage 15 (restore/replay verification): keep the
   // LIVE (not-yet-logged) box in step with a mid-session edit or delete of
@@ -4269,7 +4332,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 ),
               });
             }
-            if (currentSGI != null && !!pairedExerciseName) {
+            if (currentSGI != null && !!pairedExerciseName && isCircuitGroup) {
+              // EL-9: "Circuit A · Round 2 of 3" - the group header this
+              // chip doubles as. Round number is the station's own
+              // working-set position, since rounds map 1:1 with stations
+              // logged (recommended_sets = rounds).
+              const roundNum = Math.min(workingLogged + 1, targetSets || 1);
+              items.push({
+                key: 'circuit',
+                label: 'Circuit',
+                icon: 'repeat',
+                iconColor: t.colors.primary,
+                content: (
+                  <View key="circuit" style={[styles.supersetChip, live.supersetChip]}>
+                    <Ionicons name="repeat" size={11} color={t.colors.primary} />
+                    <Text style={[styles.supersetChipText, live.supersetChipText]}>
+                      Circuit · Round {roundNum} of {targetSets} · alternates with {partnerNamesText}
+                    </Text>
+                  </View>
+                ),
+              });
+            } else if (currentSGI != null && !!pairedExerciseName) {
               items.push({
                 key: 'superset',
                 label: 'Superset',

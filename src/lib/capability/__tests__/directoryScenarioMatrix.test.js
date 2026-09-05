@@ -14,8 +14,6 @@
  *  - LATERALITY: sided constraints on body-side axes
  */
 
-const fs = require('fs');
-const path = require('path');
 const { buildCapabilityResolveState, demandAxisConflict, demandConflicts, isCapabilityEligible } = require('../resolve');
 const { deriveExerciseMetadata } = require('../../exerciseMetadata');
 const { deriveDemandMetadata } = require('../demands');
@@ -23,6 +21,7 @@ const { movementFamily } = require('../../exercise/movementFamily');
 const { CONSTRAINT_RULE_KIND, CONSTRAINT_SOURCE, CONSTRAINT_ROLE } = require('../model');
 const { CONDITION_PROFILES } = require('../directory/conditions');
 const { INJURY_PROFILES } = require('../directory/injuries');
+const { CORPUS } = require('../../exerciseCorpus');
 
 const NOW = 1_750_000_000_000;
 
@@ -33,26 +32,19 @@ const THIN_PROFILES = new Map([
 
 // ── Library derivation ──────────────────────────────────────────────────────
 
+// Re-anchored EL-14 (exercise-library-expansion-2026-09-05): this used to
+// regex-parse seedExercises.js's RAW tuple and SUBREGION_MAP text
+// directly. Both are gone — the corpus is the source of truth.
 function realLibraryByName() {
-  const seedSrc = fs.readFileSync(path.resolve(__dirname, '../../seedExercises.js'), 'utf8');
-  const start = seedSrc.indexOf('const RAW = [');
-  const body = seedSrc.slice(start, seedSrc.indexOf('\n];', start));
-  const mapStart = seedSrc.indexOf('const SUBREGION_MAP = {');
-  const mapBody = seedSrc.slice(mapStart, seedSrc.indexOf('\n};', mapStart));
-  const sub = new Map();
-  const subRe = /'((?:[^'\\]|\\.)+)':\s*'([a-z_]+)'/g;
-  let sm;
-  while ((sm = subRe.exec(mapBody)) !== null) sub.set(sm[1].replace(/\\'/g, "'"), sm[2]);
   const out = new Map();
-  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
+  for (const entry of CORPUS) {
     const base = {
-      name: m[1], primaryMuscle: m[2], equipment: m[4], movementPattern: m[5],
-      compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
+      name: entry.name, primaryMuscle: entry.primaryMuscle, equipment: entry.equipment,
+      movementPattern: entry.movementPattern,
+      compoundIsolation: entry.compound ? 'compound' : 'isolation',
     };
-    out.set(m[1], {
-      id: m[1], ...base, subregion: sub.get(m[1]) ?? null,
+    out.set(entry.name, {
+      id: entry.name, ...base, subregion: entry.subregion ?? null,
       ...deriveExerciseMetadata(base), ...deriveDemandMetadata(base),
     });
   }

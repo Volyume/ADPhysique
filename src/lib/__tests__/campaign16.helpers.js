@@ -44,6 +44,14 @@ function buildRealLibrary() {
       fatigueCost: entry.fatigueCost,
       stimulusToFatigueRatio: entry.sfr,
       subregion: entry.subregion ?? null,
+      // EL-21: carried through so poolGenerator's exerciseType hard screen
+      // (a duration/distance/reps_only row cannot honestly take an
+      // automatic rep-range/weight prescription) actually applies inside
+      // this test rig too — the pre-existing buildRealLibrary() never
+      // carried this field, so a plan-quality suite over "the real seeded
+      // library" could reach duration rows (Plank, Weighted Plank (Plate
+      // on Back)...) the real app's generator was meant to exclude.
+      exerciseType: entry.overrides?.exerciseType ?? 'weight_reps',
     };
     return { id: entry.name, ...base, ...deriveExerciseMetadata(base) };
   });

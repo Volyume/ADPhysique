@@ -120,7 +120,7 @@ const STAPLE = [
 
   // Triceps: pushdown, overhead, and the standard extension.
   'Tricep Pushdown (Rope)', 'Tricep Pushdown (Bar)',
-  'Cable Pushdown (Straight Bar)', 'Rope Pushdown',
+  'Cable Pushdown (Straight Bar)', // 'Rope Pushdown' retired into 'Tricep Pushdown (Rope)' (EL-21)
   'Overhead Cable Tricep Extension', 'EZ Bar Skull Crusher',
   'Close-Grip Bench Press',
 
@@ -221,10 +221,10 @@ const COMMON = [
 
   // Triceps
   'Dumbbell Skull Crusher', 'Barbell Skull Crusher',
-  'Dumbbell Overhead Tricep Extension', 'Overhead Dumbbell Extension',
+  'Dumbbell Overhead Tricep Extension', // 'Overhead Dumbbell Extension' retired into this (EL-21)
   'Cable Overhead Tricep Extension', 'Overhead Cable Rope Extension',
   'Plate-Loaded Overhead Extension', 'Machine Tricep Extension',
-  'Triceps Extension Machine', 'Weighted Dips (Triceps)',
+  'Weighted Dips (Triceps)', // 'Triceps Extension Machine' retired into 'Machine Tricep Extension' (EL-21)
   'Tricep Dip (Parallel Bars)', 'Dip Machine', 'Seated Dip Machine',
   'Assisted Dip Machine', 'Single Arm Cable Extension',
   'Reverse Grip Cable Pushdown', 'Lying Tricep Extension',
@@ -232,7 +232,7 @@ const COMMON = [
   'Single-Arm Overhead Cable Extension', 'Cross-Body Cable Tricep Extension',
 
   // Abs
-  'Machine Crunch', 'Ab Crunch Machine', 'Decline Crunch', 'Crunch',
+  'Machine Crunch', 'Decline Crunch', 'Crunch', // 'Ab Crunch Machine' retired into 'Machine Crunch' (EL-21)
   'Reverse Crunch', 'Leg Raise', 'Leg Raise (Flat Bench)', 'Weighted Sit-Up',
   'Kneeling Cable Crunch', 'Ab Wheel Rollout', 'Ab Rollout',
   'Ab Wheel (Kneeling)', 'Kneeling Ab Rollout', 'Plank', 'Side Plank',
@@ -347,6 +347,27 @@ const NEVER_AUTO = [
 
   // Skill / competition lifts, not bodybuilding movements.
   'Snatch Grip Deadlift', 'Deficit Deadlift',
+
+  // EL-15 (exercise-library-expansion-2026-09-05): the 18 former
+  // seedRoutines.js REQUIRED_EXERCISES rows, now ordinary canonical
+  // corpus entries. NEVER_AUTO rather than SPECIALIST deliberately
+  // (EL-5's "when in doubt, the safer tier"): these are narrow, oddly-
+  // specific names written for their own hand-curated LIBRARY_PLANS
+  // templates ("HS Plate-Loaded Lat Pulldown", "Cable Fly (Low to Mid,
+  // Incline)"...), never intended as automatic-generation candidates, and
+  // template resolution (seedRoutines.js byName lookup) is tier-blind, so
+  // NEVER_AUTO does not affect their template usage or manual search at
+  // all. Confirmed necessary: at SPECIALIST they measurably changed
+  // automatic-generation output for at least one goal (campaign16.planFit
+  // suite), which folding in "ordinary canonical rows" was never meant to
+  // do. A lead may reclassify individually with a programming reason.
+  'HS Plate-Loaded Lat Pulldown', 'Underhand Lat Pulldown',
+  'Plate-Loaded Seated Row', 'HS ISO High Row', 'Cable Serratus Punch',
+  'Cable Lateral Raise (Low Pulley)', 'Facing-In Shoulder Press',
+  'Cable Fly (Low to Mid, Incline)', 'Cable Fly (Mid Height, Cuff)',
+  'Box Step-Up', 'Single-Arm Dumbbell Row', 'Trap Bar Deadlift (Low Handle)',
+  'Hip Thrust (Barbell)', 'Dumbbell Goblet Squat', 'Lunge',
+  'Bodyweight Squat', 'Seated Band Row', 'Seated Band Lat Pulldown',
 ];
 
 // ─── SPECIALIST ──────────────────────────────────────────────────────────
@@ -373,10 +394,10 @@ const SPECIALIST = [
 
   // Deadlift/hinge/posterior-chain variants with a higher skill or fatigue
   // cost than the RDL/leg-curl staples already covering hamstrings.
-  'Nordic Hamstring Curl', 'Good Morning', 'Deadlift (Conventional)',
+  'Good Morning', 'Deadlift (Conventional)', // 'Nordic Hamstring Curl' retired into 'Nordic Curl' (EL-21)
   'Deadlift (Sumo)', 'Trap Bar Deadlift (Hamstring)',
   'Reverse Hyperextension (Glute)', 'Sumo Deadlift (Glute Focus)',
-  'Sumo Deadlift (Wide Stance)', 'Cable Pull-Through (Glute)',
+  'Sumo Deadlift (Wide Stance)', // 'Cable Pull-Through (Glute)' retired into 'Cable Pull-Through' (EL-21)
   'Romanian Deadlift (Glute)', 'Barbell Good Morning',
   'Hip Extension (Cable)',
 
@@ -429,17 +450,6 @@ const SPECIALIST = [
   // Chest: plate-loaded decline press, narrow machine-availability slot
   // next to the already-tiered decline machine press.
   'Plate-Loaded Decline Press',
-
-  // Template-scaffolding rows folded into the corpus (EL-15). Newly
-  // canonical; not yet lead-reviewed for a tier, so SPECIALIST by the same
-  // "safer default" rule as any other unclassified row.
-  'HS Plate-Loaded Lat Pulldown', 'Underhand Lat Pulldown',
-  'Plate-Loaded Seated Row', 'HS ISO High Row', 'Cable Serratus Punch',
-  'Cable Lateral Raise (Low Pulley)', 'Facing-In Shoulder Press',
-  'Cable Fly (Low to Mid, Incline)', 'Cable Fly (Mid Height, Cuff)',
-  'Box Step-Up', 'Single-Arm Dumbbell Row', 'Trap Bar Deadlift (Low Handle)',
-  'Hip Thrust (Barbell)', 'Dumbbell Goblet Squat', 'Lunge',
-  'Bodyweight Squat', 'Seated Band Row', 'Seated Band Lat Pulldown',
 ];
 
 // ─── CONTESTED (held at the safer tier, awaiting a founder ruling) ────────

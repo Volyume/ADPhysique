@@ -28,6 +28,8 @@ const { searchProfiles, profileById, OTHER_PROFILE } = require('../index');
 const { movementFamily } = require('../../../exercise/movementFamily');
 
 const { CORPUS } = require('../../../exerciseCorpus');
+const fs = require('fs');
+const path = require('path');
 
 // Re-anchored EL-14 (exercise-library-expansion-2026-09-05): this used to
 // regex-parse seedExercises.js's RAW tuple and SUBREGION_MAP text

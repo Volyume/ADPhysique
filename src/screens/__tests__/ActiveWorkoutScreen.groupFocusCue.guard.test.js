@@ -68,8 +68,11 @@ describe('D44: group-driven focus change gets a cue (source guard)', () => {
     expect(SRC).toMatch(/function announceGroupFocusChange\(destIdx, sgi\) \{[\s\S]*?setTimeout\(\(\) => setGroupFocusMessage\(null\), 2500\)/);
   });
 
-  test('the copy names the group kind (2 members: Superset, 3+: Giant set) and the destination exercise, no exclamation', () => {
-    expect(SRC).toContain("const groupLabel = groupSize > 2 ? 'Giant set' : 'Superset';");
+  test('the copy names the group kind (2 members: Superset, 3+: Giant set, a circuit: Circuit) and the destination exercise, no exclamation', () => {
+    // EL-9 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md)
+    // extends this to a third group kind - a circuit gets its own name
+    // rather than reading as an ordinary superset/giant set.
+    expect(SRC).toContain("const groupLabel = destIsCircuit ? 'Circuit' : (groupSize > 2 ? 'Giant set' : 'Superset');");
     expect(SRC).toContain('const message = `${groupLabel}: now ${destName}`;');
     expect(SRC).not.toMatch(/\$\{groupLabel\}: now \$\{destName\}!/);
   });
