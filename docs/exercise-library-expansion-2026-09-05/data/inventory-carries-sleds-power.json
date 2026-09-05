@@ -976,7 +976,7 @@
     },
     {
       "name": "Clean Pull",
-      "reason": "duplicate of 'Clean Pull' (already seeded, barbell equipment, hinge pattern)"
+      "reason": "duplicate of an existing seed row: 'Clean Pull' is already seeded (barbell equipment, hinge pattern); the brief listed it among Olympic-derived items 'not in the corpus yet', but this agent's corpus check found it already present"
     },
     {
       "name": "Power Snatch",
