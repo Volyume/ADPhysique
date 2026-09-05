@@ -1,14 +1,13 @@
 /**
  * exerciseFuzzySearch
  *
- * Pure, dependency-free fuzzy matcher for the exercise picker search
- * (design-usability-audit-2026-07-09, L07-F6: "No fuzzy/typo-tolerant
- * search in the exercise picker"). The old search was a plain
- * case-insensitive substring match against the whole query string, so a
- * typo or an out-of-order word (e.g. "bul garian" for "Bulgarian Split
- * Squat") found nothing.
+ * Pure fuzzy matcher for the exercise picker search (design-usability-audit
+ * -2026-07-09, L07-F6: "No fuzzy/typo-tolerant search in the exercise
+ * picker"). The old search was a plain case-insensitive substring match
+ * against the whole query string, so a typo or an out-of-order word (e.g.
+ * "bul garian" for "Bulgarian Split Squat") found nothing.
  *
- * No external library. Matching is:
+ * No external library. Token-level matching is:
  *   - token-based: the query and the exercise name are both split into
  *     words, so word order in the query never matters ("squat bulgarian"
  *     matches the same as "bulgarian squat").
@@ -20,8 +19,30 @@
  *     subsequence, then a small Levenshtein-distance allowance for a
  *     genuine typo (transposition, one wrong letter, etc).
  *
+ * Exercise-library-expansion-2026-09-05 (EL-20): the corpus now carries an
+ * `aliases` field (JSON array of alternative names, e.g. "RDL" for
+ * "Romanian Deadlift"), and results must favour a strong canonical match
+ * over a niche variant. `fuzzySearch` therefore ranks in TIERS rather than
+ * by raw score alone, checked in this order for a non-empty query:
+ *
+ *   0. exact name match       (normalised full string equality)
+ *   1. name prefix match      (normalised name starts with the query)
+ *   2. alias exact match
+ *   3. alias prefix match
+ *   4. fuzzy match on the name    (the token-scorer above, score > 0)
+ *   5. fuzzy match on an alias    (same scorer, against any alias)
+ *
+ * An item that hits none of these six tiers is excluded, exactly as
+ * before (score/rank 0 == no match). Within a tier, ties break by auto-
+ * generation tier (STAPLE first, `exercise/canonicality.js`'s `tierRank`)
+ * then alphabetically by name, so "Bench Press" surfaces the staple
+ * "Barbell Bench Press" above an equally-matching niche variant.
+ *
  * Exported as small, independently-testable pure functions so the scoring
- * rules can be pinned by unit tests without any React/RN dependency.
+ * rules can be pinned by unit tests without any React/RN dependency. This
+ * module has no dependency of its own on the tier registry
+ * (`exercise/canonicality.js`) — a caller that wants staples to outrank
+ * specialists within a tier passes its `tierRank` in as `options.getTier`.
  */
 
 // Lower-cases and strips accents so e.g. "café" and "cafe" tokenize the
@@ -137,18 +158,90 @@ export function fuzzyScore(query, name) {
   return total / queryTokens.length;
 }
 
+// Lower-cases, strips accents AND collapses/trims whitespace, for
+// whole-string comparisons (exact/prefix tiers, and the create-form
+// canonical-match suggestion). `normalise` above only lower-cases and
+// strips accents; token boundaries are handled separately by `tokenize`.
+export function normaliseExerciseName(str) {
+  return normalise(str).replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Where `name`/`aliases` rank against `query` (EL-20's six tiers, module
+ * doc above). Returns the tier number (0 best) or null when nothing
+ * matches at all. `query` is assumed non-empty and already trimmed.
+ */
+function matchTier(query, name, aliases) {
+  const nq = normaliseExerciseName(query);
+  const nn = normaliseExerciseName(name);
+  if (nn && nn === nq) return 0;
+  if (nn && nn.startsWith(nq)) return 1;
+  const normAliases = (Array.isArray(aliases) ? aliases : [])
+    .filter(Boolean)
+    .map(normaliseExerciseName);
+  if (normAliases.some(a => a === nq)) return 2;
+  if (normAliases.some(a => a.startsWith(nq))) return 3;
+  if (fuzzyScore(query, name) > 0) return 4;
+  const rawAliases = (Array.isArray(aliases) ? aliases : []).filter(Boolean);
+  if (rawAliases.some(a => fuzzyScore(query, a) > 0)) return 5;
+  return null;
+}
+
 /**
  * Filter + rank a list of items by fuzzy-matching `query` against
- * `getText(item)`. Returns only items that match (score > 0), best match
- * first; equal scores keep the original relative order (stable sort). An
- * empty query returns `items` unchanged, same order.
+ * `getText(item)` (the exercise name) and, via `options.getAliases`, its
+ * search aliases. Returns only items that match at least one of the six
+ * tiers above, best tier first; within a tier, `options.getTier` breaks
+ * ties (the picker passes the real auto-generation tierRank so staples
+ * outrank specialists; omitted, every item ties at tier 0 and the order
+ * is purely alphabetical, same as before EL-20) then alphabetically; any
+ * remaining tie keeps the original relative order (stable). An empty
+ * query returns `items` unchanged, same order — unchanged from before
+ * EL-20, so an empty-query caller keeps its own ordering (the picker's
+ * recent/plan/staples/alphabetical sections, EL-20 second half, live in
+ * the component, not here).
  */
-export function fuzzySearch(items, query, getText) {
+export function fuzzySearch(items, query, getText, options = {}) {
   const q = String(query || '').trim();
   if (!q) return items;
+  const getAliases = options.getAliases || (() => []);
+  const getTier = options.getTier || (() => 0);
   return items
-    .map((item, index) => ({ item, index, score: fuzzyScore(q, getText(item)) }))
-    .filter(x => x.score > 0)
-    .sort((a, b) => (b.score - a.score) || (a.index - b.index))
+    .map((item, index) => ({
+      item,
+      index,
+      tier: matchTier(q, getText(item) || '', getAliases(item)),
+    }))
+    .filter(x => x.tier !== null)
+    .sort((a, b) => {
+      if (a.tier !== b.tier) return a.tier - b.tier;
+      const tierRankA = getTier(a.item);
+      const tierRankB = getTier(b.item);
+      if (tierRankA !== tierRankB) return tierRankA - tierRankB;
+      const cmp = String(getText(a.item) || '').localeCompare(String(getText(b.item) || ''));
+      if (cmp !== 0) return cmp;
+      return a.index - b.index;
+    })
     .map(x => x.item);
+}
+
+/**
+ * EL-18: does `name` already exist in the library, exactly, as a canonical
+ * row's name OR one of its aliases (normalised: case/accent/whitespace
+ * insensitive)? Used by the custom-exercise creation form to offer "Looks
+ * like <Name> already exists. Use it instead?" rather than a silent
+ * duplicate. Canonical rows only (never suggests merging into another
+ * custom exercise) — pure, no I/O; the caller supplies the exercise list.
+ * Returns the matching exercise, or null.
+ */
+export function findCanonicalNameMatch(name, exercises) {
+  const target = normaliseExerciseName(name);
+  if (!target || !Array.isArray(exercises)) return null;
+  for (const ex of exercises) {
+    if (!ex || ex.isCustom) continue;
+    if (normaliseExerciseName(ex.name) === target) return ex;
+    const aliases = Array.isArray(ex.aliases) ? ex.aliases : [];
+    if (aliases.some(a => normaliseExerciseName(a) === target)) return ex;
+  }
+  return null;
 }

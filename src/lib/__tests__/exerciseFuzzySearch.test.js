@@ -4,8 +4,19 @@
  * dependency: this is a hand-written token scorer, so these tests lock the
  * exact behaviours the audit asked for (typo tolerance, partial words,
  * out-of-order words) plus the "does not match everything" guard.
+ *
+ * Exercise-library-expansion-2026-09-05 (EL-20): the alias-aware,
+ * six-tier ranking (exact name > name prefix > alias exact > alias prefix
+ * > fuzzy name > fuzzy alias, tier-rank then alphabetical within each) is
+ * pinned below, plus the EL-18 creation-suggestion helper
+ * (`findCanonicalNameMatch`) and a perf guard over a synthetic 1,600-row
+ * library.
  */
-import { fuzzyScore, fuzzySearch, tokenize, levenshteinDistance } from '../exerciseFuzzySearch';
+import {
+  fuzzyScore, fuzzySearch, tokenize, levenshteinDistance,
+  findCanonicalNameMatch, normaliseExerciseName,
+} from '../exerciseFuzzySearch';
+import { tierRank } from '../exercise/canonicality';
 
 describe('tokenize', () => {
   test('lower-cases and splits on non-alphanumeric boundaries', () => {
@@ -171,5 +182,175 @@ describe('fuzzySearch', () => {
       { name: 'Lat Pulldown' },
     ];
     expect(fuzzySearch(list, 'qzxjklw999', e => e.name)).toEqual([]);
+  });
+});
+
+// ─── EL-20: alias-aware, six-tier ranking ──────────────────────────────────
+describe('fuzzySearch — EL-20 six-tier ranking with aliases', () => {
+  // A fixture exercising all six tiers against one query family, with
+  // real STAPLE/COMMON names (canonicality.js) so the tier-rank tie-break
+  // is exercised against the real registry, not a stand-in.
+  const withAliases = (list) => (item) => (list.find(e => e.name === item.name)?.aliases) || [];
+
+  const library = [
+    // Tier 0: exact name match for query "Barbell Bench Press".
+    { name: 'Barbell Bench Press', aliases: ['Bench Press'] },
+    // Tier 1: name prefix ("Barbell Bench Press (Close Grip)" starts with it).
+    { name: 'Barbell Bench Press (Close Grip)', aliases: [] },
+    // Tier 2/3 candidate, plus the RDL case: alias exact match.
+    { name: 'Romanian Deadlift', aliases: ['RDL', 'Stiff-Leg Deadlift'] },
+    // A niche variant that only fuzzy-matches "bench press" on the name
+    // (no shared alias), used to prove staples outrank it.
+    { name: 'Spoto Press', aliases: [] },
+  ];
+  const getAliases = withAliases(library);
+  const getTier = (item) => tierRank(item.name);
+
+  test('tier 0: exact name match', () => {
+    const result = fuzzySearch(library, 'Barbell Bench Press', e => e.name, { getAliases, getTier });
+    expect(result[0].name).toBe('Barbell Bench Press');
+  });
+
+  test('tier 1: name prefix match ranks below an exact match', () => {
+    const result = fuzzySearch(library, 'Barbell Bench Press', e => e.name, { getAliases, getTier });
+    const names = result.map(e => e.name);
+    expect(names.indexOf('Barbell Bench Press')).toBeLessThan(names.indexOf('Barbell Bench Press (Close Grip)'));
+  });
+
+  test('tier 2: alias exact match — "RDL" finds Romanian Deadlift through its alias', () => {
+    const result = fuzzySearch(library, 'RDL', e => e.name, { getAliases, getTier });
+    expect(result.map(e => e.name)).toContain('Romanian Deadlift');
+    // Nothing else in the fixture shares "rdl" as a name or alias token.
+    expect(result[0].name).toBe('Romanian Deadlift');
+  });
+
+  test('tier 3: alias prefix match', () => {
+    const result = fuzzySearch(library, 'Stiff-Leg', e => e.name, { getAliases, getTier });
+    expect(result[0].name).toBe('Romanian Deadlift');
+  });
+
+  test('tier 4 vs tier 5: a name-fuzzy hit outranks an alias-only fuzzy hit', () => {
+    const list = [
+      { name: 'Cable Row (Neutral Grip)', aliases: [] }, // fuzzy on NAME
+      { name: 'Seated Row', aliases: ['Cable Rowing'] }, // fuzzy only on an ALIAS
+    ];
+    const result = fuzzySearch(list, 'cable row', e => e.name, { getAliases: withAliases(list), getTier });
+    expect(result.map(e => e.name)).toEqual(['Cable Row (Neutral Grip)', 'Seated Row']);
+  });
+
+  test('"Bench Press" puts the staple Barbell Bench Press above a niche variant', () => {
+    // Both "Barbell Bench Press" (via its alias, tier 2) and "Spoto Press"
+    // (via name-fuzzy, tier 4) match; the staple's better TIER already
+    // wins here, and canonicality.js confirms it also outranks by
+    // auto-generation tier (STAPLE vs the unlisted default SPECIALIST).
+    expect(tierRank('Barbell Bench Press')).toBeLessThan(tierRank('Spoto Press'));
+    const result = fuzzySearch(library, 'Bench Press', e => e.name, { getAliases, getTier });
+    const names = result.map(e => e.name);
+    expect(names[0]).toBe('Barbell Bench Press');
+    expect(names.indexOf('Barbell Bench Press')).toBeLessThan(names.indexOf('Spoto Press'));
+  });
+
+  test('within the same match tier, a lower auto-generation tier (staple) sorts first', () => {
+    // Two exercises that both hit tier 4 (fuzzy on name) for "press", one
+    // a real STAPLE, one unlisted (defaults to SPECIALIST) — confirms the
+    // getTier tie-break, isolated from the six match tiers above.
+    const list = [
+      { name: 'Some Unlisted Novelty Press', aliases: [] },
+      { name: 'Machine Chest Press', aliases: [] }, // STAPLE in canonicality.js
+    ];
+    expect(tierRank('Machine Chest Press')).toBe(0); // STAPLE
+    expect(tierRank('Some Unlisted Novelty Press')).toBeGreaterThan(0); // unlisted default
+    const result = fuzzySearch(list, 'press', e => e.name, { getAliases: withAliases(list), getTier });
+    expect(result[0].name).toBe('Machine Chest Press');
+  });
+
+  test('without getTier, ties fall back to alphabetical (pre-EL-20 behaviour, unchanged)', () => {
+    const list = [
+      { name: 'Zercher Press', aliases: [] },
+      { name: 'Arnold Press', aliases: [] },
+    ];
+    const result = fuzzySearch(list, 'press', e => e.name, { getAliases: withAliases(list) });
+    expect(result.map(e => e.name)).toEqual(['Arnold Press', 'Zercher Press']);
+  });
+
+  test('an alias may still fail to match — no false positives from unrelated aliases', () => {
+    const result = fuzzySearch(library, 'xyz999nonsense', e => e.name, { getAliases, getTier });
+    expect(result).toEqual([]);
+  });
+});
+
+// ─── EL-18: creation-suggestion helper ─────────────────────────────────────
+describe('findCanonicalNameMatch', () => {
+  const library = [
+    { name: 'Romanian Deadlift', aliases: ['RDL', 'Stiff-Leg Deadlift'], isCustom: 0 },
+    { name: 'Barbell Bench Press', aliases: ['Bench Press'], isCustom: 0 },
+    { name: "Alice's Curl", aliases: [], isCustom: 1 }, // a custom row
+  ];
+
+  test('matches an existing canonical row by exact (normalised) name', () => {
+    expect(findCanonicalNameMatch('romanian   deadlift', library)?.name).toBe('Romanian Deadlift');
+    expect(findCanonicalNameMatch('  Romanian Deadlift  ', library)?.name).toBe('Romanian Deadlift');
+  });
+
+  test('matches an existing canonical row through an alias', () => {
+    expect(findCanonicalNameMatch('rdl', library)?.name).toBe('Romanian Deadlift');
+    expect(findCanonicalNameMatch('Bench Press', library)?.name).toBe('Barbell Bench Press');
+  });
+
+  test('is case- and accent-insensitive', () => {
+    expect(findCanonicalNameMatch('BENCH PRESS', library)?.name).toBe('Barbell Bench Press');
+  });
+
+  test('never matches an existing CUSTOM exercise (canonical rows only)', () => {
+    expect(findCanonicalNameMatch("Alice's Curl", library)).toBeNull();
+  });
+
+  test('returns null for a genuinely new name', () => {
+    expect(findCanonicalNameMatch('Some Brand New Movement', library)).toBeNull();
+  });
+
+  test('returns null for an empty/whitespace name', () => {
+    expect(findCanonicalNameMatch('', library)).toBeNull();
+    expect(findCanonicalNameMatch('   ', library)).toBeNull();
+  });
+
+  test('normaliseExerciseName collapses whitespace and strips accents/case', () => {
+    expect(normaliseExerciseName('  Café   Curl ')).toBe('cafe curl');
+  });
+});
+
+// ─── Perf guard: search must feel instant over a large library ────────────
+describe('fuzzySearch performance (EL-20)', () => {
+  test('ranked search over a synthetic 1,600-row library completes well under 30ms', () => {
+    // Synthetic, but shaped like the real corpus: varied implement/muscle
+    // words, every 10th row carrying two aliases, so the alias-matching
+    // path is genuinely exercised at scale, not skipped.
+    const implements_ = ['Barbell', 'Dumbbell', 'Cable', 'Machine', 'Kettlebell', 'Bodyweight', 'Band', 'Smith'];
+    const movements = ['Press', 'Row', 'Squat', 'Curl', 'Raise', 'Extension', 'Pulldown', 'Fly', 'Deadlift', 'Lunge'];
+    const modifiers = ['Incline', 'Decline', 'Seated', 'Standing', 'Single-Arm', 'Close Grip', 'Wide Grip', 'Paused'];
+    const big = [];
+    for (let i = 0; i < 1600; i++) {
+      const impl = implements_[i % implements_.length];
+      const mov = movements[(i * 3) % movements.length];
+      const mod = modifiers[(i * 7) % modifiers.length];
+      const name = `${mod} ${impl} ${mov} ${i}`;
+      big.push({
+        name,
+        aliases: i % 10 === 0 ? [`${mov} Alt ${i}`, `${impl} ${mov} Variant ${i}`] : [],
+      });
+    }
+    const getAliases = (item) => item.aliases;
+    const getTier = (item) => tierRank(item.name);
+
+    const start = Date.now();
+    const result = fuzzySearch(big, 'incline press', e => e.name, { getAliases, getTier });
+    const elapsedMs = Date.now() - start;
+
+    expect(result.length).toBeGreaterThan(0);
+    // Generous ceiling (task brief): asserts under 30ms in Jest/node,
+    // which is far slower to warn about than to actually breach here.
+    expect(elapsedMs).toBeLessThan(30);
+    // eslint-disable-next-line no-console
+    console.log(`[perf] fuzzySearch over 1,600 rows: ${elapsedMs}ms`);
   });
 });
