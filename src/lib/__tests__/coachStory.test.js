@@ -219,7 +219,7 @@ describe('THE CROSS-DOMAIN RECEIPT (job 12)', () => {
     expect(story.changing[0]).toMatchObject({
       domain: 'training',
       text: note,
-      why: 'Your temporary change has ended, so the sets it reduced build back toward your plan, one week at a time.',
+      why: 'Your temporary change has ended, so the sets it reduced build back towards your plan, one week at a time.',
       from: 'plan.reintroduction',
     });
     expect(story.isQuietWeek).toBe(false);

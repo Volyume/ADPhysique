@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-05T15:57:53.767Z",
+  "generatedAt": "2026-09-05T16:02:48.959Z",
   "scope": {
     "dirs": [
       "src/screens",
@@ -66,7 +66,6 @@
       "src/lib/readinessSummary.js",
       "src/lib/health.js",
       "src/lib/femaleNutritionAwareness.js",
-      "src/lib/differentialPaywall.js",
       "src/lib/weightTrend.js",
       "src/lib/nutritionEngine.js",
       "src/lib/activationNudge.js",
@@ -100,8 +99,8 @@
       "src/lib/division/profile.js",
       "src/lib/exercise/adaptedSetup.js"
     ],
-    "fileCount": 405,
-    "dormantFileCount": 21,
+    "fileCount": 404,
+    "dormantFileCount": 22,
     "dormantBucket": [
       "src/screens/ProUpgradeScreen.js",
       "src/screens/CascadeGateScreen.js",
@@ -113,23 +112,24 @@
       "src/components/TierComparisonStrip.js",
       "src/components/PostLapseSheet.js",
       "src/components/food/TodaysPlateTeaser.js",
+      "src/lib/differentialPaywall.js",
       "src/lib/payments/**"
     ]
   },
   "counts": {
-    "usSpelling": 5,
+    "usSpelling": 4,
     "aiTells": 14,
-    "commercialResidue": 8,
+    "commercialResidue": 6,
     "placeholders": 0,
     "internalTermLeaks": 2,
     "unclearCounts": 16,
-    "duplicateLabels": 5,
+    "duplicateLabels": 6,
     "parseErrors": 0
   },
   "dormantCounts": {
     "usSpelling": 0,
     "aiTells": 2,
-    "commercialResidue": 92,
+    "commercialResidue": 94,
     "placeholders": 0,
     "internalTermLeaks": 0,
     "unclearCounts": 0,
@@ -153,15 +153,6 @@
         "rule": "toward",
         "note": "UK usually: towards",
         "value": "When you end a temporary change, movements come back conservatively and volume rebuilds gradually toward your own plan. No timetable is assumed.",
-        "kind": "string",
-        "dormant": false
-      },
-      {
-        "file": "src/lib/coachStory.js",
-        "line": 217,
-        "rule": "toward",
-        "note": "UK usually: towards",
-        "value": "Your temporary change has ended, so the sets it reduced build back toward your plan, one week at a time.",
         "kind": "string",
         "dormant": false
       },
@@ -295,7 +286,7 @@
       },
       {
         "file": "src/screens/NutritionTargetsScreen.js",
-        "line": 776,
+        "line": 806,
         "rule": "personalized/personalised",
         "note": "report, lead judges",
         "value": "Calculate your personalised daily calorie and protein targets.",
@@ -313,24 +304,6 @@
       }
     ],
     "commercialResidue": [
-      {
-        "file": "src/lib/differentialPaywall.js",
-        "line": 60,
-        "rule": "Pro",
-        "note": null,
-        "value": "Your weight is moving faster than your logged calories explain. Pro tracks the calories your body actually uses.",
-        "kind": "string",
-        "dormant": false
-      },
-      {
-        "file": "src/lib/differentialPaywall.js",
-        "line": 76,
-        "rule": "Pro",
-        "note": null,
-        "value": "Your weight is moving faster than your logged calories explain. Pro tracks the calories your body actually uses.",
-        "kind": "string",
-        "dormant": false
-      },
       {
         "file": "src/lib/notifications/scheduler.js",
         "line": 726,
@@ -525,7 +498,7 @@
       },
       {
         "file": "src/screens/NutritionTargetsScreen.js",
-        "line": 1490,
+        "line": 1520,
         "rule": "things",
         "note": null,
         "value": "High protein does two things: it gives your muscles what they need to rebuild after training, and it signals your body to hold on to muscle even as the slight calorie gap burns fat. That combination is what separates ...",
@@ -578,6 +551,15 @@
         "lines": [
           263,
           328
+        ]
+      },
+      {
+        "file": "src/screens/ProOnboardingScreen.js",
+        "propName": "title",
+        "value": "Skip for now",
+        "lines": [
+          2219,
+          2358
         ]
       },
       {
@@ -865,6 +847,24 @@
         "note": null,
         "value": "Pro builds a day of real food to your own calories and macros, and lets you swap anything and log it in a tap. Here is what a day looks like.",
         "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/lib/differentialPaywall.js",
+        "line": 60,
+        "rule": "Pro",
+        "note": null,
+        "value": "Your weight is moving faster than your logged calories explain. Pro tracks the calories your body actually uses.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/lib/differentialPaywall.js",
+        "line": 76,
+        "rule": "Pro",
+        "note": null,
+        "value": "Your weight is moving faster than your logged calories explain. Pro tracks the calories your body actually uses.",
+        "kind": "string",
         "dormant": true
       },
       {

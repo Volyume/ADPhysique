@@ -214,7 +214,7 @@ export function whatIsChanging(context, limiters, changes = {}) {
     out.push({
       domain: 'training',
       text: changes.reintroductionNote,
-      why: 'Your temporary change has ended, so the sets it reduced build back toward your plan, one week at a time.',
+      why: 'Your temporary change has ended, so the sets it reduced build back towards your plan, one week at a time.',
       from: 'plan.reintroduction',
     });
   }
