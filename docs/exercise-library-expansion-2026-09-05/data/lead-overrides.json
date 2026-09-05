@@ -58,6 +58,50 @@
       "verdictNow": "false_positive",
       "target": "Tyre Flip",
       "why": "The corpus already carries 'Tyre Flip' (it is in the NEVER_AUTO registry list); the dataset's US spelling 'tire flip' defeated the screen. Add 'Tire Flip' as an alias of the existing row; no new equipment value."
+    },
+    {
+      "triageFile": "gap-triage-bars-cables-machines.json",
+      "name": "Cable External Rotation",
+      "verdictWas": "add (flagged)",
+      "verdictNow": "add",
+      "primaryMuscle": "rear_delts",
+      "subregion": null,
+      "tier": "specialist",
+      "why": "Accepted. No rotator-cuff muscle exists in the closed vocabulary and adding one would ripple through the volume landmarks; the movement sits with the posterior shoulder for counting purposes, subregion left null with an unknownAxes note."
+    },
+    {
+      "triageFile": "gap-triage-bars-cables-machines.json",
+      "name": "Cable Internal Rotation",
+      "verdictWas": "add (flagged)",
+      "verdictNow": "add",
+      "primaryMuscle": "front_delts",
+      "subregion": null,
+      "tier": "specialist",
+      "why": "Accepted on the same basis, counted with the anterior shoulder."
+    },
+    {
+      "triageFile": "gap-triage-bars-cables-machines.json",
+      "name": "Barbell Thruster",
+      "verdictWas": "not_distinct (flagged)",
+      "verdictNow": "add",
+      "tier": "specialist",
+      "loadCharacter": "grind",
+      "equipment": "barbell",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "front_delts",
+        "glutes",
+        "triceps"
+      ],
+      "movementPattern": "squat",
+      "why": "A front squat driven into a press is a distinct compound the kettlebell inventory already accepted at specialist for the double-bell version; the barbell version is at least as well attested."
+    },
+    {
+      "triageFile": "gap-triage-bars-cables-machines.json",
+      "name": "Clean Rack Delivery",
+      "verdictWas": "not_distinct (flagged)",
+      "verdictNow": "not_distinct",
+      "why": "A technique drill, not a training exercise a coach programmes for load."
     }
   ]
 }
