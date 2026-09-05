@@ -590,8 +590,12 @@ describe('WORKOUT: the first session completes honestly with no history (C5-P13-
     // "Below target" and was told to add sets its own plan already covers.
     const src = read('screens/WorkoutSummaryScreen.js');
     expect(src).toContain('Week in progress: {weekProgress.logged} of {weekProgress.planned} sessions logged.');
-    expect(src).toMatch(/const insight = weekJudgeable \? getVolumeInsight\(/);
-    expect(src).toMatch(/const why = weekJudgeable \? getVolumeWhy\(/);
+    // Final pass S4 (certification 2026-09-05): the week gate is composed with
+    // the excluded-work gate (advice also waits for a muscle whose week held
+    // explosive sets the volume read dropped). The week half is unchanged.
+    expect(src).toMatch(/const adviceAllowed = weekJudgeable && !hasExcludedWork;/);
+    expect(src).toMatch(/const insight = adviceAllowed \? getVolumeInsight\(/);
+    expect(src).toMatch(/const why = adviceAllowed \? getVolumeWhy\(/);
     // getVolumeStatus, the landmarks and the colours are untouched.
     expect(src).toMatch(/const \{ label, status \} = getVolumeStatus\(data\.workingSets, muscle, landmarkResolution\?\.table\);/);
   });
