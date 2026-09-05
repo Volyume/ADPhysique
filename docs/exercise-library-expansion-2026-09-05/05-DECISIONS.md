@@ -337,3 +337,35 @@ honest, supported measure; distance is not invented). Their rep
 defaults are seconds (20 to 40 s carries, 15 to 30 s sled pushes). No
 new logging type is added this campaign; `sled` and `medicine_ball`
 join the demand derivation's implement sets so grip and balance derive.
+
+## EL-23 The template-scaffolding rows were duplicates too
+
+Fact (lead check after EL-15 folded the eighteen rows into the corpus):
+six of them duplicate an existing canonical row under a different name,
+confirmed by equipment and by their cues describing the same movement:
+"Dumbbell Goblet Squat" = "Goblet Squat"; "Hip Thrust (Barbell)" =
+"Barbell Hip Thrust"; "Cable Serratus Punch" = "Serratus Punch"; "HS
+Plate-Loaded Lat Pulldown" = "Plate-Loaded Lat Pulldown"; "Cable Lateral
+Raise (Low Pulley)" = "Cable Lateral Raise"; "Single-Arm Dumbbell Row" =
+"Dumbbell Row" (both bench-supported single-arm rows). "Seated Band Lat
+Pulldown" and "Seated Band Row" stay: their position differs from the
+kneeling and standing rows, and position is a capability axis.
+
+Ruling: the six are RETIRED into their survivors under EL-21 (retired
+entry keeps its name and id so history merges; the name becomes an
+alias). Because these rows shipped on existing installs under random
+ids, the top-up must merge a retired name found under ANY id into the
+survivor, not only the canonical id. Library plans that referenced the
+retired names are rewritten to the survivor names (seed data, not
+history).
+
+## EL-24 Circuit templates are exempt from the no-supersets rule
+
+Fact: the C16-4 ruling pins that Volyume-provided library plans hand
+over no supersets. Circuit templates group stations by design.
+
+Ruling: C16-4 stands for every plan without a `style:circuit_*` tag. A
+circuit-tagged plan is the one the user explicitly chose for grouped
+work (user intent outranks inference, EL-11), and its groups must be
+circuits only (`group_kind = 'circuit'`), never plain supersets. The
+guard is re-anchored to pin exactly that.
