@@ -4926,6 +4926,12 @@ export async function duplicateRoutine(routineId, userId, newName) {
   await runInTransaction(d, async () => {
     for (let i = 0; i < exercises.length; i++) {
       const { routineExercise: re } = exercises[i];
+      // Every structural column travels with the copy. The call used to stop
+      // at supersetGroupId, so a library circuit reached the user's own plan
+      // with group_kind and round_rest_seconds NULL: no round counter, no
+      // round rest, and (the data-truth failure) no evidence_class stamp, so
+      // circuit sets fed every hypertrophy learner EL-7 excludes them from.
+      // Certification 2026-09-05, finding A0.
       await addExerciseToRoutine(
         newRoutine.id,
         re.exerciseId,
@@ -4937,6 +4943,10 @@ export async function duplicateRoutine(routineId, userId, newName) {
         re.startingWeight,
         re.restSeconds,
         re.supersetGroupId,
+        true,
+        re.selectionReason ?? null,
+        re.groupKind ?? null,
+        re.roundRestSeconds ?? null,
       );
     }
   });
@@ -5328,7 +5338,14 @@ export async function copyPlanFromLibrary(libraryPlanId, userId) {
   const libPlan = await getProgrammeById(libraryPlanId);
   if (!libPlan) throw new Error('Plan not found');
 
-  const newPlan = await createProgramme(userId, libPlan.name, libPlan.description, 0);
+  // Tags, split type and difficulty travel with the copy. Without tags the
+  // user's plan has no style key, so a kettlebell or circuit plan's swap
+  // pool, "Adjust plan" constraint and style swap-cause all died on
+  // activation (certification 2026-09-05, finding A0b).
+  const newPlan = await createProgramme(
+    userId, libPlan.name, libPlan.description, 0,
+    libPlan.tags ?? null, libPlan.splitType ?? null, libPlan.difficulty ?? null,
+  );
   // RB-6 (D96, Review B): stamp which library plan this copy came from, so
   // consumers can identify the copy by provenance instead of by name (a
   // rename used to defeat the FreeStarter dedup, and an unrelated user plan

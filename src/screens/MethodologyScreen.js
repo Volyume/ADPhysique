@@ -115,7 +115,8 @@ const SECTIONS = [
       'It cannot see food you have not logged. It cannot know how a set felt unless ' +
       'you log it or say so at your check-in. It cannot tell you what is wrong if ' +
       'you are injured or ill, and it cannot measure how much of you is muscle or ' +
-      'fat. It cannot overrule you: every change it suggests waits until you accept it.',
+      'fat. It never overrules a safety hold. Unless you have chosen Coached mode in ' +
+      'Settings, every change it suggests waits until you accept it.',
   },
 ];
 

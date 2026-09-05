@@ -1,0 +1,3237 @@
+{
+  "generated": "2026-09-05",
+  "stacks": {
+    "DiaryStack": [
+      {
+        "route": "Diary",
+        "component": "DiaryScreen",
+        "line": 371
+      },
+      {
+        "route": "MealPlan",
+        "component": "MealPlanScreen",
+        "line": 373
+      },
+      {
+        "route": "FoodSearch",
+        "component": "FoodSearchScreen",
+        "line": 378
+      },
+      {
+        "route": "AddCustomFood",
+        "component": "AddCustomFoodScreen",
+        "line": 383
+      },
+      {
+        "route": "ScanBarcode",
+        "component": "ScanBarcodeScreen",
+        "line": 388
+      },
+      {
+        "route": "ScanLabel",
+        "component": "ScanLabelScreen",
+        "line": 393
+      },
+      {
+        "route": "FoodInsights",
+        "component": "FoodInsightsScreen",
+        "line": 398
+      },
+      {
+        "route": "MyRecipes",
+        "component": "MyRecipesScreen",
+        "line": 403
+      },
+      {
+        "route": "MyMeals",
+        "component": "MyMealsScreen",
+        "line": 408
+      },
+      {
+        "route": "RecipeBuilder",
+        "component": "RecipeBuilderScreen",
+        "line": 413
+      }
+    ],
+    "HomeStack": [
+      {
+        "route": "Home",
+        "component": "HomeScreen",
+        "line": 436
+      },
+      {
+        "route": "BuildWorkout",
+        "component": "BuildWorkoutScreen",
+        "line": 437
+      },
+      {
+        "route": "ActiveWorkout",
+        "component": "ActiveWorkoutScreen",
+        "line": 438
+      },
+      {
+        "route": "WorkoutSummary",
+        "component": "WorkoutSummaryScreen",
+        "line": 439
+      },
+      {
+        "route": "WorkoutHistory",
+        "component": "WorkoutHistoryScreen",
+        "line": 440
+      },
+      {
+        "route": "ShareCard",
+        "component": "ShareCardScreen",
+        "line": 441
+      },
+      {
+        "route": "CoachReview",
+        "component": "CoachReviewScreen",
+        "line": 442
+      },
+      {
+        "route": "HowYouTrain",
+        "component": "HowYouTrainScreen",
+        "line": 455
+      },
+      {
+        "route": "HowYouTrainAdd",
+        "component": "HowYouTrainAddScreen",
+        "line": 456
+      },
+      {
+        "route": "TrainingConsiderations",
+        "component": "TrainingConsiderationsScreen",
+        "line": 457
+      },
+      {
+        "route": "SettingsWorkout",
+        "component": "SettingsWorkoutScreen",
+        "line": 458
+      },
+      {
+        "route": "AvoidedMovements",
+        "component": "AvoidedMovementsScreen",
+        "line": 462
+      }
+    ],
+    "PlansStack": [
+      {
+        "route": "Plans",
+        "component": "PlansScreen",
+        "line": 479
+      },
+      {
+        "route": "PlanUpdate",
+        "component": "PlanUpdateScreen",
+        "line": 480
+      },
+      {
+        "route": "PlanDetail",
+        "component": "PlanDetailScreen",
+        "line": 481
+      },
+      {
+        "route": "RoutineDetail",
+        "component": "RoutineDetailScreen",
+        "line": 482
+      },
+      {
+        "route": "ExerciseDetail",
+        "component": "ExerciseDetailScreen",
+        "line": 483
+      },
+      {
+        "route": "ManualBuilder",
+        "component": "ManualBuilderScreen",
+        "line": 484
+      },
+      {
+        "route": "PlanLibrary",
+        "component": "PlanLibraryScreen",
+        "line": 485
+      },
+      {
+        "route": "MesocycleBuilder",
+        "component": "MesocycleBuilderScreen",
+        "line": 486
+      },
+      {
+        "route": "AvoidedMovements",
+        "component": "AvoidedMovementsScreen",
+        "line": 491
+      },
+      {
+        "route": "HowYouTrain",
+        "component": "HowYouTrainScreen",
+        "line": 493
+      },
+      {
+        "route": "HowYouTrainAdd",
+        "component": "HowYouTrainAddScreen",
+        "line": 494
+      },
+      {
+        "route": "TrainingConsiderations",
+        "component": "TrainingConsiderationsScreen",
+        "line": 496
+      },
+      {
+        "route": "SettingsWorkout",
+        "component": "SettingsWorkoutScreen",
+        "line": 500
+      }
+    ],
+    "ProgressStack": [
+      {
+        "route": "Analytics",
+        "component": "AnalyticsScreen",
+        "line": 519
+      },
+      {
+        "route": "WorkoutHistory",
+        "component": "WorkoutHistoryScreen",
+        "line": 520
+      },
+      {
+        "route": "WorkoutSummary",
+        "component": "WorkoutSummaryScreen",
+        "line": 521
+      },
+      {
+        "route": "VolumeHeatmap",
+        "component": "VolumeHeatmapScreen",
+        "line": 522
+      },
+      {
+        "route": "BodyMetrics",
+        "component": "BodyMetricsScreen",
+        "line": 523
+      },
+      {
+        "route": "ProgressPhotos",
+        "component": "ProgressPhotosScreen",
+        "line": 524
+      },
+      {
+        "route": "LiftProgress",
+        "component": "LiftProgressScreen",
+        "line": 525
+      },
+      {
+        "route": "Consistency",
+        "component": "ConsistencyScreen",
+        "line": 526
+      },
+      {
+        "route": "Partner",
+        "component": "PartnerScreen",
+        "line": 527
+      },
+      {
+        "route": "ExerciseDetail",
+        "component": "ExerciseDetailScreen",
+        "line": 528
+      },
+      {
+        "route": "YearOfLifts",
+        "component": "YearOfLiftsScreen",
+        "line": 529
+      },
+      {
+        "route": "RecapStory",
+        "component": "YearOfLiftsScreen",
+        "line": 530
+      },
+      {
+        "route": "ShareCard",
+        "component": "ShareCardScreen",
+        "line": 531
+      },
+      {
+        "route": "HowYouTrain",
+        "component": "HowYouTrainScreen",
+        "line": 538
+      },
+      {
+        "route": "HowYouTrainAdd",
+        "component": "HowYouTrainAddScreen",
+        "line": 539
+      },
+      {
+        "route": "TrainingConsiderations",
+        "component": "TrainingConsiderationsScreen",
+        "line": 540
+      },
+      {
+        "route": "AvoidedMovements",
+        "component": "AvoidedMovementsScreen",
+        "line": 544
+      },
+      {
+        "route": "SettingsWorkout",
+        "component": "SettingsWorkoutScreen",
+        "line": 548
+      }
+    ],
+    "ProfileStack": [
+      {
+        "route": "You",
+        "component": "YouScreen",
+        "line": 567
+      },
+      {
+        "route": "AthleteProfile",
+        "component": "AthleteProfileScreen",
+        "line": 568
+      },
+      {
+        "route": "Settings",
+        "component": "SettingsScreen",
+        "line": 569
+      },
+      {
+        "route": "SettingsWorkout",
+        "component": "SettingsWorkoutScreen",
+        "line": 570
+      },
+      {
+        "route": "HowYouTrain",
+        "component": "HowYouTrainScreen",
+        "line": 576
+      },
+      {
+        "route": "HowYouTrainAdd",
+        "component": "HowYouTrainAddScreen",
+        "line": 577
+      },
+      {
+        "route": "TrainingConsiderations",
+        "component": "TrainingConsiderationsScreen",
+        "line": 578
+      },
+      {
+        "route": "AvoidedMovements",
+        "component": "AvoidedMovementsScreen",
+        "line": 582
+      },
+      {
+        "route": "SettingsAccount",
+        "component": "SettingsAccountScreen",
+        "line": 583
+      },
+      {
+        "route": "SettingsProfile",
+        "component": "SettingsProfileScreen",
+        "line": 584
+      },
+      {
+        "route": "SettingsCoaching",
+        "component": "SettingsCoachingScreen",
+        "line": 585
+      },
+      {
+        "route": "SettingsDisplay",
+        "component": "SettingsDisplayScreen",
+        "line": 586
+      },
+      {
+        "route": "SettingsHealth",
+        "component": "SettingsHealthScreen",
+        "line": 587
+      },
+      {
+        "route": "SettingsData",
+        "component": "SettingsDataScreen",
+        "line": 588
+      },
+      {
+        "route": "SettingsDietary",
+        "component": "SettingsDietaryScreen",
+        "line": 589
+      },
+      {
+        "route": "Snapshots",
+        "component": "SnapshotsScreen",
+        "line": 590
+      },
+      {
+        "route": "SettingsPrivacy",
+        "component": "SettingsPrivacyScreen",
+        "line": 591
+      },
+      {
+        "route": "SettingsAbout",
+        "component": "SettingsAboutScreen",
+        "line": 592
+      },
+      {
+        "route": "SettingsFaq",
+        "component": "SettingsFaqScreen",
+        "line": 593
+      },
+      {
+        "route": "NutritionTargets",
+        "component": "NutritionTargetsScreen",
+        "line": 594
+      },
+      {
+        "route": "MealNames",
+        "component": "MealNamesScreen",
+        "line": 599
+      },
+      {
+        "route": "NutritionEducation",
+        "component": "NutritionEducationScreen",
+        "line": 600
+      },
+      {
+        "route": "BodyMetrics",
+        "component": "BodyMetricsScreen",
+        "line": 601
+      },
+      {
+        "route": "ProgressPhotos",
+        "component": "ProgressPhotosScreen",
+        "line": 602
+      },
+      {
+        "route": "WeeklyCheckIn",
+        "component": "WeeklyCheckInScreen",
+        "line": 603
+      },
+      {
+        "route": "CoachOutput",
+        "component": "CoachOutputScreen",
+        "line": 604
+      },
+      {
+        "route": "WeeklyStory",
+        "component": "WeeklyStoryScreen",
+        "line": 605
+      },
+      {
+        "route": "Methodology",
+        "component": "MethodologyScreen",
+        "line": 606
+      },
+      {
+        "route": "ShareCard",
+        "component": "ShareCardScreen",
+        "line": 607
+      },
+      {
+        "route": "CoachHeldHistory",
+        "component": "CoachHeldHistoryScreen",
+        "line": 608
+      },
+      {
+        "route": "BlockReflection",
+        "component": "BlockReflectionScreen",
+        "line": 609
+      },
+      {
+        "route": "ProGoalSetup",
+        "component": "ProGoalSetupScreen",
+        "line": 610
+      },
+      {
+        "route": "GoalChangeSummary",
+        "component": "GoalChangeSummaryScreen",
+        "line": 611
+      },
+      {
+        "route": "GoalLockConsent",
+        "component": "GoalLockConsentScreen",
+        "line": 612
+      },
+      {
+        "route": "NotificationSettings",
+        "component": "NotificationSettingsScreen",
+        "line": 613
+      },
+      {
+        "route": "Import",
+        "component": "ImportScreen",
+        "line": 614
+      },
+      {
+        "route": "CoachingReminders",
+        "component": "CoachingRemindersScreen",
+        "line": 615
+      },
+      {
+        "route": "WellbeingCheck",
+        "component": "WellbeingCheckScreen",
+        "line": 616
+      },
+      {
+        "route": "PrivacyPolicy",
+        "component": "PrivacyPolicyScreen",
+        "line": 617
+      },
+      {
+        "route": "DebugLog",
+        "component": "DebugLogScreen",
+        "line": 618
+      },
+      {
+        "route": "Credits",
+        "component": "CreditsScreen",
+        "line": 625
+      }
+    ],
+    "MainTabs": [
+      {
+        "route": "HomeTab",
+        "component": "HomeStack",
+        "line": 690
+      },
+      {
+        "route": "PlansTab",
+        "component": "PlansStack",
+        "line": 691
+      },
+      {
+        "route": "DiaryTab",
+        "component": "DiaryStack",
+        "line": 692
+      },
+      {
+        "route": "ProgressTab",
+        "component": "ProgressStack",
+        "line": 693
+      },
+      {
+        "route": "ProfileTab",
+        "component": "ProfileStack",
+        "line": 694
+      }
+    ],
+    "WelcomeStack": [
+      {
+        "route": "Welcome",
+        "component": "WelcomeScreen",
+        "line": 728
+      },
+      {
+        "route": "QuizTraining",
+        "component": "QuizScreen",
+        "line": 731
+      },
+      {
+        "route": "PlanPreview",
+        "component": "PlanPreviewScreen",
+        "line": 732
+      },
+      {
+        "route": "Login",
+        "component": "LoginScreen",
+        "line": 733
+      },
+      {
+        "route": "PrivacyPolicy",
+        "component": "PrivacyPolicyScreen",
+        "line": 736
+      }
+    ],
+    "Article9ConsentStack": [
+      {
+        "route": "Article9Consent",
+        "component": "Article9ConsentScreen",
+        "line": 758
+      },
+      {
+        "route": "PrivacyPolicy",
+        "component": "PrivacyPolicyScreen",
+        "line": 762
+      }
+    ],
+    "ProOnboardingStack": [
+      {
+        "route": "ProOnboarding",
+        "component": "ProOnboardingScreen",
+        "line": 770
+      },
+      {
+        "route": "ProSetupComplete",
+        "component": "ProSetupCompleteScreen",
+        "line": 774
+      },
+      {
+        "route": "NutritionEducation",
+        "component": "NutritionEducationScreen",
+        "line": 777
+      },
+      {
+        "route": "NotificationSettings",
+        "component": "NotificationSettingsScreen",
+        "line": 783
+      },
+      {
+        "route": "CoachingReminders",
+        "component": "CoachingRemindersScreen",
+        "line": 784
+      },
+      {
+        "route": "Methodology",
+        "component": "MethodologyScreen",
+        "line": 787
+      },
+      {
+        "route": "HowYouTrain",
+        "component": "HowYouTrainScreen",
+        "line": 796
+      },
+      {
+        "route": "HowYouTrainAdd",
+        "component": "HowYouTrainAddScreen",
+        "line": 797
+      },
+      {
+        "route": "TrainingConsiderations",
+        "component": "TrainingConsiderationsScreen",
+        "line": 798
+      },
+      {
+        "route": "SettingsWorkout",
+        "component": "SettingsWorkoutScreen",
+        "line": 799
+      },
+      {
+        "route": "AvoidedMovements",
+        "component": "AvoidedMovementsScreen",
+        "line": 803
+      }
+    ]
+  },
+  "routeToStacks": {
+    "Diary": {
+      "stacks": [
+        "DiaryStack"
+      ],
+      "component": "DiaryScreen",
+      "regs": [
+        "DiaryStack:371"
+      ]
+    },
+    "MealPlan": {
+      "stacks": [
+        "DiaryStack"
+      ],
+      "component": "MealPlanScreen",
+      "regs": [
+        "DiaryStack:373"
+      ]
+    },
+    "FoodSearch": {
+      "stacks": [
+        "DiaryStack"
+      ],
+      "component": "FoodSearchScreen",
+      "regs": [
+        "DiaryStack:378"
+      ]
+    },
+    "AddCustomFood": {
+      "stacks": [
+        "DiaryStack"
+      ],
+      "component": "AddCustomFoodScreen",
+      "regs": [
+        "DiaryStack:383"
+      ]
+    },
+    "ScanBarcode": {
+      "stacks": [
+        "DiaryStack"
+      ],
+      "component": "ScanBarcodeScreen",
+      "regs": [
+        "DiaryStack:388"
+      ]
+    },
+    "ScanLabel": {
+      "stacks": [
+        "DiaryStack"
+      ],
+      "component": "ScanLabelScreen",
+      "regs": [
+        "DiaryStack:393"
+      ]
+    },
+    "FoodInsights": {
+      "stacks": [
+        "DiaryStack"
+      ],
+      "component": "FoodInsightsScreen",
+      "regs": [
+        "DiaryStack:398"
+      ]
+    },
+    "MyRecipes": {
+      "stacks": [
+        "DiaryStack"
+      ],
+      "component": "MyRecipesScreen",
+      "regs": [
+        "DiaryStack:403"
+      ]
+    },
+    "MyMeals": {
+      "stacks": [
+        "DiaryStack"
+      ],
+      "component": "MyMealsScreen",
+      "regs": [
+        "DiaryStack:408"
+      ]
+    },
+    "RecipeBuilder": {
+      "stacks": [
+        "DiaryStack"
+      ],
+      "component": "RecipeBuilderScreen",
+      "regs": [
+        "DiaryStack:413"
+      ]
+    },
+    "Home": {
+      "stacks": [
+        "HomeStack"
+      ],
+      "component": "HomeScreen",
+      "regs": [
+        "HomeStack:436"
+      ]
+    },
+    "BuildWorkout": {
+      "stacks": [
+        "HomeStack"
+      ],
+      "component": "BuildWorkoutScreen",
+      "regs": [
+        "HomeStack:437"
+      ]
+    },
+    "ActiveWorkout": {
+      "stacks": [
+        "HomeStack"
+      ],
+      "component": "ActiveWorkoutScreen",
+      "regs": [
+        "HomeStack:438"
+      ]
+    },
+    "WorkoutSummary": {
+      "stacks": [
+        "HomeStack",
+        "ProgressStack"
+      ],
+      "component": "WorkoutSummaryScreen",
+      "regs": [
+        "HomeStack:439",
+        "ProgressStack:521"
+      ]
+    },
+    "WorkoutHistory": {
+      "stacks": [
+        "HomeStack",
+        "ProgressStack"
+      ],
+      "component": "WorkoutHistoryScreen",
+      "regs": [
+        "HomeStack:440",
+        "ProgressStack:520"
+      ]
+    },
+    "ShareCard": {
+      "stacks": [
+        "HomeStack",
+        "ProgressStack",
+        "ProfileStack"
+      ],
+      "component": "ShareCardScreen",
+      "regs": [
+        "HomeStack:441",
+        "ProgressStack:531",
+        "ProfileStack:607"
+      ]
+    },
+    "CoachReview": {
+      "stacks": [
+        "HomeStack"
+      ],
+      "component": "CoachReviewScreen",
+      "regs": [
+        "HomeStack:442"
+      ]
+    },
+    "HowYouTrain": {
+      "stacks": [
+        "HomeStack",
+        "PlansStack",
+        "ProgressStack",
+        "ProfileStack",
+        "ProOnboardingStack"
+      ],
+      "component": "HowYouTrainScreen",
+      "regs": [
+        "HomeStack:455",
+        "PlansStack:493",
+        "ProgressStack:538",
+        "ProfileStack:576",
+        "ProOnboardingStack:796"
+      ]
+    },
+    "HowYouTrainAdd": {
+      "stacks": [
+        "HomeStack",
+        "PlansStack",
+        "ProgressStack",
+        "ProfileStack",
+        "ProOnboardingStack"
+      ],
+      "component": "HowYouTrainAddScreen",
+      "regs": [
+        "HomeStack:456",
+        "PlansStack:494",
+        "ProgressStack:539",
+        "ProfileStack:577",
+        "ProOnboardingStack:797"
+      ]
+    },
+    "TrainingConsiderations": {
+      "stacks": [
+        "HomeStack",
+        "PlansStack",
+        "ProgressStack",
+        "ProfileStack",
+        "ProOnboardingStack"
+      ],
+      "component": "TrainingConsiderationsScreen",
+      "regs": [
+        "HomeStack:457",
+        "PlansStack:496",
+        "ProgressStack:540",
+        "ProfileStack:578",
+        "ProOnboardingStack:798"
+      ]
+    },
+    "SettingsWorkout": {
+      "stacks": [
+        "HomeStack",
+        "PlansStack",
+        "ProgressStack",
+        "ProfileStack",
+        "ProOnboardingStack"
+      ],
+      "component": "SettingsWorkoutScreen",
+      "regs": [
+        "HomeStack:458",
+        "PlansStack:500",
+        "ProgressStack:548",
+        "ProfileStack:570",
+        "ProOnboardingStack:799"
+      ]
+    },
+    "AvoidedMovements": {
+      "stacks": [
+        "HomeStack",
+        "PlansStack",
+        "ProgressStack",
+        "ProfileStack",
+        "ProOnboardingStack"
+      ],
+      "component": "AvoidedMovementsScreen",
+      "regs": [
+        "HomeStack:462",
+        "PlansStack:491",
+        "ProgressStack:544",
+        "ProfileStack:582",
+        "ProOnboardingStack:803"
+      ]
+    },
+    "Plans": {
+      "stacks": [
+        "PlansStack"
+      ],
+      "component": "PlansScreen",
+      "regs": [
+        "PlansStack:479"
+      ]
+    },
+    "PlanUpdate": {
+      "stacks": [
+        "PlansStack"
+      ],
+      "component": "PlanUpdateScreen",
+      "regs": [
+        "PlansStack:480"
+      ]
+    },
+    "PlanDetail": {
+      "stacks": [
+        "PlansStack"
+      ],
+      "component": "PlanDetailScreen",
+      "regs": [
+        "PlansStack:481"
+      ]
+    },
+    "RoutineDetail": {
+      "stacks": [
+        "PlansStack"
+      ],
+      "component": "RoutineDetailScreen",
+      "regs": [
+        "PlansStack:482"
+      ]
+    },
+    "ExerciseDetail": {
+      "stacks": [
+        "PlansStack",
+        "ProgressStack"
+      ],
+      "component": "ExerciseDetailScreen",
+      "regs": [
+        "PlansStack:483",
+        "ProgressStack:528"
+      ]
+    },
+    "ManualBuilder": {
+      "stacks": [
+        "PlansStack"
+      ],
+      "component": "ManualBuilderScreen",
+      "regs": [
+        "PlansStack:484"
+      ]
+    },
+    "PlanLibrary": {
+      "stacks": [
+        "PlansStack"
+      ],
+      "component": "PlanLibraryScreen",
+      "regs": [
+        "PlansStack:485"
+      ]
+    },
+    "MesocycleBuilder": {
+      "stacks": [
+        "PlansStack"
+      ],
+      "component": "MesocycleBuilderScreen",
+      "regs": [
+        "PlansStack:486"
+      ]
+    },
+    "Analytics": {
+      "stacks": [
+        "ProgressStack"
+      ],
+      "component": "AnalyticsScreen",
+      "regs": [
+        "ProgressStack:519"
+      ]
+    },
+    "VolumeHeatmap": {
+      "stacks": [
+        "ProgressStack"
+      ],
+      "component": "VolumeHeatmapScreen",
+      "regs": [
+        "ProgressStack:522"
+      ]
+    },
+    "BodyMetrics": {
+      "stacks": [
+        "ProgressStack",
+        "ProfileStack"
+      ],
+      "component": "BodyMetricsScreen",
+      "regs": [
+        "ProgressStack:523",
+        "ProfileStack:601"
+      ]
+    },
+    "ProgressPhotos": {
+      "stacks": [
+        "ProgressStack",
+        "ProfileStack"
+      ],
+      "component": "ProgressPhotosScreen",
+      "regs": [
+        "ProgressStack:524",
+        "ProfileStack:602"
+      ]
+    },
+    "LiftProgress": {
+      "stacks": [
+        "ProgressStack"
+      ],
+      "component": "LiftProgressScreen",
+      "regs": [
+        "ProgressStack:525"
+      ]
+    },
+    "Consistency": {
+      "stacks": [
+        "ProgressStack"
+      ],
+      "component": "ConsistencyScreen",
+      "regs": [
+        "ProgressStack:526"
+      ]
+    },
+    "Partner": {
+      "stacks": [
+        "ProgressStack"
+      ],
+      "component": "PartnerScreen",
+      "regs": [
+        "ProgressStack:527"
+      ]
+    },
+    "YearOfLifts": {
+      "stacks": [
+        "ProgressStack"
+      ],
+      "component": "YearOfLiftsScreen",
+      "regs": [
+        "ProgressStack:529"
+      ]
+    },
+    "RecapStory": {
+      "stacks": [
+        "ProgressStack"
+      ],
+      "component": "YearOfLiftsScreen",
+      "regs": [
+        "ProgressStack:530"
+      ]
+    },
+    "You": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "YouScreen",
+      "regs": [
+        "ProfileStack:567"
+      ]
+    },
+    "AthleteProfile": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "AthleteProfileScreen",
+      "regs": [
+        "ProfileStack:568"
+      ]
+    },
+    "Settings": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "SettingsScreen",
+      "regs": [
+        "ProfileStack:569"
+      ]
+    },
+    "SettingsAccount": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "SettingsAccountScreen",
+      "regs": [
+        "ProfileStack:583"
+      ]
+    },
+    "SettingsProfile": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "SettingsProfileScreen",
+      "regs": [
+        "ProfileStack:584"
+      ]
+    },
+    "SettingsCoaching": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "SettingsCoachingScreen",
+      "regs": [
+        "ProfileStack:585"
+      ]
+    },
+    "SettingsDisplay": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "SettingsDisplayScreen",
+      "regs": [
+        "ProfileStack:586"
+      ]
+    },
+    "SettingsHealth": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "SettingsHealthScreen",
+      "regs": [
+        "ProfileStack:587"
+      ]
+    },
+    "SettingsData": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "SettingsDataScreen",
+      "regs": [
+        "ProfileStack:588"
+      ]
+    },
+    "SettingsDietary": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "SettingsDietaryScreen",
+      "regs": [
+        "ProfileStack:589"
+      ]
+    },
+    "Snapshots": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "SnapshotsScreen",
+      "regs": [
+        "ProfileStack:590"
+      ]
+    },
+    "SettingsPrivacy": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "SettingsPrivacyScreen",
+      "regs": [
+        "ProfileStack:591"
+      ]
+    },
+    "SettingsAbout": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "SettingsAboutScreen",
+      "regs": [
+        "ProfileStack:592"
+      ]
+    },
+    "SettingsFaq": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "SettingsFaqScreen",
+      "regs": [
+        "ProfileStack:593"
+      ]
+    },
+    "NutritionTargets": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "NutritionTargetsScreen",
+      "regs": [
+        "ProfileStack:594"
+      ]
+    },
+    "MealNames": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "MealNamesScreen",
+      "regs": [
+        "ProfileStack:599"
+      ]
+    },
+    "NutritionEducation": {
+      "stacks": [
+        "ProfileStack",
+        "ProOnboardingStack"
+      ],
+      "component": "NutritionEducationScreen",
+      "regs": [
+        "ProfileStack:600",
+        "ProOnboardingStack:777"
+      ]
+    },
+    "WeeklyCheckIn": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "WeeklyCheckInScreen",
+      "regs": [
+        "ProfileStack:603"
+      ]
+    },
+    "CoachOutput": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "CoachOutputScreen",
+      "regs": [
+        "ProfileStack:604"
+      ]
+    },
+    "WeeklyStory": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "WeeklyStoryScreen",
+      "regs": [
+        "ProfileStack:605"
+      ]
+    },
+    "Methodology": {
+      "stacks": [
+        "ProfileStack",
+        "ProOnboardingStack"
+      ],
+      "component": "MethodologyScreen",
+      "regs": [
+        "ProfileStack:606",
+        "ProOnboardingStack:787"
+      ]
+    },
+    "CoachHeldHistory": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "CoachHeldHistoryScreen",
+      "regs": [
+        "ProfileStack:608"
+      ]
+    },
+    "BlockReflection": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "BlockReflectionScreen",
+      "regs": [
+        "ProfileStack:609"
+      ]
+    },
+    "ProGoalSetup": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "ProGoalSetupScreen",
+      "regs": [
+        "ProfileStack:610"
+      ]
+    },
+    "GoalChangeSummary": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "GoalChangeSummaryScreen",
+      "regs": [
+        "ProfileStack:611"
+      ]
+    },
+    "GoalLockConsent": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "GoalLockConsentScreen",
+      "regs": [
+        "ProfileStack:612"
+      ]
+    },
+    "NotificationSettings": {
+      "stacks": [
+        "ProfileStack",
+        "ProOnboardingStack"
+      ],
+      "component": "NotificationSettingsScreen",
+      "regs": [
+        "ProfileStack:613",
+        "ProOnboardingStack:783"
+      ]
+    },
+    "Import": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "ImportScreen",
+      "regs": [
+        "ProfileStack:614"
+      ]
+    },
+    "CoachingReminders": {
+      "stacks": [
+        "ProfileStack",
+        "ProOnboardingStack"
+      ],
+      "component": "CoachingRemindersScreen",
+      "regs": [
+        "ProfileStack:615",
+        "ProOnboardingStack:784"
+      ]
+    },
+    "WellbeingCheck": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "WellbeingCheckScreen",
+      "regs": [
+        "ProfileStack:616"
+      ]
+    },
+    "PrivacyPolicy": {
+      "stacks": [
+        "ProfileStack",
+        "WelcomeStack",
+        "Article9ConsentStack"
+      ],
+      "component": "PrivacyPolicyScreen",
+      "regs": [
+        "ProfileStack:617",
+        "WelcomeStack:736",
+        "Article9ConsentStack:762"
+      ]
+    },
+    "DebugLog": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "DebugLogScreen",
+      "regs": [
+        "ProfileStack:618"
+      ]
+    },
+    "Credits": {
+      "stacks": [
+        "ProfileStack"
+      ],
+      "component": "CreditsScreen",
+      "regs": [
+        "ProfileStack:625"
+      ]
+    },
+    "HomeTab": {
+      "stacks": [
+        "MainTabs"
+      ],
+      "component": "HomeStack",
+      "regs": [
+        "MainTabs:690"
+      ]
+    },
+    "PlansTab": {
+      "stacks": [
+        "MainTabs"
+      ],
+      "component": "PlansStack",
+      "regs": [
+        "MainTabs:691"
+      ]
+    },
+    "DiaryTab": {
+      "stacks": [
+        "MainTabs"
+      ],
+      "component": "DiaryStack",
+      "regs": [
+        "MainTabs:692"
+      ]
+    },
+    "ProgressTab": {
+      "stacks": [
+        "MainTabs"
+      ],
+      "component": "ProgressStack",
+      "regs": [
+        "MainTabs:693"
+      ]
+    },
+    "ProfileTab": {
+      "stacks": [
+        "MainTabs"
+      ],
+      "component": "ProfileStack",
+      "regs": [
+        "MainTabs:694"
+      ]
+    },
+    "Welcome": {
+      "stacks": [
+        "WelcomeStack"
+      ],
+      "component": "WelcomeScreen",
+      "regs": [
+        "WelcomeStack:728"
+      ]
+    },
+    "QuizTraining": {
+      "stacks": [
+        "WelcomeStack"
+      ],
+      "component": "QuizScreen",
+      "regs": [
+        "WelcomeStack:731"
+      ]
+    },
+    "PlanPreview": {
+      "stacks": [
+        "WelcomeStack"
+      ],
+      "component": "PlanPreviewScreen",
+      "regs": [
+        "WelcomeStack:732"
+      ]
+    },
+    "Login": {
+      "stacks": [
+        "WelcomeStack"
+      ],
+      "component": "LoginScreen",
+      "regs": [
+        "WelcomeStack:733"
+      ]
+    },
+    "Article9Consent": {
+      "stacks": [
+        "Article9ConsentStack"
+      ],
+      "component": "Article9ConsentScreen",
+      "regs": [
+        "Article9ConsentStack:758"
+      ]
+    },
+    "ProOnboarding": {
+      "stacks": [
+        "ProOnboardingStack"
+      ],
+      "component": "ProOnboardingScreen",
+      "regs": [
+        "ProOnboardingStack:770"
+      ]
+    },
+    "ProSetupComplete": {
+      "stacks": [
+        "ProOnboardingStack"
+      ],
+      "component": "ProSetupCompleteScreen",
+      "regs": [
+        "ProOnboardingStack:774"
+      ]
+    }
+  },
+  "inboundCounts": {
+    "ActiveWorkout": 11,
+    "HomeTab": 9,
+    "HowYouTrain": 15,
+    "PlansTab": 4,
+    "BuildWorkout": 4,
+    "Subscription": 1,
+    "ProfileTab": 2,
+    "ProUpgrade": 3,
+    "Home": 2,
+    "WorkoutSummary": 4,
+    "FoodSearch": 5,
+    "LiftProgress": 3,
+    "BodyMetrics": 3,
+    "ProgressPhotos": 5,
+    "WorkoutHistory": 3,
+    "VolumeHeatmap": 3,
+    "RecapStory": 5,
+    "Consistency": 1,
+    "YearOfLifts": 1,
+    "Partner": 4,
+    "PrivacyPolicy": 2,
+    "ExerciseDetail": 7,
+    "SettingsProfile": 2,
+    "SettingsData": 2,
+    "Settings": 2,
+    "Plans": 5,
+    "SettingsWorkout": 3,
+    "ShareCard": 8,
+    "NutritionTargets": 9,
+    "MealPlan": 4,
+    "DiaryTab": 2,
+    "Methodology": 3,
+    "CoachHeldHistory": 2,
+    "NotificationSettings": 4,
+    "MesocycleBuilder": 2,
+    "PlanLibrary": 3,
+    "ScanBarcode": 3,
+    "CoachOutput": 7,
+    "SettingsPrivacy": 2,
+    "FoodInsights": 2,
+    "AddCustomFood": 8,
+    "MyMeals": 2,
+    "MyRecipes": 1,
+    "You": 1,
+    "WeeklyCheckIn": 2,
+    "CoachReview": 1,
+    "HowYouTrainAdd": 5,
+    "Analytics": 1,
+    "TrainingConsiderations": 1,
+    "AvoidedMovements": 2,
+    "Diary": 2,
+    "BlockReflection": 3,
+    "RecipeBuilder": 2,
+    "CoachingReminders": 4,
+    "NutritionEducation": 2,
+    "ManualBuilder": 1,
+    "RoutineDetail": 2,
+    "PlanDetail": 9,
+    "Login": 1,
+    "PlanUpdate": 1,
+    "GoalChangeSummary": 1,
+    "ProSetupComplete": 1,
+    "SubscriptionPolicy": 1,
+    "PlanPreview": 1,
+    "ScanLabel": 2,
+    "SettingsFaq": 1,
+    "Credits": 1,
+    "DebugLog": 2,
+    "Import": 1,
+    "Snapshots": 1,
+    "SettingsAccount": 1,
+    "SettingsCoaching": 1,
+    "SettingsDietary": 1,
+    "SettingsDisplay": 1,
+    "SettingsHealth": 1,
+    "SettingsAbout": 1,
+    "QuizTraining": 1,
+    "AthleteProfile": 1,
+    "WeeklyStory": 1,
+    "ProGoalSetup": 1,
+    "GoalLockConsent": 1,
+    "WellbeingCheck": 1
+  },
+  "inbound": {
+    "ActiveWorkout": [
+      {
+        "target": "ActiveWorkout",
+        "tab": "HomeTab",
+        "kind": "nested",
+        "file": "src/components/ActiveSessionMiniBar.js",
+        "line": 122
+      },
+      {
+        "target": "ActiveWorkout",
+        "kind": "replace",
+        "file": "src/screens/BuildWorkoutScreen.js",
+        "line": 182
+      },
+      {
+        "target": "ActiveWorkout",
+        "kind": "replace",
+        "file": "src/screens/BuildWorkoutScreen.js",
+        "line": 196
+      },
+      {
+        "target": "ActiveWorkout",
+        "kind": "navigate",
+        "file": "src/screens/HomeScreen.js",
+        "line": 1504
+      },
+      {
+        "target": "ActiveWorkout",
+        "kind": "navigate",
+        "file": "src/screens/HomeScreen.js",
+        "line": 1537
+      },
+      {
+        "target": "ActiveWorkout",
+        "kind": "navigate",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2257
+      },
+      {
+        "target": "ActiveWorkout",
+        "tab": "HomeTab",
+        "kind": "nested",
+        "file": "src/screens/PlanDetailScreen.js",
+        "line": 250
+      },
+      {
+        "target": "ActiveWorkout",
+        "tab": "HomeTab",
+        "kind": "nested",
+        "file": "src/screens/PlansScreen.js",
+        "line": 842
+      },
+      {
+        "target": "ActiveWorkout",
+        "tab": "HomeTab",
+        "kind": "nested",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1124
+      },
+      {
+        "target": "ActiveWorkout",
+        "tab": "HomeTab",
+        "kind": "nested",
+        "file": "src/screens/RoutineDetailScreen.js",
+        "line": 977
+      },
+      {
+        "target": "ActiveWorkout",
+        "tab": "HomeTab",
+        "kind": "crossTab",
+        "file": "src/screens/WorkoutHistoryScreen.js",
+        "line": 258
+      }
+    ],
+    "HomeTab": [
+      {
+        "target": "HomeTab",
+        "kind": "navigate",
+        "file": "src/components/ActiveSessionMiniBar.js",
+        "line": 122
+      },
+      {
+        "target": "HomeTab",
+        "kind": "navigate",
+        "file": "src/components/ProGate.js",
+        "line": 252
+      },
+      {
+        "target": "HomeTab",
+        "kind": "navigate",
+        "file": "src/components/ScreenBoundary.js",
+        "line": 92
+      },
+      {
+        "target": "HomeTab",
+        "kind": "navigate",
+        "file": "src/screens/ManualBuilderScreen.js",
+        "line": 1589
+      },
+      {
+        "target": "HomeTab",
+        "kind": "navigate",
+        "file": "src/screens/PlanDetailScreen.js",
+        "line": 250
+      },
+      {
+        "target": "HomeTab",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 842
+      },
+      {
+        "target": "HomeTab",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1124
+      },
+      {
+        "target": "HomeTab",
+        "kind": "navigate",
+        "file": "src/screens/RoutineDetailScreen.js",
+        "line": 958
+      },
+      {
+        "target": "HomeTab",
+        "kind": "navigate",
+        "file": "src/screens/RoutineDetailScreen.js",
+        "line": 977
+      }
+    ],
+    "HowYouTrain": [
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/components/ExerciseConflictSheet.js",
+        "line": 178
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/components/ExercisePickerModal.js",
+        "line": 493
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/ActiveWorkoutScreen.js",
+        "line": 5501
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/AvoidedMovementsScreen.js",
+        "line": 111
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2632
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2650
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2668
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/HowYouTrainAddScreen.js",
+        "line": 491
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1667
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/ProOnboardingScreen.js",
+        "line": 1738
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/ProOnboardingScreen.js",
+        "line": 2350
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 46
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/TrainingConsiderationsScreen.js",
+        "line": 85
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1635
+      },
+      {
+        "target": "HowYouTrain",
+        "kind": "navigate",
+        "file": "src/screens/YouScreen.js",
+        "line": 516
+      }
+    ],
+    "PlansTab": [
+      {
+        "target": "PlansTab",
+        "kind": "navigate",
+        "file": "src/components/HomeChangeWorkoutSheet.js",
+        "line": 63
+      },
+      {
+        "target": "PlansTab",
+        "kind": "navigate",
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 501
+      },
+      {
+        "target": "PlansTab",
+        "kind": "navigate",
+        "file": "src/screens/ManualBuilderScreen.js",
+        "line": 1012
+      },
+      {
+        "target": "PlansTab",
+        "tab": "PlansTab",
+        "kind": "crossTabRoot",
+        "file": "src/screens/WorkoutHistoryScreen.js",
+        "line": 276
+      }
+    ],
+    "BuildWorkout": [
+      {
+        "target": "BuildWorkout",
+        "kind": "navigate",
+        "file": "src/components/HomeChangeWorkoutSheet.js",
+        "line": 86
+      },
+      {
+        "target": "BuildWorkout",
+        "tab": "HomeTab",
+        "kind": "crossTab",
+        "file": "src/screens/CoachReviewScreen.js",
+        "line": 520
+      },
+      {
+        "target": "BuildWorkout",
+        "tab": "HomeTab",
+        "kind": "crossTab",
+        "file": "src/screens/ExerciseDetailScreen.js",
+        "line": 1025
+      },
+      {
+        "target": "BuildWorkout",
+        "tab": "HomeTab",
+        "kind": "nested",
+        "file": "src/screens/RoutineDetailScreen.js",
+        "line": 958
+      }
+    ],
+    "Subscription": [
+      {
+        "target": "Subscription",
+        "tab": "ProfileTab",
+        "kind": "nested",
+        "file": "src/components/PostLapseSheet.js",
+        "line": 72
+      }
+    ],
+    "ProfileTab": [
+      {
+        "target": "ProfileTab",
+        "kind": "navigate",
+        "file": "src/components/PostLapseSheet.js",
+        "line": 72
+      },
+      {
+        "target": "ProfileTab",
+        "kind": "navigate",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2082
+      }
+    ],
+    "ProUpgrade": [
+      {
+        "target": "ProUpgrade",
+        "kind": "navigate",
+        "file": "src/components/ProGate.js",
+        "line": 85
+      },
+      {
+        "target": "ProUpgrade",
+        "kind": "navigate",
+        "file": "src/components/ProGate.js",
+        "line": 229
+      },
+      {
+        "target": "ProUpgrade",
+        "kind": "navigate",
+        "file": "src/components/ProGate.js",
+        "line": 239
+      }
+    ],
+    "Home": [
+      {
+        "target": "Home",
+        "tab": "HomeTab",
+        "kind": "nested",
+        "file": "src/components/ScreenBoundary.js",
+        "line": 92
+      },
+      {
+        "target": "Home",
+        "tab": "HomeTab",
+        "kind": "crossTab",
+        "file": "src/screens/WeeklyCheckInScreen.js",
+        "line": 1757
+      }
+    ],
+    "WorkoutSummary": [
+      {
+        "target": "WorkoutSummary",
+        "kind": "replace",
+        "file": "src/screens/ActiveWorkoutScreen.js",
+        "line": 3796
+      },
+      {
+        "target": "WorkoutSummary",
+        "kind": "navigate",
+        "file": "src/screens/AnalyticsScreen.js",
+        "line": 384
+      },
+      {
+        "target": "WorkoutSummary",
+        "kind": "navigate",
+        "file": "src/screens/WorkoutHistoryScreen.js",
+        "line": 562
+      },
+      {
+        "target": "WorkoutSummary",
+        "kind": "navigate",
+        "file": "src/screens/WorkoutHistoryScreen.js",
+        "line": 598
+      }
+    ],
+    "FoodSearch": [
+      {
+        "target": "FoodSearch",
+        "kind": "replace",
+        "file": "src/screens/AddCustomFoodScreen.js",
+        "line": 453
+      },
+      {
+        "target": "FoodSearch",
+        "kind": "navigate",
+        "file": "src/screens/DiaryScreen.js",
+        "line": 788
+      },
+      {
+        "target": "FoodSearch",
+        "kind": "navigate",
+        "file": "src/screens/DiaryScreen.js",
+        "line": 1030
+      },
+      {
+        "target": "FoodSearch",
+        "kind": "navigate",
+        "file": "src/screens/RecipeBuilderScreen.js",
+        "line": 168
+      },
+      {
+        "target": "FoodSearch",
+        "kind": "replace",
+        "file": "src/screens/ScanBarcodeScreen.js",
+        "line": 186
+      }
+    ],
+    "LiftProgress": [
+      {
+        "target": "LiftProgress",
+        "kind": "navigate",
+        "file": "src/screens/AnalyticsScreen.js",
+        "line": 282
+      },
+      {
+        "target": "LiftProgress",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/AthleteProfileScreen.js",
+        "line": 588
+      },
+      {
+        "target": "LiftProgress",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1064
+      }
+    ],
+    "BodyMetrics": [
+      {
+        "target": "BodyMetrics",
+        "kind": "navigate",
+        "file": "src/screens/AnalyticsScreen.js",
+        "line": 291
+      },
+      {
+        "target": "BodyMetrics",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/AthleteProfileScreen.js",
+        "line": 570
+      },
+      {
+        "target": "BodyMetrics",
+        "kind": "navigate",
+        "file": "src/screens/LiftProgressScreen.js",
+        "line": 372
+      }
+    ],
+    "ProgressPhotos": [
+      {
+        "target": "ProgressPhotos",
+        "kind": "navigate",
+        "file": "src/screens/AnalyticsScreen.js",
+        "line": 305
+      },
+      {
+        "target": "ProgressPhotos",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/AthleteProfileScreen.js",
+        "line": 579
+      },
+      {
+        "target": "ProgressPhotos",
+        "kind": "navigate",
+        "file": "src/screens/BodyMetricsScreen.js",
+        "line": 1105
+      },
+      {
+        "target": "ProgressPhotos",
+        "kind": "navigate",
+        "file": "src/screens/WeeklyCheckInScreen.js",
+        "line": 1863
+      },
+      {
+        "target": "ProgressPhotos",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1655
+      }
+    ],
+    "WorkoutHistory": [
+      {
+        "target": "WorkoutHistory",
+        "kind": "navigate",
+        "file": "src/screens/AnalyticsScreen.js",
+        "line": 363
+      },
+      {
+        "target": "WorkoutHistory",
+        "kind": "navigate",
+        "file": "src/screens/AnalyticsScreen.js",
+        "line": 467
+      },
+      {
+        "target": "WorkoutHistory",
+        "kind": "navigate",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2118
+      }
+    ],
+    "VolumeHeatmap": [
+      {
+        "target": "VolumeHeatmap",
+        "kind": "navigate",
+        "file": "src/screens/AnalyticsScreen.js",
+        "line": 426
+      },
+      {
+        "target": "VolumeHeatmap",
+        "kind": "navigate",
+        "file": "src/screens/ConsistencyScreen.js",
+        "line": 152
+      },
+      {
+        "target": "VolumeHeatmap",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/YouScreen.js",
+        "line": 599
+      }
+    ],
+    "RecapStory": [
+      {
+        "target": "RecapStory",
+        "kind": "navigate",
+        "file": "src/screens/AnalyticsScreen.js",
+        "line": 438
+      },
+      {
+        "target": "RecapStory",
+        "kind": "navigate",
+        "file": "src/screens/AnalyticsScreen.js",
+        "line": 493
+      },
+      {
+        "target": "RecapStory",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/BlockReflectionScreen.js",
+        "line": 202
+      },
+      {
+        "target": "RecapStory",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1793
+      },
+      {
+        "target": "RecapStory",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1836
+      }
+    ],
+    "Consistency": [
+      {
+        "target": "Consistency",
+        "kind": "navigate",
+        "file": "src/screens/AnalyticsScreen.js",
+        "line": 466
+      }
+    ],
+    "YearOfLifts": [
+      {
+        "target": "YearOfLifts",
+        "kind": "navigate",
+        "file": "src/screens/AnalyticsScreen.js",
+        "line": 508
+      }
+    ],
+    "Partner": [
+      {
+        "target": "Partner",
+        "kind": "navigate",
+        "file": "src/screens/AnalyticsScreen.js",
+        "line": 522
+      },
+      {
+        "target": "Partner",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1076
+      },
+      {
+        "target": "Partner",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1087
+      },
+      {
+        "target": "Partner",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/YouScreen.js",
+        "line": 377
+      }
+    ],
+    "PrivacyPolicy": [
+      {
+        "target": "PrivacyPolicy",
+        "kind": "navigate",
+        "file": "src/screens/Article9ConsentScreen.js",
+        "line": 174
+      },
+      {
+        "target": "PrivacyPolicy",
+        "kind": "navigate",
+        "file": "src/screens/SettingsPrivacyScreen.js",
+        "line": 116
+      }
+    ],
+    "ExerciseDetail": [
+      {
+        "target": "ExerciseDetail",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/AthleteProfileScreen.js",
+        "line": 529
+      },
+      {
+        "target": "ExerciseDetail",
+        "kind": "push",
+        "file": "src/screens/ExerciseDetailScreen.js",
+        "line": 1081
+      },
+      {
+        "target": "ExerciseDetail",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2523
+      },
+      {
+        "target": "ExerciseDetail",
+        "kind": "navigate",
+        "file": "src/screens/LiftProgressScreen.js",
+        "line": 266
+      },
+      {
+        "target": "ExerciseDetail",
+        "kind": "navigate",
+        "file": "src/screens/LiftProgressScreen.js",
+        "line": 475
+      },
+      {
+        "target": "ExerciseDetail",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/WorkoutHistoryScreen.js",
+        "line": 522
+      },
+      {
+        "target": "ExerciseDetail",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1061
+      }
+    ],
+    "SettingsProfile": [
+      {
+        "target": "SettingsProfile",
+        "kind": "navigate",
+        "file": "src/screens/AthleteProfileScreen.js",
+        "line": 602
+      },
+      {
+        "target": "SettingsProfile",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 58
+      }
+    ],
+    "SettingsData": [
+      {
+        "target": "SettingsData",
+        "kind": "navigate",
+        "file": "src/screens/AthleteProfileScreen.js",
+        "line": 610
+      },
+      {
+        "target": "SettingsData",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 142
+      }
+    ],
+    "Settings": [
+      {
+        "target": "Settings",
+        "kind": "navigate",
+        "file": "src/screens/AthleteProfileScreen.js",
+        "line": 618
+      },
+      {
+        "target": "Settings",
+        "kind": "navigate",
+        "file": "src/screens/YouScreen.js",
+        "line": 388
+      }
+    ],
+    "Plans": [
+      {
+        "target": "Plans",
+        "tab": "PlansTab",
+        "kind": "crossTab",
+        "file": "src/screens/BlockReflectionScreen.js",
+        "line": 240
+      },
+      {
+        "target": "Plans",
+        "tab": "PlansTab",
+        "kind": "crossTab",
+        "file": "src/screens/BlockReflectionScreen.js",
+        "line": 376
+      },
+      {
+        "target": "Plans",
+        "tab": "PlansTab",
+        "kind": "nested",
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 501
+      },
+      {
+        "target": "Plans",
+        "tab": "PlansTab",
+        "kind": "crossTab",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2062
+      },
+      {
+        "target": "Plans",
+        "tab": "PlansTab",
+        "kind": "crossTab",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2726
+      }
+    ],
+    "SettingsWorkout": [
+      {
+        "target": "SettingsWorkout",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/BodyMetricsScreen.js",
+        "line": 1171
+      },
+      {
+        "target": "SettingsWorkout",
+        "kind": "navigate",
+        "file": "src/screens/HowYouTrainScreen.js",
+        "line": 1447
+      },
+      {
+        "target": "SettingsWorkout",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 75
+      }
+    ],
+    "ShareCard": [
+      {
+        "target": "ShareCard",
+        "kind": "navigate",
+        "file": "src/screens/BodyMetricsScreen.js",
+        "line": 1276
+      },
+      {
+        "target": "ShareCard",
+        "kind": "navigate",
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 2707
+      },
+      {
+        "target": "ShareCard",
+        "kind": "navigate",
+        "file": "src/screens/LiftProgressScreen.js",
+        "line": 237
+      },
+      {
+        "target": "ShareCard",
+        "kind": "navigate",
+        "file": "src/screens/LiftProgressScreen.js",
+        "line": 277
+      },
+      {
+        "target": "ShareCard",
+        "kind": "navigate",
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1052
+      },
+      {
+        "target": "ShareCard",
+        "kind": "navigate",
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1142
+      },
+      {
+        "target": "ShareCard",
+        "kind": "navigate",
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1158
+      },
+      {
+        "target": "ShareCard",
+        "kind": "navigate",
+        "file": "src/screens/YearOfLiftsScreen.js",
+        "line": 690
+      }
+    ],
+    "NutritionTargets": [
+      {
+        "target": "NutritionTargets",
+        "kind": "navigate",
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 2811
+      },
+      {
+        "target": "NutritionTargets",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/DiaryScreen.js",
+        "line": 1523
+      },
+      {
+        "target": "NutritionTargets",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/FoodInsightsScreen.js",
+        "line": 127
+      },
+      {
+        "target": "NutritionTargets",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/FoodSearchScreen.js",
+        "line": 836
+      },
+      {
+        "target": "NutritionTargets",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2104
+      },
+      {
+        "target": "NutritionTargets",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/MealPlanScreen.js",
+        "line": 430
+      },
+      {
+        "target": "NutritionTargets",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 81
+      },
+      {
+        "target": "NutritionTargets",
+        "kind": "navigate",
+        "file": "src/screens/WeeklyCheckInScreen.js",
+        "line": 1237
+      },
+      {
+        "target": "NutritionTargets",
+        "kind": "navigate",
+        "file": "src/screens/YouScreen.js",
+        "line": 580
+      }
+    ],
+    "MealPlan": [
+      {
+        "target": "MealPlan",
+        "tab": "DiaryTab",
+        "kind": "nested",
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 2815
+      },
+      {
+        "target": "MealPlan",
+        "tab": "DiaryTab",
+        "kind": "nested",
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 3097
+      },
+      {
+        "target": "MealPlan",
+        "kind": "navigate",
+        "file": "src/screens/DiaryScreen.js",
+        "line": 1644
+      },
+      {
+        "target": "MealPlan",
+        "kind": "navigate",
+        "file": "src/screens/DiaryScreen.js",
+        "line": 1783
+      }
+    ],
+    "DiaryTab": [
+      {
+        "target": "DiaryTab",
+        "kind": "navigate",
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 2815
+      },
+      {
+        "target": "DiaryTab",
+        "kind": "navigate",
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 3097
+      }
+    ],
+    "Methodology": [
+      {
+        "target": "Methodology",
+        "kind": "navigate",
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 3155
+      },
+      {
+        "target": "Methodology",
+        "kind": "navigate",
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 3240
+      },
+      {
+        "target": "Methodology",
+        "kind": "navigate",
+        "file": "src/screens/ProSetupCompleteScreen.js",
+        "line": 591
+      }
+    ],
+    "CoachHeldHistory": [
+      {
+        "target": "CoachHeldHistory",
+        "kind": "navigate",
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 3239
+      },
+      {
+        "target": "CoachHeldHistory",
+        "kind": "navigate",
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 3300
+      }
+    ],
+    "NotificationSettings": [
+      {
+        "target": "NotificationSettings",
+        "kind": "navigate",
+        "file": "src/screens/CoachingRemindersScreen.js",
+        "line": 449
+      },
+      {
+        "target": "NotificationSettings",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/DiaryScreen.js",
+        "line": 1603
+      },
+      {
+        "target": "NotificationSettings",
+        "kind": "navigate",
+        "file": "src/screens/ProSetupCompleteScreen.js",
+        "line": 278
+      },
+      {
+        "target": "NotificationSettings",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 104
+      }
+    ],
+    "MesocycleBuilder": [
+      {
+        "target": "MesocycleBuilder",
+        "tab": "PlansTab",
+        "kind": "crossTab",
+        "file": "src/screens/ConsistencyScreen.js",
+        "line": 145
+      },
+      {
+        "target": "MesocycleBuilder",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1681
+      }
+    ],
+    "PlanLibrary": [
+      {
+        "target": "PlanLibrary",
+        "tab": "PlansTab",
+        "kind": "crossTab",
+        "file": "src/screens/ConsistencyScreen.js",
+        "line": 146
+      },
+      {
+        "target": "PlanLibrary",
+        "tab": "PlansTab",
+        "kind": "crossTab",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2435
+      },
+      {
+        "target": "PlanLibrary",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1358
+      }
+    ],
+    "ScanBarcode": [
+      {
+        "target": "ScanBarcode",
+        "kind": "navigate",
+        "file": "src/screens/DiaryScreen.js",
+        "line": 1038
+      },
+      {
+        "target": "ScanBarcode",
+        "kind": "navigate",
+        "file": "src/screens/DiaryScreen.js",
+        "line": 1943
+      },
+      {
+        "target": "ScanBarcode",
+        "kind": "navigate",
+        "file": "src/screens/FoodSearchScreen.js",
+        "line": 745
+      }
+    ],
+    "CoachOutput": [
+      {
+        "target": "CoachOutput",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/DiaryScreen.js",
+        "line": 1487
+      },
+      {
+        "target": "CoachOutput",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2071
+      },
+      {
+        "target": "CoachOutput",
+        "kind": "navigate",
+        "file": "src/screens/WeeklyCheckInScreen.js",
+        "line": 995
+      },
+      {
+        "target": "CoachOutput",
+        "kind": "navigate",
+        "file": "src/screens/WeeklyCheckInScreen.js",
+        "line": 1631
+      },
+      {
+        "target": "CoachOutput",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1578
+      },
+      {
+        "target": "CoachOutput",
+        "kind": "navigate",
+        "file": "src/screens/YouScreen.js",
+        "line": 481
+      },
+      {
+        "target": "CoachOutput",
+        "kind": "navigate",
+        "file": "src/screens/YouScreen.js",
+        "line": 553
+      }
+    ],
+    "SettingsPrivacy": [
+      {
+        "target": "SettingsPrivacy",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/DiaryScreen.js",
+        "line": 1559
+      },
+      {
+        "target": "SettingsPrivacy",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 148
+      }
+    ],
+    "FoodInsights": [
+      {
+        "target": "FoodInsights",
+        "kind": "navigate",
+        "file": "src/screens/DiaryScreen.js",
+        "line": 1798
+      },
+      {
+        "target": "FoodInsights",
+        "kind": "navigate",
+        "file": "src/screens/DiaryScreen.js",
+        "line": 2079
+      }
+    ],
+    "AddCustomFood": [
+      {
+        "target": "AddCustomFood",
+        "kind": "replace",
+        "file": "src/screens/FoodSearchScreen.js",
+        "line": 669
+      },
+      {
+        "target": "AddCustomFood",
+        "kind": "navigate",
+        "file": "src/screens/FoodSearchScreen.js",
+        "line": 672
+      },
+      {
+        "target": "AddCustomFood",
+        "kind": "navigate",
+        "file": "src/screens/FoodSearchScreen.js",
+        "line": 789
+      },
+      {
+        "target": "AddCustomFood",
+        "kind": "replace",
+        "file": "src/screens/ScanBarcodeScreen.js",
+        "line": 137
+      },
+      {
+        "target": "AddCustomFood",
+        "kind": "replace",
+        "file": "src/screens/ScanLabelScreen.js",
+        "line": 202
+      },
+      {
+        "target": "AddCustomFood",
+        "kind": "replace",
+        "file": "src/screens/ScanLabelScreen.js",
+        "line": 217
+      },
+      {
+        "target": "AddCustomFood",
+        "kind": "replace",
+        "file": "src/screens/ScanLabelScreen.js",
+        "line": 229
+      },
+      {
+        "target": "AddCustomFood",
+        "kind": "replace",
+        "file": "src/screens/ScanLabelScreen.js",
+        "line": 253
+      }
+    ],
+    "MyMeals": [
+      {
+        "target": "MyMeals",
+        "kind": "navigate",
+        "file": "src/screens/FoodSearchScreen.js",
+        "line": 747
+      },
+      {
+        "target": "MyMeals",
+        "kind": "navigate",
+        "file": "src/screens/FoodSearchScreen.js",
+        "line": 767
+      }
+    ],
+    "MyRecipes": [
+      {
+        "target": "MyRecipes",
+        "kind": "navigate",
+        "file": "src/screens/FoodSearchScreen.js",
+        "line": 748
+      }
+    ],
+    "You": [
+      {
+        "target": "You",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2053
+      }
+    ],
+    "WeeklyCheckIn": [
+      {
+        "target": "WeeklyCheckIn",
+        "tab": "ProfileTab",
+        "kind": "nested",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2082
+      },
+      {
+        "target": "WeeklyCheckIn",
+        "kind": "navigate",
+        "file": "src/screens/YouScreen.js",
+        "line": 541
+      }
+    ],
+    "CoachReview": [
+      {
+        "target": "CoachReview",
+        "kind": "navigate",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2094
+      }
+    ],
+    "HowYouTrainAdd": [
+      {
+        "target": "HowYouTrainAdd",
+        "kind": "navigate",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2248
+      },
+      {
+        "target": "HowYouTrainAdd",
+        "kind": "navigate",
+        "file": "src/screens/HowYouTrainScreen.js",
+        "line": 264
+      },
+      {
+        "target": "HowYouTrainAdd",
+        "kind": "navigate",
+        "file": "src/screens/HowYouTrainScreen.js",
+        "line": 1273
+      },
+      {
+        "target": "HowYouTrainAdd",
+        "kind": "navigate",
+        "file": "src/screens/HowYouTrainScreen.js",
+        "line": 1519
+      },
+      {
+        "target": "HowYouTrainAdd",
+        "kind": "navigate",
+        "file": "src/screens/HowYouTrainScreen.js",
+        "line": 1570
+      }
+    ],
+    "Analytics": [
+      {
+        "target": "Analytics",
+        "tab": "ProgressTab",
+        "kind": "crossTab",
+        "file": "src/screens/HomeScreen.js",
+        "line": 2487
+      }
+    ],
+    "TrainingConsiderations": [
+      {
+        "target": "TrainingConsiderations",
+        "kind": "navigate",
+        "file": "src/screens/HowYouTrainScreen.js",
+        "line": 1431
+      }
+    ],
+    "AvoidedMovements": [
+      {
+        "target": "AvoidedMovements",
+        "kind": "navigate",
+        "file": "src/screens/HowYouTrainScreen.js",
+        "line": 1462
+      },
+      {
+        "target": "AvoidedMovements",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1700
+      }
+    ],
+    "Diary": [
+      {
+        "target": "Diary",
+        "kind": "navigate",
+        "file": "src/screens/MealPlanScreen.js",
+        "line": 495
+      },
+      {
+        "target": "Diary",
+        "kind": "navigate",
+        "file": "src/screens/MealPlanScreen.js",
+        "line": 555
+      }
+    ],
+    "BlockReflection": [
+      {
+        "target": "BlockReflection",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/MesocycleBuilderScreen.js",
+        "line": 268
+      },
+      {
+        "target": "BlockReflection",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/MesocycleBuilderScreen.js",
+        "line": 336
+      },
+      {
+        "target": "BlockReflection",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1514
+      }
+    ],
+    "RecipeBuilder": [
+      {
+        "target": "RecipeBuilder",
+        "kind": "navigate",
+        "file": "src/screens/MyRecipesScreen.js",
+        "line": 142
+      },
+      {
+        "target": "RecipeBuilder",
+        "kind": "navigate",
+        "file": "src/screens/MyRecipesScreen.js",
+        "line": 146
+      }
+    ],
+    "CoachingReminders": [
+      {
+        "target": "CoachingReminders",
+        "kind": "navigate",
+        "file": "src/screens/NotificationSettingsScreen.js",
+        "line": 586
+      },
+      {
+        "target": "CoachingReminders",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 110
+      },
+      {
+        "target": "CoachingReminders",
+        "kind": "navigate",
+        "file": "src/screens/WeeklyCheckInScreen.js",
+        "line": 1589
+      },
+      {
+        "target": "CoachingReminders",
+        "kind": "navigate",
+        "file": "src/screens/YouScreen.js",
+        "line": 586
+      }
+    ],
+    "NutritionEducation": [
+      {
+        "target": "NutritionEducation",
+        "kind": "navigate",
+        "file": "src/screens/NutritionTargetsScreen.js",
+        "line": 798
+      },
+      {
+        "target": "NutritionEducation",
+        "kind": "navigate",
+        "file": "src/screens/ProSetupCompleteScreen.js",
+        "line": 461
+      }
+    ],
+    "ManualBuilder": [
+      {
+        "target": "ManualBuilder",
+        "kind": "navigate",
+        "file": "src/screens/PlanDetailScreen.js",
+        "line": 373
+      }
+    ],
+    "RoutineDetail": [
+      {
+        "target": "RoutineDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlanDetailScreen.js",
+        "line": 629
+      },
+      {
+        "target": "RoutineDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1078
+      }
+    ],
+    "PlanDetail": [
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlanLibraryScreen.js",
+        "line": 789
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlanLibraryScreen.js",
+        "line": 858
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlanLibraryScreen.js",
+        "line": 960
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1015
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1061
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1323
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1843
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1869
+      },
+      {
+        "target": "PlanDetail",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1918
+      }
+    ],
+    "Login": [
+      {
+        "target": "Login",
+        "kind": "navigate",
+        "file": "src/screens/PlanPreviewScreen.js",
+        "line": 29
+      }
+    ],
+    "PlanUpdate": [
+      {
+        "target": "PlanUpdate",
+        "kind": "navigate",
+        "file": "src/screens/PlansScreen.js",
+        "line": 1589
+      }
+    ],
+    "GoalChangeSummary": [
+      {
+        "target": "GoalChangeSummary",
+        "kind": "replace",
+        "file": "src/screens/ProGoalSetupScreen.js",
+        "line": 531
+      }
+    ],
+    "ProSetupComplete": [
+      {
+        "target": "ProSetupComplete",
+        "kind": "replace",
+        "file": "src/screens/ProOnboardingScreen.js",
+        "line": 1833
+      }
+    ],
+    "SubscriptionPolicy": [
+      {
+        "target": "SubscriptionPolicy",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 631
+      }
+    ],
+    "PlanPreview": [
+      {
+        "target": "PlanPreview",
+        "kind": "navigate",
+        "file": "src/screens/QuizScreen.js",
+        "line": 68
+      }
+    ],
+    "ScanLabel": [
+      {
+        "target": "ScanLabel",
+        "kind": "replace",
+        "file": "src/screens/ScanBarcodeScreen.js",
+        "line": 147
+      },
+      {
+        "target": "ScanLabel",
+        "kind": "replace",
+        "file": "src/screens/ScanBarcodeScreen.js",
+        "line": 191
+      }
+    ],
+    "SettingsFaq": [
+      {
+        "target": "SettingsFaq",
+        "kind": "navigate",
+        "file": "src/screens/SettingsAboutScreen.js",
+        "line": 48
+      }
+    ],
+    "Credits": [
+      {
+        "target": "Credits",
+        "kind": "navigate",
+        "file": "src/screens/SettingsAboutScreen.js",
+        "line": 85
+      }
+    ],
+    "DebugLog": [
+      {
+        "target": "DebugLog",
+        "kind": "navigate",
+        "file": "src/screens/SettingsAboutScreen.js",
+        "line": 110
+      },
+      {
+        "target": "DebugLog",
+        "kind": "navigate",
+        "file": "src/screens/SettingsAboutScreen.js",
+        "line": 139
+      }
+    ],
+    "Import": [
+      {
+        "target": "Import",
+        "kind": "navigate",
+        "file": "src/screens/SettingsDataScreen.js",
+        "line": 371
+      }
+    ],
+    "Snapshots": [
+      {
+        "target": "Snapshots",
+        "kind": "navigate",
+        "file": "src/screens/SettingsDataScreen.js",
+        "line": 389
+      }
+    ],
+    "SettingsAccount": [
+      {
+        "target": "SettingsAccount",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 52
+      }
+    ],
+    "SettingsCoaching": [
+      {
+        "target": "SettingsCoaching",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 64
+      }
+    ],
+    "SettingsDietary": [
+      {
+        "target": "SettingsDietary",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 91
+      }
+    ],
+    "SettingsDisplay": [
+      {
+        "target": "SettingsDisplay",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 116
+      }
+    ],
+    "SettingsHealth": [
+      {
+        "target": "SettingsHealth",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 135
+      }
+    ],
+    "SettingsAbout": [
+      {
+        "target": "SettingsAbout",
+        "kind": "navigate",
+        "file": "src/screens/SettingsScreen.js",
+        "line": 154
+      }
+    ],
+    "QuizTraining": [
+      {
+        "target": "QuizTraining",
+        "kind": "navigate",
+        "file": "src/screens/WelcomeScreen.js",
+        "line": 75
+      }
+    ],
+    "AthleteProfile": [
+      {
+        "target": "AthleteProfile",
+        "kind": "navigate",
+        "file": "src/screens/YouScreen.js",
+        "line": 436
+      }
+    ],
+    "WeeklyStory": [
+      {
+        "target": "WeeklyStory",
+        "kind": "navigate",
+        "file": "src/screens/YouScreen.js",
+        "line": 560
+      }
+    ],
+    "ProGoalSetup": [
+      {
+        "target": "ProGoalSetup",
+        "kind": "navigate",
+        "file": "src/screens/YouScreen.js",
+        "line": 574
+      }
+    ],
+    "GoalLockConsent": [
+      {
+        "target": "GoalLockConsent",
+        "kind": "navigate",
+        "file": "src/screens/YouScreen.js",
+        "line": 634
+      }
+    ],
+    "WellbeingCheck": [
+      {
+        "target": "WellbeingCheck",
+        "kind": "navigate",
+        "file": "src/screens/YouScreen.js",
+        "line": 642
+      }
+    ]
+  },
+  "orphans": [
+    "MealNames",
+    "ProgressTab",
+    "Welcome",
+    "Article9Consent",
+    "ProOnboarding"
+  ],
+  "deadTargets": {
+    "Subscription": [
+      {
+        "target": "Subscription",
+        "tab": "ProfileTab",
+        "kind": "nested",
+        "file": "src/components/PostLapseSheet.js",
+        "line": 72
+      }
+    ],
+    "ProUpgrade": [
+      {
+        "target": "ProUpgrade",
+        "kind": "navigate",
+        "file": "src/components/ProGate.js",
+        "line": 85
+      },
+      {
+        "target": "ProUpgrade",
+        "kind": "navigate",
+        "file": "src/components/ProGate.js",
+        "line": 229
+      },
+      {
+        "target": "ProUpgrade",
+        "kind": "navigate",
+        "file": "src/components/ProGate.js",
+        "line": 239
+      }
+    ],
+    "SubscriptionPolicy": [
+      {
+        "target": "SubscriptionPolicy",
+        "tab": "ProfileTab",
+        "kind": "crossTab",
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 631
+      }
+    ]
+  },
+  "unregisteredScreenFiles": [
+    "CascadeGateScreen.js",
+    "ProUpgradeScreen.js",
+    "SubscriptionPolicyScreen.js",
+    "SubscriptionScreen.js",
+    "paywallExcerpts.js"
+  ],
+  "dynamicTargets": [
+    {
+      "file": "src/components/VolyumeTabBar.js",
+      "line": 155,
+      "text": "navigation.navigate(route.name, route.params);"
+    },
+    {
+      "file": "src/screens/DiaryScreen.js",
+      "line": 1052,
+      "text": "navigation.navigate(routeName, { mealSlot, entryDate: selectedDate });"
+    },
+    {
+      "file": "src/screens/FoodSearchScreen.js",
+      "line": 538,
+      "text": "navigation.navigate(returnTo, {"
+    },
+    {
+      "file": "src/screens/PlansScreen.js",
+      "line": 1732,
+      "text": "onPress={() => navigation.navigate(card.screen)}"
+    }
+  ]
+}

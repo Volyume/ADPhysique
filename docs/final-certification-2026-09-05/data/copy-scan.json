@@ -1,0 +1,1468 @@
+{
+  "generatedAt": "2026-09-05T15:57:53.767Z",
+  "scope": {
+    "dirs": [
+      "src/screens",
+      "src/components",
+      "src/lib/food",
+      "src/lib/notifications",
+      "src/lib/capability",
+      "src/lib/coachOutput",
+      "src/lib/onboarding",
+      "src/lib/partners",
+      "src/lib/shareCard",
+      "src/lib/progress",
+      "src/lib/widgets"
+    ],
+    "files": [
+      "src/lib/weeklyCoach.js",
+      "src/lib/coachApply.js",
+      "src/lib/authErrorCopy.js",
+      "src/lib/volumeInsightCopy.js",
+      "src/lib/coachGlossary.js",
+      "src/lib/coachStory.js",
+      "src/lib/weeklyStory.js",
+      "src/lib/coachResponse.js",
+      "src/lib/coachRegister.js",
+      "src/lib/coachLedger.js",
+      "src/lib/coachReport.js",
+      "src/lib/coachDecline.js",
+      "src/lib/coachIntervention.js",
+      "src/lib/coachPrecedence.js",
+      "src/lib/coachContext.js",
+      "src/lib/coachOutcome.js",
+      "src/lib/coachDecision.js",
+      "src/lib/coachApplySafety.js",
+      "src/lib/coachApplyView.js",
+      "src/lib/coachOutputZones.js",
+      "src/lib/blockExplain.js",
+      "src/lib/blockAdvisor.js",
+      "src/lib/blockReview.js",
+      "src/lib/blockProgression.js",
+      "src/lib/planRationale.js",
+      "src/lib/planDisplay.js",
+      "src/lib/planFit.js",
+      "src/lib/planSwitch.js",
+      "src/lib/planDiff.js",
+      "src/lib/planAutoGen.js",
+      "src/lib/whyThisTemplates.js",
+      "src/lib/homeCoachBrief.js",
+      "src/lib/syncStatusLabel.js",
+      "src/lib/coachingGoals.js",
+      "src/lib/progressCaptureGuide.js",
+      "src/lib/progressScanAnalysis.js",
+      "src/lib/progressScanResultsContract.js",
+      "src/lib/progressScanCoachResolver.js",
+      "src/lib/progressScanCheckInEvidence.js",
+      "src/lib/progressScanVision.js",
+      "src/lib/progressScanTrendViewModel.js",
+      "src/lib/progressPhotosController.js",
+      "src/lib/progressPhotoTimeline.js",
+      "src/lib/mesocycle.js",
+      "src/lib/recoveryState.js",
+      "src/lib/profileFreshness.js",
+      "src/lib/milestones.js",
+      "src/lib/contestCountdown.js",
+      "src/lib/readinessSummary.js",
+      "src/lib/health.js",
+      "src/lib/femaleNutritionAwareness.js",
+      "src/lib/differentialPaywall.js",
+      "src/lib/weightTrend.js",
+      "src/lib/nutritionEngine.js",
+      "src/lib/activationNudge.js",
+      "src/lib/recompReframe.js",
+      "src/lib/reEntryCheck.js",
+      "src/lib/reEntryEaseState.js",
+      "src/lib/nextBlockPreview.js",
+      "src/lib/interBlock.js",
+      "src/lib/workoutRecordLine.js",
+      "src/lib/insightsEngine.js",
+      "src/lib/plateauSurfacing.js",
+      "src/lib/tonnageMilestone.js",
+      "src/lib/warmupRamp.js",
+      "src/lib/restSuggest.js",
+      "src/lib/formTips.js",
+      "src/lib/strengthStandards.js",
+      "src/lib/algorithms.js",
+      "src/lib/storeName.js",
+      "src/lib/storeReview.js",
+      "src/lib/trainingRecency.js",
+      "src/lib/liftProgress.js",
+      "src/lib/streakState.js",
+      "src/lib/streak.js",
+      "src/lib/wellbeing.js",
+      "src/lib/edPatternDetector.js",
+      "src/lib/workoutHelpers.js",
+      "src/lib/trialActivation.js",
+      "src/lib/sessionAdjustments.js",
+      "src/lib/bodyMetricValidate.js",
+      "src/lib/biometricLock.js",
+      "src/lib/division/profile.js",
+      "src/lib/exercise/adaptedSetup.js"
+    ],
+    "fileCount": 405,
+    "dormantFileCount": 21,
+    "dormantBucket": [
+      "src/screens/ProUpgradeScreen.js",
+      "src/screens/CascadeGateScreen.js",
+      "src/screens/SubscriptionScreen.js",
+      "src/screens/SubscriptionPolicyScreen.js",
+      "src/screens/paywallExcerpts.js",
+      "src/components/ProGate.js",
+      "src/components/CancelReasonSheet.js",
+      "src/components/TierComparisonStrip.js",
+      "src/components/PostLapseSheet.js",
+      "src/components/food/TodaysPlateTeaser.js",
+      "src/lib/payments/**"
+    ]
+  },
+  "counts": {
+    "usSpelling": 5,
+    "aiTells": 14,
+    "commercialResidue": 8,
+    "placeholders": 0,
+    "internalTermLeaks": 2,
+    "unclearCounts": 16,
+    "duplicateLabels": 5,
+    "parseErrors": 0
+  },
+  "dormantCounts": {
+    "usSpelling": 0,
+    "aiTells": 2,
+    "commercialResidue": 92,
+    "placeholders": 0,
+    "internalTermLeaks": 0,
+    "unclearCounts": 0,
+    "duplicateLabels": 1,
+    "parseErrors": 0
+  },
+  "findings": {
+    "usSpelling": [
+      {
+        "file": "src/lib/capability/directory/conditions.js",
+        "line": 323,
+        "rule": "tire (noun)",
+        "note": "UK: tyre(s) -- \"tired\"/\"tiring\" (the verb) are unaffected by this word-boundary regex",
+        "value": "Plain wording and no hurry matter when concentration tires; nothing in logging runs against a clock.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/capability/directory/injuries.js",
+        "line": 35,
+        "rule": "toward",
+        "note": "UK usually: towards",
+        "value": "When you end a temporary change, movements come back conservatively and volume rebuilds gradually toward your own plan. No timetable is assumed.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/coachStory.js",
+        "line": 217,
+        "rule": "toward",
+        "note": "UK usually: towards",
+        "value": "Your temporary change has ended, so the sets it reduced build back toward your plan, one week at a time.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1696,
+        "rule": "program(s) for training programme",
+        "note": "LEAD-JUDGED: \"program\" is correct in both dialects for software; only the training-noun sense wants \"programme\" in UK copy",
+        "value": "These ranges come from what your plan programs each week, inside the range your experience, recovery, phase and age support. You can also set them by hand with Edit volume targets on the Volume screen, your edits alwa...",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "line": 1699,
+        "rule": "program(s) for training programme",
+        "note": "LEAD-JUDGED: \"program\" is correct in both dialects for software; only the training-noun sense wants \"programme\" in UK copy",
+        "value": "These ranges are matched to your training experience, recovery, phase and age. Once a plan programs a muscle they follow what it aims at, and you can set them by hand with Edit volume targets on the Volume screen.",
+        "kind": "string",
+        "dormant": false
+      }
+    ],
+    "aiTells": [
+      {
+        "file": "src/components/BiometricLockScreen.js",
+        "line": 37,
+        "rule": "unlock",
+        "note": "also listed under commercial residue -- lead to judge which framing applies per hit",
+        "value": "Unlock with Face ID, your fingerprint, or your device passcode to continue.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/components/BiometricLockScreen.js",
+        "line": 43,
+        "rule": "unlock",
+        "note": "also listed under commercial residue -- lead to judge which framing applies per hit",
+        "value": "Unlock Volyume",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/components/BodyDiagramHeatmap.js",
+        "line": 381,
+        "rule": "elevate",
+        "note": "report, lead judges",
+        "value": "Triangle up means elevated for ‹EXPR›, triangle down means capped",
+        "kind": "template",
+        "dormant": false
+      },
+      {
+        "file": "src/components/ProgressSections.js",
+        "line": 290,
+        "rule": "elevate",
+        "note": "report, lead judges",
+        "value": "Load is elevated (above 1.3). Monitor how you feel.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/biometricLock.js",
+        "line": 134,
+        "rule": "unlock",
+        "note": "also listed under commercial residue -- lead to judge which framing applies per hit",
+        "value": "Unlock Volyume",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/capability/directory/conditions.js",
+        "line": 564,
+        "rule": "tailored",
+        "note": "report, lead judges",
+        "value": "Which joints, how much, and on which days all vary. UK guidance puts tailored exercise at the centre for osteoarthritis, and the tailoring is exactly what your answers here do.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/capability/directory/conditions.js",
+        "line": 583,
+        "rule": "tailored",
+        "note": "report, lead judges",
+        "value": "UK guidance recommends tailored strength and fitness exercise as core care for osteoarthritis.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/coachGlossary.js",
+        "line": 60,
+        "rule": "tailored",
+        "note": "report, lead judges",
+        "value": "The category you'd compete in (e.g. bodybuilding, classic physique, bikini); your plan is tailored to what that division is judged on.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/exercise/adaptedSetup.js",
+        "line": 123,
+        "rule": "elevate",
+        "note": "report, lead judges",
+        "value": "A smaller shoulder elevation shortens the range while the hips still do the work.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/mesocycle.js",
+        "line": 214,
+        "rule": "personalized/personalised",
+        "note": "report, lead judges",
+        "value": "Keep logging sessions and we'll start making personalised adjustments.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/nutritionEngine.js",
+        "line": 101,
+        "rule": "personalized/personalised",
+        "note": "report, lead judges",
+        "value": "Override with a specific g/kg rate. Use if your coach or dietitian has given you a personalised target.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/progressScanResultsContract.js",
+        "line": 259,
+        "rule": "unlock",
+        "note": "also listed under commercial residue -- lead to judge which framing applies per hit",
+        "value": "Your starting set is saved. Take your next set the same way, at least a week from now, to unlock comparison.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/screens/NutritionTargetsScreen.js",
+        "line": 776,
+        "rule": "personalized/personalised",
+        "note": "report, lead judges",
+        "value": "Calculate your personalised daily calorie and protein targets.",
+        "kind": "jsx-text",
+        "dormant": false
+      },
+      {
+        "file": "src/screens/PrivacyPolicyScreen.js",
+        "line": 24,
+        "rule": "personalized/personalised",
+        "note": "report, lead judges",
+        "value": "Volyume collects information you provide directly: your name, email address, profile details, body measurements, workout logs, food diary entries, check-ins, training preferences, and the settings you choose. This dat...",
+        "kind": "jsx-text",
+        "dormant": false
+      }
+    ],
+    "commercialResidue": [
+      {
+        "file": "src/lib/differentialPaywall.js",
+        "line": 60,
+        "rule": "Pro",
+        "note": null,
+        "value": "Your weight is moving faster than your logged calories explain. Pro tracks the calories your body actually uses.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/differentialPaywall.js",
+        "line": 76,
+        "rule": "Pro",
+        "note": null,
+        "value": "Your weight is moving faster than your logged calories explain. Pro tracks the calories your body actually uses.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/notifications/scheduler.js",
+        "line": 726,
+        "rule": "Pro",
+        "note": null,
+        "value": "Your free Pro trial ends in two days",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/notifications/scheduler.js",
+        "line": 726,
+        "rule": "trial",
+        "note": null,
+        "value": "Your free Pro trial ends in two days",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/notifications/scheduler.js",
+        "line": 730,
+        "rule": "free plan",
+        "value": "You're back on the free plan",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/notifications/scheduler.js",
+        "line": 731,
+        "rule": "Pro",
+        "note": null,
+        "value": "Everything you've logged is safe and waiting. You can go Pro again any time.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/notifications/scheduler.js",
+        "line": 731,
+        "rule": "go Pro",
+        "value": "Everything you've logged is safe and waiting. You can go Pro again any time.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/screens/CoachOutputScreen.js",
+        "line": 543,
+        "rule": "trial",
+        "note": null,
+        "value": "Based on the MATADOR trial (2017). This is a suggestion, not a requirement.",
+        "kind": "jsx-text",
+        "dormant": false
+      }
+    ],
+    "placeholders": [],
+    "internalTermLeaks": [
+      {
+        "file": "src/screens/Article9ConsentScreen.js",
+        "line": 252,
+        "rule": "Supabase",
+        "note": null,
+        "value": "In Supabase in the EU region for cloud-backed account data, with row-level security so only you and the team supporting your account can see it",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/screens/PrivacyPolicyScreen.js",
+        "line": 42,
+        "rule": "Supabase",
+        "note": null,
+        "value": "Your data is stored locally on your device and, if you create an account, synchronised to our secure cloud database in Supabase's EU region. All data in transit is encrypted via HTTPS. Auth tokens are stored in your d...",
+        "kind": "jsx-text",
+        "dormant": false
+      }
+    ],
+    "unclearCounts": [
+      {
+        "file": "src/lib/capability/directory/conditions.js",
+        "line": 631,
+        "rule": "things",
+        "note": null,
+        "value": "Research strongly supports regular strength and fitness work in rheumatoid arthritis, shaped around how things are week to week.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/capability/directory/conditions.js",
+        "line": 952,
+        "rule": "things",
+        "note": null,
+        "value": "Preferred pace, support and communication differ; a supporter can help set things up once and the plan then repeats.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/capability/directory/injuries.js",
+        "line": 33,
+        "rule": "things",
+        "note": null,
+        "value": "If something serious has happened, or things are getting worse rather than better, a professional needs to see it. Volyume supports training around what you confirm, nothing more.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/capability/directory/injuries.js",
+        "line": 247,
+        "rule": "things",
+        "note": null,
+        "value": "Heavy pressing finishes through the triceps; some people trim it while things settle.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/capability/directory/injuries.js",
+        "line": 356,
+        "rule": "things",
+        "note": null,
+        "value": "There are things you can do yourself to ease it, but see a GP if it does not go away.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/capability/directory/injuries.js",
+        "line": 385,
+        "rule": "things",
+        "note": null,
+        "value": "There are things you can do to ease the pain.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/coachIntervention.js",
+        "line": 606,
+        "rule": "things",
+        "note": null,
+        "value": "Since we ‹EXPR›, things have moved into the range we were aiming for.",
+        "kind": "template",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/coachIntervention.js",
+        "line": 608,
+        "rule": "things",
+        "note": null,
+        "value": "Since we ‹EXPR›, things have not moved much yet.",
+        "kind": "template",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/coachIntervention.js",
+        "line": 610,
+        "rule": "things",
+        "note": null,
+        "value": "Since we ‹EXPR›, things have moved further from where we were aiming.",
+        "kind": "template",
+        "dormant": false
+      },
+      {
+        "file": "src/lib/progressScanCoachResolver.js",
+        "line": 81,
+        "rule": "things",
+        "note": null,
+        "value": "Your photos look steady. That supports holding things as they are.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/screens/CreditsScreen.js",
+        "line": 85,
+        "rule": "items",
+        "note": null,
+        "value": "North-American food data, hit only when both the bundled snapshot and Open Food Facts miss. Used for imported items and occasional UK gaps.",
+        "kind": "jsx-text",
+        "dormant": false
+      },
+      {
+        "file": "src/screens/HowYouTrainAddScreen.js",
+        "line": 538,
+        "rule": "things",
+        "note": null,
+        "value": "Getting things ready.",
+        "kind": "jsx-text",
+        "dormant": false
+      },
+      {
+        "file": "src/screens/HowYouTrainAddScreen.js",
+        "line": 642,
+        "rule": "things",
+        "note": null,
+        "value": "Only changes how Volyume words things. It never contacts anyone.",
+        "kind": "string",
+        "dormant": false
+      },
+      {
+        "file": "src/screens/NutritionTargetsScreen.js",
+        "line": 1490,
+        "rule": "things",
+        "note": null,
+        "value": "High protein does two things: it gives your muscles what they need to rebuild after training, and it signals your body to hold on to muscle even as the slight calorie gap burns fat. That combination is what separates ...",
+        "kind": "template",
+        "dormant": false
+      },
+      {
+        "file": "src/screens/PrivacyPolicyScreen.js",
+        "line": 85,
+        "rule": "things",
+        "note": null,
+        "value": "Volyume keeps first-party usage telemetry to see which features get used and where the app is slow: things like which screens open, when a sync runs, and whether a purchase flow completes. It is tied to a pseudonymous...",
+        "kind": "jsx-text",
+        "dormant": false
+      },
+      {
+        "file": "src/screens/SettingsDataScreen.js",
+        "line": 182,
+        "rule": "items",
+        "note": null,
+        "value": "Food library updated (‹EXPR› items).",
+        "kind": "template",
+        "dormant": false
+      }
+    ],
+    "duplicateLabels": [
+      {
+        "file": "src/components/TodayStrip.js",
+        "propName": "accessibilityLabel",
+        "value": "Log morning weight",
+        "lines": [
+          167,
+          213,
+          252
+        ]
+      },
+      {
+        "file": "src/screens/DiaryScreen.js",
+        "propName": "accessibilityLabel",
+        "value": "Open nutrition trends and export",
+        "lines": [
+          1799,
+          2081
+        ]
+      },
+      {
+        "file": "src/screens/MesocycleBuilderScreen.js",
+        "propName": "title",
+        "value": "View block summary",
+        "lines": [
+          263,
+          328
+        ]
+      },
+      {
+        "file": "src/screens/ScanBarcodeScreen.js",
+        "propName": "accessibilityLabel",
+        "value": "Enter barcode number",
+        "lines": [
+          385,
+          408
+        ]
+      },
+      {
+        "file": "src/screens/WorkoutSummaryScreen.js",
+        "propName": "accessibilityLabel",
+        "value": "Save this workout to reuse",
+        "lines": [
+          1969,
+          2047
+        ]
+      }
+    ],
+    "parseErrors": []
+  },
+  "dormantFindings": {
+    "usSpelling": [],
+    "aiTells": [
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 33,
+        "rule": "personalized/personalised",
+        "note": "report, lead judges",
+        "value": "Personalised calorie and protein targets, updated as your goals change",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 88,
+        "rule": "personalized/personalised",
+        "note": "report, lead judges",
+        "value": "Personalised calorie and protein targets, updated as your goals change.",
+        "kind": "jsx-text",
+        "dormant": true
+      }
+    ],
+    "commercialResidue": [
+      {
+        "file": "src/components/CancelReasonSheet.js",
+        "line": 119,
+        "rule": "subscription",
+        "note": null,
+        "value": "Your subscription settings may also let you pause instead of cancel.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/components/CancelReasonSheet.js",
+        "line": 139,
+        "rule": "subscription",
+        "note": null,
+        "value": "Keep my subscription",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/PostLapseSheet.js",
+        "line": 35,
+        "rule": "Pro",
+        "note": null,
+        "value": "Changed your mind? Pro is always one tap away in Subscription.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/PostLapseSheet.js",
+        "line": 35,
+        "rule": "subscription",
+        "note": null,
+        "value": "Changed your mind? Pro is always one tap away in Subscription.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/PostLapseSheet.js",
+        "line": 83,
+        "rule": "Pro",
+        "note": null,
+        "value": "Your Pro subscription has ended",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/PostLapseSheet.js",
+        "line": 83,
+        "rule": "subscription",
+        "note": null,
+        "value": "Your Pro subscription has ended",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/PostLapseSheet.js",
+        "line": 85,
+        "rule": "Pro",
+        "note": null,
+        "value": "Your Pro subscription has ended",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/components/PostLapseSheet.js",
+        "line": 85,
+        "rule": "subscription",
+        "note": null,
+        "value": "Your Pro subscription has ended",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 51,
+        "rule": "Pro",
+        "note": null,
+        "value": "Pro gives you weekly check-ins, nutrition targets, the food diary, and body metrics.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 99,
+        "rule": "Pro",
+        "note": null,
+        "value": "Upgrade to Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 99,
+        "rule": "upgrade",
+        "note": null,
+        "value": "Upgrade to Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 103,
+        "rule": "Pro",
+        "note": null,
+        "value": "Pro",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 124,
+        "rule": "Pro",
+        "note": null,
+        "value": "Upgrade to Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 124,
+        "rule": "upgrade",
+        "note": null,
+        "value": "Upgrade to Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 127,
+        "rule": "Pro",
+        "note": null,
+        "value": "Upgrade to Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 127,
+        "rule": "upgrade",
+        "note": null,
+        "value": "Upgrade to Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 191,
+        "rule": "Pro",
+        "note": null,
+        "value": "Pro restored",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 191,
+        "rule": "subscription",
+        "note": null,
+        "value": "Your subscription is active again.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 193,
+        "rule": "subscription",
+        "note": null,
+        "value": "We could not find an active subscription for this store account.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 216,
+        "rule": "Pro",
+        "note": null,
+        "value": "is part of Pro",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 232,
+        "rule": "Pro",
+        "note": null,
+        "value": "See the food diary in Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 243,
+        "rule": "Pro",
+        "note": null,
+        "value": "Upgrade to Pro",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/components/ProGate.js",
+        "line": 243,
+        "rule": "upgrade",
+        "note": null,
+        "value": "Upgrade to Pro",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/components/TierComparisonStrip.js",
+        "line": 89,
+        "rule": "Pro",
+        "note": null,
+        "value": "Pro",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/components/food/TodaysPlateTeaser.js",
+        "line": 47,
+        "rule": "Pro",
+        "note": null,
+        "value": "Example meal plan day. Pro builds this around your own targets.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/components/food/TodaysPlateTeaser.js",
+        "line": 48,
+        "rule": "Pro",
+        "note": null,
+        "value": "A day on Pro",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/components/food/TodaysPlateTeaser.js",
+        "line": 50,
+        "rule": "Pro",
+        "note": null,
+        "value": "Pro builds a day of real food to your own calories and macros, and lets you swap anything and log it in a tap. Here is what a day looks like.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/CascadeGateScreen.js",
+        "line": 98,
+        "rule": "Pro",
+        "note": null,
+        "value": "Go Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/CascadeGateScreen.js",
+        "line": 98,
+        "rule": "go Pro",
+        "value": "Go Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/CascadeGateScreen.js",
+        "line": 99,
+        "rule": "Pro",
+        "note": null,
+        "value": "Pro keeps the weekly coaching and the food log. Free keeps your data and safety checks, but some features stay view-only.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/CascadeGateScreen.js",
+        "line": 100,
+        "rule": "Pro",
+        "note": null,
+        "value": "Go Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/CascadeGateScreen.js",
+        "line": 100,
+        "rule": "go Pro",
+        "value": "Go Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/CascadeGateScreen.js",
+        "line": 112,
+        "rule": "Pro",
+        "note": null,
+        "value": "Your Pro trial is winding down",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/CascadeGateScreen.js",
+        "line": 112,
+        "rule": "trial",
+        "note": null,
+        "value": "Your Pro trial is winding down",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/CascadeGateScreen.js",
+        "line": 113,
+        "rule": "Pro",
+        "note": null,
+        "value": "Pro keeps the weekly coaching and the food log. Free keeps your data and safety checks, but some features become view-only.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/CascadeGateScreen.js",
+        "line": 114,
+        "rule": "Pro",
+        "note": null,
+        "value": "Stay on Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/CascadeGateScreen.js",
+        "line": 338,
+        "rule": "subscription",
+        "note": null,
+        "value": "Subscription",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/CascadeGateScreen.js",
+        "line": 349,
+        "rule": "trial",
+        "note": null,
+        "value": "During your trial",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 59,
+        "rule": "trial",
+        "note": null,
+        "value": "How does the 14-day trial work?",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 60,
+        "rule": "Pro",
+        "note": null,
+        "value": "No payment card needed. New accounts get full Pro free for 14 days (one trial per account), and if you decide not to subscribe it winds down gently and nothing you logged is lost.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 60,
+        "rule": "trial",
+        "note": null,
+        "value": "No payment card needed. New accounts get full Pro free for 14 days (one trial per account), and if you decide not to subscribe it winds down gently and nothing you logged is lost.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 60,
+        "rule": "subscribe",
+        "note": null,
+        "value": "No payment card needed. New accounts get full Pro free for 14 days (one trial per account), and if you decide not to subscribe it winds down gently and nothing you logged is lost.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 63,
+        "rule": "Pro",
+        "note": null,
+        "value": "I subscribed before. How do I get Pro back?",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 63,
+        "rule": "subscribe",
+        "note": null,
+        "value": "I subscribed before. How do I get Pro back?",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 64,
+        "rule": "Pro",
+        "note": null,
+        "value": "Tap Restore purchases on any Pro lock screen and we will check your subscription in ‹EXPR›. Restoring never charges you.",
+        "kind": "template",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 64,
+        "rule": "subscription",
+        "note": null,
+        "value": "Tap Restore purchases on any Pro lock screen and we will check your subscription in ‹EXPR›. Restoring never charges you.",
+        "kind": "template",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 173,
+        "rule": "subscription",
+        "note": null,
+        "value": "Subscription unavailable, try again later",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 261,
+        "rule": "trial",
+        "note": null,
+        "value": "Could not start your trial. Try again in a moment.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 288,
+        "rule": "Pro",
+        "note": null,
+        "value": "Finish your workout in progress first, then set up Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 328,
+        "rule": "Pro",
+        "note": null,
+        "value": "Pro restored",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 328,
+        "rule": "subscription",
+        "note": null,
+        "value": "Your subscription is active again.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 330,
+        "rule": "subscription",
+        "note": null,
+        "value": "We could not find an active subscription for this store account.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 425,
+        "rule": "Pro",
+        "note": null,
+        "value": "Finish your workout in progress first, then set up your Pro plan",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 441,
+        "rule": "Pro",
+        "note": null,
+        "value": "You're Pro.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 472,
+        "rule": "upgrade",
+        "note": null,
+        "value": "Upgrade",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 478,
+        "rule": "Pro",
+        "note": null,
+        "value": "Go Pro",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 478,
+        "rule": "go Pro",
+        "value": "Go Pro",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 479,
+        "rule": "Pro",
+        "note": null,
+        "value": "Free keeps your training log. Pro reads it like a coach and adjusts your plan as you go.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 526,
+        "rule": "Pro",
+        "note": null,
+        "value": "Your account is ready. Activate Pro to switch on the coaching features.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 531,
+        "rule": "subscribe",
+        "note": null,
+        "value": "Your account is ready. Subscribe to switch the coaching features on.",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 545,
+        "rule": "Pro",
+        "note": null,
+        "value": "Activate Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 546,
+        "rule": "trial",
+        "note": null,
+        "value": "Start your free trial",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 546,
+        "rule": "Pro",
+        "note": null,
+        "value": "Subscribe to Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/ProUpgradeScreen.js",
+        "line": 546,
+        "rule": "subscribe",
+        "note": null,
+        "value": "Subscribe to Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 32,
+        "rule": "Pro",
+        "note": null,
+        "value": "Free, Pro, and your data",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 35,
+        "rule": "Pro",
+        "note": null,
+        "value": "Here's what you get on Free, what Pro adds, and what happens to your data if you ever switch back.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 82,
+        "rule": "Pro",
+        "note": null,
+        "value": "What Pro adds",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 84,
+        "rule": "Pro",
+        "note": null,
+        "value": "Pro is the coach who writes back. Everything in Free stays; Pro adds a layer on top that adjusts your training each week based on how you're going.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 104,
+        "rule": "Pro",
+        "note": null,
+        "value": "If you switch from Pro back to Free",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 109,
+        "rule": "Pro",
+        "note": null,
+        "value": "You keep read access to everything you built on Pro.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 124,
+        "rule": "Pro",
+        "note": null,
+        "value": "Plans you built on Pro stay viewable; you can re-use them, but you won't get new coaching changes week to week.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 126,
+        "rule": "Pro",
+        "note": null,
+        "value": "Weekly check-ins and nutrition targets pause with the rest of coaching, and are there again if you come back to Pro.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 133,
+        "rule": "trial",
+        "note": null,
+        "value": "Your free trial",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 135,
+        "rule": "Pro",
+        "note": null,
+        "value": "New accounts get Pro free for 14 days. You get the full coaching features and can see if it's for you.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 138,
+        "rule": "Pro",
+        "note": null,
+        "value": "To keep Pro after that, subscribe in the app. Your store adds a further 7 days free, then it renews at the price shown at checkout until you cancel.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 138,
+        "rule": "subscribe",
+        "note": null,
+        "value": "To keep Pro after that, subscribe in the app. Your store adds a further 7 days free, then it renews at the price shown at checkout until you cancel.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 138,
+        "rule": "price",
+        "note": null,
+        "value": "To keep Pro after that, subscribe in the app. Your store adds a further 7 days free, then it renews at the price shown at checkout until you cancel.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 141,
+        "rule": "free tier",
+        "value": "The Free tier has no time limit: the plan library, your own training, and your progress charts stay free.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 142,
+        "rule": "Pro",
+        "note": null,
+        "value": "Anything you built on Pro stays yours and readable even if you move to Free; only new coaching changes pause.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 143,
+        "rule": "Pro",
+        "note": null,
+        "value": ". You keep Pro until the period you've paid for ends, then you drop to Free.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 154,
+        "rule": "Pro",
+        "note": null,
+        "value": "Use it if you're leaving the app for good. If you only want to stop paying for Pro, use Manage subscription in Settings instead: cancelling stops the next renewal, Pro stays until your current period ends, and your hi...",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 154,
+        "rule": "subscription",
+        "note": null,
+        "value": "Use it if you're leaving the app for good. If you only want to stop paying for Pro, use Manage subscription in Settings instead: cancelling stops the next renewal, Pro stays until your current period ends, and your hi...",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 159,
+        "rule": "paywall",
+        "note": null,
+        "value": "We won't quietly raise prices, change what's free, or hold your data behind a paywall. If something changes, you'll hear about it first.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionPolicyScreen.js",
+        "line": 159,
+        "rule": "price",
+        "note": null,
+        "value": "We won't quietly raise prices, change what's free, or hold your data behind a paywall. If something changes, you'll hear about it first.",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionScreen.js",
+        "line": 38,
+        "rule": "Pro",
+        "note": null,
+        "value": "Pro trial",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionScreen.js",
+        "line": 38,
+        "rule": "trial",
+        "note": null,
+        "value": "Pro trial",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionScreen.js",
+        "line": 110,
+        "rule": "subscription",
+        "note": null,
+        "value": "No active subscription on this account",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionScreen.js",
+        "line": 141,
+        "rule": "subscription",
+        "note": null,
+        "value": "Subscription",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionScreen.js",
+        "line": 171,
+        "rule": "price",
+        "note": null,
+        "value": "Price",
+        "kind": "jsx-text",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionScreen.js",
+        "line": 185,
+        "rule": "Pro",
+        "note": null,
+        "value": "Stay on Pro",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionScreen.js",
+        "line": 200,
+        "rule": "subscription",
+        "note": null,
+        "value": "Cancel subscription",
+        "kind": "string",
+        "dormant": true
+      },
+      {
+        "file": "src/screens/SubscriptionScreen.js",
+        "line": 209,
+        "rule": "subscription",
+        "note": null,
+        "value": ". To change your payment method or cancel, open subscription settings in",
+        "kind": "jsx-text",
+        "dormant": true
+      }
+    ],
+    "placeholders": [],
+    "internalTermLeaks": [],
+    "unclearCounts": [],
+    "duplicateLabels": [
+      {
+        "file": "src/components/ProGate.js",
+        "propName": "accessibilityLabel",
+        "value": "Upgrade to Pro",
+        "lines": [
+          99,
+          127
+        ]
+      }
+    ],
+    "parseErrors": []
+  }
+}
