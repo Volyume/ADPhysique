@@ -18,45 +18,27 @@
  */
 const { computePlanCompatibility } = require('../capability/planCompat');
 const { buildCapabilityResolveState } = require('../capability/resolve');
-const { deriveExerciseMetadata } = require('../exerciseMetadata');
-const { deriveDemandMetadata } = require('../capability/demands');
+const { CORPUS, corpusEntryToSeedRow } = require('../exerciseCorpus');
 
 const NOW = 1_750_000_000_000;
 const fs = require('fs');
 const path = require('path');
 
 // ── The real library, derived the same way the seed derives ─────────────
+// Re-anchored EL-14/EL-15 (exercise-library-expansion-2026-09-05):
+// corpusEntryToSeedRow is exactly the row seedExercises.js inserts
+// (07-CORPUS-FORMAT.md section 4, subregion and demand metadata already
+// merged in), so this runs against the same live library the real seed
+// produces.
 function realLibraryByName() {
-  const seedSrc = fs.readFileSync(path.resolve(__dirname, '../seedExercises.js'), 'utf8');
-  const start = seedSrc.indexOf('const RAW = [');
-  const body = seedSrc.slice(start, seedSrc.indexOf('\n];', start));
-  // Subregions ride SUBREGION_MAP at insert time; the harness attaches
-  // them too so FAMILY-rule audiences (gap-closure Phase E) resolve
-  // through the real movementFamily pass-through instead of silently
-  // matching nothing.
-  const mapStart = seedSrc.indexOf('const SUBREGION_MAP = {');
-  const mapBody = seedSrc.slice(mapStart, seedSrc.indexOf('\n};', mapStart));
-  const sub = new Map();
-  let sm;
-  const subRe = /'((?:[^'\\]|\\.)+)':\s*'([a-z_]+)'/g;
-  while ((sm = subRe.exec(mapBody)) !== null) sub.set(sm[1].replace(/\\'/g, "'"), sm[2]);
-  const out = new Map();
-  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
-    const base = {
-      name: m[1], primaryMuscle: m[2], equipment: m[4], movementPattern: m[5],
-      compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
-    };
-    out.set(m[1], {
-      id: m[1], ...base, subregion: sub.get(m[1]) ?? null,
-      ...deriveExerciseMetadata(base), ...deriveDemandMetadata(base),
-    });
-  }
-  return out;
+  return new Map(CORPUS.map((entry) => [entry.name, { id: entry.name, ...corpusEntryToSeedRow(entry) }]));
 }
 
-// ── The family plans + REQUIRED_EXERCISES, parsed from seedRoutines ─────
+// ── The family plans, parsed from seedRoutines ───────────────────────────
+// EL-15: REQUIRED_EXERCISES is gone - those 18 rows are now ordinary
+// CORPUS entries, seeded by seedExercises.js before seedRoutines.js runs,
+// so they already resolve through realLibraryByName() above and no
+// separate parse/merge pass is needed.
 function parseSeedRoutines() {
   const src = fs.readFileSync(path.resolve(__dirname, '../seedRoutines.js'), 'utf8');
   const plansStart = src.indexOf('const LIBRARY_PLANS = [');
@@ -75,25 +57,12 @@ function parseSeedRoutines() {
     const workoutCount = (seg.match(/name: 'Day /g) ?? []).length;
     plans.push({ ...indices[i], exercises: exNames, workoutCount });
   }
-  // Required exercises join the derived library so the compatibility
-  // proof COVERS them (final-review fix: they were silently filtered out,
-  // leaving the Seated Home band pulls unproven).
-  const requiredEntries = [...src.matchAll(/name: '((?:[^'\\]|\\.)*)',\s*primaryMuscle: '([a-z_]+)',\s*equipment: '([a-z_]+)',\s*movementPattern: '([a-z_]+)',\s*compoundIsolation: '([a-z_]+)'/g)]
-    .map((x) => ({ name: x[1], primaryMuscle: x[2], equipment: x[3], movementPattern: x[4], compoundIsolation: x[5] }));
-  return { plans, required: new Set(requiredEntries.map((e) => e.name)), requiredEntries };
+  return { plans };
 }
 
 const LIB = realLibraryByName();
-const { plans, required, requiredEntries } = parseSeedRoutines();
-// LIB plus the required exercises, derived the same way the seed loop
-// now derives them at insert.
-const LIB_ALL = new Map(LIB);
-for (const base of requiredEntries) {
-  LIB_ALL.set(base.name, {
-    id: base.name, ...base, subregion: null,
-    ...deriveExerciseMetadata(base), ...deriveDemandMetadata(base),
-  });
-}
+const { plans } = parseSeedRoutines();
+const LIB_ALL = LIB;
 
 const capRows = (rules) => buildCapabilityResolveState(
   rules.map((r, i) => ({
@@ -133,8 +102,14 @@ const FAMILY_PROFILES = {
 };
 
 // Seated Home Strength exists for home training from a chair: nothing in
-// it may need a gym station (GC-D8).
-const HOME_EQUIPMENT = new Set(['dumbbell', 'bodyweight']);
+// it may need a gym station (GC-D8). A resistance band is a no-gym-station
+// item too (the plan pairs Seated Band Row/Lat Pulldown with dumbbell work
+// by design). Pre-EL-14 the seed mislabelled every band row's raw
+// `equipment` as 'bodyweight' (deriveEquipmentCategory then name-sniffed it
+// back to 'band' for the equipment FILTER); the corpus now tags it 'band'
+// at the source (07-CORPUS-FORMAT.md), which is the more honest raw value,
+// so the home-equipment allowlist needs it explicitly.
+const HOME_EQUIPMENT = new Set(['dumbbell', 'bodyweight', 'band']);
 
 const FAMILY_NAMES = Object.keys(FAMILY_PROFILES);
 const familyPlans = plans.filter((p) => FAMILY_NAMES.includes(p.name));
@@ -151,7 +126,7 @@ test('every referenced exercise name resolves against the library', () => {
   const missing = [];
   for (const p of familyPlans) {
     for (const ex of p.exercises) {
-      if (!LIB.has(ex.name) && !required.has(ex.name)) missing.push({ plan: p.name, name: ex.name });
+      if (!LIB.has(ex.name)) missing.push({ plan: p.name, name: ex.name });
     }
   }
   expect(missing).toEqual([]);

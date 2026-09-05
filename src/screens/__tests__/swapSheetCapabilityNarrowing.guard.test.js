@@ -46,9 +46,14 @@ function slice(src, startMarker, endMarker, fromIndex = 0) {
   return src.slice(start, end + endMarker.length);
 }
 
+// EL-11 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md) added a
+// `{ relaxStyle = false } = {}` options param to both handleOpenSwap
+// signatures - the "Show all exercises" escape hatch out of a routine's
+// style:<pool> restriction. Re-anchored to the new signatures; the function
+// bodies and their capability-narrowing sequence are unaffected by this.
 describe.each([
-  ['ActiveWorkoutScreen', ACTIVE_WORKOUT, 'async function handleOpenSwap() {', 'setShowSwapModal(true);\n  }'],
-  ['RoutineDetailScreen', ROUTINE_DETAIL, 'async function handleOpenSwap(routineExercise, exercise) {', 'setSwapState({ routineExerciseId: routineExercise.id, exercise });\n  }'],
+  ['ActiveWorkoutScreen', ACTIVE_WORKOUT, 'async function handleOpenSwap({ relaxStyle = false } = {}) {', 'setShowSwapModal(true);\n  }'],
+  ['RoutineDetailScreen', ROUTINE_DETAIL, 'async function handleOpenSwap(routineExercise, exercise, { relaxStyle = false } = {}) {', 'setSwapState({ routineExerciseId: routineExercise.id, exercise });\n  }'],
 ])('%s handleOpenSwap: narrowed count computed over the STRUCTURAL list', (name, SRC, startMarker, endMarker) => {
   const FN = slice(SRC, startMarker, endMarker);
 
@@ -81,9 +86,13 @@ describe.each([
 });
 
 describe('ranking and filtering are byte-identical: visibility only, no behaviour change', () => {
-  test('ActiveWorkoutScreen: rankSwaps/rankPersonalised call sites unchanged', () => {
-    expect(ACTIVE_WORKOUT).toContain(
-      "const ranked = rankSwaps(exercise, allExercises, { excludeIds: alreadyInWorkout, numResults: 20, excludeAssisted: !isBeginner, equipment: swapEquipment });",
+  test('ActiveWorkoutScreen: rankSwaps/rankPersonalised call sites unchanged bar the EL-11 style pool', () => {
+    // EL-11 added one new structural option - stylePool - alongside the
+    // pre-existing excludeIds/numResults/excludeAssisted/equipment options,
+    // computed above from styleKey/relaxStyle; nothing else about this call
+    // changed, and rankPersonalised is untouched.
+    expect(ACTIVE_WORKOUT).toMatch(
+      /const ranked = rankSwaps\(exercise, allExercises, \{\s*excludeIds: alreadyInWorkout, numResults: 20, excludeAssisted: !isBeginner, equipment: swapEquipment,\s*stylePool,\s*\}\);/,
     );
     expect(ACTIVE_WORKOUT).toContain('let ordered = ranked.slice(0, 8);');
     expect(ACTIVE_WORKOUT).toMatch(
@@ -91,11 +100,18 @@ describe('ranking and filtering are byte-identical: visibility only, no behaviou
     );
   });
 
-  test('RoutineDetailScreen: rankSwaps/rankPersonalised call sites unchanged', () => {
+  test('RoutineDetailScreen: rankSwaps/rankPersonalised call sites unchanged bar the EL-11 style pool', () => {
+    expect(ROUTINE_DETAIL).toMatch(/const ranked = rankSwaps\(exercise, all, \{[\s\S]{0,400}?stylePool,\s*\}\);/);
     expect(ROUTINE_DETAIL).toContain('let ordered = ranked.slice(0, 12);');
     expect(ROUTINE_DETAIL).toMatch(
       /ordered = rankPersonalised\(state, ranked, \{\s*fromExerciseId: exercise\?\.id, routineId,\s*\}\)\.slice\(0, 12\);/,
     );
+  });
+
+  test('EL-11 style pool is computed the same way in both screens, and is null whenever there is no restriction or the user asked to see everything', () => {
+    const styleLine = 'const stylePool = (styleKey && !relaxStyle) ? stylePoolFor(styleKey) : null;';
+    expect(ACTIVE_WORKOUT).toContain(styleLine);
+    expect(ROUTINE_DETAIL).toContain(styleLine);
   });
 });
 

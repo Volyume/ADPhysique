@@ -221,6 +221,17 @@ describe('current function migrations fail closed under real storage faults', ()
     expect(d.execAsync).not.toHaveBeenCalled();
   });
 
+  // The offsets below (-8, -5) are counts back from CURRENT_SCHEMA_VERSION to
+  // specific named migrations (load_semantics, swap-cause/effective-choice),
+  // so they must move whenever a migration lands after those targets. The
+  // exercise library expansion (docs/exercise-library-expansion-2026-09-05/
+  // 05-DECISIONS.md EL-9, EL-14/EL-19) appended two more versions after
+  // adaptation_mode - routine_exercises.group_kind/round_rest_seconds +
+  // workout_sets.evidence_class, then exercises.aliases/load_character -
+  // which pushed CURRENT_SCHEMA_VERSION up by 2 without moving the targets
+  // these offsets were written to hit. Re-anchored by +2 (-6->-8, -3->-5) so
+  // they still land on the same migrations rather than drifting two versions
+  // late into ones these fixtures never provisioned tables for.
   test('load-semantics disk-full rolls back the earlier column and version marker', async () => {
     const raw = new DatabaseSync(':memory:');
     raw.exec(`CREATE TABLE exercises (
@@ -228,7 +239,7 @@ describe('current function migrations fail closed under real storage faults', ()
       is_custom INTEGER DEFAULT 0
     )`);
     raw.exec('CREATE TABLE custom_exercises (id TEXT PRIMARY KEY)');
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 6}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 8}`);
     const d = strictAdapt(raw, {
       beforeExec(sql) {
         if (/ALTER TABLE custom_exercises ADD COLUMN load_semantics/i.test(sql)) {
@@ -238,7 +249,7 @@ describe('current function migrations fail closed under real storage faults', ()
     });
 
     await expect(runMigrations(d)).rejects.toThrow('database or disk is full');
-    expect(version(raw)).toBe(CURRENT_SCHEMA_VERSION - 6);
+    expect(version(raw)).toBe(CURRENT_SCHEMA_VERSION - 8);
     expect(columns(raw, 'exercises')).not.toContain('load_semantics');
     expect(columns(raw, 'custom_exercises')).not.toContain('load_semantics');
   });
@@ -250,7 +261,7 @@ describe('current function migrations fail closed under real storage faults', ()
       is_custom INTEGER DEFAULT 0
     )`);
     raw.exec('CREATE TABLE custom_exercises (id TEXT PRIMARY KEY)');
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 6}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 8}`);
     let customReads = 0;
     const d = strictAdapt(raw, {
       beforeGetAll(sql) {
@@ -261,7 +272,7 @@ describe('current function migrations fail closed under real storage faults', ()
     });
 
     await expect(runMigrations(d)).rejects.toThrow('schema readback');
-    expect(version(raw)).toBe(CURRENT_SCHEMA_VERSION - 6);
+    expect(version(raw)).toBe(CURRENT_SCHEMA_VERSION - 8);
     expect(columns(raw, 'exercises')).not.toContain('load_semantics');
     expect(columns(raw, 'custom_exercises')).not.toContain('load_semantics');
   });
@@ -270,7 +281,7 @@ describe('current function migrations fail closed under real storage faults', ()
     const raw = new DatabaseSync(':memory:');
     raw.exec('CREATE TABLE exercise_swaps (id TEXT PRIMARY KEY)');
     raw.exec('CREATE TABLE capability_constraints (id TEXT PRIMARY KEY)');
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 3}`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 5}`);
     const d = strictAdapt(raw, {
       beforeExec(sql) {
         if (/ALTER TABLE capability_constraints ADD COLUMN effective_choice/i.test(sql)) {
@@ -280,7 +291,7 @@ describe('current function migrations fail closed under real storage faults', ()
     });
 
     await expect(runMigrations(d)).rejects.toThrow('second ALTER');
-    expect(version(raw)).toBe(CURRENT_SCHEMA_VERSION - 3);
+    expect(version(raw)).toBe(CURRENT_SCHEMA_VERSION - 5);
     expect(columns(raw, 'exercise_swaps')).not.toContain('cause');
     expect(columns(raw, 'capability_constraints')).not.toContain('effective_choice');
   });
@@ -293,7 +304,12 @@ describe('current function migrations fail closed under real storage faults', ()
       id TEXT PRIMARY KEY, name TEXT, equipment TEXT, movement_pattern TEXT,
       primary_muscle TEXT, compound_isolation TEXT, is_custom INTEGER DEFAULT 0
     )`);
-    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 3}`);
+    // EL-9/EL-14/EL-19: the window now also crosses the two exercise-library
+    // expansion versions, so their target tables must exist for the plain
+    // ALTER statements to find.
+    raw.exec('CREATE TABLE routine_exercises (id TEXT PRIMARY KEY)');
+    raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY)');
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 5}`);
 
     await expect(runMigrations(strictAdapt(raw))).resolves.not.toThrow();
     expect(version(raw)).toBe(CURRENT_SCHEMA_VERSION);
@@ -301,7 +317,13 @@ describe('current function migrations fail closed under real storage faults', ()
     expect(columns(raw, 'capability_constraints')).toEqual(expect.arrayContaining([
       'effective_choice', 'adaptation_mode',
     ]));
-    expect(columns(raw, 'exercises')).toContain('weight_bearing_hands');
+    expect(columns(raw, 'exercises')).toEqual(expect.arrayContaining([
+      'weight_bearing_hands', 'aliases', 'load_character',
+    ]));
+    expect(columns(raw, 'routine_exercises')).toEqual(expect.arrayContaining([
+      'group_kind', 'round_rest_seconds',
+    ]));
+    expect(columns(raw, 'workout_sets')).toContain('evidence_class');
   });
 });
 

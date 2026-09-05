@@ -1401,12 +1401,30 @@ describe('LOGGER: the first session states its effort target and its own words (
     // authoritative rule - FIRST_TIME_BAND's repsTarget is band.min
     // (repsMin), never band.max - instead of the screen's own retired
     // getBestAnchorSet ordinal anchor (design doc section 3 #2).
-    expect(src).toContain('const seedPrescription = resolveSetPrescription(localPacket, seedPos);');
+    // EL-7/EL-10 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md)
+    // widened the second argument from a bare position number to
+    // { index, evidenceClass } so the resolver can type-gate a circuit
+    // station/ballistic exercise to history-only; livePrescription.js's own
+    // normalizePosition (below) still treats a bare number as {index,
+    // setType:'straight', evidenceClass:null}, so an ordinary exercise's
+    // first-ever set takes exactly the same FIRST_TIME_BAND path as before.
+    expect(src).toContain(
+      'const seedPrescription = resolveSetPrescription(localPacket, { index: seedPos, evidenceClass: currentEvidenceClass });',
+    );
     expect(src).not.toContain('const lastActual = getBestAnchorSet(prev, currentWorkingCount)');
     // livePrescription.js's own FIRST_TIME_BAND branch is the ground truth
     // for the bottom-of-band pin (checked directly, not just referenced).
     const engine = read('lib/livePrescription.js');
     expect(engine).toMatch(/repsTarget: band\.min,[\s\S]{0,80}provenance: PROVENANCE\.FIRST_TIME_BAND,/);
+    // The type gate above the FIRST_TIME_BAND branch only fires when a
+    // position carries a non-null evidenceClass (a circuit station or
+    // ballistic exercise, EL-10); a plain exercise's currentEvidenceClass is
+    // null (checked in ActiveWorkoutScreen above), so it still falls through
+    // to FIRST_TIME_BAND untouched.
+    expect(engine).toMatch(/pos\.evidenceClass != null/);
+    expect(engine).toMatch(
+      /if \(typeof position === 'number'\) return \{ index: position, setType: 'straight', evidenceClass: null \};/,
+    );
   });
 });
 

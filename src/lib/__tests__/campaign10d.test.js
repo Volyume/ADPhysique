@@ -5,7 +5,9 @@
  *   2. cycle-specific interpretation obeys the extra opt-in
  *   3. the readiness setting states its behavioural consequence
  */
-import { detectPlateau, detectProgressionConsistency, isE1rmEligibleRow } from '../algorithms';
+import {
+  detectPlateau, detectProgressionConsistency, isE1rmEligibleRow, isTrendEligibleRow,
+} from '../algorithms';
 import { shouldShowCycleQuestion } from '../cyclePrefs';
 import { cycleTrendAnnotation } from '../cyclePhase';
 
@@ -106,13 +108,25 @@ describe('RD6-3: only legitimate progression evidence decides a plateau', () => 
   });
 
   test('both use the ONE existing eligibility law, not a second filter', () => {
+    // EL-7 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+    // isTrendEligibleRow (e1RM-eligible AND not a circuit row) is now THE
+    // law for both trend reads - detectPlateau and detectProgressionConsistency
+    // share it - while isE1rmEligibleRow stays the law for PR detection only
+    // (a circuit set IS PR-eligible, per isTrendEligibleRow's own doc comment,
+    // but must never decide a plateau or a progression-consistency verdict).
     const src = read('lib/algorithms.js');
-    const fn = src.slice(src.indexOf('export function detectPlateau'));
-    expect(fn.slice(0, 1800)).toMatch(/filter\(isE1rmEligibleRow\)/);
+    const plateauFn = src.slice(src.indexOf('export function detectPlateau'));
+    expect(plateauFn.slice(0, 1800)).toMatch(/filter\(isTrendEligibleRow\)/);
     // No bespoke set-type list invented alongside it.
-    expect(fn.slice(0, 1800)).not.toMatch(/'warmup'|myo_reps|rest_pause/);
+    expect(plateauFn.slice(0, 1800)).not.toMatch(/'warmup'|myo_reps|rest_pause/);
+    const consistencyFn = src.slice(src.indexOf('export function detectProgressionConsistency'));
+    expect(consistencyFn.slice(0, 400)).toMatch(/filter\(isTrendEligibleRow\)/);
     expect(isE1rmEligibleRow({ setType: 'warmup' })).toBe(false);
     expect(isE1rmEligibleRow({ setType: 'straight' })).toBe(true);
+    // The one law itself: a circuit row is trend-ineligible but stays
+    // PR-eligible (isE1rmEligibleRow), the split EL-7 depends on.
+    expect(isTrendEligibleRow({ setType: 'straight', evidenceClass: 'circuit' })).toBe(false);
+    expect(isE1rmEligibleRow({ setType: 'straight', evidenceClass: 'circuit' })).toBe(true);
   });
 
   // RE-ANCHORED by C12 job 1. C10D's own scope was ROW ELIGIBILITY, and it

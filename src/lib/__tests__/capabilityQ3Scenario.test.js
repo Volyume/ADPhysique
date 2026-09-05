@@ -17,35 +17,17 @@ const {
   resolvePlanAgainstLibrary, buildExerciseIndex, thinSessionReport,
 } = require('../planAutoGen');
 const { buildCapabilityResolveState, capabilityBlockReason, nearMissCandidates } = require('../capability/resolve');
-const { deriveExerciseMetadata } = require('../exerciseMetadata');
-const { deriveDemandMetadata } = require('../capability/demands');
+const { CORPUS, corpusEntryToSeedRow } = require('../exerciseCorpus');
 
 const NOW = 1_750_000_000_000;
 
+// Re-anchored EL-14/EL-21 (exercise-library-expansion-2026-09-05): RAW no
+// longer exists - corpusEntryToSeedRow is exactly the row seedExercises.js
+// inserts (07-CORPUS-FORMAT.md section 4, demand metadata already merged
+// in), retired stubs already excluded from CORPUS. `id` stays the exercise
+// name to match this suite's pre-existing convention.
 function realLibrary() {
-  const seedSrc = require('fs').readFileSync(
-    require('path').join(__dirname, '../seedExercises.js'), 'utf8',
-  );
-  const start = seedSrc.indexOf('const RAW = [');
-  const end = seedSrc.indexOf('\n];', start);
-  const body = seedSrc.slice(start, end);
-  const smStart = seedSrc.indexOf('const SUBREGION_MAP = {');
-  const smEnd = seedSrc.indexOf('\n};', smStart);
-  const subMap = {};
-  for (const m of seedSrc.slice(smStart, smEnd).matchAll(/'([^']+)':\s*'(\w+)'/g)) subMap[m[1]] = m[2];
-  const rows = [];
-  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
-    const base = {
-      name: m[1], primaryMuscle: m[2], equipment: m[4], movementPattern: m[5],
-      compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
-      fatigueCost: parseInt(m[9], 10), stimulusToFatigueRatio: parseInt(m[10], 10),
-      subregion: subMap[m[1]] ?? null,
-    };
-    rows.push({ id: m[1], ...base, ...deriveExerciseMetadata(base), ...deriveDemandMetadata(base) });
-  }
-  return rows;
+  return CORPUS.map((entry) => ({ id: entry.name, ...corpusEntryToSeedRow(entry) }));
 }
 
 const LIBRARY = realLibrary();
@@ -86,12 +68,14 @@ describe('PATH A - adequate library: a fully compatible, useful plan', () => {
   const { filtered, resolved } = runPipeline(LIBRARY);
 
   test('a compatible core exists AND every shortfall is visibly reported', () => {
-    // The honest product truth at CC27: 49 of the 551 seed rows are
-    // Q3-compatible, the engine writes a compatible core (9 slots at
-    // CC27; floor pinned just under) and everything else it wanted is
-    // REPORTED as blocked or missed - the gate's "compatible plan or
-    // honest gaps", both at once. CC28's curated seated/no-floor/
-    // grip-limited families exist precisely to widen this core.
+    // The honest product truth at CC27: 49 of the then-551 seed rows were
+    // Q3-compatible (now 79 of 918 post EL-14 corpus expansion; the pinned
+    // floor below is the load-bearing contract, not the exact count), the
+    // engine writes a compatible core (9 slots at CC27; floor pinned just
+    // under) and everything else it wanted is REPORTED as blocked or missed
+    // - the gate's "compatible plan or honest gaps", both at once. CC28's
+    // curated seated/no-floor/grip-limited families exist precisely to
+    // widen this core.
     expect(filtered.library.length).toBeGreaterThanOrEqual(40);
     expect(resolved.totalResolved).toBeGreaterThanOrEqual(8);
     expect(resolved.workouts.length).toBe(INPUTS.daysPerWeek);

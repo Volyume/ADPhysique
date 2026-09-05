@@ -130,20 +130,34 @@ describe('B9 wiring guard: builder pre-fill only, runtime untouched', () => {
     expect(BUILD).toMatch(/restSeconds: next, restSuggested: false/);
   });
 
-  test('runtime rest resolution for saved routines is unchanged', () => {
+  test('runtime rest resolution for a non-circuit routine is unchanged', () => {
     // Existing logged routines keep restSeconds || defaultRestSeconds || 90;
     // the suggestion must never leak into the live timer resolution. D9
     // (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md)
     // extracted this formula into a `fullRest` local so a per-side compound
-    // set's post-pair rest can be conditionally halved (amendment 2); the
-    // formula itself, and the fact it still feeds straight into
-    // startRestTimer with no suggestion-table involvement, are unchanged.
+    // set's post-pair rest can be conditionally halved (amendment 2). EL-9
+    // (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md) then
+    // branched `fullRest` on isCircuitGroup so a circuit rests
+    // round_rest_seconds after the final station instead - but the
+    // non-circuit branch is the exact pre-EL-9 formula, untouched, and it
+    // still feeds straight into startRestTimer with no suggestion-table
+    // involvement.
     expect(ACTIVE).toMatch(
-      /const fullRest = routineExercise\?\.restSeconds \|\| defaultRestSeconds \|\| 90;/,
+      /: \(routineExercise\?\.restSeconds \|\| defaultRestSeconds \|\| 90\);/,
     );
     expect(ACTIVE).toMatch(
       /startRestTimer\(overrides\.perSideCompound \? halfRestSeconds\(fullRest\) : fullRest\);/,
     );
     expect(ACTIVE).not.toMatch(/restSuggest/);
+  });
+
+  test('EL-9: a circuit group rests round_rest_seconds instead, only after the final station', () => {
+    // The circuit branch is the sole addition over the pre-EL-9 formula
+    // above - same fallback chain, shape just points at roundRestSeconds -
+    // and it is gated on isCircuitGroup so a superset/ordinary routine never
+    // takes it.
+    expect(ACTIVE).toMatch(
+      /const fullRest = isCircuitGroup\s*\n\s*\? \(routineExercise\?\.roundRestSeconds \|\| defaultRestSeconds \|\| 90\)/,
+    );
   });
 });

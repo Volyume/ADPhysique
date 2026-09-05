@@ -12,28 +12,19 @@
 const { getCapabilityAwareStarterRecommendation, getPlanDays } = require('../onboarding/freeStarter');
 const { computePlanCompatibility } = require('../capability/planCompat');
 const { buildCapabilityResolveState } = require('../capability/resolve');
-const { deriveExerciseMetadata } = require('../exerciseMetadata');
-const { deriveDemandMetadata } = require('../capability/demands');
+const { CORPUS, corpusEntryToSeedRow } = require('../exerciseCorpus');
 
 const fs = require('fs');
 const path = require('path');
 const NOW = 1_750_000_000_000;
 
+// Re-anchored EL-14/EL-15 (exercise-library-expansion-2026-09-05):
+// corpusEntryToSeedRow is exactly the row seedExercises.js inserts
+// (07-CORPUS-FORMAT.md section 4, demand metadata already merged in). The
+// old REQUIRED_EXERCISES rows are now ordinary CORPUS entries too, so they
+// resolve here with no separate parse/merge pass.
 function realLibraryByName() {
-  const seedSrc = fs.readFileSync(path.resolve(__dirname, '../seedExercises.js'), 'utf8');
-  const start = seedSrc.indexOf('const RAW = [');
-  const body = seedSrc.slice(start, seedSrc.indexOf('\n];', start));
-  const out = new Map();
-  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
-    const base = {
-      name: m[1], primaryMuscle: m[2], equipment: m[4], movementPattern: m[5],
-      compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
-    };
-    out.set(m[1], { id: m[1], ...base, ...deriveExerciseMetadata(base), ...deriveDemandMetadata(base) });
-  }
-  return out;
+  return new Map(CORPUS.map((entry) => [entry.name, { id: entry.name, ...corpusEntryToSeedRow(entry) }]));
 }
 
 // Parse EVERY library plan from the seed into { plan meta, exercise rows }.

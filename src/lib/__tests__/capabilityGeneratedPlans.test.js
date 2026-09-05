@@ -17,37 +17,19 @@ const { generatePlan } = require('../planEngine');
 const { filterLibraryForGeneration } = require('../exercise/generation');
 const { orderSamePositionContiguously } = require('../planAutoGen');
 const { buildCapabilityResolveState } = require('../capability/resolve');
-const { deriveExerciseMetadata } = require('../exerciseMetadata');
-const { deriveDemandMetadata } = require('../capability/demands');
+const { CORPUS, corpusEntryToSeedRow } = require('../exerciseCorpus');
 
 const NOW = 1_750_000_000_000;
 
+// Re-anchored EL-14/EL-21 (exercise-library-expansion-2026-09-05): RAW no
+// longer exists - corpusEntryToSeedRow is exactly the row seedExercises.js
+// inserts (07-CORPUS-FORMAT.md section 4, demand metadata already merged
+// in), retired stubs already excluded from CORPUS, so this runs against the
+// same live library the real seed produces. `id` stays the exercise name to
+// match this suite's pre-existing convention of keying off it as a
+// byName-style id.
 function realLibrary() {
-  const seedSrc = require('fs').readFileSync(
-    require('path').join(__dirname, '../seedExercises.js'), 'utf8',
-  );
-  const start = seedSrc.indexOf('const RAW = [');
-  const end = seedSrc.indexOf('\n];', start);
-  const body = seedSrc.slice(start, end);
-  const smStart = seedSrc.indexOf('const SUBREGION_MAP = {');
-  const smEnd = seedSrc.indexOf('\n};', smStart);
-  const smBody = seedSrc.slice(smStart, smEnd);
-  const subMap = {};
-  for (const m of smBody.matchAll(/'([^']+)':\s*'(\w+)'/g)) subMap[m[1]] = m[2];
-
-  const rows = [];
-  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
-    const base = {
-      name: m[1], primaryMuscle: m[2], equipment: m[4], movementPattern: m[5],
-      compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
-      fatigueCost: parseInt(m[9], 10), stimulusToFatigueRatio: parseInt(m[10], 10),
-      subregion: subMap[m[1]] ?? null,
-    };
-    rows.push({ id: m[1], ...base, ...deriveExerciseMetadata(base), ...deriveDemandMetadata(base) });
-  }
-  return rows;
+  return CORPUS.map((entry) => ({ id: entry.name, ...corpusEntryToSeedRow(entry) }));
 }
 
 const LIBRARY = realLibrary();

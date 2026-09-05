@@ -10,7 +10,7 @@
  * which is where the structural behaviour lives and is reproducible in CI.
  */
 import { generatePlan } from '../planEngine';
-import { deriveExerciseMetadata } from '../exerciseMetadata';
+import { CORPUS, corpusEntryToSeedRow } from '../exerciseCorpus';
 
 // Spec landmark table (Israetel/RP classic, intermediate), from the rebuild
 // specification. Side+rear delts share a combined MRV of 26. Front delts are
@@ -101,40 +101,15 @@ function mrvFor(muscle, goal) {
 
 let _seedLibraryCache = null;
 
+// Re-anchored EL-14 (exercise-library-expansion-2026-09-05): RAW no longer
+// exists in seedExercises.js - the corpus (src/lib/exerciseCorpus/) is the
+// source of truth, and corpusEntryToSeedRow is exactly the row seedExercises
+// inserts (07-CORPUS-FORMAT.md section 4), so this now runs against the SAME
+// exercises the real seed produces rather than a hand-parsed subset of them.
 export function loadSeedLibrary() {
   if (_seedLibraryCache) return _seedLibraryCache;
-  const fs = require('fs');
-  const path = require('path');
-  const seedSrc = fs.readFileSync(path.join(__dirname, '../seedExercises.js'), 'utf8');
-
-  const start = seedSrc.indexOf('const RAW = [');
-  const end = seedSrc.indexOf('\n];', start);
-  const body = seedSrc.slice(start, end);
-
-  const smStart = seedSrc.indexOf('const SUBREGION_MAP = {');
-  const smEnd = seedSrc.indexOf('\n};', smStart);
-  const smBody = seedSrc.slice(smStart, smEnd);
-  const subMap = {};
-  for (const m of smBody.matchAll(/'([^']+)':\s*'(\w+)'/g)) subMap[m[1]] = m[2];
-
-  const rows = [];
-  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
-    const secondaryMuscles = m[3]
-      ? [...m[3].matchAll(/'([a-z_]+)'/g)].map(s => s[1])
-      : [];
-    const base = {
-      name: m[1], primaryMuscle: m[2], equipment: m[4], movementPattern: m[5],
-      compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
-      fatigueCost: parseInt(m[9], 10), stimulusToFatigueRatio: parseInt(m[10], 10),
-      subregion: subMap[m[1]] ?? null,
-      secondaryMuscles,
-    };
-    rows.push({ id: m[1], ...base, ...deriveExerciseMetadata(base) });
-  }
-  _seedLibraryCache = rows;
-  return rows;
+  _seedLibraryCache = CORPUS.map(corpusEntryToSeedRow);
+  return _seedLibraryCache;
 }
 
 // generatePlan on the library path (real seed library as effective pool).
