@@ -45,7 +45,9 @@ function loadSeedData() {
   expect(start).toBeGreaterThan(-1);
   expect(end).toBeGreaterThan(start);
   // eslint-disable-next-line no-new-func
-  return new Function(`${src.slice(start, end).replace('export const LIBRARY_PLANS', 'const LIBRARY_PLANS')}\nreturn { LIBRARY_PLANS };`)();
+  // F-16: the slice includes the band-plan append; the literal alone is
+  // what this guard evaluates, so the import is stubbed empty here.
+  return new Function(`const BAND_LIBRARY_PLANS = [];\n${src.slice(start, end).replace('export const LIBRARY_PLANS', 'const LIBRARY_PLANS')}\nreturn { LIBRARY_PLANS };`)();
 }
 
 // REQUIRED_EXERCISES removed (EL-15, exercise-library-expansion-2026-09-05):

@@ -4,6 +4,9 @@ import {
   createProgramme, getLibraryPlans,
 } from './database';
 import { logError, logWarn, logInfo } from './errorLog';
+// F-16 (certification 2026-09-05): the two band-only library plans live in
+// their own module and join LIBRARY_PLANS below.
+import { BAND_LIBRARY_PLANS } from './seedRoutines.bandPlans';
 
 // Bump to v12: adds Mens Physique Width Enhancement plan
 // v13 (CC28): the capability-led routine families - nine free plans
@@ -14,7 +17,9 @@ import { logError, logWarn, logInfo } from './errorLog';
 // 09-STYLE-PLANS.md): adds the five kettlebell templates and three circuit
 // templates, each carrying a style:<pool> tag (src/lib/exercise/
 // stylePools.js) that constrains its own generation and swaps.
-const SEED_KEY = '@volyume_routines_seeded_v15';
+// v16 (certification 2026-09-05, F-16): the two band library plans. The
+// seed dedupes by plan name, so a bump only adds what is new.
+const SEED_KEY = '@volyume_routines_seeded_v16';
 
 // REQUIRED_EXERCISES removed (EL-15, exercise-library-expansion-2026-09-05):
 // these 18 rows are now ordinary canonical corpus entries
@@ -2238,7 +2243,7 @@ export const LIBRARY_PLANS = [
   {
     name: 'Kettlebell Minimal: 3 Days',
     description: 'A stripped-back, single-kettlebell session for when time is short. Three near-identical sessions a week, around 25 minutes each: a big set of swings, a handful of get-ups, and a set of goblet squats. Start with the two-hand swing; once your technique is solid and consistent, move to the single-arm swing (the pool this plan draws from includes it once you are ready). Progress the swing and squat by reps then bell size; the get-up progresses by moving to the full get-up once the half get-up feels easy.',
-    tags: 'style:kettlebell_experienced equipment:kettlebell kettlebell home full_body beginner intermediate advanced goal:build_muscle days:3 short minimalist',
+    tags: 'style:kettlebell_foundations equipment:kettlebell kettlebell home full_body beginner intermediate advanced goal:build_muscle days:3 short minimalist',
     difficulty: 1,
     workouts: [
       {
@@ -2397,6 +2402,9 @@ export const LIBRARY_PLANS = [
     ],
   },
 ];
+// F-16: appended after the literal so the source-slicing library-data guard
+// (seedRoutinesLibraryData.test.js) keeps evaluating the literal alone.
+LIBRARY_PLANS.push(...BAND_LIBRARY_PLANS);
 
 // ─── Seed function ────────────────────────────────────────────────────────────
 

@@ -85,6 +85,56 @@ function clamp(x, lo, hi) {
   return Math.min(hi, Math.max(lo, x));
 }
 
+// ── A1 (final certification 2026-09-05): the kettlebell bell ladder ───────
+// Kettlebells come in discrete sizes. The corpus derives a generic
+// `increment_kg` from compound/isolation only (exerciseCorpus/index.js
+// deriveIncrementKg), so a compound bell row carried 2.5 kg and a 16 kg
+// bell topped its range prefilled 18.5 kg - a weight that does not exist,
+// directly contradicting the library plan descriptions the user just read
+// ("move up to the next kettlebell size", seedRoutines.js:2075). The corpus
+// stays generic; the snap lives HERE, in the one consumer that turns an
+// increment into a prescribed load.
+//
+// Standard cast/competition ladder, in kilograms.
+export const KETTLEBELL_LADDER_KG = Object.freeze([
+  4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 44, 48,
+]);
+
+/**
+ * PURE. The next real bell size strictly above `current`, or null when
+ * there is none to give - above the top of the ladder, or a non-positive /
+ * non-finite load - in which case the caller keeps its ordinary increment
+ * behaviour rather than inventing a bell. A load that is not itself a bell
+ * size still snaps UP to the next one (15 -> 16), never down.
+ *
+ * Double-bell work (the corpus marks doubles by NAME only - "Double
+ * Kettlebell Press" etc. - it carries no per-bell flag) logs the weight of
+ * one bell, so the same ladder applies per bell with no special case.
+ */
+export function nextKettlebellLoadKg(current) {
+  const w = Number(current);
+  if (!Number.isFinite(w) || w <= 0) return null;
+  for (const bell of KETTLEBELL_LADDER_KG) {
+    if (bell > w) return bell;
+  }
+  return null; // above the top bell: nothing on the ladder left to say
+}
+
+// Accepts the db/corpus `equipment_category` value ('kettlebell') and the
+// raw free-text `equipment` string ('Kettlebell') alike.
+function isKettlebell(equipmentCategory) {
+  return String(equipmentCategory || '').toLowerCase().includes('kettlebell');
+}
+
+// The one place the packet's exercise row is read for its equipment, so a
+// caller may supply any of the three shapes the data layer produces.
+function readEquipmentCategory(exercise) {
+  const raw = exercise?.equipmentCategory ?? exercise?.equipment_category ?? exercise?.equipment ?? null;
+  if (raw == null) return null;
+  const s = String(raw).trim();
+  return s ? s.toLowerCase() : null;
+}
+
 function median(nums) {
   const arr = (nums || []).filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
   if (!arr.length) return NaN;
@@ -113,8 +163,21 @@ function declinePerPosition(category) {
 // capped at 5% of the base load, rounded to the 0.25 grid, floored at 0.25.
 // computeSetTargets' existing maths (algorithms.js:488-498), kept
 // byte-for-byte and promoted to the single authority (design §10.2).
-export function resolveLoadIncrement(baseWeight, { incrementKg = null, units = 'kg', category = 'compound' } = {}) {
+export function resolveLoadIncrement(baseWeight, {
+  incrementKg = null, units = 'kg', category = 'compound', equipmentCategory = null,
+} = {}) {
   const w = Number.isFinite(baseWeight) ? baseWeight : 0;
+  // A1: on a kettlebell the increment is not a number of plates, it is the
+  // gap to the next bell on the shelf. Returns EARLY, above the 5% cap and
+  // the 0.25 grid, because both would un-snap it (5% of 16 kg is 0.8 kg);
+  // every ladder value is a whole kilo, so roundQuarter downstream is a
+  // no-op on the resulting load. kg only: the ladder is a kg ladder and an
+  // lbs user's logged numbers are lbs, so snapping those to it would invent
+  // bells just as surely as +2.5 kg did.
+  if (units !== 'lbs' && isKettlebell(equipmentCategory)) {
+    const nextBell = nextKettlebellLoadKg(w);
+    if (nextBell != null) return nextBell - w;
+  }
   const raw = incrementKg != null && Number.isFinite(Number(incrementKg))
     ? Number(incrementKg)
     : defaultIncrement(w, units, category);
@@ -193,7 +256,7 @@ export function discountOutliers(comparableHistory) {
 // not per ordinal set (design's amendment to computeSetTargets' per-set
 // loop, §10 preamble). Outlier-discounted internally (§13.3 / scenario 45).
 export function nextSessionOpeningLoad(comparableHistory, band, opts = {}) {
-  const { incrementKg = null, units = 'kg', category = 'compound' } = opts;
+  const { incrementKg = null, units = 'kg', category = 'compound', equipmentCategory = null } = opts;
   const usable = discountOutliers(comparableHistory);
   if (!usable.length) {
     return { weight: null, provenance: PROVENANCE.INSUFFICIENT_EVIDENCE, sourceAt: null };
@@ -216,7 +279,7 @@ export function nextSessionOpeningLoad(comparableHistory, band, opts = {}) {
       const priorBand = prior.band || band;
       const priorMissed = priorTop && classifyReps(priorTop.R_top, priorBand) === 'missed';
       if (priorMissed && top.W > 0) {
-        const dec = resolveLoadIncrement(top.W, { incrementKg, units, category });
+        const dec = resolveLoadIncrement(top.W, { incrementKg, units, category, equipmentCategory });
         return {
           weight: Math.max(0, roundQuarter(top.W - dec)),
           provenance: PROVENANCE.LOAD_DROP_CONSECUTIVE_MISS,
@@ -235,7 +298,7 @@ export function nextSessionOpeningLoad(comparableHistory, band, opts = {}) {
     const effortSupports = Number.isFinite(sd) && sd >= 1 && sd <= 3;
     const effortVeryHard = Number.isFinite(sd) && sd >= 4;
     if (effortSupports) {
-      const inc = resolveLoadIncrement(top.W, { incrementKg, units, category });
+      const inc = resolveLoadIncrement(top.W, { incrementKg, units, category, equipmentCategory });
       return {
         weight: roundQuarter(top.W + inc),
         provenance: PROVENANCE.LOAD_ADVANCE_RANGE_TOPPED,
@@ -591,6 +654,10 @@ export function assembleEvidencePacket(input) {
         id: exerciseId,
         exerciseType: exercise?.exerciseType ?? 'weight_reps',
         category: exercise?.category ?? 'compound',
+        // A1: carried so the increment resolver can snap a kettlebell to the
+        // next real bell size. Additive and optional - a caller that omits it
+        // gets exactly the previous behaviour.
+        equipmentCategory: readEquipmentCategory(exercise),
         incrementKg: num(exercise?.incrementKg),
         units: exercise?.units === 'lbs' ? 'lbs' : 'kg',
       },
@@ -621,7 +688,10 @@ export function assembleEvidencePacket(input) {
     // Robustness requirement: never throw on garbage input. Fall back to a
     // minimal, valid, first-time-shaped packet.
     return {
-      exercise: { id: null, exerciseType: 'weight_reps', category: 'compound', incrementKg: null, units: 'kg' },
+      exercise: {
+        id: null, exerciseType: 'weight_reps', category: 'compound',
+        equipmentCategory: null, incrementKg: null, units: 'kg',
+      },
       prescription: { repsMin: 8, repsMax: 12, targetSets: null, startingWeight: null, goal: null },
       senior: {
         isDeload: false, deloadTargets: null, blockFinished: false, readinessTweak: null,
@@ -747,6 +817,7 @@ function normalizePacket(packet) {
       id: p.exercise?.id ?? null,
       exerciseType: p.exercise?.exerciseType ?? 'weight_reps',
       category: p.exercise?.category ?? 'compound',
+      equipmentCategory: readEquipmentCategory(p.exercise),
       incrementKg: Number.isFinite(p.exercise?.incrementKg) ? p.exercise.incrementKg : null,
       units: p.exercise?.units === 'lbs' ? 'lbs' : 'kg',
     },
@@ -812,7 +883,12 @@ function resolveConfidence({ comparableHistory, today, provenance }) {
 // session evidence (§7 hierarchy tier 3) outranks stable structure (tier 4).
 function determineWorkingLoad({ packet, comparableHistory, band, pos }) {
   const { today, senior, exercise } = packet;
-  const opts = { incrementKg: exercise.incrementKg, units: exercise.units, category: exercise.category };
+  const opts = {
+    incrementKg: exercise.incrementKg,
+    units: exercise.units,
+    category: exercise.category,
+    equipmentCategory: exercise.equipmentCategory,
+  };
 
   if (today.overrideLoad != null) {
     return { L: today.overrideLoad, provenance: PROVENANCE.USER_CHOICE_RESPECTED, repsOverride: null, sessionDriven: true };
