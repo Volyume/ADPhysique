@@ -299,3 +299,31 @@ exercises first, then the user's current plan's exercises, then
 staples by the active equipment filter, then everything else
 alphabetically; equipment and muscle filters remain; results are capped
 per page with the same virtualised list. No new dependency.
+
+## EL-21 Audit rulings (from 02-CORPUS-AUDIT)
+
+- The six confirmed duplicate pairs are consolidated by RETIREMENT, never
+  rename: the surviving entry keeps its name; the retired entry stays in
+  the corpus as `{ name, retiredInto: '<survivor>' }` so its canonical id
+  is still known; the top-up remaps every reference from the retired id
+  to the survivor (the shared same-name merge helper) and deletes the
+  retired row; the retired name becomes an alias of the survivor. History
+  is preserved under the survivor.
+- The twelve duration-type rows and the eleven mis-typed rows: the
+  corpus carries the correct `exerciseType` (`duration`, `steps` or
+  `distance` per the live screen's supported types) with sane defaults,
+  and `poolGenerator` screens every non-`weight_reps` row out of
+  automatic generation as a hard filter, the same shape as NEVER_AUTO.
+- The 59 rows missing a required subregion get one in the conversion,
+  assigned from the movement by the agent and listed for lead review;
+  the guard then makes a missing required subregion a build failure.
+- The 88 unlisted rows get an explicit tier in the registry (agent
+  proposal, lead review of anything proposed STAPLE or COMMON).
+- Brand names in existing names stay (history); aliases carry the
+  generic name. The 107 alias suggestions are adopted where marked high
+  confidence.
+- Derivation fixes carried in the same landing: `suspension` gets its
+  own equipment category and the home-gym profile; `alternating`
+  laterality is recognised; the "neck" grip-demand regex no longer
+  fires on "behind-the-neck"; `weightBearingHands` is treated as the
+  eleventh demand axis it already is.
