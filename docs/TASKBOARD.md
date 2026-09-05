@@ -57,7 +57,24 @@ Stage 2 (inventories, sonnet, parallel; brief `INVENTORY-BRIEF.md`):
   (`data/inventory-*.json`). Recovery: relaunch from brief + INVENTORY-BRIEF.
 - [ ] B2. bodyweight / band / suspension. Recovery: same.
 - [ ] later: barbell, dumbbell, cable, machine families (after A and C).
-Stage 3 onward: seed integration script, guards, expansion,
+- [x] K, B2, barbell/dumbbell, cable/machine inventories landed
+  (`data/inventory-*.json`, 329 candidates); lead pass in
+  `data/lead-overrides.json`; corpus audit `02-CORPUS-AUDIT.md`;
+  open-dataset gap analysis `08-OPEN-DATASET-GAPS.md`.
+Stage 3 (in flight, sonnet):
+- [ ] R. Corpus refactor per `07-CORPUS-FORMAT.md` (structured
+  `src/lib/exerciseCorpus/`, seed rewrite, guard, migration). Recovery:
+  relaunch from 07 + EL-14/15/16/19/21; partial work is on the branch.
+- [ ] X. Circuit groups and evidence classes per EL-7/EL-9/EL-10
+  (routine_exercises.group_kind/round_rest_seconds,
+  workout_sets.evidence_class, builder, live workout, consumers, two
+  UNAPPLIED cloud migrations 158/159). Recovery: relaunch from EL-7/9/10.
+- [ ] T1-T3. Gap triage of the 1,931 open-dataset "missing" rows by
+  group (`TRIAGE-BRIEF.md`; outputs `data/gap-triage-*.json`).
+  Recovery: relaunch per group.
+Stage 4: integration (`INTEGRATION-BRIEF.md`), cues lane, tier review,
+search/picker, style plans (`09-STYLE-PLANS.md`), custom-exercise
+delete, verification, closure.
 guards, search/builder, plan architecture, kettlebell, circuits, library
 integration, evidence eligibility, verification. Entries added as they
 start.
