@@ -123,6 +123,14 @@ function scoreTokenPair(queryToken, nameToken) {
   const longer = Math.max(queryToken.length, nameToken.length);
   if (longer >= 3) {
     const allowedDistance = queryToken.length <= 4 ? 1 : queryToken.length <= 7 ? 2 : 3;
+    // Perf (EL-20, searching a 1,500+ row library on every keystroke):
+    // edit distance can never be smaller than the two tokens' length
+    // difference, so a pair whose lengths are already further apart than
+    // the allowance can never pass -- skip the O(n*m) DP table entirely.
+    // This is a pure short-circuit (same results, just fewer wasted
+    // levenshteinDistance calls against tokens that share nothing in
+    // common, e.g. "press" against "kettlebell").
+    if (Math.abs(queryToken.length - nameToken.length) > allowedDistance) return 0;
     const distance = levenshteinDistance(queryToken, nameToken);
     if (distance <= allowedDistance) {
       return 0.2 * (1 - distance / longer) + 0.05;
@@ -131,20 +139,15 @@ function scoreTokenPair(queryToken, nameToken) {
   return 0;
 }
 
-/**
- * Score a free-text query against an exercise name. Returns a number > 0
- * when every word in the query matches somewhere in the name (higher is a
- * better match), or exactly 0 when it does not match at all. An empty/
- * whitespace-only query always scores 1 (matches everything), so this
- * function can be used for both filtering (score > 0) and ranking (sort
- * descending by score).
- */
-export function fuzzyScore(query, name) {
-  const queryTokens = tokenize(query);
+// The actual token-vs-token scan, shared by `fuzzyScore` (which tokenizes
+// both sides fresh, for standalone/one-off use) and the indexed hot path
+// in `fuzzySearch` below (which tokenizes each name/alias exactly once
+// per exercise-list identity, never per keystroke — see the WeakMap index
+// further down). Same result either way; this is purely which side
+// re-does the tokenizing work.
+function scoreTokenised(queryTokens, nameTokens) {
   if (queryTokens.length === 0) return 1;
-  const nameTokens = tokenize(name);
   if (nameTokens.length === 0) return 0;
-
   let total = 0;
   for (const q of queryTokens) {
     let best = 0;
@@ -158,6 +161,18 @@ export function fuzzyScore(query, name) {
   return total / queryTokens.length;
 }
 
+/**
+ * Score a free-text query against an exercise name. Returns a number > 0
+ * when every word in the query matches somewhere in the name (higher is a
+ * better match), or exactly 0 when it does not match at all. An empty/
+ * whitespace-only query always scores 1 (matches everything), so this
+ * function can be used for both filtering (score > 0) and ranking (sort
+ * descending by score).
+ */
+export function fuzzyScore(query, name) {
+  return scoreTokenised(tokenize(query), tokenize(name));
+}
+
 // Lower-cases, strips accents AND collapses/trims whitespace, for
 // whole-string comparisons (exact/prefix tiers, and the create-form
 // canonical-match suggestion). `normalise` above only lower-cases and
@@ -167,23 +182,62 @@ export function normaliseExerciseName(str) {
 }
 
 /**
- * Where `name`/`aliases` rank against `query` (EL-20's six tiers, module
- * doc above). Returns the tier number (0 best) or null when nothing
- * matches at all. `query` is assumed non-empty and already trimmed.
+ * Perf (EL-20: search must feel instant over a 1,500+ row library, on
+ * every keystroke): tokenizing every name and alias is the same work
+ * whichever query is typed next, so it is done exactly ONCE per
+ * exercise-list identity and cached here, keyed by the `items` array
+ * reference itself. `ExercisePickerModal` re-filters its equipment/
+ * muscle/intent conditions into a fresh `base` array only when THOSE
+ * change (not on every keystroke), so this cache is naturally hit on
+ * every keystroke of a search and naturally invalidated (a new array
+ * reference in, a fresh index built) whenever the underlying candidate
+ * set actually changes. A WeakMap means a stale `items` array is freed
+ * automatically once nothing else references it - no manual eviction.
+ *
+ * Assumes (as the picker always does) that `getText`/`getAliases` are
+ * stable, pure accessors for a given array identity - if a caller ever
+ * needs to reuse the same array reference with DIFFERENT accessors, it
+ * must pass a fresh array (e.g. via `.slice()`) to force a rebuild.
  */
-function matchTier(query, name, aliases) {
-  const nq = normaliseExerciseName(query);
-  const nn = normaliseExerciseName(name);
-  if (nn && nn === nq) return 0;
-  if (nn && nn.startsWith(nq)) return 1;
-  const normAliases = (Array.isArray(aliases) ? aliases : [])
-    .filter(Boolean)
-    .map(normaliseExerciseName);
-  if (normAliases.some(a => a === nq)) return 2;
-  if (normAliases.some(a => a.startsWith(nq))) return 3;
-  if (fuzzyScore(query, name) > 0) return 4;
-  const rawAliases = (Array.isArray(aliases) ? aliases : []).filter(Boolean);
-  if (rawAliases.some(a => fuzzyScore(query, a) > 0)) return 5;
+const _indexCache = new WeakMap();
+
+function buildIndex(items, getText, getAliases) {
+  return items.map((item) => {
+    const name = getText(item) || '';
+    const aliases = (getAliases(item) || []).filter(Boolean);
+    return {
+      item,
+      nn: normaliseExerciseName(name),
+      nameTokens: tokenize(name),
+      aliasEntries: aliases.map((a) => ({
+        norm: normaliseExerciseName(a),
+        tokens: tokenize(a),
+      })),
+    };
+  });
+}
+
+function getIndex(items, getText, getAliases) {
+  let index = _indexCache.get(items);
+  if (!index) {
+    index = buildIndex(items, getText, getAliases);
+    _indexCache.set(items, index);
+  }
+  return index;
+}
+
+/**
+ * Where one indexed entry ranks against an already-tokenised query
+ * (EL-20's six tiers, module doc above). Returns the tier number (0 best)
+ * or null when nothing matches at all.
+ */
+function matchTier(nq, queryTokens, entry) {
+  if (entry.nn && entry.nn === nq) return 0;
+  if (entry.nn && entry.nn.startsWith(nq)) return 1;
+  if (entry.aliasEntries.some(a => a.norm === nq)) return 2;
+  if (entry.aliasEntries.some(a => a.norm.startsWith(nq))) return 3;
+  if (scoreTokenised(queryTokens, entry.nameTokens) > 0) return 4;
+  if (entry.aliasEntries.some(a => scoreTokenised(queryTokens, a.tokens) > 0)) return 5;
   return null;
 }
 
@@ -206,23 +260,26 @@ export function fuzzySearch(items, query, getText, options = {}) {
   if (!q) return items;
   const getAliases = options.getAliases || (() => []);
   const getTier = options.getTier || (() => 0);
-  return items
-    .map((item, index) => ({
-      item,
-      index,
-      tier: matchTier(q, getText(item) || '', getAliases(item)),
+  const nq = normaliseExerciseName(q);
+  const queryTokens = tokenize(q);
+  const index = getIndex(items, getText, getAliases);
+  return index
+    .map((entry, i) => ({
+      entry,
+      index: i,
+      tier: matchTier(nq, queryTokens, entry),
     }))
     .filter(x => x.tier !== null)
     .sort((a, b) => {
       if (a.tier !== b.tier) return a.tier - b.tier;
-      const tierRankA = getTier(a.item);
-      const tierRankB = getTier(b.item);
+      const tierRankA = getTier(a.entry.item);
+      const tierRankB = getTier(b.entry.item);
       if (tierRankA !== tierRankB) return tierRankA - tierRankB;
-      const cmp = String(getText(a.item) || '').localeCompare(String(getText(b.item) || ''));
+      const cmp = String(getText(a.entry.item) || '').localeCompare(String(getText(b.entry.item) || ''));
       if (cmp !== 0) return cmp;
       return a.index - b.index;
     })
-    .map(x => x.item);
+    .map(x => x.entry.item);
 }
 
 /**

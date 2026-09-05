@@ -56,6 +56,14 @@ export function deriveEquipmentCategory(name, equipment) {
     // and fell through to 'other', which the pool generator drops entirely
     // (generatePoolFromLibrary skips equipmentCategory === 'other').
     case 'suspension':    return 'suspension';
+    // exercise-library-expansion-2026-09-05 (integration stage 2, job 3):
+    // sled/medicine_ball/sandbag get their own categories rather than
+    // falling to 'other', so PROFILES_BY_CATEGORY below can give each its
+    // real equipment context instead of the 'other' catch-all's bare
+    // ['full_gym'].
+    case 'sled':          return 'sled';
+    case 'medicine_ball':  return 'medicine_ball';
+    case 'sandbag':        return 'sandbag';
     case 'machine':
       if (CONDITIONING_RE.test(n)) return 'other';
       if (PLATE_LOADED_RE.test(n)) return 'machine_plate_loaded';
@@ -85,6 +93,13 @@ const PROFILES_BY_CATEGORY = {
   // profile either (the strap is required). full_gym and home_gym are the
   // two profiles that plausibly carry one.
   suspension:           ['full_gym', 'home_gym'],
+  // exercise-library-expansion-2026-09-05 (integration stage 2, job 3):
+  // sled and medicine ball work needs open floor space, so it reads as a
+  // full-gym context only; a sandbag is common home/garage equipment, so
+  // it also carries a home-gym profile like the dumbbell/kettlebell rows.
+  sled:                 ['full_gym'],
+  medicine_ball:        ['full_gym'],
+  sandbag:              ['full_gym', 'home_gym'],
   other:                ['full_gym'],
 };
 
@@ -262,6 +277,10 @@ const DIFFICULTY_BASE = {
   band:                 1,
   bodyweight:           2,
   suspension:           2,
+  // exercise-library-expansion-2026-09-05 (integration stage 2, job 3).
+  sled:                 2,
+  medicine_ball:        2,
+  sandbag:              2,
   other:                1,
 };
 

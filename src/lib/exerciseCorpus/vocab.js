@@ -35,6 +35,11 @@ export const EQUIPMENT = Object.freeze([
   'barbell', 'dumbbell', 'cable', 'machine', 'smith_machine', 'kettlebell',
   'ez_bar', 'bodyweight', 'band', 'suspension', 'landmine', 'medicine_ball',
   'sled',
+  // 'sandbag' added (exercise-library-expansion-2026-09-05, integration
+  // stage 2, lead-overrides.json newFamilies): a small attested family of
+  // shifting-load bear-hug/Zercher/shouldering movements, common home and
+  // garage equipment.
+  'sandbag',
 ]);
 
 export const MOVEMENT_PATTERNS = Object.freeze([
