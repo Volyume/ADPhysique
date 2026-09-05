@@ -1,0 +1,713 @@
+{
+  "seatedAndFloorAccessCount": 1,
+  "seatedAndFloorAccess": [
+    {
+      "name": "Z-Press",
+      "detail": "position=seated with floorAccess=true"
+    }
+  ],
+  "lyingAndHighBalanceCount": 0,
+  "lyingAndHighBalance": [],
+  "bodyweightIsolationTotalLoadCount": 82,
+  "bodyweightIsolationTotalLoad": [
+    {
+      "name": "TRX Curl",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Sissy Squat",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Wall Sit",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Spanish Squat",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Terminal Knee Extension",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Nordic Curl",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Nordic Hamstring Curl",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Swiss Ball Leg Curl",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Frog Pump",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Donkey Kick",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Nordic Glute Curl",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Donkey Calf Raise",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Single-Leg Calf Raise (Bodyweight)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Calf Raise on Steps",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Standing Calf Raise (Bodyweight)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Tibialis Raise (Wall)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Tibialis Raise (Slant Board)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Toe Walk",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Hanging Leg Raise",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Plank",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Side Plank",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Ab Rollout",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Ab Wheel Rollout",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Decline Crunch",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Russian Twist",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Bicycle Crunch",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Crunch",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Reverse Crunch",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Leg Raise",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Leg Raise (Flat Bench)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Dragon Flag",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "V-Up",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Sit-Up",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Dead Bug",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Hollow Body Hold",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Stir the Pot",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Hanging Knee Raise",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Ab Wheel (Kneeling)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Toe-to-Bar",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "L-Sit Hold",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Copenhagen Plank",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Dead Hang",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Rice Bucket",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Neck Lateral Flexion",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Neck Curl",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Neck Bridge",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Manual Resistance Neck Flexion",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Manual Resistance Neck Extension",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Neck Rotation (Resistance)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Exercise Ball Crunch",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Mountain Climber",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Bear Crawl",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Kneeling Ab Rollout",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Glute Squeeze Hold",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Monster Walk",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Heel Walk",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Incline Board Sit-Up",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Hanging Oblique Raise",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Copenhagen Adduction",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Side-Lying Adduction",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Band Pull-Apart",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Band Face Pull",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Band Lateral Raise",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Band Bicep Curl",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Band Tricep Pushdown",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Band Overhead Tricep Extension",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Banded Lateral Walk",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Band Tibialis Raise",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Band Wrist Curl",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Band Wrist Extension",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Band Leg Curl",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Prone Reverse Fly",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Seated Bodyweight Calf Raise",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Oblique V-Up",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Single-Leg Tibialis Raise",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Adductor Squeeze (Ball)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Adductor Rock-Back (Kneeling)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Eccentric Calf Raise (Bodyweight)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Reverse Nordic Curl",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Slider Leg Curl (Bodyweight)",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Push-Up Plus",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    },
+    {
+      "name": "Reverse Plank",
+      "detail": "equipment=bodyweight, compoundIsolation=isolation, loadSemantics=total (only meaningful if a weighted variant is intended)"
+    }
+  ],
+  "bodyweightIsolationTotalLoadNote": "Not necessarily a bug: BW_LOADED_PROFILES (exerciseMetadata.js) deliberately allows unweighted bodyweight isolation staples (crunch, plank, etc.) into every plan context on the assumption a user CAN add external load. Flagged for lead confirmation that this is intended for every row listed, not asserted as wrong.",
+  "compoundButIsolationPatternCount": 0,
+  "compoundButIsolationPattern": [],
+  "secondaryContainsPrimaryCount": 0,
+  "secondaryContainsPrimary": [],
+  "repRangeInvertedCount": 0,
+  "repRangeInverted": [],
+  "repRangeAbsurdCount": 27,
+  "repRangeAbsurd": [
+    {
+      "name": "Wall Sit",
+      "detail": "rep range 30-90 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Cycling (Stationary)",
+      "detail": "rep range 60-120 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Toe Walk",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Plank",
+      "detail": "rep range 20-60 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Side Plank",
+      "detail": "rep range 20-60 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Suitcase Carry",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Farmer's Walk",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Keg Carry",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Plate Pinch",
+      "detail": "rep range 30-60 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Dead Hang",
+      "detail": "rep range 20-60 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Farmer Walk (Forearms)",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Rice Bucket",
+      "detail": "rep range 60-120 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Pinch Grip Carry",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Sled Push",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Sled Pull",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Prowler Drag",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Battle Ropes",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Stair Running",
+      "detail": "rep range 30-60 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Mountain Climber",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Agility Ladder Drills",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Rope Jump",
+      "detail": "rep range 30-60 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Heel Walk",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Gripper Walks",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Single-Arm Farmer Carry",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Weighted Plank (Plate on Back)",
+      "detail": "rep range 20-60 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Cable Anti-Rotation Hold (Half-Kneeling)",
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+    },
+    {
+      "name": "Reverse Plank",
+      "detail": "rep range 20-60 outside a plausible 1-30 hypertrophy/strength range"
+    }
+  ],
+  "fatigueOrSfrOutOfRangeCount": 0,
+  "fatigueOrSfrOutOfRange": [],
+  "demandValidationFailureCount": 0,
+  "demandValidationFailures": [],
+  "missingSubregionWhereRequiredCount": 59,
+  "missingSubregionWhereRequired": [
+    {
+      "name": "Dumbbell Pullover",
+      "primaryMuscle": "chest"
+    },
+    {
+      "name": "Hammer Strength Chest Press",
+      "primaryMuscle": "chest"
+    },
+    {
+      "name": "Cable Fly (High to Low)",
+      "primaryMuscle": "chest"
+    },
+    {
+      "name": "Dumbbell Pullover (Chest)",
+      "primaryMuscle": "chest"
+    },
+    {
+      "name": "Good Morning (Barbell)",
+      "primaryMuscle": "hamstrings"
+    },
+    {
+      "name": "Tricep Dip (Parallel Bars)",
+      "primaryMuscle": "triceps"
+    },
+    {
+      "name": "Cycling (Stationary)",
+      "primaryMuscle": "quads"
+    },
+    {
+      "name": "Romanian Deadlift (Dumbbell)",
+      "primaryMuscle": "hamstrings"
+    },
+    {
+      "name": "Kettlebell Swing",
+      "primaryMuscle": "hamstrings"
+    },
+    {
+      "name": "Deadlift (Conventional)",
+      "primaryMuscle": "hamstrings"
+    },
+    {
+      "name": "Deadlift (Sumo)",
+      "primaryMuscle": "hamstrings"
+    },
+    {
+      "name": "Trap Bar Deadlift (Hamstring)",
+      "primaryMuscle": "hamstrings"
+    },
+    {
+      "name": "Box Jump",
+      "primaryMuscle": "calves"
+    },
+    {
+      "name": "Ab Wheel (Kneeling)",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Weighted Sit-Up",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Toe-to-Bar",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "L-Sit Hold",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Suitcase Carry",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Pallof Press (Kneeling)",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Copenhagen Plank",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Sled Push",
+      "primaryMuscle": "quads"
+    },
+    {
+      "name": "Sled Pull",
+      "primaryMuscle": "hamstrings"
+    },
+    {
+      "name": "Prowler Drag",
+      "primaryMuscle": "hamstrings"
+    },
+    {
+      "name": "Assault Bike",
+      "primaryMuscle": "quads"
+    },
+    {
+      "name": "Jump Squat",
+      "primaryMuscle": "quads"
+    },
+    {
+      "name": "Broad Jump",
+      "primaryMuscle": "quads"
+    },
+    {
+      "name": "Depth Jump",
+      "primaryMuscle": "quads"
+    },
+    {
+      "name": "Stair Running",
+      "primaryMuscle": "quads"
+    },
+    {
+      "name": "Barbell Good Morning",
+      "primaryMuscle": "hamstrings"
+    },
+    {
+      "name": "Jefferson Curl",
+      "primaryMuscle": "hamstrings"
+    },
+    {
+      "name": "Serratus Punch",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Kneeling Cable Crunch",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Exercise Ball Crunch",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Mountain Climber",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Plank Row",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Bear Crawl",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Kneeling Ab Rollout",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Windmill",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Turkish Get-Up",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Close-Grip Push-Up",
+      "primaryMuscle": "chest"
+    },
+    {
+      "name": "Archer Push-Up",
+      "primaryMuscle": "chest"
+    },
+    {
+      "name": "Single-Arm Push-Up",
+      "primaryMuscle": "chest"
+    },
+    {
+      "name": "Cable Chest Press (Standing)",
+      "primaryMuscle": "chest"
+    },
+    {
+      "name": "Smith Machine Incline Press",
+      "primaryMuscle": "chest"
+    },
+    {
+      "name": "Guillotine Press",
+      "primaryMuscle": "chest"
+    },
+    {
+      "name": "Smith Machine Close-Grip Press",
+      "primaryMuscle": "triceps"
+    },
+    {
+      "name": "Dip Machine",
+      "primaryMuscle": "triceps"
+    },
+    {
+      "name": "Cable Kickback (Triceps)",
+      "primaryMuscle": "triceps"
+    },
+    {
+      "name": "Barbell Skull Crusher",
+      "primaryMuscle": "triceps"
+    },
+    {
+      "name": "Stiff-Leg Deadlift (Single-Leg)",
+      "primaryMuscle": "hamstrings"
+    },
+    {
+      "name": "Agility Ladder Drills",
+      "primaryMuscle": "calves"
+    },
+    {
+      "name": "Rope Jump",
+      "primaryMuscle": "calves"
+    },
+    {
+      "name": "Landmine Press (Abs)",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Half-Kneeling Pallof Press",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Tall-Kneeling Pallof Press",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "GHD Sit-Up",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Incline Board Sit-Up",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Hanging Oblique Raise",
+      "primaryMuscle": "abs"
+    },
+    {
+      "name": "Seated Twist (Plate)",
+      "primaryMuscle": "abs"
+    }
+  ],
+  "carryTaggedWeightRepsCount": 7,
+  "carryTaggedWeightReps": [
+    "Suitcase Carry",
+    "Farmer's Walk",
+    "Keg Carry",
+    "Farmer Walk (Forearms)",
+    "Pinch Grip Carry",
+    "Gripper Walks",
+    "Single-Arm Farmer Carry"
+  ]
+}

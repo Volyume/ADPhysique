@@ -111,7 +111,7 @@
         "Double Kettlebell Front Squat",
         "Double Rack Squat"
       ],
-      "tier": "common",
+      "tier": "specialist",
       "laterality": "bilateral",
       "loadCharacter": "grind",
       "difficulty": 2,
@@ -200,7 +200,7 @@
       "aliases": [
         "Two-Hand Kettlebell Deadlift"
       ],
-      "tier": "common",
+      "tier": "specialist",
       "laterality": "bilateral",
       "loadCharacter": "grind",
       "difficulty": 1,
@@ -703,7 +703,7 @@
         "Strict Kettlebell Press",
         "Military Kettlebell Press"
       ],
-      "tier": "common",
+      "tier": "specialist",
       "laterality": "unilateral",
       "loadCharacter": "grind",
       "difficulty": 2,
@@ -1267,7 +1267,7 @@
       "aliases": [
         "Kettlebell Farmer Walk"
       ],
-      "tier": "common",
+      "tier": "specialist",
       "laterality": "bilateral",
       "loadCharacter": "grind",
       "difficulty": 1,
@@ -1310,7 +1310,7 @@
       "sfr": 5,
       "subregion": null,
       "aliases": [],
-      "tier": "common",
+      "tier": "niche",
       "laterality": "unilateral",
       "loadCharacter": "grind",
       "difficulty": 1,
@@ -1400,7 +1400,7 @@
       "aliases": [
         "Waiter’s Carry (Kettlebell)"
       ],
-      "tier": "specialist",
+      "tier": "niche",
       "laterality": "unilateral",
       "loadCharacter": "grind",
       "difficulty": 3,
