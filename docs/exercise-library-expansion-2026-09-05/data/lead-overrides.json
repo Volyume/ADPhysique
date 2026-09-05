@@ -17,16 +17,47 @@
     }
   ],
   "aliasesForExisting": [
-    { "existing": "TRX Row", "aliases": ["Ring Row", "Inverted Row on Rings"] },
-    { "existing": "TRX Curl", "aliases": ["TRX Bicep Curl", "Suspension Curl"] }
+    {
+      "existing": "TRX Row",
+      "aliases": [
+        "Ring Row",
+        "Inverted Row on Rings"
+      ]
+    },
+    {
+      "existing": "TRX Curl",
+      "aliases": [
+        "TRX Bicep Curl",
+        "Suspension Curl"
+      ]
+    }
   ],
   "newFamilies": [
     {
       "equipment": "sandbag",
       "why": "Two inventories rejected sandbag movements only because the vocabulary lacked the implement. Sandbags are common home and garage equipment with a distinct shifting-load demand; a small attested family is in scope, cardio-style drills are not.",
       "cap": 12,
-      "examples": ["Sandbag Bear-Hug Squat", "Sandbag Shouldering", "Sandbag Clean", "Sandbag Front Carry", "Sandbag Zercher Carry", "Sandbag Bent-Over Row", "Sandbag Get-Up", "Sandbag Lunge (Bear Hug)"]
+      "examples": [
+        "Sandbag Bear-Hug Squat",
+        "Sandbag Shouldering",
+        "Sandbag Clean",
+        "Sandbag Front Carry",
+        "Sandbag Zercher Carry",
+        "Sandbag Bent-Over Row",
+        "Sandbag Get-Up",
+        "Sandbag Lunge (Bear Hug)"
+      ]
     }
   ],
-  "upheld": "Every other rejection in every inventory stands as recorded, including all cardio rejections."
+  "upheld": "Every other rejection in every inventory stands as recorded, including all cardio rejections.",
+  "triageCorrections": [
+    {
+      "triageFile": "gap-triage-free-implements.json",
+      "name": "Tyre Flip",
+      "verdictWas": "add",
+      "verdictNow": "false_positive",
+      "target": "Tyre Flip",
+      "why": "The corpus already carries 'Tyre Flip' (it is in the NEVER_AUTO registry list); the dataset's US spelling 'tire flip' defeated the screen. Add 'Tire Flip' as an alias of the existing row; no new equipment value."
+    }
+  ]
 }
