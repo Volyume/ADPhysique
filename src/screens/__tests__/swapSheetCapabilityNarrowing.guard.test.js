@@ -58,8 +58,12 @@ describe.each([
   const FN = slice(SRC, startMarker, endMarker);
 
   test('narrowedCount declared before the try, defaulting to 0 (safe-default pattern, matching ordered/proposal)', () => {
+    // EL-11 added its own earlier try/catch (the best-effort styleKey read)
+    // ahead of the personalisation try this test pins - so the search for
+    // "the try" starts from the declaration itself, finding the very next
+    // try block after it rather than EL-11's unrelated, earlier one.
     const declIdx = FN.indexOf('let narrowedCount = 0;');
-    const tryIdx = FN.indexOf('try {');
+    const tryIdx = FN.indexOf('try {', declIdx);
     expect(declIdx).toBeGreaterThan(-1);
     expect(tryIdx).toBeGreaterThan(declIdx);
   });
