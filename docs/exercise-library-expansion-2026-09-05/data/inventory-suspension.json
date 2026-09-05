@@ -1,0 +1,1537 @@
+{
+  "family": "suspension",
+  "generatedAt": "2026-09-05",
+  "existingRowsConsidered": 3,
+  "aliasesForExisting": [
+    {
+      "existing": "TRX Row",
+      "aliases": [
+        "Ring Row",
+        "Suspension Row",
+        "Inverted Row on Rings"
+      ]
+    },
+    {
+      "existing": "TRX Curl",
+      "aliases": [
+        "TRX Bicep Curl",
+        "Suspension Curl"
+      ]
+    },
+    {
+      "existing": "Ring Push-Up",
+      "aliases": [
+        "Suspended Ring Push-Up"
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "name": "TRX Row (Single-Arm)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "TRX Row",
+        "why": "one hand pulls at a time on its own strap, adding an anti-rotation demand the two-hand row does not require"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": false,
+        "unilateralLoadable": true,
+        "balanceDemand": "supported",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Row (Feet Elevated)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "TRX Row",
+        "why": "feet raised on a bench brings the body closer to horizontal, increasing the proportion of bodyweight pulled"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "unilateralLoadable",
+        "bilateralUpper",
+        "axialLoad"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Face Pull",
+      "primaryMuscle": "rear_delts",
+      "secondaryMuscles": [
+        "back"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "pull",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "face_pull",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "TRX Row",
+        "why": "pulled to face height with external rotation at the top rather than to the ribs, biasing rear delts and rotator cuff over lats"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "TRX Y-Raise",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "traps"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "pull",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "TRX Face Pull",
+        "why": "straight arms raise overhead to a Y rather than bending the elbows to pull to the face"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": true,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "unilateralLoadable",
+        "bilateralUpper"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX T-Raise",
+      "primaryMuscle": "rear_delts",
+      "secondaryMuscles": [
+        "traps"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "pull",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "horiz_abduction",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "TRX Y-Raise",
+        "why": "straight arms open out to the side at shoulder height rather than overhead, part of the same Y-T-W-I family"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX W-Raise",
+      "primaryMuscle": "rear_delts",
+      "secondaryMuscles": [
+        "traps"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "pull",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "horiz_abduction",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "TRX T-Raise",
+        "why": "elbows bend and draw back to a W shape rather than staying straight, biasing mid traps and rhomboids"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "unilateralLoadable",
+        "bilateralUpper"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX I-Raise",
+      "primaryMuscle": "traps",
+      "secondaryMuscles": [
+        "rear_delts"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "pull",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "TRX Y-Raise",
+        "why": "straight arms raise directly overhead in line with the body rather than out to a Y angle, isolating lower traps"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": true,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Reverse Fly",
+      "primaryMuscle": "rear_delts",
+      "secondaryMuscles": [
+        "back"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "horiz_abduction",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "TRX Face Pull",
+        "why": "straight-arm horizontal abduction rather than an elbow-bending pull to the face"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Bicep Curl (Single-Arm)",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "forearms"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "short_head",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "TRX Curl",
+        "why": "one arm curls at a time leaning back on one strap, adding a unilateral stability demand the two-arm curl does not have"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": false,
+        "unilateralLoadable": true,
+        "balanceDemand": "supported",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "TRX Chest Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Push-Up",
+        "why": "leaning forward into two suspended handles adds an unstable base the floor push-up does not have, and the incline sets the resistance by body angle"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Chest Press (Single-Arm)",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "TRX Chest Press",
+        "why": "one arm presses at a time, adding a rotational stability demand the two-hand press does not require"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": false,
+        "unilateralLoadable": true,
+        "balanceDemand": "supported",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Push-Up (Feet Suspended)",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts",
+        "abs"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Push-Up",
+        "why": "feet suspended in the straps rather than fixed on the floor, adding a whole-body instability and core-bracing demand"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "TRX Atomic Push-Up",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "abs",
+        "triceps"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "TRX Push-Up (Feet Suspended)",
+        "why": "each rep combines the push-up with a knee tuck to the chest, adding a compound core-flexion phase to the press"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "TRX Chest Fly",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front_delts"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "TRX Chest Press",
+        "why": "straight arms sweep out to the sides rather than bending at the elbow to press, isolating the chest"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Triceps Extension",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "overhead",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "TRX Curl",
+        "why": "body faces away from the anchor and extends the elbows overhead, the triceps counterpart to the existing biceps curl"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": true,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Pike",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "front_delts"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "anti_extension",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": null,
+        "why": "feet in the straps, hips pike upward from a plank, a compound core-flexion movement the strap system enables that no floor exercise replicates"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Knee Tuck",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "flexion",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "TRX Pike",
+        "why": "knees draw in toward the chest from a plank rather than the hips piking up, a smaller-range regression of the pike"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Fallout (Rollout)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "back"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "anti_extension",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Ab Wheel Rollout",
+        "why": "body leans forward from suspended straps rather than rolling a wheel along the floor, the suspension equivalent of the same anti-extension pattern"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Plank (Feet Suspended)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 45,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "anti_extension",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Plank",
+        "why": "feet suspended in the straps rather than fixed on the floor, adding an instability demand to the same anti-extension hold"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [
+        "unilateralLoadable"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Mountain Climber (Feet Suspended)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "quads",
+        "front_delts"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 15,
+      "repMax": 30,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "common",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Mountain Climber",
+        "why": "feet suspended in the straps rather than on the floor, adding an instability demand to the same driving-knee pattern"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [
+        "unilateralLoadable"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Hamstring Curl",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "knee_flexion",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Swiss Ball Leg Curl",
+        "why": "heels sit in the suspension straps rather than on a ball, with the strap length setting the resistance instead of ball control"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": false,
+        "unilateralLoadable": false,
+        "bilateralLower": true,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "unilateralLoadable",
+        "bilateralUpper",
+        "bilateralLower"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Hip Press",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "activator",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Glute Bridge",
+        "why": "heels rest in the suspension straps rather than flat on the floor, adding an instability demand to the same hip-extension pattern"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": false,
+        "unilateralLoadable": false,
+        "bilateralLower": true,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Assisted Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "staple",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Bodyweight Box Squat",
+        "why": "holding the straps for counterbalance lets a beginner reach full depth with support, rather than a fully self-supported squat"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "bilateralUpper": false,
+        "unilateralLoadable": false,
+        "bilateralLower": true,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "unilateralLoadable",
+        "bilateralUpper"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Assisted Pistol Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Assisted Pistol Squat (Chair-Assisted)",
+        "why": "the counterbalance comes from holding adjustable straps rather than a fixed chair, letting the assistance be dialled by strap length"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "bilateralUpper": false,
+        "unilateralLoadable": true,
+        "balanceDemand": "stable",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "bilateralUpper"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "TRX Rear-Foot Elevated Lunge",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Bodyweight Bulgarian Split Squat",
+        "why": "the rear foot hangs in a suspended strap rather than resting on a fixed bench, so the rear leg must actively stabilise rather than just rest"
+      },
+      "sources": [
+        "https://www.trxtraining.com/blogs/news/trx-exercises",
+        "https://fitbod.me/exercises/trx"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": false,
+        "unilateralLoadable": true,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "bilateralUpper"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Ring Dip",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [
+        "chest",
+        "front_delts"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "pushdown",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Tricep Dip (Parallel Bars)",
+        "why": "the rings rotate and can turn out at the bottom, adding a stability and shoulder-mobility demand fixed parallel bars do not have"
+      },
+      "sources": [
+        "https://calisthenicsnerd.com/2021/01/17/gymnastic-rings-workout-20-exercises-from-beginner-to-expert/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Ring Support Hold",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [
+        "chest",
+        "abs"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 15,
+      "repMax": 45,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "pushdown",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Ring Dip",
+        "why": "a static top-of-dip hold with straight arms, no reps, isolating the stabilisation demand the rings add"
+      },
+      "sources": [
+        "https://calisthenicsnerd.com/2021/01/17/gymnastic-rings-workout-20-exercises-from-beginner-to-expert/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "axialLoad",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Ring Fly",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front_delts"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "TRX Chest Fly",
+        "why": "the rotating rings let the hands turn through the fly, a harder and less fixed path than a webbing-strap handle"
+      },
+      "sources": [
+        "https://calisthenicsnerd.com/2021/01/17/gymnastic-rings-workout-20-exercises-from-beginner-to-expert/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "gripDemand",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Archer Row on Rings",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "TRX Row (Single-Arm)",
+        "why": "one ring is pulled while the other arm stays extended as a stabiliser, a bilateral-stance one-arm-row progression rather than a fully unilateral pull"
+      },
+      "sources": [
+        "https://calisthenicsnerd.com/2021/01/17/gymnastic-rings-workout-20-exercises-from-beginner-to-expert/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": false,
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Ring Chin-Up",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Chin-Up",
+        "why": "the rings rotate freely, letting the grip turn through the pull and adding a stabilisation demand a fixed bar does not have"
+      },
+      "sources": [
+        "https://calisthenicsnerd.com/2021/01/17/gymnastic-rings-workout-20-exercises-from-beginner-to-expert/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Ring Pull-Up",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Ring Chin-Up",
+        "why": "pronated grip on the same rotating rings, mirroring the Pull-Up/Chin-Up grip split used everywhere else in the library"
+      },
+      "sources": [
+        "https://calisthenicsnerd.com/2021/01/17/gymnastic-rings-workout-20-exercises-from-beginner-to-expert/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Ring Muscle-Up",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "chest",
+        "triceps",
+        "biceps"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 1,
+      "repMax": 6,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Muscle-Up (Bar)",
+        "why": "a false grip and turning the rotating rings out at the transition make the ring version a technically different skill from the fixed-bar muscle-up"
+      },
+      "sources": [
+        "https://jasongrubb.substack.com/p/guide-to-first-ring-muscle-up"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "overheadPosition",
+        "axialLoad"
+      ],
+      "notes": "Explicit never_auto per brief; highest technical/timing complexity in the suspension family."
+    },
+    {
+      "name": "Skin the Cat",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "chest",
+        "abs"
+      ],
+      "equipment": "suspension",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 8,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": null,
+        "why": "a shoulder-mobility rotation through and behind the rings/straps from a hang, a movement no pull or push pattern in the library already represents"
+      },
+      "sources": [
+        "https://gymnastgem.com/skin-the-cat/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "axialLoad",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": "Explicit never_auto per brief; shoulder end-range mobility skill, not a strength-progression staple."
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Ring Row",
+      "reason": "duplicate of 'TRX Row' (identical suspended-row mechanics; rings vs webbing handles do not change the demand for a two-hand row)"
+    },
+    {
+      "name": "TRX Bicep Curl",
+      "reason": "duplicate of 'TRX Curl'"
+    },
+    {
+      "name": "TRX Burpee",
+      "reason": "cardio"
+    },
+    {
+      "name": "Inverted Row on Rings",
+      "reason": "duplicate of 'TRX Row' / 'Archer Row on Rings' family (same suspended-row pattern, not a materially different stimulus)"
+    }
+  ]
+}

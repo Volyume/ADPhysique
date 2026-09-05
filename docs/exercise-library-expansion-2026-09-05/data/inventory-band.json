@@ -60,7 +60,10 @@
         "existing": "Band Chest Press",
         "why": "one arm presses at a time against the anchor, adding an anti-rotation core demand the two-hand press does not require"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "unilateralLoadable": true,
         "bilateralUpper": false,
@@ -95,7 +98,10 @@
         "existing": "Band Chest Press",
         "why": "anchor set low so the pressing line travels up and out at an incline angle, biasing upper chest and front delts"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -124,7 +130,10 @@
         "existing": "Push-Up",
         "why": "a band looped across the back adds accommodating resistance that increases through the range, unlike the flat bodyweight-only load"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "position": "lying",
         "floorAccess": true,
@@ -162,7 +171,10 @@
         "existing": "Band Chest Press",
         "why": "straight-arm horizontal-adduction fly rather than an elbow-bending press, isolating the chest instead of driving through the triceps"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -190,7 +202,10 @@
         "existing": "Band Face Pull",
         "why": "straight-arm horizontal abduction rather than pulling to the face with bent elbows, isolating rear delts without the external-rotation component"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -218,7 +233,10 @@
         "existing": "Band Shoulder Press",
         "why": "band anchored under a seat with the lifter seated removes leg drive and back sway, the seated/standing split already used elsewhere in the library"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "position": "seated",
         "axialLoad": false
@@ -251,7 +269,10 @@
         "existing": "Band Row",
         "why": "one hand rows at a time, adding an anti-rotation core demand the two-hand row does not require"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "unilateralLoadable": true,
         "bilateralUpper": false,
@@ -285,7 +306,10 @@
         "existing": "Band Row",
         "why": "seated with feet braced against the anchor removes the standing postural/leg-drive component of the standing row"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "position": "seated",
         "axialLoad": false
@@ -318,7 +342,10 @@
         "existing": "Band Pull-Apart",
         "why": "performed overhead rather than at chest height, biasing the upper traps and lower rear delt fibres through a different angle"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "overheadPosition": true
       },
@@ -348,7 +375,10 @@
         "existing": "Band Lat Pulldown",
         "why": "elbows stay locked and the arms sweep down from overhead, isolating the lats without elbow flexion the bent-arm pulldown uses"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "overheadPosition": true
       },
@@ -378,7 +408,10 @@
         "existing": "Band Bicep Curl",
         "why": "neutral (palms-in) grip shifts emphasis to the brachialis and brachioradialis rather than the biceps short head"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -404,7 +437,10 @@
         "existing": "Band Bicep Curl",
         "why": "seated with the elbow braced against the inner thigh, isolating one arm with no shoulder involvement possible"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "position": "seated",
         "unilateralLoadable": true,
@@ -436,7 +472,10 @@
         "existing": "Band Bicep Curl",
         "why": "one arm curls at a time standing, unlike the two-hand version, letting each side be trained to its own fatigue point"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "unilateralLoadable": true,
         "bilateralUpper": false
@@ -465,7 +504,10 @@
         "existing": "Band Tricep Pushdown",
         "why": "torso hinged forward and the arm extends backward behind the body, rather than pushing straight down in front of it"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "position": "standing",
         "unilateralLoadable": true,
@@ -495,7 +537,10 @@
         "existing": "Band Lateral Raise",
         "why": "the band is raised forward in the sagittal plane rather than out to the side, isolating the anterior deltoid fibre"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -523,7 +568,10 @@
         "existing": "Band Lateral Raise",
         "why": "arms raise overhead at a Y angle rather than straight out to the side, biasing lower traps and serratus"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "overheadPosition": true
       },
@@ -553,7 +601,10 @@
         "existing": "Band Rear Delt Fly",
         "why": "part of the Y-T-W sequence performed bent-over at a fixed T angle rather than a free horizontal fly path"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "position": "standing",
         "floorAccess": false,
@@ -589,7 +640,10 @@
         "existing": "Band T-Raise",
         "why": "elbows bend and draw back to a W shape rather than staying straight, biasing the mid traps and rhomboids"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -618,7 +672,10 @@
         "existing": "Band Y-Raise",
         "why": "a single set cycles through all three positions (Y, T, W) rather than repeating one angle, a combined scapular-control drill"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "overheadPosition": true,
         "position": "standing",
@@ -655,7 +712,10 @@
         "existing": "Band Bicep Curl",
         "why": "the band is pulled straight up close to the body toward the chin, an internally-rotated shoulder path rather than an elbow curl"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "axialLoad": false
       },
@@ -687,7 +747,10 @@
         "existing": "Band Squat",
         "why": "band held at the chest with both hands rather than anchored underfoot/overhead, an anterior-loaded goblet position"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -715,7 +778,10 @@
         "existing": "Band Deadlift",
         "why": "a hip hinge with soft knees from a standing start, not a full pull from the floor, matching how the RDL is a separate row from the deadlift on every other implement"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -743,7 +809,10 @@
         "existing": "Band Romanian Deadlift (Bilateral)",
         "why": "one leg supports the whole hinge, adding a balance and unilateral-loading demand the two-leg version does not have"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "balanceDemand": "high",
         "axialLoad": false
@@ -775,7 +844,10 @@
         "existing": "Band Deadlift",
         "why": "a wide stance with toes turned out shifts more load onto the glutes and adductors than the standard stance pull"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -803,7 +875,10 @@
         "existing": "Band Hip Thrust",
         "why": "one leg drives the thrust while the other is held off the floor, doubling the load on the working side"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "balanceDemand": "supported"
       },
@@ -833,7 +908,10 @@
         "existing": "Band Hip Thrust",
         "why": "shoulders stay on the floor rather than elevated on a bench, the same shoulder-position split that separates Glute Bridge from Hip Thrust elsewhere in the library"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -861,7 +939,10 @@
         "existing": "Banded Lateral Walk",
         "why": "performed side-lying with knees bent, opening the top knee like a clamshell, rather than standing and travelling"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "position": "lying",
         "floorAccess": true,
@@ -906,7 +987,10 @@
         "existing": "Banded Lateral Walk",
         "why": "travels forward/backward in an athletic stance rather than stepping side to side"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "gripDemand": "none",
         "weightBearingHands": false,
@@ -940,7 +1024,10 @@
         "existing": "Donkey Kick",
         "why": "a band around the ankles/feet adds external resistance, versus the pure bodyweight version"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "position": "kneeling",
         "floorAccess": true,
@@ -977,7 +1064,10 @@
         "existing": "Banded Lateral Walk",
         "why": "a stationary standing leg-raise to the side against the band, not a travelling walk"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "gripDemand": "supportive",
         "weightBearingHands": false,
@@ -1007,7 +1097,10 @@
         "existing": "Band Standing Hip Abduction",
         "why": "the working leg pulls inward across the body against the band rather than outward away from it"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "gripDemand": "supportive",
         "weightBearingHands": false,
@@ -1039,7 +1132,10 @@
         "existing": "Band Standing Hip Abduction",
         "why": "performed on all fours lifting the knee out to the side, rather than standing and abducting a straight leg"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "position": "kneeling",
         "floorAccess": true,
@@ -1079,7 +1175,10 @@
         "existing": null,
         "why": "an anti-rotation press-out held against the band pulling sideways, a core-bracing pattern no other seeded band row provides"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "position": "standing"
       },
@@ -1109,7 +1208,10 @@
         "existing": "Band Pallof Press",
         "why": "a rotational chop pulling the band diagonally across the body, not an anti-rotation hold"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -1137,7 +1239,10 @@
         "existing": "Band Woodchop (High-to-Low)",
         "why": "the diagonal pull travels upward across the body rather than downward, the mirrored direction of the same pattern"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -1163,7 +1268,10 @@
         "existing": "Band Tibialis Raise",
         "why": "the foot pulls against band resistance while seated with the leg extended, an isolated ankle movement rather than a standing bodyweight raise"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "position": "seated",
         "floorAccess": true,
@@ -1209,7 +1317,10 @@
         "existing": "Band Assisted Pull-Up",
         "why": "the same band-assistance principle applied to the dip rather than the pull-up, a push-pattern counterpart"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/pros/expert-articles/8789/quick-hit-workout-resistance-bands/",
+        "https://blog.nasm.org/resistance-training"
+      ],
       "demandOverrides": {
         "position": "mixed",
         "floorAccess": false,

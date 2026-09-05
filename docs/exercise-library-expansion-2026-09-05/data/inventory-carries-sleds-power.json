@@ -1,0 +1,1019 @@
+{
+  "family": "carries-sleds-power",
+  "generatedAt": "2026-09-05",
+  "existingRowsConsidered": 19,
+  "candidates": [
+    {
+      "name": "Dumbbell Overhead Carry",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "abs",
+        "traps"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "carry",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "Waiter’s Overhead Carry"
+      ],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Farmer's Walk",
+        "why": "load locked out overhead rather than hanging at the side; sustained overhead shoulder stability replaces the anti-lateral-flexion demand of a side carry"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (strongman/carry and Olympic-lift chapters)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "exerciseType is distance or time, not weight_reps (no \"distance\" exerciseType exists in the current schema — see vocabulary-gap note in the top-level report); rep fields left null."
+    },
+    {
+      "name": "Dumbbell Front Rack Carry",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "front_delts",
+        "quads"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "carry",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": null,
+      "aliases": [
+        "Double Front Rack Carry"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Farmer's Walk",
+        "why": "two dumbbells racked at the shoulders rather than hanging at the sides; the anti-flexion demand moves from the grip/lats to the upper trunk holding the rack position"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "exerciseType distance or time, not weight_reps."
+    },
+    {
+      "name": "Trap Bar Carry",
+      "primaryMuscle": "traps",
+      "secondaryMuscles": [
+        "forearms",
+        "quads"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "carry",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": null,
+      "aliases": [
+        "Hex Bar Carry"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Farmer's Walk",
+        "why": "implement family differs (a single trap bar with fixed handle width vs two independently spaced dumbbells)"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (strongman/carry and Olympic-lift chapters)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Trap bar has no dedicated coarse equipment value in this vocabulary; tagged \"barbell\", matching the existing \"Trap Bar Deadlift\" and \"Trap Bar Shrug\" rows. exerciseType distance or time, not weight_reps."
+    },
+    {
+      "name": "Barbell Zercher Carry",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "quads",
+        "back"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "carry",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Zercher Squat",
+        "why": "the bar is walked rather than squatted; the movement pattern is carry, not squat, even though the hold is identical"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "exerciseType distance or time, not weight_reps. Bar held in the crook of the elbows against the torso."
+    },
+    {
+      "name": "Dumbbell Waiter's Carry",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "forearms",
+        "abs"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "carry",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [
+        "Waiter's Walk"
+      ],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Dumbbell Overhead Carry",
+        "why": "the dumbbell is balanced upright on an open palm rather than gripped by the handle; wrist and finger stabilisation replace a closed-grip hold"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "exerciseType distance or time, not weight_reps. Light-load balance drill; the open-palm hold is the whole coaching point."
+    },
+    {
+      "name": "Sled Row",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps",
+        "rear_delts"
+      ],
+      "equipment": "sled",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": "horizontal_lat",
+      "aliases": [
+        "Sled Rope Row"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Sled Pull",
+        "why": "the lifter stands still and pulls the sled toward themselves hand-over-hand on a rope, rather than walking backward or forward while attached"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": "exerciseType time or distance-of-rope-pulled, not weight_reps; new coarse equipment value \"sled\" used per this campaign’s vocabulary (the existing Sled Push/Pull/Prowler Drag rows predate it and stay tagged \"machine\"). \"sled\" is not yet in the demands.js SINGLE_IMPLEMENT/FIXED_IMPLEMENT sets, so grip/unilateral/bilateral axes derive null; overridden here from the mechanics (one shared sled load, cannot be split per side)."
+    },
+    {
+      "name": "Sled Reverse Drag",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "calves"
+      ],
+      "equipment": "sled",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": null,
+      "aliases": [
+        "Backward Sled Drag"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Sled Pull",
+        "why": "walked backward facing away from the sled with straps over the shoulders, rather than facing the sled and pulling it forward hand-over-hand or by harness"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": false,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "weightBearingHands"
+      ],
+      "notes": "exerciseType distance or time, not weight_reps. Knee-extension-dominant compared to the hip-hinge-dominant forward Sled Pull. \"sled\" equipment not yet in demands.js implement sets, so grip/bilateral axes derive null; overridden from the mechanics (harness/straps, hands are not the load-bearing interface)."
+    },
+    {
+      "name": "Sled Lateral Drag",
+      "primaryMuscle": "adductors",
+      "secondaryMuscles": [
+        "glutes",
+        "quads"
+      ],
+      "equipment": "sled",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "Lateral Sled Drag"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Sled Pull",
+        "why": "side-stepping drag with the harness/strap attached to the hip, loading the frontal-plane hip abductors/adductors rather than the sagittal-plane hip extensors"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": false,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "weightBearingHands"
+      ],
+      "notes": "exerciseType distance or time, not weight_reps. Same \"sled\" implement-set gap as Sled Row/Sled Reverse Drag; overridden the same way."
+    },
+    {
+      "name": "Medicine Ball Chest Pass",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "medicine_ball",
+      "movementPattern": "power",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [
+        "Medicine Ball Push Pass"
+      ],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Weighted Russian Twist (Medicine Ball)",
+        "why": "a two-hand explosive throw released away from the chest (resistance/power work) rather than a held anti-rotation twist"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (strongman/carry and Olympic-lift chapters)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "axialLoad",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": "Ballistic per EL-7 (throw); when-in-doubt-safer-tier applied (never_auto), matching the caution EL-5 gives kettlebell ballistics, since the release/catch cycle carries the same risk-profile logic. \"medicine_ball\" is not yet in demands.js implement sets, so several axes derive null; overridden from the mechanics below."
+    },
+    {
+      "name": "Medicine Ball Rotational Throw",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "glutes",
+        "chest"
+      ],
+      "equipment": "medicine_ball",
+      "movementPattern": "power",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "rotation",
+      "aliases": [
+        "Medicine Ball Side Throw",
+        "Rotational Med Ball Throw"
+      ],
+      "tier": "never_auto",
+      "laterality": "unilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Landmine Rotation",
+        "why": "implement family differs (medicine ball released against a wall vs a fixed landmine bar) and the ball is thrown, not held through a controlled rotation"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (strongman/carry and Olympic-lift chapters)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "axialLoad",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": "Ballistic per EL-7 (throw); never_auto, when-in-doubt-safer-tier. \"medicine_ball\" implement-set gap as above; axialLoad false to match the corpus’s own convention for rotation-pattern movements (e.g. \"Landmine Rotation\"), which are not treated as axial despite the trunk torque."
+    },
+    {
+      "name": "Medicine Ball Slam",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "back",
+        "triceps"
+      ],
+      "equipment": "medicine_ball",
+      "movementPattern": "power",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "anti_extension",
+      "aliases": [
+        "Overhead Medicine Ball Slam"
+      ],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: overhead-to-floor explosive slam, none of the seeded rows perform it"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (strongman/carry and Olympic-lift chapters)",
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "supportive",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "axialLoad",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": "Ballistic per EL-7 (throw/slam is the throw family); never_auto. \"medicine_ball\" implement-set gap as above."
+    },
+    {
+      "name": "Medicine Ball Overhead Throw",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front_delts",
+        "triceps"
+      ],
+      "equipment": "medicine_ball",
+      "movementPattern": "power",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [
+        "Overhead Soccer Throw",
+        "Medicine Ball Backward Overhead Throw"
+      ],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Medicine Ball Slam",
+        "why": "thrown forward or backward through an overhead arc and released, rather than driven down into the floor in front of the body"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "supportive",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "gripDemand",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "axialLoad",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": "Ballistic per EL-7 (throw); never_auto. Two common variants (forward soccer-style throw, backward-over-head heave) share this row per EL-2 (same implement, same overhead-release stimulus); aliases cover both. \"medicine_ball\" implement-set gap as above (overheadPosition itself derives correctly via the name)."
+    },
+    {
+      "name": "Medicine Ball Scoop Toss",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "abs",
+        "quads"
+      ],
+      "equipment": "medicine_ball",
+      "movementPattern": "power",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [
+        "Rotational Scoop Toss"
+      ],
+      "tier": "never_auto",
+      "laterality": "unilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Medicine Ball Rotational Throw",
+        "why": "power is generated from a squat-and-hip-extension scoop off the floor into the throw, rather than a standing rotational wind-up; the legs/hips are the prime mover, not the trunk rotation"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "unilateralLoadable",
+        "bilateralUpper",
+        "bilateralLower",
+        "axialLoad",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": "Ballistic per EL-7 (throw); never_auto. \"medicine_ball\" implement-set gap as above."
+    },
+    {
+      "name": "Hang Clean",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "glutes",
+        "quads"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "power",
+      "isCompound": true,
+      "repMin": 2,
+      "repMax": 5,
+      "fatigueCost": 6,
+      "sfr": 3,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Power Clean",
+        "why": "starts from a hang position above the knee rather than the floor, removing the first pull and floor pick-up phase"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": "Ballistic (clean); never_auto and difficulty 3 per the explicit brief instruction for Olympic-derived lifts."
+    },
+    {
+      "name": "Hang Snatch",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "glutes",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "power",
+      "isCompound": true,
+      "repMin": 2,
+      "repMax": 5,
+      "fatigueCost": 6,
+      "sfr": 2,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: no full or hang snatch of any kind is seeded (only \"Snatch Grip Deadlift\" and \"Snatch Grip Shrug\" exist, neither of which catches the bar overhead)"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Ballistic (snatch); never_auto, difficulty 3 per the brief."
+    },
+    {
+      "name": "Snatch Pull",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "traps",
+        "hamstrings"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 5,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Clean Pull",
+        "why": "snatch-width grip and pull to a higher finish (chest-high shrug) than the clean-width, lower-finishing clean pull"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Ballistic (a snatch derivative); never_auto, difficulty 3 per the brief. \"Clean Pull\" already exists as a seeded barbell row (hinge pattern), which is why this candidate is compared against it rather than added as a duplicate."
+    },
+    {
+      "name": "Push Jerk",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "quads"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "power",
+      "isCompound": true,
+      "repMin": 2,
+      "repMax": 5,
+      "fatigueCost": 6,
+      "sfr": 3,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Push Press",
+        "why": "catches the bar overhead with a re-bend/dip of the knees (a jerk catch), rather than one continuous leg drive straight to lockout"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Ballistic (jerk); never_auto, difficulty 3 per the brief."
+    },
+    {
+      "name": "Split Jerk",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "quads"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "power",
+      "isCompound": true,
+      "repMin": 1,
+      "repMax": 3,
+      "fatigueCost": 6,
+      "sfr": 2,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Push Jerk",
+        "why": "the feet split fore-aft to catch the bar overhead, rather than re-bending the knees in a parallel stance"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Ballistic (jerk); never_auto, difficulty 3 per the brief. Competition weightlifting jerk variant."
+    },
+    {
+      "name": "Muscle Snatch",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "front_delts",
+        "traps"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "power",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 5,
+      "sfr": 3,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Hang Snatch",
+        "why": "the bar is pressed/pulled straight through to lockout with no receiving dip under it, a strict-technique drill rather than the competition catch"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Ballistic (a snatch derivative used as a technique drill); never_auto, difficulty 3 per the brief."
+    },
+    {
+      "name": "Barbell High Pull",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "side_delts",
+        "traps"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 8,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [
+        "High Pull"
+      ],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Clean Pull",
+        "why": "pulled higher, to a high-elbow chest-height finish, rather than stopping at the shrug-height clean pull finish"
+      },
+      "sources": [
+        "Established S&C coaching literature (strongman conditioning texts, USAW technical manual for the Olympic-lift derivatives)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "balanceDemand"
+      ],
+      "notes": "Ballistic (high pull); never_auto per the brief’s explicit \"every high pull is never_auto\" instruction."
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Sandbag Carry",
+      "reason": "not representable (no equipment vocabulary bucket fits a sandbag: it is neither a barbell/dumbbell/kettlebell-style rigid implement nor a medicine ball; forcing it into \"medicine_ball\" would misrepresent the unstable, shifting-load handling that is the whole point of the implement)"
+    },
+    {
+      "name": "Bulgarian Bag Swing",
+      "reason": "not representable (same equipment-vocabulary gap as the sandbag; also overlaps mechanically with the already-covered kettlebell swing family)"
+    },
+    {
+      "name": "Plate Pinch Carry",
+      "reason": "duplicate of 'Pinch Grip Carry' (already seeded, barbell equipment, carry pattern)"
+    },
+    {
+      "name": "Clean Pull",
+      "reason": "duplicate of 'Clean Pull' (already seeded, barbell equipment, hinge pattern)"
+    },
+    {
+      "name": "Power Snatch",
+      "reason": "out of this family’s assigned scope (a full barehand Olympic lift belongs with the barbell family’s own Olympic-lift coverage, not the carries/sleds/power inventory); flagged in the report as a corpus gap since only \"Power Clean\" is currently seeded and no barbell Snatch of any kind exists"
+    },
+    {
+      "name": "Sled Sprint (Resisted)",
+      "reason": "not distinct under EL-2 from a running/cardio modality (the brief explicitly rejects running); kept out to avoid re-introducing an endurance-adjacent logging case through the sled family"
+    },
+    {
+      "name": "Rowing Machine (Erg)",
+      "reason": "cardio"
+    },
+    {
+      "name": "Assault Bike Intervals",
+      "reason": "cardio"
+    },
+    {
+      "name": "Treadmill Sprints",
+      "reason": "cardio"
+    },
+    {
+      "name": "Outdoor Running Intervals",
+      "reason": "cardio"
+    },
+    {
+      "name": "Stationary Cycling Intervals",
+      "reason": "cardio"
+    }
+  ],
+  "vocabularyGaps": [
+    "No \"distance\" exerciseType exists in the schema (only weight_reps, duration, weighted_bodyweight); every carry/sled-drag candidate in this family needs one, and today the existing carry rows (Farmer’s Walk etc.) are seeded as weight_reps by convention rather than a true distance/time type. Flagged, not invented.",
+    "No equipment bucket fits a sandbag or a Bulgarian bag; both rejected as not representable under the closed equipment vocabulary.",
+    "No coarse equipment value exists for a trap/hex bar or other specialty bars (EL-4 buckets them under \"barbell\" by design; followed here for the Trap Bar Carry)."
+  ]
+}

@@ -379,7 +379,9 @@
         "existing": "Push-Up",
         "why": "each rep drives a knee to the elbow, adding an oblique/hip-flexion demand on top of the press"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Kinesiology/ScalingCalisthenics"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -408,7 +410,9 @@
         "existing": "Archer Push-Up",
         "why": "one hand set forward of the other in a fixed offset rather than sweeping wide on each rep, a milder unilateral-bias step before the archer variant"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Kinesiology/ScalingCalisthenics"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -437,7 +441,9 @@
         "existing": "Push-Up",
         "why": "explosive concentric leaves the floor for a clap, a plyometric/power expression rather than a controlled grind"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Kinesiology/ScalingCalisthenics"
+      ],
       "demandOverrides": {
         "impact": true,
         "position": "mixed",
@@ -517,7 +523,9 @@
         "existing": "Deficit Push-Up",
         "why": "parallettes give a fixed, stable elevated hand platform with a neutral wrist grip, versus stacked-plate/box deficits with a flat palm"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Kinesiology/ScalingCalisthenics"
+      ],
       "demandOverrides": {
         "gripDemand": "supportive"
       },
@@ -547,7 +555,9 @@
         "existing": "Neutral Grip Pull-Up",
         "why": "hands together on the same narrow overhand grip, not a shoulder-width neutral-grip attachment"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -640,7 +650,9 @@
         "existing": "Pull-Up",
         "why": "legs held out in an L-sit for the whole set, adding a sustained hip-flexor/abdominal isometric to the pulling movement"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -668,7 +680,9 @@
         "existing": "Chin-Up (Supinated)",
         "why": "one palm pronated and one supinated on the same rep, asymmetric forearm/bicep loading rather than a matched grip"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -696,7 +710,9 @@
         "existing": "Pull-Up",
         "why": "starts at the top (jump or step up) and only performs the slow lowering phase, the standard beginner path to a first strict pull-up"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -724,7 +740,9 @@
         "existing": "Pull-Up",
         "why": "a held top-position isometric with no reps, a fixed-angle strength hold rather than a full concentric/eccentric cycle"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": "Time-based hold; exerciseType would be duration_hold rather than weight_reps."
@@ -859,7 +877,9 @@
         "existing": "Weighted Pull-Up",
         "why": "supinated grip biases the biceps and changes the loading vector, mirroring how Chin-Up is already a separate row from Pull-Up"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {
         "position": "mixed",
         "floorAccess": false,
@@ -897,7 +917,9 @@
         "existing": "Tricep Dip (Parallel Bars)",
         "why": "torso leaned well forward and legs kicked back, shifting the emphasis from triceps to chest, the mirror of how upright-torso dips bias triceps"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Kinesiology/ScalingCalisthenics"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -926,7 +948,9 @@
         "existing": "Bench Dip",
         "why": "feet raised on a second bench increases the range and the proportion of bodyweight loaded through the arms"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Kinesiology/ScalingCalisthenics"
+      ],
       "demandOverrides": {
         "position": "mixed",
         "floorAccess": false,
@@ -962,7 +986,9 @@
         "existing": "Inverted Row",
         "why": "feet raised on a box brings the body closer to horizontal, increasing the proportion of bodyweight pulled"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -990,7 +1016,9 @@
         "existing": "Inverted Row",
         "why": "one arm pulls while the other stays free at the side, a unilateral loading vector the two-hand row cannot provide"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {
         "unilateralLoadable": true,
         "bilateralUpper": false
@@ -1021,7 +1049,9 @@
         "existing": "Inverted Row",
         "why": "a higher bar keeps the torso closer to vertical, a standard beginner-easy regression of the row angle"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -1049,7 +1079,9 @@
         "existing": "Inverted Row (High Bar)",
         "why": "a low bar takes the body near horizontal, the hardest end of the row-angle range"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -1077,7 +1109,9 @@
         "existing": "Inverted Row",
         "why": "supinated grip biases biceps more than the default overhand row, matching the Pull-Up/Chin-Up grip split already in the corpus"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -1221,7 +1255,9 @@
         "existing": "Bodyweight Bulgarian Split Squat",
         "why": "rear foot stays on the floor rather than elevated on a bench, the easier stationary-lunge entry point"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Lists/ExList/ThighWt"
+      ],
       "demandOverrides": {
         "gripDemand": "none",
         "axialLoad": false,
@@ -1257,7 +1293,9 @@
         "existing": "Reverse Lunge",
         "why": "unloaded bodyweight version of the existing dumbbell row, the implement (none vs dumbbell) is the distinguishing axis"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Lists/ExList/ThighWt"
+      ],
       "demandOverrides": {
         "gripDemand": "none",
         "axialLoad": false,
@@ -1293,7 +1331,9 @@
         "existing": "Bodyweight Reverse Lunge",
         "why": "the working leg steps forward under a lengthening quad rather than back, a different eccentric demand and knee-tracking profile"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Lists/ExList/ThighWt"
+      ],
       "demandOverrides": {
         "gripDemand": "none",
         "axialLoad": false,
@@ -1329,7 +1369,9 @@
         "existing": "Walking Lunge",
         "why": "unloaded bodyweight version; implement axis (none vs dumbbell) makes this a separate row from the existing loaded one"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Lists/ExList/ThighWt"
+      ],
       "demandOverrides": {
         "unilateralLoadable": false,
         "gripDemand": "none",
@@ -1367,7 +1409,9 @@
         "existing": "Curtsy Lunge",
         "why": "unloaded bodyweight version; implement axis makes this a separate row from the existing loaded dumbbell one"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Lists/ExList/ThighWt"
+      ],
       "demandOverrides": {
         "gripDemand": "none",
         "axialLoad": false,
@@ -1403,7 +1447,9 @@
         "existing": "Step-Up (Dumbbell)",
         "why": "unloaded bodyweight version; implement axis makes this a separate row from every loaded step-up already seeded"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Lists/ExList/ThighWt"
+      ],
       "demandOverrides": {
         "gripDemand": "none",
         "axialLoad": false,
@@ -1440,7 +1486,9 @@
         "existing": "Bodyweight Step-Up",
         "why": "the step is to the side rather than straight ahead, adding a frontal-plane/adductor demand the forward step-up does not have"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Lists/ExList/ThighWt"
+      ],
       "demandOverrides": {
         "gripDemand": "none",
         "axialLoad": false,
@@ -1476,7 +1524,9 @@
         "existing": "Box Squat",
         "why": "unloaded bodyweight version; implement axis makes this a separate row from the existing barbell one"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Lists/ExList/ThighWt"
+      ],
       "demandOverrides": {
         "gripDemand": "none",
         "axialLoad": false,
@@ -1513,7 +1563,9 @@
         "existing": "Jump Squat",
         "why": "legs switch mid-air between a lunge split stance each rep, rather than a symmetric two-leg jump"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Lists/ExList/ThighWt"
+      ],
       "demandOverrides": {
         "bilateralLower": false,
         "axialLoad": false
@@ -1547,7 +1599,9 @@
         "existing": "Jump Squat",
         "why": "knees drive to the chest at the top of the jump, an explosive hip/knee-flexion expression rather than a squat-depth landing"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Lists/ExList/ThighWt"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -1575,7 +1629,9 @@
         "existing": "Glute Bridge",
         "why": "one leg does the full bridge while the other is held off the floor, doubling the load on the working side, distinct from the shoulder-elevated Single Leg Hip Thrust"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/everyone/exercise-library/"
+      ],
       "demandOverrides": {
         "balanceDemand": "supported"
       },
@@ -1606,7 +1662,9 @@
         "existing": "Glute Bridge",
         "why": "the top position is held while the legs alternate lifting off the floor, adding a pelvic-stability demand the static bridge does not test"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/everyone/exercise-library/"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -1634,7 +1692,9 @@
         "existing": null,
         "why": "the anti-flexion counterpart to the Plank/Hollow Body Hold family; loads the posterior chain isometrically face-down rather than the anterior core"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/everyone/exercise-library/"
+      ],
       "demandOverrides": {
         "position": "lying",
         "floorAccess": true,
@@ -1673,7 +1733,9 @@
         "existing": "Dead Bug",
         "why": "performed on all fours moving an opposite arm and leg rather than lying on the back moving limbs against gravity"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/everyone/exercise-library/"
+      ],
       "demandOverrides": {
         "position": "kneeling",
         "floorAccess": true,
@@ -1740,7 +1802,9 @@
         "existing": "Plank",
         "why": "forearms are walked forward past the shoulders, lengthening the moment arm and increasing anti-extension demand for the same body position"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -1766,7 +1830,9 @@
         "existing": "Side Plank",
         "why": "a repeated dip-and-raise of the hip rather than a static hold, a rep-based rather than isometric prescription of the same position"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Kinesiology/ScalingCalisthenics"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -1792,7 +1858,9 @@
         "existing": "Leg Raise",
         "why": "small continuous alternating up-down kicks with the legs held low, not a full raise to a fixed top position"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/everyone/exercise-library/"
+      ],
       "demandOverrides": {
         "position": "lying",
         "floorAccess": true,
@@ -1836,7 +1904,9 @@
         "existing": "Flutter Kick",
         "why": "legs cross over each other horizontally rather than moving up and down, adding an adductor crossover component"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/everyone/exercise-library/"
+      ],
       "demandOverrides": {
         "position": "lying",
         "floorAccess": true,
@@ -1880,7 +1950,9 @@
         "existing": "Plank",
         "why": "one hand lifts to tap the opposite shoulder each rep, adding an anti-rotation demand the static plank does not require"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/everyone/exercise-library/"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -1909,7 +1981,9 @@
         "existing": "Plank",
         "why": "alternates between forearm plank and full push-up plank each rep, adding a repeated pressing transition to the static hold"
       },
-      "sources": [],
+      "sources": [
+        "https://exrx.net/Kinesiology/ScalingCalisthenics"
+      ],
       "demandOverrides": {},
       "derivedNullAxes": [],
       "notes": ""
@@ -1935,7 +2009,9 @@
         "existing": "Toe-to-Bar",
         "why": "legs are raised then swept side to side under control while hanging, a rotational demand a straight vertical toes-to-bar does not test"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/everyone/exercise-library/"
+      ],
       "demandOverrides": {
         "position": "mixed",
         "floorAccess": false,
@@ -1974,7 +2050,9 @@
         "existing": "L-Sit Hold",
         "why": "performed hanging from a bar with a closed grip, not supported on parallettes/the floor with palms pressing down"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/everyone/exercise-library/"
+      ],
       "demandOverrides": {
         "position": "mixed",
         "floorAccess": false,
@@ -2011,7 +2089,9 @@
         "existing": "L-Sit Hold",
         "why": "legs are raised well above parallel into a V rather than held level with the hips, a harder end of the same range-of-motion progression"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/everyone/exercise-library/"
+      ],
       "demandOverrides": {
         "position": "mixed",
         "floorAccess": true,
@@ -2053,7 +2133,9 @@
         "existing": "Neck Bridge",
         "why": "bridges forward onto the forehead loading neck flexors, the mirror of the existing back-of-head extensor bridge"
       },
-      "sources": [],
+      "sources": [
+        "https://www.acefitness.org/resources/everyone/exercise-library/"
+      ],
       "demandOverrides": {
         "position": "kneeling",
         "floorAccess": true,
@@ -2383,7 +2465,9 @@
         "existing": "Front Lever (Tuck)",
         "why": "body hangs face-down and behind the bar in a false grip rather than face-up in front of it, a straight-arm shoulder-extension hold instead of a pulling hold"
       },
-      "sources": [],
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
       "demandOverrides": {
         "position": "mixed",
         "floorAccess": false,

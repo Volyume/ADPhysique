@@ -3,7 +3,9 @@
   "seatedAndFloorAccess": [
     {
       "name": "Z-Press",
-      "detail": "position=seated with floorAccess=true"
+      "detail": "position=seated with floorAccess=true",
+      "knownIntentional": true,
+      "note": "CURATED_DEMANDS (demands.js) sets this deliberately: \"Z-press: seated ON THE FLOOR\". Not a bug — the combination genuinely occurs for this one movement, which is exactly why validateDemandMetadata does not treat seated+floorAccess as a hard contradiction (unlike impact+seated or high-balance+lying, which it does reject)."
     }
   ],
   "lyingAndHighBalanceCount": 0,
@@ -346,115 +348,51 @@
   "secondaryContainsPrimary": [],
   "repRangeInvertedCount": 0,
   "repRangeInverted": [],
-  "repRangeAbsurdCount": 27,
+  "repRangeAbsurdCount": 11,
   "repRangeAbsurd": [
     {
-      "name": "Wall Sit",
-      "detail": "rep range 30-90 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Cycling (Stationary)",
-      "detail": "rep range 60-120 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
       "name": "Toe Walk",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Plank",
-      "detail": "rep range 20-60 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Side Plank",
-      "detail": "rep range 20-60 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Suitcase Carry",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Farmer's Walk",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Keg Carry",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength rep range (exerciseType=weight_reps, movementPattern=isolation)"
     },
     {
       "name": "Plate Pinch",
-      "detail": "rep range 30-60 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Dead Hang",
-      "detail": "rep range 20-60 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Farmer Walk (Forearms)",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+      "detail": "rep range 30-60 outside a plausible 1-30 hypertrophy/strength rep range (exerciseType=weight_reps, movementPattern=isolation)"
     },
     {
       "name": "Rice Bucket",
-      "detail": "rep range 60-120 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Pinch Grip Carry",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+      "detail": "rep range 60-120 outside a plausible 1-30 hypertrophy/strength rep range (exerciseType=weight_reps, movementPattern=isolation)"
     },
     {
       "name": "Sled Push",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength rep range (exerciseType=weight_reps, movementPattern=squat)"
     },
     {
       "name": "Sled Pull",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength rep range (exerciseType=weight_reps, movementPattern=hinge)"
     },
     {
       "name": "Prowler Drag",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Battle Ropes",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength rep range (exerciseType=weight_reps, movementPattern=hinge)"
     },
     {
       "name": "Stair Running",
-      "detail": "rep range 30-60 outside a plausible 1-30 hypertrophy/strength range"
+      "detail": "rep range 30-60 outside a plausible 1-30 hypertrophy/strength rep range (exerciseType=weight_reps, movementPattern=squat)"
     },
     {
       "name": "Mountain Climber",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength rep range (exerciseType=weight_reps, movementPattern=isolation)"
     },
     {
       "name": "Agility Ladder Drills",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength rep range (exerciseType=weight_reps, movementPattern=plyometric)"
     },
     {
       "name": "Rope Jump",
-      "detail": "rep range 30-60 outside a plausible 1-30 hypertrophy/strength range"
+      "detail": "rep range 30-60 outside a plausible 1-30 hypertrophy/strength rep range (exerciseType=weight_reps, movementPattern=plyometric)"
     },
     {
       "name": "Heel Walk",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Gripper Walks",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Single-Arm Farmer Carry",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Weighted Plank (Plate on Back)",
-      "detail": "rep range 20-60 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Cable Anti-Rotation Hold (Half-Kneeling)",
-      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength range"
-    },
-    {
-      "name": "Reverse Plank",
-      "detail": "rep range 20-60 outside a plausible 1-30 hypertrophy/strength range"
+      "detail": "rep range 20-40 outside a plausible 1-30 hypertrophy/strength rep range (exerciseType=weight_reps, movementPattern=isolation)"
     }
   ],
   "fatigueOrSfrOutOfRangeCount": 0,
@@ -465,239 +403,529 @@
   "missingSubregionWhereRequired": [
     {
       "name": "Dumbbell Pullover",
-      "primaryMuscle": "chest"
+      "primaryMuscle": "chest",
+      "silentFallbackRole": "flat",
+      "requiredRolesForMuscle": [
+        "incline",
+        "flat"
+      ]
     },
     {
       "name": "Hammer Strength Chest Press",
-      "primaryMuscle": "chest"
+      "primaryMuscle": "chest",
+      "silentFallbackRole": "flat",
+      "requiredRolesForMuscle": [
+        "incline",
+        "flat"
+      ]
     },
     {
       "name": "Cable Fly (High to Low)",
-      "primaryMuscle": "chest"
+      "primaryMuscle": "chest",
+      "silentFallbackRole": "flat",
+      "requiredRolesForMuscle": [
+        "incline",
+        "flat"
+      ]
     },
     {
       "name": "Dumbbell Pullover (Chest)",
-      "primaryMuscle": "chest"
+      "primaryMuscle": "chest",
+      "silentFallbackRole": "flat",
+      "requiredRolesForMuscle": [
+        "incline",
+        "flat"
+      ]
     },
     {
       "name": "Good Morning (Barbell)",
-      "primaryMuscle": "hamstrings"
+      "primaryMuscle": "hamstrings",
+      "silentFallbackRole": "hip_extension",
+      "requiredRolesForMuscle": [
+        "hip_extension",
+        "knee_flexion"
+      ]
     },
     {
       "name": "Tricep Dip (Parallel Bars)",
-      "primaryMuscle": "triceps"
+      "primaryMuscle": "triceps",
+      "silentFallbackRole": "pushdown",
+      "requiredRolesForMuscle": [
+        "overhead"
+      ]
     },
     {
       "name": "Cycling (Stationary)",
-      "primaryMuscle": "quads"
+      "primaryMuscle": "quads",
+      "silentFallbackRole": "vasti",
+      "requiredRolesForMuscle": [
+        "squat_press",
+        "knee_extension"
+      ]
     },
     {
       "name": "Romanian Deadlift (Dumbbell)",
-      "primaryMuscle": "hamstrings"
+      "primaryMuscle": "hamstrings",
+      "silentFallbackRole": "hip_extension",
+      "requiredRolesForMuscle": [
+        "hip_extension",
+        "knee_flexion"
+      ]
     },
     {
       "name": "Kettlebell Swing",
-      "primaryMuscle": "hamstrings"
+      "primaryMuscle": "hamstrings",
+      "silentFallbackRole": "hip_extension",
+      "requiredRolesForMuscle": [
+        "hip_extension",
+        "knee_flexion"
+      ]
     },
     {
       "name": "Deadlift (Conventional)",
-      "primaryMuscle": "hamstrings"
+      "primaryMuscle": "hamstrings",
+      "silentFallbackRole": "hip_extension",
+      "requiredRolesForMuscle": [
+        "hip_extension",
+        "knee_flexion"
+      ]
     },
     {
       "name": "Deadlift (Sumo)",
-      "primaryMuscle": "hamstrings"
+      "primaryMuscle": "hamstrings",
+      "silentFallbackRole": "hip_extension",
+      "requiredRolesForMuscle": [
+        "hip_extension",
+        "knee_flexion"
+      ]
     },
     {
       "name": "Trap Bar Deadlift (Hamstring)",
-      "primaryMuscle": "hamstrings"
+      "primaryMuscle": "hamstrings",
+      "silentFallbackRole": "hip_extension",
+      "requiredRolesForMuscle": [
+        "hip_extension",
+        "knee_flexion"
+      ]
     },
     {
       "name": "Box Jump",
-      "primaryMuscle": "calves"
+      "primaryMuscle": "calves",
+      "silentFallbackRole": "gastro",
+      "requiredRolesForMuscle": [
+        "gastro",
+        "soleus"
+      ]
     },
     {
       "name": "Ab Wheel (Kneeling)",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Weighted Sit-Up",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Toe-to-Bar",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "L-Sit Hold",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Suitcase Carry",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Pallof Press (Kneeling)",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Copenhagen Plank",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Sled Push",
-      "primaryMuscle": "quads"
+      "primaryMuscle": "quads",
+      "silentFallbackRole": "vasti",
+      "requiredRolesForMuscle": [
+        "squat_press",
+        "knee_extension"
+      ]
     },
     {
       "name": "Sled Pull",
-      "primaryMuscle": "hamstrings"
+      "primaryMuscle": "hamstrings",
+      "silentFallbackRole": "hip_extension",
+      "requiredRolesForMuscle": [
+        "hip_extension",
+        "knee_flexion"
+      ]
     },
     {
       "name": "Prowler Drag",
-      "primaryMuscle": "hamstrings"
+      "primaryMuscle": "hamstrings",
+      "silentFallbackRole": "hip_extension",
+      "requiredRolesForMuscle": [
+        "hip_extension",
+        "knee_flexion"
+      ]
     },
     {
       "name": "Assault Bike",
-      "primaryMuscle": "quads"
+      "primaryMuscle": "quads",
+      "silentFallbackRole": "vasti",
+      "requiredRolesForMuscle": [
+        "squat_press",
+        "knee_extension"
+      ]
     },
     {
       "name": "Jump Squat",
-      "primaryMuscle": "quads"
+      "primaryMuscle": "quads",
+      "silentFallbackRole": "vasti",
+      "requiredRolesForMuscle": [
+        "squat_press",
+        "knee_extension"
+      ]
     },
     {
       "name": "Broad Jump",
-      "primaryMuscle": "quads"
+      "primaryMuscle": "quads",
+      "silentFallbackRole": "vasti",
+      "requiredRolesForMuscle": [
+        "squat_press",
+        "knee_extension"
+      ]
     },
     {
       "name": "Depth Jump",
-      "primaryMuscle": "quads"
+      "primaryMuscle": "quads",
+      "silentFallbackRole": "vasti",
+      "requiredRolesForMuscle": [
+        "squat_press",
+        "knee_extension"
+      ]
     },
     {
       "name": "Stair Running",
-      "primaryMuscle": "quads"
+      "primaryMuscle": "quads",
+      "silentFallbackRole": "vasti",
+      "requiredRolesForMuscle": [
+        "squat_press",
+        "knee_extension"
+      ]
     },
     {
       "name": "Barbell Good Morning",
-      "primaryMuscle": "hamstrings"
+      "primaryMuscle": "hamstrings",
+      "silentFallbackRole": "hip_extension",
+      "requiredRolesForMuscle": [
+        "hip_extension",
+        "knee_flexion"
+      ]
     },
     {
       "name": "Jefferson Curl",
-      "primaryMuscle": "hamstrings"
+      "primaryMuscle": "hamstrings",
+      "silentFallbackRole": "hip_extension",
+      "requiredRolesForMuscle": [
+        "hip_extension",
+        "knee_flexion"
+      ]
     },
     {
       "name": "Serratus Punch",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Kneeling Cable Crunch",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Exercise Ball Crunch",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Mountain Climber",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Plank Row",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Bear Crawl",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Kneeling Ab Rollout",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Windmill",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Turkish Get-Up",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Close-Grip Push-Up",
-      "primaryMuscle": "chest"
+      "primaryMuscle": "chest",
+      "silentFallbackRole": "flat",
+      "requiredRolesForMuscle": [
+        "incline",
+        "flat"
+      ]
     },
     {
       "name": "Archer Push-Up",
-      "primaryMuscle": "chest"
+      "primaryMuscle": "chest",
+      "silentFallbackRole": "flat",
+      "requiredRolesForMuscle": [
+        "incline",
+        "flat"
+      ]
     },
     {
       "name": "Single-Arm Push-Up",
-      "primaryMuscle": "chest"
+      "primaryMuscle": "chest",
+      "silentFallbackRole": "flat",
+      "requiredRolesForMuscle": [
+        "incline",
+        "flat"
+      ]
     },
     {
       "name": "Cable Chest Press (Standing)",
-      "primaryMuscle": "chest"
+      "primaryMuscle": "chest",
+      "silentFallbackRole": "flat",
+      "requiredRolesForMuscle": [
+        "incline",
+        "flat"
+      ]
     },
     {
       "name": "Smith Machine Incline Press",
-      "primaryMuscle": "chest"
+      "primaryMuscle": "chest",
+      "silentFallbackRole": "flat",
+      "requiredRolesForMuscle": [
+        "incline",
+        "flat"
+      ]
     },
     {
       "name": "Guillotine Press",
-      "primaryMuscle": "chest"
+      "primaryMuscle": "chest",
+      "silentFallbackRole": "flat",
+      "requiredRolesForMuscle": [
+        "incline",
+        "flat"
+      ]
     },
     {
       "name": "Smith Machine Close-Grip Press",
-      "primaryMuscle": "triceps"
+      "primaryMuscle": "triceps",
+      "silentFallbackRole": "pushdown",
+      "requiredRolesForMuscle": [
+        "overhead"
+      ]
     },
     {
       "name": "Dip Machine",
-      "primaryMuscle": "triceps"
+      "primaryMuscle": "triceps",
+      "silentFallbackRole": "pushdown",
+      "requiredRolesForMuscle": [
+        "overhead"
+      ]
     },
     {
       "name": "Cable Kickback (Triceps)",
-      "primaryMuscle": "triceps"
+      "primaryMuscle": "triceps",
+      "silentFallbackRole": "pushdown",
+      "requiredRolesForMuscle": [
+        "overhead"
+      ]
     },
     {
       "name": "Barbell Skull Crusher",
-      "primaryMuscle": "triceps"
+      "primaryMuscle": "triceps",
+      "silentFallbackRole": "pushdown",
+      "requiredRolesForMuscle": [
+        "overhead"
+      ]
     },
     {
       "name": "Stiff-Leg Deadlift (Single-Leg)",
-      "primaryMuscle": "hamstrings"
+      "primaryMuscle": "hamstrings",
+      "silentFallbackRole": "hip_extension",
+      "requiredRolesForMuscle": [
+        "hip_extension",
+        "knee_flexion"
+      ]
     },
     {
       "name": "Agility Ladder Drills",
-      "primaryMuscle": "calves"
+      "primaryMuscle": "calves",
+      "silentFallbackRole": "gastro",
+      "requiredRolesForMuscle": [
+        "gastro",
+        "soleus"
+      ]
     },
     {
       "name": "Rope Jump",
-      "primaryMuscle": "calves"
+      "primaryMuscle": "calves",
+      "silentFallbackRole": "gastro",
+      "requiredRolesForMuscle": [
+        "gastro",
+        "soleus"
+      ]
     },
     {
       "name": "Landmine Press (Abs)",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Half-Kneeling Pallof Press",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Tall-Kneeling Pallof Press",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "GHD Sit-Up",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Incline Board Sit-Up",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Hanging Oblique Raise",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     },
     {
       "name": "Seated Twist (Plate)",
-      "primaryMuscle": "abs"
+      "primaryMuscle": "abs",
+      "silentFallbackRole": "flexion",
+      "requiredRolesForMuscle": [
+        "flexion",
+        "anti_extension"
+      ]
     }
   ],
   "carryTaggedWeightRepsCount": 7,
