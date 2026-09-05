@@ -2755,6 +2755,46 @@ const SCHEMA_MIGRATIONS = [
   [
     migrateCapabilityAdaptationMode,
   ],
+  // Exercise library expansion 2026-09-05 (docs/exercise-library-expansion-
+  // 2026-09-05/05-DECISIONS.md EL-7, EL-9; 07-CORPUS-FORMAT.md section 5).
+  // Two additive nullable columns on routine_exercises:
+  //   group_kind          NULL = superset (today's behaviour, unchanged) |
+  //                       'circuit' (the existing group-advance cycle runs
+  //                       circuit semantics instead: no rest between
+  //                       stations, round rest only after the last one).
+  //   round_rest_seconds  the circuit's between-round rest, stored on every
+  //                       member so the group header and the rest timer can
+  //                       read it off whichever station just finished.
+  // One additive nullable column on workout_sets:
+  //   evidence_class      NULL = conventional | 'circuit' | 'ballistic' |
+  //                       'circuit_ballistic'. Stamped at WRITE time by the
+  //                       live screen from structure (group_kind) and
+  //                       exercise metadata (load_character), never chosen
+  //                       by the user (EL-7). Every pre-migration row reads
+  //                       NULL = conventional, byte-identical to today.
+  // All three are read defensively (`?? null`) everywhere, so a device that
+  // has not yet run this migration, or a cloud row missing the column,
+  // degrades to the pre-campaign behaviour rather than crashing.
+  // Cloud counterparts: supabase/migrate_158_routine_exercise_groups.sql and
+  // supabase/migrate_159_workout_set_evidence_class.sql (both written, NOT
+  // applied - founder-gated per CLAUDE.md; supabase/README status block
+  // records them WRITTEN, NOT APPLIED). Until applied, the push omits all
+  // three columns while CIRCUIT_SYNC_COLUMNS_ENABLED
+  // (src/lib/sync/featureFlags.js) is false; every pull applier already
+  // reads these fields via `?? null`, so an absent cloud column degrades to
+  // null with no crash.
+  // Additive: yes (ALTER TABLE ADD COLUMN only). Safe to re-run: yes (the
+  // benign-duplicate-column skip above covers a second run).
+  // Rollback: leave the columns in place and ignore them; every reader
+  // treats NULL as the pre-migration behaviour (ordinary superset / no
+  // group; conventional evidence), and no circuit or evidence-classed row
+  // can exist on a device that has not run this migration (the UI/live
+  // paths that create one ship in the same build).
+  [
+    'ALTER TABLE routine_exercises ADD COLUMN group_kind TEXT',
+    'ALTER TABLE routine_exercises ADD COLUMN round_rest_seconds INTEGER',
+    'ALTER TABLE workout_sets ADD COLUMN evidence_class TEXT',
+  ],
 ];
 
 // Tests and diagnostics may compare a database's durable marker with the
@@ -4587,7 +4627,7 @@ export async function getRoutineExercisesWithDetails(routineId) {
   });
 }
 
-export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12, notes = null, sets = 3, startingWeight = null, restSeconds = null, supersetGroupId = null, scheduleSync = true, selectionReason = null) {
+export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12, notes = null, sets = 3, startingWeight = null, restSeconds = null, supersetGroupId = null, scheduleSync = true, selectionReason = null, groupKind = null, roundRestSeconds = null) {
   const d = await db();
   const id = uid();
   const now = Date.now();
@@ -4603,13 +4643,13 @@ export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin
     `INSERT INTO routine_exercises
       (id, routine_id, exercise_id, exercise_name, order_in_routine, recommended_sets,
        recommended_reps_min, recommended_reps_max, notes, starting_weight, rest_seconds,
-       superset_group_id, selection_reason, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       superset_group_id, selection_reason, group_kind, round_rest_seconds, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [id, routineId, exerciseId, exerciseName, order, sets, repsMin, repsMax, notes,
-      startingWeight, restSeconds, supersetGroupId, selectionReason, now, now],
+      startingWeight, restSeconds, supersetGroupId, selectionReason, groupKind, roundRestSeconds, now, now],
   );
   if (scheduleSync) _scheduleSync();
-  return { id, routineId, exerciseId, orderInRoutine: order, supersetGroupId };
+  return { id, routineId, exerciseId, orderInRoutine: order, supersetGroupId, groupKind, roundRestSeconds };
 }
 
 export async function updateRoutineExercise(id, data) {
@@ -4622,6 +4662,11 @@ export async function updateRoutineExercise(id, data) {
     notes: 'notes',
     startingWeight: 'starting_weight',
     restSeconds: 'rest_seconds',
+    // EL-9 circuit model (docs/exercise-library-expansion-2026-09-05/
+    // 05-DECISIONS.md): group_kind ('circuit' | null = superset) and the
+    // circuit's between-round rest, both additive columns.
+    groupKind: 'group_kind',
+    roundRestSeconds: 'round_rest_seconds',
   };
   const fields = [];
   const values = [];
@@ -9722,7 +9767,8 @@ export async function insertRoutineExerciseFromCloud(re) {
         routine_id = ?, exercise_id = ?, exercise_name = ?, order_in_routine = ?,
         recommended_sets = ?, recommended_reps_min = ?, recommended_reps_max = ?,
         notes = ?, starting_weight = ?, rest_seconds = ?, superset_group_id = ?,
-        selection_reason = ?, updated_at = ?, deleted_at = ?
+        selection_reason = ?, group_kind = ?, round_rest_seconds = ?,
+        updated_at = ?, deleted_at = ?
        WHERE id = ?`,
       [
         re.routine_id, exerciseId, exerciseName,
@@ -9735,6 +9781,11 @@ export async function insertRoutineExerciseFromCloud(re) {
         re.rest_seconds ?? null,
         re.superset_group_id ?? null,
         re.selection_reason ?? null,
+        // EL-9: absent on a cloud row (column not yet applied, or the push
+        // omitted it under CIRCUIT_SYNC_COLUMNS_ENABLED=false) degrades to
+        // null - ordinary superset/no-group, same as pre-campaign.
+        re.group_kind ?? null,
+        re.round_rest_seconds ?? null,
         cloudUpdated,
         tsMs(re.deleted_at),
         re.id,
@@ -9746,8 +9797,9 @@ export async function insertRoutineExerciseFromCloud(re) {
     `INSERT OR REPLACE INTO routine_exercises
       (id, routine_id, exercise_id, exercise_name, order_in_routine, recommended_sets,
        recommended_reps_min, recommended_reps_max, notes, starting_weight,
-       rest_seconds, superset_group_id, selection_reason, created_at, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       rest_seconds, superset_group_id, selection_reason, group_kind,
+       round_rest_seconds, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       re.id, re.routine_id, exerciseId, exerciseName,
       re.order_in_routine ?? 0,
@@ -9759,6 +9811,8 @@ export async function insertRoutineExerciseFromCloud(re) {
       re.rest_seconds ?? null,
       re.superset_group_id ?? null,
       re.selection_reason ?? null,
+      re.group_kind ?? null,
+      re.round_rest_seconds ?? null,
       createdAt,
       cloudUpdated ?? createdAt,
       // Spelled out rather than routed through tsMs because
