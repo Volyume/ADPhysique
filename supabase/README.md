@@ -211,6 +211,25 @@ contract must not delegate its authority to a superseded audit.
   - Both applied via the Supabase MCP `apply_migration` path (recorded in
     the project's migration history as `migrate_142_exercise_intent_expiry`
     and `migrate_143_load_semantics`).
+- **2026-09-05 BATCH (Claude-run, founder phrase "run against production"
+  given in chat after the closure named the batch, project
+  `sujrylzzxcqxxfygptns`, via the Supabase MCP `apply_migration` path):
+  158 and 159 APPLIED AND VERIFIED.** Pre-apply read-only sweep confirmed
+  `routine_exercises.group_kind`, `routine_exercises.round_rest_seconds`
+  and `workout_sets.evidence_class` did not exist and that the parent
+  columns (`superset_group_id`, `rest_seconds`, `set_type`) did.
+  Post-apply verification, all green: the three columns (text, integer,
+  text; all nullable), both CHECK constraints
+  (`routine_exercises_group_kind_check`: null | 'superset' | 'circuit';
+  `workout_sets_evidence_class_check`: null | 'circuit' | 'ballistic' |
+  'circuit_ballistic'), and the two ledger rows in
+  `supabase_migrations.schema_migrations` (versions 20260905123313 and
+  20260905123316). No data rewritten; every existing row is NULL, the
+  pre-migration meaning. `CIRCUIT_SYNC_COLUMNS_ENABLED` flipped to true
+  in the same landing so the client pushes the columns from the next
+  build; older builds keep omitting them and the pull tolerates either.
+  155 remains PENDING on its client prerequisite; 049 HELD.
+
 - **2026-08-21 BATCH (Claude-run, founder phrase "run against production",
   project `sujrylzzxcqxxfygptns`, via the Supabase MCP `apply_migration`
   path): 145, 146, 147, 148, 149 and 151 APPLIED AND VERIFIED.**
@@ -408,8 +427,8 @@ themselves; add a row here whenever a migration is added.
 | 155 | `migrate_155_partner_cheer_server_date.sql` | Replaces the partner-cheer INSERT policy so `sent_on` must be the database's UTC date. Closes arbitrary-date daily-rate bypass; deploy with the matching `partner-cheer` Edge Function change. | **PENDING - Daybreak Blue 2026-08-28; do not apply without explicit production authorization.** |
 | 156 | `migrate_156_activation_funnel_telemetry.sql` | Replaces `record_engine_telemetry` with the complete allow-list: migration 104's 87 names plus the 18 activation and programme funnel events the client emits (first_workout_started, first_weigh_in, checkin_started, first_checkin_completed, coach_result_viewed, coach_recommendation_accepted/declined, notification_permission_requested, setup_started, first_home_landed, plan_preview_shown/confirmed/dismissed, block_decision, library_plan_previewed, manual_plan_started, manual_plan_saved, plan_replaced). Create-or-replace, idempotent. Rollback: re-apply 104. | **YES - APPLIED 2026-09-04** (exact phrase; MCP; verified as above). |
 | 157 | `migrate_157_pause_cascade_cron.sql` | Unschedules the `cascade-advance-due-users` pg_cron job (migration 031) on the fully-free product; the function stays defined, nothing else touched. Rollback: one `cron.schedule` statement (see file header). | **YES - APPLIED 2026-09-04** (exact phrase; MCP; verified: zero matching cron rows, function still defined). |
-| 158 | `migrate_158_routine_exercise_groups.sql` | Exercise library expansion EL-9: two nullable columns on `routine_exercises` (`group_kind` 'circuit'\|null=superset, `round_rest_seconds`) for the circuit model. Client push omits both while `CIRCUIT_SYNC_COLUMNS_ENABLED` (src/lib/sync/featureFlags.js) is false; pull reads both via `?? null`. | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase "run against production".** |
-| 159 | `migrate_159_workout_set_evidence_class.sql` | Exercise library expansion EL-7: nullable `workout_sets.evidence_class` (null=conventional \| 'circuit' \| 'ballistic' \| 'circuit_ballistic'), stamped by the live screen, never user-chosen. Client push omits it while `CIRCUIT_SYNC_COLUMNS_ENABLED` is false; pull reads it via `?? null`. | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase "run against production".** |
+| 158 | `migrate_158_routine_exercise_groups.sql` | Exercise library expansion EL-9: two nullable columns on `routine_exercises` (`group_kind` 'circuit'\|null=superset, `round_rest_seconds`) for the circuit model. Client push omits both while `CIRCUIT_SYNC_COLUMNS_ENABLED` (src/lib/sync/featureFlags.js) is false; pull reads both via `?? null`. | **APPLIED AND VERIFIED 2026-09-05** (Claude-run batch below). |
+| 159 | `migrate_159_workout_set_evidence_class.sql` | Exercise library expansion EL-7: nullable `workout_sets.evidence_class` (null=conventional \| 'circuit' \| 'ballistic' \| 'circuit_ballistic'), stamped by the live screen, never user-chosen. Client push omits it while `CIRCUIT_SYNC_COLUMNS_ENABLED` is false; pull reads it via `?? null`. | **APPLIED AND VERIFIED 2026-09-05** (Claude-run batch below); flag flipped ON in the same landing. |
 
 > Ledger gap noted 2026-08-20: `migrate_144_apple_review_password_reset.sql`
 > exists in this folder but has no row in this table (it predates CC26 and

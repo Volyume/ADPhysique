@@ -113,9 +113,10 @@ at the green regression recorded at the end of this file. Rulings:
     category (rotator-cuff rows count with the shoulder), any new
     dependency.
 20. **Remaining limitations**: the count is below JEFIT's inflated
-    figure by design; the two cloud migrations (158, 159) are written but
-    NOT applied, so circuit and evidence-class columns do not sync until
-    the founder runs them and the flag is flipped; search timing is
+    figure by design; the two cloud migrations (158, 159) were applied
+    and verified on 2026-09-05 on the founder's phrase and the sync flag
+    is on, so circuit and evidence-class columns sync from the next
+    build; search timing is
     measured in Jest, not on a phone; the position sweep covered machine
     and cable stations only; the 84 tuple-level near-duplicate pairs the
     audit flagged are all judged distinct on the lead's reading of the

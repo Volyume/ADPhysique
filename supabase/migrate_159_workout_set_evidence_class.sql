@@ -42,13 +42,11 @@
 --                    COLUMN on workout_sets, no backfill - every existing
 --                    row is correctly NULL/conventional).
 --
--- Applied remotely:  NO - NOT RUN. Production requires the founder's exact
---                    phrase "run against production" (CLAUDE.md Section 2;
---                    supabase/README ledger). Written and locally proven
---                    only; do not apply without that phrase in this
---                    session, given AFTER Claude has presented the audited
---                    apply list.
---
+-- Applied remotely:  YES - 2026-09-05, Claude-run on the founder's exact
+--                    phrase, via the Supabase MCP apply_migration path;
+--                    columns, CHECK constraint and ledger row verified
+--                    read-only afterwards (supabase/README, 2026-09-05
+--                    batch).
 -- Safe to re-run:    YES - IF NOT EXISTS / duplicate-tolerant.
 --
 -- Rollback:          alter table public.workout_sets drop column if exists evidence_class;

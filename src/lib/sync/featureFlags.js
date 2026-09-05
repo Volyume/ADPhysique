@@ -16,11 +16,11 @@
  * (Postgres rejects an unknown column for the entire payload), exactly the
  * tolerated failure mode migrate_137's header already describes. Omitting
  * the columns while this flag is off keeps every OTHER field syncing
- * normally; flipping it on is a deliberate two-step alongside the founder
+ * normally; flipping it on was the deliberate two-step alongside the founder
  * running "run against production" on both migrations.
  *
  * Flip this to true ONLY after the founder has run both migrations against
  * production and their presence has been verified (supabase/README status
  * block updated to APPLIED).
  */
-export const CIRCUIT_SYNC_COLUMNS_ENABLED = false;
+export const CIRCUIT_SYNC_COLUMNS_ENABLED = true;

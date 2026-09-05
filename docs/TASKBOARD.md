@@ -102,9 +102,10 @@ Stage 5 (in flight, sonnet):
   normalised-name guard. Live corpus 918, retired 21.
 - [x] Stage 6: form tips fall back to the cue; full regression green
   (1194 suites, 16261 tests, lint clean); closure written; merged.
-Founder-side: run cloud migrations 158 and 159 when ready (exact phrase
-per supabase/README), then flip `CIRCUIT_SYNC_COLUMNS_ENABLED`; walk
-the device checklist from a green build (none dispatched).
+- [x] Cloud migrations 158 and 159 applied and verified 2026-09-05 on
+  the founder's phrase; `CIRCUIT_SYNC_COLUMNS_ENABLED` on.
+Founder-side: walk the device checklist from a green build (none
+dispatched).
 guards, search/builder, plan architecture, kettlebell, circuits, library
 integration, evidence eligibility, verification. Entries added as they
 start.
