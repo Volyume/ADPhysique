@@ -2,7 +2,7 @@
   "equipmentCategoryByPrimaryMuscle": {
     "barbell": {
       "quads": 29,
-      "glutes": 8,
+      "glutes": 7,
       "hamstrings": 12,
       "chest": 16,
       "biceps": 12,
@@ -36,9 +36,9 @@
     },
     "dumbbell": {
       "front_delts": 14,
-      "back": 10,
+      "back": 9,
       "triceps": 9,
-      "quads": 13,
+      "quads": 12,
       "biceps": 15,
       "glutes": 9,
       "chest": 18,
@@ -55,7 +55,7 @@
     "cable": {
       "biceps": 12,
       "rear_delts": 10,
-      "abs": 17,
+      "abs": 16,
       "traps": 4,
       "chest": 18,
       "glutes": 5,
@@ -63,7 +63,7 @@
       "front_delts": 3,
       "adductors": 1,
       "triceps": 13,
-      "side_delts": 8,
+      "side_delts": 7,
       "forearms": 4,
       "quads": 2,
       "hamstrings": 2,
@@ -98,7 +98,7 @@
     },
     "machine_plate_loaded": {
       "chest": 5,
-      "back": 11,
+      "back": 10,
       "glutes": 1,
       "triceps": 1,
       "biceps": 1,
@@ -189,12 +189,12 @@
   },
   "movementPatternByPrimaryMuscle": {
     "squat": {
-      "quads": 87,
+      "quads": 86,
       "adductors": 6,
       "glutes": 7
     },
     "hinge": {
-      "glutes": 28,
+      "glutes": 27,
       "hamstrings": 38,
       "traps": 2,
       "back": 25,
@@ -203,8 +203,7 @@
     "push": {
       "chest": 78,
       "front_delts": 42,
-      "triceps": 19,
-      "abs": 1
+      "triceps": 19
     },
     "isolation": {
       "biceps": 48,
@@ -212,7 +211,7 @@
       "traps": 15,
       "triceps": 34,
       "forearms": 19,
-      "side_delts": 19,
+      "side_delts": 18,
       "neck": 15,
       "calves": 22,
       "abs": 90,
@@ -226,7 +225,7 @@
       "back": 6
     },
     "pull": {
-      "back": 105,
+      "back": 103,
       "side_delts": 5,
       "rear_delts": 10,
       "traps": 3,
@@ -267,13 +266,13 @@
   },
   "lateralityByPrimaryMuscle": {
     "quads": {
-      "bilateral": 72,
+      "bilateral": 71,
       "unilateral": 39,
       "alternating": 3
     },
     "glutes": {
       "unilateral": 21,
-      "bilateral": 34,
+      "bilateral": 33,
       "alternating": 2
     },
     "hamstrings": {
@@ -296,8 +295,8 @@
       "alternating": 2
     },
     "back": {
-      "bilateral": 116,
-      "unilateral": 19,
+      "bilateral": 115,
+      "unilateral": 18,
       "alternating": 7
     },
     "traps": {
@@ -314,7 +313,7 @@
       "unilateral": 2
     },
     "side_delts": {
-      "bilateral": 23,
+      "bilateral": 22,
       "unilateral": 2
     },
     "neck": {
@@ -325,7 +324,7 @@
       "unilateral": 3
     },
     "abs": {
-      "bilateral": 80,
+      "bilateral": 79,
       "unilateral": 18,
       "alternating": 9
     },
@@ -343,9 +342,9 @@
     }
   },
   "positionDistribution": {
-    "standing": 483,
-    "lying": 192,
-    "seated": 130,
+    "standing": 479,
+    "lying": 191,
+    "seated": 129,
     "mixed": 99,
     "kneeling": 30
   },
@@ -354,7 +353,7 @@
     "back": {
       "vertical_pull": {
         "full_gym": {
-          "totalMatching": 18,
+          "totalMatching": 17,
           "stapleOrCommonCount": 8,
           "stapleOrCommonNames": [
             "Lat Pulldown (Close Grip)",
@@ -368,7 +367,7 @@
           ]
         },
         "machines_cables": {
-          "totalMatching": 14,
+          "totalMatching": 13,
           "stapleOrCommonCount": 8,
           "stapleOrCommonNames": [
             "Lat Pulldown (Close Grip)",
@@ -410,7 +409,7 @@
       },
       "horizontal_row": {
         "full_gym": {
-          "totalMatching": 65,
+          "totalMatching": 64,
           "stapleOrCommonCount": 28,
           "stapleOrCommonNames": [
             "Barbell Row (Bent Over)",
@@ -466,7 +465,7 @@
           ]
         },
         "home_gym": {
-          "totalMatching": 28,
+          "totalMatching": 27,
           "stapleOrCommonCount": 5,
           "stapleOrCommonNames": [
             "Chest-Supported Row (Dumbbell)",
@@ -477,7 +476,7 @@
           ]
         },
         "dumbbells_only": {
-          "totalMatching": 23,
+          "totalMatching": 22,
           "stapleOrCommonCount": 4,
           "stapleOrCommonNames": [
             "Chest-Supported Row (Dumbbell)",
@@ -634,7 +633,7 @@
     "glutes": {
       "activator": {
         "full_gym": {
-          "totalMatching": 20,
+          "totalMatching": 19,
           "stapleOrCommonCount": 11,
           "stapleOrCommonNames": [
             "B-Stance Hip Thrust",
@@ -678,7 +677,7 @@
           ]
         },
         "barbell_plates": {
-          "totalMatching": 7,
+          "totalMatching": 6,
           "stapleOrCommonCount": 4,
           "stapleOrCommonNames": [
             "B-Stance Hip Thrust",
@@ -764,7 +763,7 @@
     "quads": {
       "squat_press": {
         "full_gym": {
-          "totalMatching": 83,
+          "totalMatching": 82,
           "stapleOrCommonCount": 29,
           "stapleOrCommonNames": [
             "Barbell Back Squat",
@@ -816,7 +815,7 @@
           ]
         },
         "home_gym": {
-          "totalMatching": 27,
+          "totalMatching": 26,
           "stapleOrCommonCount": 9,
           "stapleOrCommonNames": [
             "Bulgarian Split Squat",
@@ -831,7 +830,7 @@
           ]
         },
         "dumbbells_only": {
-          "totalMatching": 22,
+          "totalMatching": 21,
           "stapleOrCommonCount": 7,
           "stapleOrCommonNames": [
             "Bulgarian Split Squat",
@@ -1356,7 +1355,7 @@
     "abs": {
       "flexion": {
         "full_gym": {
-          "totalMatching": 33,
+          "totalMatching": 32,
           "stapleOrCommonCount": 20,
           "stapleOrCommonNames": [
             "Weighted Sit-Up",
@@ -1382,7 +1381,7 @@
           ]
         },
         "machines_cables": {
-          "totalMatching": 27,
+          "totalMatching": 26,
           "stapleOrCommonCount": 17,
           "stapleOrCommonNames": [
             "Cable Crunch",
@@ -2138,135 +2137,103 @@
   ],
   "demandAxisCounts": {
     "position": {
-      "standing": 483,
-      "lying": 192,
-      "seated": 130,
+      "standing": 479,
+      "lying": 191,
+      "seated": 129,
       "mixed": 99,
       "kneeling": 30
     },
     "floorAccess": {
-      "false": 808,
-      "true": 126
+      "false": 803,
+      "true": 125
     },
     "overheadPosition": {
-      "false": 777,
-      "true": 157
+      "false": 772,
+      "true": 156
     },
     "gripDemand": {
-      "bar": 681,
-      "none": 174,
+      "bar": 676,
+      "none": 175,
       "supportive": 76,
-      "null": 3
+      "null": 1
     },
     "unilateralLoadable": {
-      "false": 500,
-      "true": 407,
-      "null": 27
+      "false": 508,
+      "true": 411,
+      "null": 9
     },
     "bilateralUpper": {
-      "false": 489,
-      "true": 443,
-      "null": 2
+      "false": 486,
+      "true": 441,
+      "null": 1
     },
     "bilateralLower": {
-      "false": 648,
-      "true": 286
+      "false": 644,
+      "true": 284
     },
     "axialLoad": {
-      "false": 678,
-      "true": 252,
-      "null": 4
+      "false": 677,
+      "true": 250,
+      "null": 1
     },
     "impact": {
-      "false": 920,
+      "false": 914,
       "true": 14
     },
     "balanceDemand": {
-      "stable": 428,
-      "supported": 415,
+      "stable": 424,
+      "supported": 413,
       "high": 91
     },
     "weightBearingHands": {
-      "false": 855,
-      "true": 63,
-      "null": 16
+      "false": 856,
+      "true": 64,
+      "null": 8
     }
   },
   "demandAxisNullRowCounts": {
     "position": 0,
     "floorAccess": 0,
     "overheadPosition": 0,
-    "gripDemand": 3,
-    "unilateralLoadable": 27,
-    "bilateralUpper": 2,
+    "gripDemand": 1,
+    "unilateralLoadable": 9,
+    "bilateralUpper": 1,
     "bilateralLower": 0,
-    "axialLoad": 4,
+    "axialLoad": 1,
     "impact": 0,
     "balanceDemand": 0,
-    "weightBearingHands": 16
+    "weightBearingHands": 8
   },
   "demandAxisNullRows": {
     "position": [],
     "floorAccess": [],
     "overheadPosition": [],
     "gripDemand": [
-      "Bodyweight Squat",
-      "Box Step-Up",
       "Lunge"
     ],
     "unilateralLoadable": [
-      "Decline Machine Press",
-      "Facing-In Shoulder Press",
-      "Hammer Strength Chest Press",
-      "Incline Machine Press",
       "Lateral Raise Machine",
-      "Machine Chest Press",
       "Machine Curl",
       "Machine Lateral Raise",
       "Machine Rear Delt Fly",
-      "Machine Shoulder Press",
-      "Machine Shoulder Press (Front Delt Focus)",
       "Machine Tricep Extension",
       "Machine Y-Raise",
-      "Neck Harness Extension",
-      "Neck Harness Flexion",
-      "Plate-Loaded Chest Press",
-      "Plate-Loaded Decline Press",
-      "Plate-Loaded Incline Press",
       "Plate-Loaded Overhead Extension",
-      "Plate-Loaded Preacher Curl",
       "Plate-Loaded Rear Delt",
-      "Plate-Loaded Seated Row",
-      "Plate-Loaded Shoulder Press",
-      "Preacher Curl Machine",
-      "Seated Rear Delt Machine",
-      "Tib Bar Raise (Machine)",
-      "Viking Press"
+      "Seated Rear Delt Machine"
     ],
     "bilateralUpper": [
-      "Machine Y-Raise",
-      "Plate-Loaded Seated Row"
+      "Machine Y-Raise"
     ],
     "bilateralLower": [],
     "axialLoad": [
-      "Single-Arm Dumbbell Row",
-      "Bodyweight Squat",
-      "Box Step-Up",
       "Lunge"
     ],
     "impact": [],
     "balanceDemand": [],
     "weightBearingHands": [
-      "Assault Bike",
-      "Battle Ropes",
-      "Cycling (Stationary)",
-      "Glute-Ham Raise Machine",
-      "Prowler Drag",
-      "Adductor Rock-Back (Kneeling)",
       "Bodyweight Squat",
       "Box Step-Up",
-      "Cossack Squat",
-      "Dead Hang",
       "Frog Pump",
       "Lunge",
       "Side-Lying Adduction",
@@ -2276,10 +2243,10 @@
     ]
   },
   "adaptedSetupClassDistribution": {
-    "none": 498,
-    "strap_cuff": 171,
+    "none": 495,
+    "strap_cuff": 169,
     "supported": 85,
-    "one_arm+seated": 47,
+    "one_arm+seated": 46,
     "seated": 46,
     "one_arm+strap_cuff": 15,
     "strap_cuff+supported": 14,
@@ -2298,7 +2265,7 @@
     "per_side+seated": 1,
     "per_side+supported": 1
   },
-  "unclassifiedAdaptedSetupRowCount": 498,
+  "unclassifiedAdaptedSetupRowCount": 495,
   "unclassifiedAdaptedSetupRows": [
     "Anderson Squat",
     "B-Stance Hip Thrust",
@@ -2324,7 +2291,6 @@
     "Guillotine Press",
     "Hatfield Squat",
     "Heel-Elevated Squat",
-    "Hip Thrust (Barbell)",
     "Jefferson Squat",
     "JM Press",
     "Kickstand Hip Thrust",
@@ -2398,7 +2364,6 @@
     "Decline Dumbbell Press",
     "Dumbbell Floor Skull Crusher",
     "Dumbbell Fly",
-    "Dumbbell Goblet Squat",
     "Dumbbell Hip Thrust",
     "Dumbbell Pronation/Supination",
     "Dumbbell Pullover",
@@ -2474,7 +2439,6 @@
     "Cable Hip Adduction",
     "Cable Kickback",
     "Cable Reverse Woodchop (Kneeling)",
-    "Cable Serratus Punch",
     "Cable Side Bend",
     "Cable Squat (Standing)",
     "Cable Woodchop",

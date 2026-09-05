@@ -39,7 +39,7 @@ export const LIBRARY_PLANS = [
         name: 'Day 1: Width, Rear Delts & Back Detail',
         exercises: [
           { name: 'Face Pull',                         sets: 4, repsMin: 20, repsMax: 25, rest: 60,  notes: 'Rope at chest height, elbows high. Light weight only. Rear delt warm-up.' },
-          { name: 'HS Plate-Loaded Lat Pulldown',      sets: 4, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Full overhead stretch. Pull elbows to pockets. 3 s eccentric.' },
+          { name: 'Plate-Loaded Lat Pulldown',      sets: 4, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Full overhead stretch. Pull elbows to pockets. 3 s eccentric.' },
           { name: 'Underhand Lat Pulldown',            sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Lower-lat emphasis. Squeeze hard at bottom. 3 s eccentric.' },
           { name: 'Plate-Loaded Seated Row',           sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Full stretch forward. Pull elbows back. Squeeze rhomboids.' },
           { name: 'Cable Straight-Arm Pulldown',       sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Lat length and lower-lat control. Slow arc, slight elbow bend.' },
@@ -48,7 +48,7 @@ export const LIBRARY_PLANS = [
       {
         name: 'Day 2: Upper Chest, Lateral Delts & Shoulder Refinement',
         exercises: [
-          { name: 'Cable Lateral Raise (Low Pulley)',  sets: 4, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Arm slightly forward. Lead with elbow. Raise to shoulder height.' },
+          { name: 'Cable Lateral Raise',  sets: 4, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Arm slightly forward. Lead with elbow. Raise to shoulder height.' },
           { name: 'Facing-In Shoulder Press',          sets: 4, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Scapular-plane pressing. Hits upper chest and anterior delt.' },
           { name: 'Cable Fly (Low to Mid, Incline)',  sets: 4, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Cables low, bench 30–45 degrees. 3 s eccentric. Upper-chest focus.' },
           { name: 'Cable Fly (Mid Height, Cuff)',     sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Upper-chest isolation. Cuffed for greater range. 3 s eccentric.' },
@@ -779,7 +779,7 @@ export const LIBRARY_PLANS = [
       {
         name: 'Full Body A',
         exercises: [
-          { name: 'Dumbbell Goblet Squat', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Hold dumbbell at chest. Sit deep into the squat. Push knees out.' },
+          { name: 'Goblet Squat', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Hold dumbbell at chest. Sit deep into the squat. Push knees out.' },
           { name: 'Romanian Deadlift (Barbell)', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Hip hinge. Feel the hamstring stretch. Keep bar close to legs.' },
           { name: 'Dumbbell Bench Press', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Control the descent. Press smoothly. Full range.' },
           { name: 'Dumbbell Row', sets: 3, repsMin: 10, repsMax: 15, rest: 90, notes: 'Brace core. Pull elbow back and up. Squeeze back.' },
@@ -819,7 +819,7 @@ export const LIBRARY_PLANS = [
       {
         name: 'Lower A: Glutes & Hamstrings',
         exercises: [
-          { name: 'Hip Thrust (Barbell)', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Shoulders on bench. Drive hips fully up. Squeeze hard at top.' },
+          { name: 'Barbell Hip Thrust', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Shoulders on bench. Drive hips fully up. Squeeze hard at top.' },
           { name: 'Romanian Deadlift (Barbell)', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Hip hinge. Long hamstring stretch. Control the descent.' },
           { name: 'Bulgarian Split Squat', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Rear foot elevated. Drive through front heel. Knee tracks toes.' },
           { name: 'Lying Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Curl hard. Squeeze glutes as you curl. Hold at top.' },
@@ -869,7 +869,7 @@ export const LIBRARY_PLANS = [
       {
         name: 'Full Body A',
         exercises: [
-          { name: 'Dumbbell Goblet Squat', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Hold dumbbell at chest. Sit deep. Push knees out.' },
+          { name: 'Goblet Squat', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Hold dumbbell at chest. Sit deep. Push knees out.' },
           { name: 'Romanian Deadlift (Barbell)', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Use dumbbells. Hip hinge. Long hamstring stretch.' },
           { name: 'Dumbbell Bench Press', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Flat bench or floor press if no bench. Full range.' },
           { name: 'Dumbbell Row', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Brace core. Pull elbow back and up. Squeeze back at top.' },
@@ -1011,7 +1011,7 @@ export const LIBRARY_PLANS = [
       {
         name: 'Day 1: Glutes & Hamstrings (Heavy)',
         exercises: [
-          { name: 'Hip Thrust (Barbell)', sets: 5, repsMin: 8, repsMax: 12, rest: 120, notes: 'Primary glute builder in this division. Shoulders on bench, hips fully extended. Squeeze hard at top.' },
+          { name: 'Barbell Hip Thrust', sets: 5, repsMin: 8, repsMax: 12, rest: 120, notes: 'Primary glute builder in this division. Shoulders on bench, hips fully extended. Squeeze hard at top.' },
           { name: 'Romanian Deadlift (Barbell)', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Long hamstring stretch. Slow 3 s eccentric. Hip hinge only: do not round the back.' },
           { name: 'Bulgarian Split Squat', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Rear foot elevated. Drive through front heel. Squeeze glute at the top.' },
           { name: 'Lying Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Curl hard. Squeeze at top. Slow descent.' },
@@ -1061,7 +1061,7 @@ export const LIBRARY_PLANS = [
       {
         name: 'Day 1: Glutes & Hamstrings (Heavy)',
         exercises: [
-          { name: 'Hip Thrust (Barbell)', sets: 5, repsMin: 6, repsMax: 10, rest: 120, notes: 'Heavy. This is your primary indicator of glute development. Load progressively each week.' },
+          { name: 'Barbell Hip Thrust', sets: 5, repsMin: 6, repsMax: 10, rest: 120, notes: 'Heavy. This is your primary indicator of glute development. Load progressively each week.' },
           { name: 'Romanian Deadlift (Barbell)', sets: 5, repsMin: 8, repsMax: 10, rest: 120, notes: 'Hip hinge. Maximum hamstring stretch. Bar close to legs. 3 s eccentric.' },
           { name: 'Sumo Deadlift', sets: 3, repsMin: 5, repsMax: 8, rest: 120, notes: 'Wide stance. Targets inner thighs and glutes. Drive hips through at the top.' },
           { name: 'Lying Leg Curl', sets: 4, repsMin: 10, repsMax: 15, rest: 60, notes: 'Knee flexion for hamstring lower-portion development. Squeeze hard at top.' },
@@ -1104,7 +1104,7 @@ export const LIBRARY_PLANS = [
           { name: 'Machine Row (Chest Supported)', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Upper back maintenance. Chest support removes lower-back stress.' },
           { name: 'Incline Dumbbell Press', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Upper chest. Fewer sets in this division by design.' },
           { name: 'Reverse Pec Deck', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Rear-delt health and rounding.' },
-          { name: 'Hip Thrust (Barbell)', sets: 4, repsMin: 12, repsMax: 15, rest: 90, notes: 'Second hip thrust session. Slightly lighter than Day 1. Focus on squeeze and contraction.' },
+          { name: 'Barbell Hip Thrust', sets: 4, repsMin: 12, repsMax: 15, rest: 90, notes: 'Second hip thrust session. Slightly lighter than Day 1. Focus on squeeze and contraction.' },
           { name: 'Seated Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Hamstring detail to finish the week.' },
         ],
       },
@@ -1194,7 +1194,7 @@ export const LIBRARY_PLANS = [
         name: 'Day 2: Legs',
         exercises: [
           { name: 'Barbell Back Squat', sets: 4, repsMin: 8, repsMax: 12, rest: 120, notes: 'Quad and glute compound. Full depth. Figure requires balanced leg development.' },
-          { name: 'Hip Thrust (Barbell)', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Glute emphasis. Shoulders on bench. Full extension at top.' },
+          { name: 'Barbell Hip Thrust', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Glute emphasis. Shoulders on bench. Full extension at top.' },
           { name: 'Romanian Deadlift (Barbell)', sets: 4, repsMin: 8, repsMax: 12, rest: 90, notes: 'Hamstring and glute. Hip hinge. 3 s eccentric.' },
           { name: 'Leg Extension', sets: 3, repsMin: 15, repsMax: 20, rest: 60, notes: 'Quad detail. Full contraction at top.' },
           { name: 'Lying Leg Curl', sets: 3, repsMin: 12, repsMax: 15, rest: 60, notes: 'Hamstring curl. Full range. Squeeze at top.' },
@@ -1223,7 +1223,7 @@ export const LIBRARY_PLANS = [
       {
         name: 'Day 5: Glute & Back Detail',
         exercises: [
-          { name: 'Hip Thrust (Barbell)', sets: 4, repsMin: 12, repsMax: 15, rest: 90, notes: 'Second glute session. Slightly lighter than Day 2. Focus on squeeze and contraction quality.' },
+          { name: 'Barbell Hip Thrust', sets: 4, repsMin: 12, repsMax: 15, rest: 90, notes: 'Second glute session. Slightly lighter than Day 2. Focus on squeeze and contraction quality.' },
           { name: 'Cable Kickback', sets: 4, repsMin: 15, repsMax: 20, rest: 60, notes: 'Glute isolation. Full hip extension. Slow and deliberate.' },
           { name: 'Lat Pulldown (Wide Grip)', sets: 4, repsMin: 10, repsMax: 15, rest: 90, notes: 'Second back session. Focus on lat engagement and full stretch.' },
           { name: 'Seated Cable Row', sets: 3, repsMin: 12, repsMax: 15, rest: 90, notes: 'Back detail. Control through full range.' },
@@ -1265,7 +1265,7 @@ export const LIBRARY_PLANS = [
         exercises: [
           { name: 'Barbell Back Squat',          sets: 4, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Moderate depth. Drive through heels. Keep torso upright for quad bias.' },
           { name: 'Bulgarian Split Squat',        sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Rear foot elevated. Front foot forward enough to feel glutes. Drive through heel.' },
-          { name: 'Hip Thrust (Barbell)',          sets: 4, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Full hip extension. Squeeze glutes hard at top. Hold 1 second. Lower controlled.' },
+          { name: 'Barbell Hip Thrust',          sets: 4, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Full hip extension. Squeeze glutes hard at top. Hold 1 second. Lower controlled.' },
           { name: 'Romanian Deadlift (Barbell)',   sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Hip hinge, feel hamstring stretch. Keep bar close. Full hip extension at top.' },
           { name: 'Leg Extension',                 sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Quad isolation finisher. Peak squeeze at full extension. Slow eccentric.' },
           { name: 'Cable Kickback',                sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Full hip extension. Squeeze glute at lockout. Deliberate and controlled.' },
@@ -1340,7 +1340,7 @@ export const LIBRARY_PLANS = [
         exercises: [
           { name: 'Romanian Deadlift (Barbell)',  sets: 5, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Heavy hip hinge. Full hamstring stretch at bottom. Drive hips forward to lockout.' },
           { name: 'Seated Leg Curl',              sets: 4, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Seated position keeps hamstring under tension through full range. Slow eccentric.' },
-          { name: 'Hip Thrust (Barbell)',          sets: 5, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Primary glute day. Heavy and deliberate. Full hip extension. Squeeze hard at top.' },
+          { name: 'Barbell Hip Thrust',          sets: 5, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Primary glute day. Heavy and deliberate. Full hip extension. Squeeze hard at top.' },
           { name: 'Bulgarian Split Squat',         sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Rear foot elevated. Drive through front heel. Glute and quad unilateral work.' },
           { name: 'Cable Kickback',                sets: 4, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Glute isolation. Full hip extension. Slow return. Add ankle weight if cable is unavailable.' },
           { name: 'Leg Press Calf Raise',          sets: 4, repsMin: 15, repsMax: 25, rest: 60,  notes: 'Full range every rep. Pause at bottom stretch. Rise to full tip-toe at top.' },
@@ -1421,7 +1421,7 @@ export const LIBRARY_PLANS = [
         exercises: [
           { name: 'Romanian Deadlift (Barbell)',  sets: 5, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Second hamstring session. Full hip hinge. Feel the stretch at the bottom. Heavy and slow.' },
           { name: 'Seated Leg Curl',              sets: 5, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Full range of motion. Seated position maintains tension throughout. 3 s eccentric.' },
-          { name: 'Hip Thrust (Barbell)',          sets: 4, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Full hip extension. Squeeze glutes hard at top. Posterior chain development.' },
+          { name: 'Barbell Hip Thrust',          sets: 4, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Full hip extension. Squeeze glutes hard at top. Posterior chain development.' },
           { name: 'Cable Pull-Through',            sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Hip hinge with cable. Glute and hamstring drive. Feel the pull in the posterior chain.' },
           { name: 'Good Morning',                  sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Low bar on back, hinge at hips. Hamstring and lower-back conditioning.' },
           { name: 'Reverse Pec Deck',              sets: 4, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Rear-delt detail and upper-back finishing work. Squeeze at full extension.' },
@@ -1442,12 +1442,12 @@ export const LIBRARY_PLANS = [
         name: 'Day 1: Width, Rear Delts & Back',
         exercises: [
           { name: 'Face Pull',                       sets: 4, repsMin: 20, repsMax: 25, rest: 60,  notes: 'LIGHT. Rope at chest height. Elbows high and wide. Squeeze rear delt. Stop short of pain. First. Warms shoulder before heavy pulling.' },
-          { name: 'HS Plate-Loaded Lat Pulldown',    sets: 4, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Full overhead stretch. Pull elbows to pockets. Lat width, not biceps. 3s eccentric. Slight back lean, chest up.' },
+          { name: 'Plate-Loaded Lat Pulldown',    sets: 4, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Full overhead stretch. Pull elbows to pockets. Lat width, not biceps. 3s eccentric. Slight back lean, chest up.' },
           { name: 'Underhand Lat Pulldown',          sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Full stretch at top. Squeeze lower lat hard at bottom. 3s eccentric. Elongates V-taper.' },
           { name: 'Plate-Loaded Seated Row',         sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Full stretch forward. Pull elbows back. Squeeze rhomboids hard at end. Don\'t shrug.' },
           { name: 'HS ISO High Row',                 sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Higher elbow targets upper lat and mid back. Control the negative. Shoulder packed throughout.' },
           { name: 'Cable Straight-Arm Pulldown',     sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Slight elbow bend throughout. Sweep from overhead to hips. Feel the lat from armpit to hip.' },
-          { name: 'Cable Serratus Punch',            sets: 3, repsMin: 15, repsMax: 25, rest: 45,  notes: 'Single arm. Reach forward and fully protract scapula at end range. Feel serration along ribcage. Slow. Feel it or it does nothing.' },
+          { name: 'Serratus Punch',            sets: 3, repsMin: 15, repsMax: 25, rest: 45,  notes: 'Single arm. Reach forward and fully protract scapula at end range. Feel serration along ribcage. Slow. Feel it or it does nothing.' },
         ],
       },
       {
@@ -1455,7 +1455,7 @@ export const LIBRARY_PLANS = [
         exercises: [
           { name: 'Facing-In Shoulder Press',          sets: 4, repsMin: 10, repsMax: 12, rest: 120, notes: 'PRIMARY. Do first when freshest. Face INTO pad. Scapular plane press avoids impingement. Hits upper chest AND anterior delt simultaneously.' },
           { name: 'Cable Lateral Raise',               sets: 4, repsMin: 12, repsMax: 15, rest: 75,  notes: 'Pulley at SHOULDER height. Arm slightly forward. Lead with elbow. Raise to just above shoulder. Challenging at 12. Not a pump movement.' },
-          { name: 'Cable Lateral Raise (Low Pulley)',  sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Pulley at floor/ANKLE level. Different arc to shoulder height. Arm crosses body at bottom. Pump focused. Together these two cables give full lateral coverage.' },
+          { name: 'Cable Lateral Raise',  sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Pulley at floor/ANKLE level. Different arc to shoulder height. Arm crosses body at bottom. Pump focused. Together these two cables give full lateral coverage.' },
           { name: 'Cable Fly (Low to Mid, Incline)',   sets: 4, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Bench 30-45°. Cables at lowest position. Fly upward and inward. 3s eccentric. Find pain-free path. Superior upper-chest mind-muscle vs pressing.' },
           { name: 'Cable Fly (Mid Height, Cuff)',      sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Cables at chest height. Cuffed. Strong stretch, squeeze hard at contraction. Pump focused. Higher reps.' },
           { name: 'Face Pull',                         sets: 4, repsMin: 20, repsMax: 25, rest: 45,  notes: 'Always last. Shoulder fatigued by now. Light weight. Rope at chest height. Elbows high and wide. Pull to comfortable range only.' },
@@ -2278,7 +2278,7 @@ export const LIBRARY_PLANS = [
       {
         name: 'Session A',
         exercises: [
-          { name: 'Dumbbell Goblet Squat', sets: 3, repsMin: 8, repsMax: 12, rest: 0, notes: 'Circuit 1, station 1. Move straight to the next station after your reps.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
+          { name: 'Goblet Squat', sets: 3, repsMin: 8, repsMax: 12, rest: 0, notes: 'Circuit 1, station 1. Move straight to the next station after your reps.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
           { name: 'Push-Up',               sets: 3, repsMin: 8, repsMax: 12, rest: 0, notes: 'Circuit 1, station 2. Knees down is a fair regression, full range either way.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
           { name: 'Dumbbell Row',          sets: 3, repsMin: 8, repsMax: 12, rest: 0, notes: 'Circuit 1, station 3. Rest 90 seconds after this station, then repeat the circuit.', supersetGroupId: 'circuit1', groupKind: 'circuit', roundRestSeconds: 90 },
           { name: 'Romanian Deadlift (Dumbbell)', sets: 3, repsMin: 8,  repsMax: 12, rest: 0, notes: 'Circuit 2, station 1. Soft knees, push the hips back, long hamstring stretch.', supersetGroupId: 'circuit2', groupKind: 'circuit', roundRestSeconds: 90 },

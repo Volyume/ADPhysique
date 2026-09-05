@@ -276,20 +276,12 @@ export default [
     loadCharacter: "grind",
     cue: "Stand holding dumbbells in front of your thighs, palms facing your legs. Raise one or both to around shoulder height, then lower under control. Leaning back to help the weight up shifts effort onto the lower back.",
   },
-  {
-    name: "Dumbbell Goblet Squat",
-    primaryMuscle: "quads",
-    secondaryMuscles: [],
-    equipment: "dumbbell",
-    movementPattern: "squat",
-    compound: true,
-    repMin: 10, repMax: 20,
-    fatigueCost: 2, sfr: 4,
-    subregion: "squat_press",
-    aliases: ["DB Goblet Squat"],
-    loadCharacter: "grind",
-    cue: "Hold a dumbbell vertically against your chest with both hands. Squat down between your knees, chest up, elbows brushing your inner knees, then drive back up. Letting the dumbbell drift away from your chest pulls you forward.",
-  },
+  // EL-21/EL-23 (exercise-library-expansion-2026-09-05): retired, a
+  // duplicate of "Goblet Squat" below (confirmed by equipment and cue -
+  // both describe the same dumbbell-front-rack squat). Name and id kept
+  // so history merges under the survivor; the name is now an alias of
+  // "Goblet Squat".
+  { name: "Dumbbell Goblet Squat", retiredInto: "Goblet Squat" },
   {
     name: "Dumbbell Hip Thrust",
     primaryMuscle: "glutes",
@@ -412,7 +404,7 @@ export default [
     repMin: 8, repMax: 15,
     fatigueCost: 3, sfr: 4,
     subregion: "horizontal_lat",
-    aliases: ["DB Row","Two-Arm Bent-Over Dumbbell Row","Bent-Over Dumbbell Row","dumbbell reverse grip incline bench two arm row"],
+    aliases: ["DB Row","Two-Arm Bent-Over Dumbbell Row","Bent-Over Dumbbell Row","dumbbell reverse grip incline bench two arm row","Single-Arm Dumbbell Row","Single-Arm DB Row"],
     loadCharacter: "grind",
     cue: "Rest one knee and hand on a bench, back flat, and hold a dumbbell in the other hand below your shoulder. Pull it up towards your hip, elbow back, then lower fully. Twisting the torso to help takes work away from the back.",
   },
@@ -636,6 +628,7 @@ export default [
     repMin: 10, repMax: 20,
     fatigueCost: 3, sfr: 4,
     subregion: "squat_press",
+    aliases: ["Dumbbell Goblet Squat", "DB Goblet Squat"],
     loadCharacter: "grind",
     cue: "Hold a dumbbell vertically against your chest cupping the top end. Squat down between your knees, torso upright, then drive back up to standing. Letting the weight pull your torso forward is the common breakdown as depth increases.",
   },
@@ -1061,20 +1054,12 @@ export default [
     loadCharacter: "grind",
     cue: "Stand or sit holding a dumbbell at shoulder height on one side, torso braced. Press it straight overhead without leaning to the opposite side, then lower. Letting the torso tip away from the working arm is common as it gets heavy.",
   },
-  {
-    name: "Single-Arm Dumbbell Row",
-    primaryMuscle: "back",
-    secondaryMuscles: [],
-    equipment: "dumbbell",
-    movementPattern: "pull",
-    compound: true,
-    repMin: 10, repMax: 15,
-    fatigueCost: 3, sfr: 4,
-    subregion: "horizontal_lat",
-    aliases: ["Single-Arm DB Row"],
-    loadCharacter: "grind",
-    cue: "Rest one knee and hand on a bench, holding a dumbbell in the other hand with your arm hanging straight. Pull it up towards your hip, squeezing your back, then lower with control. Twisting your torso to help the weight up loses the point.",
-  },
+  // EL-21/EL-23 (exercise-library-expansion-2026-09-05): retired, a
+  // duplicate of "Dumbbell Row" above (both bench-supported single-arm
+  // rows, per the lead check). Name and id kept so history merges under
+  // the survivor; the name and its own alias are now aliases of
+  // "Dumbbell Row".
+  { name: "Single-Arm Dumbbell Row", retiredInto: "Dumbbell Row" },
   {
     name: "Single-Arm Dumbbell Shrug",
     primaryMuscle: "traps",

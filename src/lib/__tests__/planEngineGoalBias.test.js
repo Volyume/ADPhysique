@@ -4,35 +4,12 @@
  * asserts the new behaviours hold, while coverage is never sacrificed.
  */
 import { generatePlan } from '../planEngine';
-import { deriveExerciseMetadata } from '../exerciseMetadata';
+import { CORPUS, corpusEntryToSeedRow } from '../exerciseCorpus';
 
-function realLibrary() {
-  const seedSrc = require('fs').readFileSync(
-    require('path').join(__dirname, '../seedExercises.js'), 'utf8',
-  );
-  const start = seedSrc.indexOf('const RAW = [');
-  const end = seedSrc.indexOf('\n];', start);
-  const body = seedSrc.slice(start, end);
-  const smStart = seedSrc.indexOf('const SUBREGION_MAP = {');
-  const smEnd = seedSrc.indexOf('\n};', smStart);
-  const subMap = {};
-  for (const m of seedSrc.slice(smStart, smEnd).matchAll(/'([^']+)':\s*'(\w+)'/g)) subMap[m[1]] = m[2];
-  const rows = [];
-  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
-    const base = {
-      name: m[1], primaryMuscle: m[2], equipment: m[4], movementPattern: m[5],
-      compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
-      fatigueCost: parseInt(m[9], 10), stimulusToFatigueRatio: parseInt(m[10], 10),
-      subregion: subMap[m[1]] ?? null,
-    };
-    rows.push({ id: m[1], ...base, ...deriveExerciseMetadata(base) });
-  }
-  return rows;
-}
-
-const LIBRARY = realLibrary();
+// Build the real seed library the same way the seed does (07-CORPUS-FORMAT.md
+// section 4: CORPUS.map(corpusEntryToSeedRow) is exactly what seedExercises.js
+// inserts), so the test runs against the exercises users actually get.
+const LIBRARY = CORPUS.map(corpusEntryToSeedRow);
 const BASE = {
   daysPerWeek: 4, sessionLengthMinutes: 60, equipment: 'full_gym',
   goal: 'general', phase: 'lean_gain', weakPoints: [], recoveryRating: 'average',

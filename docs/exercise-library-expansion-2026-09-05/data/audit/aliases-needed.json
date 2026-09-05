@@ -1,9 +1,9 @@
 {
-  "totalRows": 934,
-  "rowsWithAtLeastOneAliasCount": 212,
-  "rowsWithNoAliasSuggestedCount": 722,
-  "totalAliasCount": 223,
-  "highConfidenceCount": 216,
+  "totalRows": 928,
+  "rowsWithAtLeastOneAliasCount": 209,
+  "rowsWithNoAliasSuggestedCount": 719,
+  "totalAliasCount": 220,
+  "highConfidenceCount": 213,
   "mediumConfidenceCount": 7,
   "skippedCollisionsCount": 2,
   "skippedCollisions": [
@@ -309,16 +309,6 @@
       "aliases": [
         {
           "alias": "Good Morning (BB)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Hip Thrust (Barbell)",
-      "aliases": [
-        {
-          "alias": "Hip Thrust (BB)",
           "confidence": "high",
           "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         }
@@ -780,16 +770,6 @@
       ]
     },
     {
-      "name": "Dumbbell Goblet Squat",
-      "aliases": [
-        {
-          "alias": "DB Goblet Squat",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
       "name": "Dumbbell Hip Thrust",
       "aliases": [
         {
@@ -1104,16 +1084,6 @@
       "aliases": [
         {
           "alias": "Single-Arm DB Press",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
-        }
-      ]
-    },
-    {
-      "name": "Single-Arm Dumbbell Row",
-      "aliases": [
-        {
-          "alias": "Single-Arm DB Row",
           "confidence": "high",
           "reason": "Standard gym shorthand: \"DB\" for \"Dumbbell\" is near-universal in logging apps and coaching notation."
         }
@@ -2388,7 +2358,6 @@
     "Cable Lat Pullover",
     "Cable Lateral Raise",
     "Cable Lateral Raise (Behind the Back)",
-    "Cable Lateral Raise (Low Pulley)",
     "Cable Overhead Bicep Curl",
     "Cable Overhead Tricep Extension",
     "Cable Pull-Through",
@@ -2402,7 +2371,6 @@
     "Cable Rope Hammer Curl",
     "Cable Rope Straight-Arm Pulldown (Single-Arm)",
     "Cable Row (Wide Grip)",
-    "Cable Serratus Punch",
     "Cable Shrug",
     "Cable Side Bend",
     "Cable Squat (Standing)",
@@ -2502,7 +2470,6 @@
     "Hand Gripper",
     "Hip Adduction Machine",
     "HS ISO High Row",
-    "HS Plate-Loaded Lat Pulldown",
     "Hyperextension (Back Extension)",
     "Incline Machine Press",
     "Iso-Lateral Chest Press",

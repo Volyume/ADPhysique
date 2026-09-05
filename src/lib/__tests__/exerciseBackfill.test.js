@@ -14,10 +14,12 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 const mockGetAllExercises = jest.fn();
 const mockUpdateExerciseMetadata = jest.fn(() => Promise.resolve());
 const mockInsertExerciseWithId = jest.fn(() => Promise.resolve());
+const mockMergeExerciseIdInto = jest.fn(() => Promise.resolve());
 jest.mock('../database', () => ({
   getAllExercises: (...a) => mockGetAllExercises(...a),
   updateExerciseMetadata: (...a) => mockUpdateExerciseMetadata(...a),
   insertExerciseWithId: (...a) => mockInsertExerciseWithId(...a),
+  mergeExerciseIdInto: (...a) => mockMergeExerciseIdInto(...a),
   insertExercise: jest.fn(() => Promise.resolve()),
 }));
 
@@ -25,14 +27,17 @@ const { backfillExerciseMetadataIfNeeded, topUpNewExercisesIfNeeded, rederiveExe
 const getAllExercises = mockGetAllExercises;
 const updateExerciseMetadata = mockUpdateExerciseMetadata;
 const insertExerciseWithId = mockInsertExerciseWithId;
+const mergeExerciseIdInto = mockMergeExerciseIdInto;
 
 beforeEach(() => {
   mockStore = {};
   getAllExercises.mockReset();
   updateExerciseMetadata.mockReset();
   insertExerciseWithId.mockReset();
+  mergeExerciseIdInto.mockReset();
   insertExerciseWithId.mockResolvedValue(undefined);
   updateExerciseMetadata.mockResolvedValue(undefined);
+  mergeExerciseIdInto.mockResolvedValue(undefined);
 });
 
 test('populates derived metadata on canonical rows that lack it', async () => {
@@ -172,5 +177,44 @@ describe('topUpNewExercisesIfNeeded', () => {
   test('a thrown DB error does not reject (boot must not crash)', async () => {
     getAllExercises.mockRejectedValue(new Error('db down'));
     await expect(topUpNewExercisesIfNeeded()).resolves.toBeUndefined();
+  });
+
+  // EL-23 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+  // the six template-scaffolding rows shipped on existing installs under a
+  // RANDOM id, predating EL-15's canonical-id-per-corpus-entry scheme, so
+  // a retired name must be found and merged under ANY id it sits at, not
+  // only its own canonical id.
+  test('a retired name found under a legacy random id merges into the survivor, with history preserved via mergeExerciseIdInto', async () => {
+    const { canonicalExerciseId } = require('../seedExercises');
+    const survivorId = canonicalExerciseId('Goblet Squat');
+    const legacyId = 'uid-legacy-abc123'; // pre-EL-15 random uid(), not the
+    // retired name's own canonical hash.
+    // The install already has every canonical corpus exercise (so the
+    // CORPUS loop inserts/re-ids nothing) PLUS the legacy duplicate row
+    // that carries a user's real logged history under its random id.
+    const { CORPUS } = require('../exerciseCorpus');
+    const existing = CORPUS.map((entry) => ({ id: canonicalExerciseId(entry.name), name: entry.name, isCustom: 0 }));
+    existing.push({ id: legacyId, name: 'Dumbbell Goblet Squat', isCustom: 0 });
+
+    getAllExercises.mockResolvedValue(existing);
+    await topUpNewExercisesIfNeeded();
+
+    expect(mergeExerciseIdInto).toHaveBeenCalledWith(legacyId, survivorId);
+    // Never merges by the retired name's own canonical id when that's not
+    // where the row actually is.
+    const retiredCanonicalId = canonicalExerciseId('Dumbbell Goblet Squat');
+    expect(mergeExerciseIdInto).not.toHaveBeenCalledWith(retiredCanonicalId, survivorId);
+  });
+
+  test('a custom exercise sharing a retired name is never merged away', async () => {
+    const { canonicalExerciseId } = require('../seedExercises');
+    const { CORPUS } = require('../exerciseCorpus');
+    const existing = CORPUS.map((entry) => ({ id: canonicalExerciseId(entry.name), name: entry.name, isCustom: 0 }));
+    existing.push({ id: 'custom-uid-1', name: 'Dumbbell Goblet Squat', isCustom: 1 });
+
+    getAllExercises.mockResolvedValue(existing);
+    await topUpNewExercisesIfNeeded();
+
+    expect(mergeExerciseIdInto).not.toHaveBeenCalledWith('custom-uid-1', expect.anything());
   });
 });

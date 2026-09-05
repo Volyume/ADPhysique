@@ -32,6 +32,7 @@ const fs = require('fs');
 const path = require('path');
 const { generatePlan, classifySupersetPair, estimateWorkoutMinutes } = require('../planEngine');
 const { LIBRARY, inputs, planExercises } = require('./campaign16.helpers');
+const { LIBRARY_PLANS } = require('../seedRoutines');
 
 const ENGINE_SRC = fs.readFileSync(path.resolve(__dirname, '../planEngine.js'), 'utf8');
 
@@ -154,13 +155,69 @@ describe('C16-4 the time estimate was always straight-set honest (22, 23)', () =
   });
 });
 
+// EL-24 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+// circuit templates are the one deliberate exception to C16-4 - the user
+// explicitly chose a plan built around grouped stations. A plan is a
+// circuit template the same way the product identifies one everywhere
+// else (PlanLibraryScreen's hasTag/'circuit' collection chip): its tags
+// string carries the word "circuit" (as its own tag or as part of a
+// style:circuit_* pool tag - hasTag is a substring check, so both read as
+// the same signal). Every OTHER plan must have zero grouped exercises,
+// and a circuit plan's groups must be circuits, never plain supersets.
 describe('C16-4 Volyume-provided library plans hand over no supersets either', () => {
-  test('no seeded plan pairs exercises or tells the user to', () => {
-    // The founder ruling covers authored plans too: the product should not
-    // hand someone a plan that needs two stations at once. The seeded
-    // plans never carried a structural pairing, but two of them suggested
-    // supersets in copy and one claimed a time saving from them.
-    const seed = fs.readFileSync(path.resolve(__dirname, '../seedRoutines.js'), 'utf8');
-    expect(seed).not.toMatch(/superset/i);
+  const isCircuitPlan = (plan) => /circuit/i.test(plan.tags || '');
+
+  test('the corpus actually contains circuit templates (guards the test itself)', () => {
+    expect(LIBRARY_PLANS.filter(isCircuitPlan).length).toBeGreaterThan(0);
+  });
+
+  test('every non-circuit plan has no grouped exercises', () => {
+    const offenders = [];
+    for (const plan of LIBRARY_PLANS) {
+      if (isCircuitPlan(plan)) continue;
+      for (const workout of plan.workouts) {
+        for (const ex of workout.exercises) {
+          if (ex.supersetGroupId || ex.groupKind) {
+            offenders.push(`${plan.name} / ${workout.name} / ${ex.name}`);
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test('every circuit plan groups only as circuits, never plain supersets', () => {
+    const offenders = [];
+    for (const plan of LIBRARY_PLANS.filter(isCircuitPlan)) {
+      for (const workout of plan.workouts) {
+        for (const ex of workout.exercises) {
+          if (ex.supersetGroupId && ex.groupKind !== 'circuit') {
+            offenders.push(`${plan.name} / ${workout.name} / ${ex.name}`);
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test('no seeded plan copy suggests a superset (circuits describe stations, not supersets)', () => {
+    // The founder ruling covers authored plan COPY too: no plan tells a
+    // user to superset two exercises. Checked over the human-readable
+    // prose fields only (description/workout description/exercise notes)
+    // - `supersetGroupId`/`superset_group_id` is the shared, pre-existing
+    // grouping column name for BOTH circuits and manual supersets (EL-9),
+    // so it legitimately appears in circuit exercise defs and is not what
+    // this pins.
+    const offenders = [];
+    for (const plan of LIBRARY_PLANS) {
+      if (/superset/i.test(plan.description || '')) offenders.push(`${plan.name} (plan description)`);
+      for (const workout of plan.workouts) {
+        if (/superset/i.test(workout.description || '')) offenders.push(`${plan.name} / ${workout.name} (workout description)`);
+        for (const ex of workout.exercises) {
+          if (/superset/i.test(ex.notes || '')) offenders.push(`${plan.name} / ${workout.name} / ${ex.name} (notes)`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
   });
 });

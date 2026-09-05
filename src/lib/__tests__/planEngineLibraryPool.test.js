@@ -6,8 +6,8 @@
  * POOL so a plan is never starved.
  */
 import { generatePlan } from '../planEngine';
-import { deriveExerciseMetadata } from '../exerciseMetadata';
 import { translateSubregion } from '../poolGenerator';
+import { CORPUS, corpusEntryToSeedRow } from '../exerciseCorpus';
 
 const BASE_INPUTS = {
   experience: 'intermediate',
@@ -21,37 +21,10 @@ const BASE_INPUTS = {
   nutritionPhase: 'maintain',
 };
 
-// Build the real seed library the same way the seed does, so the test runs
-// against the exercises users actually get.
-function realLibrary() {
-  const seedSrc = require('fs').readFileSync(
-    require('path').join(__dirname, '../seedExercises.js'), 'utf8',
-  );
-  const start = seedSrc.indexOf('const RAW = [');
-  const end = seedSrc.indexOf('\n];', start);
-  const body = seedSrc.slice(start, end);
-  const smStart = seedSrc.indexOf('const SUBREGION_MAP = {');
-  const smEnd = seedSrc.indexOf('\n};', smStart);
-  const smBody = seedSrc.slice(smStart, smEnd);
-  const subMap = {};
-  for (const m of smBody.matchAll(/'([^']+)':\s*'(\w+)'/g)) subMap[m[1]] = m[2];
-
-  const rows = [];
-  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
-    const base = {
-      name: m[1], primaryMuscle: m[2], equipment: m[4], movementPattern: m[5],
-      compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
-      fatigueCost: parseInt(m[9], 10), stimulusToFatigueRatio: parseInt(m[10], 10),
-      subregion: subMap[m[1]] ?? null,
-    };
-    rows.push({ id: m[1], ...base, ...deriveExerciseMetadata(base) });
-  }
-  return rows;
-}
-
-const LIBRARY = realLibrary();
+// Build the real seed library the same way the seed does (07-CORPUS-FORMAT.md
+// section 4: CORPUS.map(corpusEntryToSeedRow) is exactly what seedExercises.js
+// inserts), so the test runs against the exercises users actually get.
+const LIBRARY = CORPUS.map(corpusEntryToSeedRow);
 
 function allExerciseNames(plan) {
   return plan.workouts.flatMap(w => w.exercises.map(e => e.exerciseName));

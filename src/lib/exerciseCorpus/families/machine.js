@@ -61,7 +61,10 @@ export default [
     fatigueCost: 3, sfr: 5,
     subregion: "squat_press",
     loadCharacter: "grind",
-    overrides: {"exerciseType":"duration"},
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // hands drive moving handlebars for propulsion; they are gripping,
+    // not bearing bodyweight through flat palms.
+    overrides: {"exerciseType":"duration", demands: { weightBearingHands: false }},
     cue: "Sit with your hands on the moving handles and feet on the pedals. Drive with your arms and legs together to build and hold your pace. Slouching over the handlebars instead of driving through the legs wastes effort.",
   },
   {
@@ -116,7 +119,9 @@ export default [
     subregion: null,
     aliases: ["Battling Ropes"],
     loadCharacter: "grind",
-    overrides: {"exerciseType":"duration"},
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // hands grip rope ends, not bearing bodyweight through flat palms.
+    overrides: {"exerciseType":"duration", demands: { weightBearingHands: false }},
     cue: "Hold one end of each rope, feet planted and knees soft. Whip your arms up and down alternately to send waves through the ropes, keeping your middle braced. Rounding the back over the ropes instead of staying upright wastes effort.",
   },
   {
@@ -169,7 +174,10 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "squat_press",
     loadCharacter: "grind",
-    overrides: {"exerciseType":"duration"},
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // seated, weight rests on the seat; hands rest lightly on the
+    // handlebars, not bearing bodyweight through flat palms.
+    overrides: {"exerciseType":"duration", demands: { weightBearingHands: false }},
     cue: "Sit on the bike with seat height set so your knee has a slight bend at the bottom of the pedal stroke. Pedal at a steady pace, keeping your hips still. Rocking your hips side to side usually means the seat needs adjusting.",
   },
   {
@@ -183,6 +191,11 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "decline",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): a
+    // plain selectorised press with no iso-lateral/plate-loaded branding
+    // in its name uses a single shared handlebar driven by one stack, so
+    // the two sides cannot be loaded independently.
+    overrides: { demands: { unilateralLoadable: false } },
     cue: "Sit in the machine with the seat adjusted so the handles sit level with your lower chest. Press the handles forward and slightly down until your arms extend, then return slowly. Flaring the elbows out wide is the common fault.",
   },
   {
@@ -235,6 +248,11 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): a
+    // plain selectorised press with no iso-lateral/plate-loaded branding
+    // in its name uses a single shared handlebar driven by one stack, so
+    // the two sides cannot be loaded independently.
+    overrides: { demands: { unilateralLoadable: false } },
     cue: "Sit facing into the machine and grip the handles at shoulder height. Press them forward and slightly together until your arms extend, then return with control. Arching your lower back off the pad to help the press is the fault to avoid.",
   },
   {
@@ -293,6 +311,10 @@ export default [
     fatigueCost: 3, sfr: 5,
     subregion: "hip_extension",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // hands are free (crossed at the chest or behind the head), not
+    // bearing bodyweight through flat palms.
+    overrides: { demands: { weightBearingHands: false } },
     cue: "Kneel with your ankles locked under the footplates, body upright. Curl forward and back using your hamstrings to control the movement, then return upright. Letting your hips lead the movement instead of your hamstrings is the usual fault.",
   },
   {
@@ -320,6 +342,10 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "flat",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // Hammer Strength plate-loaded press machines are built with two
+    // independently pivoting arms, one per side, by design.
+    overrides: { demands: { unilateralLoadable: true } },
     cue: "Sit in the machine with the handles at chest height and your feet flat on the floor. Press the handles forward until your arms extend, then return slowly. Bouncing the handles off your chest at the bottom is the common fault.",
   },
   {
@@ -363,19 +389,11 @@ export default [
     loadCharacter: "grind",
     cue: "Sit facing the pad with your chest supported and grip the high handles. Pull them back towards your body, squeezing your shoulder blades together, then extend back with control. Letting your chest lift off the pad is the common fault.",
   },
-  {
-    name: "HS Plate-Loaded Lat Pulldown",
-    primaryMuscle: "back",
-    secondaryMuscles: [],
-    equipment: "machine",
-    movementPattern: "pull",
-    compound: true,
-    repMin: 8, repMax: 12,
-    fatigueCost: 3, sfr: 4,
-    subregion: "vertical_pull",
-    loadCharacter: "grind",
-    cue: "Sit facing the machine with your thighs secured under the pads and grip the handles overhead. Pull them down towards your chest, squeezing your back, then let them rise back with control. Leaning back excessively turns it into a row.",
-  },
+  // EL-21/EL-23 (exercise-library-expansion-2026-09-05): retired, a
+  // duplicate of "Plate-Loaded Lat Pulldown" below (confirmed by
+  // equipment and cue). Name and id kept so history merges under the
+  // survivor; the name is now an alias of "Plate-Loaded Lat Pulldown".
+  { name: "HS Plate-Loaded Lat Pulldown", retiredInto: "Plate-Loaded Lat Pulldown" },
   {
     name: "Hyperextension (Back Extension)",
     primaryMuscle: "back",
@@ -400,6 +418,11 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "incline",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): a
+    // plain selectorised press with no iso-lateral/plate-loaded branding
+    // in its name uses a single shared handlebar driven by one stack, so
+    // the two sides cannot be loaded independently.
+    overrides: { demands: { unilateralLoadable: false } },
     cue: "Sit in the machine with the seat set so the handles sit level with your upper chest. Press the handles forward and slightly up until your arms extend, then return slowly. Flaring the elbows out wide is the common fault.",
   },
   {
@@ -440,6 +463,12 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "lateral_raise",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // whether a lateral-raise machine's two lever arms move on
+    // independent pivots or a single synchronised shaft is a
+    // manufacturer-specific design choice not stated in the exercise
+    // name or cue.
+    unknownAxes: [{ axis: "unilateralLoadable", reason: "Selectorised lateral-raise machine; independent-arm vs synchronised-shaft linkage varies by manufacturer and is not determinable from the name or cue." }],
     cue: "Sit with your back against the pad and your upper arms against the outer pads. Raise your arms out to the sides to shoulder height, then lower slowly. Shrugging instead of raising through the arms is the common fault.",
   },
   {
@@ -547,6 +576,11 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "flat",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): a
+    // plain selectorised press with no iso-lateral/plate-loaded branding
+    // in its name uses a single shared handlebar driven by one stack, so
+    // the two sides cannot be loaded independently.
+    overrides: { demands: { unilateralLoadable: false } },
     cue: "Sit in the machine with the handles level with your chest and your feet flat on the floor. Press the handles forward until your arms extend, then return slowly. Flaring the elbows out wide instead of tracking forward is the common fault.",
   },
   {
@@ -578,6 +612,11 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: "short_head",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // whether this curl machine's two handles share one rigid bar or
+    // move on independent pivots is a manufacturer-specific design
+    // choice not stated in the exercise name or cue.
+    unknownAxes: [{ axis: "unilateralLoadable", reason: "Selectorised curl machine; independent-arm vs shared-bar linkage varies by manufacturer and is not determinable from the name or cue." }],
     cue: "Sit with your arms resting on the pad and your hands gripping the handles. Curl the handles up towards your shoulders, then lower fully slowly. Lifting your elbows off the pad as the set gets harder is the common fault.",
   },
   {
@@ -609,6 +648,11 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "lateral_raise",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // whether this lever-pad machine's two arms move independently or on
+    // a synchronised shaft is a manufacturer-specific design choice not
+    // stated in the exercise name or cue.
+    unknownAxes: [{ axis: "unilateralLoadable", reason: "Selectorised lateral-raise machine; independent-arm vs synchronised-shaft linkage varies by manufacturer and is not determinable from the name or cue." }],
     cue: "Sit with your back against the pad and your upper arms against the lever pads. Raise your arms out to the sides to shoulder height, then lower slowly. Using momentum to jerk the weight up instead of a smooth raise is the common fault.",
   },
   {
@@ -622,6 +666,11 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // whether this rear-delt/reverse-fly machine's two arms move
+    // independently or on a synchronised shaft is a manufacturer-specific
+    // design choice not stated in the exercise name or cue.
+    unknownAxes: [{ axis: "unilateralLoadable", reason: "Selectorised reverse-fly machine; independent-arm vs synchronised-shaft linkage varies by manufacturer and is not determinable from the name or cue." }],
     cue: "Sit facing the pads with your chest against the support and your arms resting on the handles. Sweep your arms out and back, squeezing your shoulder blades, then return slowly. Using your upper back to heave the weight is the common fault.",
   },
   {
@@ -661,6 +710,11 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "overhead_press",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): a
+    // plain selectorised press with no iso-lateral/plate-loaded branding
+    // in its name uses a single shared handlebar driven by one stack, so
+    // the two sides cannot be loaded independently.
+    overrides: { demands: { unilateralLoadable: false } },
     cue: "Sit with your back against the pad and grip the handles at shoulder height. Press the handles straight up until your arms extend, then lower slowly. Arching your lower back off the pad to help press is the usual fault.",
   },
   {
@@ -674,6 +728,11 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): a
+    // plain selectorised press with no iso-lateral/plate-loaded branding
+    // in its name uses a single shared handlebar driven by one stack, so
+    // the two sides cannot be loaded independently.
+    overrides: { demands: { unilateralLoadable: false } },
     cue: "Sit with your back against the pad and grip the handles in front of your shoulders. Press up and slightly forward until your arms extend, then lower slowly. Pressing straight up instead of slightly forward misses the front delts.",
   },
   {
@@ -688,6 +747,11 @@ export default [
     subregion: "pushdown",
     aliases: ["Triceps Extension Machine"],
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // whether this tricep-extension machine's handles are on one shared
+    // bar or independent pivots is a manufacturer-specific design choice
+    // not stated in the exercise name or cue.
+    unknownAxes: [{ axis: "unilateralLoadable", reason: "Selectorised tricep-extension machine; independent-arm vs shared-bar linkage varies by manufacturer and is not determinable from the name or cue." }],
     cue: "Sit with your arms resting on the pad, hands gripping the handles, upper arms still. Push the handles down or forward until your arms straighten, then return slowly. Moving at the shoulder instead of just the elbow is the usual mistake.",
   },
   {
@@ -701,6 +765,15 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // whether this Y-raise machine's two arms move independently or on a
+    // synchronised shaft is a manufacturer-specific design choice not
+    // stated in the exercise name or cue; bilateralUpper is downstream of
+    // the same open question.
+    unknownAxes: [
+      { axis: "unilateralLoadable", reason: "Selectorised Y-raise machine; independent-arm vs synchronised-shaft linkage varies by manufacturer and is not determinable from the name or cue." },
+      { axis: "bilateralUpper", reason: "Depends on the same unresolved independent-arm-vs-linked-shaft design question as unilateralLoadable." },
+    ],
     cue: "Sit facing the pads with your chest against the support and your arms hanging below you. Raise your arms up and out into a Y shape, squeezing your upper back, then lower slowly. Shrugging instead of raising through the arms is the fault.",
   },
   {
@@ -742,6 +815,10 @@ export default [
     subregion: null,
     aliases: ["Neck Harness (Extension)"],
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): a
+    // head harness loads the whole head/neck against one hanging weight;
+    // there is no per-side split to load independently.
+    overrides: { demands: { unilateralLoadable: false } },
     cue: "Sit or kneel with the harness strapped around your head and a weight hanging behind you. Tilt your head back against the load, then return slowly to neutral. Moving your whole torso instead of just your head is the common fault.",
   },
   {
@@ -756,6 +833,10 @@ export default [
     subregion: null,
     aliases: ["Neck Harness (Flexion)"],
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): a
+    // head harness loads the whole head/neck against one hanging weight;
+    // there is no per-side split to load independently.
+    overrides: { demands: { unilateralLoadable: false } },
     cue: "Sit or kneel with the harness strapped around your head and a weight hanging in front. Tilt your head forward against the load, then return slowly to neutral. Using your shoulders to help pull the weight is the common fault.",
   },
   {
@@ -809,6 +890,10 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "flat",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): the
+    // cue's own "letting one side lead the press unevenly" fault confirms
+    // two independently pivoting arms, one per side.
+    overrides: { demands: { unilateralLoadable: true } },
     cue: "Sit in the machine with the handles level with your chest, plates loaded evenly on each side. Press the handles forward until your arms extend, then return slowly. Letting one side lead the press unevenly is the common fault.",
   },
   {
@@ -822,6 +907,11 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "decline",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // same plate-loaded chest-press apparatus family as Plate-Loaded
+    // Chest Press/Incline Press (two independently pivoting arms), just
+    // set at a decline angle.
+    overrides: { demands: { unilateralLoadable: true } },
     cue: "Sit in the machine with the seat set so the handles sit level with your lower chest. Press the handles forward and slightly down until your arms extend, then return slowly. Flaring the elbows out wide is the common fault.",
   },
   {
@@ -865,6 +955,10 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "incline",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): the
+    // cue's own "letting one side lead the press" fault confirms two
+    // independently pivoting arms, one per side.
+    overrides: { demands: { unilateralLoadable: true } },
     cue: "Sit in the machine with the seat set so the handles sit level with your upper chest, plates loaded evenly. Press the handles forward and up until your arms extend, then return slowly. Letting one side lead the press is the common fault.",
   },
   {
@@ -877,6 +971,7 @@ export default [
     repMin: 8, repMax: 15,
     fatigueCost: 3, sfr: 4,
     subregion: "vertical_pull",
+    aliases: ["HS Plate-Loaded Lat Pulldown"],
     loadCharacter: "grind",
     cue: "Sit with your thighs under the pads and grip the handles above you, plates loaded evenly. Pull the handles down towards your upper chest, driving your elbows down, then extend slowly. Leaning back excessively is the usual fault.",
   },
@@ -904,6 +999,12 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "overhead",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // unlike the plate-loaded press family, this machine's cue gives no
+    // "one side leads" fault and no evidence of independent arms vs a
+    // single shared bar; a manufacturer-specific design choice not
+    // stated in the exercise name or cue.
+    unknownAxes: [{ axis: "unilateralLoadable", reason: "Plate-loaded overhead-extension machine; independent-arm vs shared-bar linkage varies by manufacturer and is not determinable from the name or cue." }],
     cue: "Sit with your arms overhead gripping the handles, plates loaded evenly on the machine. Lower the handles behind your head by bending your elbows, then extend back up. Letting the elbows wing out wide is the usual fault.",
   },
   {
@@ -917,6 +1018,11 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "short_head",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): the
+    // cue grips "the handle" (singular) — a single shared bar across the
+    // pivot, the same as a fixed EZ-bar preacher curl, so it cannot be
+    // loaded one side at a time.
+    overrides: { demands: { unilateralLoadable: false } },
     cue: "Sit with your arms resting over the preacher pad and grip the handle, plates loaded evenly. Curl the handle up towards your shoulders, then lower fully to extend your arms. Lifting your elbows off the pad is the common fault.",
   },
   {
@@ -930,6 +1036,11 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // whether this plate-loaded reverse-fly machine's two arms move
+    // independently or on a synchronised shaft is a manufacturer-specific
+    // design choice not stated in the exercise name or cue.
+    unknownAxes: [{ axis: "unilateralLoadable", reason: "Plate-loaded reverse-fly machine; independent-arm vs synchronised-shaft linkage varies by manufacturer and is not determinable from the name or cue." }],
     cue: "Sit facing the pads with your chest against the support, gripping the handles in front of you. Sweep your arms out and back, squeezing your shoulder blades, then return slowly. Using your upper back to heave the weight is the usual fault.",
   },
   {
@@ -956,6 +1067,11 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "horizontal_lat",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // plate-loaded row machines load each arm's lever independently with
+    // its own plates, the classic iso-lateral design; one-side use is
+    // therefore always available, so bilateralUpper follows as false.
+    overrides: { demands: { unilateralLoadable: true, bilateralUpper: false } },
     cue: "Sit with your chest against the pad and grip the handles in front of you. Pull them towards your body, squeezing your shoulder blades together, then extend back with control. Using your lower back to heave the weight is a common fault.",
   },
   {
@@ -969,6 +1085,11 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "overhead_press",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // same plate-loaded press family as Plate-Loaded Chest Press/Incline
+    // Press (two independently pivoting arms), applied to the shoulder
+    // press variant.
+    overrides: { demands: { unilateralLoadable: true } },
     cue: "Sit with your back against the pad, plates loaded evenly, gripping the handles at shoulder height. Press the handles straight up until your arms extend, then lower slowly. Arching your lower back off the pad is the usual fault.",
   },
   {
@@ -982,6 +1103,11 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "short_head",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): the
+    // cue grips "the handle" (singular) — a single shared bar across the
+    // pivot, the same as a fixed EZ-bar preacher curl, so it cannot be
+    // loaded one side at a time.
+    overrides: { demands: { unilateralLoadable: false } },
     cue: "Sit with your arms resting over the preacher pad and your hands gripping the handle. Curl the handle up towards your shoulders, then lower fully to extend your arms. Letting your elbows lift off the pad is the common fault.",
   },
   {
@@ -1008,7 +1134,10 @@ export default [
     fatigueCost: 4, sfr: 5,
     subregion: "hip_extension",
     loadCharacter: "grind",
-    overrides: {"exerciseType":"duration"},
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // the cue's own strap/handle grip is a working grip, not bodyweight
+    // borne through flat palms.
+    overrides: {"exerciseType":"duration", demands: { weightBearingHands: false }},
     cue: "Attach a strap or handles to the sled and stand facing away, leaning forward slightly. Walk backward or forward with steady steps, keeping tension through the strap. Standing too upright instead of leaning into the drag reduces the effect.",
   },
   {
@@ -1127,6 +1256,11 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "horiz_abduction",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // whether this reverse-fly machine's two arms move independently or
+    // on a synchronised shaft is a manufacturer-specific design choice
+    // not stated in the exercise name or cue.
+    unknownAxes: [{ axis: "unilateralLoadable", reason: "Selectorised reverse-fly machine; independent-arm vs synchronised-shaft linkage varies by manufacturer and is not determinable from the name or cue." }],
     cue: "Sit facing the pads with your chest against the support, arms resting on the handles in front. Sweep your arms out and back, squeezing your shoulder blades, then return slowly. Using your upper back to heave the weight is the common fault.",
   },
   {
@@ -1234,6 +1368,12 @@ export default [
     fatigueCost: 1, sfr: 5,
     subregion: null,
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // matches the established Leg Extension/Leg Press precedent
+    // (capability/demands.js CURATED_DEMANDS) — a single bar spanning
+    // both feet at one pivot is still worked one side at a time in
+    // practice.
+    overrides: { demands: { unilateralLoadable: true } },
     cue: "Sit with your heels resting on a support and the front of your feet hooked under the bar. Pull your toes up towards your shins against the resistance, then lower slowly. Rushing through the reps instead of moving slowly is the common fault.",
   },
   {
@@ -1268,7 +1408,9 @@ export default [
     loadCharacter: "grind",
     // exercise-library-expansion-2026-09-05 metadataCorrectionsVerified
     // (lead-overrides.json): a standing specialist apparatus, not seated.
-    overrides: { demands: { position: "standing" } },
+    // nullAxisAnnotation (EL-6): the apparatus is two independent
+    // vertical loading posts, one per side, like a double landmine press.
+    overrides: { demands: { position: "standing", unilateralLoadable: true } },
     cue: "Sit or stand gripping the handles with a neutral grip in front of your chest. Press the handles straight up overhead until your arms extend, then lower slowly. Leaning back excessively to help press the weight up is the usual mistake.",
   },
   // ── INTEGRATION STAGE 2 (exercise-library-expansion-2026-09-05) — generated by scripts/exercise-library/integrate-inventories.mjs; rerun the script to regenerate, do not hand-edit below this line ──

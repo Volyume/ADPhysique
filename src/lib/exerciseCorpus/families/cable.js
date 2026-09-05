@@ -403,6 +403,7 @@ export default [
     repMin: 15, repMax: 25,
     fatigueCost: 2, sfr: 5,
     subregion: "lateral_raise",
+    aliases: ["Cable Lateral Raise (Low Pulley)"],
     loadCharacter: "grind",
     cue: "Stand beside a low pulley with the cable crossing your body, arm hanging by your hip. Raise your arm out to shoulder height, leading with the elbow, then lower slowly. Shrugging your shoulder up is the common fault.",
   },
@@ -419,19 +420,11 @@ export default [
     loadCharacter: "grind",
     cue: "Stand with the cable set low behind you, running to your working hand. Raise your arm out to shoulder height, then lower slowly for the extra stretch. Shrugging the shoulder instead of leading with the elbow is the usual fault.",
   },
-  {
-    name: "Cable Lateral Raise (Low Pulley)",
-    primaryMuscle: "side_delts",
-    secondaryMuscles: [],
-    equipment: "cable",
-    movementPattern: "isolation",
-    compound: false,
-    repMin: 15, repMax: 20,
-    fatigueCost: 2, sfr: 5,
-    subregion: null,
-    loadCharacter: "grind",
-    cue: "Stand side on to a low pulley, holding the handle across your body in the far hand. Raise your arm out to the side to shoulder height, then lower with control. Shrugging the shoulder up to help the raise is the common fault.",
-  },
+  // EL-21/EL-23 (exercise-library-expansion-2026-09-05): retired, a
+  // duplicate of "Cable Lateral Raise" above (confirmed by equipment and
+  // cue). Name and id kept so history merges under the survivor; the
+  // name is now an alias of "Cable Lateral Raise".
+  { name: "Cable Lateral Raise (Low Pulley)", retiredInto: "Cable Lateral Raise" },
   {
     name: "Cable Overhead Bicep Curl",
     primaryMuscle: "biceps",
@@ -614,19 +607,11 @@ export default [
     loadCharacter: "grind",
     cue: "Sit with your feet on the platform and take a wide bar, arms extended with a tall spine. Pull the bar towards your torso with elbows out wide, then extend back out slowly. Rounding your back at the start is the common fault.",
   },
-  {
-    name: "Cable Serratus Punch",
-    primaryMuscle: "abs",
-    secondaryMuscles: [],
-    equipment: "cable",
-    movementPattern: "push",
-    compound: false,
-    repMin: 15, repMax: 25,
-    fatigueCost: 1, sfr: 5,
-    subregion: "flexion",
-    loadCharacter: "grind",
-    cue: "Hold a low or mid height cable handle at chest level with a straight arm. Punch your hand forward and let your shoulder blade rotate around your ribs at the end, then return. Bending the elbow to reach further misses the point.",
-  },
+  // EL-21/EL-23 (exercise-library-expansion-2026-09-05): retired, a
+  // duplicate of "Serratus Punch" below (confirmed by equipment and
+  // cue). Name and id kept so history merges under the survivor; the
+  // name is now an alias of "Serratus Punch".
+  { name: "Cable Serratus Punch", retiredInto: "Serratus Punch" },
   {
     name: "Cable Shrug",
     primaryMuscle: "traps",
@@ -1174,7 +1159,7 @@ export default [
     repMin: 12, repMax: 20,
     fatigueCost: 1, sfr: 4,
     subregion: "flexion",
-    aliases: [],
+    aliases: ["Cable Serratus Punch"],
         loadCharacter: "grind",
     cue: "Hold a light handle in one hand, arm extended in front of your chest. Punch your arm further forward by reaching with your shoulder blade, then return slowly. Bending the elbow instead of reaching through the shoulder blade is the fault.",
   },

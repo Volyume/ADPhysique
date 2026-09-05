@@ -1047,9 +1047,9 @@
       "note": "Byte-identical rep range/fatigue/SFR/pattern/subregion template. Cross-check against nearDuplicatesByTuple/nearDuplicatesByNormalizedName for actual name similarity before treating as a duplicate — many groups here are legitimately distinct movements that merely share a template."
     }
   ],
-  "nearDuplicatesByNormalizedNamePairCount": 14,
+  "nearDuplicatesByNormalizedNamePairCount": 13,
   "nearDuplicatesByNormalizedNameBreakdown": {
-    "likely_same_stimulus": 11,
+    "likely_same_stimulus": 10,
     "legitimately_distinct": 3
   },
   "nearDuplicatesByNormalizedName": [
@@ -1058,15 +1058,6 @@
       "pair": [
         "Barbell Good Morning",
         "Good Morning (Barbell)"
-      ],
-      "classification": "likely_same_stimulus",
-      "reason": "Identical after case/punctuation folding, DB->dumbbell/BB->barbell/KB->kettlebell expansion and word-order removal, with no direction-word reversal — spelling/abbreviation/word-order, EL-2's explicit non-distinguishing list."
-    },
-    {
-      "normalized": "barbell hip thrust",
-      "pair": [
-        "Barbell Hip Thrust",
-        "Hip Thrust (Barbell)"
       ],
       "classification": "likely_same_stimulus",
       "reason": "Identical after case/punctuation folding, DB->dumbbell/BB->barbell/KB->kettlebell expansion and word-order removal, with no direction-word reversal — spelling/abbreviation/word-order, EL-2's explicit non-distinguishing list."
@@ -1180,11 +1171,11 @@
       "reason": "Bag-of-words identical but the pulley direction (high-to-low vs low-to-high) reverses — EL-2 names loading vector/pulley height as a distinguishing dimension, and both forms are already separate registry entries in canonicality.js."
     }
   ],
-  "nearDuplicatesByTupleCount": 550,
+  "nearDuplicatesByTupleCount": 545,
   "nearDuplicatesByTupleBreakdown": {
-    "legitimately_distinct": 550
+    "legitimately_distinct": 545
   },
-  "nearDuplicatesByTupleFlaggedForLeadReviewCount": 85,
+  "nearDuplicatesByTupleFlaggedForLeadReviewCount": 84,
   "nearDuplicatesByTupleFlaggedForLeadReview": [
     {
       "tuple": {
@@ -2193,27 +2184,6 @@
       "confidence": "medium",
       "reason": "Same 5-tuple; differing token(s) (horizontal, vertical) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation.",
       "alsoSharesNumericTemplate": true
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "back",
-        "equipmentCategory": "machine_plate_loaded",
-        "movementPattern": "pull",
-        "subregion": "vertical_pull",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "HS Plate-Loaded Lat Pulldown",
-        "Plate-Loaded Lat Pulldown"
-      ],
-      "jaccard": 0.8,
-      "diffTokens": [
-        "hs"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (hs) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation.",
-      "alsoSharesNumericTemplate": false
     },
     {
       "tuple": {
@@ -8437,49 +8407,6 @@
     },
     {
       "tuple": {
-        "primaryMuscle": "quads",
-        "equipmentCategory": "dumbbell",
-        "movementPattern": "squat",
-        "subregion": "squat_press",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Dumbbell Goblet Squat",
-        "Front Squat (Dumbbell)"
-      ],
-      "jaccard": 0.5,
-      "diffTokens": [
-        "goblet",
-        "front"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (goblet, front) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "quads",
-        "equipmentCategory": "dumbbell",
-        "movementPattern": "squat",
-        "subregion": "squat_press",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Dumbbell Goblet Squat",
-        "Goblet Squat"
-      ],
-      "jaccard": 0.67,
-      "diffTokens": [
-        "dumbbell"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (dumbbell) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
         "primaryMuscle": "side_delts",
         "equipmentCategory": "dumbbell",
         "movementPattern": "isolation",
@@ -9941,28 +9868,6 @@
     },
     {
       "tuple": {
-        "primaryMuscle": "glutes",
-        "equipmentCategory": "barbell",
-        "movementPattern": "hinge",
-        "subregion": "activator",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Hip Thrust (Barbell)",
-        "Kickstand Hip Thrust"
-      ],
-      "jaccard": 0.5,
-      "diffTokens": [
-        "barbell",
-        "kickstand"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (barbell) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
         "primaryMuscle": "quads",
         "equipmentCategory": "machine_selectorised",
         "movementPattern": "squat",
@@ -9982,27 +9887,6 @@
       "confidence": "medium",
       "reason": "Same 5-tuple; differing token(s) (horizontal, vertical) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation.",
       "alsoSharesNumericTemplate": true
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "back",
-        "equipmentCategory": "machine_plate_loaded",
-        "movementPattern": "pull",
-        "subregion": "vertical_pull",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "HS Plate-Loaded Lat Pulldown",
-        "Plate-Loaded Lat Pulldown"
-      ],
-      "jaccard": 0.8,
-      "diffTokens": [
-        "hs"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "medium",
-      "reason": "Same 5-tuple; differing token(s) (hs) are not on the reviewed cosmetic OR distinguishing list — defaulted to distinct (safer default) and flagged for lead confirmation.",
-      "alsoSharesNumericTemplate": false
     },
     {
       "tuple": {
@@ -14222,28 +14106,6 @@
       "confidence": "high",
       "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (seated) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
       "alsoSharesNumericTemplate": true
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "back",
-        "equipmentCategory": "dumbbell",
-        "movementPattern": "pull",
-        "subregion": "horizontal_lat",
-        "laterality": "unilateral"
-      },
-      "pair": [
-        "Single-Arm Dumbbell Row",
-        "Single-Arm Dumbbell Row (Bench-Supported)"
-      ],
-      "jaccard": 0.67,
-      "diffTokens": [
-        "bench",
-        "supported"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (supported) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
     },
     {
       "tuple": {

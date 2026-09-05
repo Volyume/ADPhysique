@@ -124,11 +124,24 @@ export async function topUpNewExercisesIfNeeded() {
 
     let retired = 0;
     for (const { name, retiredInto } of RETIRED_ENTRIES) {
-      const retiredId = canonicalExerciseId(name);
       const survivorId = canonicalExerciseId(retiredInto);
-      if (haveIds.has(retiredId) && haveIds.has(survivorId)) {
-        await mergeExerciseIdInto(retiredId, survivorId);
-        haveIds.delete(retiredId);
+      if (!haveIds.has(survivorId)) continue; // survivor is a live CORPUS
+      // entry, inserted (or re-idded here) by the loop above, so this
+      // should never actually be false — defensive only.
+      // EL-23 (05-DECISIONS.md): the six template-scaffolding rows shipped
+      // on existing installs under a RANDOM id (they predate EL-15's
+      // canonical-id-per-corpus-entry scheme), not necessarily under the
+      // retired name's own canonical id. Match by name — case-insensitive,
+      // non-custom, exactly like the same-name merge above — so a retired
+      // name is found and merged under ANY id it happens to sit at, not
+      // only its canonical one.
+      const nameKey = String(name).toLowerCase().trim();
+      const dup = byNameLower.get(nameKey);
+      const retiredRowId = dup ? dup.id : null;
+      if (retiredRowId && retiredRowId !== survivorId) {
+        await mergeExerciseIdInto(retiredRowId, survivorId);
+        haveIds.delete(retiredRowId);
+        byNameLower.delete(nameKey);
         retired++;
       }
     }

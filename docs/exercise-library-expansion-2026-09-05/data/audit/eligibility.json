@@ -1,6 +1,6 @@
 {
-  "totalRows": 934,
-  "neverEligibleCount": 110,
+  "totalRows": 928,
+  "neverEligibleCount": 104,
   "neverEligible": [
     {
       "name": "Barbell Upright Row (Wide)",
@@ -47,20 +47,6 @@
     },
     {
       "name": "Guillotine Press",
-      "tier": "never_auto",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": true,
-      "neverEligibleReasons": [
-        "never_auto tier (canonicality.js)"
-      ],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Hip Thrust (Barbell)",
       "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
@@ -351,34 +337,6 @@
       "equipmentProfilesEmpty": false
     },
     {
-      "name": "Dumbbell Goblet Squat",
-      "tier": "never_auto",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": true,
-      "neverEligibleReasons": [
-        "never_auto tier (canonicality.js)"
-      ],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Single-Arm Dumbbell Row",
-      "tier": "never_auto",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": true,
-      "neverEligibleReasons": [
-        "never_auto tier (canonicality.js)"
-      ],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
       "name": "Dumbbell Clean",
       "tier": "never_auto",
       "poolEligible": false,
@@ -483,34 +441,6 @@
     },
     {
       "name": "Cable Fly (Mid Height, Cuff)",
-      "tier": "never_auto",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": true,
-      "neverEligibleReasons": [
-        "never_auto tier (canonicality.js)"
-      ],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Cable Lateral Raise (Low Pulley)",
-      "tier": "never_auto",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": true,
-      "neverEligibleReasons": [
-        "never_auto tier (canonicality.js)"
-      ],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Cable Serratus Punch",
       "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
@@ -654,20 +584,6 @@
     },
     {
       "name": "HS ISO High Row",
-      "tier": "never_auto",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": true,
-      "neverEligibleReasons": [
-        "never_auto tier (canonicality.js)"
-      ],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "HS Plate-Loaded Lat Pulldown",
       "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,
@@ -1593,7 +1509,7 @@
     "common": 279,
     "niche": 246,
     "specialist": 234,
-    "never_auto": 105,
+    "never_auto": 99,
     "staple": 70
   },
   "difficulty3Count": 114,
@@ -3153,20 +3069,6 @@
       "poolBlockReason": null,
       "everNeverEligible": false,
       "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Hip Thrust (Barbell)",
-      "tier": "never_auto",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": true,
-      "neverEligibleReasons": [
-        "never_auto tier (canonicality.js)"
-      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -4854,20 +4756,6 @@
       "equipmentProfilesEmpty": false
     },
     {
-      "name": "Dumbbell Goblet Squat",
-      "tier": "never_auto",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": true,
-      "neverEligibleReasons": [
-        "never_auto tier (canonicality.js)"
-      ],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
       "name": "Dumbbell Hip Thrust",
       "tier": "common",
       "poolEligible": true,
@@ -5534,20 +5422,6 @@
       "poolBlockReason": null,
       "everNeverEligible": false,
       "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Single-Arm Dumbbell Row",
-      "tier": "never_auto",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": true,
-      "neverEligibleReasons": [
-        "never_auto tier (canonicality.js)"
-      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -6751,20 +6625,6 @@
       "equipmentProfilesEmpty": false
     },
     {
-      "name": "Cable Lateral Raise (Low Pulley)",
-      "tier": "never_auto",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": true,
-      "neverEligibleReasons": [
-        "never_auto tier (canonicality.js)"
-      ],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
       "name": "Cable Overhead Bicep Curl",
       "tier": "niche",
       "poolEligible": true,
@@ -6915,20 +6775,6 @@
       "poolBlockReason": null,
       "everNeverEligible": false,
       "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Cable Serratus Punch",
-      "tier": "never_auto",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": true,
-      "neverEligibleReasons": [
-        "never_auto tier (canonicality.js)"
-      ],
       "beginnerBlockedByDifficulty3": false,
       "exerciseType": "weight_reps",
       "nonWeightReps": false,
@@ -8181,20 +8027,6 @@
     },
     {
       "name": "HS ISO High Row",
-      "tier": "never_auto",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": true,
-      "neverEligibleReasons": [
-        "never_auto tier (canonicality.js)"
-      ],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "HS Plate-Loaded Lat Pulldown",
       "tier": "never_auto",
       "poolEligible": true,
       "poolBlockReason": null,

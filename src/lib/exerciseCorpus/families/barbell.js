@@ -165,7 +165,7 @@ export default [
     repMin: 8, repMax: 15,
     fatigueCost: 3, sfr: 5,
     subregion: "activator",
-    aliases: ["BB Hip Thrust","Hip Thrust","Unilateral Hip Thrust"],
+    aliases: ["BB Hip Thrust","Hip Thrust","Unilateral Hip Thrust","Hip Thrust (Barbell)","Hip Thrust (BB)"],
     loadCharacter: "grind",
     cue: "Sit on the floor with your upper back against a bench and the bar over your hips. Drive through your heels to lift until your body forms a straight line from shoulders to knees, then lower. Overextending the lower back at the top is common.",
   },
@@ -669,20 +669,11 @@ export default [
     loadCharacter: "grind",
     cue: "Stand inside the hex bar holding the handles at your sides. Lift your shoulders straight up towards your ears, pause, then lower fully. Bending the knees to heave the weight up turns the shrug into a partial deadlift.",
   },
-  {
-    name: "Hip Thrust (Barbell)",
-    primaryMuscle: "glutes",
-    secondaryMuscles: [],
-    equipment: "barbell",
-    movementPattern: "hinge",
-    compound: true,
-    repMin: 8, repMax: 15,
-    fatigueCost: 3, sfr: 5,
-    subregion: "activator",
-    aliases: ["Hip Thrust (BB)"],
-    loadCharacter: "grind",
-    cue: "Sit with your upper back on a bench and the bar over your hips. Drive through your heels until your body is straight, then squeeze at the top. Letting the bar roll down your thighs is common.",
-  },
+  // EL-21/EL-23 (exercise-library-expansion-2026-09-05): retired, a
+  // duplicate of "Barbell Hip Thrust" above (confirmed by equipment and
+  // cue). Name and id kept so history merges under the survivor; the
+  // name and its own alias are now aliases of "Barbell Hip Thrust".
+  { name: "Hip Thrust (Barbell)", retiredInto: "Barbell Hip Thrust" },
   {
     name: "Incline Barbell Bench Press",
     primaryMuscle: "chest",

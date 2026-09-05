@@ -470,12 +470,23 @@ const NEVER_AUTO = [
   // automatic-generation output for at least one goal (campaign16.planFit
   // suite), which folding in "ordinary canonical rows" was never meant to
   // do. A lead may reclassify individually with a programming reason.
-  'HS Plate-Loaded Lat Pulldown', 'Underhand Lat Pulldown',
-  'Plate-Loaded Seated Row', 'HS ISO High Row', 'Cable Serratus Punch',
-  'Cable Lateral Raise (Low Pulley)', 'Facing-In Shoulder Press',
+  //
+  // EL-21/EL-23 (exercise-library-expansion-2026-09-05): six of the
+  // eighteen retired into an existing canonical row of the same movement
+  // ("HS Plate-Loaded Lat Pulldown" into "Plate-Loaded Lat Pulldown",
+  // "Cable Serratus Punch" into "Serratus Punch", "Cable Lateral Raise
+  // (Low Pulley)" into "Cable Lateral Raise", "Single-Arm Dumbbell Row"
+  // into "Dumbbell Row", "Hip Thrust (Barbell)" into "Barbell Hip
+  // Thrust", "Dumbbell Goblet Squat" into "Goblet Squat") and are removed
+  // from this list - a retired name is never a live corpus entry, so it
+  // has no tier of its own; the surviving name already carries its own
+  // tier classification elsewhere in this registry.
+  'Underhand Lat Pulldown',
+  'Plate-Loaded Seated Row', 'HS ISO High Row',
+  'Facing-In Shoulder Press',
   'Cable Fly (Low to Mid, Incline)', 'Cable Fly (Mid Height, Cuff)',
-  'Box Step-Up', 'Single-Arm Dumbbell Row', 'Trap Bar Deadlift (Low Handle)',
-  'Hip Thrust (Barbell)', 'Dumbbell Goblet Squat', 'Lunge',
+  'Box Step-Up', 'Trap Bar Deadlift (Low Handle)',
+  'Lunge',
   'Bodyweight Squat', 'Seated Band Row', 'Seated Band Lat Pulldown',
 
   // exercise-library-expansion-2026-09-05 (integration stage 2): the

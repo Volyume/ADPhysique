@@ -70,6 +70,10 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): the
+    // cue's own "hands on the floor for balance" places the hands under
+    // load.
+    overrides: { demands: { weightBearingHands: true } },
     cue: "Kneel with one leg out wide, hands on the floor for balance. Rock your hips back towards your heel until you feel a stretch on the inner thigh of the straight leg, then return forward. Rounding the back instead of the hips is the fault.",
   },
   {
@@ -191,6 +195,13 @@ export default [
     fatigueCost: 1, sfr: 3,
     subregion: "squat_press",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): no
+    // implement is held, so there is no grip requirement and the hands
+    // are free (not bearing bodyweight through flat palms); matches the
+    // established "Bodyweight Bulgarian Split Squat"/"Sissy Squat"
+    // precedent (capability/demands.js CURATED_DEMANDS) for axialLoad
+    // (no external load), gripDemand and weightBearingHands.
+    overrides: { demands: { axialLoad: false, gripDemand: "none", weightBearingHands: false } },
     cue: "Stand with feet shoulder width apart. Bend your hips and knees together to sit down and back, keeping your chest up, then drive back up through your whole foot. Letting your knees cave inward on the way up is common.",
   },
   {
@@ -222,6 +233,13 @@ export default [
     // alias carried over.
     aliases: ["Bodyweight Step-Up", "Step-ups"],
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): no
+    // implement is held, so there is no grip requirement and the hands
+    // are free (not bearing bodyweight through flat palms); matches the
+    // established "Bodyweight Bulgarian Split Squat" precedent
+    // (capability/demands.js CURATED_DEMANDS) for axialLoad (no external
+    // load), gripDemand and weightBearingHands.
+    overrides: { demands: { axialLoad: false, gripDemand: "none", weightBearingHands: false } },
     cue: "Stand facing a sturdy box or step. Place one foot fully on top, then drive through that foot to stand up, bringing the other leg to meet it. Pushing off the trailing foot rather than driving through the top leg is common.",
   },
   {
@@ -330,6 +348,10 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): a
+    // standing lateral squat performed with hands free (not on the
+    // floor).
+    overrides: { demands: { weightBearingHands: false } },
     cue: "Stand with feet wide apart, toes turned slightly out. Shift your weight to one side, bending that knee and sitting back while the other leg stays straight, then push back to centre. Letting the bent knee's heel lift off is the fault.",
   },
   {
@@ -372,7 +394,10 @@ export default [
     subregion: null,
     aliases: ["Passive Hang","Bar Hang","Deadhang"],
     loadCharacter: "grind",
-    overrides: {"exerciseType":"duration"},
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // load passes through a bar grip, not flat palms bearing bodyweight
+    // (the axis's own NAME_WEIGHT_BEARING_HANDS list excludes hanging).
+    overrides: {"exerciseType":"duration", demands: { weightBearingHands: false }},
     cue: "Jump or step up to grip a pull-up bar, hands shoulder width apart. Let your body hang fully extended, shoulders relaxed rather than shrugged up, and hold. Gripping too tightly with clenched shoulders tires your forearms fast.",
   },
   {
@@ -525,6 +550,10 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "activator",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // lying on the back, arms are free at the sides, not bearing
+    // bodyweight through flat palms.
+    overrides: { demands: { weightBearingHands: false } },
     cue: "Lie on your back with the soles of your feet together, knees dropped out to the sides. Drive your hips up by squeezing your glutes, then lower under control. Arching the lower back instead of using the glutes is the common fault.",
   },
   {
@@ -748,6 +777,13 @@ export default [
     // row) and its own alias carried over.
     aliases: ["Bodyweight Forward Lunge", "forward lunge (male)"],
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): no
+    // implement is held, so there is no grip requirement and the hands
+    // are free (not bearing bodyweight through flat palms); matches the
+    // established "Bodyweight Bulgarian Split Squat" precedent
+    // (capability/demands.js CURATED_DEMANDS) for axialLoad (no external
+    // load), gripDemand and weightBearingHands.
+    overrides: { demands: { axialLoad: false, gripDemand: "none", weightBearingHands: false } },
     cue: "Stand tall, then step forward and lower your back knee towards the floor while your front knee stays roughly over your ankle. Push through your front heel to return standing. Letting the front knee cave inward is the main thing to watch.",
   },
   {
@@ -1108,6 +1144,10 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // lying on the side, the supporting arm is not bearing bodyweight
+    // through flat palms for this movement.
+    overrides: { demands: { weightBearingHands: false } },
     cue: "Lie on your side, bottom leg straight and top leg bent with the foot flat on the floor in front. Lift your bottom leg towards the ceiling, then lower slowly under control. Rotating the hip forward reduces the effect.",
   },
   {
@@ -1295,6 +1335,9 @@ export default [
     fatigueCost: 1, sfr: 4,
     subregion: "knee_extension",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6): a
+    // standing band exercise; hands are not involved in the movement.
+    overrides: { demands: { weightBearingHands: false } },
     cue: "Anchor a band behind one knee and stand facing away with a slight bend in that knee. Straighten the knee fully by squeezing the front of the thigh, then let it bend back slightly. Locking the knee out harshly reduces control.",
   },
   {
@@ -1416,7 +1459,11 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "decline",
     loadCharacter: "grind",
-    overrides: {"exerciseType":"weighted_bodyweight"},
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // load passes through a bar grip on the dip bars, not flat palms
+    // (matches the axis's own NAME_WEIGHT_BEARING_HANDS list, which
+    // excludes dips).
+    overrides: {"exerciseType":"weighted_bodyweight", demands: { weightBearingHands: false }},
     cue: "Support your body on parallel bars, arms straight, torso leaning forward slightly, legs bent behind you. Lower your body until you feel a stretch across the chest, then push back up. Staying too upright shifts the work away from the chest.",
   },
   {
@@ -1430,6 +1477,11 @@ export default [
     fatigueCost: 4, sfr: 3,
     subregion: "pushdown",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
+    // load passes through a bar grip on the dip bars, not flat palms
+    // (matches the axis's own NAME_WEIGHT_BEARING_HANDS list, which
+    // excludes dips).
+    overrides: { demands: { weightBearingHands: false } },
     cue: "Support your body on parallel bars, arms straight, torso upright, legs bent behind you. Lower your body by bending your elbows close to your sides, then push back up. Leaning the torso forward shifts the work towards the chest instead.",
   },
   {
