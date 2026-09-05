@@ -33,7 +33,10 @@ describe('the edit-exercise sheet states its scope truthfully (D139)', () => {
     // read before editing, not buried below the inputs.
     const titleIdx = editWindow.indexOf('{editingExercise?.exercise?.name}');
     const noteIdx = editWindow.indexOf('This changes this workout only');
-    const firstFieldIdx = editWindow.indexOf('label="Sets"');
+    // F-13/F-17 (docs/final-certification-2026-09-05/07-FINDINGS.md): the
+    // first field is labelled "Rounds" on a circuit station and "Sets"
+    // otherwise, so the marker is the label expression rather than a literal.
+    const firstFieldIdx = editWindow.indexOf("label={editingIsCircuit ? 'Rounds' : 'Sets'}");
     expect(titleIdx).toBeGreaterThan(-1);
     expect(noteIdx).toBeGreaterThan(titleIdx);
     expect(noteIdx).toBeLessThan(firstFieldIdx);

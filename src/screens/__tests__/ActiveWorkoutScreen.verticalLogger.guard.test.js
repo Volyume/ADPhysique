@@ -86,8 +86,13 @@ describe('one workout surface: the outline navigator keeps every exercise reacha
     expect(fn).toContain('? adjustedSetCount');
     expect(fn).toContain(': entry.routineExercise?.recommendedSets) || DEFAULT_FREEFORM_TARGET_SETS');
     expect(fn).toContain('skipped: !!entry._timeCrunchSkipped');
-    // Superset members carry the same 2-vs-3+ naming.
-    expect(fn).toContain("groupLabel: gid != null ? (groupSize > 2 ? 'Giant set' : 'Superset') : null");
+    // Superset members carry the same 2-vs-3+ naming. F-13
+    // (docs/final-certification-2026-09-05/07-FINDINGS.md, evidence A5): a
+    // CIRCUIT station is named by its stored group kind instead, since the
+    // 2-vs-3+ split describes supersets and giant sets, not circuits.
+    expect(fn).toContain("(groupSize > 2 ? 'Giant set' : 'Superset')");
+    expect(fn).toContain("? (entry.routineExercise?.groupKind === 'circuit'");
+    expect(fn).toContain("? 'Circuit'");
   });
 });
 

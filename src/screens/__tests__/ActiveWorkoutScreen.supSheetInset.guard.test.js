@@ -38,7 +38,7 @@ describe('ActiveWorkoutScreen superset/unilateral sheet bottom inset (D36a)', ()
   });
 
   test('these two modals stay raw Modals, not BottomSheet, by ruling', () => {
-    const supersetWindow = ACTIVE_WORKOUT.match(/Superset \/ giant-set heads-up modal[\s\S]{0,400}/)?.[0] ?? '';
+    const supersetWindow = ACTIVE_WORKOUT.match(/Superset \/ giant-set heads-up modal[\s\S]{0,600}/)?.[0] ?? '';
     expect(supersetWindow).toContain('<Modal');
   });
 });

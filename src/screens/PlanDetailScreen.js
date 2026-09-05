@@ -28,6 +28,7 @@ import { logError } from '../lib/errorLog';
 import { useToast } from '../components/Toast';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { getSplitRationale } from '../lib/whyThisTemplates';
+import { summariseCircuitGroups, formatCircuitPreviewLine } from '../lib/circuitRound';
 import { track } from '../lib/telemetry';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
@@ -57,6 +58,11 @@ export default function PlanDetailScreen({ navigation, route }) {
   const [workouts, setWorkouts] = useState([]);
   const [exerciseCounts, setExerciseCounts] = useState({});
   const [setCounts, setSetCounts] = useState({});
+  // F-17 (docs/final-certification-2026-09-05/07-FINDINGS.md, evidence
+  // A10): the preview named neither circuits nor rounds, so the only
+  // signal before someone committed to a circuit plan was the free-text
+  // description. Keyed by routine id, one entry per circuit group.
+  const [circuitGroups, setCircuitGroups] = useState({});
   const [activePlan, setActivePlanData] = useState(null);
   const [whyThis, setWhyThis] = useState(null);
   // D139 (finding: "the library's 'N to swap' fact vanished on the deciding
@@ -115,6 +121,24 @@ export default function PlanDetailScreen({ navigation, route }) {
       setExerciseCounts(counts);
       setSetCounts(sets);
       setActivePlanData(active);
+      // F-17 (evidence A10): the day rows need the routines' own exercise
+      // rows, which the compatibility pass below already reads. Fetched once
+      // here and shared, so naming the circuit costs no extra query.
+      // Best-effort per routine: a read failure just leaves that day with the
+      // plain exercise count it had before.
+      const detailsByRoutine = {};
+      for (const routine of (routines ?? [])) {
+        // eslint-disable-next-line no-await-in-loop
+        detailsByRoutine[routine.id] = (await getRoutineExercisesWithDetails(routine.id).catch(() => [])) ?? [];
+      }
+      const circuits = {};
+      for (const routine of (routines ?? [])) {
+        const groups = summariseCircuitGroups(
+          detailsByRoutine[routine.id].map(row => row?.routineExercise).filter(Boolean),
+        );
+        if (groups.length) circuits[routine.id] = groups;
+      }
+      setCircuitGroups(circuits);
       // The rationale cache is per-user and always tracks the active
       // auto-generated plan (every reroll archives the others), so it's
       // only meaningful here when this plan is the active one. Loading it
@@ -140,9 +164,9 @@ export default function PlanDetailScreen({ navigation, route }) {
           if (capState && !capState.empty && !capState.unavailable) {
             const exerciseRows = [];
             for (const routine of (routines ?? [])) {
-              // eslint-disable-next-line no-await-in-loop
-              const withEx = await getRoutineExercisesWithDetails(routine.id).catch(() => []);
-              for (const row of (withEx ?? [])) if (row?.exercise) exerciseRows.push(row.exercise);
+              for (const row of (detailsByRoutine[routine.id] ?? [])) {
+                if (row?.exercise) exerciseRows.push(row.exercise);
+              }
             }
             setCompatibility(computePlanCompatibility(capState, exerciseRows));
           } else {
@@ -578,6 +602,11 @@ export default function PlanDetailScreen({ navigation, route }) {
                     ) : (
                       <Text style={[styles.workoutMeta, live.workoutMeta]}>No exercises yet</Text>
                     )}
+                    {(circuitGroups[routine.id] ?? []).map(group => (
+                      <Text key={group.groupId} style={[styles.workoutMeta, live.workoutMeta]}>
+                        {formatCircuitPreviewLine(group)}
+                      </Text>
+                    ))}
                   </View>
                   <View style={styles.reorderActions}>
                     <TouchableOpacity
@@ -621,6 +650,14 @@ export default function PlanDetailScreen({ navigation, route }) {
                   ) : (
                     <Text style={[styles.workoutMeta, live.workoutMeta]}>No exercises yet</Text>
                   )}
+                  {/* F-17 (evidence A10): a day that runs a circuit says so
+                      here, with its stations, rounds and round rest, before
+                      anyone commits to the plan. */}
+                  {(circuitGroups[routine.id] ?? []).map(group => (
+                    <Text key={group.groupId} style={[styles.workoutMeta, live.workoutMeta]}>
+                      {formatCircuitPreviewLine(group)}
+                    </Text>
+                  ))}
                 </View>
                 {!isLibrary && (
                   <View style={styles.workoutActions}>

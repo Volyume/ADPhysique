@@ -202,6 +202,12 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const [editRepsMin, setEditRepsMin] = useState('');
   const [editRepsMax, setEditRepsMax] = useState('');
   const [editRest, setEditRest] = useState('');
+  // F-17 (docs/final-certification-2026-09-05/07-FINDINGS.md, evidence
+  // A9): a circuit station's between-round rest, editable here for the
+  // first time. The per-station rest field is inert on a circuit (the
+  // live session reads roundRestSeconds, ActiveWorkoutScreen's fullRest),
+  // so on a circuit this replaces it rather than sitting beside it.
+  const [editRoundRest, setEditRoundRest] = useState('');
   const [editStartWeight, setEditStartWeight] = useState('');
   const [swapState, setSwapState] = useState(null);
   const [swapCandidates, setSwapCandidates] = useState([]);
@@ -540,8 +546,22 @@ export default function RoutineDetailScreen({ navigation, route }) {
     setEditRepsMin(String(routineExercise.recommendedRepsMin ?? 6));
     setEditRepsMax(String(routineExercise.recommendedRepsMax ?? 12));
     setEditRest(String(routineExercise.restSeconds ?? ''));
+    setEditRoundRest(String(routineExercise.roundRestSeconds ?? ''));
     setEditStartWeight(String(routineExercise.startingWeight ?? ''));
   }
+
+  // F-17 (evidence A9): the members of the circuit this edit belongs to, in
+  // routine order. EL-9 keeps rounds equal within a circuit, and nothing
+  // enforced that here before - one station's rounds could diverge from its
+  // siblings' with no way to notice. Rounds and round rest are therefore
+  // written to EVERY member; reps and start weight stay per-station.
+  const editingIsCircuit = editingExercise?.routineExercise?.groupKind === 'circuit';
+  const editingCircuitMembers = editingIsCircuit
+    ? exercises
+      .map(row => row.routineExercise)
+      .filter(re => re && re.supersetGroupId
+        && re.supersetGroupId === editingExercise.routineExercise.supersetGroupId)
+    : [];
 
   async function saveEdit() {
     if (!editingExercise) return;
@@ -553,16 +573,43 @@ export default function RoutineDetailScreen({ navigation, route }) {
     // no visible reason nothing happened. Every sibling save path in this
     // wave (ManualBuilderScreen.validate) shows a warning toast instead.
     if (!sets || !repsMin || !repsMax) {
+      if (editingIsCircuit) {
+        toast.show('Enter a value for rounds and reps before saving', { variant: 'warning' });
+        return;
+      }
       toast.show('Enter a value for sets and reps before saving', { variant: 'warning' });
       return;
     }
-    await updateRoutineExercise(editingExercise.routineExercise.id, {
-      recommendedSets: sets,
-      recommendedRepsMin: repsMin,
-      recommendedRepsMax: repsMax,
-      restSeconds: editRest ? parseInt(editRest, 10) : null,
-      startingWeight: editStartWeight ? parseDecimalInput(editStartWeight) : null,
-    });
+    if (editingIsCircuit) {
+      // F-17 / EL-9 equal-rounds law: rounds and round rest belong to the
+      // CIRCUIT, so they are written to every station in the group. The
+      // per-station rest is left alone entirely - it is inert on a circuit
+      // and the sheet no longer shows it, so it must not be nulled either.
+      const roundRest = editRoundRest ? parseInt(editRoundRest, 10) : null;
+      await updateRoutineExercise(editingExercise.routineExercise.id, {
+        recommendedSets: sets,
+        recommendedRepsMin: repsMin,
+        recommendedRepsMax: repsMax,
+        roundRestSeconds: roundRest,
+        startingWeight: editStartWeight ? parseDecimalInput(editStartWeight) : null,
+      });
+      for (const member of editingCircuitMembers) {
+        if (member.id === editingExercise.routineExercise.id) continue;
+        // eslint-disable-next-line no-await-in-loop
+        await updateRoutineExercise(member.id, {
+          recommendedSets: sets,
+          roundRestSeconds: roundRest,
+        });
+      }
+    } else {
+      await updateRoutineExercise(editingExercise.routineExercise.id, {
+        recommendedSets: sets,
+        recommendedRepsMin: repsMin,
+        recommendedRepsMax: repsMax,
+        restSeconds: editRest ? parseInt(editRest, 10) : null,
+        startingWeight: editStartWeight ? parseDecimalInput(editStartWeight) : null,
+      });
+    }
     setEditingExercise(null);
     await loadRoutine();
   }
@@ -1359,12 +1406,14 @@ export default function RoutineDetailScreen({ navigation, route }) {
             </Text>
             <View style={styles.editRow}>
               <TextField
-                label="Sets"
+                label={editingIsCircuit ? 'Rounds' : 'Sets'}
                 labelNumberOfLines={1}
                 containerStyle={styles.editField}
                 fieldStyle={styles.editInputField}
                 inputStyle={[styles.editInput, live.editInput]}
-                accessibilityLabel={`Sets for ${editingExercise?.exercise?.name || 'exercise'}`}
+                accessibilityLabel={editingIsCircuit
+                  ? `Rounds for the whole circuit, set on ${editingExercise?.exercise?.name || 'exercise'}`
+                  : `Sets for ${editingExercise?.exercise?.name || 'exercise'}`}
                 value={editSets}
                 onChangeText={setEditSets}
                 keyboardType="number-pad"
@@ -1398,21 +1447,47 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 placeholderTextColor={t.colors.textMuted}
               />
             </View>
+            {editingIsCircuit ? (
+              // F-17 (evidence A9): on a circuit the per-station rest is
+              // inert - the live session rests roundRestSeconds after the
+              // last station and nothing at all between stations - so the
+              // sheet shows the rest that actually applies, and only that.
+              <Text style={[styles.editScopeNote, live.editScopeNote]}>
+                Rounds and rest between rounds apply to the whole circuit. There is no rest between stations.
+              </Text>
+            ) : null}
             <View style={styles.editRow}>
-              <TextField
-                label="Rest (s)"
-                labelNumberOfLines={1}
-                containerStyle={styles.editField}
-                fieldStyle={styles.editInputField}
-                inputStyle={[styles.editInput, live.editInput]}
-                accessibilityLabel={`Rest seconds for ${editingExercise?.exercise?.name || 'exercise'}`}
-                value={editRest}
-                onChangeText={setEditRest}
-                keyboardType="number-pad"
-                placeholder="90"
-                maxLength={4}
-                placeholderTextColor={t.colors.textMuted}
-              />
+              {editingIsCircuit ? (
+                <TextField
+                  label="Rest between rounds (s)"
+                  labelNumberOfLines={1}
+                  containerStyle={styles.editField}
+                  fieldStyle={styles.editInputField}
+                  inputStyle={[styles.editInput, live.editInput]}
+                  accessibilityLabel="Rest between rounds, in seconds, for the whole circuit"
+                  value={editRoundRest}
+                  onChangeText={setEditRoundRest}
+                  keyboardType="number-pad"
+                  placeholder="90"
+                  maxLength={4}
+                  placeholderTextColor={t.colors.textMuted}
+                />
+              ) : (
+                <TextField
+                  label="Rest (s)"
+                  labelNumberOfLines={1}
+                  containerStyle={styles.editField}
+                  fieldStyle={styles.editInputField}
+                  inputStyle={[styles.editInput, live.editInput]}
+                  accessibilityLabel={`Rest seconds for ${editingExercise?.exercise?.name || 'exercise'}`}
+                  value={editRest}
+                  onChangeText={setEditRest}
+                  keyboardType="number-pad"
+                  placeholder="90"
+                  maxLength={4}
+                  placeholderTextColor={t.colors.textMuted}
+                />
+              )}
               <TextField
                 label="Start weight"
                 labelNumberOfLines={1}

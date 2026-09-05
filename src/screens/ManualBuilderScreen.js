@@ -1303,8 +1303,17 @@ export default function ManualBuilderScreen({ navigation, route }) {
                         delayLongPress={400}
                         activeOpacity={0.7}
                         accessibilityRole="button"
-                        accessibilityLabel={`${ex.name}, ${ex.sets} sets`}
-                        accessibilityHint="Tap to select for a superset, hold to remove"
+                        // F-13 (docs/final-certification-2026-09-05/
+                        // 07-FINDINGS.md, evidence A5): a circuit station is
+                        // spoken in rounds, and it is never offered for
+                        // superset selection - a circuit is built and
+                        // changed as a group, not paired row by row.
+                        accessibilityLabel={isCircuit
+                          ? `${ex.name}, ${ex.sets} round${ex.sets === 1 ? '' : 's'}`
+                          : `${ex.name}, ${ex.sets} sets`}
+                        accessibilityHint={isCircuit
+                          ? 'Hold to remove'
+                          : 'Tap to select for a superset, hold to remove'}
                         accessibilityState={{ selected: isSelected }}
                       >
                         <Ionicons

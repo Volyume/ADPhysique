@@ -61,6 +61,12 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
     : evidenceClass === 'circuit' ? ' - Circuit'
     : evidenceClass === 'ballistic' ? ' - Ballistic'
     : '';
+  // F-13 (docs/final-certification-2026-09-05/07-FINDINGS.md, evidence A5):
+  // a circuit station logs one working set per ROUND, so "set 3" on this row
+  // meant round 3 and said the wrong word. The number itself is unchanged -
+  // only what it is called. The truthful " - Circuit" suffix above stays.
+  const isCircuitSet = evidenceClass === 'circuit' || evidenceClass === 'circuit_ballistic';
+  const unitWord = isCircuitSet ? 'round' : 'set';
 
   // In-place editor: replaces the row entirely while open. Delete sits on the
   // left (destructive, separated from Save so it is not fat-fingered), with
@@ -74,7 +80,7 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
     return (
       <View style={[styles.editingWrap, live.editingWrap]}>
         <Text style={[styles.editingTitle, live.editingTitle]}>
-          {isWarmup ? 'Edit warm-up set' : `Edit set ${progressNum}`}
+          {isWarmup ? 'Edit warm-up set' : `Edit ${unitWord} ${progressNum}`}
         </Text>
         {editValue && (
           <SetEntry
@@ -131,7 +137,7 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
   const fmt = formatLoggedSet(set, units, exerciseType);
   const perSide = formatPerSide(set.leftReps, set.rightReps);
   const spokenSetLabel = [
-    isWarmup ? 'Edit warm-up set' : `Edit set ${progressNum}`,
+    isWarmup ? 'Edit warm-up set' : `Edit ${unitWord} ${progressNum}`,
     fmt.text,
     perSide,
   ].filter(Boolean).join(': ');
@@ -167,7 +173,7 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
       <Text style={[styles.loggedSetText, live.loggedSetText, isWarmup && [styles.loggedSetTextWarmup, live.loggedSetTextWarmup]]} numberOfLines={1}>
         {fmt.text}
         {perSide ? ` - ${perSide}` : ''}
-        {isWarmup ? ' - Warm-up' : evidenceLabel}
+        {isWarmup ? ' - Warm-up' : (isCircuitSet ? ` - Round ${progressNum}${evidenceLabel}` : evidenceLabel)}
       </Text>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>

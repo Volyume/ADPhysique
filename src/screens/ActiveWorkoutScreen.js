@@ -88,6 +88,11 @@ import {
   shouldConfirmBeforeFinish,
 } from '../lib/workoutHelpers';
 import {
+  circuitRoundState,
+  formatRoundRestWords,
+  CIRCUIT_MISSED_ROUND_LINE,
+} from '../lib/circuitRound';
+import {
   loadUnilateralExercises, setUnilateralExercise,
   loadUnilateralAsked, markUnilateralAsked,
   perSideRestPlan, halfRestSeconds,
@@ -1350,10 +1355,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Unlink the whole group: clear the group id from EVERY member (a pair is
       // just the two-member case). Coherent for a giant set of 3+ - it never
       // leaves an orphaned lone member still carrying the group id.
+      //
+      // F-13 (docs/final-certification-2026-09-05/07-FINDINGS.md, evidence
+      // A4): the group KIND goes with the group id. Leaving groupKind =
+      // 'circuit' on an unlinked member left the athlete doing straight sets
+      // that were still stamped evidence_class 'circuit' (isCircuitGroup
+      // reads groupKind alone) and so still excluded from every learning
+      // consumer, with nothing on screen saying so. roundRestSeconds goes
+      // too: with no group there is no round to rest between, and fullRest
+      // must fall back to the ordinary per-exercise rest.
       const gid = currentSGI;
       for (let i = 0; i < updated.length; i++) {
         if (updated[i].supersetGroupId === gid) {
-          updated[i] = { ...updated[i], supersetGroupId: null };
+          const re = updated[i].routineExercise;
+          updated[i] = {
+            ...updated[i],
+            supersetGroupId: null,
+            routineExercise: re
+              ? { ...re, groupKind: null, roundRestSeconds: null }
+              : re,
+          };
         }
       }
     } else {
@@ -1981,6 +2002,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       groupId: currentSGI,
       // Every member in session order (a pair is just two; a giant set 3+).
       memberNames: groupMemberNames.length ? groupMemberNames : [exercise?.name ?? 'this exercise'],
+      // F-13 (evidence A4): a circuit is not a giant set. It is announced
+      // as a circuit, with its rounds and round rest, and it is NOT
+      // unlinkable here - a circuit is edited in the plan, not broken
+      // apart mid-session. The kind is read from the STORED prescription,
+      // never from the group's size.
+      isCircuit: isCircuitGroup,
+      rounds: routineExercise?.recommendedSets ?? null,
+      roundRestSeconds: routineExercise?.roundRestSeconds ?? null,
     });
     hapticsVocab.selection();
     // groupMemberNames is derived from currentSGI + workoutExercises and only
@@ -2193,6 +2222,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // dependency arrays don't fight each other and we get instant
   // feedback on user actions + cheap upkeep on the timer.
   const lastNotifUpdateRef = useRef(0);
+  // F-13: the circuit round derived further down (circuitRound), mirrored
+  // into a ref so the two notification effects above it can read the
+  // latest value without depending on a binding declared after them.
+  // Plain mirror of a rendered value, no side effect.
+  const circuitRoundRef = useRef(null);
 
   // Path 1: immediate update on state change.
   useEffect(() => {
@@ -2207,8 +2241,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // produced "Set 3 of 2" on the lock-screen / persistent
       // notification when the user logged a warm-up before the first
       // working set. totalSetsForExercise is the *working* target.
-      currentSetIndex: countProgressSets(loggedSets) + 1,
+      // F-13 (evidence A5): a circuit station counts ROUNDS, and the round
+      // is the circuit's own (circuitRoundRef), not this station's set
+      // count - the lock screen must not contradict the chip on screen.
+      currentSetIndex: circuitRoundRef.current?.round ?? (countProgressSets(loggedSets) + 1),
       totalSetsForExercise: adjustedSetCount, // COMP-015: reflect any session adjustment
+      isCircuit: !!circuitRoundRef.current,
       exerciseName: exercise?.name,
     }).catch(() => {});
     // Intentionally exclude elapsedSeconds, that's handled by
@@ -2232,8 +2270,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // produced "Set 3 of 2" on the lock-screen / persistent
       // notification when the user logged a warm-up before the first
       // working set. totalSetsForExercise is the *working* target.
-      currentSetIndex: countProgressSets(loggedSets) + 1,
+      currentSetIndex: circuitRoundRef.current?.round ?? (countProgressSets(loggedSets) + 1),
       totalSetsForExercise: adjustedSetCount, // COMP-015
+      isCircuit: !!circuitRoundRef.current, // F-13: "Round n of m" on a circuit
       exerciseName: exercise?.name,
     }).catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4047,6 +4086,43 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const workingLogged = countProgressSets(loggedSets);
   const targetComplete = targetSets && workingLogged >= targetSets;
 
+  // F-13 (docs/final-certification-2026-09-05/07-FINDINGS.md, evidence A8):
+  // on a circuit the round belongs to the CIRCUIT, not to one station.
+  // Reading each station's own logged-set count let A show "Round 3 of 3"
+  // while B showed "Round 2 of 3" inside the same circuit at the same
+  // moment. This is the one derivation every circuit surface reads: the
+  // chip, the orientation row and the lock-screen text. The live loggedSets
+  // list is authoritative for THIS station; the other stations come from
+  // their own snapshotted sets. Auto-advance is untouched - it still fires
+  // per station on that station's own target.
+  const circuitRound = useMemo(() => {
+    if (!isCircuitGroup || currentSGI == null) return null;
+    const groupLogged = workoutExercises
+      .map((entry, i) => (
+        (entry?.supersetGroupId ?? null) === currentSGI
+          ? (i === currentExerciseIndex ? workingLogged : countProgressSets(entry?.sets ?? []))
+          : null
+      ))
+      .filter(n => n !== null);
+    return circuitRoundState({ stationLogged: workingLogged, groupLogged, targetRounds: targetSets });
+  }, [isCircuitGroup, currentSGI, workoutExercises, currentExerciseIndex, workingLogged, targetSets]);
+  circuitRoundRef.current = circuitRound;
+
+  // F-13 (evidence A4): the pre-set heads-up copy, forked on the group's
+  // stored KIND rather than on its size. A circuit is announced as a
+  // circuit, in plain words, with its rounds and its round rest; a superset
+  // or giant set keeps exactly the copy it had.
+  const headsUpIsCircuit = !!supersetHeadsUp?.isCircuit;
+  const headsUpStations = supersetHeadsUp?.memberNames?.length ?? 0;
+  const headsUpRounds = supersetHeadsUp?.rounds ?? null;
+  const headsUpRestWords = formatRoundRestWords(supersetHeadsUp?.roundRestSeconds);
+  const headsUpCircuitBody = [
+    `${headsUpStations} stations done one after the other with no rest between them`,
+    headsUpRestWords ? `, then rest ${headsUpRestWords} between rounds` : '',
+    '.',
+    headsUpRounds ? ` ${headsUpRounds} rounds in all.` : '',
+  ].join('');
+
   // Campaign 20 Phase 2, Stage 3/4 (design section 9.3): prescriptions[i] is
   // the resolver's prescription for working position i+1 (1-based
   // elsewhere, 0-indexed here). Reactive to `packet` (readiness changes,
@@ -4103,6 +4179,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       return `Warm-up - Set W${loggedSets.filter(s => s.setType === 'warmup').length + 1}`;
     }
     if (isDeloadWeek) return `Light set ${workingLogged + 1} - Easy`;
+    // F-13 (evidence A5): on a circuit station this line said "Set 3 of 3 -
+    // Superset" while the chip directly above it said "Circuit · Round 3 of
+    // 3". A circuit counts rounds, and the round is the circuit's own (see
+    // circuitRound above), so both now read from the same derivation.
+    if (circuitRound) {
+      const pos = circuitRound.targetRounds
+        ? `Round ${circuitRound.round} of ${circuitRound.targetRounds}`
+        : `Round ${circuitRound.round}`;
+      return `${pos} - Circuit`;
+    }
     const pos = targetSets ? `Set ${workingLogged + 1} of ${targetSets}` : `Set ${workingLogged + 1}`;
     const mode = (currentSGI != null && pairedExerciseName)
       ? 'Superset'
@@ -4170,7 +4256,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         ? adjustedSetCount
         : entry.routineExercise?.recommendedSets) || DEFAULT_FREEFORM_TARGET_SETS,
       skipped: !!entry._timeCrunchSkipped,
-      groupLabel: gid != null ? (groupSize > 2 ? 'Giant set' : 'Superset') : null,
+      // F-13 (evidence A5): a circuit station is named by its own group
+      // kind, never by the 2-vs-3+ superset/giant-set split.
+      groupLabel: gid != null
+        ? (entry.routineExercise?.groupKind === 'circuit'
+          ? 'Circuit'
+          : (groupSize > 2 ? 'Giant set' : 'Superset'))
+        : null,
     };
   });
 
@@ -4370,22 +4462,32 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             }
             if (currentSGI != null && !!pairedExerciseName && isCircuitGroup) {
               // EL-9: "Circuit A · Round 2 of 3" - the group header this
-              // chip doubles as. Round number is the station's own
-              // working-set position, since rounds map 1:1 with stations
-              // logged (recommended_sets = rounds).
-              const roundNum = Math.min(workingLogged + 1, targetSets || 1);
+              // chip doubles as. F-13 (evidence A8, A13): the round is the
+              // CIRCUIT's, not this station's own working-set position, and
+              // a circuit rotates rather than alternating, so the verb is
+              // "with". A station more than one round behind the circuit
+              // says so in one line rather than leaving the athlete to work
+              // out why the number jumped.
+              const roundNum = circuitRound?.round ?? 1;
               items.push({
                 key: 'circuit',
                 label: 'Circuit',
                 icon: 'repeat',
                 iconColor: t.colors.primary,
                 content: (
-                  <View key="circuit" style={[styles.supersetChip, live.supersetChip]}>
-                    <Ionicons name="repeat" size={11} color={t.colors.primary} />
-                    <Text style={[styles.supersetChipText, live.supersetChipText]}>
-                      Circuit · Round {roundNum} of {targetSets} · alternates with {partnerNamesText}
-                    </Text>
-                  </View>
+                  <React.Fragment key="circuit">
+                    <View style={[styles.supersetChip, live.supersetChip]}>
+                      <Ionicons name="repeat" size={11} color={t.colors.primary} />
+                      <Text style={[styles.supersetChipText, live.supersetChipText]}>
+                        Circuit · Round {roundNum} of {targetSets} · with {partnerNamesText}
+                      </Text>
+                    </View>
+                    {circuitRound?.missedRound ? (
+                      <Text style={[styles.circuitMissedLine, live.circuitMissedLine]}>
+                        {CIRCUIT_MISSED_ROUND_LINE}
+                      </Text>
+                    ) : null}
+                  </React.Fragment>
                 ),
               });
             } else if (currentSGI != null && !!pairedExerciseName) {
@@ -5018,7 +5120,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             user lands on a grouped exercise. Educational for first-timers,
             and gives a clear out (unlink or swap) if they're not set up
             for it today. Renders one numbered row per member, so a pair shows
-            two and a giant set 3+. */}
+            two and a giant set 3+. F-13 (docs/final-certification-2026-09-05/
+            07-FINDINGS.md, evidence A4): a CIRCUIT forks on the group's
+            stored kind, never its size - own title, own body, no Unlink. */}
         <Modal
           visible={!!supersetHeadsUp}
           transparent
@@ -5035,15 +5139,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 showsVerticalScrollIndicator={false}
               >
                 <View style={styles.supIconRow}>
-                  <Ionicons name="link" size={24} color={t.colors.primary} />
+                  <Ionicons name={headsUpIsCircuit ? 'repeat' : 'link'} size={24} color={t.colors.primary} />
                   <Text style={[styles.supTitle, live.supTitle]}>
-                    {(supersetHeadsUp?.memberNames?.length ?? 0) > 2 ? 'Giant set coming up' : 'Superset coming up'}
+                    {headsUpIsCircuit
+                      ? 'Circuit coming up'
+                      : (headsUpStations > 2 ? 'Giant set coming up' : 'Superset coming up')}
                   </Text>
                 </View>
                 <Text style={[styles.supSubtitle, live.supSubtitle]}>
-                  {(supersetHeadsUp?.memberNames?.length ?? 0) > 2
-                    ? `${supersetHeadsUp.memberNames.length} exercises done back-to-back with no rest between them.`
-                    : 'Two exercises done back-to-back with no rest between them.'}
+                  {headsUpIsCircuit
+                    ? headsUpCircuitBody
+                    : (headsUpStations > 2
+                      ? `${supersetHeadsUp.memberNames.length} exercises done back-to-back with no rest between them.`
+                      : 'Two exercises done back-to-back with no rest between them.')}
                 </Text>
 
                 <Card surface="surface2" radius="md" padding="md" style={[styles.supPairCard, live.supPairCard]}>
@@ -5067,20 +5175,30 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   </View>
                   <View style={styles.supStep}>
                     <Text style={[styles.supStepNum, live.supStepNum]}>2</Text>
-                    <Text style={[styles.supStepText, live.supStepText]}>Do all reps of the first exercise.</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>
+                      {headsUpIsCircuit ? 'Do all reps at the first station.' : 'Do all reps of the first exercise.'}
+                    </Text>
                   </View>
                   <View style={styles.supStep}>
                     <Text style={[styles.supStepNum, live.supStepNum]}>3</Text>
-                    <Text style={[styles.supStepText, live.supStepText]}>Move straight to the next. No rest between.</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>
+                      {headsUpIsCircuit ? 'Move straight to the next station. No rest between stations.' : 'Move straight to the next. No rest between.'}
+                    </Text>
                   </View>
                   <View style={styles.supStep}>
                     <Text style={[styles.supStepNum, live.supStepNum]}>4</Text>
-                    <Text style={[styles.supStepText, live.supStepText]}>After the last one, rest the full rest period, then repeat.</Text>
+                    <Text style={[styles.supStepText, live.supStepText]}>
+                      {headsUpIsCircuit
+                        ? `After the last station, rest${headsUpRestWords ? ` ${headsUpRestWords}` : ''}, then start the next round.`
+                        : 'After the last one, rest the full rest period, then repeat.'}
+                    </Text>
                   </View>
                 </View>
 
                 <Text style={[styles.supTip, live.supTip]}>
-                  Tip: if you can't grab every station right now, unlink and do them as normal sets.
+                  {headsUpIsCircuit
+                    ? 'Tip: if a station is taken, carry on with the next one and come back to it. The circuit itself is changed in your plan.'
+                    : "Tip: if you can't grab every station right now, unlink and do them as normal sets."}
                 </Text>
 
                 <Button
@@ -5092,6 +5210,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 />
 
                 <View style={styles.supSecondaryRow}>
+                  {/* F-13 (evidence A4): NO Unlink on a circuit. Unlinking a
+                      circuit mid-session would leave the athlete doing
+                      straight sets against a plan that still says circuit;
+                      a circuit is changed in the plan, not broken apart
+                      here. A superset or giant set keeps the action. */}
+                  {headsUpIsCircuit ? null : (
                   <Button
                     variant="outline"
                     style={[styles.supSecondaryBtn, live.supSecondaryBtn]}
@@ -5104,6 +5228,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <Ionicons name="unlink" size={14} color={t.colors.textSecondary} />
                     <Text style={[styles.supSecondaryBtnText, live.supSecondaryBtnText]}>Unlink</Text>
                   </Button>
+                  )}
                   <Button
                     variant="outline"
                     style={[styles.supSecondaryBtn, live.supSecondaryBtn]}
@@ -5741,6 +5866,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   const groupSize = gid != null
                     ? workoutExercises.filter((e) => (e.supersetGroupId ?? null) === gid).length
                     : 0;
+                  const rowIsCircuit = item.routineExercise?.groupKind === 'circuit';
                   const canUp = swapAdjacentBlocks(workoutExercises, index, 'up', (e) => e.supersetGroupId ?? null) !== workoutExercises;
                   const canDown = swapAdjacentBlocks(workoutExercises, index, 'down', (e) => e.supersetGroupId ?? null) !== workoutExercises;
                   const setsLogged = item.sets?.length ?? 0;
@@ -5754,9 +5880,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                           {setsLogged} set{setsLogged !== 1 ? 's' : ''} logged
                         </Text>
                         {gid != null && (
+                          // F-13 (evidence A5): a circuit station is named by
+                          // its group kind here too, with the same repeat icon
+                          // the live chip and the builder use.
                           <View style={[styles.reorderSheetSupersetChip, live.reorderSheetSupersetChip]}>
-                            <Ionicons name="link" size={11} color={t.colors.primary} />
-                            <Text style={[styles.reorderSheetSupersetChipText, live.reorderSheetSupersetChipText]}>{groupSize > 2 ? 'Giant set' : 'Superset'}</Text>
+                            <Ionicons name={rowIsCircuit ? 'repeat' : 'link'} size={11} color={t.colors.primary} />
+                            <Text style={[styles.reorderSheetSupersetChipText, live.reorderSheetSupersetChipText]}>{rowIsCircuit ? 'Circuit' : (groupSize > 2 ? 'Giant set' : 'Superset')}</Text>
                           </View>
                         )}
                       </View>
@@ -6003,6 +6132,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <TouchableOpacity
                   style={[styles.swapBrowseBtn, live.swapBrowseBtn]}
                   onPress={() => {
+                    // F-13 / A15: leaving the ranked slate for the FULL
+                    // library is a deliberate choice from outside the style
+                    // pool, so the pool no longer applies to what comes
+                    // back. Without this the swap was still filed
+                    // causeOverride 'style' ("staying inside the pool is
+                    // not preference") and dropped from preference
+                    // learning, which is the opposite of what the user did.
+                    setSwapStyleShowAll(true);
                     setShowSwapModal(false);
                     setPickerMode('swap');
                     setShowExercisePicker(true);
@@ -6428,6 +6565,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   supersetChipText: { ...type.captionStrong, color: colors.primary },
+  // F-13 (evidence A8): the one short line under the circuit chip when
+  // this station is more than a round behind the circuit.
+  circuitMissedLine: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   loggedSection: { gap: spacing.xs2 },
   loggedTitle: { ...type.captionStrong, color: colors.textMuted },
   // Upcoming prescribed sets: quiet read-only LINES closing the continuous
@@ -6715,6 +6855,7 @@ function buildLiveStyles(t) {
     noteCornerBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     supersetChip: { backgroundColor: t.colors.primaryBg },
     supersetChipText: { ...t.type.captionStrong, color: t.colors.primary },
+    circuitMissedLine: { ...t.type.caption, color: t.colors.textSecondary },
     loggedTitle: { ...t.type.captionStrong, color: t.colors.textMuted },
     // Phase 2B live-theme mirrors for the sequence additions.
     upcomingSetNum: { ...t.type.num('caption'), color: t.colors.textMuted },

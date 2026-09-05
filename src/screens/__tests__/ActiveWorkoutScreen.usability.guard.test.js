@@ -165,7 +165,13 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // keeps `export { LoggedSetRow };` as a re-export, so this invariant
     // reads the new file's source instead.
     expect(LOGGED_SET_ROW).toContain('const spokenSetLabel = [');
-    expect(LOGGED_SET_ROW).toContain("isWarmup ? 'Edit warm-up set' : `Edit set ${progressNum}`");
+    // F-13 (docs/final-certification-2026-09-05/07-FINDINGS.md, evidence
+    // A5): a circuit station logs one working set per ROUND, so the noun is
+    // now `unitWord` ('round' on a circuit row, 'set' everywhere else). The
+    // invariant this test exists for is unchanged: the spoken label names
+    // the row's position and its content, and a warm-up stays a warm-up.
+    expect(LOGGED_SET_ROW).toContain("isWarmup ? 'Edit warm-up set' : `Edit ${unitWord} ${progressNum}`");
+    expect(LOGGED_SET_ROW).toContain("const unitWord = isCircuitSet ? 'round' : 'set';");
     expect(LOGGED_SET_ROW).toContain('accessibilityLabel={spokenSetLabel}');
     const loggedRowWindow = LOGGED_SET_ROW.match(/export const LoggedSetRow[\s\S]*?\n\}\);/)?.[0] ?? '';
     expect(loggedRowWindow).toContain('name="chevron-forward"');

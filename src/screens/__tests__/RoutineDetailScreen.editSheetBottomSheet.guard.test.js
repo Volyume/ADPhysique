@@ -35,7 +35,10 @@ describe('RoutineDetailScreen edit-exercise sheet (D36a)', () => {
     const editWindow = ROUTINE_DETAIL.match(/\{\/\* Edit exercise modal\.[\s\S]*?<\/BottomSheet>/)?.[0] ?? '';
     expect(editWindow).toContain('accessibilityLabel="Save exercise targets"');
     expect(editWindow).toContain('onPress={saveEdit}');
-    expect(editWindow).toMatch(/label="Sets"[\s\S]*label="Reps min"[\s\S]*label="Reps max"[\s\S]*label="Rest \(s\)"[\s\S]*label="Start weight"/);
+    // F-17: the first field is "Rounds" on a circuit and "Sets" otherwise,
+    // and the per-station rest field is replaced by "Rest between rounds (s)"
+    // on a circuit. The ORDER this pins is unchanged.
+    expect(editWindow).toMatch(/label=\{editingIsCircuit \? 'Rounds' : 'Sets'\}[\s\S]*label="Reps min"[\s\S]*label="Reps max"[\s\S]*label="Rest between rounds \(s\)"[\s\S]*label="Rest \(s\)"[\s\S]*label="Start weight"/);
   });
 
   test('the plan-level swap modal stays a raw Modal (not folded into BottomSheet)', () => {

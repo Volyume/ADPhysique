@@ -91,8 +91,14 @@ async function ensureChannel() {
  *
  *   workoutName        e.g. "Push Day A" or "Manual session"
  *   elapsedSeconds     total session length so far
- *   currentSetIndex    1-based set number being worked
+ *   currentSetIndex    1-based set number being worked, or, on a circuit
+ *                      station, the circuit's 1-based round number
  *   totalSetsForExercise optional, displayed as "Set 2 of 4"
+ *   isCircuit          true → the body counts ROUNDS, not sets
+ *                      ("Round 2 of 3"). F-13, docs/final-certification-
+ *                      2026-09-05/07-FINDINGS.md, evidence A5: a circuit
+ *                      station logs one set per round, so set language on
+ *                      the lock screen contradicted every other surface.
  *   isResting          true → body reads "Resting · 1:23"
  *   restRemainingSec   countdown for the rest case
  *
@@ -101,6 +107,7 @@ async function ensureChannel() {
 function buildTitleAndBody({
   workoutName, elapsedSeconds = 0, currentSetIndex,
   totalSetsForExercise, exerciseName, isResting = false, restRemainingSec = 0,
+  isCircuit = false,
 }) {
   const title = workoutName
     ? `Volyume · ${workoutName}`
@@ -113,9 +120,10 @@ function buildTitleAndBody({
     body = `Resting · ${t}${exerciseName ? `  ·  ${exerciseName}` : ''}`;
   } else if (currentSetIndex != null) {
     const elapsed = formatElapsed(elapsedSeconds);
+    const unit = isCircuit ? 'Round' : 'Set';
     const setLabel = totalSetsForExercise
-      ? `Set ${currentSetIndex} of ${totalSetsForExercise}`
-      : `Set ${currentSetIndex}`;
+      ? `${unit} ${currentSetIndex} of ${totalSetsForExercise}`
+      : `${unit} ${currentSetIndex}`;
     body = exerciseName
       ? `${setLabel}  ·  ${exerciseName}  ·  ${elapsed}`
       : `${setLabel}  ·  ${elapsed}`;
