@@ -113,12 +113,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/volyume-splash-logo.png",
-          "imageWidth": 220,
+          "image": "./assets/volyume-splash-blank.png",
+          "imageWidth": 64,
           "backgroundColor": "#0D0D0D",
           "resizeMode": "contain",
           "dark": {
-            "image": "./assets/volyume-splash-logo.png",
+            "image": "./assets/volyume-splash-blank.png",
             "backgroundColor": "#0D0D0D"
           }
         }

@@ -1,25 +1,28 @@
 /**
- * EP-05 / VR-01 (docs end-user-polish audit 2026-07-12) source guard.
+ * D149 (founder, 2026-09-05): no splash screen at all.
  *
- * The splash source used to be assets/volyume-splash-hero.png, a 1242x2436
- * fully transparent canvas whose only visible artwork was an 836x353 wordmark
- * near the middle. The locked Expo splash pipeline treats its input as a logo
- * and contains the WHOLE canvas inside a small logo box (100pt iOS / 200dp
- * Android), so the wordmark rendered at roughly 34x15pt -- a tiny mark
- * floating in a large field, on every cold launch.
+ * History: EP-05 / VR-01 (2026-07-12) shipped a tightly cropped wordmark as
+ * the native splash image; D148 (2026-09-04) removed the in-app brand
+ * splash; D149 removes the brand mark from the native launch frame too.
+ * The OS insists on a launch frame (an iOS launch storyboard, the Android
+ * 12+ system splash), so the nearest thing to "no splash" is a plain
+ * charcoal frame: the expo-splash-screen plugin points at a fully
+ * transparent image, the frame is the app background colour, and the
+ * first screen fades in the moment the boot gate lifts.
  *
- * Fix: ship a tightly cropped wordmark (assets/volyume-splash-logo.png) and
- * pass an explicit imageWidth so the pipeline scales the mark to a deliberate
- * size. This guard pins that the plugin points at the cropped asset (light and
- * dark), that an explicit imageWidth is set, and that the asset really is a
- * tight, wide wordmark rather than a tall full-screen canvas.
+ * This guard pins: the plugin (light and dark) points at the blank asset;
+ * that asset really is fully transparent; the old wordmark assets are gone
+ * so nobody re-points at them; and RootNavigator holds the frame for no
+ * minimum time (the 1.6 s first-run "brand hold" is gone).
  */
 import fs from 'fs';
 import path from 'path';
+import { PNG } from 'pngjs';
 
 const ROOT = path.join(__dirname, '..', '..');
 const APP_JSON = JSON.parse(fs.readFileSync(path.join(ROOT, 'app.json'), 'utf8'));
-const LOGO_REL = './assets/volyume-splash-logo.png';
+const NAV = fs.readFileSync(path.join(ROOT, 'src', 'navigation', 'RootNavigator.js'), 'utf8');
+const BLANK_REL = './assets/volyume-splash-blank.png';
 
 function splashConfig() {
   const plugin = APP_JSON.expo.plugins.find(
@@ -28,34 +31,38 @@ function splashConfig() {
   return plugin && plugin[1];
 }
 
-// Minimal PNG dimension read: IHDR width/height are big-endian uint32 at
-// byte offsets 16 and 20. Avoids pulling in an image library for a test.
-function pngSize(absPath) {
-  const buf = fs.readFileSync(absPath);
-  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
-}
-
-describe('EP-05/VR-01: splash uses a tightly cropped wordmark with an explicit width', () => {
-  test('the splash plugin points at the cropped logo asset (light and dark)', () => {
+describe('D149: the native launch frame is a plain charcoal frame, not a splash', () => {
+  test('the splash plugin points at the blank asset (light and dark)', () => {
     const config = splashConfig();
     expect(config).toBeTruthy();
-    expect(config.image).toBe(LOGO_REL);
-    expect(config.dark.image).toBe(LOGO_REL);
-  });
-
-  test('an explicit imageWidth is set so the mark is not left in the default logo box', () => {
-    const config = splashConfig();
+    expect(config.image).toBe(BLANK_REL);
+    expect(config.dark.image).toBe(BLANK_REL);
     expect(typeof config.imageWidth).toBe('number');
     expect(config.imageWidth).toBeGreaterThan(0);
   });
 
-  test('the cropped asset exists and is a tight, wide wordmark, not a full-screen canvas', () => {
-    const abs = path.join(ROOT, 'assets', 'volyume-splash-logo.png');
+  test('the blank asset exists and every pixel is fully transparent', () => {
+    const abs = path.join(ROOT, 'assets', 'volyume-splash-blank.png');
     expect(fs.existsSync(abs)).toBe(true);
-    const { width, height } = pngSize(abs);
-    // Much smaller than the old 1242x2436 canvas, and wider than it is tall.
-    expect(width).toBeLessThan(1242);
-    expect(height).toBeLessThan(1000);
-    expect(width).toBeGreaterThan(height);
+    const png = PNG.sync.read(fs.readFileSync(abs));
+    expect(png.width).toBeGreaterThan(0);
+    expect(png.height).toBeGreaterThan(0);
+    let maxAlpha = 0;
+    for (let i = 3; i < png.data.length; i += 4) maxAlpha = Math.max(maxAlpha, png.data[i]);
+    expect(maxAlpha).toBe(0);
+  });
+
+  test('the old wordmark splash assets are gone', () => {
+    expect(fs.existsSync(path.join(ROOT, 'assets', 'volyume-splash-logo.png'))).toBe(false);
+    expect(fs.existsSync(path.join(ROOT, 'assets', 'volyume-splash-hero.png'))).toBe(false);
+    expect(JSON.stringify(APP_JSON)).not.toMatch(/volyume-splash-(logo|hero)/);
+  });
+
+  test('RootNavigator holds the launch frame for no minimum time', () => {
+    expect(NAV).not.toMatch(/SPLASH_MIN_MS\s*=/);
+    expect(NAV).not.toMatch(/setTimeout\(\(\) => setSplashReady\(true\)/);
+    // splashReady is released purely by the readiness flags, for first-run
+    // users as much as returning ones.
+    expect(NAV).toMatch(/if \(firstRunChecked && tierChecked\) \{\s*setSplashReady\(true\);/);
   });
 });

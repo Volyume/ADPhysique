@@ -882,8 +882,6 @@ const linking = {
   },
 };
 
-const SPLASH_MIN_MS = 1600;
-
 // C5-P29-04: how long the consent-resolver splash may wait before the
 // fail-closed failsafe releases it to the Article 9 gate. Deliberately
 // generous (the check can involve a cloud read on a poor connection) and far
@@ -977,22 +975,23 @@ export default function RootNavigator() {
   // see its header comment).
   const navTheme = useNavTheme();
 
-  useEffect(() => {
-    const t = setTimeout(() => setSplashReady(true), SPLASH_MIN_MS);
-    return () => clearTimeout(t);
-  }, []);
-
   // E8 (founder decision 2026-07-02): a returning, already-onboarded user is
   // released the moment the bootstrap checks resolve. The old 350ms
   // anti-flash floor was an artificial delay; the render below is already
   // gated on the same readiness flags, so removal cannot expose a
-  // half-ready frame. First-run users (firstRunComplete still false) keep
-  // the full SPLASH_MIN_MS brand hold, which masks first-run seeding.
+  // half-ready frame.
+  // D149 (founder, 2026-09-05): first-run users are released on the same
+  // terms. They used to be held on the native splash for a fixed
+  // SPLASH_MIN_MS (1.6 s) "brand hold" that masked exercise seeding; the
+  // seeding is fire-and-forget (see attemptDbInit) and nothing the Welcome
+  // screen renders depends on it, so the hold was pure delay in front of
+  // the first screen. There is no minimum splash time any more: the native
+  // frame lifts the moment the boot gate resolves.
   useEffect(() => {
-    if (firstRunChecked && tierChecked && firstRunComplete) {
+    if (firstRunChecked && tierChecked) {
       setSplashReady(true);
     }
-  }, [firstRunChecked, tierChecked, firstRunComplete]);
+  }, [firstRunChecked, tierChecked]);
 
   useEffect(() => {
     configureNotificationHandler();
@@ -2130,11 +2129,16 @@ export default function RootNavigator() {
   );
 }
 
-// D148 (founder, 2026-09-04): no brand splash inside the app. The native
-// splash covers the boot (it hides exactly when the boot gate lifts, see
-// bootGateResolved above); every later gate holds on a bare background so
-// the next screen, Welcome or Today, simply appears. The animated wordmark
-// that used to play here read as a second loading screen before Welcome.
+// D148 (founder, 2026-09-04): no brand splash inside the app. Every gate
+// holds on a bare background so the next screen, Welcome or Today, simply
+// appears. The animated wordmark that used to play here read as a second
+// loading screen before Welcome.
+// D149 (founder, 2026-09-05): no splash screen at all. The native launch
+// frame the OS insists on (app.json, expo-splash-screen) is now a plain
+// charcoal frame with a fully transparent image, so nothing reads as a
+// splash: the app opens on charcoal and the first screen fades in the
+// moment the boot gate lifts (bootGateResolved above), with no minimum
+// hold.
 function SplashScreen() {
   return <View style={splashStyles.container} />;
 }

@@ -6054,3 +6054,49 @@ container.
 
 **Engine, ED-safety, consent, billing: untouched.** No engine module,
 floor, gate, consent path or billing surface changed.
+
+## D149 — No splash screen at all: straight into Welcome (founder, 2026-09-05)
+
+**Founder order.** "No splash screen at all, just into the new welcome
+screen."
+
+**What was observed.** Two things stood between launch and Welcome. The
+native expo-splash-screen frame carried the V wordmark at 220 px on
+charcoal. And RootNavigator held that frame for a fixed minimum of 1.6 s
+(`SPLASH_MIN_MS`) for every first-run user, a "brand hold" whose stated
+purpose was to mask exercise seeding; the seeding is fire-and-forget in
+`attemptDbInit` and nothing Welcome renders depends on it, so the hold
+was pure delay. Returning users had already been released on the
+readiness flags alone (E8, 2026-07-02).
+
+**What cannot be done.** Both platforms insist on a launch frame: iOS
+draws the launch storyboard until the first frame is ready, and Android
+12+ draws the system splash (background plus an icon slot) on every cold
+start. Neither can be switched off from the app. Stated as a fact about
+the platforms, not a choice.
+
+**Ruling.** The nearest honest thing to "no splash" is a plain charcoal
+frame, which is also what the iOS guidelines ask a launch screen to be
+(a placeholder that resembles the first screen, never a branding moment):
+- The plugin's image (light and dark) is a fully transparent PNG
+  (`assets/volyume-splash-blank.png`), so the OS frame is the app
+  background and nothing else. The Android icon slot is empty rather than
+  the launcher icon.
+- The 1.6 s hold is gone. `splashReady` releases on the readiness flags
+  for first-run users exactly as for returning users. There is no
+  minimum splash time anywhere.
+- The native frame still lifts only when the boot gate resolves (DB open,
+  first-run and tier checks, the one-shot auth latch), so the 2026-07-12
+  signed-in flash of Welcome cannot return, and the 400 ms fade
+  (`App.js`, `SplashScreen.setOptions`) carries charcoal into the first
+  screen.
+- The old wordmark and hero splash assets are deleted; the guard
+  (`splashLogoAsset.guard.test.js`) now pins the blank asset, its full
+  transparency, the absence of the old assets, and the absence of any
+  minimum hold.
+
+**What the user sees.** Cold start: the OS icon animation, a charcoal
+frame for as long as the boot takes (typically well under a second), then
+Welcome fading in. Nothing reads as a splash screen.
+
+**Engine, ED-safety, consent, billing: untouched.**

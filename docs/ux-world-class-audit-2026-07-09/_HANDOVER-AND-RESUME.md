@@ -1,6 +1,17 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-05 — NO SPLASH SCREEN (D149); 1.3.4 BUMPED ★
+
+Founder order: straight into Welcome. The native launch frame is now a
+plain charcoal frame (transparent expo-splash-screen image), the 1.6 s
+first-run "brand hold" in RootNavigator is gone, the wordmark splash
+assets are deleted. The OS frame itself cannot be removed (D149 records
+the platform facts). Version bumped to 1.3.4 for the next iOS build on
+the founder's ask. No build dispatched; the founder must create 1.3.4 in
+App Store Connect and give the go for the build.
+
+===============================================================================
 ## ★ 2026-09-04 — ACTION HIERARCHY: AMBER IS ACCENT (D148); ALSO D146, D147 LANDED ★
 
 Founder brief: orange was doing "brand accent" and "this is a button" at
