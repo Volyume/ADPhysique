@@ -120,3 +120,20 @@ at the green regression recorded at the end of this file. Rulings:
     and cable stations only; the 84 tuple-level near-duplicate pairs the
     audit flagged are all judged distinct on the lead's reading of the
     list but were not individually written up.
+
+## Regression (the one full run over the settled tree, 2026-09-05)
+
+```
+> volyume@1.3.4 lint
+> eslint . --max-warnings 0
+
+Test Suites: 1 skipped, 1194 passed, 1194 of 1195 total
+Tests:       16 skipped, 16261 passed, 16277 total
+Snapshots:   17 passed, 17 total
+```
+Corpus guard: `validate-corpus: OK — 918 live rows, 21 retired, 0
+violations`. The first full run found 13 suites whose fixtures still
+parsed the retired seed text or pinned pre-campaign call shapes; all
+were re-anchored with the ruling cited, and one real gap they exposed
+(library routines referencing three retired names) was fixed and
+guarded before this run.

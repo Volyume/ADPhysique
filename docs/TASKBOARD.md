@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## EXERCISE LIBRARY & ALTERNATIVE TRAINING EXPANSION (2026-09-05) — IN FLIGHT
+## EXERCISE LIBRARY & ALTERNATIVE TRAINING EXPANSION (2026-09-05) — COMPLETE, MERGED TO MAIN. Record EL-1 to EL-25; closure `11-CLOSURE.md`; device checklist `10-VERIFICATION.md`.
 
 Founder brief in chat 2026-09-05 (one autonomous end-to-end task).
 Campaign folder: `docs/exercise-library-expansion-2026-09-05/` (README
@@ -100,8 +100,11 @@ Stage 5 (in flight, sonnet):
   annotated (demandAxesRequireReason true); EL-23 six template-row
   retirements + any-id top-up merge; EL-25 ten word-order duplicates +
   normalised-name guard. Live corpus 918, retired 21.
-Stage 6 (lead, hands-on): form tips fall back to the cue; ONE full
-regression; closure `11-CLOSURE.md`; merge to main.
+- [x] Stage 6: form tips fall back to the cue; full regression green
+  (1194 suites, 16261 tests, lint clean); closure written; merged.
+Founder-side: run cloud migrations 158 and 159 when ready (exact phrase
+per supabase/README), then flip `CIRCUIT_SYNC_COLUMNS_ENABLED`; walk
+the device checklist from a green build (none dispatched).
 guards, search/builder, plan architecture, kettlebell, circuits, library
 integration, evidence eligibility, verification. Entries added as they
 start.
