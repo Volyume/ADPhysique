@@ -131,7 +131,7 @@ const BACK_HORIZONTAL_LAT = [
 // the rhomboids and mid traps do most of the work.
 const BACK_UPPER_MID_ROW = [
   'Barbell Row (Bent Over)', 'Pendlay Row', 'Seal Row', 'Inverted Row', 'TRX Row',
-  'Cable High Row', 'Cable Row (Wide Grip)', 'Wide-Grip Cable Row',
+  'Cable High Row', 'Wide-Grip Cable Row', // 'Cable Row (Wide Grip)' retired into 'Wide-Grip Cable Row' (EL-25)
   'Seated Machine Row (Wide)', 'Chest-Supported Row (Dumbbell)',
   'Chest-Supported Row (Barbell)', 'Plate-Loaded Row', 'Plate-Loaded High Row',
   'Band Row', 'Batwing Row', 'Renegade Row', 'Barbell Upright Row (Wide)',

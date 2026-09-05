@@ -3,9 +3,9 @@
     "barbell": {
       "quads": 29,
       "glutes": 7,
-      "hamstrings": 12,
+      "hamstrings": 9,
       "chest": 16,
-      "biceps": 12,
+      "biceps": 11,
       "front_delts": 13,
       "back": 23,
       "traps": 13,
@@ -19,7 +19,7 @@
     },
     "band": {
       "chest": 7,
-      "back": 10,
+      "back": 9,
       "quads": 5,
       "biceps": 4,
       "hamstrings": 6,
@@ -53,16 +53,16 @@
       "adductors": 4
     },
     "cable": {
-      "biceps": 12,
+      "biceps": 11,
       "rear_delts": 10,
       "abs": 16,
       "traps": 4,
       "chest": 18,
       "glutes": 5,
-      "back": 22,
+      "back": 21,
       "front_delts": 3,
       "adductors": 1,
-      "triceps": 13,
+      "triceps": 12,
       "side_delts": 7,
       "forearms": 4,
       "quads": 2,
@@ -82,8 +82,8 @@
       "hamstrings": 7,
       "forearms": 1,
       "adductors": 1,
-      "side_delts": 2,
       "biceps": 2,
+      "side_delts": 1,
       "rear_delts": 4,
       "neck": 5,
       "tibialis": 2,
@@ -106,7 +106,7 @@
       "front_delts": 2
     },
     "smith": {
-      "chest": 3,
+      "chest": 2,
       "calves": 1,
       "triceps": 1,
       "quads": 3,
@@ -195,23 +195,23 @@
     },
     "hinge": {
       "glutes": 27,
-      "hamstrings": 38,
+      "hamstrings": 35,
       "traps": 2,
       "back": 25,
       "quads": 1
     },
     "push": {
-      "chest": 78,
+      "chest": 77,
       "front_delts": 42,
       "triceps": 19
     },
     "isolation": {
-      "biceps": 48,
+      "biceps": 46,
       "front_delts": 13,
       "traps": 15,
-      "triceps": 34,
+      "triceps": 33,
       "forearms": 19,
-      "side_delts": 18,
+      "side_delts": 17,
       "neck": 15,
       "calves": 22,
       "abs": 90,
@@ -225,7 +225,7 @@
       "back": 6
     },
     "pull": {
-      "back": 103,
+      "back": 101,
       "side_delts": 5,
       "rear_delts": 10,
       "traps": 3,
@@ -277,16 +277,16 @@
     },
     "hamstrings": {
       "unilateral": 11,
-      "bilateral": 40,
+      "bilateral": 37,
       "alternating": 1
     },
     "chest": {
-      "bilateral": 90,
+      "bilateral": 89,
       "alternating": 4,
       "unilateral": 18
     },
     "biceps": {
-      "bilateral": 43,
+      "bilateral": 41,
       "unilateral": 6
     },
     "front_delts": {
@@ -295,7 +295,7 @@
       "alternating": 2
     },
     "back": {
-      "bilateral": 115,
+      "bilateral": 113,
       "unilateral": 18,
       "alternating": 7
     },
@@ -305,7 +305,7 @@
       "alternating": 1
     },
     "triceps": {
-      "bilateral": 46,
+      "bilateral": 45,
       "unilateral": 7
     },
     "forearms": {
@@ -313,7 +313,7 @@
       "unilateral": 2
     },
     "side_delts": {
-      "bilateral": 22,
+      "bilateral": 21,
       "unilateral": 2
     },
     "neck": {
@@ -342,9 +342,9 @@
     }
   },
   "positionDistribution": {
-    "standing": 479,
-    "lying": 191,
-    "seated": 129,
+    "standing": 474,
+    "lying": 190,
+    "seated": 125,
     "mixed": 99,
     "kneeling": 30
   },
@@ -409,8 +409,8 @@
       },
       "horizontal_row": {
         "full_gym": {
-          "totalMatching": 64,
-          "stapleOrCommonCount": 28,
+          "totalMatching": 63,
+          "stapleOrCommonCount": 27,
           "stapleOrCommonNames": [
             "Barbell Row (Bent Over)",
             "Chest-Supported Row (Barbell)",
@@ -423,7 +423,6 @@
             "Single-Arm Dumbbell Row (Bench-Supported)",
             "Cable Face Pull (Upper Back)",
             "Cable High Row",
-            "Cable Row (Wide Grip)",
             "Seated Cable Row",
             "Single-Arm Cable Row",
             "Wide-Grip Cable Row",
@@ -443,12 +442,11 @@
           ]
         },
         "machines_cables": {
-          "totalMatching": 21,
-          "stapleOrCommonCount": 16,
+          "totalMatching": 20,
+          "stapleOrCommonCount": 15,
           "stapleOrCommonNames": [
             "Cable Face Pull (Upper Back)",
             "Cable High Row",
-            "Cable Row (Wide Grip)",
             "Seated Cable Row",
             "Single-Arm Cable Row",
             "Wide-Grip Cable Row",
@@ -499,16 +497,15 @@
           ]
         },
         "bodyweight": {
-          "totalMatching": 12,
-          "stapleOrCommonCount": 7,
+          "totalMatching": 11,
+          "stapleOrCommonCount": 6,
           "stapleOrCommonNames": [
             "Inverted Row",
             "Inverted Row (Feet Elevated)",
             "Inverted Row (High Bar)",
             "Inverted Row (Low Bar)",
             "Inverted Row (Underhand Grip)",
-            "Band Row (Single-Arm)",
-            "Band Seated Row"
+            "Band Row (Single-Arm)"
           ]
         }
       }
@@ -516,7 +513,7 @@
     "hamstrings": {
       "hip_extension": {
         "full_gym": {
-          "totalMatching": 33,
+          "totalMatching": 30,
           "stapleOrCommonCount": 12,
           "stapleOrCommonNames": [
             "B-Stance Romanian Deadlift",
@@ -564,7 +561,7 @@
           ]
         },
         "barbell_plates": {
-          "totalMatching": 14,
+          "totalMatching": 11,
           "stapleOrCommonCount": 5,
           "stapleOrCommonNames": [
             "B-Stance Romanian Deadlift",
@@ -911,8 +908,8 @@
     "chest": {
       "incline": {
         "full_gym": {
-          "totalMatching": 20,
-          "stapleOrCommonCount": 12,
+          "totalMatching": 19,
+          "stapleOrCommonCount": 11,
           "stapleOrCommonNames": [
             "Incline Barbell Bench Press",
             "Incline Dumbbell Fly",
@@ -923,14 +920,13 @@
             "Low Cable Fly",
             "Incline Machine Press",
             "Plate-Loaded Incline Press",
-            "Incline Smith Machine Press",
             "Smith Machine Incline Press",
             "Landmine Press"
           ]
         },
         "machines_cables": {
-          "totalMatching": 10,
-          "stapleOrCommonCount": 8,
+          "totalMatching": 9,
+          "stapleOrCommonCount": 7,
           "stapleOrCommonNames": [
             "Cable Fly (Low to High)",
             "Incline Cable Chest Press",
@@ -938,7 +934,6 @@
             "Low Cable Fly",
             "Incline Machine Press",
             "Plate-Loaded Incline Press",
-            "Incline Smith Machine Press",
             "Smith Machine Incline Press"
           ]
         },
@@ -1181,8 +1176,8 @@
     "triceps": {
       "overhead": {
         "full_gym": {
-          "totalMatching": 19,
-          "stapleOrCommonCount": 11,
+          "totalMatching": 18,
+          "stapleOrCommonCount": 10,
           "stapleOrCommonNames": [
             "Barbell Skull Crusher",
             "EZ Bar Skull Crusher",
@@ -1192,18 +1187,16 @@
             "Single-Arm Overhead Dumbbell Tricep Extension",
             "Cable Overhead Tricep Extension",
             "Overhead Cable Rope Extension",
-            "Overhead Cable Tricep Extension",
             "Single-Arm Overhead Cable Extension",
             "Plate-Loaded Overhead Extension"
           ]
         },
         "machines_cables": {
-          "totalMatching": 6,
-          "stapleOrCommonCount": 5,
+          "totalMatching": 5,
+          "stapleOrCommonCount": 4,
           "stapleOrCommonNames": [
             "Cable Overhead Tricep Extension",
             "Overhead Cable Rope Extension",
-            "Overhead Cable Tricep Extension",
             "Single-Arm Overhead Cable Extension",
             "Plate-Loaded Overhead Extension"
           ]
@@ -1625,14 +1618,13 @@
       },
       "short_head": {
         "full_gym": {
-          "totalMatching": 23,
-          "stapleOrCommonCount": 16,
+          "totalMatching": 22,
+          "stapleOrCommonCount": 15,
           "stapleOrCommonNames": [
             "Barbell Curl",
             "EZ Bar Curl",
             "EZ Bar Preacher Curl",
             "Preacher Curl (Barbell)",
-            "Preacher Curl (EZ Bar)",
             "Concentration Curl",
             "Dumbbell Curl",
             "Preacher Curl (Dumbbell)",
@@ -1680,14 +1672,13 @@
           ]
         },
         "barbell_plates": {
-          "totalMatching": 7,
-          "stapleOrCommonCount": 5,
+          "totalMatching": 6,
+          "stapleOrCommonCount": 4,
           "stapleOrCommonNames": [
             "Barbell Curl",
             "EZ Bar Curl",
             "EZ Bar Preacher Curl",
-            "Preacher Curl (Barbell)",
-            "Preacher Curl (EZ Bar)"
+            "Preacher Curl (Barbell)"
           ]
         },
         "bodyweight": {
@@ -2137,82 +2128,76 @@
   ],
   "demandAxisCounts": {
     "position": {
-      "standing": 479,
-      "lying": 191,
-      "seated": 129,
+      "standing": 474,
+      "lying": 190,
+      "seated": 125,
       "mixed": 99,
       "kneeling": 30
     },
     "floorAccess": {
-      "false": 803,
+      "false": 793,
       "true": 125
     },
     "overheadPosition": {
-      "false": 772,
-      "true": 156
+      "false": 763,
+      "true": 155
     },
     "gripDemand": {
-      "bar": 676,
-      "none": 175,
-      "supportive": 76,
-      "null": 1
+      "bar": 667,
+      "none": 176,
+      "supportive": 75
     },
     "unilateralLoadable": {
-      "false": 508,
-      "true": 411,
-      "null": 9
+      "false": 501,
+      "true": 409,
+      "null": 8
     },
     "bilateralUpper": {
-      "false": 486,
-      "true": 441,
+      "false": 484,
+      "true": 433,
       "null": 1
     },
     "bilateralLower": {
-      "false": 644,
-      "true": 284
+      "false": 637,
+      "true": 281
     },
     "axialLoad": {
-      "false": 677,
-      "true": 250,
-      "null": 1
+      "false": 671,
+      "true": 247
     },
     "impact": {
-      "false": 914,
+      "false": 904,
       "true": 14
     },
     "balanceDemand": {
-      "stable": 424,
-      "supported": 413,
+      "stable": 419,
+      "supported": 408,
       "high": 91
     },
     "weightBearingHands": {
-      "false": 856,
-      "true": 64,
-      "null": 8
+      "false": 854,
+      "true": 64
     }
   },
   "demandAxisNullRowCounts": {
     "position": 0,
     "floorAccess": 0,
     "overheadPosition": 0,
-    "gripDemand": 1,
-    "unilateralLoadable": 9,
+    "gripDemand": 0,
+    "unilateralLoadable": 8,
     "bilateralUpper": 1,
     "bilateralLower": 0,
-    "axialLoad": 1,
+    "axialLoad": 0,
     "impact": 0,
     "balanceDemand": 0,
-    "weightBearingHands": 8
+    "weightBearingHands": 0
   },
   "demandAxisNullRows": {
     "position": [],
     "floorAccess": [],
     "overheadPosition": [],
-    "gripDemand": [
-      "Lunge"
-    ],
+    "gripDemand": [],
     "unilateralLoadable": [
-      "Lateral Raise Machine",
       "Machine Curl",
       "Machine Lateral Raise",
       "Machine Rear Delt Fly",
@@ -2226,29 +2211,18 @@
       "Machine Y-Raise"
     ],
     "bilateralLower": [],
-    "axialLoad": [
-      "Lunge"
-    ],
+    "axialLoad": [],
     "impact": [],
     "balanceDemand": [],
-    "weightBearingHands": [
-      "Bodyweight Squat",
-      "Box Step-Up",
-      "Frog Pump",
-      "Lunge",
-      "Side-Lying Adduction",
-      "Terminal Knee Extension",
-      "Weighted Dips (Chest)",
-      "Weighted Dips (Triceps)"
-    ]
+    "weightBearingHands": []
   },
   "adaptedSetupClassDistribution": {
-    "none": 495,
-    "strap_cuff": 169,
+    "none": 492,
+    "strap_cuff": 165,
     "supported": 85,
-    "one_arm+seated": 46,
     "seated": 46,
-    "one_arm+strap_cuff": 15,
+    "one_arm+seated": 44,
+    "one_arm+strap_cuff": 14,
     "strap_cuff+supported": 14,
     "one_arm+seated+strap_cuff": 12,
     "seated+strap_cuff": 10,
@@ -2265,7 +2239,7 @@
     "per_side+seated": 1,
     "per_side+supported": 1
   },
-  "unclassifiedAdaptedSetupRowCount": 495,
+  "unclassifiedAdaptedSetupRowCount": 492,
   "unclassifiedAdaptedSetupRows": [
     "Anderson Squat",
     "B-Stance Hip Thrust",
@@ -2305,7 +2279,6 @@
     "Plate Neck Lateral Flexion",
     "Plate Pinch",
     "Preacher Curl (Barbell)",
-    "Preacher Curl (EZ Bar)",
     "Push Press",
     "Reverse Curl",
     "Reverse Wrist Curl",
@@ -2488,7 +2461,6 @@
     "Hyperextension (Back Extension)",
     "Incline Machine Press",
     "Iso-Lateral Chest Press",
-    "Lateral Raise Machine",
     "Leg Press (High Foot)",
     "Leg Press (Narrow Stance)",
     "Leg Press Calf Raise",
@@ -2546,7 +2518,6 @@
     "Single-Leg Lying Leg Curl",
     "V-Squat Machine",
     "Vertical Leg Press",
-    "Incline Smith Machine Press",
     "Smith Machine Bench Press",
     "Smith Machine Close-Grip Press",
     "Smith Machine Front Squat",

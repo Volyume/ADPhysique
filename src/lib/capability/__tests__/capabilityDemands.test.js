@@ -129,7 +129,8 @@ test('anchor rows derive the values the resolver depends on (pinned)', () => {
   expect(by('Pec Deck (Machine Fly)')).toMatchObject({ position: 'seated', gripDemand: 'supportive' });
   expect(by('Plank')).toMatchObject({ floorAccess: true, gripDemand: 'none' });
   expect(by('Pull-Up')).toMatchObject({ overheadPosition: true, gripDemand: 'bar', bilateralUpper: true });
-  expect(by('Deadlift (Conventional)')).toMatchObject({ axialLoad: true, bilateralLower: true, gripDemand: 'bar' });
+  // 'Deadlift (Conventional)' retired into 'Conventional Deadlift' (EL-25, a word-order duplicate).
+  expect(by('Conventional Deadlift')).toMatchObject({ axialLoad: true, bilateralLower: true, gripDemand: 'bar' });
 });
 
 describe('weight_bearing_hands (gap-closure Phase C: the audited eleventh column)', () => {

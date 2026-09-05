@@ -116,12 +116,12 @@ const STAPLE = [
 
   // Biceps: the curls that need no explanation.
   'Barbell Curl', 'EZ Bar Curl', 'Dumbbell Curl', 'Hammer Curl',
-  'Incline Dumbbell Curl', 'Cable Curl', 'Preacher Curl (EZ Bar)',
+  'Incline Dumbbell Curl', 'Cable Curl', // 'Preacher Curl (EZ Bar)' retired into 'EZ Bar Preacher Curl' (EL-25), listed under COMMON
 
   // Triceps: pushdown, overhead, and the standard extension.
   'Tricep Pushdown (Rope)', 'Tricep Pushdown (Bar)',
   'Cable Pushdown (Straight Bar)', // 'Rope Pushdown' retired into 'Tricep Pushdown (Rope)' (EL-21)
-  'Overhead Cable Tricep Extension', 'EZ Bar Skull Crusher',
+  'EZ Bar Skull Crusher', // 'Overhead Cable Tricep Extension' retired into 'Cable Overhead Tricep Extension' (EL-25), listed under COMMON
   'Close-Grip Bench Press',
 
   // Abs: loaded flexion and hanging raises.
@@ -146,7 +146,7 @@ const COMMON = [
   // Chest
   'Decline Barbell Bench Press', 'Decline Dumbbell Press', 'Dumbbell Fly',
   'Incline Dumbbell Fly', 'Weighted Dips (Chest)', 'Push-Up',
-  'Smith Machine Bench Press', 'Incline Smith Machine Press',
+  'Smith Machine Bench Press', // 'Incline Smith Machine Press' retired into 'Smith Machine Incline Press' (EL-25)
   'Hammer Strength Chest Press', 'Plate-Loaded Chest Press',
   'Plate-Loaded Incline Press', 'Iso-Lateral Chest Press',
   'Cable Fly (Low to High)', 'Cable Fly (High to Low)', 'Cable Fly (Neutral)',
@@ -161,7 +161,7 @@ const COMMON = [
   'Wide-Grip Pull-Up', 'Cable High Row', 'Single-Arm Cable Row',
   'Seated Machine Row (Wide)', 'Machine Row (Hammer Strength)',
   'Plate-Loaded Row', 'Plate-Loaded Lat Pulldown', 'Plate-Loaded High Row',
-  'Plate-Loaded Low Row', 'V-Bar Pulldown', 'Cable Row (Wide Grip)',
+  'Plate-Loaded Low Row', 'V-Bar Pulldown', // 'Cable Row (Wide Grip)' retired into 'Wide-Grip Cable Row' (EL-25)
   'Wide-Grip Cable Row', 'Landmine Row', 'Pendlay Row', 'Seal Row',
   'Inverted Row', 'Cable Lat Pullover', 'Single-Arm Lat Pulldown',
   'Iso-Lateral Front Pulldown', 'Smith Machine Row',
@@ -171,7 +171,7 @@ const COMMON = [
 
   // Side delts
   'Leaning Cable Lateral Raise', 'Seated Lateral Raise',
-  'Lateral Raise Machine', 'Single-Arm Cable Lateral Raise',
+  'Single-Arm Cable Lateral Raise', // 'Lateral Raise Machine' retired into 'Machine Lateral Raise' (EL-25), listed under STAPLE
   'Leaning Lateral Raise',
 
   // Rear delts
@@ -220,7 +220,7 @@ const COMMON = [
   // Biceps
   'Preacher Curl (Barbell)', 'Preacher Curl (Dumbbell)',
   'EZ Bar Preacher Curl', 'Preacher Curl Machine',
-  'Plate-Loaded Preacher Curl', 'Machine Curl', 'Cable Hammer Curl (Rope)',
+  'Plate-Loaded Preacher Curl', 'Machine Curl', // 'Cable Hammer Curl (Rope)' retired into 'Cable Rope Hammer Curl' (EL-25)
   'Cable Rope Hammer Curl', 'Concentration Curl', 'Spider Curl',
   'Seated Dumbbell Curl', 'Cross-Body Hammer Curl', 'Reverse Curl',
   'Incline Hammer Curl', 'Bayesian Curl', 'High Cable Curl',
@@ -259,7 +259,7 @@ const COMMON = [
   // movements earn COMMON here.
   'Band Chest Press (Single-Arm)', 'Band Chest Fly (Standing)',
   'Band Rear Delt Fly', 'Band Shoulder Press (Seated)',
-  'Band Row (Single-Arm)', 'Band Seated Row', 'Band Pull-Apart (Overhead)',
+  'Band Row (Single-Arm)', 'Band Pull-Apart (Overhead)', // 'Band Seated Row' (never shipped, EL-25) dropped as an alias of 'Seated Band Row', listed under NEVER_AUTO
   'Band Hammer Curl', 'Band Standing Curl (Single-Arm)',
   'Band Tricep Kickback', 'Band Front Raise', 'Band Goblet Squat',
   'Band Romanian Deadlift (Bilateral)', 'Band Glute Bridge',
@@ -553,13 +553,13 @@ const SPECIALIST = [
   // audit script that found "88 unlisted" reads REGISTRY_LISTS, not
   // CONTESTED. Harmless: CONTESTED always wins in buildRegistry().
   'Conventional Deadlift', 'Sumo Deadlift', 'Rack Pull', 'Trap Bar Deadlift',
-  'Good Morning (Barbell)', 'JM Press', 'Glute Ham Raise',
+  'JM Press', 'Glute Ham Raise', // 'Good Morning (Barbell)' retired into 'Barbell Good Morning' (EL-25), listed below
   'Cable Pull-Through', 'Nordic Curl', 'Dumbbell Pullover',
 
   // Deadlift/hinge/posterior-chain variants with a higher skill or fatigue
   // cost than the RDL/leg-curl staples already covering hamstrings.
-  'Good Morning', 'Deadlift (Conventional)', // 'Nordic Hamstring Curl' retired into 'Nordic Curl' (EL-21)
-  'Deadlift (Sumo)', 'Trap Bar Deadlift (Hamstring)',
+  'Good Morning', // 'Nordic Hamstring Curl' retired into 'Nordic Curl' (EL-21); 'Deadlift (Conventional)' retired into 'Conventional Deadlift' (EL-25)
+  'Trap Bar Deadlift (Hamstring)', // 'Deadlift (Sumo)' retired into 'Sumo Deadlift' (EL-25)
   'Reverse Hyperextension (Glute)', 'Sumo Deadlift (Glute Focus)',
   'Sumo Deadlift (Wide Stance)', // 'Cable Pull-Through (Glute)' retired into 'Cable Pull-Through' (EL-21)
   'Romanian Deadlift (Glute)', 'Barbell Good Morning',
@@ -736,7 +736,7 @@ export const CONTESTED = Object.freeze([
     argument: 'Excellent hamstring stimulus, but most intermediates cannot control the eccentric and few gyms have a way to anchor the feet. Held at SPECIALIST: reachable when knee-flexion work is required and nothing better is available, never a default.',
   },
   {
-    name: 'Good Morning (Barbell)',
+    name: 'Barbell Good Morning', // retired name 'Good Morning (Barbell)' repointed (EL-25)
     heldAt: AUTO_TIER.SPECIALIST,
     argument: 'A legitimate hinge with a spinal-load profile that needs coaching. It was being generated as a primary hamstring movement ahead of the RDL, which is the defect this campaign exists to fix.',
   },

@@ -1,7 +1,7 @@
 {
   "exactDuplicateCount": 0,
   "exactDuplicates": [],
-  "exactDataDuplicateGroupCount": 137,
+  "exactDataDuplicateGroupCount": 132,
   "exactDataDuplicates": [
     {
       "names": [
@@ -28,8 +28,7 @@
     {
       "names": [
         "Barbell Good Morning",
-        "Good Morning",
-        "Good Morning (Barbell)"
+        "Good Morning"
       ],
       "note": "Byte-identical rep range/fatigue/SFR/pattern/subregion template. Cross-check against nearDuplicatesByTuple/nearDuplicatesByNormalizedName for actual name similarity before treating as a duplicate — many groups here are legitimately distinct movements that merely share a template."
     },
@@ -107,22 +106,8 @@
     },
     {
       "names": [
-        "Deadlift (Conventional)",
-        "Deadlift (Sumo)"
-      ],
-      "note": "Byte-identical rep range/fatigue/SFR/pattern/subregion template. Cross-check against nearDuplicatesByTuple/nearDuplicatesByNormalizedName for actual name similarity before treating as a duplicate — many groups here are legitimately distinct movements that merely share a template."
-    },
-    {
-      "names": [
         "Deficit Deadlift",
         "Paused Deadlift"
-      ],
-      "note": "Byte-identical rep range/fatigue/SFR/pattern/subregion template. Cross-check against nearDuplicatesByTuple/nearDuplicatesByNormalizedName for actual name similarity before treating as a duplicate — many groups here are legitimately distinct movements that merely share a template."
-    },
-    {
-      "names": [
-        "EZ Bar Curl",
-        "Preacher Curl (EZ Bar)"
       ],
       "note": "Byte-identical rep range/fatigue/SFR/pattern/subregion template. Cross-check against nearDuplicatesByTuple/nearDuplicatesByNormalizedName for actual name similarity before treating as a duplicate — many groups here are legitimately distinct movements that merely share a template."
     },
@@ -486,13 +471,6 @@
     },
     {
       "names": [
-        "Cable Hammer Curl (Rope)",
-        "Cable Rope Hammer Curl"
-      ],
-      "note": "Byte-identical rep range/fatigue/SFR/pattern/subregion template. Cross-check against nearDuplicatesByTuple/nearDuplicatesByNormalizedName for actual name similarity before treating as a duplicate — many groups here are legitimately distinct movements that merely share a template."
-    },
-    {
-      "names": [
         "Cable Kickback (Triceps)",
         "Cross-Body Cable Tricep Extension",
         "Reverse Grip Cable Pushdown",
@@ -527,7 +505,6 @@
     {
       "names": [
         "Cable Overhead Tricep Extension",
-        "Overhead Cable Tricep Extension",
         "Overhead Cable Tricep Extension (Bar)"
       ],
       "note": "Byte-identical rep range/fatigue/SFR/pattern/subregion template. Cross-check against nearDuplicatesByTuple/nearDuplicatesByNormalizedName for actual name similarity before treating as a duplicate — many groups here are legitimately distinct movements that merely share a template."
@@ -771,13 +748,6 @@
     },
     {
       "names": [
-        "Incline Smith Machine Press",
-        "Smith Machine Incline Press"
-      ],
-      "note": "Byte-identical rep range/fatigue/SFR/pattern/subregion template. Cross-check against nearDuplicatesByTuple/nearDuplicatesByNormalizedName for actual name similarity before treating as a duplicate — many groups here are legitimately distinct movements that merely share a template."
-    },
-    {
-      "names": [
         "Ab Rollout",
         "Ab Wheel (Kneeling)",
         "Ab Wheel Rollout",
@@ -962,13 +932,6 @@
     },
     {
       "names": [
-        "Band Row (Single-Arm)",
-        "Band Seated Row"
-      ],
-      "note": "Byte-identical rep range/fatigue/SFR/pattern/subregion template. Cross-check against nearDuplicatesByTuple/nearDuplicatesByNormalizedName for actual name similarity before treating as a duplicate — many groups here are legitimately distinct movements that merely share a template."
-    },
-    {
-      "names": [
         "Band T-Raise",
         "Band W-Raise"
       ],
@@ -1047,48 +1010,11 @@
       "note": "Byte-identical rep range/fatigue/SFR/pattern/subregion template. Cross-check against nearDuplicatesByTuple/nearDuplicatesByNormalizedName for actual name similarity before treating as a duplicate — many groups here are legitimately distinct movements that merely share a template."
     }
   ],
-  "nearDuplicatesByNormalizedNamePairCount": 13,
+  "nearDuplicatesByNormalizedNamePairCount": 3,
   "nearDuplicatesByNormalizedNameBreakdown": {
-    "likely_same_stimulus": 10,
     "legitimately_distinct": 3
   },
   "nearDuplicatesByNormalizedName": [
-    {
-      "normalized": "barbell good morning",
-      "pair": [
-        "Barbell Good Morning",
-        "Good Morning (Barbell)"
-      ],
-      "classification": "likely_same_stimulus",
-      "reason": "Identical after case/punctuation folding, DB->dumbbell/BB->barbell/KB->kettlebell expansion and word-order removal, with no direction-word reversal — spelling/abbreviation/word-order, EL-2's explicit non-distinguishing list."
-    },
-    {
-      "normalized": "conventional deadlift",
-      "pair": [
-        "Conventional Deadlift",
-        "Deadlift (Conventional)"
-      ],
-      "classification": "likely_same_stimulus",
-      "reason": "Identical after case/punctuation folding, DB->dumbbell/BB->barbell/KB->kettlebell expansion and word-order removal, with no direction-word reversal — spelling/abbreviation/word-order, EL-2's explicit non-distinguishing list."
-    },
-    {
-      "normalized": "deadlift sumo",
-      "pair": [
-        "Deadlift (Sumo)",
-        "Sumo Deadlift"
-      ],
-      "classification": "likely_same_stimulus",
-      "reason": "Identical after case/punctuation folding, DB->dumbbell/BB->barbell/KB->kettlebell expansion and word-order removal, with no direction-word reversal — spelling/abbreviation/word-order, EL-2's explicit non-distinguishing list."
-    },
-    {
-      "normalized": "bar curl ez preacher",
-      "pair": [
-        "EZ Bar Preacher Curl",
-        "Preacher Curl (EZ Bar)"
-      ],
-      "classification": "likely_same_stimulus",
-      "reason": "Identical after case/punctuation folding, DB->dumbbell/BB->barbell/KB->kettlebell expansion and word-order removal, with no direction-word reversal — spelling/abbreviation/word-order, EL-2's explicit non-distinguishing list."
-    },
     {
       "normalized": "cable fly high low to",
       "pair": [
@@ -1097,33 +1023,6 @@
       ],
       "classification": "legitimately_distinct",
       "reason": "Bag-of-words identical but the pulley direction (high-to-low vs low-to-high) reverses — EL-2 names loading vector/pulley height as a distinguishing dimension, and both forms are already separate registry entries in canonicality.js."
-    },
-    {
-      "normalized": "cable curl hammer rope",
-      "pair": [
-        "Cable Hammer Curl (Rope)",
-        "Cable Rope Hammer Curl"
-      ],
-      "classification": "likely_same_stimulus",
-      "reason": "Identical after case/punctuation folding, DB->dumbbell/BB->barbell/KB->kettlebell expansion and word-order removal, with no direction-word reversal — spelling/abbreviation/word-order, EL-2's explicit non-distinguishing list."
-    },
-    {
-      "normalized": "cable extension overhead tricep",
-      "pair": [
-        "Cable Overhead Tricep Extension",
-        "Overhead Cable Tricep Extension"
-      ],
-      "classification": "likely_same_stimulus",
-      "reason": "Identical after case/punctuation folding, DB->dumbbell/BB->barbell/KB->kettlebell expansion and word-order removal, with no direction-word reversal — spelling/abbreviation/word-order, EL-2's explicit non-distinguishing list."
-    },
-    {
-      "normalized": "cable grip row wide",
-      "pair": [
-        "Cable Row (Wide Grip)",
-        "Wide-Grip Cable Row"
-      ],
-      "classification": "likely_same_stimulus",
-      "reason": "Identical after case/punctuation folding, DB->dumbbell/BB->barbell/KB->kettlebell expansion and word-order removal, with no direction-word reversal — spelling/abbreviation/word-order, EL-2's explicit non-distinguishing list."
     },
     {
       "normalized": "cable high low to woodchop",
@@ -1135,33 +1034,6 @@
       "reason": "Bag-of-words identical but the pulley direction (high-to-low vs low-to-high) reverses — EL-2 names loading vector/pulley height as a distinguishing dimension, and both forms are already separate registry entries in canonicality.js."
     },
     {
-      "normalized": "lateral machine raise",
-      "pair": [
-        "Lateral Raise Machine",
-        "Machine Lateral Raise"
-      ],
-      "classification": "likely_same_stimulus",
-      "reason": "Identical after case/punctuation folding, DB->dumbbell/BB->barbell/KB->kettlebell expansion and word-order removal, with no direction-word reversal — spelling/abbreviation/word-order, EL-2's explicit non-distinguishing list."
-    },
-    {
-      "normalized": "incline machine press smith",
-      "pair": [
-        "Incline Smith Machine Press",
-        "Smith Machine Incline Press"
-      ],
-      "classification": "likely_same_stimulus",
-      "reason": "Identical after case/punctuation folding, DB->dumbbell/BB->barbell/KB->kettlebell expansion and word-order removal, with no direction-word reversal — spelling/abbreviation/word-order, EL-2's explicit non-distinguishing list."
-    },
-    {
-      "normalized": "band row seated",
-      "pair": [
-        "Seated Band Row",
-        "Band Seated Row"
-      ],
-      "classification": "likely_same_stimulus",
-      "reason": "Identical after case/punctuation folding, DB->dumbbell/BB->barbell/KB->kettlebell expansion and word-order removal, with no direction-word reversal — spelling/abbreviation/word-order, EL-2's explicit non-distinguishing list."
-    },
-    {
       "normalized": "band high low to woodchop",
       "pair": [
         "Band Woodchop (High-to-Low)",
@@ -1171,9 +1043,9 @@
       "reason": "Bag-of-words identical but the pulley direction (high-to-low vs low-to-high) reverses — EL-2 names loading vector/pulley height as a distinguishing dimension, and both forms are already separate registry entries in canonicality.js."
     }
   ],
-  "nearDuplicatesByTupleCount": 545,
+  "nearDuplicatesByTupleCount": 532,
   "nearDuplicatesByTupleBreakdown": {
-    "legitimately_distinct": 545
+    "legitimately_distinct": 532
   },
   "nearDuplicatesByTupleFlaggedForLeadReviewCount": 84,
   "nearDuplicatesByTupleFlaggedForLeadReview": [
@@ -3831,27 +3703,6 @@
     },
     {
       "tuple": {
-        "primaryMuscle": "back",
-        "equipmentCategory": "band",
-        "movementPattern": "pull",
-        "subregion": "upper_mid_row",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Band Row",
-        "Band Seated Row"
-      ],
-      "jaccard": 0.67,
-      "diffTokens": [
-        "seated"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (seated) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
         "primaryMuscle": "quads",
         "equipmentCategory": "band",
         "movementPattern": "squat",
@@ -5928,52 +5779,6 @@
     },
     {
       "tuple": {
-        "primaryMuscle": "biceps",
-        "equipmentCategory": "cable",
-        "movementPattern": "isolation",
-        "subregion": "brachialis",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Cable Hammer Curl (Rope)",
-        "Cable Reverse Curl"
-      ],
-      "jaccard": 0.4,
-      "diffTokens": [
-        "hammer",
-        "rope",
-        "reverse"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (hammer, rope, reverse) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "back",
-        "equipmentCategory": "cable",
-        "movementPattern": "pull",
-        "subregion": "upper_mid_row",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Cable High Row",
-        "Cable Row (Wide Grip)"
-      ],
-      "jaccard": 0.4,
-      "diffTokens": [
-        "high",
-        "wide",
-        "grip"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (high, wide) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
         "primaryMuscle": "back",
         "equipmentCategory": "cable",
         "movementPattern": "pull",
@@ -7617,116 +7422,6 @@
     },
     {
       "tuple": {
-        "primaryMuscle": "hamstrings",
-        "equipmentCategory": "barbell",
-        "movementPattern": "hinge",
-        "subregion": "hip_extension",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Deadlift (Conventional)",
-        "Deadlift (Sumo)"
-      ],
-      "jaccard": 0.33,
-      "diffTokens": [
-        "conventional",
-        "sumo"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (conventional, sumo) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": true
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "hamstrings",
-        "equipmentCategory": "barbell",
-        "movementPattern": "hinge",
-        "subregion": "hip_extension",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Deadlift (Conventional)",
-        "Romanian Deadlift"
-      ],
-      "jaccard": 0.33,
-      "diffTokens": [
-        "conventional",
-        "romanian"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (conventional) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "hamstrings",
-        "equipmentCategory": "barbell",
-        "movementPattern": "hinge",
-        "subregion": "hip_extension",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Deadlift (Conventional)",
-        "Zercher Deadlift"
-      ],
-      "jaccard": 0.33,
-      "diffTokens": [
-        "conventional",
-        "zercher"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (conventional, zercher) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "hamstrings",
-        "equipmentCategory": "barbell",
-        "movementPattern": "hinge",
-        "subregion": "hip_extension",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Deadlift (Sumo)",
-        "Romanian Deadlift"
-      ],
-      "jaccard": 0.33,
-      "diffTokens": [
-        "sumo",
-        "romanian"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (sumo) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "hamstrings",
-        "equipmentCategory": "barbell",
-        "movementPattern": "hinge",
-        "subregion": "hip_extension",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Deadlift (Sumo)",
-        "Zercher Deadlift"
-      ],
-      "jaccard": 0.33,
-      "diffTokens": [
-        "sumo",
-        "zercher"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (sumo, zercher) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
         "primaryMuscle": "abs",
         "equipmentCategory": "bodyweight",
         "movementPattern": "isolation",
@@ -8943,27 +8638,6 @@
         "laterality": "bilateral"
       },
       "pair": [
-        "EZ Bar Curl",
-        "Preacher Curl (EZ Bar)"
-      ],
-      "jaccard": 0.75,
-      "diffTokens": [
-        "preacher"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (preacher) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": true
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "biceps",
-        "equipmentCategory": "barbell",
-        "movementPattern": "isolation",
-        "subregion": "short_head",
-        "laterality": "bilateral"
-      },
-      "pair": [
         "EZ Bar Preacher Curl",
         "Preacher Curl (Barbell)"
       ],
@@ -9134,27 +8808,6 @@
       "confidence": "high",
       "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (weighted) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
       "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "hamstrings",
-        "equipmentCategory": "barbell",
-        "movementPattern": "hinge",
-        "subregion": "hip_extension",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Good Morning",
-        "Good Morning (Barbell)"
-      ],
-      "jaccard": 0.67,
-      "diffTokens": [
-        "barbell"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (barbell) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": true
     },
     {
       "tuple": {
@@ -12286,28 +11939,6 @@
       },
       "pair": [
         "Overhead Cable Rope Extension",
-        "Overhead Cable Tricep Extension"
-      ],
-      "jaccard": 0.6,
-      "diffTokens": [
-        "rope",
-        "tricep"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (rope) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "triceps",
-        "equipmentCategory": "cable",
-        "movementPattern": "isolation",
-        "subregion": "overhead",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Overhead Cable Rope Extension",
         "Overhead Cable Tricep Extension (Bar)"
       ],
       "jaccard": 0.5,
@@ -12320,27 +11951,6 @@
       "confidence": "high",
       "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (rope, bar) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
       "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "triceps",
-        "equipmentCategory": "cable",
-        "movementPattern": "isolation",
-        "subregion": "overhead",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Overhead Cable Tricep Extension",
-        "Overhead Cable Tricep Extension (Bar)"
-      ],
-      "jaccard": 0.8,
-      "diffTokens": [
-        "bar"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (bar) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": true
     },
     {
       "tuple": {
@@ -12980,29 +12590,6 @@
       "classification": "legitimately_distinct",
       "confidence": "high",
       "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (barbell) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
-      "alsoSharesNumericTemplate": false
-    },
-    {
-      "tuple": {
-        "primaryMuscle": "biceps",
-        "equipmentCategory": "barbell",
-        "movementPattern": "isolation",
-        "subregion": "short_head",
-        "laterality": "bilateral"
-      },
-      "pair": [
-        "Preacher Curl (Barbell)",
-        "Preacher Curl (EZ Bar)"
-      ],
-      "jaccard": 0.4,
-      "diffTokens": [
-        "barbell",
-        "ez",
-        "bar"
-      ],
-      "classification": "legitimately_distinct",
-      "confidence": "high",
-      "reason": "Same primary muscle/equipment-category/pattern/subregion/laterality, but the differing token(s) (barbell, ez, bar) fall in an EL-2 distinguishing dimension (implement/loading vector/support/grip/range/ballistic character/movement identity), so they are not interchangeable even though the 5-tuple matches.",
       "alsoSharesNumericTemplate": false
     },
     {

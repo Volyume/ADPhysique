@@ -76,7 +76,7 @@ const CURATED = [
   ['Conventional Deadlift', 'Deadlift', 'high', 'Conventional stance is the default/implied form of an unqualified "deadlift".'],
   ['Romanian Deadlift', 'RDL', 'high', 'Near-universal lifting-community abbreviation.'],
   ['Stiff-Leg Deadlift', 'SLDL', 'medium', 'Common lifting-community abbreviation, less universal than RDL.'],
-  ['Good Morning (Barbell)', 'Good Morning', 'high', 'Barbell is the default/implied implement.'],
+  ['Barbell Good Morning', 'Good Morning', 'high', 'Barbell is the default/implied implement.'], // canonical repointed from 'Good Morning (Barbell)', retired EL-25
   ['Barbell Overhead Press', 'OHP', 'high', 'Near-universal lifting-community abbreviation.'],
   ['Barbell Overhead Press', 'Military Press', 'high', 'Long-standing common name for the standing barbell overhead press.'],
   ['EZ Bar Curl', 'EZ Curl', 'high', 'Common shorthand dropping "Bar".'],

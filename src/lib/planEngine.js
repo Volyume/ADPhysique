@@ -587,18 +587,18 @@ export const POOL = {
     { n: 'Prone Incline Curl',           sub: 'long_head',  p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
     { n: 'Barbell Curl',                 sub: 'short_head', p: 'isolation', eq: ['full_gym', 'barbell_plates'] },
     { n: 'EZ Bar Curl',                  sub: 'short_head', p: 'isolation', eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Preacher Curl (EZ Bar)',       sub: 'short_head', p: 'isolation', eq: ['full_gym', 'barbell_plates'] },
+    { n: 'EZ Bar Preacher Curl',         sub: 'short_head', p: 'isolation', eq: ['full_gym', 'barbell_plates'] }, // EL-25: 'Preacher Curl (EZ Bar)' retired into this survivor
     { n: 'Cable Curl',                   sub: 'short_head', p: 'isolation', eq: ['full_gym', 'machines_cables'] },
     { n: 'Machine Curl',                 sub: 'short_head', p: 'isolation', eq: ['full_gym', 'machines_cables'] },
     { n: 'Dumbbell Curl',                sub: 'short_head', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
     { n: 'Concentration Curl',           sub: 'short_head', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
     { n: 'Hammer Curl',                  sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates'], secondary: ['forearms'] },
-    { n: 'Cable Hammer Curl (Rope)',     sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'machines_cables'], secondary: ['forearms'] },
+    { n: 'Cable Rope Hammer Curl',       sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'machines_cables'], secondary: ['forearms'] }, // EL-25: 'Cable Hammer Curl (Rope)' retired into this survivor
     { n: 'Zottman Curl',                 sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['forearms'] },
     { n: 'Cross-Body Hammer Curl',       sub: 'brachialis', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['forearms'] },
   ],
   triceps: [
-    { n: 'Overhead Cable Tricep Extension', sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
+    { n: 'Cable Overhead Tricep Extension', sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'machines_cables'] }, // EL-25: 'Overhead Cable Tricep Extension' retired into this survivor
     { n: 'EZ Bar Skull Crusher',            sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'barbell_plates'] },
     { n: 'Dumbbell Overhead Tricep Extension', sub: 'overhead', p: 'isolation', eq: ['full_gym', 'dumbbells_only', 'home_gym'] }, // EL-21: 'Overhead Dumbbell Extension' retired into this survivor (exercise-library-expansion-2026-09-05)
     { n: 'JM Press',                        sub: 'overhead', p: 'mod_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['chest'] },

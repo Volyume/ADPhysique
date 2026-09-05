@@ -59,6 +59,27 @@ const AMERICAN_SPELLINGS = [
 ];
 const AMERICAN_SPELLING_RE = new RegExp(`\\b(${AMERICAN_SPELLINGS.join('|')})\\b`, 'i');
 
+// Kept in exact sync with validate-corpus.mjs's foldExerciseName (EL-25):
+// case/punctuation/brackets/hyphens/DB-BB-KB abbreviations/word order all
+// folded away, with the high-to-low / low-to-high direction phrase
+// collapsed to one atomic token first so a genuinely distinct direction
+// pair never collides.
+const NAME_ABBREVIATIONS = { db: 'dumbbell', bb: 'barbell', kb: 'kettlebell' };
+function foldExerciseName(name) {
+  const normalised = name
+    .toLowerCase()
+    .replace(/high[\s-]*to[\s-]*low/g, ' dirhightolow ')
+    .replace(/low[\s-]*to[\s-]*high/g, ' dirlowtohigh ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  const tokens = normalised
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((t) => NAME_ABBREVIATIONS[t] ?? t)
+    .sort();
+  return tokens.join(' ');
+}
+
 describe('exercise corpus guard (EL-3, EL-14, 07-CORPUS-FORMAT.md section 6)', () => {
   test('corpus count never below the committed floor', () => {
     expect(CORPUS.length).toBeGreaterThanOrEqual(corpusFloor.floor);
@@ -263,5 +284,23 @@ describe('exercise corpus guard (EL-3, EL-14, 07-CORPUS-FORMAT.md section 6)', (
     }
     expect(unresolved).toEqual([]);
     expect(disallowedNeverAuto).toEqual([]);
+  });
+
+  // Rule 15 (EL-25): two LIVE entries whose names fold to the same
+  // case/punctuation/bracket/hyphen/abbreviation/word-order-insensitive key
+  // are the same exercise named twice. Retired entries and aliases are
+  // exempt (an alias folding to a canonical name elsewhere is the point of
+  // aliases).
+  test('no two live entries share a normalised (word-order-insensitive) name', () => {
+    const byFoldedKey = new Map();
+    for (const e of CORPUS) {
+      const key = foldExerciseName(e.name);
+      if (!byFoldedKey.has(key)) byFoldedKey.set(key, []);
+      byFoldedKey.get(key).push(e.name);
+    }
+    const collisions = [...byFoldedKey.values()]
+      .filter((names) => names.length > 1)
+      .map((names) => names.join(' / '));
+    expect(collisions).toEqual([]);
   });
 });

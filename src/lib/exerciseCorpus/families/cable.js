@@ -287,19 +287,11 @@ export default [
     loadCharacter: "grind",
     cue: "Stand facing away from a low pulley, the handle held in front of your thighs, elbows softly bent. Raise the handle straight out to roughly shoulder height, then lower slowly. Heaving the weight up with your lower back is the common fault.",
   },
-  {
-    name: "Cable Hammer Curl (Rope)",
-    primaryMuscle: "biceps",
-    secondaryMuscles: ["forearms"],
-    equipment: "cable",
-    movementPattern: "isolation",
-    compound: false,
-    repMin: 10, repMax: 15,
-    fatigueCost: 2, sfr: 4,
-    subregion: "brachialis",
-    loadCharacter: "grind",
-    cue: "Stand facing a low pulley with a rope attached, palms facing each other. Curl the rope up towards your shoulders with elbows pinned to your sides, then lower slowly. Letting the elbows swing forward turns this into a shoulder move.",
-  },
+  // EL-25 (exercise-library-expansion-2026-09-05): retired, a word-order
+  // duplicate of "Cable Rope Hammer Curl" (confirmed by cue and
+  // metadata). Name and id kept so history merges under the survivor;
+  // the name is now an alias of "Cable Rope Hammer Curl".
+  { name: "Cable Hammer Curl (Rope)", retiredInto: "Cable Rope Hammer Curl" },
   {
     name: "Cable High Row",
     primaryMuscle: "back",
@@ -448,7 +440,7 @@ export default [
     repMin: 12, repMax: 20,
     fatigueCost: 2, sfr: 5,
     subregion: "overhead",
-    aliases: ["Triceps Extensions on Cable"],
+    aliases: ["Triceps Extensions on Cable", "Overhead Cable Tricep Extension"],
     loadCharacter: "grind",
     cue: "Stand facing away from a low pulley with a rope held behind your head, elbows pointing forward. Extend your arms forward and up until they straighten, then return slowly. Letting the elbows wing out to the sides takes work off the triceps.",
   },
@@ -573,7 +565,7 @@ export default [
     repMin: 10, repMax: 15,
     fatigueCost: 2, sfr: 4,
     subregion: "brachialis",
-    aliases: ["Hammercurls on Cable"],
+    aliases: ["Hammercurls on Cable", "Cable Hammer Curl (Rope)"],
     loadCharacter: "grind",
     cue: "Stand facing a low pulley holding a rope with a neutral grip, elbows tucked to your sides. Curl the rope up towards your shoulders, then lower fully slowly. Letting the elbows swing forward once it gets harder is the common fault.",
   },
@@ -594,19 +586,11 @@ export default [
     overrides: { demands: { position: "standing" } },
     cue: "Sit or kneel facing a high pulley with a rope in one hand, arm extended overhead. Pull the rope down to your hip, keeping your arm straight, then return slowly. Bending the elbow to help pull turns this into a pushdown.",
   },
-  {
-    name: "Cable Row (Wide Grip)",
-    primaryMuscle: "back",
-    secondaryMuscles: ["biceps","rear_delts"],
-    equipment: "cable",
-    movementPattern: "pull",
-    compound: true,
-    repMin: 10, repMax: 15,
-    fatigueCost: 3, sfr: 4,
-    subregion: "upper_mid_row",
-    loadCharacter: "grind",
-    cue: "Sit with your feet on the platform and take a wide bar, arms extended with a tall spine. Pull the bar towards your torso with elbows out wide, then extend back out slowly. Rounding your back at the start is the common fault.",
-  },
+  // EL-25 (exercise-library-expansion-2026-09-05): retired, a word-order
+  // duplicate of "Wide-Grip Cable Row" (confirmed by cue and metadata).
+  // Name and id kept so history merges under the survivor; the name is
+  // now an alias of "Wide-Grip Cable Row".
+  { name: "Cable Row (Wide Grip)", retiredInto: "Wide-Grip Cable Row" },
   // EL-21/EL-23 (exercise-library-expansion-2026-09-05): retired, a
   // duplicate of "Serratus Punch" below (confirmed by equipment and
   // cue). Name and id kept so history merges under the survivor; the
@@ -1059,19 +1043,11 @@ export default [
     loadCharacter: "grind",
     cue: "Stand facing away from a low pulley with a rope held behind your head, elbows pointing up. Extend your arms forward and up until they straighten, then return slowly. Letting the elbows wing out to the sides takes work off the triceps.",
   },
-  {
-    name: "Overhead Cable Tricep Extension",
-    primaryMuscle: "triceps",
-    secondaryMuscles: [],
-    equipment: "cable",
-    movementPattern: "isolation",
-    compound: false,
-    repMin: 12, repMax: 20,
-    fatigueCost: 2, sfr: 5,
-    subregion: "overhead",
-    loadCharacter: "grind",
-    cue: "Stand facing away from a low pulley, arms bent overhead holding the handle behind your head. Extend your arms up until they straighten, keeping your elbows still, then lower slowly. Letting the elbows drift wide is the common fault.",
-  },
+  // EL-25 (exercise-library-expansion-2026-09-05): retired, a word-order
+  // duplicate of "Cable Overhead Tricep Extension" (confirmed by cue and
+  // metadata). Name and id kept so history merges under the survivor;
+  // the name is now an alias of "Cable Overhead Tricep Extension".
+  { name: "Overhead Cable Tricep Extension", retiredInto: "Cable Overhead Tricep Extension" },
   {
     name: "Pallof Press",
     primaryMuscle: "abs",
@@ -1359,6 +1335,7 @@ export default [
     repMin: 10, repMax: 15,
     fatigueCost: 3, sfr: 4,
     subregion: "upper_mid_row",
+    aliases: ["Cable Row (Wide Grip)"],
     loadCharacter: "grind",
     cue: "Sit with your feet on the platform and take a wide bar attachment, arms extended with a tall spine. Pull the bar towards your torso with elbows out wide, then extend back out slowly. Rounding your back at the start is the common fault.",
   },

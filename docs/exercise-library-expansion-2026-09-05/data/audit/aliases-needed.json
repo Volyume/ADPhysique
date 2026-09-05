@@ -1,14 +1,14 @@
 {
-  "totalRows": 928,
-  "rowsWithAtLeastOneAliasCount": 209,
-  "rowsWithNoAliasSuggestedCount": 719,
-  "totalAliasCount": 220,
-  "highConfidenceCount": 213,
+  "totalRows": 918,
+  "rowsWithAtLeastOneAliasCount": 208,
+  "rowsWithNoAliasSuggestedCount": 710,
+  "totalAliasCount": 219,
+  "highConfidenceCount": 212,
   "mediumConfidenceCount": 7,
   "skippedCollisionsCount": 2,
   "skippedCollisions": [
     {
-      "canonicalName": "Good Morning (Barbell)",
+      "canonicalName": "Barbell Good Morning",
       "alias": "Good Morning",
       "collidesWith": "Good Morning"
     },
@@ -301,16 +301,6 @@
           "alias": "Lying Triceps Extension",
           "confidence": "medium",
           "reason": "Formal/coaching name for the same movement family; kept medium since barbell and dumbbell versions are separate rows and could equally be meant."
-        }
-      ]
-    },
-    {
-      "name": "Good Morning (Barbell)",
-      "aliases": [
-        {
-          "alias": "Good Morning (BB)",
-          "confidence": "high",
-          "reason": "Standard gym shorthand: \"BB\" for \"Barbell\" is near-universal in logging apps and coaching notation."
         }
       ]
     },
@@ -2177,8 +2167,6 @@
     "Clean Pull",
     "Close-Grip Floor Press",
     "Cyclist Squat",
-    "Deadlift (Conventional)",
-    "Deadlift (Sumo)",
     "Decline Skull Crusher",
     "Deficit Deadlift",
     "EZ Bar Drag Curl",
@@ -2205,7 +2193,6 @@
     "Plate Neck Lateral Flexion",
     "Plate Pinch",
     "Power Clean",
-    "Preacher Curl (EZ Bar)",
     "Push Press",
     "Rack Pull",
     "Rack Pull (Traps)",
@@ -2348,7 +2335,6 @@
     "Cable Fly (Mid Height, Cuff)",
     "Cable Fly (Neutral)",
     "Cable Front Raise",
-    "Cable Hammer Curl (Rope)",
     "Cable High Row",
     "Cable Hip Abduction",
     "Cable Hip Adduction",
@@ -2370,7 +2356,6 @@
     "Cable Reverse-Grip Pulldown",
     "Cable Rope Hammer Curl",
     "Cable Rope Straight-Arm Pulldown (Single-Arm)",
-    "Cable Row (Wide Grip)",
     "Cable Shrug",
     "Cable Side Bend",
     "Cable Squat (Standing)",
@@ -2403,7 +2388,6 @@
     "Low Cable Fly",
     "Lying Cable Curl",
     "Overhead Cable Rope Extension",
-    "Overhead Cable Tricep Extension",
     "Pallof Press",
     "Pallof Press (Kneeling)",
     "Reverse Cable Crossover",
@@ -2474,7 +2458,6 @@
     "Incline Machine Press",
     "Iso-Lateral Chest Press",
     "Iso-Lateral Front Pulldown",
-    "Lateral Raise Machine",
     "Leg Extension",
     "Leg Press",
     "Leg Press (High Foot)",
@@ -2552,7 +2535,6 @@
     "Single-Leg Lying Leg Curl",
     "V-Squat Machine",
     "Vertical Leg Press",
-    "Incline Smith Machine Press",
     "Smith Machine Bench Press",
     "Smith Machine Calf Raise",
     "Smith Machine Close-Grip Press",
@@ -2787,7 +2769,6 @@
     "Band Romanian Deadlift (Bilateral)",
     "Band Romanian Deadlift (Single-Leg)",
     "Band Row (Single-Arm)",
-    "Band Seated Row",
     "Band Shoulder Press (Seated)",
     "Band Standing Curl (Single-Arm)",
     "Band Standing Hip Abduction",

@@ -33,6 +33,15 @@
  * 12. Corpus count (live rows) never below data/corpus-floor.json's floor.
  * 13. No orphan exercise name in a seed routine (LIBRARY_PLANS) that is
  *     neither a live corpus name nor a retired name with a survivor.
+ * 14. Style pools (EL-8): every STYLE_POOLS name resolves live, and no pool
+ *     carries a NEVER_AUTO row outside the declared kettlebell exceptions.
+ * 15. Normalised-name collisions (EL-25): two LIVE entries whose names fold
+ *     to the same case/punctuation/bracket/hyphen/DB-BB-KB-abbreviation/
+ *     word-order-insensitive key are the same exercise named twice. Retired
+ *     entries and aliases are exempt (an alias legitimately folding to a
+ *     canonical name elsewhere is the point of aliases). The high-to-low /
+ *     low-to-high direction phrase is folded as one atomic token so a
+ *     direction pair (a genuinely distinct exercise) never collides.
  *
  * Run: node scripts/exercise-library/validate-corpus.mjs
  */
@@ -78,6 +87,27 @@ const fail = (msg) => errors.push(msg);
 // Every name this build considers "resolvable": live corpus rows plus
 // retired names (their canonical id and tier stay meaningful).
 const knownNames = new Set([...CORPUS.map((e) => e.name), ...RETIRED_ENTRIES.map((e) => e.name)]);
+
+// Fold a name to a case/punctuation/bracket/hyphen/abbreviation/word-order
+// insensitive key (EL-25). The high-to-low / low-to-high direction phrase
+// is collapsed to one atomic token FIRST so that swapping its two words
+// never produces the same token bag as the other direction (those pairs
+// are genuinely distinct exercises and must stay distinct, EL-25).
+const NAME_ABBREVIATIONS = { db: 'dumbbell', bb: 'barbell', kb: 'kettlebell' };
+function foldExerciseName(name) {
+  const normalised = name
+    .toLowerCase()
+    .replace(/high[\s-]*to[\s-]*low/g, ' dirhightolow ')
+    .replace(/low[\s-]*to[\s-]*high/g, ' dirlowtohigh ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  const tokens = normalised
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((t) => NAME_ABBREVIATIONS[t] ?? t)
+    .sort();
+  return tokens.join(' ');
+}
 
 // ── 1. Duplicate canonical names (case-insensitive) ────────────────────────
 {
@@ -304,6 +334,24 @@ requireKnown(CONTESTED.map((c) => c.name), 'canonicality.js CONTESTED');
       if (neverAutoSet.has(name) && !exceptionSet.has(name)) {
         fail(`stylePools.js "${poolKey}" contains NEVER_AUTO row "${name}", which is not in KETTLEBELL_NEVER_AUTO_EXCEPTIONS`);
       }
+    }
+  }
+}
+
+// ── 15. Normalised-name collisions (EL-25) ─────────────────────────────────
+// Two LIVE entries folding to the same key are the same exercise named
+// twice (case/punctuation/brackets/hyphens/DB-BB-KB abbreviations/word
+// order all folded away). Retired entries and aliases are exempt.
+{
+  const byFoldedKey = new Map();
+  for (const e of CORPUS) {
+    const key = foldExerciseName(e.name);
+    if (!byFoldedKey.has(key)) byFoldedKey.set(key, []);
+    byFoldedKey.get(key).push(e.name);
+  }
+  for (const names of byFoldedKey.values()) {
+    if (names.length > 1) {
+      fail(`normalised-name collision (EL-25): ${names.map((n) => `"${n}"`).join(' / ')}`);
     }
   }
 }

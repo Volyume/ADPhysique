@@ -310,8 +310,7 @@ export const CURATED_DEMANDS = Object.freeze({
   'Dumbbell Side-Lying Rear Delt': { overheadPosition: false },
   'Dumbbell Skull Crusher': { overheadPosition: true },
   'EZ Bar Skull Crusher': { overheadPosition: true },
-  'Good Morning': { overheadPosition: false },
-  'Good Morning (Barbell)': { overheadPosition: false },
+  'Good Morning': { overheadPosition: false }, // 'Good Morning (Barbell)' retired into 'Barbell Good Morning' (EL-25), already listed above
   'Half-Kneeling Shoulder Press': { axialLoad: true },
   'Jump Squat': { axialLoad: false },
   'Kneeling Ab Rollout': { overheadPosition: true },

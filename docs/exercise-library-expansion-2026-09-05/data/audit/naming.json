@@ -1,5 +1,5 @@
 {
-  "totalRows": 928,
+  "totalRows": 918,
   "trailingOrLeadingSpaceCount": 0,
   "trailingOrLeadingSpace": [],
   "doubleSpaceCount": 0,
@@ -29,7 +29,7 @@
   "abbreviationsInName": [
     "Single-Leg Romanian Deadlift (DB)"
   ],
-  "brandNameCount": 44,
+  "brandNameCount": 43,
   "brandNames": [
     {
       "name": "Hammer Strength Chest Press",
@@ -42,12 +42,6 @@
       "brandTerm": "Hammer Strength",
       "actionable": true,
       "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
-    },
-    {
-      "name": "Incline Smith Machine Press",
-      "brandTerm": "Smith",
-      "actionable": false,
-      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
     },
     {
       "name": "Smith Machine Bench Press",

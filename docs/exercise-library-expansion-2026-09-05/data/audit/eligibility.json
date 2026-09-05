@@ -1,5 +1,5 @@
 {
-  "totalRows": 928,
+  "totalRows": 918,
   "neverEligibleCount": 104,
   "neverEligible": [
     {
@@ -1506,20 +1506,19 @@
     }
   ],
   "tierDistribution": {
-    "common": 279,
+    "common": 274,
     "niche": 246,
-    "specialist": 234,
+    "specialist": 231,
     "never_auto": 99,
-    "staple": 70
+    "staple": 68
   },
-  "difficulty3Count": 114,
+  "difficulty3Count": 113,
   "difficulty3Rows": [
     "Barbell Front Squat",
     "Barbell Good Morning",
     "Clean Pull",
     "Deficit Deadlift",
     "Good Morning",
-    "Good Morning (Barbell)",
     "Power Clean",
     "Snatch Grip Deadlift",
     "Snatch Grip Shrug",
@@ -2017,17 +2016,14 @@
     "Sandbag Front Carry",
     "Sandbag Zercher Carry"
   ],
-  "unlistedDefaultSpecialistCount": 235,
+  "unlistedDefaultSpecialistCount": 232,
   "unlistedDefaultSpecialist": [
     "Barbell Good Morning",
     "Barbell Wrist Curl",
     "Behind-the-Back Wrist Curl (Barbell)",
     "Conventional Deadlift",
-    "Deadlift (Conventional)",
-    "Deadlift (Sumo)",
     "Fat Grip Curl",
     "Good Morning",
-    "Good Morning (Barbell)",
     "JM Press",
     "Pinch Grip Carry",
     "Plate Neck Curl",
@@ -2879,30 +2875,6 @@
       "equipmentProfilesEmpty": false
     },
     {
-      "name": "Deadlift (Conventional)",
-      "tier": "specialist",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Deadlift (Sumo)",
-      "tier": "specialist",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
       "name": "Decline Barbell Bench Press",
       "tier": "common",
       "poolEligible": true,
@@ -3002,18 +2974,6 @@
     },
     {
       "name": "Good Morning",
-      "tier": "specialist",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": true,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Good Morning (Barbell)",
       "tier": "specialist",
       "poolEligible": true,
       "poolBlockReason": null,
@@ -3284,18 +3244,6 @@
     {
       "name": "Preacher Curl (Barbell)",
       "tier": "common",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Preacher Curl (EZ Bar)",
-      "tier": "staple",
       "poolEligible": true,
       "poolBlockReason": null,
       "everNeverEligible": false,
@@ -6505,18 +6453,6 @@
       "equipmentProfilesEmpty": false
     },
     {
-      "name": "Cable Hammer Curl (Rope)",
-      "tier": "common",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
       "name": "Cable High Row",
       "tier": "common",
       "poolEligible": true,
@@ -6759,18 +6695,6 @@
     {
       "name": "Cable Rope Straight-Arm Pulldown (Single-Arm)",
       "tier": "niche",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Cable Row (Wide Grip)",
-      "tier": "common",
       "poolEligible": true,
       "poolBlockReason": null,
       "everNeverEligible": false,
@@ -7169,18 +7093,6 @@
     {
       "name": "Overhead Cable Rope Extension",
       "tier": "common",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Overhead Cable Tricep Extension",
-      "tier": "staple",
       "poolEligible": true,
       "poolBlockReason": null,
       "everNeverEligible": false,
@@ -8077,18 +7989,6 @@
     },
     {
       "name": "Iso-Lateral Front Pulldown",
-      "tier": "common",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Lateral Raise Machine",
       "tier": "common",
       "poolEligible": true,
       "poolBlockReason": null,
@@ -9042,18 +8942,6 @@
     {
       "name": "Vertical Leg Press",
       "tier": "specialist",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Incline Smith Machine Press",
-      "tier": "common",
       "poolEligible": true,
       "poolBlockReason": null,
       "everNeverEligible": false,
@@ -11949,18 +11837,6 @@
     },
     {
       "name": "Band Row (Single-Arm)",
-      "tier": "common",
-      "poolEligible": true,
-      "poolBlockReason": null,
-      "everNeverEligible": false,
-      "neverEligibleReasons": [],
-      "beginnerBlockedByDifficulty3": false,
-      "exerciseType": "weight_reps",
-      "nonWeightReps": false,
-      "equipmentProfilesEmpty": false
-    },
-    {
-      "name": "Band Seated Row",
       "tier": "common",
       "poolEligible": true,
       "poolBlockReason": null,

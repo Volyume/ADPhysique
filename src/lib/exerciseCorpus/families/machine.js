@@ -452,25 +452,11 @@ export default [
     loadCharacter: "grind",
     cue: "Sit with your thighs under the pads and grip a handle in each hand above you. Pull both handles down towards your upper chest, driving your elbows down, then extend slowly. Leaning back too far to help the pull is the common fault.",
   },
-  {
-    name: "Lateral Raise Machine",
-    primaryMuscle: "side_delts",
-    secondaryMuscles: [],
-    equipment: "machine",
-    movementPattern: "isolation",
-    compound: false,
-    repMin: 12, repMax: 20,
-    fatigueCost: 2, sfr: 5,
-    subregion: "lateral_raise",
-    loadCharacter: "grind",
-    // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
-    // whether a lateral-raise machine's two lever arms move on
-    // independent pivots or a single synchronised shaft is a
-    // manufacturer-specific design choice not stated in the exercise
-    // name or cue.
-    unknownAxes: [{ axis: "unilateralLoadable", reason: "Selectorised lateral-raise machine; independent-arm vs synchronised-shaft linkage varies by manufacturer and is not determinable from the name or cue." }],
-    cue: "Sit with your back against the pad and your upper arms against the outer pads. Raise your arms out to the sides to shoulder height, then lower slowly. Shrugging instead of raising through the arms is the common fault.",
-  },
+  // EL-25 (exercise-library-expansion-2026-09-05): retired, a word-order
+  // duplicate of "Machine Lateral Raise" (confirmed by cue and
+  // metadata). Name and id kept so history merges under the survivor;
+  // the name is now an alias of "Machine Lateral Raise".
+  { name: "Lateral Raise Machine", retiredInto: "Machine Lateral Raise" },
   {
     name: "Leg Extension",
     primaryMuscle: "quads",
@@ -647,6 +633,7 @@ export default [
     repMin: 15, repMax: 25,
     fatigueCost: 2, sfr: 5,
     subregion: "lateral_raise",
+    aliases: ["Lateral Raise Machine"],
     loadCharacter: "grind",
     // exercise-library-expansion-2026-09-05 nullAxisAnnotation (EL-6):
     // whether this lever-pad machine's two arms move independently or on

@@ -151,7 +151,7 @@ export default [
     repMin: 8, repMax: 15,
     fatigueCost: 4, sfr: 3,
     subregion: "hip_extension",
-    aliases: ["BB Good Morning"],
+    aliases: ["BB Good Morning", "Good Morning (Barbell)", "Good Morning (BB)"],
     loadCharacter: "grind",
     cue: "Set the bar across your upper back as for a squat, soft bend in the knees. Push your hips back and lower your torso towards horizontal, bar over your feet, then stand tall. Rounding the back instead of hinging is common.",
   },
@@ -439,7 +439,7 @@ export default [
     repMin: 3, repMax: 8,
     fatigueCost: 5, sfr: 3,
     subregion: "spinal_erector",
-    aliases: ["Deadlift"],
+    aliases: ["Deadlift", "Deadlift (Conventional)"],
     loadCharacter: "grind",
     cue: "Stand with the bar over the middle of your feet, grip outside your legs, hips set, flat back. Drive through the floor to stand tall, bar close to your shins and thighs throughout. Letting the bar drift forward rounds the back under load.",
   },
@@ -456,32 +456,16 @@ export default [
     loadCharacter: "grind",
     cue: "Stand with your heels elevated on plates or a wedge, feet close together, bar on your back. Squat straight down, torso upright, knees tracking forward, then stand back up. Letting the heels lift further off the wedge strains the ankles.",
   },
-  {
-    name: "Deadlift (Conventional)",
-    primaryMuscle: "hamstrings",
-    secondaryMuscles: ["back","glutes","quads"],
-    equipment: "barbell",
-    movementPattern: "hinge",
-    compound: true,
-    repMin: 3, repMax: 8,
-    fatigueCost: 5, sfr: 3,
-    subregion: "hip_extension",
-    loadCharacter: "grind",
-    cue: "Stand with the bar over the middle of your feet, grip outside your legs, hips set, flat back. Drive through the floor to stand tall, bar close to your shins and thighs throughout. Letting the bar drift forward rounds the back under load.",
-  },
-  {
-    name: "Deadlift (Sumo)",
-    primaryMuscle: "hamstrings",
-    secondaryMuscles: ["back","glutes","quads"],
-    equipment: "barbell",
-    movementPattern: "hinge",
-    compound: true,
-    repMin: 3, repMax: 8,
-    fatigueCost: 5, sfr: 3,
-    subregion: "hip_extension",
-    loadCharacter: "grind",
-    cue: "Stand with a wide stance, toes turned out, gripping the bar inside your knees, flat back. Push your knees out towards your toes and drive through the floor to stand. Letting the hips shoot up faster than the chest makes this stiff-legged.",
-  },
+  // EL-25 (exercise-library-expansion-2026-09-05): retired, a word-order
+  // duplicate of "Conventional Deadlift" (confirmed by cue and metadata).
+  // Name and id kept so history merges under the survivor; the name is
+  // now an alias of "Conventional Deadlift".
+  { name: "Deadlift (Conventional)", retiredInto: "Conventional Deadlift" },
+  // EL-25 (exercise-library-expansion-2026-09-05): retired, a word-order
+  // duplicate of "Sumo Deadlift" (confirmed by cue and metadata). Name
+  // and id kept so history merges under the survivor; the name is now an
+  // alias of "Sumo Deadlift".
+  { name: "Deadlift (Sumo)", retiredInto: "Sumo Deadlift" },
   {
     name: "Decline Barbell Bench Press",
     primaryMuscle: "chest",
@@ -559,7 +543,7 @@ export default [
     repMin: 8, repMax: 12,
     fatigueCost: 2, sfr: 5,
     subregion: "short_head",
-    aliases: ["Preacher Curls"],
+    aliases: ["Preacher Curls", "Preacher Curl (EZ Bar)"],
     loadCharacter: "grind",
     cue: "Sit at the preacher bench, upper arms resting on the pad, bar held with an underhand grip. Curl it up towards your shoulders, then lower until your arms are almost straight. Lifting your upper arms off the pad hurts the movement.",
   },
@@ -603,20 +587,11 @@ export default [
     loadCharacter: "grind",
     cue: "Set the bar across your upper back as for a squat, soft bend in the knees. Push your hips back and lower your torso towards horizontal, bar over your feet, then stand tall. Rounding the back instead of hinging is common.",
   },
-  {
-    name: "Good Morning (Barbell)",
-    primaryMuscle: "hamstrings",
-    secondaryMuscles: ["glutes","back"],
-    equipment: "barbell",
-    movementPattern: "hinge",
-    compound: true,
-    repMin: 8, repMax: 15,
-    fatigueCost: 4, sfr: 3,
-    subregion: "hip_extension",
-    aliases: ["Good Morning (BB)"],
-    loadCharacter: "grind",
-    cue: "Set the bar across your upper back as for a squat, soft bend in the knees. Push your hips back and lower your torso towards horizontal, bar over your feet, then stand tall. Rounding the back instead of hinging is common.",
-  },
+  // EL-25 (exercise-library-expansion-2026-09-05): retired, a word-order
+  // duplicate of "Barbell Good Morning" (confirmed by cue and metadata).
+  // Name and id kept so history merges under the survivor; the name (and
+  // its own alias) are now aliases of "Barbell Good Morning".
+  { name: "Good Morning (Barbell)", retiredInto: "Barbell Good Morning" },
   {
     name: "Guillotine Press",
     primaryMuscle: "chest",
@@ -914,19 +889,11 @@ export default [
     loadCharacter: "grind",
     cue: "Sit at the preacher bench, upper arms resting on the pad, bar held with an underhand grip. Curl it up towards your shoulders, then lower until your arms are almost straight. Lifting your upper arms off the pad hurts the movement.",
   },
-  {
-    name: "Preacher Curl (EZ Bar)",
-    primaryMuscle: "biceps",
-    secondaryMuscles: [],
-    equipment: "ez_bar",
-    movementPattern: "isolation",
-    compound: false,
-    repMin: 8, repMax: 12,
-    fatigueCost: 2, sfr: 4,
-    subregion: "short_head",
-    loadCharacter: "grind",
-    cue: "Sit at the preacher bench, upper arms resting on the pad, the angled bar held with an underhand grip. Curl it up towards your shoulders, then lower until your arms are almost straight. Lifting your upper arms off the pad hurts the movement.",
-  },
+  // EL-25 (exercise-library-expansion-2026-09-05): retired, a word-order
+  // duplicate of "EZ Bar Preacher Curl" (confirmed by cue and metadata).
+  // Name and id kept so history merges under the survivor; the name is
+  // now an alias of "EZ Bar Preacher Curl".
+  { name: "Preacher Curl (EZ Bar)", retiredInto: "EZ Bar Preacher Curl" },
   {
     name: "Push Press",
     primaryMuscle: "front_delts",
@@ -1219,6 +1186,7 @@ export default [
     repMin: 3, repMax: 8,
     fatigueCost: 5, sfr: 3,
     subregion: "spinal_erector",
+    aliases: ["Deadlift (Sumo)"],
     loadCharacter: "grind",
     cue: "Stand with a wide stance, toes turned out, gripping the bar inside your knees, flat back. Push your knees out towards your toes and drive through the floor to stand. Letting the hips shoot up faster than the chest makes this stiff-legged.",
   },

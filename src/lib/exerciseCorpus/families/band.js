@@ -328,6 +328,10 @@ export default [
     repMin: 12, repMax: 20,
     fatigueCost: 2, sfr: 4,
     subregion: "horizontal_lat",
+    // EL-25 (exercise-library-expansion-2026-09-05): "Band Seated Row"
+    // (never shipped) re-created this row under a folded name; dropped
+    // outright rather than retired, and its aliases carried over here.
+    aliases: ["Band Seated Row", "resistance band seated straight back row"],
     loadCharacter: "grind",
     cue: "Sit with legs extended and the band looped around your feet, an end in each hand. Pull your elbows back past your ribs while keeping your chest tall, then extend forward. Rounding the back to add range loses tension in the target muscles.",
   },
@@ -671,21 +675,11 @@ export default [
     overrides: {"demands":{"unilateralLoadable":true,"bilateralUpper":false,"axialLoad":false}},
     cue: "Anchor the band at chest height and stand side on, holding one end in a staggered stance. Pull your elbow back past your ribs keeping your torso still, then extend forward. Rotating the torso to help takes tension off the back.",
   },
-  {
-    name: "Band Seated Row",
-    primaryMuscle: "back",
-    secondaryMuscles: ["biceps"],
-    equipment: "band",
-    movementPattern: "pull",
-    compound: true,
-    repMin: 10, repMax: 20,
-    fatigueCost: 2, sfr: 4,
-    subregion: "upper_mid_row",
-    aliases: ["resistance band seated straight back row"],
-    loadCharacter: "grind",
-    overrides: {"demands":{"position":"seated","axialLoad":false}},
-    cue: "Sit on the floor with legs extended, the band anchored at foot height, an end in each hand. Pull your elbows straight back close to your ribs, squeezing the shoulder blades, then extend forward. Leaning back loses mid-back tension.",
-  },
+  // EL-25 (exercise-library-expansion-2026-09-05): "Band Seated Row" was
+  // never shipped and duplicated "Seated Band Row" (a folded-name
+  // word-order collision) above under a different name. Deleted outright
+  // (never retired into a stub, since it never shipped) and added as an
+  // alias of "Seated Band Row"; its own alias carried over there too.
   {
     name: "Band Shoulder Press (Seated)",
     primaryMuscle: "front_delts",

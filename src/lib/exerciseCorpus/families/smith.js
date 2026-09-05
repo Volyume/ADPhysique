@@ -18,19 +18,11 @@
  */
 
 export default [
-  {
-    name: "Incline Smith Machine Press",
-    primaryMuscle: "chest",
-    secondaryMuscles: ["triceps","front_delts"],
-    equipment: "smith_machine",
-    movementPattern: "push",
-    compound: true,
-    repMin: 8, repMax: 15,
-    fatigueCost: 3, sfr: 4,
-    subregion: "incline",
-    loadCharacter: "grind",
-    cue: "Set a bench to a moderate incline under the bar, lie back, and unhook it by rotating your wrists. Lower the bar to your upper chest, then press back up to straight arms. Setting the bench too steep turns this into a shoulder press.",
-  },
+  // EL-25 (exercise-library-expansion-2026-09-05): retired, a word-order
+  // duplicate of "Smith Machine Incline Press" (confirmed by cue and
+  // metadata). Name and id kept so history merges under the survivor;
+  // the name is now an alias of "Smith Machine Incline Press".
+  { name: "Incline Smith Machine Press", retiredInto: "Smith Machine Incline Press" },
   {
     name: "Smith Machine Bench Press",
     primaryMuscle: "chest",
@@ -106,6 +98,7 @@ export default [
     repMin: 8, repMax: 15,
     fatigueCost: 3, sfr: 4,
     subregion: "incline",
+    aliases: ["Incline Smith Machine Press"],
     loadCharacter: "grind",
     cue: "Set the bench to a shallow incline under the bar and lie back, unhooking the bar by rotating your wrists. Lower it to your upper chest, then press back up to straight arms. A bench angled too steep shifts work onto the shoulders.",
   },
