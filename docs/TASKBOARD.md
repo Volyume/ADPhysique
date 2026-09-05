@@ -50,7 +50,14 @@ Stage 1 (discovery, agents on sonnet, parallel):
   Recovery: relaunch from brief.
 - [ ] C. Corpus quality audit (after A) (`02-CORPUS-AUDIT.md`, JSON
   reports in `data/`). Recovery: relaunch from brief.
-Stage 2 onward: lead decisions (`05-DECISIONS.md`), then expansion,
+- [x] B, D, E landed (03, 04, 06). Lead decisions drafted in
+  `05-DECISIONS.md` (EL-1 to EL-13); field-contract sections fill from A.
+Stage 2 (inventories, sonnet, parallel; brief `INVENTORY-BRIEF.md`):
+- [ ] K. kettlebell / landmine / carries-sleds-power / specialty
+  (`data/inventory-*.json`). Recovery: relaunch from brief + INVENTORY-BRIEF.
+- [ ] B2. bodyweight / band / suspension. Recovery: same.
+- [ ] later: barbell, dumbbell, cable, machine families (after A and C).
+Stage 3 onward: seed integration script, guards, expansion,
 guards, search/builder, plan architecture, kettlebell, circuits, library
 integration, evidence eligibility, verification. Entries added as they
 start.
