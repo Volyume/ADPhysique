@@ -1454,8 +1454,8 @@ export const LIBRARY_PLANS = [
         name: 'Day 2: Upper Chest, Lateral Delts & Shoulders',
         exercises: [
           { name: 'Facing-In Shoulder Press',          sets: 4, repsMin: 10, repsMax: 12, rest: 120, notes: 'PRIMARY. Do first when freshest. Face INTO pad. Scapular plane press avoids impingement. Hits upper chest AND anterior delt simultaneously.' },
-          { name: 'Cable Lateral Raise',               sets: 4, repsMin: 12, repsMax: 15, rest: 75,  notes: 'Pulley at SHOULDER height. Arm slightly forward. Lead with elbow. Raise to just above shoulder. Challenging at 12. Not a pump movement.' },
-          { name: 'Cable Lateral Raise',  sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Pulley at floor/ANKLE level. Different arc to shoulder height. Arm crosses body at bottom. Pump focused. Together these two cables give full lateral coverage.' },
+          { name: 'Cable Lateral Raise',               sets: 4, repsMin: 12, repsMax: 15, rest: 75,  notes: 'Low pulley, cable across the body. Arm slightly forward. Lead with elbow. Raise to just above shoulder. Challenging at 12. Not a pump movement.' },
+          { name: 'Cable Lateral Raise (Behind the Back)',  sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Cable runs behind the body from a low pulley. A different arc to the first raise, height. Arm crosses body at bottom. Pump focused. Together these two cables give full lateral coverage.' },
           { name: 'Cable Fly (Low to Mid, Incline)',   sets: 4, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Bench 30-45°. Cables at lowest position. Fly upward and inward. 3s eccentric. Find pain-free path. Superior upper-chest mind-muscle vs pressing.' },
           { name: 'Cable Fly (Mid Height, Cuff)',      sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Cables at chest height. Cuffed. Strong stretch, squeeze hard at contraction. Pump focused. Higher reps.' },
           { name: 'Face Pull',                         sets: 4, repsMin: 20, repsMax: 25, rest: 45,  notes: 'Always last. Shoulder fatigued by now. Light weight. Rope at chest height. Elbows high and wide. Pull to comfortable range only.' },

@@ -113,3 +113,28 @@ describe('seedRoutines library rows are named', () => {
     expect(LIBRARY_PLANS.length).toBeGreaterThanOrEqual(40);
   });
 });
+
+// EL-23 follow-up (lead, 2026-09-05): retiring duplicate names made one
+// library workout list the same exercise twice. Written to FAIL if any
+// seeded workout ever repeats an exercise name, so a future retirement
+// or rename cannot silently collapse two slots into one.
+describe('no seeded workout lists the same exercise twice', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs.readFileSync(path.resolve(__dirname, '../seedRoutines.js'), 'utf8');
+  test('every workout block has unique exercise names', () => {
+    const blocks = src.split(/\n\s*\{\s*\n\s*name: '/).slice(1);
+    const offenders = [];
+    for (const block of blocks) {
+      const title = block.slice(0, block.indexOf("'"));
+      const body = block.slice(0, block.indexOf('\n      },') > 0 ? block.indexOf('\n      },') : block.length);
+      const names = [...body.matchAll(/\{ name: '((?:[^'\\]|\\.)+)',/g)].map((m) => m[1]);
+      const seen = new Set();
+      for (const n of names) {
+        if (seen.has(n)) offenders.push(`${title}: ${n}`);
+        seen.add(n);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
