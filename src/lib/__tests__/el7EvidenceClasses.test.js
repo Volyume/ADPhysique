@@ -225,3 +225,25 @@ describe('EL-7 livePrescription exclusion', () => {
     expect(result.prefill).toBe(false);
   });
 });
+
+// EL-7 follow-up (lead, 2026-09-05): the exercise detail screen computes
+// its own chart series, PR list and per-session e1RM inline. Written to
+// FAIL if any of those three sites goes back to a warm-up-only filter,
+// which would let a ballistic kettlebell set fabricate an e1RM or a PR
+// on the one screen that shows them most prominently.
+describe('EL-7: ExerciseDetailScreen inline e1RM sites honour evidence classes', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs.readFileSync(path.resolve(__dirname, '../../screens/ExerciseDetailScreen.js'), 'utf8');
+  test('imports the shared predicates', () => {
+    expect(src).toMatch(/isBallisticEvidenceRow, isTrendEligibleRow \} from '\.\.\/lib\/algorithms'/);
+  });
+  test('the chart series and the working-set dates use the trend predicate', () => {
+    expect(src).toMatch(/if \(!isTrendEligibleRow\(s\)\) continue;/);
+    expect(src).toMatch(/&& isTrendEligibleRow\(s\)\s*\n\s*&& \(s\.exerciseId \?\? s\.exercise_id\) === exerciseId/);
+  });
+  test('the PR list and the session e1RM exclude ballistic rows', () => {
+    expect(src).toMatch(/!== 'warmup' && !isBallisticEvidenceRow\(s\) && \(s\.weight \|\| 0\) > 0/);
+    expect(src).toMatch(/const e1rmSets = sessionSets\.filter\(s => !isBallisticEvidenceRow\(s\)\);/);
+  });
+});

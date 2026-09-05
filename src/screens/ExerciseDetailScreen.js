@@ -30,7 +30,7 @@ import {
   getExerciseById, getCompletedSetHistoryForExercise, getAllExercises,
   getExerciseGoal, saveExerciseGoal, markGoalAchieved, deleteExerciseGoal,
 } from '../lib/database';
-import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau, detectPR } from '../lib/algorithms';
+import { calculate1RM, MUSCLE_DISPLAY_NAMES, detectPlateau, detectPR, isBallisticEvidenceRow, isTrendEligibleRow } from '../lib/algorithms';
 import { buildExerciseMetricSeries } from '../lib/liftProgress';
 import { equipmentDisplayLabel, difficultyDisplayLabel, subregionDisplayLabel } from '../lib/exerciseDisplay';
 import { rankSwaps } from '../lib/swapEngine';
@@ -126,7 +126,9 @@ export function buildDetailMetricPoints(allSessions, exerciseId, exerciseTypeByI
   const bySession = new Map();
   for (const s of flatSets) {
     if (!s) continue;
-    if ((s.setType ?? s.set_type) === 'warmup') continue;
+    // EL-7: the chart is a TREND read, so circuit and ballistic sets stay
+    // out of it exactly as they stay out of detectPlateau.
+    if (!isTrendEligibleRow(s)) continue;
     const exId = s.exerciseId ?? s.exercise_id;
     if (exId !== exerciseId) continue;
     const weight = Number(s.weight) || 0;
@@ -181,7 +183,7 @@ export function derivePRSessionDates(allSessions, exercise, exerciseTypeById) {
 
   const workingSets = (allSessions || []).flat().filter(s => (
     s
-    && (s.setType ?? s.set_type) !== 'warmup'
+    && isTrendEligibleRow(s)
     && (s.exerciseId ?? s.exercise_id) === exerciseId
     && (Number(s.weight) || 0) > 0
     && (Number(s.actualReps ?? s.actual_reps) || 0) > 0
@@ -350,8 +352,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       setPlateau(plateauResult.plateau ? plateauResult : null);
 
       // Compute local PRs from working sets
+      // EL-7: a PR is a PR (circuit sets count) but a ballistic set is not
+      // a one-rep-max proxy, so it never produces a PR or a best e1RM.
       const workingSets = mySets.filter(
-        s => (s.setType ?? s.set_type) !== 'warmup' && (s.weight || 0) > 0 && (s.actualReps || 0) > 0,
+        s => (s.setType ?? s.set_type) !== 'warmup' && !isBallisticEvidenceRow(s) && (s.weight || 0) > 0 && (s.actualReps || 0) > 0,
       );
       let computedBest1RM = 0;
       if (workingSets.length > 0) {
@@ -925,7 +929,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <SectionLabel>History (last {history.length} sessions)</SectionLabel>
             {history.map((sessionSets, i) => {
               const firstSet = sessionSets[0];
-              const sessionEst1RM = Math.max(...sessionSets.map(s => calculate1RM(s.weight || 0, s.actualReps || 0)));
+              // EL-7: ballistic sets never estimate a one-rep max.
+              const e1rmSets = sessionSets.filter(s => !isBallisticEvidenceRow(s));
+              const sessionEst1RM = e1rmSets.length ? Math.max(...e1rmSets.map(s => calculate1RM(s.weight || 0, s.actualReps || 0))) : 0;
               return (
                 <Card radius="md" style={styles.historyCard} key={i}>
                   <Text style={[styles.historyDate, live.historyDate]}>{safeFormatDate(firstSet.createdAt, 'MMM d')}</Text>
