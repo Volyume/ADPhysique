@@ -74,6 +74,9 @@ import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 // the single unified P1 "Today line" and its pure priority arbiter.
 import TodayLine from '../components/home/TodayLine';
 import { resolveTodayLine } from '../lib/home/todayLineArbiter';
+// Final pass D-P2-2 (certification 2026-09-05): a circuit day names itself
+// on Today instead of reading as a generic "N exercises".
+import { summariseCircuitGroups, formatCircuitPreviewLine } from '../lib/circuitRound';
 // Campaign 26 (founder device order 2026-08-17): the C22 FirstReviewLine
 // link is replaced by the restored since-check-in evidence pane - one
 // quiet region carrying the check-in countdown, the weigh-in and session
@@ -1637,6 +1640,24 @@ export default function HomeScreen({ navigation, route }) {
 
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
   const displayWorkout = selectedWorkoutOverride || nextWorkout;
+  // D-P2-2: the displayed session's circuit line ("Circuit · 3 stations · 3
+  // rounds · 90s between rounds"), or '' when the session has no circuit.
+  // Read once per displayed routine; a failed read leaves the count line.
+  const [circuitLine, setCircuitLine] = useState('');
+  const displayRoutineIdForCircuit = displayWorkout?.routine?.id ?? null;
+  useEffect(() => {
+    let alive = true;
+    setCircuitLine('');
+    if (!displayRoutineIdForCircuit) return undefined;
+    getRoutineExercisesWithDetails(displayRoutineIdForCircuit)
+      .then((rows) => {
+        if (!alive) return;
+        const groups = summariseCircuitGroups((rows ?? []).map((r) => r.routineExercise));
+        setCircuitLine(groups.length ? groups.map(formatCircuitPreviewLine).filter(Boolean).join(' · ') : '');
+      })
+      .catch(() => { /* best effort: the count line stands */ });
+    return () => { alive = false; };
+  }, [displayRoutineIdForCircuit]);
   // ── HERO PRECEDENCE (F-18; evidence B-1, B-2, B-3). Stated once, here,
   // because three regions of this screen used to answer "what is today?"
   // independently and could contradict one another (the Today line said
@@ -2431,7 +2452,9 @@ export default function HomeScreen({ navigation, route }) {
                 routine's raw row count. effectiveSessionCount is null until
                 resolved (or on a read failure), so the raw exerciseCounts
                 figure (already loaded) shows first rather than nothing. */}
-            {(effectiveSessionCount ?? exerciseCounts[displayWorkout?.routine?.id]) ? (
+            {circuitLine ? (
+              <Text style={[styles.workoutMeta, live.workoutMeta]}>{circuitLine}</Text>
+            ) : (effectiveSessionCount ?? exerciseCounts[displayWorkout?.routine?.id]) ? (
               <Text style={[styles.workoutMeta, live.workoutMeta]}>
                 {effectiveSessionCount ?? exerciseCounts[displayWorkout.routine.id]} exercises
               </Text>
