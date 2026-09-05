@@ -13,40 +13,13 @@
  * coverage check matches exactly what the generator itself enforces —
  * never a re-derived approximation.
  */
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { loadSeedRows } from '../loadSeed.mjs';
 import { movementFamily, CLASSIFIED_MUSCLES, familySatisfiesRole } from '../../../src/lib/exercise/movementFamily.js';
 import { autoTier, AUTO_TIER } from '../../../src/lib/exercise/canonicality.js';
 import { DEMAND_FIELDS } from '../../../src/lib/capability/demands.js';
-import { ROOT, writeJson, countBy } from './lib.mjs';
+import { writeJson, countBy, loadSubregionRequirements } from './lib.mjs';
 
 const rows = loadSeedRows();
-
-// ── SUBREGION_REQUIREMENTS, extracted from planEngine.js source text ─────
-// planEngine.js cannot be imported directly under plain Node: its own
-// import specifiers omit file extensions (`from './coachingGoals'`, etc.),
-// which Metro/Babel resolve at RN build time but Node's ESM loader
-// refuses — same category of problem loadSeed.mjs documents for
-// seedExercises.js, same fix (parse the source text for the one exported
-// object this script needs, eval it in isolation, never re-derive its
-// values by hand).
-function loadSubregionRequirements() {
-  const src = readFileSync(join(ROOT, 'src/lib/planEngine.js'), 'utf8');
-  const start = src.indexOf('export const SUBREGION_REQUIREMENTS = {');
-  if (start === -1) throw new Error('coverage.mjs: could not find SUBREGION_REQUIREMENTS in planEngine.js');
-  const braceStart = src.indexOf('{', start);
-  let depth = 0;
-  let end = -1;
-  for (let i = braceStart; i < src.length; i++) {
-    if (src[i] === '{') depth++;
-    else if (src[i] === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
-  }
-  if (end === -1) throw new Error('coverage.mjs: unbalanced braces reading SUBREGION_REQUIREMENTS');
-  const literal = src.slice(braceStart, end);
-  // eslint-disable-next-line no-new-func
-  return Function(`"use strict"; return (${literal});`)();
-}
 const SUBREGION_REQUIREMENTS = loadSubregionRequirements();
 
 // ── translateSubregion, reimplemented from poolGenerator.js ───────────────

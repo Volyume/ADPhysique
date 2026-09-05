@@ -12,12 +12,39 @@
  * Nothing here writes outside docs/exercise-library-expansion-2026-09-05/
  * or scripts/exercise-library/audit/.
  */
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
 export const OUT_DIR = join(ROOT, 'docs/exercise-library-expansion-2026-09-05/data/audit');
+
+/**
+ * SUBREGION_REQUIREMENTS, extracted from planEngine.js source text.
+ * planEngine.js cannot be imported directly under plain Node: its own
+ * import specifiers omit file extensions (`from './coachingGoals'`, etc.),
+ * which Metro/Babel resolve at RN build time but Node's ESM loader
+ * refuses — same category of problem loadSeed.mjs documents for
+ * seedExercises.js, same fix (parse the source text for the one exported
+ * object this script needs, eval it in isolation, never re-derive its
+ * values by hand).
+ */
+export function loadSubregionRequirements() {
+  const src = readFileSync(join(ROOT, 'src/lib/planEngine.js'), 'utf8');
+  const start = src.indexOf('export const SUBREGION_REQUIREMENTS = {');
+  if (start === -1) throw new Error('loadSubregionRequirements: could not find SUBREGION_REQUIREMENTS in planEngine.js');
+  const braceStart = src.indexOf('{', start);
+  let depth = 0;
+  let end = -1;
+  for (let i = braceStart; i < src.length; i++) {
+    if (src[i] === '{') depth++;
+    else if (src[i] === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
+  }
+  if (end === -1) throw new Error('loadSubregionRequirements: unbalanced braces reading SUBREGION_REQUIREMENTS');
+  const literal = src.slice(braceStart, end);
+  // eslint-disable-next-line no-new-func
+  return Function(`"use strict"; return (${literal});`)();
+}
 
 export function writeJson(filename, data) {
   mkdirSync(OUT_DIR, { recursive: true });
