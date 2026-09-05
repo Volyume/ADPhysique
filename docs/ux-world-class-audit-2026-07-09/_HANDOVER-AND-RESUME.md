@@ -1,6 +1,24 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-05 — FINAL WHOLE-PRODUCT CERTIFICATION (campaign, in flight) ★
+
+Founder brief (in chat): one autonomous adversarial certification of the
+whole product. Campaign folder `docs/final-certification-2026-09-05/`
+(README = document map; `07-FINDINGS.md` = every ruling F-01..F-20 with
+evidence; register D152). Landed and on main: the injuries / limitations
+feature renamed "Injuries & limitations" with truthful readback (D152,
+founder: "injury" and "disability" may be used freely); the P0
+library-plan copy path that dropped circuit structure and tags; five
+navigation dead ends; search ranking and alias repair; kettlebell bell
+ladder; ballistic-aware insights; two band library plans; Methodology
+truth. In flight: circuit logger semantics, Today week-complete and
+block-finished states, style-aware capability substitutes, kettlebell
+and band equipment routes, Adjust-training disclosure. Board block
+carries the recovery path. Certification report lands as
+`10-CERTIFICATION.md`.
+
+===============================================================================
 ## ★ 2026-09-05 — EXERCISE LIST ROW, EXERCISE SHEET, INSTRUCTION CONTRACT (D151) ★
 
 Founder brief (in chat). The outline's current row is a tonal surface2

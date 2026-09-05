@@ -33,6 +33,33 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## FINAL WHOLE-PRODUCT CERTIFICATION (2026-09-05) — IN FLIGHT. Record D152 + `docs/final-certification-2026-09-05/07-FINDINGS.md` (F-01..F-20); evidence `01`..`06` same folder.
+
+Founder brief in chat 2026-09-05 (one autonomous end-to-end task: discover,
+attack, prove, fix, re-exercise, certify). Branch
+`claude/volyume-final-certification-w2xds1`; main fast-forwarded at each
+green landing.
+
+Landed on main (all green, lint + 16,372 tests):
+- [x] F-01 D152: "How you train" -> "Injuries & limitations" everywhere; "N things you told it" retired; truthful Home/intro claims; guard test.
+- [x] F-10 P0: library-plan activation now carries circuit structure and tags (database.js copy path), pinned on in-memory SQLite.
+- [x] F-02..F-07: widget taps, partner links, foreground-service link, builder Save draft, meal plan return, block-reflection jump.
+- [x] F-09: search ranking (word-start tier, literal before fuzzy, tighter typo allowance), alias repair, Kettlebell chip, no-results copy.
+- [x] F-11: kettlebell loads snap to real bells; Kettlebell Minimal on the foundations pool.
+- [x] F-12: low-volume insight suppressed on excluded evidence; heatmap says explosive lifts are not counted.
+- [x] F-16 point 2: two band library plans (`seedRoutines.bandPlans.js`), seed key v16.
+- [x] F-19: Methodology tells the truth about Coached mode. Copy scan: "towards".
+In flight (agents, Opus, disjoint lanes; recovery = relaunch from the F-ruling in 07-FINDINGS.md):
+- [ ] F-13 + F-17 circuit semantics (ActiveWorkout, LoggedSetRow, notification text, RoutineDetail edit sheet, PlanDetail preview).
+- [ ] F-18 Today: week-complete hero, block-finished hero, plan-with-no-sessions state; D-2 coach note.
+- [ ] F-14 style- and equipment-aware capability substitutes (effective.js, sessionEffective.js).
+- [ ] F-15 + F-16 points 1 and 3: Kettlebells/Bands equipment answers route to library plans; Adjust training on style plans discloses and routes; circuit-flatten disclosure.
+Then: final adversarial journey pass (`09-FINAL-PASS.md`), full regression, certification report (`10-CERTIFICATION.md`), device checklist for the founder.
+
+Founder-side actions raised by this campaign (section 3 mirror):
+- Re-paste the store listings (`docs/PLAY_STORE_LISTING.md`, `docs/APP_STORE_CONNECT_LISTING.md`) so the live listings say "Injuries & limitations".
+- The Article 9 line "never the photos" is untrue only for the allow-listed founder debug accounts (rgb/mask attached to their own rows); decide whether to reword the consent line or drop the founder debug attachment.
+
 ## EXERCISE LIBRARY & ALTERNATIVE TRAINING EXPANSION (2026-09-05) — COMPLETE, MERGED TO MAIN. Record EL-1 to EL-25; closure `11-CLOSURE.md`; device checklist `10-VERIFICATION.md`.
 
 Founder brief in chat 2026-09-05 (one autonomous end-to-end task).
