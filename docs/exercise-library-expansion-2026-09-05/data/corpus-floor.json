@@ -1,0 +1,5 @@
+{
+  "floor": 564,
+  "note": "552 legacy RAW rows + 18 REQUIRED_EXERCISES (EL-15) - 6 EL-21 retirements = 564. The guard fails the build if CORPUS.length drops below this. Raise it when a later expansion stage lands new rows; never lower it without a founder-reviewed retirement list.",
+  "cuesRequired": false
+}

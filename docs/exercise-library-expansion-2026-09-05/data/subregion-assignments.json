@@ -1,0 +1,242 @@
+{
+  "note": "EL-21 / F6: 59 rows missing a required subregion, assigned from the movement by convert-legacy.mjs. Lead review requested.",
+  "count": 59,
+  "assignments": [
+    {
+      "name": "Dumbbell Pullover",
+      "subregion": "flat"
+    },
+    {
+      "name": "Hammer Strength Chest Press",
+      "subregion": "flat"
+    },
+    {
+      "name": "Cable Fly (High to Low)",
+      "subregion": "flat"
+    },
+    {
+      "name": "Dumbbell Pullover (Chest)",
+      "subregion": "flat"
+    },
+    {
+      "name": "Good Morning (Barbell)",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Tricep Dip (Parallel Bars)",
+      "subregion": "pushdown"
+    },
+    {
+      "name": "Cycling (Stationary)",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Romanian Deadlift (Dumbbell)",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Kettlebell Swing",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Deadlift (Conventional)",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Deadlift (Sumo)",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Trap Bar Deadlift (Hamstring)",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Box Jump",
+      "subregion": "gastro"
+    },
+    {
+      "name": "Ab Wheel (Kneeling)",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Weighted Sit-Up",
+      "subregion": "flexion"
+    },
+    {
+      "name": "Toe-to-Bar",
+      "subregion": "flexion"
+    },
+    {
+      "name": "L-Sit Hold",
+      "subregion": "flexion"
+    },
+    {
+      "name": "Suitcase Carry",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Pallof Press (Kneeling)",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Copenhagen Plank",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Sled Push",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Sled Pull",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Prowler Drag",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Assault Bike",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Jump Squat",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Broad Jump",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Depth Jump",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Stair Running",
+      "subregion": "squat_press"
+    },
+    {
+      "name": "Barbell Good Morning",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Jefferson Curl",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Serratus Punch",
+      "subregion": "flexion"
+    },
+    {
+      "name": "Kneeling Cable Crunch",
+      "subregion": "flexion"
+    },
+    {
+      "name": "Exercise Ball Crunch",
+      "subregion": "flexion"
+    },
+    {
+      "name": "Mountain Climber",
+      "subregion": "flexion"
+    },
+    {
+      "name": "Plank Row",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Bear Crawl",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Kneeling Ab Rollout",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Windmill",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Turkish Get-Up",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Close-Grip Push-Up",
+      "subregion": "flat"
+    },
+    {
+      "name": "Archer Push-Up",
+      "subregion": "flat"
+    },
+    {
+      "name": "Single-Arm Push-Up",
+      "subregion": "flat"
+    },
+    {
+      "name": "Cable Chest Press (Standing)",
+      "subregion": "flat"
+    },
+    {
+      "name": "Smith Machine Incline Press",
+      "subregion": "incline"
+    },
+    {
+      "name": "Guillotine Press",
+      "subregion": "flat"
+    },
+    {
+      "name": "Smith Machine Close-Grip Press",
+      "subregion": "pushdown"
+    },
+    {
+      "name": "Dip Machine",
+      "subregion": "pushdown"
+    },
+    {
+      "name": "Cable Kickback (Triceps)",
+      "subregion": "pushdown"
+    },
+    {
+      "name": "Barbell Skull Crusher",
+      "subregion": "overhead"
+    },
+    {
+      "name": "Stiff-Leg Deadlift (Single-Leg)",
+      "subregion": "hip_extension"
+    },
+    {
+      "name": "Agility Ladder Drills",
+      "subregion": "gastro"
+    },
+    {
+      "name": "Rope Jump",
+      "subregion": "gastro"
+    },
+    {
+      "name": "Landmine Press (Abs)",
+      "subregion": "flexion"
+    },
+    {
+      "name": "Half-Kneeling Pallof Press",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "Tall-Kneeling Pallof Press",
+      "subregion": "anti_extension"
+    },
+    {
+      "name": "GHD Sit-Up",
+      "subregion": "flexion"
+    },
+    {
+      "name": "Incline Board Sit-Up",
+      "subregion": "flexion"
+    },
+    {
+      "name": "Hanging Oblique Raise",
+      "subregion": "flexion"
+    },
+    {
+      "name": "Seated Twist (Plate)",
+      "subregion": "flexion"
+    }
+  ]
+}

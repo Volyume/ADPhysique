@@ -9,49 +9,52 @@
       "total": 876,
       "matched": 155,
       "matchedPct": 17.7,
-      "alias_of": 66,
-      "alias_ofPct": 7.5,
+      "alias_of": 67,
+      "alias_ofPct": 7.6,
       "out_of_scope": 141,
       "out_of_scopePct": 16.1,
-      "variant_not_distinct": 4,
-      "variant_not_distinctPct": 0.5,
-      "resistance_missing": 508,
-      "resistance_missingPct": 58,
+      "variant_not_distinct": 13,
+      "variant_not_distinctPct": 1.5,
+      "resistance_missing": 498,
+      "resistance_missingPct": 56.8,
       "junk": 2,
-      "junkPct": 0.2
+      "junkPct": 0.2,
+      "resistance_missing_looseCoreDistinct": 444
     },
     "exercises-dataset": {
       "total": 1324,
-      "matched": 133,
-      "matchedPct": 10,
-      "alias_of": 149,
-      "alias_ofPct": 11.3,
+      "matched": 153,
+      "matchedPct": 11.6,
+      "alias_of": 163,
+      "alias_ofPct": 12.3,
       "out_of_scope": 88,
       "out_of_scopePct": 6.6,
-      "variant_not_distinct": 6,
-      "variant_not_distinctPct": 0.5,
-      "resistance_missing": 948,
-      "resistance_missingPct": 71.6,
+      "variant_not_distinct": 30,
+      "variant_not_distinctPct": 2.3,
+      "resistance_missing": 890,
+      "resistance_missingPct": 67.2,
       "junk": 0,
-      "junkPct": 0
+      "junkPct": 0,
+      "resistance_missing_looseCoreDistinct": 688
     },
     "wger": {
       "total": 871,
       "matched": 140,
       "matchedPct": 16.1,
-      "alias_of": 52,
-      "alias_ofPct": 6,
+      "alias_of": 53,
+      "alias_ofPct": 6.1,
       "out_of_scope": 110,
       "out_of_scopePct": 12.6,
-      "variant_not_distinct": 3,
-      "variant_not_distinctPct": 0.3,
-      "resistance_missing": 559,
-      "resistance_missingPct": 64.2,
-      "junk": 7,
-      "junkPct": 0.8
+      "variant_not_distinct": 20,
+      "variant_not_distinctPct": 2.3,
+      "resistance_missing": 543,
+      "resistance_missingPct": 62.3,
+      "junk": 5,
+      "junkPct": 0.6,
+      "resistance_missing_looseCoreDistinct": 509
     }
   },
-  "distinctResistanceMissingMovements": 1834,
+  "distinctResistanceMissingMovements": 1762,
   "gaps": [
     {
       "name": "assisted hanging knee raise",
@@ -2558,21 +2561,82 @@
       "jaccardScore": 0.75
     },
     {
-      "name": "lever donkey calf raise",
+      "name": "lever bicep curl",
       "dataset": "exercises-dataset",
-      "datasetCategory": "lower legs",
+      "datasetCategory": "upper arms",
       "datasetEquipment": [
         "leverage machine"
       ],
       "datasetMuscle": [
-        "hamstrings",
-        "calves",
-        "hamstrings",
-        "glutes"
+        "forearms",
+        "biceps",
+        "forearms"
       ],
       "classification": "alias_of",
       "alias_of": [
-        "Donkey Calf Raise"
+        "Machine Curl"
+      ],
+      "matchStage": "synonym",
+      "matchOrigin": "corpus"
+    },
+    {
+      "name": "lever decline chest press",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "chest",
+      "datasetEquipment": [
+        "leverage machine"
+      ],
+      "datasetMuscle": [
+        "triceps",
+        "pectorals",
+        "triceps",
+        "shoulders"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Decline Machine Press"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.75
+    },
+    {
+      "name": "lever incline chest press",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "chest",
+      "datasetEquipment": [
+        "leverage machine"
+      ],
+      "datasetMuscle": [
+        "shoulders",
+        "pectorals",
+        "shoulders",
+        "triceps"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Incline Machine Press"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.75
+    },
+    {
+      "name": "lever incline chest press v. 2",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "chest",
+      "datasetEquipment": [
+        "leverage machine"
+      ],
+      "datasetMuscle": [
+        "triceps",
+        "pectorals",
+        "triceps",
+        "shoulders"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Incline Machine Press"
       ],
       "matchStage": "fuzzy",
       "matchOrigin": "corpus",
@@ -2599,21 +2663,42 @@
       "jaccardScore": 0.75
     },
     {
-      "name": "lever seated calf raise",
+      "name": "lever military press",
       "dataset": "exercises-dataset",
-      "datasetCategory": "lower legs",
+      "datasetCategory": "shoulders",
       "datasetEquipment": [
         "leverage machine"
       ],
       "datasetMuscle": [
-        "soleus",
-        "calves",
-        "soleus",
-        "ankle stabilizers"
+        "triceps",
+        "delts",
+        "triceps",
+        "upper chest"
       ],
       "classification": "alias_of",
       "alias_of": [
-        "Seated Calf Raise"
+        "Smith Machine Overhead Press"
+      ],
+      "matchStage": "synonym-fuzzy",
+      "matchOrigin": "candidate:machine",
+      "jaccardScore": 0.75
+    },
+    {
+      "name": "lever seated hip adduction",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "leverage machine"
+      ],
+      "datasetMuscle": [
+        "hamstrings",
+        "adductors",
+        "hamstrings",
+        "glutes"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Hip Adduction Machine"
       ],
       "matchStage": "fuzzy",
       "matchOrigin": "corpus",
@@ -2634,6 +2719,48 @@
       "classification": "alias_of",
       "alias_of": [
         "Seated Leg Curl"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.75
+    },
+    {
+      "name": "lever seated row",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "back",
+      "datasetEquipment": [
+        "leverage machine"
+      ],
+      "datasetMuscle": [
+        "biceps",
+        "upper back",
+        "biceps",
+        "forearms"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Seated Machine Row (Wide)"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.75
+    },
+    {
+      "name": "lever standing chest press",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "chest",
+      "datasetEquipment": [
+        "leverage machine"
+      ],
+      "datasetMuscle": [
+        "shoulders",
+        "pectorals",
+        "shoulders",
+        "triceps"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Machine Chest Press"
       ],
       "matchStage": "fuzzy",
       "matchOrigin": "corpus",
@@ -2893,42 +3020,42 @@
       "jaccardScore": 0.8333333333333334
     },
     {
-      "name": "smith behind neck press",
+      "name": "smith back shrug",
       "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
+      "datasetCategory": "back",
       "datasetEquipment": [
         "smith machine"
       ],
       "datasetMuscle": [
-        "triceps",
-        "delts",
-        "triceps",
-        "upper back"
-      ],
-      "classification": "alias_of",
-      "alias_of": [
-        "Behind-the-Neck Press"
-      ],
-      "matchStage": "fuzzy",
-      "matchOrigin": "candidate:barbell",
-      "jaccardScore": 0.75
-    },
-    {
-      "name": "smith bench press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "chest",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "pectorals",
-        "triceps",
+        "shoulders",
+        "traps",
         "shoulders"
       ],
       "classification": "alias_of",
       "alias_of": [
-        "Smith Machine Bench Press"
+        "Smith Machine Shrug"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.75
+    },
+    {
+      "name": "smith chair squat",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "smith machine"
+      ],
+      "datasetMuscle": [
+        "glutes",
+        "quads",
+        "glutes",
+        "hamstrings",
+        "calves"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Smith Machine Squat"
       ],
       "matchStage": "fuzzy",
       "matchOrigin": "corpus",
@@ -2949,14 +3076,57 @@
       ],
       "classification": "alias_of",
       "alias_of": [
-        "Close-Grip Bench Press"
+        "Smith Machine Close-Grip Press"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.8333333333333334
+    },
+    {
+      "name": "smith deadlift",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "smith machine"
+      ],
+      "datasetMuscle": [
+        "hamstrings",
+        "glutes",
+        "hamstrings",
+        "quadriceps",
+        "lower back"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Smith Machine Romanian Deadlift"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "candidate:machine",
+      "jaccardScore": 0.75
+    },
+    {
+      "name": "smith decline bench press",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "chest",
+      "datasetEquipment": [
+        "smith machine"
+      ],
+      "datasetMuscle": [
+        "triceps",
+        "pectorals",
+        "triceps",
+        "shoulders"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Smith Machine Bench Press"
       ],
       "matchStage": "fuzzy",
       "matchOrigin": "corpus",
       "jaccardScore": 0.8
     },
     {
-      "name": "smith low bar squat",
+      "name": "smith full squat",
       "dataset": "exercises-dataset",
       "datasetCategory": "upper legs",
       "datasetEquipment": [
@@ -2971,53 +3141,179 @@
       ],
       "classification": "alias_of",
       "alias_of": [
-        "Low-Bar Back Squat"
+        "Smith Machine Squat"
       ],
       "matchStage": "fuzzy",
-      "matchOrigin": "candidate:barbell",
+      "matchOrigin": "corpus",
       "jaccardScore": 0.75
     },
     {
-      "name": "smith upright row",
+      "name": "smith hack squat",
       "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
+      "datasetCategory": "upper legs",
       "datasetEquipment": [
         "smith machine"
       ],
       "datasetMuscle": [
-        "traps",
-        "delts",
-        "traps",
-        "biceps"
+        "quadriceps",
+        "glutes",
+        "quadriceps",
+        "hamstrings",
+        "calves"
       ],
       "classification": "alias_of",
       "alias_of": [
-        "Smith Machine Upright Row"
+        "Hack Squat Machine"
       ],
       "matchStage": "fuzzy",
-      "matchOrigin": "candidate:machine",
+      "matchOrigin": "corpus",
       "jaccardScore": 0.75
     },
     {
-      "name": "smith wide grip bench press",
+      "name": "smith incline bench press",
       "dataset": "exercises-dataset",
       "datasetCategory": "chest",
       "datasetEquipment": [
         "smith machine"
       ],
       "datasetMuscle": [
-        "triceps",
+        "shoulders",
         "pectorals",
-        "triceps",
-        "shoulders"
+        "shoulders",
+        "triceps"
       ],
       "classification": "alias_of",
       "alias_of": [
-        "Wide-Grip Bench Press"
+        "Incline Smith Machine Press"
       ],
       "matchStage": "fuzzy",
-      "matchOrigin": "candidate:barbell",
+      "matchOrigin": "corpus",
       "jaccardScore": 0.8
+    },
+    {
+      "name": "smith narrow row",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "back",
+      "datasetEquipment": [
+        "smith machine"
+      ],
+      "datasetMuscle": [
+        "biceps",
+        "upper back",
+        "biceps",
+        "rear deltoids"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Smith Machine Row"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.75
+    },
+    {
+      "name": "smith reverse calf raises",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "lower legs",
+      "datasetEquipment": [
+        "smith machine"
+      ],
+      "datasetMuscle": [
+        "hamstrings",
+        "calves",
+        "hamstrings"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Smith Machine Calf Raise"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.8
+    },
+    {
+      "name": "smith reverse calf raises",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "lower legs",
+      "datasetEquipment": [
+        "smith machine"
+      ],
+      "datasetMuscle": [
+        "hamstrings",
+        "calves",
+        "hamstrings"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Smith Machine Calf Raise"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.8
+    },
+    {
+      "name": "smith shoulder press",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "shoulders",
+      "datasetEquipment": [
+        "smith machine"
+      ],
+      "datasetMuscle": [
+        "triceps",
+        "delts",
+        "triceps",
+        "upper back"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Machine Shoulder Press"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.75
+    },
+    {
+      "name": "smith standing military press",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "shoulders",
+      "datasetEquipment": [
+        "smith machine"
+      ],
+      "datasetMuscle": [
+        "triceps",
+        "delts",
+        "triceps",
+        "upper back"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Smith Machine Overhead Press"
+      ],
+      "matchStage": "synonym-fuzzy",
+      "matchOrigin": "candidate:machine",
+      "jaccardScore": 0.8
+    },
+    {
+      "name": "smith sumo squat",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "smith machine"
+      ],
+      "datasetMuscle": [
+        "quadriceps",
+        "glutes",
+        "quadriceps",
+        "hamstrings",
+        "calves"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Smith Machine Squat"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.75
     },
     {
       "name": "standing behind neck press",
@@ -4505,7 +4801,7 @@
         "lower back"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight 3 4 Sit Up",
+      "proposedCanonicalName": "Bodyweight Sit Up",
       "primaryMuscle": "abs",
       "equipment": "bodyweight",
       "movementPattern": "core",
@@ -4964,12 +5260,12 @@
         "core"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Back Lever",
+      "proposedCanonicalName": "Bodyweight Back",
       "primaryMuscle": "back",
       "equipment": "bodyweight",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named bodyweight resistance movement.",
-      "crossDatasetDuplicateOf": "back lever"
+      "crossDatasetDuplicateOf": "back machine"
     },
     {
       "name": "backward jump",
@@ -5683,7 +5979,7 @@
         "feet"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Band Two Legs Calf Raise Band Under Both Legs 2",
+      "proposedCanonicalName": "Bodyweight Band Two Legs Calf Raise Band Under Both Legs",
       "primaryMuscle": "calves",
       "equipment": "bodyweight",
       "movementPattern": "isolation",
@@ -5854,27 +6150,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
     },
     {
-      "name": "barbell deadlift",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "hamstrings",
-        "glutes",
-        "hamstrings",
-        "lower back"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Deadlift",
-      "primaryMuscle": "hamstrings",
-      "equipment": "barbell",
-      "movementPattern": "hinge",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement.",
-      "crossDatasetDuplicateOf": "barbell deadlift"
-    },
-    {
       "name": "barbell decline bent arm pullover",
       "dataset": "exercises-dataset",
       "datasetCategory": "back",
@@ -6037,7 +6312,8 @@
       "primaryMuscle": "hamstrings",
       "equipment": "barbell",
       "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
+      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement.",
+      "crossDatasetDuplicateOf": "barbell full squat"
     },
     {
       "name": "barbell full squat (side pov)",
@@ -6059,7 +6335,8 @@
       "primaryMuscle": "hamstrings",
       "equipment": "barbell",
       "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
+      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement.",
+      "crossDatasetDuplicateOf": "barbell full squat"
     },
     {
       "name": "barbell full zercher squat",
@@ -6163,69 +6440,6 @@
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement.",
       "crossDatasetDuplicateOf": "barbell incline raise shoulder"
-    },
-    {
-      "name": "barbell jefferson squat",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "quadriceps",
-        "glutes",
-        "quadriceps",
-        "hamstrings",
-        "calves"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Jefferson Squat",
-      "primaryMuscle": "hamstrings",
-      "equipment": "barbell",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
-    },
-    {
-      "name": "barbell jump squat",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "quadriceps",
-        "glutes",
-        "quadriceps",
-        "hamstrings",
-        "calves"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Jump Squat",
-      "primaryMuscle": "hamstrings",
-      "equipment": "barbell",
-      "movementPattern": "plyometric",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
-    },
-    {
-      "name": "barbell lateral lunge",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "quadriceps",
-        "glutes",
-        "quadriceps",
-        "hamstrings",
-        "calves"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Lateral Lunge",
-      "primaryMuscle": "hamstrings",
-      "equipment": "barbell",
-      "movementPattern": "lunge",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
     },
     {
       "name": "barbell lying back of the head tricep extension",
@@ -6450,28 +6664,6 @@
       "crossDatasetDuplicateOf": "barbell leg one squat"
     },
     {
-      "name": "barbell overhead squat",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "glutes",
-        "quads",
-        "glutes",
-        "hamstrings",
-        "calves",
-        "core"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Overhead Squat",
-      "primaryMuscle": "hamstrings",
-      "equipment": "barbell",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
-    },
-    {
       "name": "barbell palms down wrist curl over a bench",
       "dataset": "exercises-dataset",
       "datasetCategory": "lower arms",
@@ -6511,26 +6703,6 @@
       "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement.",
       "crossDatasetDuplicateOf": "barbell bench curl over palm up wrist"
-    },
-    {
-      "name": "barbell pendlay row",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "back",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "biceps",
-        "upper back",
-        "biceps",
-        "forearms"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Pendlay Row",
-      "primaryMuscle": "back",
-      "equipment": "barbell",
-      "movementPattern": "pull",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
     },
     {
       "name": "barbell pin presses",
@@ -6613,26 +6785,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
     },
     {
-      "name": "barbell rack pull",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "hamstrings",
-        "glutes",
-        "hamstrings",
-        "lower back"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Rack Pull",
-      "primaryMuscle": "hamstrings",
-      "equipment": "barbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
-    },
-    {
       "name": "barbell rear delt raise",
       "dataset": "exercises-dataset",
       "datasetCategory": "shoulders",
@@ -6711,7 +6863,7 @@
         "calves"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Rear Lunge 2",
+      "proposedCanonicalName": "Barbell Rear Lunge",
       "primaryMuscle": "hamstrings",
       "equipment": "barbell",
       "movementPattern": "lunge",
@@ -6737,26 +6889,6 @@
       "equipment": "barbell",
       "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
-    },
-    {
-      "name": "barbell reverse curl",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper arms",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "forearms",
-        "biceps",
-        "forearms"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Reverse Curl",
-      "primaryMuscle": "biceps",
-      "equipment": "barbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement.",
-      "crossDatasetDuplicateOf": "barbell curl reverse"
     },
     {
       "name": "barbell reverse grip bent over row",
@@ -7029,7 +7161,7 @@
         "lower back"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Side Bent 2",
+      "proposedCanonicalName": "Barbell Side Bent",
       "primaryMuscle": "abs",
       "equipment": "barbell",
       "movementPattern": "isolation",
@@ -7072,7 +7204,7 @@
         "calves"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Side Split Squat 2",
+      "proposedCanonicalName": "Barbell Side Split Squat",
       "primaryMuscle": "hamstrings",
       "equipment": "barbell",
       "movementPattern": "squat",
@@ -7465,27 +7597,6 @@
       "crossDatasetDuplicateOf": "barbell good leg morning stiff"
     },
     {
-      "name": "barbell sumo deadlift",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "hamstrings",
-        "glutes",
-        "hamstrings",
-        "quadriceps",
-        "lower back"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Sumo Deadlift",
-      "primaryMuscle": "hamstrings",
-      "equipment": "barbell",
-      "movementPattern": "hinge",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
-    },
-    {
       "name": "barbell thruster",
       "dataset": "exercises-dataset",
       "datasetCategory": "shoulders",
@@ -7523,28 +7634,6 @@
       ],
       "classification": "resistance_missing",
       "proposedCanonicalName": "Barbell Wide Squat",
-      "primaryMuscle": "hamstrings",
-      "equipment": "barbell",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named barbell resistance movement."
-    },
-    {
-      "name": "barbell zercher squat",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "quadriceps",
-        "glutes",
-        "quadriceps",
-        "hamstrings",
-        "calves",
-        "core"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Zercher Squat",
       "primaryMuscle": "hamstrings",
       "equipment": "barbell",
       "movementPattern": "squat",
@@ -9145,7 +9234,7 @@
         "shoulders"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Cable Pushdown Straight Arm 2",
+      "proposedCanonicalName": "Cable Pushdown Straight Arm",
       "primaryMuscle": "back",
       "equipment": "cable",
       "movementPattern": "isolation",
@@ -10822,48 +10911,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
     },
     {
-      "name": "dumbbell arnold press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "delts",
-        "triceps",
-        "upper chest"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Arnold Press",
-      "primaryMuscle": "chest",
-      "equipment": "dumbbell",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "arnold dumbbell press"
-    },
-    {
-      "name": "dumbbell arnold press v. 2",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "delts",
-        "triceps",
-        "upper chest"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Arnold Press 2",
-      "primaryMuscle": "chest",
-      "equipment": "dumbbell",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "arnold dumbbell press"
-    },
-    {
       "name": "dumbbell around pullover",
       "dataset": "exercises-dataset",
       "datasetCategory": "chest",
@@ -11044,26 +11091,6 @@
       "crossDatasetDuplicateOf": "clean dumbbell"
     },
     {
-      "name": "dumbbell concentration curl",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper arms",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "forearms",
-        "biceps",
-        "forearms"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Concentration Curl",
-      "primaryMuscle": "biceps",
-      "equipment": "dumbbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "concentration curl dumbbell"
-    },
-    {
       "name": "dumbbell contralateral forward lunge",
       "dataset": "exercises-dataset",
       "datasetCategory": "upper legs",
@@ -11083,48 +11110,6 @@
       "equipment": "dumbbell",
       "movementPattern": "lunge",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
-    },
-    {
-      "name": "dumbbell cuban press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "delts",
-        "triceps",
-        "upper back"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Cuban Press",
-      "primaryMuscle": "back",
-      "equipment": "dumbbell",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "cuban dumbbell press"
-    },
-    {
-      "name": "dumbbell cuban press v. 2",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "delts",
-        "triceps",
-        "upper back"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Cuban Press 2",
-      "primaryMuscle": "back",
-      "equipment": "dumbbell",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "cuban dumbbell press"
     },
     {
       "name": "dumbbell deadlift",
@@ -11202,7 +11187,7 @@
         "rhomboids"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Decline Shrug 2",
+      "proposedCanonicalName": "Dumbbell Decline Shrug",
       "primaryMuscle": "rear_delts",
       "equipment": "dumbbell",
       "movementPattern": "isolation",
@@ -11310,48 +11295,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
     },
     {
-      "name": "dumbbell goblet squat",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "glutes",
-        "quads",
-        "glutes",
-        "hamstrings",
-        "calves"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Goblet Squat",
-      "primaryMuscle": "hamstrings",
-      "equipment": "dumbbell",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "dumbbell goblet squat"
-    },
-    {
-      "name": "dumbbell hammer curl",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper arms",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "forearms",
-        "biceps",
-        "forearms"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Hammer Curl",
-      "primaryMuscle": "biceps",
-      "equipment": "dumbbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "curl dumbbell hammer"
-    },
-    {
       "name": "dumbbell hammer curl on exercise ball",
       "dataset": "exercises-dataset",
       "datasetCategory": "upper arms",
@@ -11369,26 +11312,6 @@
       "equipment": "dumbbell",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
-    },
-    {
-      "name": "dumbbell hammer curl v. 2",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper arms",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "forearms",
-        "biceps",
-        "forearms"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Hammer Curl 2",
-      "primaryMuscle": "biceps",
-      "equipment": "dumbbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "curl dumbbell hammer"
     },
     {
       "name": "dumbbell hammer curls (with arm blaster)",
@@ -11727,25 +11650,6 @@
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement.",
       "crossDatasetDuplicateOf": "dumbbell incline raise shoulder"
-    },
-    {
-      "name": "dumbbell incline shrug",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "back",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "shoulders",
-        "traps",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Incline Shrug",
-      "primaryMuscle": "rear_delts",
-      "equipment": "dumbbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
     },
     {
       "name": "dumbbell incline t-raise",
@@ -12135,7 +12039,7 @@
         "shoulders"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Lying One Arm Press 2",
+      "proposedCanonicalName": "Dumbbell Lying One Arm Press",
       "primaryMuscle": "chest",
       "equipment": "dumbbell",
       "movementPattern": "push",
@@ -12908,7 +12812,7 @@
         "upper back"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell One Arm Shoulder Press 2",
+      "proposedCanonicalName": "Dumbbell One Arm Shoulder Press",
       "primaryMuscle": "back",
       "equipment": "dumbbell",
       "movementPattern": "push",
@@ -13366,26 +13270,6 @@
       "primaryMuscle": "chest",
       "equipment": "dumbbell",
       "movementPattern": "pull",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
-    },
-    {
-      "name": "dumbbell push press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "delts",
-        "triceps",
-        "core"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Push Press",
-      "primaryMuscle": "rear_delts",
-      "equipment": "dumbbell",
-      "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
     },
     {
@@ -14419,7 +14303,7 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Standing Inner Biceps Curl 2",
+      "proposedCanonicalName": "Dumbbell Standing Inner Biceps Curl",
       "primaryMuscle": "biceps",
       "equipment": "dumbbell",
       "movementPattern": "isolation",
@@ -14748,25 +14632,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
     },
     {
-      "name": "dumbbell tate press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper arms",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "shoulders",
-        "triceps",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Tate Press",
-      "primaryMuscle": "rear_delts",
-      "equipment": "dumbbell",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
-    },
-    {
       "name": "dumbbell tricep kickback with stork stance",
       "dataset": "exercises-dataset",
       "datasetCategory": "upper arms",
@@ -14783,26 +14648,6 @@
       "primaryMuscle": "rear_delts",
       "equipment": "dumbbell",
       "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
-    },
-    {
-      "name": "dumbbell upright row (back pov)",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "traps",
-        "delts",
-        "traps",
-        "biceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Upright Row Back Pov",
-      "primaryMuscle": "rear_delts",
-      "equipment": "dumbbell",
-      "movementPattern": "pull",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
     },
     {
@@ -14861,25 +14706,6 @@
       "classification": "resistance_missing",
       "proposedCanonicalName": "Dumbbell Waiter Biceps Curl",
       "primaryMuscle": "rear_delts",
-      "equipment": "dumbbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
-    },
-    {
-      "name": "dumbbell zottman curl",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper arms",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "forearms",
-        "biceps",
-        "forearms"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Zottman Curl",
-      "primaryMuscle": "biceps",
       "equipment": "dumbbell",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named dumbbell resistance movement."
@@ -15890,12 +15716,12 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Front Lever",
+      "proposedCanonicalName": "Bodyweight Front",
       "primaryMuscle": "back",
       "equipment": "bodyweight",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named bodyweight resistance movement.",
-      "crossDatasetDuplicateOf": "front lever"
+      "crossDatasetDuplicateOf": "front machine"
     },
     {
       "name": "front lever reps",
@@ -15911,7 +15737,7 @@
         "shoulders"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Front Lever Reps",
+      "proposedCanonicalName": "Bodyweight Front Reps",
       "primaryMuscle": "back",
       "equipment": "bodyweight",
       "movementPattern": "isolation",
@@ -16439,7 +16265,7 @@
         "hamstrings"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Inchworm 2",
+      "proposedCanonicalName": "Bodyweight Inchworm",
       "primaryMuscle": "hamstrings",
       "equipment": "bodyweight",
       "movementPattern": "isolation",
@@ -17016,7 +16842,7 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Kettlebell Figure 8",
+      "proposedCanonicalName": "Kettlebell Figure",
       "primaryMuscle": "rear_delts",
       "equipment": "kettlebell",
       "movementPattern": "isolation",
@@ -17538,7 +17364,7 @@
         "quadriceps"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Landmine 180",
+      "proposedCanonicalName": "Barbell Landmine",
       "primaryMuscle": "quads",
       "equipment": "barbell",
       "movementPattern": "isolation",
@@ -17601,7 +17427,7 @@
         "glutes"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Alternate Leg Press",
+      "proposedCanonicalName": "Machine Alternate Leg Press",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "push",
@@ -17621,7 +17447,7 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Alternating Narrow Grip Seated Row",
+      "proposedCanonicalName": "Machine Alternating Narrow Grip Seated Row",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
@@ -17641,7 +17467,7 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Assisted Chin Up",
+      "proposedCanonicalName": "Machine Assisted Chin Up",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
@@ -17661,7 +17487,7 @@
         "hamstrings"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Back Extension",
+      "proposedCanonicalName": "Machine Back Extension",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "isolation",
@@ -17681,7 +17507,7 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Lever Bent Over Row",
+      "proposedCanonicalName": "Barbell Bent Over Row",
       "primaryMuscle": "back",
       "equipment": "barbell",
       "movementPattern": "pull",
@@ -17701,29 +17527,10 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Bent Over Row With Bar",
+      "proposedCanonicalName": "Machine Bent Over Row With Bar",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever bicep curl",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper arms",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "forearms",
-        "biceps",
-        "forearms"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Bicep Curl",
-      "primaryMuscle": "biceps",
-      "equipment": "machine",
-      "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
     },
     {
@@ -17739,53 +17546,11 @@
         "hamstrings"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Calf Press",
+      "proposedCanonicalName": "Machine Calf Press",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever chest press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "chest",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "pectorals",
-        "triceps",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Chest Press",
-      "primaryMuscle": "chest",
-      "equipment": "machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "chest lever press"
-    },
-    {
-      "name": "lever chest press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "chest",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "pectorals",
-        "triceps",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Chest Press",
-      "primaryMuscle": "chest",
-      "equipment": "machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "chest lever press"
     },
     {
       "name": "lever deadlift",
@@ -17801,30 +17566,10 @@
         "quadriceps"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Deadlift",
+      "proposedCanonicalName": "Machine Deadlift",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "hinge",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever decline chest press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "chest",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "pectorals",
-        "triceps",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Decline Chest Press",
-      "primaryMuscle": "chest",
-      "equipment": "machine",
-      "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
     },
     {
@@ -17842,7 +17587,7 @@
         "rear deltoids"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Front Pulldown",
+      "proposedCanonicalName": "Machine Front Pulldown",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
@@ -17862,12 +17607,12 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Gripless Shrug",
+      "proposedCanonicalName": "Machine Gripless Shrug",
       "primaryMuscle": "rear_delts",
       "equipment": "machine",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "gripless lever shrug"
+      "crossDatasetDuplicateOf": "gripless machine shrug"
     },
     {
       "name": "lever gripless shrug v. 2",
@@ -17883,12 +17628,12 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Gripless Shrug 2",
+      "proposedCanonicalName": "Machine Gripless Shrug",
       "primaryMuscle": "rear_delts",
       "equipment": "machine",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "gripless lever shrug"
+      "crossDatasetDuplicateOf": "gripless machine shrug"
     },
     {
       "name": "lever gripper hands",
@@ -17904,7 +17649,7 @@
         "triceps"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Gripper Hands",
+      "proposedCanonicalName": "Machine Gripper Hands",
       "primaryMuscle": "biceps",
       "equipment": "machine",
       "movementPattern": "isolation",
@@ -17923,7 +17668,7 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Hammer Grip Preacher Curl",
+      "proposedCanonicalName": "Machine Hammer Grip Preacher Curl",
       "primaryMuscle": "biceps",
       "equipment": "machine",
       "movementPattern": "isolation",
@@ -17943,7 +17688,7 @@
         "rear deltoids"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever High Row",
+      "proposedCanonicalName": "Machine High Row",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
@@ -17962,7 +17707,7 @@
         "hamstrings"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Hip Extension 2",
+      "proposedCanonicalName": "Machine Hip Extension",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "isolation",
@@ -17983,53 +17728,11 @@
         "calves"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Horizontal One Leg Press",
+      "proposedCanonicalName": "Machine Horizontal One Leg Press",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever incline chest press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "chest",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "shoulders",
-        "pectorals",
-        "shoulders",
-        "triceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Incline Chest Press",
-      "primaryMuscle": "chest",
-      "equipment": "machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "chest incline lever press"
-    },
-    {
-      "name": "lever incline chest press v. 2",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "chest",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "pectorals",
-        "triceps",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Incline Chest Press 2",
-      "primaryMuscle": "chest",
-      "equipment": "machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "chest incline lever press"
     },
     {
       "name": "lever kneeling leg curl",
@@ -18044,7 +17747,7 @@
         "glutes"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Kneeling Leg Curl",
+      "proposedCanonicalName": "Machine Kneeling Leg Curl",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "isolation",
@@ -18064,30 +17767,10 @@
         "lower back"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Kneeling Twist",
+      "proposedCanonicalName": "Machine Kneeling Twist",
       "primaryMuscle": "abs",
       "equipment": "machine",
       "movementPattern": "core",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever lateral raise",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "traps",
-        "delts",
-        "traps",
-        "upper back"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Lateral Raise",
-      "primaryMuscle": "back",
-      "equipment": "machine",
-      "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
     },
     {
@@ -18103,7 +17786,7 @@
         "hamstrings"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Leg Extension",
+      "proposedCanonicalName": "Machine Leg Extension",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "isolation",
@@ -18122,30 +17805,10 @@
         "glutes"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Lying Two One Leg Curl",
+      "proposedCanonicalName": "Machine Lying Two One Leg Curl",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever military press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "delts",
-        "triceps",
-        "upper chest"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Military Press",
-      "primaryMuscle": "chest",
-      "equipment": "machine",
-      "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
     },
     {
@@ -18162,7 +17825,7 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Narrow Grip Seated Row",
+      "proposedCanonicalName": "Machine Narrow Grip Seated Row",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
@@ -18182,7 +17845,7 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Lever One Arm Bent Over Row",
+      "proposedCanonicalName": "Barbell One Arm Bent Over Row",
       "primaryMuscle": "back",
       "equipment": "barbell",
       "movementPattern": "pull",
@@ -18202,7 +17865,7 @@
         "shoulders"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever One Arm Lateral High Row",
+      "proposedCanonicalName": "Machine One Arm Lateral High Row",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
@@ -18223,7 +17886,7 @@
         "rear deltoids"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever One Arm Lateral Wide Pulldown",
+      "proposedCanonicalName": "Machine One Arm Lateral Wide Pulldown",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
@@ -18243,7 +17906,7 @@
         "upper back"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever One Arm Shoulder Press",
+      "proposedCanonicalName": "Machine One Arm Shoulder Press",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "push",
@@ -18263,70 +17926,10 @@
         "shoulders"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Overhand Triceps Dip",
+      "proposedCanonicalName": "Machine Overhand Triceps Dip",
       "primaryMuscle": "chest",
       "equipment": "machine",
       "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever preacher curl",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper arms",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "forearms",
-        "biceps",
-        "forearms"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Preacher Curl",
-      "primaryMuscle": "biceps",
-      "equipment": "machine",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "curl lever preacher"
-    },
-    {
-      "name": "lever preacher curl v. 2",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper arms",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "forearms",
-        "biceps",
-        "forearms"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Preacher Curl 2",
-      "primaryMuscle": "biceps",
-      "equipment": "machine",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "curl lever preacher"
-    },
-    {
-      "name": "lever pullover",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "back",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "lats",
-        "triceps",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Pullover",
-      "primaryMuscle": "back",
-      "equipment": "machine",
-      "movementPattern": "pull",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
     },
     {
@@ -18344,7 +17947,7 @@
         "rear deltoids"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Reverse Grip Lateral Pulldown",
+      "proposedCanonicalName": "Machine Reverse Grip Lateral Pulldown",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
@@ -18363,7 +17966,7 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Reverse Grip Preacher Curl",
+      "proposedCanonicalName": "Machine Reverse Grip Preacher Curl",
       "primaryMuscle": "biceps",
       "equipment": "machine",
       "movementPattern": "isolation",
@@ -18383,7 +17986,7 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Reverse Grip Vertical Row",
+      "proposedCanonicalName": "Machine Reverse Grip Vertical Row",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
@@ -18403,7 +18006,7 @@
         "lower back"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Reverse Hyperextension",
+      "proposedCanonicalName": "Machine Reverse Hyperextension",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "isolation",
@@ -18423,7 +18026,7 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Reverse T Bar Row",
+      "proposedCanonicalName": "Machine Reverse T Bar Row",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
@@ -18443,7 +18046,7 @@
         "ankle stabilizers"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Rotary Calf",
+      "proposedCanonicalName": "Machine Rotary Calf",
       "primaryMuscle": "calves",
       "equipment": "machine",
       "movementPattern": "isolation",
@@ -18463,31 +18066,11 @@
         "hamstrings"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Calf Press",
+      "proposedCanonicalName": "Machine Seated Calf Press",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever seated crunch",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "waist",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "obliques",
-        "abs",
-        "obliques"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Crunch",
-      "primaryMuscle": "abs",
-      "equipment": "machine",
-      "movementPattern": "core",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "crunch lever seated"
     },
     {
       "name": "lever seated crunch (chest pad)",
@@ -18502,51 +18085,10 @@
         "obliques"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Crunch Chest Pad",
+      "proposedCanonicalName": "Machine Seated Crunch Chest Pad",
       "primaryMuscle": "abs",
       "equipment": "machine",
       "movementPattern": "core",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever seated crunch v. 2",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "waist",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "obliques",
-        "abs",
-        "obliques",
-        "hip flexors"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Crunch 2",
-      "primaryMuscle": "abs",
-      "equipment": "machine",
-      "movementPattern": "core",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "crunch lever seated"
-    },
-    {
-      "name": "lever seated dip",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper arms",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "chest",
-        "triceps",
-        "chest",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Dip",
-      "primaryMuscle": "chest",
-      "equipment": "machine",
-      "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
     },
     {
@@ -18563,7 +18105,7 @@
         "trapezius"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Fly",
+      "proposedCanonicalName": "Machine Seated Fly",
       "primaryMuscle": "chest",
       "equipment": "machine",
       "movementPattern": "isolation",
@@ -18583,7 +18125,7 @@
         "lower back"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Good Morning",
+      "proposedCanonicalName": "Machine Seated Good Morning",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "hinge",
@@ -18603,27 +18145,7 @@
         "hamstrings"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Hip Abduction",
-      "primaryMuscle": "hamstrings",
-      "equipment": "machine",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever seated hip adduction",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "hamstrings",
-        "adductors",
-        "hamstrings",
-        "glutes"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Hip Adduction",
+      "proposedCanonicalName": "Machine Seated Hip Abduction",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "isolation",
@@ -18642,7 +18164,7 @@
         "hip flexors"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Leg Raise Crunch",
+      "proposedCanonicalName": "Machine Seated Leg Raise Crunch",
       "primaryMuscle": "abs",
       "equipment": "machine",
       "movementPattern": "core",
@@ -18662,7 +18184,7 @@
         "rhomboids"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Reverse Fly",
+      "proposedCanonicalName": "Machine Seated Reverse Fly",
       "primaryMuscle": "rear_delts",
       "equipment": "machine",
       "movementPattern": "isolation",
@@ -18682,30 +18204,10 @@
         "rhomboids"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Reverse Fly Parallel Grip",
+      "proposedCanonicalName": "Machine Seated Reverse Fly Parallel Grip",
       "primaryMuscle": "rear_delts",
       "equipment": "machine",
       "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever seated row",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "back",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "biceps",
-        "upper back",
-        "biceps",
-        "forearms"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Seated Row",
-      "primaryMuscle": "back",
-      "equipment": "machine",
-      "movementPattern": "pull",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
     },
     {
@@ -18723,132 +18225,10 @@
         "glutes"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Lever Seated Squat Calf Raise On Leg Press Machine",
+      "proposedCanonicalName": "Seated Squat Calf Raise On Leg Press Machine",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever shoulder press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "delts",
-        "triceps",
-        "chest"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Shoulder Press",
-      "primaryMuscle": "chest",
-      "equipment": "machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "lever press shoulder"
-    },
-    {
-      "name": "lever shoulder press v. 2",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "delts",
-        "triceps",
-        "chest"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Shoulder Press 2",
-      "primaryMuscle": "chest",
-      "equipment": "machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "lever press shoulder"
-    },
-    {
-      "name": "lever shoulder press v. 3",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "delts",
-        "triceps",
-        "chest"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Shoulder Press 3",
-      "primaryMuscle": "chest",
-      "equipment": "machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
-      "crossDatasetDuplicateOf": "lever press shoulder"
-    },
-    {
-      "name": "lever shrug",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "back",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "shoulders",
-        "traps",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Shrug",
-      "primaryMuscle": "rear_delts",
-      "equipment": "machine",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever standing calf raise",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "lower legs",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "soleus",
-        "calves",
-        "soleus",
-        "ankle stabilizers"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Standing Calf Raise",
-      "primaryMuscle": "calves",
-      "equipment": "machine",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever standing chest press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "chest",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "shoulders",
-        "pectorals",
-        "shoulders",
-        "triceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Standing Chest Press",
-      "primaryMuscle": "chest",
-      "equipment": "machine",
-      "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
     },
     {
@@ -18865,29 +18245,10 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever T Bar Reverse Grip Row",
+      "proposedCanonicalName": "Machine T Bar Reverse Grip Row",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
-    },
-    {
-      "name": "lever triceps extension",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper arms",
-      "datasetEquipment": [
-        "leverage machine"
-      ],
-      "datasetMuscle": [
-        "shoulders",
-        "triceps",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Triceps Extension",
-      "primaryMuscle": "rear_delts",
-      "equipment": "machine",
-      "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
     },
     {
@@ -18904,7 +18265,7 @@
         "forearms"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Lever Unilateral Row",
+      "proposedCanonicalName": "Machine Unilateral Row",
       "primaryMuscle": "back",
       "equipment": "machine",
       "movementPattern": "pull",
@@ -19088,7 +18449,7 @@
         "triceps"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Medicine Ball Chest Push From 3 Point Stance",
+      "proposedCanonicalName": "Medicine Ball Chest Push From Point Stance",
       "primaryMuscle": "chest",
       "equipment": "medicine_ball",
       "movementPattern": "isolation",
@@ -19332,7 +18693,7 @@
         "obliques"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Oblique Crunch 2",
+      "proposedCanonicalName": "Bodyweight Oblique Crunch",
       "primaryMuscle": "abs",
       "equipment": "bodyweight",
       "movementPattern": "core",
@@ -20089,7 +19450,7 @@
         "hamstrings"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Quick Feet 2",
+      "proposedCanonicalName": "Bodyweight Quick Feet",
       "primaryMuscle": "hamstrings",
       "equipment": "bodyweight",
       "movementPattern": "isolation",
@@ -20751,7 +20112,7 @@
         "glutes"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Side Bridge 2",
+      "proposedCanonicalName": "Bodyweight Side Bridge",
       "primaryMuscle": "glutes",
       "equipment": "bodyweight",
       "movementPattern": "hinge",
@@ -20955,7 +20316,7 @@
         "calves"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Machine Sled 45 Degrees One Leg Press",
+      "proposedCanonicalName": "Machine Sled Degrees One Leg Press",
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "push",
@@ -21020,7 +20381,8 @@
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
+      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
+      "crossDatasetDuplicateOf": "45в° leg press sled"
     },
     {
       "name": "sled 45в° leg press (back pov)",
@@ -21041,7 +20403,8 @@
       "primaryMuscle": "hamstrings",
       "equipment": "machine",
       "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
+      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement.",
+      "crossDatasetDuplicateOf": "45в° leg press sled"
     },
     {
       "name": "sled 45в° leg wide press",
@@ -21208,22 +20571,23 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named machine resistance movement."
     },
     {
-      "name": "smith back shrug",
+      "name": "smith behind neck press",
       "dataset": "exercises-dataset",
-      "datasetCategory": "back",
+      "datasetCategory": "shoulders",
       "datasetEquipment": [
         "smith machine"
       ],
       "datasetMuscle": [
-        "shoulders",
-        "traps",
-        "shoulders"
+        "triceps",
+        "delts",
+        "triceps",
+        "upper back"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Back Shrug",
-      "primaryMuscle": "rear_delts",
+      "proposedCanonicalName": "Smith Machine Smith Behind Neck Press",
+      "primaryMuscle": "back",
       "equipment": "smith_machine",
-      "movementPattern": "isolation",
+      "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
     },
     {
@@ -21264,69 +20628,8 @@
       "primaryMuscle": "back",
       "equipment": "smith_machine",
       "movementPattern": "pull",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
-    },
-    {
-      "name": "smith chair squat",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "glutes",
-        "quads",
-        "glutes",
-        "hamstrings",
-        "calves"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Chair Squat",
-      "primaryMuscle": "hamstrings",
-      "equipment": "smith_machine",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
-    },
-    {
-      "name": "smith deadlift",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "hamstrings",
-        "glutes",
-        "hamstrings",
-        "quadriceps",
-        "lower back"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Deadlift",
-      "primaryMuscle": "hamstrings",
-      "equipment": "smith_machine",
-      "movementPattern": "hinge",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
-    },
-    {
-      "name": "smith decline bench press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "chest",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "pectorals",
-        "triceps",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Decline Bench Press",
-      "primaryMuscle": "chest",
-      "equipment": "smith_machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
+      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement.",
+      "crossDatasetDuplicateOf": "bent machine over row smith"
     },
     {
       "name": "smith decline reverse-grip press",
@@ -21371,48 +20674,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
     },
     {
-      "name": "smith full squat",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "quadriceps",
-        "glutes",
-        "quadriceps",
-        "hamstrings",
-        "calves"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Full Squat",
-      "primaryMuscle": "hamstrings",
-      "equipment": "smith_machine",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
-    },
-    {
-      "name": "smith hack squat",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "quadriceps",
-        "glutes",
-        "quadriceps",
-        "hamstrings",
-        "calves"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Hack Squat",
-      "primaryMuscle": "hamstrings",
-      "equipment": "smith_machine",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
-    },
-    {
       "name": "smith hip raise",
       "dataset": "exercises-dataset",
       "datasetCategory": "waist",
@@ -21430,27 +20691,8 @@
       "primaryMuscle": "hamstrings",
       "equipment": "smith_machine",
       "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
-    },
-    {
-      "name": "smith incline bench press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "chest",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "shoulders",
-        "pectorals",
-        "shoulders",
-        "triceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Incline Bench Press",
-      "primaryMuscle": "chest",
-      "equipment": "smith_machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
+      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement.",
+      "crossDatasetDuplicateOf": "hip machine raise smith"
     },
     {
       "name": "smith incline reverse-grip press",
@@ -21491,7 +20733,7 @@
       "equipment": "smith_machine",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement.",
-      "crossDatasetDuplicateOf": "incline raise shoulder smith"
+      "crossDatasetDuplicateOf": "incline machine raise shoulder smith"
     },
     {
       "name": "smith leg press",
@@ -21512,6 +20754,28 @@
       "primaryMuscle": "hamstrings",
       "equipment": "smith_machine",
       "movementPattern": "push",
+      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement.",
+      "crossDatasetDuplicateOf": "leg machine press smith"
+    },
+    {
+      "name": "smith low bar squat",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "smith machine"
+      ],
+      "datasetMuscle": [
+        "quadriceps",
+        "glutes",
+        "quadriceps",
+        "hamstrings",
+        "calves"
+      ],
+      "classification": "resistance_missing",
+      "proposedCanonicalName": "Smith Machine Smith Low Bar Squat",
+      "primaryMuscle": "hamstrings",
+      "equipment": "smith_machine",
+      "movementPattern": "squat",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
     },
     {
@@ -21593,26 +20857,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
     },
     {
-      "name": "smith narrow row",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "back",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "biceps",
-        "upper back",
-        "biceps",
-        "rear deltoids"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Narrow Row",
-      "primaryMuscle": "back",
-      "equipment": "smith_machine",
-      "movementPattern": "pull",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
-    },
-    {
       "name": "smith one arm row",
       "dataset": "exercises-dataset",
       "datasetCategory": "back",
@@ -21672,46 +20916,6 @@
       "equipment": "smith_machine",
       "movementPattern": "pull",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
-    },
-    {
-      "name": "smith reverse calf raises",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "lower legs",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "hamstrings",
-        "calves",
-        "hamstrings"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Reverse Calf Raises",
-      "primaryMuscle": "hamstrings",
-      "equipment": "smith_machine",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement.",
-      "crossDatasetDuplicateOf": "calf raise reverse smith"
-    },
-    {
-      "name": "smith reverse calf raises",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "lower legs",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "hamstrings",
-        "calves",
-        "hamstrings"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Reverse Calf Raises",
-      "primaryMuscle": "hamstrings",
-      "equipment": "smith_machine",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement.",
-      "crossDatasetDuplicateOf": "calf raise reverse smith"
     },
     {
       "name": "smith reverse grip bent over row",
@@ -21813,45 +21017,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
     },
     {
-      "name": "smith shoulder press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "delts",
-        "triceps",
-        "upper back"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Shoulder Press",
-      "primaryMuscle": "back",
-      "equipment": "smith_machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
-    },
-    {
-      "name": "smith shrug",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "back",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "shoulders",
-        "traps",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Shrug",
-      "primaryMuscle": "rear_delts",
-      "equipment": "smith_machine",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
-    },
-    {
       "name": "smith single leg split squat",
       "dataset": "exercises-dataset",
       "datasetCategory": "upper legs",
@@ -21870,28 +21035,7 @@
       "equipment": "smith_machine",
       "movementPattern": "squat",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement.",
-      "crossDatasetDuplicateOf": "leg single smith split squat"
-    },
-    {
-      "name": "smith squat",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "quadriceps",
-        "glutes",
-        "quadriceps",
-        "hamstrings",
-        "calves"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Squat",
-      "primaryMuscle": "hamstrings",
-      "equipment": "smith_machine",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
+      "crossDatasetDuplicateOf": "leg machine single smith split squat"
     },
     {
       "name": "smith standing back wrist curl",
@@ -21954,47 +21098,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
     },
     {
-      "name": "smith standing military press",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "shoulders",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "delts",
-        "triceps",
-        "upper back"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Standing Military Press",
-      "primaryMuscle": "back",
-      "equipment": "smith_machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
-    },
-    {
-      "name": "smith sumo squat",
-      "dataset": "exercises-dataset",
-      "datasetCategory": "upper legs",
-      "datasetEquipment": [
-        "smith machine"
-      ],
-      "datasetMuscle": [
-        "quadriceps",
-        "glutes",
-        "quadriceps",
-        "hamstrings",
-        "calves"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Sumo Squat",
-      "primaryMuscle": "hamstrings",
-      "equipment": "smith_machine",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
-    },
-    {
       "name": "smith toe raise",
       "dataset": "exercises-dataset",
       "datasetCategory": "lower legs",
@@ -22012,6 +21115,26 @@
       "primaryMuscle": "calves",
       "equipment": "smith_machine",
       "movementPattern": "isolation",
+      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
+    },
+    {
+      "name": "smith wide grip bench press",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "chest",
+      "datasetEquipment": [
+        "smith machine"
+      ],
+      "datasetMuscle": [
+        "triceps",
+        "pectorals",
+        "triceps",
+        "shoulders"
+      ],
+      "classification": "resistance_missing",
+      "proposedCanonicalName": "Smith Machine Smith Wide Grip Bench Press",
+      "primaryMuscle": "chest",
+      "equipment": "smith_machine",
+      "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named smith machine resistance movement."
     },
     {
@@ -22521,7 +21644,7 @@
         "calves"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Swimmer Kicks 2 Male",
+      "proposedCanonicalName": "Bodyweight Swimmer Kicks Male",
       "primaryMuscle": "hamstrings",
       "equipment": "bodyweight",
       "movementPattern": "isolation",
@@ -23232,7 +22355,7 @@
         "lower back"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Weighted Russian Twist 2",
+      "proposedCanonicalName": "Bodyweight Weighted Russian Twist",
       "primaryMuscle": "abs",
       "equipment": "bodyweight",
       "movementPattern": "core",
@@ -23583,6 +22706,203 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in exercises-dataset as a real, named bodyweight resistance movement."
     },
     {
+      "name": "barbell deadlift",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "hamstrings",
+        "glutes",
+        "hamstrings",
+        "lower back"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Conventional Deadlift"
+      ],
+      "note": "bare \"deadlift\" + barbell treated as this corpus's default deadlift name"
+    },
+    {
+      "name": "barbell jefferson squat",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "quadriceps",
+        "glutes",
+        "quadriceps",
+        "hamstrings",
+        "calves"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Jefferson Squat"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "barbell jump squat",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "quadriceps",
+        "glutes",
+        "quadriceps",
+        "hamstrings",
+        "calves"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Jump Squat"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "barbell lateral lunge",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "quadriceps",
+        "glutes",
+        "quadriceps",
+        "hamstrings",
+        "calves"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Lateral Lunge"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "barbell overhead squat",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "glutes",
+        "quads",
+        "glutes",
+        "hamstrings",
+        "calves",
+        "core"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Overhead Squat"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "barbell pendlay row",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "back",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "biceps",
+        "upper back",
+        "biceps",
+        "forearms"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Pendlay Row"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "barbell rack pull",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "hamstrings",
+        "glutes",
+        "hamstrings",
+        "lower back"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Rack Pull"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "barbell reverse curl",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper arms",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "forearms",
+        "biceps",
+        "forearms"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Reverse Curl"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "barbell sumo deadlift",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "hamstrings",
+        "glutes",
+        "hamstrings",
+        "quadriceps",
+        "lower back"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Deadlift (Sumo)"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "barbell zercher squat",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "quadriceps",
+        "glutes",
+        "quadriceps",
+        "hamstrings",
+        "calves",
+        "core"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Zercher Squat"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
       "name": "bodyweight standing row",
       "dataset": "exercises-dataset",
       "datasetCategory": "back",
@@ -23683,6 +23003,270 @@
       ],
       "cosmeticModifiersRemoved": [
         "floor"
+      ]
+    },
+    {
+      "name": "dumbbell arnold press",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "shoulders",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "triceps",
+        "delts",
+        "triceps",
+        "upper chest"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Arnold Press"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "dumbbell arnold press v. 2",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "shoulders",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "triceps",
+        "delts",
+        "triceps",
+        "upper chest"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Arnold Press"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "dumbbell concentration curl",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper arms",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "forearms",
+        "biceps",
+        "forearms"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Concentration Curl"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "dumbbell cuban press",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "shoulders",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "triceps",
+        "delts",
+        "triceps",
+        "upper back"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Cuban Press"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "dumbbell cuban press v. 2",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "shoulders",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "triceps",
+        "delts",
+        "triceps",
+        "upper back"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Cuban Press"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "dumbbell goblet squat",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper legs",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "glutes",
+        "quads",
+        "glutes",
+        "hamstrings",
+        "calves"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Goblet Squat"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "dumbbell hammer curl",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper arms",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "forearms",
+        "biceps",
+        "forearms"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Hammer Curl"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "dumbbell hammer curl v. 2",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper arms",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "forearms",
+        "biceps",
+        "forearms"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Hammer Curl"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "dumbbell incline shrug",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "back",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "shoulders",
+        "traps",
+        "shoulders"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Incline Shrug"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "dumbbell push press",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "shoulders",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "triceps",
+        "delts",
+        "triceps",
+        "core"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Push Press"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "dumbbell tate press",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper arms",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "shoulders",
+        "triceps",
+        "shoulders"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Tate Press"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "dumbbell zottman curl",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "upper arms",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "forearms",
+        "biceps",
+        "forearms"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Zottman Curl"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "lever seated crunch",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "waist",
+      "datasetEquipment": [
+        "leverage machine"
+      ],
+      "datasetMuscle": [
+        "obliques",
+        "abs",
+        "obliques"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Machine Crunch"
+      ],
+      "cosmeticModifiersRemoved": [
+        "seated"
+      ]
+    },
+    {
+      "name": "lever seated crunch v. 2",
+      "dataset": "exercises-dataset",
+      "datasetCategory": "waist",
+      "datasetEquipment": [
+        "leverage machine"
+      ],
+      "datasetMuscle": [
+        "obliques",
+        "abs",
+        "obliques",
+        "hip flexors"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Machine Crunch"
+      ],
+      "cosmeticModifiersRemoved": [
+        "seated"
       ]
     },
     {
@@ -24069,6 +23653,26 @@
       "classification": "alias_of",
       "alias_of": [
         "Decline Dumbbell Press"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.75
+    },
+    {
+      "name": "Decline Smith Press",
+      "dataset": "free-exercise-db",
+      "datasetCategory": "strength",
+      "datasetEquipment": [
+        "machine"
+      ],
+      "datasetMuscle": [
+        "chest",
+        "shoulders",
+        "triceps"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Decline Machine Press"
       ],
       "matchStage": "fuzzy",
       "matchOrigin": "corpus",
@@ -26775,7 +26379,7 @@
         "abdominals"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight 3 4 Sit Up",
+      "proposedCanonicalName": "Bodyweight Sit Up",
       "primaryMuscle": "abs",
       "equipment": "bodyweight",
       "movementPattern": "core",
@@ -27036,25 +26640,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named barbell resistance movement."
     },
     {
-      "name": "Arnold Dumbbell Press",
-      "dataset": "free-exercise-db",
-      "datasetCategory": "strength",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "shoulders",
-        "triceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Arnold Dumbbell Press",
-      "primaryMuscle": "rear_delts",
-      "equipment": "dumbbell",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "arnold dumbbell press"
-    },
-    {
       "name": "Around The Worlds",
       "dataset": "free-exercise-db",
       "datasetCategory": "strength",
@@ -27274,32 +26859,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named barbell resistance movement."
     },
     {
-      "name": "Barbell Deadlift",
-      "dataset": "free-exercise-db",
-      "datasetCategory": "strength",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "lower back",
-        "calves",
-        "forearms",
-        "glutes",
-        "hamstrings",
-        "lats",
-        "middle back",
-        "quadriceps",
-        "traps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Deadlift",
-      "primaryMuscle": "back",
-      "equipment": "barbell",
-      "movementPattern": "hinge",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named barbell resistance movement.",
-      "crossDatasetDuplicateOf": "barbell deadlift"
-    },
-    {
       "name": "Barbell Full Squat",
       "dataset": "free-exercise-db",
       "datasetCategory": "strength",
@@ -27439,27 +26998,6 @@
       "movementPattern": "squat",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named barbell resistance movement.",
       "crossDatasetDuplicateOf": "barbell side split squat"
-    },
-    {
-      "name": "Barbell Squat",
-      "dataset": "free-exercise-db",
-      "datasetCategory": "strength",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "quadriceps",
-        "calves",
-        "glutes",
-        "hamstrings",
-        "lower back"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Squat",
-      "primaryMuscle": "hamstrings",
-      "equipment": "barbell",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named barbell resistance movement."
     },
     {
       "name": "Barbell Squat To A Bench",
@@ -28553,7 +28091,7 @@
         "triceps"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Medicine Ball Chest Push From 3 Point Stance",
+      "proposedCanonicalName": "Medicine Ball Chest Push From Point Stance",
       "primaryMuscle": "chest",
       "equipment": "medicine_ball",
       "movementPattern": "isolation",
@@ -29070,25 +28608,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named bodyweight resistance movement."
     },
     {
-      "name": "Decline Smith Press",
-      "dataset": "free-exercise-db",
-      "datasetCategory": "strength",
-      "datasetEquipment": [
-        "machine"
-      ],
-      "datasetMuscle": [
-        "chest",
-        "shoulders",
-        "triceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Decline Smith Press",
-      "primaryMuscle": "chest",
-      "equipment": "smith_machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named smith machine resistance movement."
-    },
-    {
       "name": "Depth Jump Leap",
       "dataset": "free-exercise-db",
       "datasetCategory": "plyometrics",
@@ -29257,24 +28776,6 @@
       "equipment": "bodyweight",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named bodyweight resistance movement."
-    },
-    {
-      "name": "Drag Curl",
-      "dataset": "free-exercise-db",
-      "datasetCategory": "strength",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "biceps",
-        "forearms"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Drag Curl",
-      "primaryMuscle": "biceps",
-      "equipment": "barbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named barbell resistance movement."
     },
     {
       "name": "Drop Push",
@@ -29919,25 +29420,6 @@
       "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named bodyweight resistance movement.",
       "crossDatasetDuplicateOf": "bench flat in leg pull"
-    },
-    {
-      "name": "Floor Press",
-      "dataset": "free-exercise-db",
-      "datasetCategory": "powerlifting",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "triceps",
-        "chest",
-        "shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Floor Press",
-      "primaryMuscle": "chest",
-      "equipment": "barbell",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named barbell resistance movement."
     },
     {
       "name": "Floor Press with Chains",
@@ -31042,7 +30524,7 @@
         "shoulders"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Kettlebell Figure 8",
+      "proposedCanonicalName": "Kettlebell Figure",
       "primaryMuscle": "hamstrings",
       "equipment": "kettlebell",
       "movementPattern": "isolation",
@@ -31752,7 +31234,7 @@
         "quadriceps"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Linear 3 Part Start Technique",
+      "proposedCanonicalName": "Bodyweight Linear Part Start Technique",
       "primaryMuscle": "hamstrings",
       "equipment": "bodyweight",
       "movementPattern": "isolation",
@@ -33297,24 +32779,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named bodyweight resistance movement."
     },
     {
-      "name": "Preacher Curl",
-      "dataset": "free-exercise-db",
-      "datasetCategory": "strength",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "biceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Preacher Curl",
-      "primaryMuscle": "biceps",
-      "equipment": "barbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named barbell resistance movement.",
-      "crossDatasetDuplicateOf": "curl preacher"
-    },
-    {
       "name": "Press Sit-Up",
       "dataset": "free-exercise-db",
       "datasetCategory": "strength",
@@ -33672,25 +33136,6 @@
       "equipment": "barbell",
       "movementPattern": "squat",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named barbell resistance movement."
-    },
-    {
-      "name": "Reverse Barbell Curl",
-      "dataset": "free-exercise-db",
-      "datasetCategory": "strength",
-      "datasetEquipment": [
-        "barbell"
-      ],
-      "datasetMuscle": [
-        "biceps",
-        "forearms"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Reverse Barbell Curl",
-      "primaryMuscle": "biceps",
-      "equipment": "barbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named barbell resistance movement.",
-      "crossDatasetDuplicateOf": "barbell curl reverse"
     },
     {
       "name": "Reverse Flyes",
@@ -34796,7 +34241,7 @@
       "equipment": "barbell",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named barbell resistance movement.",
-      "crossDatasetDuplicateOf": "incline raise shoulder smith"
+      "crossDatasetDuplicateOf": "incline machine raise shoulder smith"
     },
     {
       "name": "Smith Machine Behind the Back Shrug",
@@ -34834,7 +34279,8 @@
       "primaryMuscle": "back",
       "equipment": "smith_machine",
       "movementPattern": "pull",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named smith machine resistance movement."
+      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named smith machine resistance movement.",
+      "crossDatasetDuplicateOf": "bent machine over row smith"
     },
     {
       "name": "Smith Machine Hang Power Clean",
@@ -34873,7 +34319,8 @@
       "primaryMuscle": "abs",
       "equipment": "smith_machine",
       "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named smith machine resistance movement."
+      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named smith machine resistance movement.",
+      "crossDatasetDuplicateOf": "hip machine raise smith"
     },
     {
       "name": "Smith Machine Leg Press",
@@ -34893,7 +34340,8 @@
       "primaryMuscle": "hamstrings",
       "equipment": "smith_machine",
       "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named smith machine resistance movement."
+      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named smith machine resistance movement.",
+      "crossDatasetDuplicateOf": "leg machine press smith"
     },
     {
       "name": "Smith Machine One-Arm Upright Row",
@@ -34933,7 +34381,7 @@
       "equipment": "smith_machine",
       "movementPattern": "squat",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named smith machine resistance movement.",
-      "crossDatasetDuplicateOf": "leg single smith split squat"
+      "crossDatasetDuplicateOf": "leg machine single smith split squat"
     },
     {
       "name": "Snatch Balance",
@@ -35191,26 +34639,6 @@
       "equipment": "barbell",
       "movementPattern": "power",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named barbell resistance movement."
-    },
-    {
-      "name": "Split Squat with Dumbbells",
-      "dataset": "free-exercise-db",
-      "datasetCategory": "strength",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "quadriceps",
-        "glutes",
-        "hamstrings"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Split Squat With Dumbbells",
-      "primaryMuscle": "hamstrings",
-      "equipment": "dumbbell",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "dumbbell split squat"
     },
     {
       "name": "Squat Jerk",
@@ -36134,24 +35562,6 @@
       "crossDatasetDuplicateOf": "flip tire"
     },
     {
-      "name": "Tricep Dumbbell Kickback",
-      "dataset": "free-exercise-db",
-      "datasetCategory": "strength",
-      "datasetEquipment": [
-        "dumbbell"
-      ],
-      "datasetMuscle": [
-        "triceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Tricep Dumbbell Kickback",
-      "primaryMuscle": "triceps",
-      "equipment": "dumbbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "dumbbell kickback tricep"
-    },
-    {
       "name": "Triceps Overhead Extension with Rope",
       "dataset": "free-exercise-db",
       "datasetCategory": "strength",
@@ -36640,6 +36050,67 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in free-exercise-db as a real, named bodyweight resistance movement."
     },
     {
+      "name": "Arnold Dumbbell Press",
+      "dataset": "free-exercise-db",
+      "datasetCategory": "strength",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "shoulders",
+        "triceps"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Arnold Press"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Barbell Deadlift",
+      "dataset": "free-exercise-db",
+      "datasetCategory": "strength",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "lower back",
+        "calves",
+        "forearms",
+        "glutes",
+        "hamstrings",
+        "lats",
+        "middle back",
+        "quadriceps",
+        "traps"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Conventional Deadlift"
+      ],
+      "note": "bare \"deadlift\" + barbell treated as this corpus's default deadlift name"
+    },
+    {
+      "name": "Barbell Squat",
+      "dataset": "free-exercise-db",
+      "datasetCategory": "strength",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "quadriceps",
+        "calves",
+        "glutes",
+        "hamstrings",
+        "lower back"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Barbell Back Squat"
+      ],
+      "note": "bare \"squat\" + barbell treated as this corpus's default squat name"
+    },
+    {
       "name": "Cable Seated Crunch",
       "dataset": "free-exercise-db",
       "datasetCategory": "strength",
@@ -36656,6 +36127,74 @@
       "cosmeticModifiersRemoved": [
         "seated"
       ]
+    },
+    {
+      "name": "Drag Curl",
+      "dataset": "free-exercise-db",
+      "datasetCategory": "strength",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "biceps",
+        "forearms"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Barbell Drag Curl"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Floor Press",
+      "dataset": "free-exercise-db",
+      "datasetCategory": "powerlifting",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "triceps",
+        "chest",
+        "shoulders"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Floor Press (Barbell)"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Preacher Curl",
+      "dataset": "free-exercise-db",
+      "datasetCategory": "strength",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "biceps"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Preacher Curl (Barbell)"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Reverse Barbell Curl",
+      "dataset": "free-exercise-db",
+      "datasetCategory": "strength",
+      "datasetEquipment": [
+        "barbell"
+      ],
+      "datasetMuscle": [
+        "biceps",
+        "forearms"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Reverse Curl"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
     },
     {
       "name": "Seated Good Mornings",
@@ -36675,6 +36214,24 @@
       "cosmeticModifiersRemoved": [
         "seated"
       ]
+    },
+    {
+      "name": "Split Squat with Dumbbells",
+      "dataset": "free-exercise-db",
+      "datasetCategory": "strength",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "quadriceps",
+        "glutes",
+        "hamstrings"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Split Squat"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
     },
     {
       "name": "Standing Bradford Press",
@@ -36713,6 +36270,22 @@
       "cosmeticModifiersRemoved": [
         "standing"
       ]
+    },
+    {
+      "name": "Tricep Dumbbell Kickback",
+      "dataset": "free-exercise-db",
+      "datasetCategory": "strength",
+      "datasetEquipment": [
+        "dumbbell"
+      ],
+      "datasetMuscle": [
+        "triceps"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Tricep Kickback"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
     },
     {
       "name": "Alternating High Cable Row",
@@ -37537,6 +37110,24 @@
       "jaccardScore": 0.8
     },
     {
+      "name": "Smith Press",
+      "dataset": "wger",
+      "datasetCategory": "Shoulders",
+      "datasetEquipment": [
+        "Incline bench"
+      ],
+      "datasetMuscle": [
+        "Shoulders"
+      ],
+      "classification": "alias_of",
+      "alias_of": [
+        "Incline Smith Machine Press"
+      ],
+      "matchStage": "fuzzy",
+      "matchOrigin": "corpus",
+      "jaccardScore": 0.75
+    },
+    {
       "name": "Standing Calf Raises",
       "dataset": "wger",
       "datasetCategory": "Calves",
@@ -37704,20 +37295,6 @@
       "reason": "single generic movement word with no implement/qualifier; not a distinct row"
     },
     {
-      "name": "Deadlifts",
-      "dataset": "wger",
-      "datasetCategory": "Back",
-      "datasetEquipment": [
-        "Barbell"
-      ],
-      "datasetMuscle": [
-        "Lats",
-        "Glutes"
-      ],
-      "classification": "junk",
-      "reason": "single generic movement word with no implement/qualifier; not a distinct row"
-    },
-    {
       "name": "Dips",
       "dataset": "wger",
       "datasetCategory": "Chest",
@@ -37772,20 +37349,6 @@
       ],
       "datasetMuscle": [
         "Shoulders"
-      ],
-      "classification": "junk",
-      "reason": "single generic movement word with no implement/qualifier; not a distinct row"
-    },
-    {
-      "name": "Squats",
-      "dataset": "wger",
-      "datasetCategory": "Legs",
-      "datasetEquipment": [
-        "Barbell"
-      ],
-      "datasetMuscle": [
-        "Quads",
-        "Glutes"
       ],
       "classification": "junk",
       "reason": "single generic movement word with no implement/qualifier; not a distinct row"
@@ -39145,7 +38708,7 @@
         "Quads"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight 1 Leg Box Squat",
+      "proposedCanonicalName": "Bodyweight Leg Box Squat",
       "primaryMuscle": "hamstrings",
       "equipment": "bodyweight",
       "movementPattern": "squat",
@@ -39162,7 +38725,7 @@
         "Lats"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Cable 1 Arm Half Kneeling Lat Pulldown",
+      "proposedCanonicalName": "Cable Arm Half Kneeling Lat Pulldown",
       "primaryMuscle": "back",
       "equipment": "cable",
       "movementPattern": "pull",
@@ -39177,7 +38740,7 @@
       ],
       "datasetMuscle": [],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight 1 2 Kneeling Thoracic Rotation",
+      "proposedCanonicalName": "Bodyweight Kneeling Thoracic Rotation",
       "primaryMuscle": "abs",
       "equipment": "bodyweight",
       "movementPattern": "core",
@@ -39197,7 +38760,7 @@
         "Abs"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "2 Handed Kettlebell Swing",
+      "proposedCanonicalName": "Handed Kettlebell Swing",
       "primaryMuscle": "hamstrings",
       "equipment": "kettlebell",
       "movementPattern": "hinge",
@@ -39214,7 +38777,7 @@
         "Abs"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight 3008 Abdominal Crunch",
+      "proposedCanonicalName": "Bodyweight Abdominal Crunch",
       "primaryMuscle": null,
       "equipment": "bodyweight",
       "movementPattern": "core",
@@ -39606,12 +39169,12 @@
       ],
       "datasetMuscle": [],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Back Lever",
+      "proposedCanonicalName": "Bodyweight Back",
       "primaryMuscle": "back",
       "equipment": "bodyweight",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named bodyweight resistance movement.",
-      "crossDatasetDuplicateOf": "back lever"
+      "crossDatasetDuplicateOf": "back machine"
     },
     {
       "name": "Back bridge",
@@ -39916,7 +39479,7 @@
         "Trapezius"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Bear Walk 2",
+      "proposedCanonicalName": "Bodyweight Bear Walk",
       "primaryMuscle": "chest",
       "equipment": "bodyweight",
       "movementPattern": "carry",
@@ -39967,26 +39530,6 @@
       "equipment": "bodyweight",
       "movementPattern": "push",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named bodyweight resistance movement."
-    },
-    {
-      "name": "Bench Press",
-      "dataset": "wger",
-      "datasetCategory": "Chest",
-      "datasetEquipment": [
-        "Barbell",
-        "Bench"
-      ],
-      "datasetMuscle": [
-        "Chest",
-        "Shoulders",
-        "Triceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Bench Press",
-      "primaryMuscle": "chest",
-      "equipment": "barbell",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named barbell resistance movement."
     },
     {
       "name": "Bench Press Isometric",
@@ -41658,59 +41201,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement."
     },
     {
-      "name": "Dumbbell Bradford press",
-      "dataset": "wger",
-      "datasetCategory": "Shoulders",
-      "datasetEquipment": [
-        "Dumbbell"
-      ],
-      "datasetMuscle": [
-        "Shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Bradford Press",
-      "primaryMuscle": "rear_delts",
-      "equipment": "dumbbell",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement."
-    },
-    {
-      "name": "Dumbbell Cheat Curl",
-      "dataset": "wger",
-      "datasetCategory": "Arms",
-      "datasetEquipment": [
-        "Dumbbell"
-      ],
-      "datasetMuscle": [
-        "Biceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Cheat Curl",
-      "primaryMuscle": "biceps",
-      "equipment": "dumbbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement."
-    },
-    {
-      "name": "Dumbbell Concentration Curl",
-      "dataset": "wger",
-      "datasetCategory": "Arms",
-      "datasetEquipment": [
-        "Dumbbell"
-      ],
-      "datasetMuscle": [
-        "Brachialis",
-        "Biceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Concentration Curl",
-      "primaryMuscle": "biceps",
-      "equipment": "dumbbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "concentration curl dumbbell"
-    },
-    {
       "name": "Dumbbell Crunches",
       "dataset": "wger",
       "datasetCategory": "Abs",
@@ -41767,24 +41257,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement."
     },
     {
-      "name": "Dumbbell Goblet Squat",
-      "dataset": "wger",
-      "datasetCategory": "Legs",
-      "datasetEquipment": [
-        "Dumbbell"
-      ],
-      "datasetMuscle": [
-        "Quads"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Goblet Squat",
-      "primaryMuscle": "quads",
-      "equipment": "dumbbell",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "dumbbell goblet squat"
-    },
-    {
       "name": "Dumbbell Hang Power Cleans",
       "dataset": "wger",
       "datasetCategory": "Back",
@@ -41819,43 +41291,6 @@
       ],
       "classification": "resistance_missing",
       "proposedCanonicalName": "Dumbbell Hex Press",
-      "primaryMuscle": "chest",
-      "equipment": "dumbbell",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement."
-    },
-    {
-      "name": "Dumbbell Lunges Walking",
-      "dataset": "wger",
-      "datasetCategory": "Legs",
-      "datasetEquipment": [
-        "Dumbbell"
-      ],
-      "datasetMuscle": [
-        "Quads",
-        "Glutes"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Lunges Walking",
-      "primaryMuscle": "quads",
-      "equipment": "dumbbell",
-      "movementPattern": "carry",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement."
-    },
-    {
-      "name": "Dumbbell Push-Up",
-      "dataset": "wger",
-      "datasetCategory": "Chest",
-      "datasetEquipment": [
-        "Dumbbell"
-      ],
-      "datasetMuscle": [
-        "Chest",
-        "Shoulders",
-        "Triceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Push Up",
       "primaryMuscle": "chest",
       "equipment": "dumbbell",
       "movementPattern": "push",
@@ -41935,27 +41370,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement."
     },
     {
-      "name": "Dumbbell Split Squat",
-      "dataset": "wger",
-      "datasetCategory": "Legs",
-      "datasetEquipment": [
-        "Dumbbell"
-      ],
-      "datasetMuscle": [
-        "Glutes",
-        "Quads",
-        "Hamstrings",
-        "Calves"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Split Squat",
-      "primaryMuscle": "hamstrings",
-      "equipment": "dumbbell",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "dumbbell split squat"
-    },
-    {
       "name": "Dumbbell Thruster",
       "dataset": "wger",
       "datasetCategory": "Legs",
@@ -42011,24 +41425,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement."
     },
     {
-      "name": "Dumbbell donkey kick",
-      "dataset": "wger",
-      "datasetCategory": "Legs",
-      "datasetEquipment": [
-        "Dumbbell"
-      ],
-      "datasetMuscle": [
-        "Hamstrings",
-        "Glutes"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Donkey Kick",
-      "primaryMuscle": "hamstrings",
-      "equipment": "dumbbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement."
-    },
-    {
       "name": "Dumbbell farmer's carry",
       "dataset": "wger",
       "datasetCategory": "Legs",
@@ -42060,26 +41456,6 @@
       "primaryMuscle": "rear_delts",
       "equipment": "dumbbell",
       "movementPattern": "pull",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement."
-    },
-    {
-      "name": "Dumbbell sumo deadlift",
-      "dataset": "wger",
-      "datasetCategory": "Legs",
-      "datasetEquipment": [
-        "Dumbbell"
-      ],
-      "datasetMuscle": [
-        "Hamstrings",
-        "Glutes",
-        "Quads",
-        "Trapezius"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Sumo Deadlift",
-      "primaryMuscle": "hamstrings",
-      "equipment": "dumbbell",
-      "movementPattern": "hinge",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement."
     },
     {
@@ -42360,7 +41736,7 @@
       "datasetEquipment": [],
       "datasetMuscle": [],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Fingerboard 20 Mm Edge",
+      "proposedCanonicalName": "Bodyweight Fingerboard Mm Edge",
       "primaryMuscle": null,
       "equipment": "bodyweight",
       "movementPattern": "isolation",
@@ -42573,12 +41949,12 @@
         "Abs"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Front Lever",
+      "proposedCanonicalName": "Bodyweight Front",
       "primaryMuscle": "back",
       "equipment": "bodyweight",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named bodyweight resistance movement.",
-      "crossDatasetDuplicateOf": "front lever"
+      "crossDatasetDuplicateOf": "front machine"
     },
     {
       "name": "Front Plank",
@@ -42622,42 +41998,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named barbell resistance movement."
     },
     {
-      "name": "Front Raises",
-      "dataset": "wger",
-      "datasetCategory": "Shoulders",
-      "datasetEquipment": [
-        "Barbell",
-        "Dumbbell"
-      ],
-      "datasetMuscle": [
-        "Shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Dumbbell Front Raises",
-      "primaryMuscle": "rear_delts",
-      "equipment": "dumbbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement."
-    },
-    {
-      "name": "Front Squats",
-      "dataset": "wger",
-      "datasetCategory": "Legs",
-      "datasetEquipment": [
-        "Barbell"
-      ],
-      "datasetMuscle": [
-        "Glutes",
-        "Abs"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Front Squats",
-      "primaryMuscle": "glutes",
-      "equipment": "barbell",
-      "movementPattern": "squat",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named barbell resistance movement."
-    },
-    {
       "name": "Front Wood Chop",
       "dataset": "wger",
       "datasetCategory": "Back",
@@ -42684,7 +42024,7 @@
         "Shoulders"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Front Lever Pull Up",
+      "proposedCanonicalName": "Bodyweight Front Pull Up",
       "primaryMuscle": "back",
       "equipment": "bodyweight",
       "movementPattern": "pull",
@@ -43161,24 +42501,6 @@
       "equipment": "bodyweight",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named bodyweight resistance movement."
-    },
-    {
-      "name": "Hip Thrust",
-      "dataset": "wger",
-      "datasetCategory": "Legs",
-      "datasetEquipment": [
-        "Barbell",
-        "Bench"
-      ],
-      "datasetMuscle": [
-        "Glutes"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Hip Thrust",
-      "primaryMuscle": "glutes",
-      "equipment": "barbell",
-      "movementPattern": "hinge",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named barbell resistance movement."
     },
     {
       "name": "Hip hinge",
@@ -44296,7 +43618,7 @@
       "datasetEquipment": [],
       "datasetMuscle": [],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Limber 11",
+      "proposedCanonicalName": "Bodyweight Limber",
       "primaryMuscle": null,
       "equipment": "bodyweight",
       "movementPattern": "isolation",
@@ -44906,23 +44228,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named cable resistance movement."
     },
     {
-      "name": "Overhead Press",
-      "dataset": "wger",
-      "datasetCategory": "Chest",
-      "datasetEquipment": [
-        "Barbell"
-      ],
-      "datasetMuscle": [
-        "Shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Barbell Overhead Press",
-      "primaryMuscle": "chest",
-      "equipment": "barbell",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named barbell resistance movement."
-    },
-    {
       "name": "Overhead Press Isometric",
       "dataset": "wger",
       "datasetCategory": "Shoulders",
@@ -45365,8 +44670,7 @@
       "primaryMuscle": null,
       "equipment": "bodyweight",
       "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named bodyweight resistance movement.",
-      "crossDatasetDuplicateOf": "curl preacher"
+      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named bodyweight resistance movement."
     },
     {
       "name": "Prisoner Squat",
@@ -47276,23 +46580,6 @@
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named bodyweight resistance movement."
     },
     {
-      "name": "Smith Press",
-      "dataset": "wger",
-      "datasetCategory": "Shoulders",
-      "datasetEquipment": [
-        "Incline bench"
-      ],
-      "datasetMuscle": [
-        "Shoulders"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Smith Machine Smith Press",
-      "primaryMuscle": "rear_delts",
-      "equipment": "smith_machine",
-      "movementPattern": "push",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named smith machine resistance movement."
-    },
-    {
       "name": "Snap Down",
       "dataset": "wger",
       "datasetCategory": "Legs",
@@ -48038,29 +47325,11 @@
         "Trapezius"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Trap 3 Raise",
+      "proposedCanonicalName": "Bodyweight Trap Raise",
       "primaryMuscle": "traps",
       "equipment": "bodyweight",
       "movementPattern": "isolation",
       "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named bodyweight resistance movement."
-    },
-    {
-      "name": "Tricep Dumbbell Kickback",
-      "dataset": "wger",
-      "datasetCategory": "Arms",
-      "datasetEquipment": [
-        "Dumbbell"
-      ],
-      "datasetMuscle": [
-        "Triceps"
-      ],
-      "classification": "resistance_missing",
-      "proposedCanonicalName": "Tricep Dumbbell Kickback",
-      "primaryMuscle": "triceps",
-      "equipment": "dumbbell",
-      "movementPattern": "isolation",
-      "why_distinct": "Not found in corpus or candidates by exact, fuzzy (Jaccard>=0.75) or curated-synonym match against 881 known names and 209 known aliases; appears in wger as a real, named dumbbell resistance movement.",
-      "crossDatasetDuplicateOf": "dumbbell kickback tricep"
     },
     {
       "name": "Tricep Pull-Down",
@@ -48799,7 +48068,7 @@
         "Triceps"
       ],
       "classification": "resistance_missing",
-      "proposedCanonicalName": "Bodyweight Elbow Lever",
+      "proposedCanonicalName": "Bodyweight Elbow",
       "primaryMuscle": "rear_delts",
       "equipment": "bodyweight",
       "movementPattern": "isolation",
@@ -48972,6 +48241,107 @@
       ]
     },
     {
+      "name": "Bench Press",
+      "dataset": "wger",
+      "datasetCategory": "Chest",
+      "datasetEquipment": [
+        "Barbell",
+        "Bench"
+      ],
+      "datasetMuscle": [
+        "Chest",
+        "Shoulders",
+        "Triceps"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Barbell Bench Press"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Deadlifts",
+      "dataset": "wger",
+      "datasetCategory": "Back",
+      "datasetEquipment": [
+        "Barbell"
+      ],
+      "datasetMuscle": [
+        "Lats",
+        "Glutes"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Conventional Deadlift"
+      ],
+      "note": "bare \"deadlift\" + barbell treated as this corpus's default deadlift name"
+    },
+    {
+      "name": "Dumbbell Bradford press",
+      "dataset": "wger",
+      "datasetCategory": "Shoulders",
+      "datasetEquipment": [
+        "Dumbbell"
+      ],
+      "datasetMuscle": [
+        "Shoulders"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Bradford Press"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Dumbbell Cheat Curl",
+      "dataset": "wger",
+      "datasetCategory": "Arms",
+      "datasetEquipment": [
+        "Dumbbell"
+      ],
+      "datasetMuscle": [
+        "Biceps"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Cheat Curl"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Dumbbell Concentration Curl",
+      "dataset": "wger",
+      "datasetCategory": "Arms",
+      "datasetEquipment": [
+        "Dumbbell"
+      ],
+      "datasetMuscle": [
+        "Brachialis",
+        "Biceps"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Concentration Curl"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Dumbbell Goblet Squat",
+      "dataset": "wger",
+      "datasetCategory": "Legs",
+      "datasetEquipment": [
+        "Dumbbell"
+      ],
+      "datasetMuscle": [
+        "Quads"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Goblet Squat"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
       "name": "Dumbbell Lunges Standing",
       "dataset": "wger",
       "datasetCategory": "Legs",
@@ -48991,6 +48361,147 @@
       ]
     },
     {
+      "name": "Dumbbell Lunges Walking",
+      "dataset": "wger",
+      "datasetCategory": "Legs",
+      "datasetEquipment": [
+        "Dumbbell"
+      ],
+      "datasetMuscle": [
+        "Quads",
+        "Glutes"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Walking Lunge"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Dumbbell Push-Up",
+      "dataset": "wger",
+      "datasetCategory": "Chest",
+      "datasetEquipment": [
+        "Dumbbell"
+      ],
+      "datasetMuscle": [
+        "Chest",
+        "Shoulders",
+        "Triceps"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Push-Up"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Dumbbell Split Squat",
+      "dataset": "wger",
+      "datasetCategory": "Legs",
+      "datasetEquipment": [
+        "Dumbbell"
+      ],
+      "datasetMuscle": [
+        "Glutes",
+        "Quads",
+        "Hamstrings",
+        "Calves"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Split Squat"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Dumbbell donkey kick",
+      "dataset": "wger",
+      "datasetCategory": "Legs",
+      "datasetEquipment": [
+        "Dumbbell"
+      ],
+      "datasetMuscle": [
+        "Hamstrings",
+        "Glutes"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Donkey Kick"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Dumbbell sumo deadlift",
+      "dataset": "wger",
+      "datasetCategory": "Legs",
+      "datasetEquipment": [
+        "Dumbbell"
+      ],
+      "datasetMuscle": [
+        "Hamstrings",
+        "Glutes",
+        "Quads",
+        "Trapezius"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Deadlift (Sumo)"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Front Raises",
+      "dataset": "wger",
+      "datasetCategory": "Shoulders",
+      "datasetEquipment": [
+        "Barbell",
+        "Dumbbell"
+      ],
+      "datasetMuscle": [
+        "Shoulders"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Barbell Front Raise"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Front Squats",
+      "dataset": "wger",
+      "datasetCategory": "Legs",
+      "datasetEquipment": [
+        "Barbell"
+      ],
+      "datasetMuscle": [
+        "Glutes",
+        "Abs"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Barbell Front Squat"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Hip Thrust",
+      "dataset": "wger",
+      "datasetCategory": "Legs",
+      "datasetEquipment": [
+        "Barbell",
+        "Bench"
+      ],
+      "datasetMuscle": [
+        "Glutes"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Barbell Hip Thrust"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
       "name": "Leg Raises, Standing",
       "dataset": "wger",
       "datasetCategory": "Abs",
@@ -49006,6 +48517,55 @@
       "cosmeticModifiersRemoved": [
         "standing"
       ]
+    },
+    {
+      "name": "Overhead Press",
+      "dataset": "wger",
+      "datasetCategory": "Chest",
+      "datasetEquipment": [
+        "Barbell"
+      ],
+      "datasetMuscle": [
+        "Shoulders"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Barbell Overhead Press"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
+    },
+    {
+      "name": "Squats",
+      "dataset": "wger",
+      "datasetCategory": "Legs",
+      "datasetEquipment": [
+        "Barbell"
+      ],
+      "datasetMuscle": [
+        "Quads",
+        "Glutes"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Barbell Back Squat"
+      ],
+      "note": "bare \"squat\" + barbell treated as this corpus's default squat name"
+    },
+    {
+      "name": "Tricep Dumbbell Kickback",
+      "dataset": "wger",
+      "datasetCategory": "Arms",
+      "datasetEquipment": [
+        "Dumbbell"
+      ],
+      "datasetMuscle": [
+        "Triceps"
+      ],
+      "classification": "variant_not_distinct",
+      "alias_of": [
+        "Tricep Kickback"
+      ],
+      "note": "matched after treating the stated implement as this corpus's implicit default equipment word for this movement"
     }
   ]
 }

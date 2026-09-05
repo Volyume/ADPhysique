@@ -41,6 +41,10 @@ const TOKEN_EXPANSIONS = {
   kb: 'kettlebell',
   ez: 'ez bar',
   ghr: 'glute ham raise',
+  // exercises-dataset's own equipment vocabulary calls every selectorised
+  // machine movement "Lever ..." (their word for "leverage machine"); the
+  // corpus calls the same equipment "Machine".
+  lever: 'machine',
 };
 
 // Phrase-level expansions, applied after tokenisation on the joined,
@@ -51,6 +55,9 @@ const PHRASE_EXPANSIONS = [
   [/\bsldl\b/g, 'romanian deadlift'],
   [/\bv\.?\s*\d+\b/g, ''], // dataset version tags e.g. "v. 2", "v2"
   [/\(male\)|\(female\)|\bmale\b|\bfemale\b/g, ''],
+  [/\b(back|side|front)\s+pov\b/g, ''], // camera-angle duplicates, not real variants
+  [/\bpov\b/g, ''],
+  [/\bsmith\b(?!\s*machine)/g, 'smith machine'], // "Smith Press" etc, corpus always says "Smith Machine"
 ];
 
 // Curated synonym table: real alternate names for movements that already
@@ -68,7 +75,6 @@ const SYNONYM_TABLE = [
   [/\bfarmers walk\b/g, 'farmer carry'],
   [/\bfarmer\s?'?s? walk\b/g, 'farmer carry'],
   [/\bwaiters walk\b/g, 'waiter carry'],
-  [/\breverse hyperextension\b/g, 'reverse hyper'],
   [/\bhyperextension\b/g, 'back extension'],
   [/\btricep\b/g, 'triceps'],
   [/\bbicep\b/g, 'biceps'],
@@ -273,7 +279,7 @@ function findCosmeticVariant(tokens) {
 /**
  * @returns {{stage:string, target:string, origin:string, score?:number, removed?:string[], viaAlias?:string}|null}
  */
-function matchName(rawName) {
+function matchName(rawName, equipmentValues) {
   const { tokens, key } = normalizeForMatch(rawName);
 
   const exact = findExact(key);
@@ -294,6 +300,47 @@ function matchName(rawName) {
   const cosmetic = findCosmeticVariant(tokens);
   if (cosmetic) return { stage: 'cosmetic-variant', target: cosmetic.match.name, origin: cosmetic.match.origin, removed: cosmetic.removed };
 
+  const barbellDefault = findBarbellDefaultVariant(tokens, equipmentValues);
+  if (barbellDefault) return { stage: 'barbell-default', target: barbellDefault.name, origin: barbellDefault.origin, note: barbellDefault.note };
+
+  return null;
+}
+
+// Barbell is this corpus's silent default equipment for several bare-named
+// lifts (e.g. "Reverse Curl" carries no equipment word but is the barbell
+// version; "Overhead Press" appears in datasets with no equipment word in
+// the text but equipment:"barbell" in metadata). Two named lifts additionally
+// use a wholly different base word for the plain barbell version ("Squat" ->
+// "Back Squat", "Deadlift" -> "Conventional Deadlift"). Tried once, at
+// reduced confidence: always reported as `variant_not_distinct` with a note
+// asking the lead to confirm which name is the implicit default, never
+// silently folded in as a full alias.
+const BARBELL_DEFAULT_BASE_WORD = { squat: 'Barbell Back Squat', deadlift: 'Conventional Deadlift' };
+
+function findBarbellDefaultVariant(tokens, equipmentValues) {
+  const hasBarbell = tokens.includes('barbell');
+  const eqSaysBarbell = (equipmentValues || []).some((e) => /barbell/i.test(e || ''));
+  const withoutBarbell = tokens.filter((t) => t !== 'barbell');
+
+  if ((hasBarbell || eqSaysBarbell) && withoutBarbell.length === 1 && BARBELL_DEFAULT_BASE_WORD[withoutBarbell[0]]) {
+    return { name: BARBELL_DEFAULT_BASE_WORD[withoutBarbell[0]], origin: 'corpus', note: `bare "${withoutBarbell[0]}" + barbell treated as this corpus's default ${withoutBarbell[0]} name` };
+  }
+
+  const attempts = [];
+  if (hasBarbell) attempts.push(withoutBarbell);
+  if (!hasBarbell && eqSaysBarbell) attempts.push([...tokens, 'barbell']);
+
+  // A handful of movements are only ever performed one way (goblet grip,
+  // neutral-grip hammer curl) so the corpus names them bare with the
+  // implement implied; a dataset stating the implement explicitly should
+  // not read as a new row. Exact-match only, never added on top.
+  const hasDumbbell = tokens.includes('dumbbell');
+  if (hasDumbbell) attempts.push(tokens.filter((t) => t !== 'dumbbell'));
+
+  for (const t of attempts) {
+    const hit = findExact(sortedKey(t));
+    if (hit) return { name: hit.name, origin: hit.origin, note: 'matched after treating the stated implement as this corpus\'s implicit default equipment word for this movement' };
+  }
   return null;
 }
 
@@ -433,7 +480,7 @@ function titleCase(s) {
 function proposeCanonicalName(rawName, equipment) {
   const cleaned = stripPunctuation(rawName)
     .split(' ')
-    .filter((w) => !['v', 'version'].includes(w))
+    .filter((w) => !['v', 'version', 'lever'].includes(w) && !/^\d+$/.test(w))
     .join(' ');
   const implementWord = {
     barbell: 'Barbell', dumbbell: 'Dumbbell', cable: 'Cable', machine: 'Machine',
@@ -502,7 +549,7 @@ for (const ds of datasets) {
     const equipment = ds.getEquipment(row);
     const muscles = ds.getMuscles(row);
 
-    const match = matchName(name);
+    const match = matchName(name, equipment);
     if (match && (match.stage === 'exact' || match.stage === 'synonym')) {
       if (match.stage === 'synonym') {
         counts.alias_of += 1;
@@ -551,6 +598,21 @@ for (const ds of datasets) {
         classification: 'variant_not_distinct',
         alias_of: [match.target],
         cosmeticModifiersRemoved: match.removed,
+      });
+      continue;
+    }
+
+    if (match && match.stage === 'barbell-default') {
+      counts.variant_not_distinct += 1;
+      gaps.push({
+        name,
+        dataset: ds.key,
+        datasetCategory: category || null,
+        datasetEquipment: equipment.filter(Boolean),
+        datasetMuscle: muscles.filter(Boolean),
+        classification: 'variant_not_distinct',
+        alias_of: [match.target],
+        note: match.note,
       });
       continue;
     }
@@ -651,6 +713,34 @@ for (const [key, group] of seenResistanceKeys) {
 }
 
 const distinctResistanceMissing = seenResistanceKeys.size;
+
+// Reporting-only metric (does not change any row's classification): how much
+// of each dataset's resistance_missing pile collapses onto the same "core"
+// movement once common stance/grip/angle/assistance descriptors are removed.
+// This is the naming-verbosity inflation the market benchmark note asks for.
+const LOOSE_MODIFIERS = new Set([
+  'standing', 'seated', 'lying', 'kneeling', 'prone', 'supine', 'half',
+  'one', 'single', 'arm', 'leg', 'alternate', 'alternating', 'behind',
+  'neck', 'wide', 'close', 'narrow', 'grip', 'decline', 'incline', 'flat',
+  'reverse', 'parallel', 'neutral', 'palm', 'palms', 'up', 'down',
+  'assisted', 'unassisted', 'weighted', 'cross', 'body', 'bent', 'over',
+  'rope', 'bar', 'to', 'the', 'side', 'stance', 'support',
+]);
+
+function looseCoreKey(name) {
+  const tokens = normalizeForMatch(name).tokens.filter((t) => !LOOSE_MODIFIERS.has(t));
+  return sortedKey(tokens.length ? tokens : normalizeForMatch(name).tokens);
+}
+
+const looseCoreByDataset = {};
+for (const g of gaps) {
+  if (g.classification !== 'resistance_missing') continue;
+  looseCoreByDataset[g.dataset] = looseCoreByDataset[g.dataset] || new Set();
+  looseCoreByDataset[g.dataset].add(looseCoreKey(g.name));
+}
+for (const dsKey of Object.keys(summary)) {
+  summary[dsKey].resistance_missing_looseCoreDistinct = looseCoreByDataset[dsKey] ? looseCoreByDataset[dsKey].size : 0;
+}
 
 const output = {
   generatedAt: '2026-09-05',
