@@ -100,7 +100,9 @@ describe('F-16 REVISED point 3: a goal change never regenerates a style plan', (
   });
 
   test('it routes to the Plan Library filtered to the same style', () => {
-    expect(source).toMatch(/navigation\.navigate\('PlanLibrary', \{ initialCollection: styleLock\.collection \}\)/);
+    // Final pass S3: ProGoalSetup sits in ProfileStack and PlanLibrary in
+    // PlansStack, so a plain navigate was a dead route. The jump crosses tabs.
+    expect(source).toMatch(/navigateCrossTab\(navigation, 'PlansTab', 'PlanLibrary', \{ initialCollection: styleLock\.collection \}\)/);
   });
 
   test('a locked save shows no failure toast: this is the intended outcome', () => {

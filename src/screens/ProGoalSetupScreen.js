@@ -7,6 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
+// Final pass S3 (certification 2026-09-05): this screen lives in the Coach
+// tab's stack and PlanLibrary in the Train tab's, so the jump must cross tabs.
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { useShallow } from 'zustand/react/shallow';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -732,7 +735,7 @@ export default function ProGoalSetupScreen({ navigation }) {
             </Text>
             <Button
               title={styleLockBrowseLabel(styleLock.label)}
-              onPress={() => navigation.navigate('PlanLibrary', { initialCollection: styleLock.collection })}
+              onPress={() => navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary', { initialCollection: styleLock.collection })}
               accessibilityLabel={styleLockBrowseLabel(styleLock.label)}
               variant="secondary"
             />

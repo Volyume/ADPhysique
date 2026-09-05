@@ -96,8 +96,12 @@ function clamp(x, lo, hi) {
 // increment into a prescribed load.
 //
 // Standard cast/competition ladder, in kilograms.
+// Lead ruling (final pass, 2026-09-05): 2 kg steps stop at 12 kg. Above
+// that the ladder moves in the 4 kg steps a cast-iron set is sold in, so
+// "the next bell" is one most people actually own (16 -> 20 -> 24). A
+// person with competition 2 kg steps types the bell they have.
 export const KETTLEBELL_LADDER_KG = Object.freeze([
-  4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 44, 48,
+  4, 6, 8, 10, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48,
 ]);
 
 /**

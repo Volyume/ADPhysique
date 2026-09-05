@@ -33,7 +33,10 @@ const METADATA_BACKFILL_KEY = '@volyume_exercise_metadata_backfilled_v1';
 // aliases column is written by corpusEntryToSeedRow, so without this
 // bump an install that already ran v4 would keep the broken alias data
 // for good and the search fix would only reach fresh installs.
-const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v5';
+// v6 (final pass S2, 2026-09-05): every delt-primary press now derives the
+// overhead position, so a "no overhead" rule covers Seated Dumbbell Press,
+// Z-Press, Log Press and the kettlebell presses on existing installs too.
+const METADATA_REDERIVE_KEY = '@volyume_exercise_metadata_rederived_v6';
 // Bumped when exercises are added to the corpus so the top-up scans for the
 // new canonical IDs once on installs that already seeded an earlier list.
 // v4 (EL-14/EL-15, exercise-library-expansion-2026-09-05): the corpus

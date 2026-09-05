@@ -2520,6 +2520,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           exerciseType: exercise?.exerciseType || 'weight_reps',
           category: exercise?.exerciseCategory || exercise?.exercise_category || 'compound',
           incrementKg: exercise?.incrementKg ?? exercise?.increment_kg ?? null,
+          // Final pass S1 (certification 2026-09-05): the bell ladder in
+          // livePrescription reads this; without it a 16 kg kettlebell
+          // prefilled 16.75 kg. Category first, raw string as the fallback.
+          equipmentCategory: exercise?.equipmentCategory ?? exercise?.equipment_category ?? exercise?.equipment ?? null,
           units,
         },
         prescription: {

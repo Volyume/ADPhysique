@@ -44,7 +44,7 @@ import ProgressPhotoPrompt from '../components/ProgressPhotoPrompt';
 import usePartners from '../hooks/usePartners';
 import { ticksLabel } from '../lib/partners/signals';
 import { getVisibleMoments, markMomentSeen } from '../lib/partners/moments';
-import { calculateWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
+import { calculateWeeklyVolume, calculateExcludedWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { getVolumeInsight, getVolumeWhy } from '../lib/volumeInsightCopy';
 import { topSetFromExerciseData, intensityTier, shareSessionName } from '../lib/sessionShareData';
@@ -247,6 +247,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // rather than after a round trip (founder device report 2026-08-24).
   const [routineName, setRoutineName] = useState(passedRoutineName || '');
   const [weeklyVolume, setWeeklyVolume] = useState({});
+  const [excludedVolume, setExcludedVolume] = useState({});
   // C5-P16-01 (D96): how far through the session's own week this is, so the
   // volume card can state a week in progress instead of delivering a
   // finished-week verdict after session one.
@@ -724,6 +725,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
     setWeeklyVolume(volume);
+    // Final pass S4 (certification 2026-09-05, same law as F-12): the volume
+    // read drops explosive (ballistic) sets, so a muscle trained partly
+    // through swings must not be told to add sets for work it has done.
+    // The excluded read is the same inputs, counting only what was dropped.
+    setExcludedVolume(calculateExcludedWeeklyVolume(recentSets, exerciseMap));
 
     // C5-P16-01 (D96): is this week finished, or still in progress?
     //
@@ -1734,8 +1740,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               // table (and this muscle's source) the verdict two lines up
               // was computed from, so the quoted range can never
               // contradict the status beside it.
-              const insight = weekJudgeable ? getVolumeInsight(muscle, data.workingSets, status, landmarkResolution?.table) : null;
-              const why = weekJudgeable ? getVolumeWhy(muscle, data.workingSets, status, landmarkResolution?.table, landmarkResolution?.source?.[muscle] ?? null) : null;
+              // S4: advice waits when this muscle also did work the read
+              // excluded; the count line then says so instead.
+              const hasExcludedWork = (excludedVolume?.[muscle]?.excludedSets ?? 0) > 0;
+              const adviceAllowed = weekJudgeable && !hasExcludedWork;
+              const insight = adviceAllowed ? getVolumeInsight(muscle, data.workingSets, status, landmarkResolution?.table) : null;
+              const why = adviceAllowed ? getVolumeWhy(muscle, data.workingSets, status, landmarkResolution?.table, landmarkResolution?.source?.[muscle] ?? null) : null;
               const isExpanded = expandedVolumeWhy === muscle;
               return (
                 <View key={muscle} style={[styles.volumeRow, live.volumeRow, mi === musclesWorked.length - 1 && styles.volumeRowLast]}>
@@ -1749,7 +1759,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                     <Text style={[styles.volumeInsightText, live.volumeInsightText]}>{insight}</Text>
                   ) : (
                     <Text style={[styles.volumeInsightText, live.volumeInsightText]}>
-                      {Math.round(data.workingSets)} sets {weekJudgeable ? 'this week' : 'so far this week'}
+                      {Math.round(data.workingSets)} sets {weekJudgeable ? 'this week' : 'so far this week'}{hasExcludedWork ? '. Explosive lifts like swings are not counted here.' : ''}
                     </Text>
                   )}
                   {why && (

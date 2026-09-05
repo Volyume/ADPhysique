@@ -493,7 +493,16 @@ export function deriveDemandMetadata(ex = {}) {
   else if (equipment === 'machine' || equipment === 'smith_machine' || equipment === 'cable') out.floorAccess = false;
 
   // ── overhead ──────────────────────────────────────────────────────────
-  if (NAME_OVERHEAD.test(name) || /\bhanging\b|\btoe-to-bar\b/i.test(name)) out.overheadPosition = true;
+  // Final pass S2 (certification 2026-09-05): a press whose primary muscle
+  // is the front or side delts is an overhead press whatever it is called
+  // (Seated Dumbbell Press, Z-Press, Bradford Press, Log Press, Kettlebell
+  // Press, Clean and Press). The name rule alone missed every one of them,
+  // so a "no overhead" limitation on a shoulder press was served another
+  // shoulder press as its substitute. Chest-line presses are excluded by
+  // name; they never carry a delt primary in the corpus anyway.
+  const DELT_PRESS = /\bpress\b/i.test(name) && /^(front|side)_delts$/.test(String(muscle || ''))
+    && !/\b(bench|floor|chest|incline|decline|svend|tate)\b/i.test(name);
+  if (NAME_OVERHEAD.test(name) || DELT_PRESS || /\bhanging\b|\btoe-to-bar\b/i.test(name)) out.overheadPosition = true;
   else if (/\brow\b|\bcurl\b|\bpress\b|\bpush-?up\b|\bfly\b|\bpushdown\b|\bkickback\b|\bshrug\b|\bsquat\b|\bdeadlift\b|\brdl\b|\bleg (press|extension|curl)\b|\bcalf\b|\bcrunch\b|\bsit-?up\b|\bplank\b|\bhip\b|\bglute\b|\blateral raise\b|\bfront raise\b|\bface pull\b|\bwrist\b|\bneck\b|\bback extension\b|\bpec deck\b|\bdip\b|\bpull-?through\b|\bpull-apart\b|\bwoodchop\b|\btwist\b|\brotation\b|\bside bend\b|\bcarry\b|\bfarmer|\bwalk\b|\bextension\b(?!.*overhead)|\braise\b(?!.*(overhead|y-raise))|\bpinch\b|\bgripper\b|\brice bucket\b|\broller\b|\bab wheel|\bdead bug\b|\bbird dog\b|\bbridge\b|\bthrust\b|\bnordic\b|\bhollow\b|\bsuperman\b|\bcopenhagen\b|\bpallof\b|\bserratus\b|\bbattle ropes\b|\bsled\b|\bprowler\b|\bcycling\b|\bassault bike\b|\bwall sit\b|\blunge\b|\bstep-?up\b|\bswing\b|\bpistol\b|\bv-up\b|\bmountain climber\b|\brussian twist\b|\bdrag\b|\bbench dip\b/i.test(name)) {
     out.overheadPosition = false;
   }

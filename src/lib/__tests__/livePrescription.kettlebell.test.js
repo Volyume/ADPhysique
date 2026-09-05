@@ -37,8 +37,10 @@ const BAND = { min: 8, max: 12 };
 
 describe('KETTLEBELL_LADDER_KG', () => {
   test('is the standard cast/competition ladder, frozen and ascending', () => {
+    // Lead ruling (final pass): 2 kg steps to 12 kg, then the 4 kg steps a
+    // cast-iron set is sold in, so the next bell is one most people own.
     expect(KETTLEBELL_LADDER_KG).toEqual([
-      4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40, 44, 48,
+      4, 6, 8, 10, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48,
     ]);
     expect(Object.isFrozen(KETTLEBELL_LADDER_KG)).toBe(true);
   });
@@ -46,12 +48,12 @@ describe('KETTLEBELL_LADDER_KG', () => {
 
 describe('nextKettlebellLoadKg', () => {
   test('16 -> 18: the next bell on the ruled ladder, never 18.5', () => {
-    expect(nextKettlebellLoadKg(16)).toBe(18);
+    expect(nextKettlebellLoadKg(16)).toBe(20);
     expect(nextKettlebellLoadKg(16)).not.toBe(18.5);
   });
 
-  test('12 -> 14', () => {
-    expect(nextKettlebellLoadKg(12)).toBe(14);
+  test('12 -> 16', () => {
+    expect(nextKettlebellLoadKg(12)).toBe(16);
   });
 
   test('24 -> 28 (the ladder widens to 4 kg above 24)', () => {
@@ -90,15 +92,15 @@ describe('resolveLoadIncrement on kettlebell equipment', () => {
     incrementKg: 2.5, units: 'kg', category: 'compound', equipmentCategory: 'kettlebell', ...extra,
   });
 
-  test('16 kg compound bell steps by 2, landing exactly on 18 (not 2.5 -> 18.5)', () => {
-    expect(kb(16)).toBe(2);
-    expect(16 + kb(16)).toBe(18);
+  test('16 kg compound bell steps by 4, landing exactly on 20 (not 2.5 -> 18.5)', () => {
+    expect(kb(16)).toBe(4);
+    expect(16 + kb(16)).toBe(20);
   });
 
   test('the 5% cap never un-snaps the ladder (5% of 16 kg is 0.8 kg)', () => {
     // The generic path would have capped 2.5 to 0.8 here; the ladder is not
     // an increment of plates and is deliberately exempt.
-    expect(kb(16)).toBe(2);   // not 0.8
+    expect(kb(16)).toBe(4);   // not 0.8
     expect(kb(24)).toBe(4);   // not 1.2
   });
 
@@ -115,7 +117,7 @@ describe('resolveLoadIncrement on kettlebell equipment', () => {
   });
 
   test('the raw free-text equipment string is accepted as well as the category', () => {
-    expect(kb(16, { equipmentCategory: 'Kettlebell' })).toBe(2);
+    expect(kb(16, { equipmentCategory: 'Kettlebell' })).toBe(4);
   });
 
   test('lbs users are untouched: the ladder is a kg ladder', () => {
@@ -178,7 +180,7 @@ describe('kettlebell prefill through resolveSetPrescription (A1)', () => {
   test('a compound kettlebell row topped at 16 kg prefills a real bell, not 18.5 kg', () => {
     const p = resolveSetPrescription(kbPacket(), 1);
     expect(p.provenance).toBe(PROVENANCE.LOAD_ADVANCE_RANGE_TOPPED);
-    expect(p.weight).toBe(18);        // the next bell on the ladder
+    expect(p.weight).toBe(20);        // the next bell on the ladder
     expect(p.weight).not.toBe(18.5);  // A1: the bell that does not exist
     expect(p.prefill).toBe(true);
   });
