@@ -341,3 +341,130 @@ from preference learning (`exercise/intent.js:445,479`).
   open.
 - Any device-level behaviour: the round-return haptic/announcement, the Live Activity's
   rendered string, and the swap-sheet layout with the style line present.
+
+---
+
+## F-16 INVESTIGATION: can generation build kettlebell-only and band-only plans?
+
+Authority: lead ruling F-16 (`07-FINDINGS.md`); evidence A2/A12 above. Read-only; no source
+edited. Method: real `generatePlan()` (`planEngine.js`) against the real seed corpus
+(`exerciseCorpus`), driven by a throwaway Jest script (`scratchpad/f16_investigation.test.js`,
+not committed) built the same way `campaign16.helpers.js` / `planengineBench.js` build their
+inputs (`corpusEntryToSeedRow`, `exerciseLibrary` passed to `generatePlan`).
+
+### Q1 — how equipment reaches the generator
+
+`ProOnboardingScreen.js:206-213` and `PlanUpdateScreen.js:59-66` both offer the identical
+6-value set (`full_gym`/`machines_cables`/`dumbbells_only`/`barbell_plates`/`home_gym`/
+`bodyweight`) as `userProfile.equipment`. `freeStarter.js:35-42`'s 3-answer starter quiz uses
+its own vocab (`full_gym`/`dumbbell`/`home`), normalised in `planEquipmentAllows`
+(`freeStarter.js:81-97`) — a different consumer (plan **recommendation**, not generation).
+Generation's own path: `generatePlan(inputs)` → `equipment` string → `filterPool(muscle,
+equipment, goal)` (`planEngine.js:1339-1341`) → `pool.filter(e => e.eq.includes(equipment))`.
+`e.eq` is `equipmentProfiles`, computed once per exercise by
+`deriveEquipmentProfiles(equipmentCategory, name, compoundIsolation)`
+(`exerciseMetadata.js:136-146`), reading `PROFILES_BY_CATEGORY` (`:80-104`) — `kettlebell:
+['full_gym','dumbbells_only','home_gym']`, no `kettlebells` value exists anywhere. A bare-string
+membership test with **no override function below it** for equipment (unlike difficulty,
+NEVER_AUTO and the recognisable-tier gates, which all sit below `filterPool` inside
+`selectExercisesForMuscle`, `:1435-1498`). One more mechanism layer matters: `buildEffectivePool`
+(`:751-789`) merges the library-derived pool with the hand-written fallback `POOL` per muscle
+whenever the generated count is `< MIN_GENERATED_PER_MUSCLE` (3, `:717`) — but the fallback
+`POOL`'s `eq` arrays are the same closed vocabulary, so a thin new-profile muscle degrades to an
+**empty slot**, never to a wrong-equipment substitution.
+
+### Q2 — does generation produce a complete kettlebell/band plan? (measured, not inferred)
+
+Two variants of a hand-built `kettlebells` profile were tried, both requiring no source edit:
+
+- **KB+bodyweight** (mirrors the existing `dumbbells_only`/`home_gym` pattern exactly: append
+  `'kettlebells'` to every `kettlebell`-category row's profiles, and to every bodyweight row
+  that already carries a non-empty profile list): **complete but not a kettlebell plan.** All
+  12 runs (beginner/intermediate × 3d/4d, plus the `full_gym`/`bodyweight` split) hit zero
+  structural-muscle zeros and zero empty workouts — but **zero "Kettlebell" exercises appear in
+  any of the 12 plans.** Root cause, read to the end of the mechanism: the corpus has **0
+  STAPLE-tier and only 2 COMMON-tier** kettlebell exercises total (`Kettlebell Goblet Squat`,
+  `Kettlebell Row (Single-Arm)`, `canonicality.js:284-285`); everything else is NICHE,
+  SPECIALIST or NEVER_AUTO. `selectExercisesForMuscle`'s recognisable-tier gate
+  (`planEngine.js:1496-1498`) restricts to COMMON-or-better whenever enough such candidates
+  exist — and bodyweight alone supplies far more STAPLE/COMMON options per muscle than
+  `numExHint` ever needs, so the 2 COMMON kettlebell rows never reach a slot. The result is a
+  plan that is byte-for-byte a bodyweight plan under a kettlebell label.
+- **KB-pure** (kettlebell-category rows only, no bodyweight blended in — isolates whether
+  bodyweight was simply outcompeting KB, or KB coverage is thin on its own): real kettlebell
+  exercises ARE selected once bodyweight stops crowding them out (`Kettlebell Row (Single-Arm)`,
+  `Gorilla Row`, `Kettlebell Floor Press`, `Kettlebell Deadlift`, `Kettlebell Front Rack Squat
+  (Double)`, `Get-Up to Elbow`, `Kettlebell Windmill (Low)`, etc. — the recognisable gate falls
+  back to the wider NICHE/SPECIALIST pool per `:1495-1497`'s coverage-fallback rule once too few
+  COMMON survive). But **`shoulders` is at ZERO planned sets in all 6 KB-pure runs**
+  (beginner/intermediate × 3d/4d/+the 3d control) — the corpus has no kettlebell (or eligible
+  bodyweight, since none is blended in) shoulder-isolation row at all, and it is on the engine's
+  own no-zero structural list (`planengineBench.js` `NO_ZERO`). 4-day upper sessions run as thin
+  as 2 exercises (`Kettlebell Floor Press`, `Kettlebell Row (Single-Arm)` only) against 5+ for
+  `full_gym`.
+- **Bands**: appending `'bands'` to band-category + bodyweight rows produced plans **identical**
+  to the existing `bodyweight` baseline in every one of the 6 comparisons run. Not an artefact of
+  the test — `PROFILES_BY_CATEGORY.band` already reads `['bodyweight']`
+  (`exerciseMetadata.js:89`), so every band exercise (`Band Lateral Raise`, `Band Face Pull`,
+  `Band Hammer Curl`...) is **already selectable inside today's shipped `bodyweight` equipment
+  option**, before any hypothetical `bands` profile is added. A dedicated `bands` value, built
+  the same way, would not currently differentiate itself from `bodyweight` at all.
+- **Bodyweight baseline**: confirmed working as shipped — complete, no zero muscles, no empty
+  workouts, across all 6 runs.
+
+### Q3 — does EL-8's beginner/experienced kettlebell rule apply inside generation?
+
+**Only to style pools — confirmed empirically and by code.** `stylePools.js:22-30` states the
+NEVER_AUTO exception is deliberate and narrow: kettlebell ballistics are NEVER_AUTO in the
+general registry, re-admitted only when `_styleAllowedNames` (the active `style:<pool>` tag) is
+set — which ordinary equipment-driven generation never sets. `selectExercisesForMuscle`'s gate
+(`:1460`) is `isAutoEligible(e.n) || (_styleAllowedNames && _styleAllowedNames.has(e.n))`; with
+no style pool active the second clause is always false. Crucially, **NEVER_AUTO is
+experience-blind** — nothing in `filterPool` or `selectExercisesForMuscle` reads `experience` to
+decide ballistic eligibility, so EL-8's "ballistics only for the experienced" progression is not
+implemented in generation at any level; it hard-blocks ballistics for beginner AND intermediate
+alike. Confirmed empirically: 0 `snatch|clean|jerk` matches across all 12 generated plans, but
+also **`Kettlebell Swing` itself never appeared** — it is listed in NEVER_AUTO
+(`canonicality.js:444`), so even the plain two-hand swing EL-8 names as beginner-appropriate is
+unreachable from ordinary generation; it only exists via `KETTLEBELL_FOUNDATIONS_NAMES`
+(`stylePools.js:73`) inside the manually-selected `kettlebell_foundations` style plan.
+
+### Q4 — library quiz mapping and the no-match state
+
+`PlanLibraryScreen.js:129-140`'s `QUIZ_STEPS` equipment step already offers `kettlebell` and
+`band` as first-class answers (`:137-138`, EL-12), mapped through the shared
+`planEquipmentAllows` (`freeStarter.js:91-92`) onto `equipment:kettlebell` / `equipment:band`
+plan tags — a **library-plan lookup**, unrelated to `generatePlan`'s equipment vocabulary from
+Q1/Q2. `getQuizRecommendation` (`:249-262`) returns `null` when no tagged plan survives the hard
+equipment filter, rendering the no-match branch (`:969-980`): title **"No exact match found"**,
+body **"Browse all the plans below to find one that suits you."**, single CTA **Button "Browse
+all plans"** → `handleQuizBrowse` (dismisses the quiz sheet, shows the filterable list) — no
+generation offer of any kind today. A real "build me a plan" entry point does exist:
+`PlanUpdate` route → `PlanUpdateScreen.js`, which owns the identical 6-value `EQUIPMENT_OPTIONS`
+(`:59-66`) and calls `generateAndSavePlan`/`generatePlanDryRun` (`:24`). But it is not currently
+routable with an equipment pre-set — `PlanUpdateScreen.js` reads **no `route.params` at all**
+(zero matches); its `equipment` state initialises only from `userProfile?.equipment ??
+'full_gym'` (`:100`). Route name to wire, and the gap to close: `navigation.navigate('PlanUpdate',
+{ initialEquipment: ... })` reaching nothing today without a source change.
+
+### VERDICT
+
+- **Kettlebells: NOT READY.** Blended with bodyweight (the pattern that would minimally extend
+  the existing profile scheme): produces a complete plan with **zero kettlebell exercises** —
+  functionally a mislabelled bodyweight plan. Kept pure: real kettlebell exercises appear, but
+  **shoulders sits at zero sets** (a structural no-zero muscle) in every combination tested, and
+  4-day upper sessions run as thin as 2 exercises. Root causes: (a) only 2 COMMON/0 STAPLE
+  kettlebell exercises exist in the whole tier registry, so any bodyweight-blended profile lets
+  bodyweight win every slot; (b) the corpus carries no kettlebell shoulder-isolation movement,
+  so a pure-kettlebell profile cannot cover shoulders at all; (c) EL-8's beginner-safe swing is
+  itself NEVER_AUTO and unreachable outside the manual style-plan path, so even a "foundations"
+  kettlebell generation option would need new tier/registry work, not just a new profile string.
+- **Bands: NOT READY, for a different reason.** Every band exercise is already selectable inside
+  the shipped `bodyweight` option (`PROFILES_BY_CATEGORY.band = ['bodyweight']`). A `bands`
+  equipment value built the same way as `kettlebells` produces plans identical to `bodyweight`
+  today — no differentiated "bands" experience exists to ship without first deciding whether
+  bands should be pulled OUT of the bare-`bodyweight` context (so a real
+  band-required-vs-no-equipment distinction exists) — a product-fork decision, not an
+  engineering gap.
+- **Bodyweight (existing baseline): GENERATION-READY**, confirmed complete across all 6 runs —
+  included only as the control, not itself in question.

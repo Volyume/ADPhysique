@@ -232,3 +232,22 @@ logged.
 A14 dead style-pool derivations (no user effect); B-4 unreachable arbiter
 branches (documented as retired); H-2 DebugLog behind seven taps
 (support-only, the user's own log); A13 wording folded into F-13.
+
+## F-16 REVISED after investigation (`04-TRAINING-STYLES.md` F-16 appendix)
+Generation is NOT ready for kettlebell-only (two common-tier kettlebell
+rows, no kettlebell shoulder work, swings never auto-selected) or
+band-only (the band profile is the bodyweight profile). So the honest
+route is the library, not the generator:
+1. Onboarding and the starter wizard gain "Kettlebells" and "Bands" as
+   equipment answers. Choosing either does not generate: Volyume installs
+   the library plan that fits the person's days and experience, and says
+   so in one line ("Volyume has kettlebell plans built for this kit. This
+   one fits your week.").
+2. Two band library plans are authored from the corpus band family
+   (Full Body: Bands, 3 days; Upper/Lower: Bands, 4 days), tagged
+   `equipment:band style:band`, so the existing band style pool stops
+   being dead code and the "Bands" library chip is no longer empty.
+   Progression on bands is reps and band grade, never "+2.5 kg".
+3. "Adjust training" on a library style plan (kettlebell, circuit, band)
+   does not regenerate into a different kind of plan. It says so and
+   routes to the Plan Library's matching style filter. This absorbs F-15.
