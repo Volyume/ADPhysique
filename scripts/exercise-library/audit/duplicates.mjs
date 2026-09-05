@@ -39,6 +39,45 @@ const exactDuplicates = [...exactGroups.entries()]
   .filter(([, names]) => names.length > 1)
   .map(([norm, names]) => ({ normalized: norm, names }));
 
+// ── (0) exact DATA duplicates: identical raw tuple under two names ───────
+// The strongest possible duplicate signal, stronger than any name
+// heuristic: every field the seed author actually typed (not just the
+// derived 5-tuple) is byte-identical except the name. Found by manual
+// verification of a few name-heuristic hits (see MANUAL_OVERRIDES below)
+// that turned out to be copy-pasted rows — checked systematically here so
+// every case of it is reported, not just the ones a name pattern happened
+// to surface.
+function dataKey(r) {
+  return JSON.stringify([
+    r.primaryMuscle, [...r.secondaryMuscles].sort(), r.equipment, r.movementPattern,
+    r.compoundIsolation, r.defaultRepMin, r.defaultRepMax, r.fatigueCost,
+    r.stimulusToFatigueRatio, r.subregion, r.exerciseType,
+  ]);
+}
+const dataGroups = new Map();
+for (const r of rows) {
+  const k = dataKey(r);
+  if (!dataGroups.has(k)) dataGroups.set(k, []);
+  dataGroups.get(k).push(r.name);
+}
+// CAVEAT, discovered on first run: this signal is noisier than it looks.
+// 97 groups came back, including families that are OBVIOUSLY distinct
+// movements sharing the seed author's same templated numeric defaults for
+// their muscle/pattern/subregion bucket (e.g. 'Neck Flexion (Machine)',
+// 'Neck Extension (Machine)' and 'Neck Machine Lateral Flexion' all carry
+// identical rep/fatigue/SFR placeholders despite flexion, extension and
+// lateral flexion being different movements; the six Cable Woodchop
+// direction/stance variants collide the same way). So this list is
+// EVIDENCE of a shared numeric template, NOT proof of duplicate stimulus —
+// it is reported for cross-reference against the name-based near-duplicate
+// lists below, never used on its own to reclassify a pair.
+const exactDataDuplicates = [...dataGroups.values()]
+  .filter((names) => names.length > 1)
+  .map((names) => ({
+    names,
+    note: 'Byte-identical rep range/fatigue/SFR/pattern/subregion template. Cross-check against nearDuplicatesByTuple/nearDuplicatesByNormalizedName for actual name similarity before treating as a duplicate — many groups here are legitimately distinct movements that merely share a template.',
+  }));
+
 // ── (2) near-duplicates by normalised name ────────────────────────────────
 // CAUTION (found while building this script): naive word-order-independent
 // folding wrongly merges pulley-DIRECTION pairs — "Cable Fly (Low to High)"
@@ -228,12 +267,50 @@ const MANUAL_OVERRIDES = [
     confidence: 'high',
     reason: 'LEAD OVERRIDE: same selectorised machine triceps-extension station; the diff tokens ("tricep" vs "triceps") are a singular/plural spelling variant, not a mechanical difference. Both listed separately in COMMON (canonicality.js). Consolidate: keep "Machine Tricep Extension" canonical (matches MACHINE_TYPE_BY_NAME key), alias "Triceps Extension Machine".',
   },
+  {
+    pair: ['Cable Pull-Through', 'Cable Pull-Through (Glute)'],
+    classification: 'likely_same_stimulus',
+    confidence: 'high',
+    reason: "LEAD OVERRIDE, DATA-VERIFIED: seedExercises.js rows are byte-identical (glutes primary, [hamstrings] secondary, cable, hinge, compound, 12-20 reps, fatigue 2, SFR 5 — seedExercises.js:829 and :861). \"(Glute)\" is a cosmetic emphasis label on an otherwise identical row, not a distinguishing dimension. Consolidate: keep \"Cable Pull-Through\" canonical, alias \"Cable Pull-Through (Glute)\".",
+  },
+  {
+    pair: ['Nordic Curl', 'Nordic Hamstring Curl'],
+    classification: 'likely_same_stimulus',
+    confidence: 'high',
+    reason: 'LEAD OVERRIDE, DATA-VERIFIED: seedExercises.js rows are byte-identical (hamstrings, bodyweight, isolation, 3-10 reps, fatigue 3, SFR 5 — seedExercises.js:817-818). "Hamstring" is the muscle name restated in the name, not a mechanical difference; "Nordic Curl" is the standard coaching term. Consolidate: keep "Nordic Curl" canonical, alias "Nordic Hamstring Curl".',
+  },
+  {
+    pair: ['Dumbbell Overhead Tricep Extension', 'Overhead Dumbbell Extension'],
+    classification: 'likely_same_stimulus',
+    confidence: 'high',
+    reason: 'LEAD OVERRIDE, DATA-VERIFIED: seedExercises.js rows are byte-identical (triceps, dumbbell, isolation, 10-15 reps, fatigue 2, SFR 4 — seedExercises.js:761-762). "Overhead Dumbbell Extension" simply omits the muscle name. Consolidate: keep "Dumbbell Overhead Tricep Extension" canonical, alias "Overhead Dumbbell Extension".',
+  },
+  {
+    pair: ['Machine Crunch', 'Ab Crunch Machine'],
+    classification: 'likely_same_stimulus',
+    confidence: 'high',
+    reason: 'LEAD OVERRIDE: same selectorised abdominal-crunch machine station (word-order variant of the same three words); MACHINE_TYPE_BY_NAME (exerciseMetadata.js) keys only "Machine Crunch" to \'ab_crunch\' and has no separate entry for "Ab Crunch Machine", i.e. the app\'s own machine-type table never treated these as different stations. Minor rep-range/SFR drift (15-25/f2/sfr4 vs 12-20/f2/sfr5, seedExercises.js:905 and :1132) is tuning noise, not a distinguishing dimension. Consolidate: keep "Machine Crunch" canonical, alias "Ab Crunch Machine".',
+  },
 ];
 for (const override of MANUAL_OVERRIDES) {
   const match = nearByTuple.find(
     (p) => p.pair.includes(override.pair[0]) && p.pair.includes(override.pair[1]),
   );
   if (match) Object.assign(match, override);
+}
+
+// Annotate (never override) nearByTuple pairs that also share an identical
+// numeric template — supporting evidence only, per the caveat above.
+const dataDupPairKeys = new Set();
+for (const g of exactDataDuplicates) {
+  for (let i = 0; i < g.names.length; i++) {
+    for (let j = i + 1; j < g.names.length; j++) {
+      dataDupPairKeys.add([g.names[i], g.names[j]].sort().join('||'));
+    }
+  }
+}
+for (const p of nearByTuple) {
+  p.alsoSharesNumericTemplate = dataDupPairKeys.has([...p.pair].sort().join('||'));
 }
 
 // Sort by classification (likely_same_stimulus first — the actionable ones) then by name.
@@ -250,6 +327,8 @@ const flaggedForLeadReview = nearByTuple.filter(
 const out = {
   exactDuplicateCount: exactDuplicates.length,
   exactDuplicates,
+  exactDataDuplicateGroupCount: exactDataDuplicates.length,
+  exactDataDuplicates,
   nearDuplicatesByNormalizedNamePairCount: nearByNormalizedName.length,
   nearDuplicatesByNormalizedNameBreakdown: countByClassification(nearByNormalizedName),
   nearDuplicatesByNormalizedName: nearByNormalizedName,
@@ -269,5 +348,8 @@ function countByClassification(list) {
 const path = writeJson('duplicates.json', out);
 console.log(`duplicates.json written: ${path}`);
 console.log(`Exact (case/whitespace) duplicates: ${exactDuplicates.length}`);
+console.log(`Exact DATA duplicate groups (byte-identical row, different name): ${exactDataDuplicates.length}`);
+for (const g of exactDataDuplicates) console.log('  ', g.names.join(' == '));
 console.log(`Near-dup by normalized name pairs: ${nearByNormalizedName.length}`, out.nearDuplicatesByNormalizedNameBreakdown);
 console.log(`Near-dup by tuple pairs: ${nearByTuple.length}`, out.nearDuplicatesByTupleBreakdown);
+console.log(`Flagged for lead review: ${flaggedForLeadReview.length}`);

@@ -1,0 +1,947 @@
+{
+  "family": "cable",
+  "generatedAt": "2026-09-05",
+  "existingRowsConsidered": 97,
+  "candidates": [
+    {
+      "name": "Single-Arm Cable Fly (Standing)",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "flat",
+      "aliases": [
+        "Single-Arm Cable Chest Fly"
+      ],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Cable Fly (Neutral)",
+        "why": "unilateral loading; working side must resist trunk rotation the bilateral fly does not demand"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (unilateral training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "One handle, one pulley height; anti-rotation demand at the trunk is the reason to programme it, not extra chest stimulus."
+    },
+    {
+      "name": "Decline Cable Chest Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "cable",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "decline",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Incline Cable Chest Press",
+        "why": "bench angle reversed (decline vs incline) changes the pressing vector and shifts emphasis toward lower chest fibres"
+      },
+      "sources": [
+        "ACSM Guidelines for Exercise Testing and Prescription (resistance training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Bench-based, mirrors the existing Incline Cable Chest Press row (which derives to lying); named without \"(Standing)\" to avoid implying a standing decline press, which is not how this is performed."
+    },
+    {
+      "name": "Incline Cable Chest Press (Single-Arm)",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "cable",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "incline",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Incline Cable Chest Press",
+        "why": "unilateral loading; one side presses while the other stabilises, adding an anti-rotation core demand the bilateral version does not have"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (unilateral training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Bench-based like the bilateral row it is distinct from; derives to lying, matching that row."
+    },
+    {
+      "name": "Cable Squeeze Press (Chest)",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps"
+      ],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "flat",
+      "aliases": [
+        "Cable Chest Squeeze"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: two independent handles pressed/squeezed together at chest height for a medial (adduction) emphasis, distinct from the arcing pattern of a fly and from a plate-based Svend Press"
+      },
+      "sources": [
+        "Contreras, B. & Schoenfeld, B. — applied hypertrophy programming articles (pec isolation/peak-contraction techniques)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Standing at a cable crossover, two D-handles pressed together in front of the chest; the name-rule deriver returns both position and balanceDemand null for this new pattern, so both are curated here."
+    },
+    {
+      "name": "Seated Cable Row (Rope)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "cable",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "horizontal_lat",
+      "aliases": [
+        "Rope Seated Cable Row"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Seated Cable Row",
+        "why": "rope attachment lets the hands rotate and separate at the finish, adding external rotation and a longer contraction the fixed V-handle/bar does not give"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Same station as Seated Cable Row, different attachment; grip rotation at the finish is the mechanical difference EL-2 requires."
+    },
+    {
+      "name": "Standing Cable Row (Single-Arm)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "cable",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "horizontal_lat",
+      "aliases": [
+        "Standing Single-Arm Cable Row"
+      ],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Single-Arm Cable Row",
+        "why": "standing removes the seat/thigh-pad brace the seated version uses, adding hip and core stabilisation against the single-side pull"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (unilateral training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "The name-rule deriver classifies any \"cable row\" name as a seated station (existing Single-Arm Cable Row also derives seated); this row is deliberately standing, so position/balanceDemand are curated to avoid inheriting that seated-station default."
+    },
+    {
+      "name": "Behind-the-Neck Lat Pulldown",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "cable",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Lat Pulldown (Wide Grip)",
+        "why": "bar pulled behind the head/neck rather than to the chest changes the shoulder path to an externally rotated, extended position with materially higher impingement risk"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (contraindicated/high-risk exercise variants discussion)"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "never_auto per EL-5 (technical-complexity/injury-risk movement, searchable only). The grip-none name-rule (built for isolated neck-training rows) false-positives on the word \"neck\" in this name; gripDemand is curated back to bar because this is a loaded pulldown, not neck-harness work."
+    },
+    {
+      "name": "Rope Lat Pulldown",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "cable",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Cable Reverse-Grip Pulldown",
+        "why": "rope attachment allows the hands to separate and rotate through the pull, unlike the fixed reverse-grip bar; a materially different hand path at the bottom of the rep"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Distinct attachment identity from the existing wide/close/neutral/reverse bar pulldowns."
+    },
+    {
+      "name": "Cross-Body Cable Lateral Raise",
+      "primaryMuscle": "side_delts",
+      "secondaryMuscles": [],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 25,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "lateral_raise",
+      "aliases": [
+        "Cross-Body Lateral Raise (Cable)"
+      ],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Cable Lateral Raise (Behind the Back)",
+        "why": "pulley crosses in front of the body from the opposite low pulley, giving a longer stretch and more resistance at the bottom of the rep than a same-side raise"
+      },
+      "sources": [
+        "Schoenfeld, B. \"Science and Development of Muscle Hypertrophy\" (lateral raise resistance-profile discussion)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Distinct resistance profile at the bottom of the rep vs the existing same-side low-pulley and behind-the-back variants."
+    },
+    {
+      "name": "Single-Arm Cable Front Raise",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Cable Front Raise",
+        "why": "unilateral loading adds an anti-lateral-flexion core demand the bilateral raise does not require"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (unilateral training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Laterality is the only difference from the existing bilateral row; subregion left null (front_delts carries no subregion values in the current seed)."
+    },
+    {
+      "name": "Cable Shoulder Press (Standing)",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "side_delts"
+      ],
+      "equipment": "cable",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: no cable overhead-press row exists for front_delts today. Dual low pulleys pressed overhead give constant tension through the full range unlike a machine or free-weight press"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Fills a genuine gap: the cable family has a front raise but no press for front_delts."
+    },
+    {
+      "name": "Single-Arm Cable Curl (Low Pulley)",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "short_head",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Cable Curl",
+        "why": "unilateral loading at a fixed low pulley, distinct from the two-hand bar/rope curl already in the corpus"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Standard single-arm cable curl; low-pulley position keeps constant tension through the top of the rep unlike a dumbbell curl."
+    },
+    {
+      "name": "Cable Drag Curl",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "long_head",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Cable Curl",
+        "why": "the bar is dragged up the torso with elbows kept back rather than swinging forward, shifting tension differently through the range and reducing front-delt involvement"
+      },
+      "sources": [
+        "Schoenfeld, B. \"Science and Development of Muscle Hypertrophy\" (bar path/tension-curve discussion)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Named bar path (drag) is the mechanical difference from a standard curl, per EL-2."
+    },
+    {
+      "name": "Cable Incline Curl",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "long_head",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Lying Cable Curl",
+        "why": "performed seated on an incline bench rather than lying flat/prone; the bench angle changes shoulder extension and the point of peak stretch"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Derives to \"lying\" under the corpus’s incline-movement convention (the position enum has no separate reclined-incline bucket); consistent with how the deriver treats other incline movements."
+    },
+    {
+      "name": "Cable Pushdown (V-Bar)",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "pushdown",
+      "aliases": [
+        "V-Bar Tricep Pushdown"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Tricep Pushdown (Bar)",
+        "why": "angled V-bar handle changes wrist/forearm angle and hand spacing versus the straight bar and rope attachments already in the corpus"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Distinct attachment from the existing straight-bar and rope pushdowns."
+    },
+    {
+      "name": "Overhead Cable Tricep Extension (Bar)",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "overhead",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Overhead Cable Rope Extension",
+        "why": "fixed straight/EZ-bar handle keeps the wrists in a set position through the stretch, unlike the rope which allows the hands to rotate and separate"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Bar-attachment counterpart to the existing rope overhead extension."
+    },
+    {
+      "name": "Cable Hip Flexion (Standing)",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "Cable Knee Raise"
+      ],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: an ankle cuff at a low pulley raising the knee/hip into flexion, distinct from every squat/press/extension row already filed under quads"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "quads carries no subregion values in the current seed, so subregion is left null."
+    },
+    {
+      "name": "Cable Romanian Deadlift",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "equipment": "cable",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "hip_extension",
+      "aliases": [
+        "Cable RDL"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Leg Curl (Cable)",
+        "why": "new implement family for the hinge pattern under hamstrings: a low-pulley RDL keeps constant tension through the hip hinge, unlike the free-weight barbell/dumbbell RDL"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Fills a genuine gap: no hinge-pattern cable row exists for hamstrings/glutes today, only the isolation leg curl and the glute-filed pull-through."
+    },
+    {
+      "name": "Standing Cable Crunch",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 25,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "flexion",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Cable Crunch",
+        "why": "performed standing at a high pulley rather than kneeling/on the floor, removing the floor-contact and hip-flexion component the existing kneeling/floor rows have"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "The word \"crunch\" trips the name-rule’s lying/floor-access defaults (built for the floor and kneeling crunch rows); this variant is standing at a cable station, so position/floorAccess/balanceDemand are curated."
+    },
+    {
+      "name": "Standing Calf Raise (Cable)",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "gastro",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new implement family for calves: standing on a block or plate attached to a low pulley for constant-tension calf work, distinct from every machine/dumbbell/bodyweight calf row already in the corpus"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Less common than the machine/dumbbell calf raise but attested as a constant-tension alternative in commercial-gym coaching practice."
+    },
+    {
+      "name": "Cable Tibialis Raise (Seated)",
+      "primaryMuscle": "tibialis",
+      "secondaryMuscles": [],
+      "equipment": "cable",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 25,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new implement family for tibialis: seated, cable/band resistance around the forefoot for dorsiflexion, distinct from the machine tibialis rows already in the corpus"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "tibialis carries no subregion values in the current seed, so subregion is left null."
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Kneeling Lat Pulldown",
+      "reason": "unattested (standard lat pulldown stations are not set up for a kneeling position; no authoritative source found for this as a distinct standard variant)"
+    },
+    {
+      "name": "Cable Curl (EZ-Bar Attachment)",
+      "reason": "not distinct under EL-2 (attachment swap does not materially change the curl versus the existing 'Cable Curl' row)"
+    },
+    {
+      "name": "Cable Rope Front Raise",
+      "reason": "not distinct under EL-2 (rope vs bar/handle does not materially change a front raise's mechanics)"
+    },
+    {
+      "name": "Cable Step-Up",
+      "reason": "not representable (step-ups are not a standard cable-station movement; no authoritative source found)"
+    },
+    {
+      "name": "Cable Lunge",
+      "reason": "not representable (lunges are standardly loaded via barbell/dumbbell/bodyweight; no authoritative source for a cable-loaded lunge as a standard variant)"
+    },
+    {
+      "name": "Cable Reverse Crunch",
+      "reason": "not representable (reverse crunch loading is standardly bodyweight or a held plate, not a cable-station movement)"
+    },
+    {
+      "name": "Cable Face Pull (High Pulley) / (Low Pulley)",
+      "reason": "not distinct under EL-2 given the existing 'Face Pull' / 'Cable Face Pull' / 'Cable Face Pull (Rope)' cluster is already near-redundant; splitting further by pulley height risks compounding that rather than adding a real distinction"
+    },
+    {
+      "name": "Standing Cable Neck Extension",
+      "reason": "not representable (no standard cable-stack attachment for neck extension; the corpus’s neck work uses a harness or dedicated neck machine)"
+    },
+    {
+      "name": "Incline Cable Fly (Single-Arm)",
+      "reason": "duplicate of 'Single-Arm Cable Fly (Standing)' (adding a separate pulley-height variant for the unilateral fly is granularity the bilateral fly family does not need)"
+    },
+    {
+      "name": "Cable Concentration Curl (Standing)",
+      "reason": "duplicate of 'Cable Concentration Curl' (already in the corpus, seated/kneeling by convention; a standing variant is not a materially different exercise)"
+    }
+  ],
+  "aliasesForExisting": [
+    {
+      "existing": "Cable Straight-Arm Pulldown",
+      "aliases": [
+        "Lat Prayer"
+      ]
+    },
+    {
+      "existing": "Serratus Punch",
+      "aliases": [
+        "Cable Serratus Punch"
+      ]
+    },
+    {
+      "existing": "Cable Reverse-Grip Pulldown",
+      "aliases": [
+        "Underhand Lat Pulldown"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1244 @@
+{
+  "family": "band",
+  "generatedAt": "2026-09-05",
+  "existingRowsConsidered": 21,
+  "aliasesForExisting": [
+    {
+      "existing": "Band Shoulder Press",
+      "aliases": [
+        "Band Overhead Press"
+      ]
+    },
+    {
+      "existing": "Band Assisted Pull-Up",
+      "aliases": [
+        "Assisted Pull-Up (Band)"
+      ]
+    },
+    {
+      "existing": "Band Bicep Curl",
+      "aliases": [
+        "Band Curl"
+      ]
+    },
+    {
+      "existing": "Band Tricep Pushdown",
+      "aliases": [
+        "Band Pushdown"
+      ]
+    },
+    {
+      "existing": "Banded Lateral Walk",
+      "aliases": [
+        "Band Lateral Walk",
+        "Monster Walk (Band)"
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "name": "Band Chest Press (Single-Arm)",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "band",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Band Chest Press",
+        "why": "one arm presses at a time against the anchor, adding an anti-rotation core demand the two-hand press does not require"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "axialLoad": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Band Incline Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "band",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "incline",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Band Chest Press",
+        "why": "anchor set low so the pressing line travels up and out at an incline angle, biasing upper chest and front delts"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Push-Up (Band-Resisted)",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "band",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Push-Up",
+        "why": "a band looped across the back adds accommodating resistance that increases through the range, unlike the flat bodyweight-only load"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [],
+      "notes": "Equipment band + bodyweight hybrid; classified under band because the band is the added-resistance element a programme would prescribe by band tension."
+    },
+    {
+      "name": "Band Chest Fly (Standing)",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front_delts"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Chest Press",
+        "why": "straight-arm horizontal-adduction fly rather than an elbow-bending press, isolating the chest instead of driving through the triceps"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Rear Delt Fly",
+      "primaryMuscle": "rear_delts",
+      "secondaryMuscles": [
+        "back"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "horiz_abduction",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Face Pull",
+        "why": "straight-arm horizontal abduction rather than pulling to the face with bent elbows, isolating rear delts without the external-rotation component"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Shoulder Press (Seated)",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps"
+      ],
+      "equipment": "band",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Shoulder Press",
+        "why": "band anchored under a seat with the lifter seated removes leg drive and back sway, the seated/standing split already used elsewhere in the library"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "seated",
+        "axialLoad": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Band Row (Single-Arm)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "band",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Row",
+        "why": "one hand rows at a time, adding an anti-rotation core demand the two-hand row does not require"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "axialLoad": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Band Seated Row",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "band",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Row",
+        "why": "seated with feet braced against the anchor removes the standing postural/leg-drive component of the standing row"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "seated",
+        "axialLoad": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Band Pull-Apart (Overhead)",
+      "primaryMuscle": "rear_delts",
+      "secondaryMuscles": [
+        "back"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 25,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "horiz_abduction",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Pull-Apart",
+        "why": "performed overhead rather than at chest height, biasing the upper traps and lower rear delt fibres through a different angle"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "overheadPosition": true
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Straight-Arm Pulldown",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "triceps"
+      ],
+      "equipment": "band",
+      "movementPattern": "pull",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Lat Pulldown",
+        "why": "elbows stay locked and the arms sweep down from overhead, isolating the lats without elbow flexion the bent-arm pulldown uses"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "overheadPosition": true
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Hammer Curl",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "forearms"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "brachialis",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Bicep Curl",
+        "why": "neutral (palms-in) grip shifts emphasis to the brachialis and brachioradialis rather than the biceps short head"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Concentration Curl",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "short_head",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Bicep Curl",
+        "why": "seated with the elbow braced against the inner thigh, isolating one arm with no shoulder involvement possible"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "seated",
+        "unilateralLoadable": true,
+        "bilateralUpper": false
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Standing Curl (Single-Arm)",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "forearms"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "short_head",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Bicep Curl",
+        "why": "one arm curls at a time standing, unlike the two-hand version, letting each side be trained to its own fatigue point"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "unilateralLoadable": true,
+        "bilateralUpper": false
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Tricep Kickback",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "pushdown",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Tricep Pushdown",
+        "why": "torso hinged forward and the arm extends backward behind the body, rather than pushing straight down in front of it"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "standing",
+        "unilateralLoadable": true,
+        "bilateralUpper": false
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Front Raise",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Lateral Raise",
+        "why": "the band is raised forward in the sagittal plane rather than out to the side, isolating the anterior deltoid fibre"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Y-Raise",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "traps"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Lateral Raise",
+        "why": "arms raise overhead at a Y angle rather than straight out to the side, biasing lower traps and serratus"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "overheadPosition": true
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band T-Raise",
+      "primaryMuscle": "rear_delts",
+      "secondaryMuscles": [
+        "traps"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "horiz_abduction",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Rear Delt Fly",
+        "why": "part of the Y-T-W sequence performed bent-over at a fixed T angle rather than a free horizontal fly path"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "balanceDemand": "stable"
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Band W-Raise",
+      "primaryMuscle": "rear_delts",
+      "secondaryMuscles": [
+        "traps"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "horiz_abduction",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band T-Raise",
+        "why": "elbows bend and draw back to a W shape rather than staying straight, biasing the mid traps and rhomboids"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Y-T-W Raise",
+      "primaryMuscle": "rear_delts",
+      "secondaryMuscles": [
+        "traps",
+        "back"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "horiz_abduction",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Band Y-Raise",
+        "why": "a single set cycles through all three positions (Y, T, W) rather than repeating one angle, a combined scapular-control drill"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "overheadPosition": true,
+        "position": "standing",
+        "floorAccess": false,
+        "balanceDemand": "stable"
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "balanceDemand"
+      ],
+      "notes": "Combined-sequence drill; the three individual angles are also seeded separately for programmes that isolate one."
+    },
+    {
+      "name": "Band Upright Row",
+      "primaryMuscle": "side_delts",
+      "secondaryMuscles": [
+        "traps"
+      ],
+      "equipment": "band",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Band Bicep Curl",
+        "why": "the band is pulled straight up close to the body toward the chin, an internally-rotated shoulder path rather than an elbow curl"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "axialLoad": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "never_auto per brief (upright row shoulder-impingement risk profile, matching how the barbell/cable version is treated elsewhere)."
+    },
+    {
+      "name": "Band Goblet Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "band",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Squat",
+        "why": "band held at the chest with both hands rather than anchored underfoot/overhead, an anterior-loaded goblet position"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Romanian Deadlift (Bilateral)",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "band",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "hip_extension",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Deadlift",
+        "why": "a hip hinge with soft knees from a standing start, not a full pull from the floor, matching how the RDL is a separate row from the deadlift on every other implement"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Romanian Deadlift (Single-Leg)",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "band",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "hip_extension",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Band Romanian Deadlift (Bilateral)",
+        "why": "one leg supports the whole hinge, adding a balance and unilateral-loading demand the two-leg version does not have"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "balanceDemand": "high",
+        "axialLoad": false
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Sumo Deadlift",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings",
+        "adductors"
+      ],
+      "equipment": "band",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "hip_extension",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Deadlift",
+        "why": "a wide stance with toes turned out shifts more load onto the glutes and adductors than the standard stance pull"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Hip Thrust (Single-Leg)",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": "band",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "activator",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Band Hip Thrust",
+        "why": "one leg drives the thrust while the other is held off the floor, doubling the load on the working side"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "balanceDemand": "supported"
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Glute Bridge",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": "band",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "activator",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Hip Thrust",
+        "why": "shoulders stay on the floor rather than elevated on a bench, the same shoulder-position split that separates Glute Bridge from Hip Thrust elsewhere in the library"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Clamshell",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "adductors"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 25,
+      "fatigueCost": 1,
+      "sfr": 5,
+      "subregion": "pumper",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Banded Lateral Walk",
+        "why": "performed side-lying with knees bent, opening the top knee like a clamshell, rather than standing and travelling"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": false,
+        "unilateralLoadable": true,
+        "bilateralLower": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "bilateralLower",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Band Monster Walk",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "quads"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 15,
+      "repMax": 30,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "pumper",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Banded Lateral Walk",
+        "why": "travels forward/backward in an athletic stance rather than stepping side to side"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "gripDemand": "none",
+        "weightBearingHands": false,
+        "axialLoad": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Band Glute Kickback",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 5,
+      "subregion": "stretcher",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Donkey Kick",
+        "why": "a band around the ankles/feet adds external resistance, versus the pure bodyweight version"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "kneeling",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": false,
+        "unilateralLoadable": true,
+        "bilateralLower": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Standing Hip Abduction",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 25,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "pumper",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Banded Lateral Walk",
+        "why": "a stationary standing leg-raise to the side against the band, not a travelling walk"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "gripDemand": "supportive",
+        "weightBearingHands": false,
+        "unilateralLoadable": true
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Standing Hip Adduction",
+      "primaryMuscle": "adductors",
+      "secondaryMuscles": [],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 25,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Standing Hip Abduction",
+        "why": "the working leg pulls inward across the body against the band rather than outward away from it"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "gripDemand": "supportive",
+        "weightBearingHands": false,
+        "unilateralLoadable": true
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Fire Hydrant (Kneeling)",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "adductors"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 25,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "pumper",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Standing Hip Abduction",
+        "why": "performed on all fours lifting the knee out to the side, rather than standing and abducting a straight leg"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "kneeling",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": false,
+        "unilateralLoadable": true,
+        "bilateralLower": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [
+        "overheadPosition",
+        "bilateralLower"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Band Pallof Press",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 1,
+      "sfr": 5,
+      "subregion": "rotation",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": null,
+        "why": "an anti-rotation press-out held against the band pulling sideways, a core-bracing pattern no other seeded band row provides"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "standing"
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Woodchop (High-to-Low)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "back"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "rotation",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Pallof Press",
+        "why": "a rotational chop pulling the band diagonally across the body, not an anti-rotation hold"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Woodchop (Low-to-High)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "back"
+      ],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "rotation",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Woodchop (High-to-Low)",
+        "why": "the diagonal pull travels upward across the body rather than downward, the mirrored direction of the same pattern"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Band Ankle Dorsiflexion",
+      "primaryMuscle": "tibialis",
+      "secondaryMuscles": [],
+      "equipment": "band",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 30,
+      "fatigueCost": 1,
+      "sfr": 5,
+      "subregion": null,
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Tibialis Raise",
+        "why": "the foot pulls against band resistance while seated with the leg extended, an isolated ankle movement rather than a standing bodyweight raise"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": false,
+        "unilateralLoadable": true,
+        "bilateralLower": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "bilateralLower",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Band Assisted Dip",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [
+        "chest",
+        "front_delts"
+      ],
+      "equipment": "band",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "pushdown",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Band Assisted Pull-Up",
+        "why": "the same band-assistance principle applied to the dip rather than the pull-up, a push-pattern counterpart"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": ""
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Band Burpee",
+      "reason": "cardio"
+    },
+    {
+      "name": "Band Overhead Press",
+      "reason": "duplicate of 'Band Shoulder Press'"
+    },
+    {
+      "name": "Band Bent-Over Row",
+      "reason": "duplicate of 'Band Row' (same hinge-and-pull mechanics, name variant only)"
+    }
+  ]
+}

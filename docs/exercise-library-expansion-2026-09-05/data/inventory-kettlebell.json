@@ -1,0 +1,2183 @@
+{
+  "family": "kettlebell",
+  "generatedAt": "2026-09-05",
+  "existingRowsConsidered": 6,
+  "candidates": [
+    {
+      "name": "Kettlebell Goblet Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 4,
+      "sfr": 6,
+      "subregion": "squat_press",
+      "aliases": [
+        "KB Goblet Squat"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Goblet Squat",
+        "why": "implement family differs (kettlebell vs dumbbell); kettlebell horn grip changes hand/forearm position and keeps the bell closer to the sternum than a dumbbell held vertically"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "NSCA Essentials of Strength Training and Conditioning (kettlebell/ballistic training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Standard KB squat entry point; front-loaded hold makes an upright torso self-correcting."
+    },
+    {
+      "name": "Kettlebell Front Rack Squat (Single-Arm)",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes",
+        "abs"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 5,
+      "sfr": 5,
+      "subregion": "squat_press",
+      "aliases": [
+        "Single-Arm Rack Squat"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Goblet Squat",
+        "why": "unilateral offset rack load adds a resisted anti-lateral-flexion demand the two-hand goblet hold does not"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Offset load in one rack position; core resists lateral lean, so it is not just a one-arm goblet squat."
+    },
+    {
+      "name": "Kettlebell Front Rack Squat (Double)",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 5,
+      "sfr": 5,
+      "subregion": "squat_press",
+      "aliases": [
+        "Double Kettlebell Front Squat",
+        "Double Rack Squat"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Front Rack Squat (Single-Arm)",
+        "why": "laterality differs (bilateral, two implements); load is symmetric so no anti-lateral-flexion demand"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Two kettlebells racked at the shoulders; the standard heavier progression from goblet squat once bell size outgrows a comfortable goblet hold."
+    },
+    {
+      "name": "Kettlebell Overhead Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes",
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 5,
+      "sfr": 3,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Kettlebell Front Rack Squat (Single-Arm)",
+        "why": "load held locked out overhead rather than racked; adds sustained overhead shoulder-stability demand through the full squat"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "high",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Rarely programmed for volume; used as a stability/mobility skill piece more than a hypertrophy squat."
+    },
+    {
+      "name": "Kettlebell Deadlift",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 4,
+      "sfr": 6,
+      "subregion": "hip_extension",
+      "aliases": [
+        "Two-Hand Kettlebell Deadlift"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Kettlebell Romanian Deadlift",
+        "why": "starts and resets from the floor each rep (full ROM pick-up) rather than a standing hip hinge that never returns the bell to the floor"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "NSCA Essentials of Strength Training and Conditioning (kettlebell/ballistic training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "The floor-to-lockout pull the swing and clean both begin from; a common first hinge pattern taught before ballistics."
+    },
+    {
+      "name": "Kettlebell Sumo Deadlift",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings",
+        "adductors"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": null,
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Deadlift",
+        "why": "wide stance and vertical shin shift emphasis toward adductors/glutes and shorten the pulling range versus the close-stance version"
+      },
+      "sources": [
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "No existing glute subregion matches hip_extension exactly (glute subregions in the seed are activator/pumper/stretcher); left null rather than guessed."
+    },
+    {
+      "name": "Kettlebell Single-Leg Deadlift",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": "hip_extension",
+      "aliases": [
+        "Single-Leg Kettlebell Deadlift"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Deadlift",
+        "why": "laterality differs (unilateral stance); adds a balance/hip-stability demand a bilateral pull does not have"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "high",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Free hand typically counterbalances; balance demand is the main coaching variable, not load."
+    },
+    {
+      "name": "Kettlebell Swing (Single-Arm)",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "One-Arm Kettlebell Swing",
+        "Single Arm KB Swing"
+      ],
+      "tier": "never_auto",
+      "laterality": "unilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Swing",
+        "why": "unilateral loading adds an anti-rotation demand through the hips and trunk the two-hand version does not carry"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Ballistic; never auto-generated per EL-5."
+    },
+    {
+      "name": "Kettlebell Swing (Alternating)",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "Hand-to-Hand Kettlebell Swing"
+      ],
+      "tier": "never_auto",
+      "laterality": "alternating",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Kettlebell Swing (Single-Arm)",
+        "why": "laterality differs (alternating hand switch mid-flight adds a timing/grip-transfer skill the single-arm version does not require)"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Ballistic; never auto-generated. Hand switch at the top of the arc is the coached skill point."
+    },
+    {
+      "name": "Double Kettlebell Swing",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "Two-Kettlebell Swing"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Kettlebell Swing",
+        "why": "two implements held simultaneously; wider stance and grip spacing change the swing arc versus one bell held with both hands"
+      },
+      "sources": [
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Ballistic; never auto-generated. Requires two matched bells, which limits how often gyms can offer it (niche over specialist)."
+    },
+    {
+      "name": "Kettlebell Clean",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "glutes",
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [
+        "Single Kettlebell Clean"
+      ],
+      "tier": "never_auto",
+      "laterality": "unilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Clean and Press",
+        "why": "racks the bell and stops there; no overhead press phase, so it trains the pull-and-catch skill in isolation"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": "Ballistic; never auto-generated. The standalone building block the corpus’s combined clean-and-press skips."
+    },
+    {
+      "name": "Double Kettlebell Clean",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "glutes",
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 5,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Kettlebell Clean",
+        "why": "laterality differs (two bells cleaned together); the bells must be threaded past the thighs simultaneously, a distinct technical demand"
+      },
+      "sources": [
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": "Ballistic; never auto-generated."
+    },
+    {
+      "name": "Kettlebell Dead Clean",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "glutes",
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [
+        "Dead-Stop Kettlebell Clean"
+      ],
+      "tier": "never_auto",
+      "laterality": "unilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Clean",
+        "why": "each rep resets dead on the floor with no backswing, removing the stretch-reflex momentum the standard clean uses"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": "Ballistic (still an explosive hip-driven pull) even though it starts dead; never auto-generated. Common strict-technique regression for clean coaching."
+    },
+    {
+      "name": "Kettlebell Hang Clean",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "glutes",
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "unilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Kettlebell Clean",
+        "why": "starts from a hang position above the knee rather than the floor, shortening the pull and removing the floor pick-up phase"
+      },
+      "sources": [
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": "Ballistic; never auto-generated."
+    },
+    {
+      "name": "Alternating Kettlebell Snatch",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 5,
+      "sfr": 3,
+      "subregion": "upper_mid_row",
+      "aliases": [
+        "Hand-to-Hand Kettlebell Snatch"
+      ],
+      "tier": "never_auto",
+      "laterality": "alternating",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Kettlebell Snatch",
+        "why": "laterality differs (alternating hand switch at the top, mid-arc), the standard competition/conditioning format"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Ballistic; never auto-generated."
+    },
+    {
+      "name": "Kettlebell Press (Single-Arm)",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "abs"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": "overhead_press",
+      "aliases": [
+        "Strict Kettlebell Press",
+        "Military Kettlebell Press"
+      ],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Clean and Press",
+        "why": "strict press from the rack only; no clean phase, so it isolates the press for its own progression"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": "The strict overhead press most KB strength programmes actually track, separate from the combined clean-and-press skill."
+    },
+    {
+      "name": "Double Kettlebell Press",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": "overhead_press",
+      "aliases": [
+        "Double Kettlebell Military Press"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Press (Single-Arm)",
+        "why": "laterality differs (bilateral, two implements pressed together); removes the anti-lateral-flexion demand of the single-arm version"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": "Requires two matched bells."
+    },
+    {
+      "name": "Bottoms-Up Kettlebell Press",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "forearms",
+        "triceps"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 8,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "overhead_press",
+      "aliases": [
+        "Bottom-Up Kettlebell Press"
+      ],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Kettlebell Press (Single-Arm)",
+        "why": "bell held base-up, unsupported by the forearm; the wrist/grip must actively balance it through the whole press"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "high",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": "Grip-stability drill more than a loading tool; light weights only by design, so it stays niche rather than specialist."
+    },
+    {
+      "name": "Half-Kneeling Kettlebell Press",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "abs"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Press (Single-Arm)",
+        "why": "kneeling stance removes leg drive and adds an anti-rotation demand through the hips, isolating the shoulder press more strictly"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "kneeling",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "Common shoulder-stability accessory; kneeling limb is opposite the pressing arm by convention."
+    },
+    {
+      "name": "Seated Kettlebell Press",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Kettlebell Press (Single-Arm)",
+        "why": "seated position removes leg drive and torso lean entirely, isolating the shoulder more than the standing version"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (kettlebell/ballistic training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "Named seated per the corpus’s standing-is-default naming convention. axialLoad true matches the corpus convention for seated FREE-WEIGHT presses (e.g. \"Seated Dumbbell Press\"): no fixed backrest transmits the load to a frame, so the spine still bears it, unlike a seated machine press."
+    },
+    {
+      "name": "Kettlebell Floor Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Kettlebell Press (Single-Arm)",
+        "why": "lying on the floor, horizontal press pattern (chest-dominant) rather than a standing vertical/overhead press"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Floor limits ROM at the bottom, taking the shoulder joint out of end-range; a common alternative when no bench is available."
+    },
+    {
+      "name": "See-Saw Kettlebell Press",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "abs"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "overhead_press",
+      "aliases": [
+        "Alternating Kettlebell Press"
+      ],
+      "tier": "niche",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Double Kettlebell Press",
+        "why": "the two bells press in reciprocating fashion (one up as the other lowers) rather than together, adding a coordination and anti-rotation demand"
+      },
+      "sources": [
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": "Requires two matched bells; coordination-focused rather than a primary loading tool."
+    },
+    {
+      "name": "Kettlebell Push Press",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "quads"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 8,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "unilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Press (Single-Arm)",
+        "why": "uses a leg-drive dip and drive to launch the bell, so heavier loads move than a strict press; the leg contribution is the defining difference"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "NSCA Essentials of Strength Training and Conditioning (kettlebell/ballistic training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Ballistic; never auto-generated per EL-5 (explicit brief instruction)."
+    },
+    {
+      "name": "Kettlebell Jerk",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "quads"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 5,
+      "sfr": 3,
+      "subregion": "overhead_press",
+      "aliases": [
+        "Kettlebell Jerk (Long Cycle)"
+      ],
+      "tier": "never_auto",
+      "laterality": "unilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Kettlebell Push Press",
+        "why": "adds a second dip under the bell to catch the lockout (split or re-bend of the knees), rather than one continuous leg drive to lockout"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Ballistic; never auto-generated per EL-5 (explicit brief instruction). Competition girevoy-sport lift."
+    },
+    {
+      "name": "Kettlebell Row (Single-Arm)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps",
+        "rear_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 6,
+      "subregion": "upper_mid_row",
+      "aliases": [
+        "Single-Arm Kettlebell Row",
+        "One-Arm Kettlebell Row"
+      ],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: no existing kettlebell row row exists (only the swing/snatch/clean/press/RDL/shrug/get-up rows are seeded)"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "NSCA Essentials of Strength Training and Conditioning (kettlebell/ballistic training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "Bent-over or supported single-arm row; a direct kettlebell-equipment equivalent of the existing Dumbbell Row."
+    },
+    {
+      "name": "Gorilla Row",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps",
+        "glutes"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": "upper_mid_row",
+      "aliases": [
+        "Kettlebell Gorilla Row"
+      ],
+      "tier": "specialist",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Row (Single-Arm)",
+        "why": "both bells stay on the floor between the feet and the lifter rows alternately from a fixed deep-hinge stance, adding a static hip-hinge hold the supported single-arm row does not have"
+      },
+      "sources": [
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "Two kettlebells on the floor, deep athletic stance held throughout."
+    },
+    {
+      "name": "Renegade Row",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "abs",
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [
+        "Kettlebell Renegade Row",
+        "Plank Row (Kettlebell)"
+      ],
+      "tier": "niche",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Gorilla Row",
+        "why": "performed from a push-up plank position (hands on the bells) rather than a standing hinge, adding a whole-body anti-rotation plank demand"
+      },
+      "sources": [
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "High core and shoulder-stability demand; light loads relative to the standing row variants."
+    },
+    {
+      "name": "Kettlebell Farmer's Carry",
+      "primaryMuscle": "traps",
+      "secondaryMuscles": [
+        "forearms",
+        "abs"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "carry",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": null,
+      "aliases": [
+        "Kettlebell Farmer Walk"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Farmer's Walk",
+        "why": "implement family differs (kettlebell vs dumbbell); the bell’s handle geometry sits differently in the hand than a dumbbell head"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (kettlebell/ballistic training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "exerciseType distance or time, not weight_reps (carries convention); rep fields left null."
+    },
+    {
+      "name": "Kettlebell Suitcase Carry",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "traps",
+        "forearms"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "carry",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": null,
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Suitcase Carry",
+        "why": "implement family differs (kettlebell vs dumbbell)"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (kettlebell/ballistic training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "exerciseType distance or time, not weight_reps."
+    },
+    {
+      "name": "Kettlebell Rack Carry",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "front_delts",
+        "forearms"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "carry",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": null,
+      "aliases": [
+        "Front Rack Kettlebell Carry"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Suitcase Carry",
+        "why": "bell held racked at the shoulder rather than hanging at the side; the anti-lateral-flexion demand moves from the hip/oblique line to the upper trunk and shoulder girdle"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "exerciseType distance or time, not weight_reps."
+    },
+    {
+      "name": "Kettlebell Overhead Carry",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "abs",
+        "traps"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "carry",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "Waiter’s Carry (Kettlebell)"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Kettlebell Rack Carry",
+        "why": "bell locked out overhead rather than racked; sustained overhead shoulder stability replaces the rack-position anti-flexion demand"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "exerciseType distance or time, not weight_reps."
+    },
+    {
+      "name": "Bottoms-Up Kettlebell Carry",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [
+        "front_delts",
+        "abs"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "carry",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Kettlebell Rack Carry",
+        "why": "bell held base-up unsupported through the whole walk; grip and wrist must actively balance it, unlike a racked bell resting on the forearm"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "exerciseType distance or time, not weight_reps. Light-load stability drill; stays niche given the load ceiling."
+    },
+    {
+      "name": "Mixed Kettlebell Carry",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "traps",
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "carry",
+      "isCompound": true,
+      "repMin": null,
+      "repMax": null,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "Offset Kettlebell Carry"
+      ],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Rack Carry",
+        "why": "one bell racked and one suitcase-carried simultaneously; the asymmetric combination changes the anti-rotation/anti-lateral-flexion mix versus either carry alone"
+      },
+      "sources": [
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "exerciseType distance or time, not weight_reps."
+    },
+    {
+      "name": "Turkish Get-Up (Half)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "glutes",
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": null,
+      "aliases": [
+        "Half Get-Up",
+        "Half Turkish Get-Up"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Turkish Get-Up",
+        "why": "stops at the tall-sitting/half-kneeling midpoint and returns, rather than completing the full stand-to-lying sequence; a regression used to teach the pattern"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "high",
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": "Coaching progression toward the full get-up; overheadPosition true because the bell is kept locked out overhead throughout, same as the full get-up."
+    },
+    {
+      "name": "Get-Up to Elbow",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": null,
+      "aliases": [
+        "Roll to Elbow",
+        "Get-Up to Elbow (Kettlebell)"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Turkish Get-Up (Half)",
+        "why": "stops even earlier, at the roll-to-forearm/elbow phase; the most reduced segment of the get-up sequence"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "high",
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": "The earliest get-up progression segment; often the first drill taught before any weight is used overhead, so the bell is not locked overhead the way the fuller get-up variants are."
+    },
+    {
+      "name": "Kettlebell Windmill (Low)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "adductors",
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 8,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "Windmill (Low)",
+        "Kettlebell Low Windmill"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: no existing windmill row is seeded"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": "Bell racked at the shoulder (not locked overhead) throughout the hip hinge; the mobility/strength hybrid entry version."
+    },
+    {
+      "name": "Kettlebell Windmill (High)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "adductors",
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [
+        "Windmill (High)",
+        "Kettlebell High Windmill"
+      ],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Kettlebell Windmill (Low)",
+        "why": "bell stays locked out overhead throughout the hinge instead of racked, adding a sustained overhead shoulder-stability demand to the hip mobility work"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": "Advanced shoulder-stability/mobility skill; rarely loaded heavily."
+    },
+    {
+      "name": "Kettlebell Halo",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "abs",
+        "traps"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: circles the bell around the head, a shoulder-mobility pattern none of the seeded kettlebell rows perform"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": null,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "balanceDemand"
+      ],
+      "notes": "Light-load mobility/warm-up staple in kettlebell programming; rarely a primary volume driver."
+    },
+    {
+      "name": "Kettlebell Around-the-World",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "front_delts",
+        "forearms"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 2,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [
+        "Kettlebell Pass Around"
+      ],
+      "tier": "niche",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Kettlebell Halo",
+        "why": "passes the bell around the waist hand-to-hand rather than around the head; a torso-level pass instead of a shoulder-level circle"
+      },
+      "sources": [
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "balanceDemand"
+      ],
+      "notes": "Grip-transfer/coordination drill; almost never logged as working volume, so niche rather than specialist."
+    },
+    {
+      "name": "Kettlebell Reverse Lunge (Rack Position)",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": null,
+      "aliases": [
+        "Kettlebell Reverse Lunge"
+      ],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: no existing kettlebell lunge row is seeded"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "high",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "One or two bells racked; stepping back is generally lower knee-shear than stepping forward, the common default teaching cue."
+    },
+    {
+      "name": "Kettlebell Forward Lunge (Rack Position)",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "Kettlebell Forward Lunge"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Reverse Lunge (Rack Position)",
+        "why": "stepping direction reverses (forward instead of back), which changes the deceleration demand on the front leg on landing"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "high",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Higher knee-shear on the step; programmed less often than the reverse-step version."
+    },
+    {
+      "name": "Kettlebell Overhead Lunge",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes",
+        "front_delts"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Kettlebell Reverse Lunge (Rack Position)",
+        "why": "bell held locked out overhead instead of racked, adding a sustained overhead shoulder-stability demand through the step and stand"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "high",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Advanced combination skill; light loads only."
+    },
+    {
+      "name": "Kettlebell Thruster (Double)",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "front_delts",
+        "glutes"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 5,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [
+        "Kettlebell Thruster",
+        "Double Kettlebell Thruster"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Front Rack Squat (Double)",
+        "why": "the squat continues into a full overhead press at the top of each rep rather than stopping at standing"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (kettlebell/ballistic training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "balanceDemand"
+      ],
+      "notes": "Not classified ballistic under EL-7 (the ballistic list is swing/clean/snatch/jerk/throw/jump); this is a continuous squat-to-press, not a launch."
+    },
+    {
+      "name": "Kettlebell High Pull",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "side_delts",
+        "traps"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [
+        "Kettlebell High Pull (Single-Arm)"
+      ],
+      "tier": "never_auto",
+      "laterality": "unilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell Swing (Single-Arm)",
+        "why": "the hip-drive momentum is pulled into a high elbow finish at chest height rather than let float out to arm’s length"
+      },
+      "sources": [
+        "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)",
+        "RKC/Dragon Door Kettlebell instructor curriculum"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "balanceDemand"
+      ],
+      "notes": "Ballistic; never auto-generated per EL-5 (explicit brief instruction: every high pull is never_auto)."
+    },
+    {
+      "name": "Kettlebell Sumo Deadlift High Pull",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "side_delts",
+        "glutes"
+      ],
+      "equipment": "kettlebell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "upper_mid_row",
+      "aliases": [
+        "SDHP",
+        "Kettlebell SDHP"
+      ],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Kettlebell High Pull",
+        "why": "starts from a sumo-stance deadlift pick-up with the bell between the feet rather than a swing-style backswing start"
+      },
+      "sources": [
+        "RKC/Dragon Door Kettlebell instructor curriculum",
+        "NSCA Essentials of Strength Training and Conditioning (kettlebell/ballistic training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Ballistic; never_auto per the brief’s explicit call-out (this specific named movement is flagged separately from the general high-pull rule, since the combined internal-rotation-plus-abduction shoulder position at the top is coached with more caution than a plain high pull)."
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Kettlebell Around-the-Body Pass",
+      "reason": "duplicate of 'Kettlebell Around-the-World'"
+    },
+    {
+      "name": "Kettlebell Figure 8",
+      "reason": "not distinct under EL-2 (a coordination/flow drill built from the halo and around-the-world patterns already covered; no single coach-countable stimulus of its own)"
+    },
+    {
+      "name": "Kettlebell Bottoms-Up Clean",
+      "reason": "not distinct under EL-2 (the bottoms-up demand is already represented by Bottoms-Up Kettlebell Press and Bottoms-Up Kettlebell Carry; a bottoms-up clean is a rare combination drill, not a distinct stimulus a coach would separately track)"
+    },
+    {
+      "name": "Kettlebell Snatch Test",
+      "reason": "not representable (a timed-rep-count test protocol, not a single exercise row)"
+    },
+    {
+      "name": "Long Cycle Clean and Jerk",
+      "reason": "not distinct under EL-2 (rep-scheme label for repeated Kettlebell Clean + Kettlebell Jerk, not a new movement)"
+    }
+  ],
+  "aliasesForExisting": [
+    {
+      "existing": "Kettlebell Swing",
+      "aliases": [
+        "Two-Hand Kettlebell Swing",
+        "Russian Kettlebell Swing"
+      ]
+    },
+    {
+      "existing": "Kettlebell Snatch",
+      "aliases": [
+        "Single-Arm Kettlebell Snatch"
+      ]
+    },
+    {
+      "existing": "Kettlebell Clean and Press",
+      "aliases": [
+        "Clean and Press (Kettlebell)"
+      ]
+    }
+  ],
+  "kettlebellComplexesForPlanWork": [
+    {
+      "name": "Clean, Press, Squat Complex",
+      "sequence": [
+        "Kettlebell Clean",
+        "Kettlebell Press (Single-Arm)",
+        "Kettlebell Front Rack Squat (Single-Arm)"
+      ],
+      "source": "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+    },
+    {
+      "name": "Swing, Clean, Snatch Ladder",
+      "sequence": [
+        "Kettlebell Swing (Single-Arm)",
+        "Kettlebell Clean",
+        "Kettlebell Snatch"
+      ],
+      "source": "RKC/Dragon Door Kettlebell instructor curriculum"
+    },
+    {
+      "name": "Around-the-Body Complex",
+      "sequence": [
+        "Kettlebell Halo",
+        "Kettlebell Around-the-World",
+        "Kettlebell Goblet Squat"
+      ],
+      "source": "RKC/Dragon Door Kettlebell instructor curriculum"
+    },
+    {
+      "name": "Get-Up to Windmill",
+      "sequence": [
+        "Turkish Get-Up (Half)",
+        "Kettlebell Windmill (Low)"
+      ],
+      "source": "StrongFirst (Tsatsouline, \"Kettlebell Simple & Sinister\"; StrongFirst Kettlebell instructor manual)"
+    },
+    {
+      "name": "Double Clean, Squat, Press",
+      "sequence": [
+        "Double Kettlebell Clean",
+        "Kettlebell Front Rack Squat (Double)",
+        "Double Kettlebell Press"
+      ],
+      "source": "RKC/Dragon Door Kettlebell instructor curriculum"
+    }
+  ]
+}

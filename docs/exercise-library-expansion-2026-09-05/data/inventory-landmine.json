@@ -1,0 +1,631 @@
+{
+  "family": "landmine",
+  "generatedAt": "2026-09-05",
+  "existingRowsConsidered": 13,
+  "candidates": [
+    {
+      "name": "Half-Kneeling Landmine Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front_delts",
+        "triceps"
+      ],
+      "equipment": "landmine",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": "incline",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Landmine Chest Press (Single-Arm)",
+        "why": "kneeling stance removes leg drive and back-leg anti-rotation contribution entirely, unlike the standing single-arm version; also distinct from the existing \"Landmine Press (Abs)\" row, whose name-derived position is standing, not kneeling"
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)"
+      ],
+      "demandOverrides": {
+        "position": "kneeling",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "Kneeling limb opposite the pressing arm by convention; a common shoulder-stability accessory."
+    },
+    {
+      "name": "Rotational Landmine Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "abs",
+        "front_delts"
+      ],
+      "equipment": "landmine",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "incline",
+      "aliases": [
+        "Landmine Punch Press",
+        "Half-Kneeling Rotational Landmine Press"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Landmine Chest Press (Single-Arm)",
+        "why": "the trunk actively rotates into the press (hip and torso turn drives the bar), rather than pressing from a fixed square stance; a rotational-power emphasis the stationary press does not have"
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": "Distinct from the existing \"Landmine Press (Abs)\" row too: that row is a stationary anti-rotation press (resisting rotation); this one deliberately produces rotation as part of the rep."
+    },
+    {
+      "name": "Landmine Meadows Row",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps",
+        "rear_delts"
+      ],
+      "equipment": "landmine",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 6,
+      "subregion": "horizontal_lat",
+      "aliases": [
+        "Meadows Row"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Single-Arm Landmine Row",
+        "why": "a bent-over, slightly turned stance (torso angled toward the bar end) with a shorter, more lat-stretched ROM than the square-stance single-arm row it is often confused with"
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)",
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Named after John Meadows; distinct hip/torso angle from the standard single-arm landmine row is the coached difference."
+    },
+    {
+      "name": "Landmine Chest-Supported Row",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "rear_delts",
+        "biceps"
+      ],
+      "equipment": "landmine",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 6,
+      "subregion": "horizontal_lat",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Landmine Row",
+        "why": "chest braced against an inclined bench over the bar removes all lower-back and hip involvement, unlike the bent-over two-arm row"
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Needs a bench positioned over the landmine sleeve; setup complexity keeps it niche rather than specialist."
+    },
+    {
+      "name": "Landmine Hack Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "landmine",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": "squat_press",
+      "aliases": [
+        "Landmine Hack Squat (Behind the Back)"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Landmine Squat",
+        "why": "the bar travels behind/between the calves (hack-squat bar path) rather than held at the chest, shifting the load line behind the body and biasing the quads more directly"
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "A hinge-forward torso with the bar close to the heels is the coaching point that separates it from the chest-held Landmine Squat."
+    },
+    {
+      "name": "Landmine Zercher Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "equipment": "landmine",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 5,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Zercher Squat",
+        "why": "implement family differs (landmine sleeve vs free barbell); the fixed pivot at the sleeve changes the bar path to an arc rather than a straight vertical line"
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Held in the crook of the elbows like the barbell Zercher squat, but anchored at one end."
+    },
+    {
+      "name": "Landmine Sumo Squat",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "quads",
+        "adductors"
+      ],
+      "equipment": "landmine",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": "squat_press",
+      "aliases": [
+        "Landmine Sumo Squat (Adductor Focus)"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Landmine Squat",
+        "why": "wide stance with the bar held vertically between the legs, shifting the load line and emphasis toward adductors/glutes versus the narrow-stance chest-held squat"
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Bar held two-handed at the sleeve end, vertical, between a wide stance; a common landmine goblet-squat substitute."
+    },
+    {
+      "name": "Landmine Reverse Lunge",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "landmine",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": "squat_press",
+      "aliases": [
+        "Landmine Reverse Lunge (Front Rack)"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: no existing landmine lunge row is seeded"
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "high",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Bar racked at the chest (as in Landmine Squat) with a reverse step; the arc of the bar assists balance versus a free-weight reverse lunge."
+    },
+    {
+      "name": "Landmine Anti-Rotation Press (Half-Kneeling)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "front_delts",
+        "chest"
+      ],
+      "equipment": "landmine",
+      "movementPattern": "core",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": "anti_extension",
+      "aliases": [
+        "Half-Kneeling Landmine Chop Press",
+        "Landmine Pallof-Style Press"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Landmine Rotation",
+        "why": "the trunk actively RESISTS rotation while the arms press out and back in (an isometric-in-motion anti-rotation demand), the opposite intent of Landmine Rotation and Landmine Twist, which deliberately produce trunk rotation"
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)"
+      ],
+      "demandOverrides": {
+        "position": "kneeling",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "Kneeling, both arms extend the bar out from the chest and return without letting the hips or shoulders turn toward the anchor; also distinguished from \"Landmine Press (Abs)\" (existing row, standing per its name-derived position) by the explicit kneeling stance and anti-rotation coaching cue."
+    },
+    {
+      "name": "Landmine Shrug",
+      "primaryMuscle": "traps",
+      "secondaryMuscles": [],
+      "equipment": "landmine",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": null,
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": null,
+        "why": "new movement family for this corpus: no existing landmine shrug row is seeded"
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Bar held at the hips (as for a landmine RDL) and shrugged; a rare substitute when no dumbbells/trap bar are free."
+    },
+    {
+      "name": "Landmine Floor Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps"
+      ],
+      "equipment": "landmine",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Landmine Chest Press (Single-Arm)",
+        "why": "lying on the floor removes leg drive and shortens the ROM at the bottom, the same floor-vs-standing distinction the corpus already draws between \"Close-Grip Bench Press\" and \"Close-Grip Floor Press\""
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Rare setup (needs the sleeve height to clear a lying lifter) but attested as a shoulder-friendly landmine pressing option."
+    },
+    {
+      "name": "Landmine Thruster",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "front_delts",
+        "glutes"
+      ],
+      "equipment": "landmine",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 5,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [
+        "Landmine Squat to Press"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Landmine Squat",
+        "why": "the squat continues into a press at the top of every rep (single-arm, bar angles up and away from the shoulder) rather than stopping at standing"
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "stable",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "balanceDemand"
+      ],
+      "notes": "Not classified ballistic under EL-7; a continuous squat-to-press, not a launch."
+    },
+    {
+      "name": "Landmine Split Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "landmine",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 5,
+      "subregion": "squat_press",
+      "aliases": [
+        "Landmine Bulgarian Split Squat"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Split Squat",
+        "why": "implement family differs (landmine vs barbell); the bar is racked at the chest and its arc assists balance, rather than a bar on the back or held free"
+      },
+      "sources": [
+        "Established S&C coaching literature (landmine training texts/courses: e.g. Perform Better, EliteFTS landmine programming guides)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "high",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Rear foot may be elevated (Bulgarian-style) or flat; same distinguishing mechanism either way, so kept as one row."
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Landmine Push Press",
+      "reason": "not distinct under EL-2 (leg-drive assistance on a single-arm landmine press is a coaching cue on the existing \"Landmine Chest Press (Single-Arm)\" and \"Half-Kneeling Landmine Press\" rows, not a separately attested named movement in the corpus’s naming convention)"
+    },
+    {
+      "name": "Landmine Clean",
+      "reason": "unattested as a standard named landmine movement distinct from a deadlift-to-shoulder shrug; not a recognised drill in the checked sources"
+    },
+    {
+      "name": "Landmine Woodchopper",
+      "reason": "duplicate of 'Landmine Rotation'/'Landmine Twist' (same standing rotational core pattern already seeded twice)"
+    }
+  ],
+  "aliasesForExisting": [
+    {
+      "existing": "Landmine Press",
+      "aliases": [
+        "Two-Arm Landmine Press",
+        "Landmine Shoulder Press"
+      ]
+    },
+    {
+      "existing": "Single-Arm Landmine Row",
+      "aliases": [
+        "Landmine Row (Single-Arm)"
+      ]
+    },
+    {
+      "existing": "Landmine Romanian Deadlift",
+      "aliases": [
+        "Landmine RDL"
+      ]
+    }
+  ],
+  "observations": [
+    "Landmine Rotation and Landmine Twist are already both seeded (back, abs, isolation, rotation subregion) and read as the same movement under two names; flagged here as an existing-corpus duplicate for the lead, not something this agent renames or removes.",
+    "\"Landmine Press (Abs)\" already exists (abs primary, movementPattern core) and is mechanically close to a half-kneeling or standing anti-rotation press; its name does not say \"kneeling\" and its name-derived position is standing, so this agent treated the new Half-Kneeling Landmine Press / Rotational Landmine Press / Landmine Anti-Rotation Press candidates as distinct by stance and by producing-vs-resisting rotation, and recorded the reasoning in each candidate rather than guessing which the existing row already is."
+  ]
+}

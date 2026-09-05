@@ -1,0 +1,2546 @@
+{
+  "family": "bodyweight",
+  "generatedAt": "2026-09-05",
+  "existingRowsConsidered": 128,
+  "aliasesForExisting": [
+    {
+      "existing": "Single-Arm Push-Up",
+      "aliases": [
+        "One-Arm Push-Up"
+      ]
+    },
+    {
+      "existing": "Inverted Row",
+      "aliases": [
+        "Australian Pull-Up",
+        "Bodyweight Row"
+      ]
+    },
+    {
+      "existing": "Chin-Up",
+      "aliases": [
+        "Underhand Pull-Up"
+      ]
+    },
+    {
+      "existing": "Pull-Up",
+      "aliases": [
+        "Overhand Pull-Up",
+        "Strict Pull-Up"
+      ]
+    },
+    {
+      "existing": "Toe-to-Bar",
+      "aliases": [
+        "Toes-to-Bar"
+      ]
+    },
+    {
+      "existing": "Hollow Body Hold",
+      "aliases": [
+        "Hollow Hold"
+      ]
+    },
+    {
+      "existing": "Wall Sit",
+      "aliases": [
+        "Wall Squat"
+      ]
+    },
+    {
+      "existing": "Dead Hang",
+      "aliases": [
+        "Passive Hang",
+        "Bar Hang"
+      ]
+    },
+    {
+      "existing": "Glute Bridge",
+      "aliases": [
+        "Floor Bridge"
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "name": "Knee Push-Up",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 3,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Push-Up",
+        "why": "knees on the floor shorten the lever arm, a standard beginner regression that changes the resistance, not the pattern"
+      },
+      "sources": [
+        "https://exrx.net/Kinesiology/ScalingCalisthenics"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Standard entry regression for clients who cannot yet do a full push-up."
+    },
+    {
+      "name": "Pike Push-Up",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "chest"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Push-Up",
+        "why": "hips piked so the torso is near-vertical, shifting load from chest to the anterior deltoid in a shoulder-press vector"
+      },
+      "sources": [
+        "https://gmb.io/planche/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "stable"
+      },
+      "derivedNullAxes": [],
+      "notes": "Common bodyweight-only shoulder-press regression before handstand push-up work."
+    },
+    {
+      "name": "Elevated Pike Push-Up",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "chest"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Pike Push-Up",
+        "why": "feet raised on a box steepens the torso further toward vertical, closer to a true handstand press line"
+      },
+      "sources": [
+        "https://gmb.io/planche/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high"
+      },
+      "derivedNullAxes": [],
+      "notes": "Bridges Pike Push-Up to Wall Handstand Push-Up."
+    },
+    {
+      "name": "Wall Handstand Push-Up",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "chest"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 10,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Elevated Pike Push-Up",
+        "why": "fully inverted against a wall, true vertical overhead pressing line rather than a piked angle"
+      },
+      "sources": [
+        "https://gmb.io/planche/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": true,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [],
+      "notes": "Wall-supported inverted press; the wall removes the balance failure mode of the freestanding version."
+    },
+    {
+      "name": "Freestanding Handstand Push-Up",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "chest"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 1,
+      "repMax": 8,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Wall Handstand Push-Up",
+        "why": "no wall support, so balance is a first-order failure mode of the rep, not just the setup"
+      },
+      "sources": [
+        "https://gmb.io/planche/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": true,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [],
+      "notes": "Advanced skill; never auto-programmed per EL-5 (highest balance-failure risk of the handstand push-up line)."
+    },
+    {
+      "name": "Pseudo-Planche Push-Up",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front_delts",
+        "triceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Push-Up",
+        "why": "hands turned out and torso leaned forward past the hands, loading the shoulder in a planche-lean vector instead of the flat horizontal press"
+      },
+      "sources": [
+        "https://gmb.io/planche/"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Foundational planche strength-training push-up variant."
+    },
+    {
+      "name": "Typewriter Push-Up",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 4,
+      "repMax": 10,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Archer Push-Up",
+        "why": "stays in the bottom position and shifts weight side to side across a held rep, rather than pressing up-and-down onto alternating arms"
+      },
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
+      "demandOverrides": {
+        "unilateralLoadable": true,
+        "bilateralUpper": false
+      },
+      "derivedNullAxes": [],
+      "notes": "One-arm push-up progression tool; sustained bottom-position loading on one arm at a time."
+    },
+    {
+      "name": "Hindu Push-Up",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front_delts",
+        "triceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 3,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Push-Up",
+        "why": "a flowing dive from downward-dog to upward-dog rather than a straight vertical press, adding a mobility component through the shoulders and thoracic spine"
+      },
+      "sources": [
+        "https://calisthenics.com/front-lever-training-routine/"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported"
+      },
+      "derivedNullAxes": [],
+      "notes": "Wrestling/yoga-derived flowing push variant; established staple of bodyweight programming."
+    },
+    {
+      "name": "Spiderman Push-Up",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "abs",
+        "triceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 3,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Push-Up",
+        "why": "each rep drives a knee to the elbow, adding an oblique/hip-flexion demand on top of the press"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Staggered Hands Push-Up",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Archer Push-Up",
+        "why": "one hand set forward of the other in a fixed offset rather than sweeping wide on each rep, a milder unilateral-bias step before the archer variant"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Clap Push-Up",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "plyometric",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 8,
+      "fatigueCost": 3,
+      "sfr": 2,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Push-Up",
+        "why": "explosive concentric leaves the floor for a clap, a plyometric/power expression rather than a controlled grind"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "impact": true,
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "stable",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [],
+      "notes": "Plyometric, not cardio; never_auto per EL-5 (plyometric class)."
+    },
+    {
+      "name": "Scapular Push-Up",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "chest"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": null,
+        "why": "a new, small-range family: scapular protraction/retraction only, elbows locked, no elbow flexion at all"
+      },
+      "sources": [
+        "https://www.syattfitness.com/conditioning/scap-push-up-progressions-for-shoulder-health-function/"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [],
+      "notes": "Serratus anterior/scapular-control drill, quadruped or plank hold; classified under back per closed muscle vocabulary (no serratus entry)."
+    },
+    {
+      "name": "Parallette Push-Up (Deep Range)",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Deficit Push-Up",
+        "why": "parallettes give a fixed, stable elevated hand platform with a neutral wrist grip, versus stacked-plate/box deficits with a flat palm"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "gripDemand": "supportive"
+      },
+      "derivedNullAxes": [],
+      "notes": "Parallettes only (rings variant is a suspension-family row); neutral-grip deep press."
+    },
+    {
+      "name": "Close-Grip Pull-Up",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Neutral Grip Pull-Up",
+        "why": "hands together on the same narrow overhand grip, not a shoulder-width neutral-grip attachment"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Commando Pull-Up",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 4,
+      "repMax": 10,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Pull-Up",
+        "why": "body hangs to one side of the bar and alternates which shoulder clears it each rep, a rotational/unilateral-bias variant of the vertical pull"
+      },
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
+      "demandOverrides": {
+        "unilateralLoadable": true
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Archer Pull-Up",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 8,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Commando Pull-Up",
+        "why": "wide grip with one arm kept straight as a stabiliser while the other does the pulling work, an explicit one-arm-pull-up progression"
+      },
+      "sources": [
+        "https://calisthenicsworldwide.com/exercises/archer-pull-up/"
+      ],
+      "demandOverrides": {
+        "unilateralLoadable": true
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "L-Sit Pull-Up",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps",
+        "abs"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 8,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Pull-Up",
+        "why": "legs held out in an L-sit for the whole set, adding a sustained hip-flexor/abdominal isometric to the pulling movement"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Mixed Grip Pull-Up",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Chin-Up (Supinated)",
+        "why": "one palm pronated and one supinated on the same rep, asymmetric forearm/bicep loading rather than a matched grip"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Negative Pull-Up (Eccentric-Only)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 8,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Pull-Up",
+        "why": "starts at the top (jump or step up) and only performs the slow lowering phase, the standard beginner path to a first strict pull-up"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Isometric Pull-Up Hold (Flexed Arm Hang)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 30,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Pull-Up",
+        "why": "a held top-position isometric with no reps, a fixed-angle strength hold rather than a full concentric/eccentric cycle"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Time-based hold; exerciseType would be duration_hold rather than weight_reps."
+    },
+    {
+      "name": "Scapular Pull-Up",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Pull-Up",
+        "why": "a small-range shoulder-depression drill from a dead hang, no elbow flexion, the movement a pull-up starts with"
+      },
+      "sources": [
+        "https://www.calisthenics-corner.com/articles/scapular-pull-ups/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Typewriter Pull-Up",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 8,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Archer Pull-Up",
+        "why": "stays pulled to the top and traverses side to side across a held rep, rather than pulling up onto a straight-arm side each time"
+      },
+      "sources": [
+        "https://www.pullup-dip.com/blogs/training-camp/10-pull-up-variations"
+      ],
+      "demandOverrides": {
+        "unilateralLoadable": true
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Muscle-Up (Bar)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "chest",
+        "triceps",
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 1,
+      "repMax": 8,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Pull-Up",
+        "why": "a pull-up immediately transitions into a dip over the bar in one continuous rep, combining two movement patterns"
+      },
+      "sources": [
+        "https://www.strengthlog.com/bar-muscle-up/"
+      ],
+      "demandOverrides": {
+        "overheadPosition": true,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": "Explicit never_auto per brief; high technical/timing complexity."
+    },
+    {
+      "name": "Weighted Chin-Up",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 4,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Weighted Pull-Up",
+        "why": "supinated grip biases the biceps and changes the loading vector, mirroring how Chin-Up is already a separate row from Pull-Up"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "exerciseType would be weighted_bodyweight; loadSemantics ADDED_BODYWEIGHT (matches Weighted Pull-Up convention)."
+    },
+    {
+      "name": "Straight Bar Dip (Chest-Lean)",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "decline",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Tricep Dip (Parallel Bars)",
+        "why": "torso leaned well forward and legs kicked back, shifting the emphasis from triceps to chest, the mirror of how upright-torso dips bias triceps"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Bench Dip (Feet Elevated)",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [
+        "chest",
+        "front_delts"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "pushdown",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Bench Dip",
+        "why": "feet raised on a second bench increases the range and the proportion of bodyweight loaded through the arms"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "gripDemand": "supportive",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "overheadPosition": false
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Inverted Row (Feet Elevated)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Inverted Row",
+        "why": "feet raised on a box brings the body closer to horizontal, increasing the proportion of bodyweight pulled"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Single-Arm Inverted Row",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Inverted Row",
+        "why": "one arm pulls while the other stays free at the side, a unilateral loading vector the two-hand row cannot provide"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "unilateralLoadable": true,
+        "bilateralUpper": false
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Inverted Row (High Bar)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "staple",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Inverted Row",
+        "why": "a higher bar keeps the torso closer to vertical, a standard beginner-easy regression of the row angle"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Inverted Row (Low Bar)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Inverted Row (High Bar)",
+        "why": "a low bar takes the body near horizontal, the hardest end of the row-angle range"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Inverted Row (Underhand Grip)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Inverted Row",
+        "why": "supinated grip biases biceps more than the default overhand row, matching the Pull-Up/Chin-Up grip split already in the corpus"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Pistol Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 10,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Skater Squat",
+        "why": "the non-working leg is held straight out in front rather than trailed back behind the body, a different balance and hamstring-flexibility demand"
+      },
+      "sources": [
+        "https://exrx.net/WeightExercises/Quadriceps/BWSingleLegSquat"
+      ],
+      "demandOverrides": {
+        "gripDemand": "none",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Assisted Pistol Squat (Chair-Assisted)",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 12,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Pistol Squat",
+        "why": "a hand on a chair/rail removes most of the balance demand, the standard regression before the freestanding pistol"
+      },
+      "sources": [
+        "https://exrx.net/WeightExercises/Quadriceps/BWSingleLegBoxSquat"
+      ],
+      "demandOverrides": {
+        "balanceDemand": "stable",
+        "gripDemand": "supportive",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": "gripDemand supportive (hand rests on a rail/chair for balance), not the grip-free freestanding pistol."
+    },
+    {
+      "name": "Shrimp Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 4,
+      "repMax": 10,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Pistol Squat",
+        "why": "the rear leg is held bent behind the body and the rear knee tracks toward the floor, removing the straight-leg counterbalance the pistol relies on"
+      },
+      "sources": [
+        "https://fitnessvolt.com/shrimp-squats/"
+      ],
+      "demandOverrides": {
+        "gripDemand": "none",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Bodyweight Split Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "staple",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Bodyweight Bulgarian Split Squat",
+        "why": "rear foot stays on the floor rather than elevated on a bench, the easier stationary-lunge entry point"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "gripDemand": "none",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Bodyweight Reverse Lunge",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "staple",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Reverse Lunge",
+        "why": "unloaded bodyweight version of the existing dumbbell row, the implement (none vs dumbbell) is the distinguishing axis"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "gripDemand": "none",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Bodyweight Forward Lunge",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "staple",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Bodyweight Reverse Lunge",
+        "why": "the working leg steps forward under a lengthening quad rather than back, a different eccentric demand and knee-tracking profile"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "gripDemand": "none",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Bodyweight Walking Lunge",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 24,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "staple",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Walking Lunge",
+        "why": "unloaded bodyweight version; implement axis (none vs dumbbell) makes this a separate row from the existing loaded one"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "unilateralLoadable": false,
+        "gripDemand": "none",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Bodyweight Curtsy Lunge",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "adductors",
+        "quads"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "pumper",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Curtsy Lunge",
+        "why": "unloaded bodyweight version; implement axis makes this a separate row from the existing loaded dumbbell one"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "gripDemand": "none",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Bodyweight Step-Up",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "staple",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Step-Up (Dumbbell)",
+        "why": "unloaded bodyweight version; implement axis makes this a separate row from every loaded step-up already seeded"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "gripDemand": "none",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Bodyweight Lateral Step-Up",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "quads",
+        "adductors"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "pumper",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Bodyweight Step-Up",
+        "why": "the step is to the side rather than straight ahead, adding a frontal-plane/adductor demand the forward step-up does not have"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "gripDemand": "none",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Bodyweight Box Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Box Squat",
+        "why": "unloaded bodyweight version; implement axis makes this a separate row from the existing barbell one"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "gripDemand": "none",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "gripDemand",
+        "axialLoad",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Jump Lunge (Alternating)",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes",
+        "calves"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "plyometric",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 16,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Jump Squat",
+        "why": "legs switch mid-air between a lunge split stance each rep, rather than a symmetric two-leg jump"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "bilateralLower": false,
+        "axialLoad": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Tuck Jump",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "calves",
+        "glutes"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "plyometric",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Jump Squat",
+        "why": "knees drive to the chest at the top of the jump, an explosive hip/knee-flexion expression rather than a squat-depth landing"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Single-Leg Glute Bridge",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "activator",
+      "aliases": [],
+      "tier": "staple",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Glute Bridge",
+        "why": "one leg does the full bridge while the other is held off the floor, doubling the load on the working side, distinct from the shoulder-elevated Single Leg Hip Thrust"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "balanceDemand": "supported"
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Marching Glute Bridge (Alternating)",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings",
+        "abs"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 12,
+      "repMax": 24,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "activator",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Glute Bridge",
+        "why": "the top position is held while the legs alternate lifting off the floor, adding a pelvic-stability demand the static bridge does not test"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Arch Hold (Superman)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 40,
+      "fatigueCost": 1,
+      "sfr": 4,
+      "subregion": "spinal_erector",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": null,
+        "why": "the anti-flexion counterpart to the Plank/Hollow Body Hold family; loads the posterior chain isometrically face-down rather than the anterior core"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": true,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Bird Dog",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 1,
+      "sfr": 5,
+      "subregion": "anti_extension",
+      "aliases": [],
+      "tier": "staple",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Dead Bug",
+        "why": "performed on all fours moving an opposite arm and leg rather than lying on the back moving limbs against gravity"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "kneeling",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": false,
+        "unilateralLoadable": true,
+        "bilateralLower": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "RKC Plank",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 30,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "anti_extension",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Plank",
+        "why": "a short maximal-tension protocol (glutes, quads and lats actively squeezed) prescribed for far shorter holds than the standard endurance plank"
+      },
+      "sources": [
+        "https://drjohnrusin.com/the-best-exercise-you-arent-doing-rkc-plank/"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Long-Lever Plank",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 30,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "anti_extension",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Plank",
+        "why": "forearms are walked forward past the shoulders, lengthening the moment arm and increasing anti-extension demand for the same body position"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Side Plank with Hip Dip (Dynamic)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "anti_extension",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Side Plank",
+        "why": "a repeated dip-and-raise of the hip rather than a static hold, a rep-based rather than isometric prescription of the same position"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Flutter Kick",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 20,
+      "repMax": 40,
+      "fatigueCost": 1,
+      "sfr": 3,
+      "subregion": "flexion",
+      "aliases": [],
+      "tier": "staple",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Leg Raise",
+        "why": "small continuous alternating up-down kicks with the legs held low, not a full raise to a fixed top position"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "bilateralUpper",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Scissor Kick",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "adductors"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 20,
+      "repMax": 40,
+      "fatigueCost": 1,
+      "sfr": 3,
+      "subregion": "flexion",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Flutter Kick",
+        "why": "legs cross over each other horizontally rather than moving up and down, adding an adductor crossover component"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "bilateralUpper",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Plank Shoulder Tap",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "front_delts"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 24,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "anti_extension",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Plank",
+        "why": "one hand lifts to tap the opposite shoulder each rep, adding an anti-rotation demand the static plank does not require"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Plank to Push-Up (Walk-Up)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "chest",
+        "triceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "anti_extension",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Plank",
+        "why": "alternates between forearm plank and full push-up plank each rep, adding a repeated pressing transition to the static hold"
+      },
+      "sources": [],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": ""
+    },
+    {
+      "name": "Windshield Wiper (Hanging)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 6,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "rotation",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Toe-to-Bar",
+        "why": "legs are raised then swept side to side under control while hanging, a rotational demand a straight vertical toes-to-bar does not test"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "bilateralUpper"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Hanging L-Sit",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "forearms"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 5,
+      "repMax": 20,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "L-Sit Hold",
+        "why": "performed hanging from a bar with a closed grip, not supported on parallettes/the floor with palms pressing down"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "bilateralUpper"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "V-Sit",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 5,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "L-Sit Hold",
+        "why": "legs are raised well above parallel into a V rather than held level with the hips, a harder end of the same range-of-motion progression"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "balanceDemand": "high",
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "bilateralUpper",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Neck Bridge (Front)",
+      "primaryMuscle": "neck",
+      "secondaryMuscles": [],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 30,
+      "fatigueCost": 2,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Neck Bridge",
+        "why": "bridges forward onto the forehead loading neck flexors, the mirror of the existing back-of-head extensor bridge"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "kneeling",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": false,
+        "unilateralLoadable": false,
+        "bilateralLower": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Wall Handstand Hold",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "abs"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 15,
+      "repMax": 60,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": null,
+        "why": "a static inverted hold against a wall; distinct from the pressing-rep Wall Handstand Push-Up"
+      },
+      "sources": [
+        "https://gmb.io/planche/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": true,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Freestanding Handstand Hold",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "abs"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 45,
+      "fatigueCost": 2,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Wall Handstand Hold",
+        "why": "no wall support; balance is the entire challenge rather than a setup convenience"
+      },
+      "sources": [
+        "https://gmb.io/planche/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": true,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "balanceDemand"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Planche Lean",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front_delts",
+        "abs"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 15,
+      "repMax": 40,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": null,
+        "why": "entry point of the planche progression: a plank-position hold with the torso leaned forward past the hands, feet still on the floor"
+      },
+      "sources": [
+        "https://gmb.io/planche/"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "supported",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "bilateralUpper",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Tuck Planche Hold",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "front_delts",
+        "abs"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Planche Lean",
+        "why": "feet leave the floor entirely with knees tucked to the chest, a full support hold rather than a leaning drill"
+      },
+      "sources": [
+        "https://gmb.io/planche/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": true,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": true
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "bilateralUpper",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Front Lever (Tuck)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "abs",
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": null,
+        "why": "a horizontal straight-body hold hanging from a bar, mechanically distinct from any vertical pulling row already seeded"
+      },
+      "sources": [
+        "https://calisthenics.com/front-lever-training-routine/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "bilateralUpper",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Front Lever (Full)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "abs",
+        "biceps"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "vertical_pull",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Front Lever (Tuck)",
+        "why": "legs fully extended straight out rather than tucked, a much longer lever arm on the same hold"
+      },
+      "sources": [
+        "https://calisthenics.com/front-lever-training-routine/"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "bilateralUpper",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Back Lever (Tuck)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps",
+        "chest"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "horizontal_lat",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Front Lever (Tuck)",
+        "why": "body hangs face-down and behind the bar in a false grip rather than face-up in front of it, a straight-arm shoulder-extension hold instead of a pulling hold"
+      },
+      "sources": [],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "bilateralUpper",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Human Flag",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "back",
+        "front_delts"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "rotation",
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": null,
+        "why": "a horizontal side-on hold gripping a vertical pole with both hands, a lateral-flexion/anti-rotation demand no other seeded row provides"
+      },
+      "sources": [
+        "https://www.bergmovement.com/calisthenics-blog/human-flag-progressions-beginner-to-advanced-progressions"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "bilateralUpper",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    },
+    {
+      "name": "Human Flag (Tuck Progression)",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "back",
+        "front_delts"
+      ],
+      "equipment": "bodyweight",
+      "movementPattern": "isolation",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "rotation",
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Human Flag",
+        "why": "knees are tucked toward the chest rather than legs extended straight, shortening the lever arm as the standard entry progression"
+      },
+      "sources": [
+        "https://www.bergmovement.com/calisthenics-blog/human-flag-progressions-beginner-to-advanced-progressions"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "bilateralUpper": true,
+        "unilateralLoadable": false,
+        "balanceDemand": "high",
+        "axialLoad": false,
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "overheadPosition",
+        "gripDemand",
+        "bilateralUpper",
+        "balanceDemand",
+        "weightBearingHands"
+      ],
+      "notes": ""
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Burpee",
+      "reason": "cardio"
+    },
+    {
+      "name": "Jumping Jack",
+      "reason": "cardio"
+    },
+    {
+      "name": "High Knees",
+      "reason": "cardio"
+    },
+    {
+      "name": "Running (Treadmill/Outdoor)",
+      "reason": "cardio"
+    },
+    {
+      "name": "Burpee Pull-Up",
+      "reason": "cardio"
+    },
+    {
+      "name": "Bear Crawl (Forward Travel)",
+      "reason": "duplicate of 'Bear Crawl'"
+    },
+    {
+      "name": "Nordic Curl (Eccentric-Only, Assisted)",
+      "reason": "not distinct under EL-2 (a coaching cue/assistance level on the existing Nordic Curl, not a new movement)"
+    },
+    {
+      "name": "Single-Leg Box Jump",
+      "reason": "not representable (box-height-dependent, not a fixed taxonomy point; belongs to a curated plyometric style pool, not a generic library row)"
+    },
+    {
+      "name": "One-Arm Push-Up",
+      "reason": "duplicate of 'Single-Arm Push-Up'"
+    }
+  ]
+}

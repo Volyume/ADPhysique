@@ -1,0 +1,913 @@
+{
+  "family": "machine",
+  "generatedAt": "2026-09-05",
+  "existingRowsConsidered": 100,
+  "candidates": [
+    {
+      "name": "Converging Chest Press Machine",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "machine",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Machine Chest Press",
+        "why": "handles travel on a converging arc that brings the hands together at lockout, giving a peak-contraction squeeze the linear-path selectorised press does not"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Selectorised (no plate-loaded/iso-lateral/HS keyword in the name) — should derive machine_selectorised. Converging-path presses are two-handle stations mechanically linked at the pivot, so single-arm use is not a reasonable ask; unilateralLoadable curated to false."
+    },
+    {
+      "name": "Converging Shoulder Press Machine",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "side_delts"
+      ],
+      "equipment": "machine",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Machine Shoulder Press",
+        "why": "handles converge toward the midline at the top of the press rather than travelling on parallel linear rails, changing the peak-contraction position"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Selectorised — should derive machine_selectorised. Same converging-linkage reasoning as the chest press: not usable one-arm at a time."
+    },
+    {
+      "name": "Iso-Lateral Shoulder Press (Single-Arm)",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "side_delts"
+      ],
+      "equipment": "machine",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "overhead_press",
+      "aliases": [
+        "Hammer Strength Shoulder Press (Single-Arm)"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Plate-Loaded Shoulder Press",
+        "why": "independent iso-lateral arms let each side move through its own path and load unilaterally, unlike the linked bilateral plate-loaded press"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (unilateral training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Named with \"Iso-Lateral\" so the equipmentCategory regex correctly derives machine_plate_loaded, matching the corpus convention for HS/iso-lateral/plate-loaded stations."
+    },
+    {
+      "name": "Smith Machine Overhead Press",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "side_delts"
+      ],
+      "equipment": "smith_machine",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "overhead_press",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Smith Machine Bench Press",
+        "why": "new movement pattern on the Smith rail: vertical overhead pressing rather than horizontal chest pressing, with front_delts as the prime mover"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "equipmentCategory correctly derives to \"smith\" from the equipment field. Position is standing in virtually all commercial Smith setups (a seated back pad is not standard on most Smith frames for this movement); the deriver returns null for position with no name-rule to catch \"overhead press\" + smith, so this is curated."
+    },
+    {
+      "name": "Plate-Loaded T-Bar Row (Chest-Supported)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps",
+        "rear_delts"
+      ],
+      "equipment": "machine",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "upper_mid_row",
+      "aliases": [
+        "Chest-Supported T-Bar Row",
+        "Plate-Loaded T-Bar Row"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Plate-Loaded Row",
+        "why": "chest-supported T-bar station: torso pinned to an angled pad with a single T-bar handle gripped with both hands, a different apparatus and torso-support profile than the standing/seated plate-loaded row and high/low row stations"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Named with \"Plate-Loaded\" so it derives machine_plate_loaded. Position curated to seated for consistency with the corpus’s sole existing chest-supported precedent (\"Machine Row (Chest Supported)\", which derives seated); a hyphenated \"Chest-Supported\" in the name would otherwise trip the lying/floor name-rule (built for prone bench work), which the existing space-separated \"Chest Supported\" name does not."
+    },
+    {
+      "name": "Iso-Lateral Row Machine (Single-Arm)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "machine",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "horizontal_lat",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Machine Row (Hammer Strength)",
+        "why": "independent iso-lateral arms let one side row at a time, unlike the linked bilateral HS row already in the corpus"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (unilateral training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Named with \"Iso-Lateral\" so it derives machine_plate_loaded."
+    },
+    {
+      "name": "Machine Pullover",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "chest"
+      ],
+      "equipment": "machine",
+      "movementPattern": "pull",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "shoulder_extension",
+      "aliases": [
+        "Nautilus Pullover"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Cable Lat Pullover",
+        "why": "new implement family for this movement: the classic Nautilus-style pullover machine drives the arms through a fixed cam-lever arc, distinct from the cable's free line of pull"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": true,
+        "gripDemand": "supportive",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Selectorised — should derive machine_selectorised. Forearms rest on a padded arm bar rather than gripping a handle, so gripDemand is curated to supportive (matches the machine-supportive family) and weightBearingHands to false (the bar loads the forearms, not flat palms)."
+    },
+    {
+      "name": "Horizontal Leg Press",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": "machine",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 20,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Leg Press",
+        "why": "seated with the sled travelling horizontally rather than on the standard 45-degree incline, changing the trunk/hip angle and reducing lower-back shear versus the angled sled"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Selectorised. unilateralLoadable curated to true, matching the corpus’s existing curated precedent for the whole leg-press/hack-squat family (one leg can push while the other rests)."
+    },
+    {
+      "name": "Vertical Leg Press",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": "machine",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 20,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Leg Press",
+        "why": "lying supine with the sled pressing straight up overhead rather than on an incline; a materially different loading angle and set-up (older-style leg press design still in many commercial gyms)"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Selectorised. unilateralLoadable curated to true, same leg-press-family precedent as Horizontal Leg Press."
+    },
+    {
+      "name": "Reverse Hack Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "machine",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [
+        "Front-Facing Hack Squat"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Hack Squat Machine",
+        "why": "facing the machine (belly to the pad) rather than back to the pad, shifting the knee-travel/torso angle and increasing quad-stretch and glute involvement versus the standard hack squat"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Selectorised. unilateralLoadable curated to true, same leg-press/hack-squat-family precedent."
+    },
+    {
+      "name": "V-Squat Machine",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "machine",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "squat_press",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Hack Squat Machine",
+        "why": "shoulder-loaded converging (V-shaped) rail path rather than the hack squat’s back-pad linear sled, giving a different bar path and knee/hip loading ratio"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": true,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Selectorised. Hands rest on side rails for balance rather than bearing load (gripDemand curated to supportive, weightBearingHands false); unilateralLoadable curated to true, matching the leg-press/hack-squat-family precedent."
+    },
+    {
+      "name": "Smith Machine Split Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "smith_machine",
+      "movementPattern": "lunge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": "squat_press",
+      "aliases": [
+        "Smith Machine Bulgarian Split Squat"
+      ],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Smith Machine Squat",
+        "why": "a rear-foot-elevated or split stance under the fixed Smith bar, changing this from a bilateral squat pattern to a unilateral lunge pattern with a fixed vertical bar path"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": true,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "high",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Fills a named gap in the Smith family (task brief: \"Smith split squat\" missing)."
+    },
+    {
+      "name": "Smith Machine Romanian Deadlift",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "equipment": "smith_machine",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": "hip_extension",
+      "aliases": [
+        "Smith Machine RDL"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Smith Machine Squat",
+        "why": "hip-hinge pattern rather than a squat pattern; the fixed vertical bar path is the reason to file this separately from the free-weight barbell RDL already in the corpus"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": true,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Fills a named gap in the Smith family (task brief: \"Smith RDL\" missing)."
+    },
+    {
+      "name": "Single-Leg Leg Extension",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [],
+      "equipment": "machine",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "knee_extension",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Leg Extension",
+        "why": "one leg loaded at a time on the same station, isolating a strength/size imbalance the bilateral machine cannot address"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (unilateral training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Seated and back-supported like the bilateral row it is distinct from. The name-rule’s single-leg high-balance regex fires regardless of apparatus, which contradicts a seated+high-balance combination the validator rejects; balanceDemand is curated to supported because the seat/back pad removes the balance demand regardless of one-leg loading."
+    },
+    {
+      "name": "Single-Leg Lying Leg Curl",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [],
+      "equipment": "machine",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "knee_flexion",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Lying Leg Curl",
+        "why": "one leg loaded at a time on the same station, matching the existing \"Standing Leg Curl\" row’s unilateral-by-construction logic but for the lying station"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (unilateral training chapter)"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Same validator conflict as Single-Leg Leg Extension: lying + high balance is an illegal combination; balanceDemand curated to supported because the prone pad removes the balance demand."
+    },
+    {
+      "name": "Hip Flexion Machine (Seated)",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [],
+      "equipment": "machine",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "Seated Hip Flexor Machine"
+      ],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Abduction Machine",
+        "why": "new movement pattern for the selectorised lower-body family: seated hip flexion (raising the knee against a pad) rather than abduction/adduction/extension"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": true,
+        "bilateralUpper": false,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": null
+      },
+      "derivedNullAxes": [
+        "weightBearingHands"
+      ],
+      "notes": "Selectorised, one-leg-at-a-time by construction like the abduction/adduction machines it is patterned on (gripDemand/unilateralLoadable/bilateralLower curated to match that family’s convention). quads has no matching subregion value for this pattern, so subregion is left null."
+    },
+    {
+      "name": "Horizontal Back Extension",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": "machine",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "spinal_erector",
+      "aliases": [
+        "Flat Back Extension"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Hyperextension (Back Extension)",
+        "why": "flat/horizontal bench angle rather than the 45-degree apparatus, shifting emphasis toward glutes/hamstrings and reducing lower-back erector loading"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "mixed",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "none",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": true,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Selectorised. Position curated to mixed, matching the corpus’s existing curated precedent for every back-extension/hip-extension apparatus row."
+    },
+    {
+      "name": "Rotary Torso Machine",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "machine",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "rotation",
+      "aliases": [
+        "Torso Rotation Machine"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Cable Woodchop",
+        "why": "new implement family for rotation: a seated selectorised machine with a fixed rotational arc against a chest pad, unlike the free line of pull of a cable woodchop"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "supportive",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Selectorised. No name-rule recognises \"rotary torso\" as a seated station, so position/overheadPosition/gripDemand/unilateralLoadable/bilateralUpper/weightBearingHands are all curated: seated with a chest pad, hands may rest on grips but the load path is through the torso rotation, not the palms; both sides rotate together (not splittable one arm at a time)."
+    },
+    {
+      "name": "Machine Shrug",
+      "primaryMuscle": "traps",
+      "secondaryMuscles": [],
+      "equipment": "machine",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "Shrug Machine"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Smith Machine Shrug",
+        "why": "selectorised pin-loaded station rather than a fixed Smith bar, giving a different resistance curve and no fixed bar path"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "Selectorised. Curated unilateralLoadable/bilateralUpper to match the fixed two-handle station design (both traps load together)."
+    },
+    {
+      "name": "Smith Machine Upright Row",
+      "primaryMuscle": "side_delts",
+      "secondaryMuscles": [
+        "biceps",
+        "traps"
+      ],
+      "equipment": "smith_machine",
+      "movementPattern": "pull",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Cable Upright Row",
+        "why": "fixed vertical Smith bar path forces the wrists/shoulders through the same internally-rotated overhead-adjacent arc every rep, with no freedom to widen the pull path the way a cable or barbell version allows"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning (contraindicated/high-risk exercise variants discussion)"
+      ],
+      "demandOverrides": {
+        "position": "standing",
+        "floorAccess": false,
+        "overheadPosition": false,
+        "gripDemand": "bar",
+        "unilateralLoadable": false,
+        "bilateralUpper": true,
+        "bilateralLower": false,
+        "axialLoad": false,
+        "impact": false,
+        "balanceDemand": "supported",
+        "weightBearingHands": false
+      },
+      "derivedNullAxes": [],
+      "notes": "never_auto per EL-5 (task brief names this explicitly as a never_auto movement; shoulder-impingement risk from the fixed bar path). side_delts has no subregion values in the current seed, so subregion is left null."
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Iso-Lateral Incline Press",
+      "reason": "duplicate of 'Plate-Loaded Incline Press' (already derives machine_plate_loaded by name; a separate iso-lateral-named row would be the same station under a different label)"
+    },
+    {
+      "name": "Iso-Lateral Decline Press",
+      "reason": "duplicate of 'Plate-Loaded Decline Press'"
+    },
+    {
+      "name": "Iso-Lateral High Row",
+      "reason": "duplicate of 'HS ISO High Row' (seedRoutines.js REQUIRED_EXERCISES auto-create list) and 'Plate-Loaded High Row'"
+    },
+    {
+      "name": "Iso-Lateral Low Row",
+      "reason": "duplicate of 'Plate-Loaded Low Row'"
+    },
+    {
+      "name": "Single-Leg Leg Press",
+      "reason": "duplicate of 'Single Leg Press' (word-order variant of an existing row, not a new movement)"
+    },
+    {
+      "name": "Belt Squat Machine",
+      "reason": "not this family — belt squat is explicitly assigned to the specialty family in the task brief"
+    },
+    {
+      "name": "GHD Back Extension",
+      "reason": "duplicate of 'Hyperextension (Back Extension)' (same apparatus already in the corpus; 'GHD Sit-Up' also already covers the GHD station for abs)"
+    },
+    {
+      "name": "Cybex Chest Press",
+      "reason": "not distinct under EL-2 (brand name; identical mechanics to 'Machine Chest Press')"
+    },
+    {
+      "name": "Iso-Lateral Preacher Curl",
+      "reason": "duplicate of 'Plate-Loaded Preacher Curl' (already derives machine_plate_loaded by name)"
+    },
+    {
+      "name": "Neck Rotation Machine",
+      "reason": "not representable (the corpus's 4-way neck machine convention covers flexion/extension/lateral flexion only; no attested standard neck-rotation machine station found)"
+    }
+  ],
+  "aliasesForExisting": []
+}

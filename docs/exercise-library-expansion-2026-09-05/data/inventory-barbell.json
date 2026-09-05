@@ -1,0 +1,1014 @@
+{
+  "family": "barbell",
+  "generatedAt": "2026-09-05",
+  "existingRowsConsidered": 113,
+  "aliasesForExisting": [
+    {
+      "existing": "Barbell Row (Supinated)",
+      "aliases": [
+        "Yates Row",
+        "Underhand Barbell Row"
+      ]
+    },
+    {
+      "existing": "Barbell Back Squat",
+      "aliases": [
+        "High-Bar Back Squat",
+        "High Bar Squat"
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "name": "Close-Grip Incline Bench Press",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [
+        "chest",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "pushdown",
+      "aliases": [
+        "Incline Close-Grip Bench Press"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Close-Grip Bench Press",
+        "why": "incline bench angle shifts load toward the clavicular chest/front delts on top of the close grip's triceps bias; also distinct from Incline Barbell Bench Press by grip width"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Grip and bench angle both differ from any single existing row; rep/set defaults match the corpus's other close-grip pressing rows."
+    },
+    {
+      "name": "Wide-Grip Bench Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "flat",
+      "aliases": [
+        "Wide Grip Barbell Bench Press"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Bench Press",
+        "why": "wider hand spacing shortens the range of motion and shifts emphasis toward the pecs, away from triceps; the mirror-image variant to Close-Grip Bench Press"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Common accessory/competition-grip variant; no new demand axis behaviour vs the flat bench press."
+    },
+    {
+      "name": "Paused Bench Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "flat",
+      "aliases": [
+        "Dead-Stop Bench Press"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Bench Press",
+        "why": "a dead-stop pause on the chest removes the stretch reflex, changing the strength demand at the bottom (EL-2 range/depth class)"
+      },
+      "sources": [
+        "Mark Rippetoe, Starting Strength",
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Standard powerlifting-programme prescription; lower rep ceiling reflects the harder concentric off a static chest."
+    },
+    {
+      "name": "Pin Press (Bench)",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [
+        "chest",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "pushdown",
+      "aliases": [
+        "Pin Bench Press"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Board Press",
+        "why": "starts from a dead stop on safety pins at a settable height rather than a fixed board thickness resting on the chest; same triceps-lockout training purpose as Board Press, different apparatus and adjustability"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "axialLoad": false,
+        "balanceDemand": "supported"
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": "Position/floorAccess/axialLoad/balanceDemand came back null because the name lacks the literal phrase 'bench press'; overridden to match Barbell Bench Press's values since it is performed lying on a flat bench off safety pins."
+    },
+    {
+      "name": "Floor Press (Barbell)",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 10,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Bench Press",
+        "why": "pressing from the floor removes leg drive and shortens the range where the upper arm meets the floor; mirrors the existing Floor Press (Dumbbell) but with a barbell"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Tagged chest-primary to match Floor Press (Dumbbell)'s convention, not triceps-primary like the close-grip floor press variant."
+    },
+    {
+      "name": "Spoto Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "flat",
+      "aliases": [
+        "Spoto Bench Press"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Bench Press",
+        "why": "bar is paused an inch or two above the chest, never touching, removing the chest as a stopping/bouncing point (a distinct range/depth class from a paused-on-chest press)"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "axialLoad": false,
+        "balanceDemand": "supported"
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": "Named coaching-community pause variant, distinct from Paused Bench Press by depth (never touches). Demand axes overridden to match the flat bench press family (name has no 'bench press' phrase for the regex to key off)."
+    },
+    {
+      "name": "Larsen Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 8,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [
+        "Larsen Bench Press"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Bench Press",
+        "why": "legs are raised off the bench/floor, removing leg drive and arch entirely - a support/stability condition change, not merely cosmetic"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "lying",
+        "floorAccess": false,
+        "axialLoad": false,
+        "balanceDemand": "supported"
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": "Demand axes overridden to match the flat bench press family; torso is still bench-supported even though the legs are not."
+    },
+    {
+      "name": "Close-Grip Decline Bench Press",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [
+        "chest"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "pushdown",
+      "aliases": [
+        "Decline Close-Grip Bench Press"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Close-Grip Bench Press",
+        "why": "decline bench angle combined with the close grip; the decline changes the resistance curve at lockout the same way Decline Barbell Bench Press differs from the flat press"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Tagged triceps-primary/pushdown to match the Close-Grip Bench Press convention."
+    },
+    {
+      "name": "Seated Barbell Overhead Press",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "side_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "overhead_press",
+      "aliases": [
+        "Seated Barbell Military Press",
+        "Seated Barbell Shoulder Press"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Overhead Press",
+        "why": "seated removes leg drive and lower-back involvement in stabilising the bar, matching the existing standing/seated split used for Dumbbell Shoulder Press vs Seated Dumbbell Press"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "axialLoad": true
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "axialLoad came back null (the regex only flags 'standing' presses); overridden to true to match the existing curated values for Seated Dumbbell Press and Z-Press, which are seated overhead presses tagged axialLoad true."
+    },
+    {
+      "name": "Behind-the-Neck Press",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "side_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 2,
+      "subregion": "overhead_press",
+      "aliases": [
+        "Behind the Neck Press"
+      ],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Barbell Overhead Press",
+        "why": "the bar travels behind the head rather than in front of the face, demanding a different shoulder external-rotation and thoracic-extension range"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "gripDemand": "bar",
+        "axialLoad": true
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "never_auto per EL-5's demanding-mobility caution. gripDemand derived as 'none' by a name-regex collision (the word 'neck' matches the neck-isolation grip-free rule) - flagged as a vocabulary/derivation gap; overridden to 'bar' since the lifter grips a loaded barbell throughout. axialLoad also came back null and is overridden to true (standing barbell load transmitted through the spine, same as any standing barbell press)."
+    },
+    {
+      "name": "Pin Press (Overhead Press)",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "side_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "overhead_press",
+      "aliases": [
+        "Overhead Pin Press"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Overhead Press",
+        "why": "starts from a dead stop on safety pins at a settable height, removing the stretch reflex and any leg-drive carryover into the pull off the shoulders"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "All demand axes resolved cleanly from the standing-press rules."
+    },
+    {
+      "name": "Low-Bar Back Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 8,
+      "fatigueCost": 5,
+      "sfr": 3,
+      "subregion": "squat_press",
+      "aliases": [
+        "Low Bar Squat",
+        "Powerlifting Squat"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Back Squat",
+        "why": "bar sits lower on the rear delts, forcing a greater forward torso lean and hip-dominant moment; a materially different loading vector to the corpus's existing (higher-bar-style) generic Back Squat"
+      },
+      "sources": [
+        "Mark Rippetoe, Starting Strength",
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "The existing 'Barbell Back Squat' is treated as the corpus's generic/high-bar-style entry; 'High-Bar Back Squat' and 'High Bar Squat' are recorded as aliases for it in aliasesForExisting rather than proposed as a second new row, since a plain high-bar squat is not mechanically distinguishable from the existing generic entry."
+    },
+    {
+      "name": "Bulgarian Split Squat (Barbell)",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "squat_press",
+      "aliases": [
+        "Barbell Rear-Foot-Elevated Split Squat"
+      ],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Bulgarian Split Squat",
+        "why": "implement family differs (barbell on the back vs a dumbbell in each hand); bar path clearance behind the rear leg makes this a distinct, less common setup"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Rarer than the dumbbell version because of bar-path clearance, hence niche rather than specialist."
+    },
+    {
+      "name": "Barbell Walking Lunge",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "squat_press",
+      "aliases": [
+        "Walking Lunge (Barbell)"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Lunge",
+        "why": "continuous forward travel each rep rather than a stationary or reverse-stepping lunge, mirroring the corpus's own split of Dumbbell Lunge vs Walking Lunge"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Mirrors the dumbbell family's existing walking/reverse/static lunge split."
+    },
+    {
+      "name": "Barbell Reverse Lunge",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "squat_press",
+      "aliases": [
+        "Reverse Lunge (Barbell)"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Lunge",
+        "why": "stepping backward changes the knee-shear and balance demand versus a forward or walking lunge, mirroring Dumbbell Reverse Lunge vs Dumbbell Lunge"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Mirrors the dumbbell family's existing walking/reverse/static lunge split."
+    },
+    {
+      "name": "Overhead Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes",
+        "front_delts"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 5,
+      "sfr": 2,
+      "subregion": "squat_press",
+      "aliases": [
+        "OHS"
+      ],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Barbell Front Squat",
+        "why": "the bar is held overhead in a wide snatch grip rather than racked, adding a shoulder-stability and thoracic-mobility demand on top of the squat pattern"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Olympic-derived and technically demanding; never_auto per EL-5. All demand axes resolved cleanly."
+    },
+    {
+      "name": "Barbell Hack Squat",
+      "primaryMuscle": "quads",
+      "secondaryMuscles": [
+        "glutes"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "squat_press",
+      "aliases": [
+        "Behind-the-Back Barbell Squat",
+        "Hack Squat (Barbell)"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Hack Squat Machine",
+        "why": "free-weight implement (barbell held behind the calves) vs a fixed machine sled path; distinct balance and grip demand"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Historic barbell-behind-the-legs squat, largely superseded by the machine version but still occasionally programmed; gripDemand resolved to 'supportive' rather than 'bar' because the bar hangs behind straight arms rather than being gripped for a press or pull."
+    },
+    {
+      "name": "Snatch-Grip Romanian Deadlift",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [
+        "glutes",
+        "back"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 5,
+      "repMax": 10,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "hip_extension",
+      "aliases": [
+        "Snatch Grip RDL"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 3,
+      "distinctFrom": {
+        "existing": "Snatch Grip Deadlift",
+        "why": "a Romanian deadlift hip-hinge pattern (bar stays off the floor between reps, knees stay softer) performed with the wide snatch grip, versus the existing row's dead-stop-from-floor conventional-deadlift pattern"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Also distinct from Romanian Deadlift by grip width, which increases range of motion and upper-back demand."
+    },
+    {
+      "name": "Block Pull (Deadlift)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 4,
+      "sfr": 3,
+      "subregion": "spinal_erector",
+      "aliases": [
+        "Deadlift from Blocks"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Rack Pull",
+        "why": "the plates rest on blocks so the bar starts at a fixed height under real free-weight tension throughout, rather than resting on safety pins inside a power rack"
+      },
+      "sources": [
+        "Bill Starr, The Strongest Shall Survive",
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Borderline distinction from Rack Pull - both are elevated-start pulls; flagged as a least-sure candidate in the final report."
+    },
+    {
+      "name": "Paused Deadlift",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "glutes",
+        "hamstrings",
+        "quads"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 3,
+      "repMax": 6,
+      "fatigueCost": 5,
+      "sfr": 3,
+      "subregion": "spinal_erector",
+      "aliases": [
+        "Dead-Stop Pause Deadlift"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Conventional Deadlift",
+        "why": "a mid-pull pause (typically below the knee) removes momentum and adds a static-hold strength demand, a distinct range/depth class"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Common conjugate/powerlifting accessory prescription."
+    },
+    {
+      "name": "Barbell Glute Bridge",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "activator",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Barbell Hip Thrust",
+        "why": "performed with the upper back on the floor rather than on a bench, giving a shorter range of motion at the top and no bench-supported end-range overload; also distinct implement from the existing bodyweight Glute Bridge"
+      },
+      "sources": [
+        "Bret Contreras, Glute Lab"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Beginner-friendly entry point before progressing to the bench-supported hip thrust."
+    },
+    {
+      "name": "Wide-Grip Barbell Curl",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [],
+      "equipment": "barbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "short_head",
+      "aliases": [
+        "Wide Grip Curl"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Curl",
+        "why": "a wider grip shifts emphasis toward the short head of the biceps to a greater degree than the standard grip"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Mirror-image variant to Close-Grip Barbell Curl."
+    },
+    {
+      "name": "Close-Grip Barbell Curl",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [],
+      "equipment": "barbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "long_head",
+      "aliases": [
+        "Close Grip Curl"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Curl",
+        "why": "a closer-than-shoulder-width grip shifts emphasis toward the long head, the opposite bias to the wide-grip variant"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Tagged long_head subregion, mirroring Spider Curl's long-head bias."
+    },
+    {
+      "name": "Cheat Curl",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "traps"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 4,
+      "repMax": 8,
+      "fatigueCost": 3,
+      "sfr": 2,
+      "subregion": "short_head",
+      "aliases": [
+        "Cheat Curls"
+      ],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "ballistic",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Curl",
+        "why": "deliberate hip and torso momentum swings the bar past the sticking point, a ballistic character rather than a strict grind"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "never_auto per EL-5: ballistic character makes it unsuitable for unsupervised auto-programming."
+    },
+    {
+      "name": "Incline Skull Crusher (Barbell)",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": "barbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "overhead",
+      "aliases": [
+        "Incline Barbell Skull Crusher"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Skull Crusher",
+        "why": "incline bench angle changes the elbow moment through the range compared with the flat or decline versions already in the corpus"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {
+        "overheadPosition": true
+      },
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": "overheadPosition came back null; overridden to true to match Barbell Skull Crusher and Decline Skull Crusher, which are both tagged overheadPosition true for the same overhead-arm-extension phase."
+    },
+    {
+      "name": "Standing Barbell Overhead Tricep Extension",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": "barbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "overhead",
+      "aliases": [
+        "Standing Barbell French Press"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Decline Skull Crusher",
+        "why": "performed standing with the bar lowered behind the head rather than lying down lowering to the forehead; a position change from lying to standing"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Fills the standing-barbell gap alongside the existing lying/decline skull crusher variants."
+    },
+    {
+      "name": "Donkey Calf Raise (Barbell)",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": "barbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 3,
+      "subregion": "gastro",
+      "aliases": [
+        "Barbell Donkey Calf Raise"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Standing Calf Raise (Barbell)",
+        "why": "bent-over torso position loads the gastrocnemius through a longer stretch than an upright standing raise; implement also differs from the existing bodyweight and machine donkey calf raise rows"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Historically performed with a partner or hip belt for resistance; here loaded via a barbell on the back."
+    },
+    {
+      "name": "Barbell Rollout",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [
+        "back"
+      ],
+      "equipment": "barbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "anti_extension",
+      "aliases": [
+        "Barbell Ab Rollout"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Ab Wheel Rollout",
+        "why": "implement family differs (loaded barbell vs a bodyweight ab wheel), changing the resistance profile and stability demand through the rollout"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": "overheadPosition left null (not overridden): the existing corpus is itself inconsistent on this axis for rollout movements (Ab Rollout=true, Ab Wheel Rollout=false), so no confident value can be asserted here."
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Bradford Press",
+      "reason": "duplicate of 'Bradford Press' \u2014 already exists in the corpus"
+    },
+    {
+      "name": "Trap Bar Row",
+      "reason": "owned by specialty inventory"
+    },
+    {
+      "name": "Swiss Bar Bench Press",
+      "reason": "owned by specialty inventory"
+    },
+    {
+      "name": "Safety Bar Good Morning",
+      "reason": "owned by specialty inventory"
+    },
+    {
+      "name": "Cambered Bar Bench Press",
+      "reason": "owned by specialty inventory"
+    },
+    {
+      "name": "Zercher Deadlift",
+      "reason": "owned by specialty inventory"
+    },
+    {
+      "name": "Sissy Squat (Barbell)",
+      "reason": "not distinct under EL-2 \u2014 sissy squat is bodyweight-family per the brief, not a barbell-loaded movement in standard programming"
+    },
+    {
+      "name": "Kroc Row (Barbell)",
+      "reason": "not distinct under EL-2 \u2014 Kroc-style high-rep rowing is a dumbbell-family movement per the brief"
+    },
+    {
+      "name": "Tempo Squat (3-1-1)",
+      "reason": "not representable \u2014 tempo is a set-level prescription, not a distinct exercise identity in this schema; Pause Squat already covers the one tempo variant the corpus programmes as a named lift"
+    },
+    {
+      "name": "Reverse-Grip Incline Bench Press",
+      "reason": "not distinct under EL-2 \u2014 combines two existing variants (grip + angle) without evidence any programme writes this down as its own named lift"
+    }
+  ]
+}

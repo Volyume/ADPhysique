@@ -1,0 +1,2542 @@
+{
+  "equipmentCategoryByPrimaryMuscle": {
+    "barbell": {
+      "chest": 6,
+      "back": 15,
+      "hamstrings": 10,
+      "front_delts": 6,
+      "side_delts": 2,
+      "biceps": 9,
+      "triceps": 7,
+      "quads": 19,
+      "glutes": 6,
+      "calves": 2,
+      "abs": 3,
+      "traps": 8,
+      "forearms": 8,
+      "neck": 3,
+      "adductors": 1
+    },
+    "dumbbell": {
+      "chest": 10,
+      "back": 6,
+      "front_delts": 8,
+      "side_delts": 5,
+      "rear_delts": 7,
+      "biceps": 12,
+      "triceps": 8,
+      "quads": 10,
+      "hamstrings": 7,
+      "glutes": 8,
+      "calves": 3,
+      "abs": 6,
+      "traps": 5,
+      "forearms": 4,
+      "adductors": 3,
+      "tibialis": 1
+    },
+    "cable": {
+      "chest": 12,
+      "back": 17,
+      "front_delts": 1,
+      "side_delts": 6,
+      "rear_delts": 8,
+      "biceps": 9,
+      "triceps": 12,
+      "hamstrings": 1,
+      "glutes": 6,
+      "abs": 15,
+      "traps": 4,
+      "forearms": 4,
+      "adductors": 1,
+      "quads": 1
+    },
+    "machine_selectorised": {
+      "chest": 6,
+      "back": 6,
+      "front_delts": 3,
+      "side_delts": 2,
+      "rear_delts": 4,
+      "biceps": 2,
+      "triceps": 5,
+      "quads": 9,
+      "hamstrings": 6,
+      "glutes": 6,
+      "calves": 5,
+      "abs": 3,
+      "forearms": 1,
+      "neck": 5,
+      "tibialis": 2,
+      "adductors": 1
+    },
+    "bodyweight": {
+      "chest": 11,
+      "back": 7,
+      "biceps": 2,
+      "triceps": 4,
+      "quads": 11,
+      "hamstrings": 5,
+      "glutes": 7,
+      "calves": 9,
+      "tibialis": 5,
+      "abs": 31,
+      "forearms": 3,
+      "neck": 6,
+      "adductors": 5,
+      "rear_delts": 1
+    },
+    "landmine": {
+      "chest": 2,
+      "back": 2,
+      "side_delts": 1,
+      "abs": 3,
+      "quads": 1,
+      "front_delts": 1,
+      "rear_delts": 1,
+      "hamstrings": 1,
+      "triceps": 1
+    },
+    "smith": {
+      "chest": 3,
+      "quads": 2,
+      "glutes": 1,
+      "calves": 1,
+      "traps": 1,
+      "back": 1,
+      "triceps": 1
+    },
+    "machine_plate_loaded": {
+      "chest": 5,
+      "back": 6,
+      "front_delts": 1,
+      "rear_delts": 1,
+      "biceps": 1,
+      "glutes": 1,
+      "triceps": 1
+    },
+    "other": {
+      "quads": 3,
+      "calves": 1,
+      "hamstrings": 2,
+      "front_delts": 1,
+      "back": 1
+    },
+    "kettlebell": {
+      "hamstrings": 2,
+      "back": 1,
+      "front_delts": 1,
+      "abs": 1,
+      "traps": 1
+    },
+    "band": {
+      "rear_delts": 2,
+      "side_delts": 1,
+      "back": 3,
+      "chest": 1,
+      "biceps": 1,
+      "triceps": 2,
+      "quads": 1,
+      "hamstrings": 4,
+      "glutes": 2,
+      "tibialis": 1,
+      "forearms": 2,
+      "front_delts": 1
+    }
+  },
+  "movementPatternByPrimaryMuscle": {
+    "push": {
+      "chest": 38,
+      "front_delts": 17,
+      "triceps": 13
+    },
+    "isolation": {
+      "chest": 18,
+      "front_delts": 5,
+      "side_delts": 15,
+      "rear_delts": 17,
+      "biceps": 35,
+      "triceps": 28,
+      "quads": 7,
+      "hamstrings": 11,
+      "glutes": 13,
+      "calves": 18,
+      "tibialis": 9,
+      "abs": 59,
+      "traps": 12,
+      "forearms": 18,
+      "neck": 14,
+      "adductors": 6
+    },
+    "pull": {
+      "back": 54,
+      "side_delts": 2,
+      "rear_delts": 7,
+      "traps": 2,
+      "forearms": 1,
+      "biceps": 1
+    },
+    "hinge": {
+      "back": 11,
+      "hamstrings": 27,
+      "glutes": 18,
+      "traps": 2
+    },
+    "squat": {
+      "quads": 49,
+      "glutes": 6,
+      "adductors": 4
+    },
+    "plyometric": {
+      "calves": 3,
+      "quads": 1
+    },
+    "carry": {
+      "abs": 2,
+      "traps": 2,
+      "forearms": 3,
+      "front_delts": 1
+    },
+    "power": {
+      "traps": 1
+    },
+    "core": {
+      "abs": 1
+    },
+    "lunge": {
+      "adductors": 1
+    }
+  },
+  "lateralityByPrimaryMuscle": {
+    "chest": {
+      "bilateral": 51,
+      "unilateral": 5
+    },
+    "back": {
+      "bilateral": 61,
+      "unilateral": 4
+    },
+    "hamstrings": {
+      "bilateral": 32,
+      "unilateral": 6
+    },
+    "front_delts": {
+      "bilateral": 22,
+      "unilateral": 1
+    },
+    "side_delts": {
+      "bilateral": 16,
+      "unilateral": 1
+    },
+    "rear_delts": {
+      "bilateral": 23,
+      "unilateral": 1
+    },
+    "biceps": {
+      "bilateral": 34,
+      "unilateral": 2
+    },
+    "triceps": {
+      "bilateral": 37,
+      "unilateral": 4
+    },
+    "quads": {
+      "bilateral": 44,
+      "unilateral": 13
+    },
+    "glutes": {
+      "bilateral": 26,
+      "unilateral": 11
+    },
+    "calves": {
+      "bilateral": 19,
+      "unilateral": 2
+    },
+    "tibialis": {
+      "bilateral": 8,
+      "unilateral": 1
+    },
+    "abs": {
+      "bilateral": 60,
+      "unilateral": 2
+    },
+    "traps": {
+      "bilateral": 18,
+      "unilateral": 1
+    },
+    "forearms": {
+      "bilateral": 21,
+      "unilateral": 1
+    },
+    "neck": {
+      "bilateral": 14
+    },
+    "adductors": {
+      "bilateral": 9,
+      "unilateral": 2
+    }
+  },
+  "positionDistribution": {
+    "standing": 284,
+    "lying": 123,
+    "seated": 96,
+    "mixed": 27,
+    "kneeling": 22
+  },
+  "subregionRequirementsSource": "src/lib/planEngine.js SUBREGION_REQUIREMENTS",
+  "subregionCoverageDetail": {
+    "back": {
+      "vertical_pull": {
+        "full_gym": {
+          "totalMatching": 9,
+          "stapleOrCommonCount": 8,
+          "stapleOrCommonNames": [
+            "Lat Pulldown (Wide Grip)",
+            "Lat Pulldown (Close Grip)",
+            "Lat Pulldown (Neutral Grip)",
+            "Assisted Pull-Up",
+            "Single-Arm Lat Pulldown",
+            "V-Bar Pulldown",
+            "Plate-Loaded Lat Pulldown",
+            "Iso-Lateral Front Pulldown"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 9,
+          "stapleOrCommonCount": 8,
+          "stapleOrCommonNames": [
+            "Lat Pulldown (Wide Grip)",
+            "Lat Pulldown (Close Grip)",
+            "Lat Pulldown (Neutral Grip)",
+            "Assisted Pull-Up",
+            "Single-Arm Lat Pulldown",
+            "V-Bar Pulldown",
+            "Plate-Loaded Lat Pulldown",
+            "Iso-Lateral Front Pulldown"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "dumbbells_only": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "barbell_plates": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "bodyweight": {
+          "totalMatching": 6,
+          "stapleOrCommonCount": 4,
+          "stapleOrCommonNames": [
+            "Pull-Up",
+            "Chin-Up",
+            "Neutral Grip Pull-Up",
+            "Wide-Grip Pull-Up"
+          ]
+        }
+      },
+      "horizontal_row": {
+        "full_gym": {
+          "totalMatching": 33,
+          "stapleOrCommonCount": 22,
+          "stapleOrCommonNames": [
+            "Barbell Row (Bent Over)",
+            "Dumbbell Row",
+            "T-Bar Row",
+            "Chest-Supported T-Bar Row",
+            "Seated Cable Row",
+            "Machine Row (Chest Supported)",
+            "Landmine Row",
+            "Cable High Row",
+            "Single-Arm Cable Row",
+            "Pendlay Row",
+            "Seal Row",
+            "Chest-Supported Row (Dumbbell)",
+            "Seated Machine Row (Wide)",
+            "Chest-Supported Row (Barbell)",
+            "Cable Row (Wide Grip)",
+            "Machine Row (Hammer Strength)",
+            "Cable Face Pull (Upper Back)",
+            "Smith Machine Row",
+            "Wide-Grip Cable Row",
+            "Plate-Loaded Row",
+            "Plate-Loaded High Row",
+            "Plate-Loaded Low Row"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 14,
+          "stapleOrCommonCount": 13,
+          "stapleOrCommonNames": [
+            "Seated Cable Row",
+            "Machine Row (Chest Supported)",
+            "Cable High Row",
+            "Single-Arm Cable Row",
+            "Seated Machine Row (Wide)",
+            "Cable Row (Wide Grip)",
+            "Machine Row (Hammer Strength)",
+            "Cable Face Pull (Upper Back)",
+            "Smith Machine Row",
+            "Wide-Grip Cable Row",
+            "Plate-Loaded Row",
+            "Plate-Loaded High Row",
+            "Plate-Loaded Low Row"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 7,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Dumbbell Row",
+            "Chest-Supported Row (Dumbbell)"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 7,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Dumbbell Row",
+            "Chest-Supported Row (Dumbbell)"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 11,
+          "stapleOrCommonCount": 7,
+          "stapleOrCommonNames": [
+            "Barbell Row (Bent Over)",
+            "T-Bar Row",
+            "Chest-Supported T-Bar Row",
+            "Landmine Row",
+            "Pendlay Row",
+            "Seal Row",
+            "Chest-Supported Row (Barbell)"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 3,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "Inverted Row"
+          ]
+        }
+      }
+    },
+    "hamstrings": {
+      "hip_extension": {
+        "full_gym": {
+          "totalMatching": 23,
+          "stapleOrCommonCount": 11,
+          "stapleOrCommonNames": [
+            "Romanian Deadlift",
+            "Romanian Deadlift (Barbell)",
+            "Romanian Deadlift (Dumbbell)",
+            "Stiff-Leg Deadlift",
+            "Single-Leg Romanian Deadlift",
+            "Single-Leg Romanian Deadlift (DB)",
+            "B-Stance Romanian Deadlift",
+            "Dumbbell Single-Leg RDL",
+            "Stiff-Leg Deadlift (Dumbbell)",
+            "Glute-Ham Raise Machine",
+            "Landmine Romanian Deadlift"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 1,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "Glute-Ham Raise Machine"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 9,
+          "stapleOrCommonCount": 5,
+          "stapleOrCommonNames": [
+            "Romanian Deadlift (Dumbbell)",
+            "Single-Leg Romanian Deadlift",
+            "Single-Leg Romanian Deadlift (DB)",
+            "Dumbbell Single-Leg RDL",
+            "Stiff-Leg Deadlift (Dumbbell)"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 9,
+          "stapleOrCommonCount": 5,
+          "stapleOrCommonNames": [
+            "Romanian Deadlift (Dumbbell)",
+            "Single-Leg Romanian Deadlift",
+            "Single-Leg Romanian Deadlift (DB)",
+            "Dumbbell Single-Leg RDL",
+            "Stiff-Leg Deadlift (Dumbbell)"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 11,
+          "stapleOrCommonCount": 5,
+          "stapleOrCommonNames": [
+            "Romanian Deadlift",
+            "Romanian Deadlift (Barbell)",
+            "Stiff-Leg Deadlift",
+            "B-Stance Romanian Deadlift",
+            "Landmine Romanian Deadlift"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 4,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        }
+      },
+      "knee_flexion": {
+        "full_gym": {
+          "totalMatching": 10,
+          "stapleOrCommonCount": 5,
+          "stapleOrCommonNames": [
+            "Lying Leg Curl",
+            "Seated Leg Curl",
+            "Standing Leg Curl",
+            "Leg Curl (Cable)",
+            "Prone Leg Curl"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 10,
+          "stapleOrCommonCount": 5,
+          "stapleOrCommonNames": [
+            "Lying Leg Curl",
+            "Seated Leg Curl",
+            "Standing Leg Curl",
+            "Leg Curl (Cable)",
+            "Prone Leg Curl"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 4,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "dumbbells_only": {
+          "totalMatching": 4,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "barbell_plates": {
+          "totalMatching": 4,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "bodyweight": {
+          "totalMatching": 5,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        }
+      }
+    },
+    "glutes": {
+      "activator": {
+        "full_gym": {
+          "totalMatching": 15,
+          "stapleOrCommonCount": 8,
+          "stapleOrCommonNames": [
+            "Barbell Hip Thrust",
+            "Dumbbell Hip Thrust",
+            "Smith Machine Hip Thrust",
+            "Machine Hip Thrust",
+            "45-Degree Hip Extension",
+            "Kickstand Hip Thrust",
+            "Plate-Loaded Hip Thrust",
+            "B-Stance Hip Thrust"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 10,
+          "stapleOrCommonCount": 4,
+          "stapleOrCommonNames": [
+            "Smith Machine Hip Thrust",
+            "Machine Hip Thrust",
+            "45-Degree Hip Extension",
+            "Plate-Loaded Hip Thrust"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 4,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "Dumbbell Hip Thrust"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 4,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "Dumbbell Hip Thrust"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 5,
+          "stapleOrCommonCount": 3,
+          "stapleOrCommonNames": [
+            "Barbell Hip Thrust",
+            "Kickstand Hip Thrust",
+            "B-Stance Hip Thrust"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 5,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Glute Bridge",
+            "Single Leg Hip Thrust"
+          ]
+        }
+      },
+      "pumper": {
+        "full_gym": {
+          "totalMatching": 8,
+          "stapleOrCommonCount": 6,
+          "stapleOrCommonNames": [
+            "Cable Kickback",
+            "Abduction Machine",
+            "Cable Hip Abduction",
+            "Cable Donkey Kickback",
+            "Donkey Kickback (Machine)",
+            "Glute Kickback Machine"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 8,
+          "stapleOrCommonCount": 6,
+          "stapleOrCommonNames": [
+            "Cable Kickback",
+            "Abduction Machine",
+            "Cable Hip Abduction",
+            "Cable Donkey Kickback",
+            "Donkey Kickback (Machine)",
+            "Glute Kickback Machine"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "dumbbells_only": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "barbell_plates": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "bodyweight": {
+          "totalMatching": 3,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        }
+      }
+    },
+    "quads": {
+      "squat_press": {
+        "full_gym": {
+          "totalMatching": 43,
+          "stapleOrCommonCount": 22,
+          "stapleOrCommonNames": [
+            "Barbell Back Squat",
+            "Barbell Front Squat",
+            "Hack Squat Machine",
+            "Leg Press",
+            "Bulgarian Split Squat",
+            "Goblet Squat",
+            "Dumbbell Lunge",
+            "Walking Lunge",
+            "Barbell Lunge",
+            "Step-Up (Dumbbell)",
+            "Smith Machine Squat",
+            "Heel-Elevated Squat",
+            "Single Leg Press",
+            "Pendulum Squat",
+            "Leg Press (Narrow Stance)",
+            "Safety Bar Squat",
+            "Split Squat",
+            "Reverse Lunge",
+            "Leg Press (High Foot)",
+            "Hatfield Squat",
+            "SSB Squat",
+            "Belt Squat"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 10,
+          "stapleOrCommonCount": 8,
+          "stapleOrCommonNames": [
+            "Hack Squat Machine",
+            "Leg Press",
+            "Smith Machine Squat",
+            "Single Leg Press",
+            "Pendulum Squat",
+            "Leg Press (Narrow Stance)",
+            "Leg Press (High Foot)",
+            "Belt Squat"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 10,
+          "stapleOrCommonCount": 6,
+          "stapleOrCommonNames": [
+            "Bulgarian Split Squat",
+            "Goblet Squat",
+            "Dumbbell Lunge",
+            "Walking Lunge",
+            "Step-Up (Dumbbell)",
+            "Reverse Lunge"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 10,
+          "stapleOrCommonCount": 6,
+          "stapleOrCommonNames": [
+            "Bulgarian Split Squat",
+            "Goblet Squat",
+            "Dumbbell Lunge",
+            "Walking Lunge",
+            "Step-Up (Dumbbell)",
+            "Reverse Lunge"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 20,
+          "stapleOrCommonCount": 8,
+          "stapleOrCommonNames": [
+            "Barbell Back Squat",
+            "Barbell Front Squat",
+            "Barbell Lunge",
+            "Heel-Elevated Squat",
+            "Safety Bar Squat",
+            "Split Squat",
+            "Hatfield Squat",
+            "SSB Squat"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 7,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        }
+      },
+      "knee_extension": {
+        "full_gym": {
+          "totalMatching": 7,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Leg Extension",
+            "Sissy Squat Machine"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 7,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Leg Extension",
+            "Sissy Squat Machine"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 5,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "dumbbells_only": {
+          "totalMatching": 5,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "barbell_plates": {
+          "totalMatching": 5,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "bodyweight": {
+          "totalMatching": 5,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        }
+      }
+    },
+    "chest": {
+      "incline": {
+        "full_gym": {
+          "totalMatching": 11,
+          "stapleOrCommonCount": 11,
+          "stapleOrCommonNames": [
+            "Incline Barbell Bench Press",
+            "Incline Dumbbell Press",
+            "Cable Fly (Low to High)",
+            "Incline Dumbbell Fly",
+            "Incline Machine Press",
+            "Landmine Press",
+            "Incline Smith Machine Press",
+            "Low Cable Fly",
+            "Incline Cable Fly",
+            "Plate-Loaded Incline Press",
+            "Incline Cable Chest Press"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 7,
+          "stapleOrCommonCount": 7,
+          "stapleOrCommonNames": [
+            "Cable Fly (Low to High)",
+            "Incline Machine Press",
+            "Incline Smith Machine Press",
+            "Low Cable Fly",
+            "Incline Cable Fly",
+            "Plate-Loaded Incline Press",
+            "Incline Cable Chest Press"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Incline Dumbbell Press",
+            "Incline Dumbbell Fly"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Incline Dumbbell Press",
+            "Incline Dumbbell Fly"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Incline Barbell Bench Press",
+            "Landmine Press"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 1,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        }
+      },
+      "flat": {
+        "full_gym": {
+          "totalMatching": 29,
+          "stapleOrCommonCount": 18,
+          "stapleOrCommonNames": [
+            "Barbell Bench Press",
+            "Dumbbell Bench Press",
+            "Cable Crossover (High to Low)",
+            "Dumbbell Fly",
+            "Pec Deck (Machine Fly)",
+            "Machine Chest Press",
+            "Smith Machine Bench Press",
+            "Cable Fly (Neutral)",
+            "Cable Fly (Chest Height)",
+            "High Cable Fly",
+            "Hammer Strength Chest Press",
+            "Cable Fly (High to Low)",
+            "Cable Chest Press (Standing)",
+            "Smith Machine Incline Press",
+            "Plate-Loaded Chest Press",
+            "Iso-Lateral Chest Press",
+            "Chest Press Machine (Single-Arm)",
+            "Machine Chest Fly (Single-Arm)"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 18,
+          "stapleOrCommonCount": 15,
+          "stapleOrCommonNames": [
+            "Cable Crossover (High to Low)",
+            "Pec Deck (Machine Fly)",
+            "Machine Chest Press",
+            "Smith Machine Bench Press",
+            "Cable Fly (Neutral)",
+            "Cable Fly (Chest Height)",
+            "High Cable Fly",
+            "Hammer Strength Chest Press",
+            "Cable Fly (High to Low)",
+            "Cable Chest Press (Standing)",
+            "Smith Machine Incline Press",
+            "Plate-Loaded Chest Press",
+            "Iso-Lateral Chest Press",
+            "Chest Press Machine (Single-Arm)",
+            "Machine Chest Fly (Single-Arm)"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 7,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Dumbbell Bench Press",
+            "Dumbbell Fly"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 7,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Dumbbell Bench Press",
+            "Dumbbell Fly"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 6,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "Barbell Bench Press"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 9,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Push-Up",
+            "Wide-Grip Push-Up"
+          ]
+        }
+      }
+    },
+    "rear_delts": {
+      "face_pull": {
+        "full_gym": {
+          "totalMatching": 3,
+          "stapleOrCommonCount": 3,
+          "stapleOrCommonNames": [
+            "Face Pull",
+            "Cable Face Pull",
+            "Cable Face Pull (Rope)"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 3,
+          "stapleOrCommonCount": 3,
+          "stapleOrCommonNames": [
+            "Face Pull",
+            "Cable Face Pull",
+            "Cable Face Pull (Rope)"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 0,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "dumbbells_only": {
+          "totalMatching": 0,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "barbell_plates": {
+          "totalMatching": 0,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        },
+        "bodyweight": {
+          "totalMatching": 1,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        }
+      },
+      "horiz_abduction": {
+        "full_gym": {
+          "totalMatching": 19,
+          "stapleOrCommonCount": 10,
+          "stapleOrCommonNames": [
+            "Dumbbell Rear Delt Fly",
+            "Cable Rear Delt Fly",
+            "Machine Rear Delt Fly",
+            "Reverse Pec Deck",
+            "Bent-Over Cable Rear Delt Fly",
+            "Seated Rear Delt Machine",
+            "Plate-Loaded Rear Delt",
+            "Prone Reverse Fly",
+            "Single-Arm Cable Rear Delt Fly",
+            "Reverse Cable Crossover"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 11,
+          "stapleOrCommonCount": 9,
+          "stapleOrCommonNames": [
+            "Cable Rear Delt Fly",
+            "Machine Rear Delt Fly",
+            "Reverse Pec Deck",
+            "Bent-Over Cable Rear Delt Fly",
+            "Seated Rear Delt Machine",
+            "Plate-Loaded Rear Delt",
+            "Prone Reverse Fly",
+            "Single-Arm Cable Rear Delt Fly",
+            "Reverse Cable Crossover"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 8,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Dumbbell Rear Delt Fly",
+            "Prone Reverse Fly"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 8,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Dumbbell Rear Delt Fly",
+            "Prone Reverse Fly"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "Prone Reverse Fly"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Band Pull-Apart",
+            "Prone Reverse Fly"
+          ]
+        }
+      }
+    },
+    "triceps": {
+      "overhead": {
+        "full_gym": {
+          "totalMatching": 13,
+          "stapleOrCommonCount": 10,
+          "stapleOrCommonNames": [
+            "EZ Bar Skull Crusher",
+            "Dumbbell Skull Crusher",
+            "Overhead Cable Tricep Extension",
+            "Dumbbell Overhead Tricep Extension",
+            "Overhead Dumbbell Extension",
+            "Lying Tricep Extension",
+            "Cable Overhead Tricep Extension",
+            "Overhead Cable Rope Extension",
+            "Plate-Loaded Overhead Extension",
+            "Single-Arm Overhead Cable Extension"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 5,
+          "stapleOrCommonCount": 5,
+          "stapleOrCommonNames": [
+            "Overhead Cable Tricep Extension",
+            "Cable Overhead Tricep Extension",
+            "Overhead Cable Rope Extension",
+            "Plate-Loaded Overhead Extension",
+            "Single-Arm Overhead Cable Extension"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 5,
+          "stapleOrCommonCount": 4,
+          "stapleOrCommonNames": [
+            "Dumbbell Skull Crusher",
+            "Dumbbell Overhead Tricep Extension",
+            "Overhead Dumbbell Extension",
+            "Lying Tricep Extension"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 5,
+          "stapleOrCommonCount": 4,
+          "stapleOrCommonNames": [
+            "Dumbbell Skull Crusher",
+            "Dumbbell Overhead Tricep Extension",
+            "Overhead Dumbbell Extension",
+            "Lying Tricep Extension"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 3,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "EZ Bar Skull Crusher"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 1,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        }
+      }
+    },
+    "calves": {
+      "gastro": {
+        "full_gym": {
+          "totalMatching": 13,
+          "stapleOrCommonCount": 9,
+          "stapleOrCommonNames": [
+            "Standing Calf Raise (Machine)",
+            "Standing Calf Raise (Barbell)",
+            "Leg Press Calf Raise",
+            "Donkey Calf Raise",
+            "Dumbbell Calf Raise (Standing)",
+            "Smith Machine Calf Raise",
+            "Single-Leg Calf Raise (Dumbbell)",
+            "Calf Raise on Leg Press Sled",
+            "Donkey Calf Raise (Machine)"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 9,
+          "stapleOrCommonCount": 5,
+          "stapleOrCommonNames": [
+            "Standing Calf Raise (Machine)",
+            "Leg Press Calf Raise",
+            "Donkey Calf Raise",
+            "Smith Machine Calf Raise",
+            "Donkey Calf Raise (Machine)"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 7,
+          "stapleOrCommonCount": 3,
+          "stapleOrCommonNames": [
+            "Donkey Calf Raise",
+            "Dumbbell Calf Raise (Standing)",
+            "Single-Leg Calf Raise (Dumbbell)"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 7,
+          "stapleOrCommonCount": 3,
+          "stapleOrCommonNames": [
+            "Donkey Calf Raise",
+            "Dumbbell Calf Raise (Standing)",
+            "Single-Leg Calf Raise (Dumbbell)"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 6,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Standing Calf Raise (Barbell)",
+            "Donkey Calf Raise"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 8,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "Donkey Calf Raise"
+          ]
+        }
+      },
+      "soleus": {
+        "full_gym": {
+          "totalMatching": 5,
+          "stapleOrCommonCount": 4,
+          "stapleOrCommonNames": [
+            "Seated Calf Raise",
+            "Seated Machine Calf Raise",
+            "Seated Dumbbell Calf Raise",
+            "Seated Calf Raise (Barbell)"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 3,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Seated Calf Raise",
+            "Seated Machine Calf Raise"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "Seated Dumbbell Calf Raise"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "Seated Dumbbell Calf Raise"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "Seated Calf Raise (Barbell)"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 1,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        }
+      }
+    },
+    "abs": {
+      "flexion": {
+        "full_gym": {
+          "totalMatching": 36,
+          "stapleOrCommonCount": 21,
+          "stapleOrCommonNames": [
+            "Cable Crunch",
+            "Hanging Leg Raise",
+            "Decline Crunch",
+            "Bicycle Crunch",
+            "Crunch",
+            "Reverse Crunch",
+            "Leg Raise",
+            "Leg Raise (Flat Bench)",
+            "V-Up",
+            "Sit-Up",
+            "Machine Crunch",
+            "Hanging Knee Raise",
+            "Ab Wheel (Kneeling)",
+            "Weighted Sit-Up",
+            "Toe-to-Bar",
+            "Kneeling Cable Crunch",
+            "Exercise Ball Crunch",
+            "Kneeling Ab Rollout",
+            "Incline Board Sit-Up",
+            "Hanging Oblique Raise",
+            "Ab Crunch Machine"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 29,
+          "stapleOrCommonCount": 20,
+          "stapleOrCommonNames": [
+            "Cable Crunch",
+            "Hanging Leg Raise",
+            "Decline Crunch",
+            "Bicycle Crunch",
+            "Crunch",
+            "Reverse Crunch",
+            "Leg Raise",
+            "Leg Raise (Flat Bench)",
+            "V-Up",
+            "Sit-Up",
+            "Machine Crunch",
+            "Hanging Knee Raise",
+            "Ab Wheel (Kneeling)",
+            "Toe-to-Bar",
+            "Kneeling Cable Crunch",
+            "Exercise Ball Crunch",
+            "Kneeling Ab Rollout",
+            "Incline Board Sit-Up",
+            "Hanging Oblique Raise",
+            "Ab Crunch Machine"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 24,
+          "stapleOrCommonCount": 16,
+          "stapleOrCommonNames": [
+            "Hanging Leg Raise",
+            "Decline Crunch",
+            "Bicycle Crunch",
+            "Crunch",
+            "Reverse Crunch",
+            "Leg Raise",
+            "Leg Raise (Flat Bench)",
+            "V-Up",
+            "Sit-Up",
+            "Hanging Knee Raise",
+            "Ab Wheel (Kneeling)",
+            "Toe-to-Bar",
+            "Exercise Ball Crunch",
+            "Kneeling Ab Rollout",
+            "Incline Board Sit-Up",
+            "Hanging Oblique Raise"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 24,
+          "stapleOrCommonCount": 16,
+          "stapleOrCommonNames": [
+            "Hanging Leg Raise",
+            "Decline Crunch",
+            "Bicycle Crunch",
+            "Crunch",
+            "Reverse Crunch",
+            "Leg Raise",
+            "Leg Raise (Flat Bench)",
+            "V-Up",
+            "Sit-Up",
+            "Hanging Knee Raise",
+            "Ab Wheel (Kneeling)",
+            "Toe-to-Bar",
+            "Exercise Ball Crunch",
+            "Kneeling Ab Rollout",
+            "Incline Board Sit-Up",
+            "Hanging Oblique Raise"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 23,
+          "stapleOrCommonCount": 17,
+          "stapleOrCommonNames": [
+            "Hanging Leg Raise",
+            "Decline Crunch",
+            "Bicycle Crunch",
+            "Crunch",
+            "Reverse Crunch",
+            "Leg Raise",
+            "Leg Raise (Flat Bench)",
+            "V-Up",
+            "Sit-Up",
+            "Hanging Knee Raise",
+            "Ab Wheel (Kneeling)",
+            "Weighted Sit-Up",
+            "Toe-to-Bar",
+            "Exercise Ball Crunch",
+            "Kneeling Ab Rollout",
+            "Incline Board Sit-Up",
+            "Hanging Oblique Raise"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 20,
+          "stapleOrCommonCount": 16,
+          "stapleOrCommonNames": [
+            "Hanging Leg Raise",
+            "Decline Crunch",
+            "Bicycle Crunch",
+            "Crunch",
+            "Reverse Crunch",
+            "Leg Raise",
+            "Leg Raise (Flat Bench)",
+            "V-Up",
+            "Sit-Up",
+            "Hanging Knee Raise",
+            "Ab Wheel (Kneeling)",
+            "Toe-to-Bar",
+            "Exercise Ball Crunch",
+            "Kneeling Ab Rollout",
+            "Incline Board Sit-Up",
+            "Hanging Oblique Raise"
+          ]
+        }
+      },
+      "anti_extension": {
+        "full_gym": {
+          "totalMatching": 13,
+          "stapleOrCommonCount": 6,
+          "stapleOrCommonNames": [
+            "Plank",
+            "Side Plank",
+            "Ab Rollout",
+            "Ab Wheel Rollout",
+            "Pallof Press",
+            "Weighted Plank (Plate on Back)"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 11,
+          "stapleOrCommonCount": 5,
+          "stapleOrCommonNames": [
+            "Plank",
+            "Side Plank",
+            "Ab Rollout",
+            "Ab Wheel Rollout",
+            "Pallof Press"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 10,
+          "stapleOrCommonCount": 4,
+          "stapleOrCommonNames": [
+            "Plank",
+            "Side Plank",
+            "Ab Rollout",
+            "Ab Wheel Rollout"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 10,
+          "stapleOrCommonCount": 4,
+          "stapleOrCommonNames": [
+            "Plank",
+            "Side Plank",
+            "Ab Rollout",
+            "Ab Wheel Rollout"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 10,
+          "stapleOrCommonCount": 5,
+          "stapleOrCommonNames": [
+            "Plank",
+            "Side Plank",
+            "Ab Rollout",
+            "Ab Wheel Rollout",
+            "Weighted Plank (Plate on Back)"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 9,
+          "stapleOrCommonCount": 4,
+          "stapleOrCommonNames": [
+            "Plank",
+            "Side Plank",
+            "Ab Rollout",
+            "Ab Wheel Rollout"
+          ]
+        }
+      }
+    },
+    "biceps": {
+      "long_head": {
+        "full_gym": {
+          "totalMatching": 8,
+          "stapleOrCommonCount": 4,
+          "stapleOrCommonNames": [
+            "Incline Dumbbell Curl",
+            "Spider Curl",
+            "Bayesian Curl",
+            "Incline Hammer Curl"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "Bayesian Curl"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 3,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Incline Dumbbell Curl",
+            "Incline Hammer Curl"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 3,
+          "stapleOrCommonCount": 2,
+          "stapleOrCommonNames": [
+            "Incline Dumbbell Curl",
+            "Incline Hammer Curl"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 3,
+          "stapleOrCommonCount": 1,
+          "stapleOrCommonNames": [
+            "Spider Curl"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 1,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        }
+      },
+      "short_head": {
+        "full_gym": {
+          "totalMatching": 19,
+          "stapleOrCommonCount": 15,
+          "stapleOrCommonNames": [
+            "Barbell Curl",
+            "EZ Bar Curl",
+            "Dumbbell Curl",
+            "Preacher Curl (Barbell)",
+            "Preacher Curl (Dumbbell)",
+            "Preacher Curl (EZ Bar)",
+            "Cable Curl",
+            "Machine Curl",
+            "Concentration Curl",
+            "EZ Bar Preacher Curl",
+            "Seated Dumbbell Curl",
+            "High Cable Curl",
+            "Plate-Loaded Preacher Curl",
+            "Preacher Curl Machine",
+            "Cable Concentration Curl"
+          ]
+        },
+        "machines_cables": {
+          "totalMatching": 8,
+          "stapleOrCommonCount": 6,
+          "stapleOrCommonNames": [
+            "Cable Curl",
+            "Machine Curl",
+            "High Cable Curl",
+            "Plate-Loaded Preacher Curl",
+            "Preacher Curl Machine",
+            "Cable Concentration Curl"
+          ]
+        },
+        "home_gym": {
+          "totalMatching": 7,
+          "stapleOrCommonCount": 4,
+          "stapleOrCommonNames": [
+            "Dumbbell Curl",
+            "Preacher Curl (Dumbbell)",
+            "Concentration Curl",
+            "Seated Dumbbell Curl"
+          ]
+        },
+        "dumbbells_only": {
+          "totalMatching": 7,
+          "stapleOrCommonCount": 4,
+          "stapleOrCommonNames": [
+            "Dumbbell Curl",
+            "Preacher Curl (Dumbbell)",
+            "Concentration Curl",
+            "Seated Dumbbell Curl"
+          ]
+        },
+        "barbell_plates": {
+          "totalMatching": 6,
+          "stapleOrCommonCount": 5,
+          "stapleOrCommonNames": [
+            "Barbell Curl",
+            "EZ Bar Curl",
+            "Preacher Curl (Barbell)",
+            "Preacher Curl (EZ Bar)",
+            "EZ Bar Preacher Curl"
+          ]
+        },
+        "bodyweight": {
+          "totalMatching": 2,
+          "stapleOrCommonCount": 0,
+          "stapleOrCommonNames": []
+        }
+      }
+    }
+  },
+  "subregionGapCount": 57,
+  "subregionGaps": [
+    {
+      "muscle": "back",
+      "role": "vertical_pull",
+      "profile": "home_gym",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "back",
+      "role": "vertical_pull",
+      "profile": "dumbbells_only",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "back",
+      "role": "vertical_pull",
+      "profile": "barbell_plates",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "back",
+      "role": "horizontal_row",
+      "profile": "home_gym",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Dumbbell Row",
+        "Chest-Supported Row (Dumbbell)"
+      ],
+      "totalMatchingAnyTier": 7
+    },
+    {
+      "muscle": "back",
+      "role": "horizontal_row",
+      "profile": "dumbbells_only",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Dumbbell Row",
+        "Chest-Supported Row (Dumbbell)"
+      ],
+      "totalMatchingAnyTier": 7
+    },
+    {
+      "muscle": "back",
+      "role": "horizontal_row",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "Inverted Row"
+      ],
+      "totalMatchingAnyTier": 3
+    },
+    {
+      "muscle": "hamstrings",
+      "role": "hip_extension",
+      "profile": "machines_cables",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "Glute-Ham Raise Machine"
+      ],
+      "totalMatchingAnyTier": 1
+    },
+    {
+      "muscle": "hamstrings",
+      "role": "hip_extension",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 4
+    },
+    {
+      "muscle": "hamstrings",
+      "role": "knee_flexion",
+      "profile": "home_gym",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 4
+    },
+    {
+      "muscle": "hamstrings",
+      "role": "knee_flexion",
+      "profile": "dumbbells_only",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 4
+    },
+    {
+      "muscle": "hamstrings",
+      "role": "knee_flexion",
+      "profile": "barbell_plates",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 4
+    },
+    {
+      "muscle": "hamstrings",
+      "role": "knee_flexion",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 5
+    },
+    {
+      "muscle": "glutes",
+      "role": "activator",
+      "profile": "home_gym",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "Dumbbell Hip Thrust"
+      ],
+      "totalMatchingAnyTier": 4
+    },
+    {
+      "muscle": "glutes",
+      "role": "activator",
+      "profile": "dumbbells_only",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "Dumbbell Hip Thrust"
+      ],
+      "totalMatchingAnyTier": 4
+    },
+    {
+      "muscle": "glutes",
+      "role": "activator",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Glute Bridge",
+        "Single Leg Hip Thrust"
+      ],
+      "totalMatchingAnyTier": 5
+    },
+    {
+      "muscle": "glutes",
+      "role": "pumper",
+      "profile": "home_gym",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "glutes",
+      "role": "pumper",
+      "profile": "dumbbells_only",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "glutes",
+      "role": "pumper",
+      "profile": "barbell_plates",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "glutes",
+      "role": "pumper",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 3
+    },
+    {
+      "muscle": "quads",
+      "role": "squat_press",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 7
+    },
+    {
+      "muscle": "quads",
+      "role": "knee_extension",
+      "profile": "full_gym",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Leg Extension",
+        "Sissy Squat Machine"
+      ],
+      "totalMatchingAnyTier": 7
+    },
+    {
+      "muscle": "quads",
+      "role": "knee_extension",
+      "profile": "machines_cables",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Leg Extension",
+        "Sissy Squat Machine"
+      ],
+      "totalMatchingAnyTier": 7
+    },
+    {
+      "muscle": "quads",
+      "role": "knee_extension",
+      "profile": "home_gym",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 5
+    },
+    {
+      "muscle": "quads",
+      "role": "knee_extension",
+      "profile": "dumbbells_only",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 5
+    },
+    {
+      "muscle": "quads",
+      "role": "knee_extension",
+      "profile": "barbell_plates",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 5
+    },
+    {
+      "muscle": "quads",
+      "role": "knee_extension",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 5
+    },
+    {
+      "muscle": "chest",
+      "role": "incline",
+      "profile": "home_gym",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Incline Dumbbell Press",
+        "Incline Dumbbell Fly"
+      ],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "chest",
+      "role": "incline",
+      "profile": "dumbbells_only",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Incline Dumbbell Press",
+        "Incline Dumbbell Fly"
+      ],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "chest",
+      "role": "incline",
+      "profile": "barbell_plates",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Incline Barbell Bench Press",
+        "Landmine Press"
+      ],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "chest",
+      "role": "incline",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 1
+    },
+    {
+      "muscle": "chest",
+      "role": "flat",
+      "profile": "home_gym",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Dumbbell Bench Press",
+        "Dumbbell Fly"
+      ],
+      "totalMatchingAnyTier": 7
+    },
+    {
+      "muscle": "chest",
+      "role": "flat",
+      "profile": "dumbbells_only",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Dumbbell Bench Press",
+        "Dumbbell Fly"
+      ],
+      "totalMatchingAnyTier": 7
+    },
+    {
+      "muscle": "chest",
+      "role": "flat",
+      "profile": "barbell_plates",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "Barbell Bench Press"
+      ],
+      "totalMatchingAnyTier": 6
+    },
+    {
+      "muscle": "chest",
+      "role": "flat",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Push-Up",
+        "Wide-Grip Push-Up"
+      ],
+      "totalMatchingAnyTier": 9
+    },
+    {
+      "muscle": "rear_delts",
+      "role": "face_pull",
+      "profile": "home_gym",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 0
+    },
+    {
+      "muscle": "rear_delts",
+      "role": "face_pull",
+      "profile": "dumbbells_only",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 0
+    },
+    {
+      "muscle": "rear_delts",
+      "role": "face_pull",
+      "profile": "barbell_plates",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 0
+    },
+    {
+      "muscle": "rear_delts",
+      "role": "face_pull",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 1
+    },
+    {
+      "muscle": "rear_delts",
+      "role": "horiz_abduction",
+      "profile": "home_gym",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Dumbbell Rear Delt Fly",
+        "Prone Reverse Fly"
+      ],
+      "totalMatchingAnyTier": 8
+    },
+    {
+      "muscle": "rear_delts",
+      "role": "horiz_abduction",
+      "profile": "dumbbells_only",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Dumbbell Rear Delt Fly",
+        "Prone Reverse Fly"
+      ],
+      "totalMatchingAnyTier": 8
+    },
+    {
+      "muscle": "rear_delts",
+      "role": "horiz_abduction",
+      "profile": "barbell_plates",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "Prone Reverse Fly"
+      ],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "rear_delts",
+      "role": "horiz_abduction",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Band Pull-Apart",
+        "Prone Reverse Fly"
+      ],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "triceps",
+      "role": "overhead",
+      "profile": "barbell_plates",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "EZ Bar Skull Crusher"
+      ],
+      "totalMatchingAnyTier": 3
+    },
+    {
+      "muscle": "triceps",
+      "role": "overhead",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 1
+    },
+    {
+      "muscle": "calves",
+      "role": "gastro",
+      "profile": "barbell_plates",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Standing Calf Raise (Barbell)",
+        "Donkey Calf Raise"
+      ],
+      "totalMatchingAnyTier": 6
+    },
+    {
+      "muscle": "calves",
+      "role": "gastro",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "Donkey Calf Raise"
+      ],
+      "totalMatchingAnyTier": 8
+    },
+    {
+      "muscle": "calves",
+      "role": "soleus",
+      "profile": "machines_cables",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Seated Calf Raise",
+        "Seated Machine Calf Raise"
+      ],
+      "totalMatchingAnyTier": 3
+    },
+    {
+      "muscle": "calves",
+      "role": "soleus",
+      "profile": "home_gym",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "Seated Dumbbell Calf Raise"
+      ],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "calves",
+      "role": "soleus",
+      "profile": "dumbbells_only",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "Seated Dumbbell Calf Raise"
+      ],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "calves",
+      "role": "soleus",
+      "profile": "barbell_plates",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "Seated Calf Raise (Barbell)"
+      ],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "calves",
+      "role": "soleus",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 1
+    },
+    {
+      "muscle": "biceps",
+      "role": "long_head",
+      "profile": "machines_cables",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "Bayesian Curl"
+      ],
+      "totalMatchingAnyTier": 2
+    },
+    {
+      "muscle": "biceps",
+      "role": "long_head",
+      "profile": "home_gym",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Incline Dumbbell Curl",
+        "Incline Hammer Curl"
+      ],
+      "totalMatchingAnyTier": 3
+    },
+    {
+      "muscle": "biceps",
+      "role": "long_head",
+      "profile": "dumbbells_only",
+      "stapleOrCommonCount": 2,
+      "stapleOrCommonNames": [
+        "Incline Dumbbell Curl",
+        "Incline Hammer Curl"
+      ],
+      "totalMatchingAnyTier": 3
+    },
+    {
+      "muscle": "biceps",
+      "role": "long_head",
+      "profile": "barbell_plates",
+      "stapleOrCommonCount": 1,
+      "stapleOrCommonNames": [
+        "Spider Curl"
+      ],
+      "totalMatchingAnyTier": 3
+    },
+    {
+      "muscle": "biceps",
+      "role": "long_head",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 1
+    },
+    {
+      "muscle": "biceps",
+      "role": "short_head",
+      "profile": "bodyweight",
+      "stapleOrCommonCount": 0,
+      "stapleOrCommonNames": [],
+      "totalMatchingAnyTier": 2
+    }
+  ],
+  "demandAxisFields": [
+    "position",
+    "floorAccess",
+    "overheadPosition",
+    "gripDemand",
+    "unilateralLoadable",
+    "bilateralUpper",
+    "bilateralLower",
+    "axialLoad",
+    "impact",
+    "balanceDemand",
+    "weightBearingHands"
+  ],
+  "demandAxisCounts": {
+    "position": {
+      "standing": 284,
+      "lying": 123,
+      "seated": 96,
+      "mixed": 27,
+      "kneeling": 22
+    },
+    "floorAccess": {
+      "false": 485,
+      "true": 67
+    },
+    "overheadPosition": {
+      "false": 483,
+      "true": 69
+    },
+    "gripDemand": {
+      "bar": 393,
+      "none": 109,
+      "supportive": 50
+    },
+    "unilateralLoadable": {
+      "false": 305,
+      "true": 221,
+      "null": 26
+    },
+    "bilateralUpper": {
+      "false": 300,
+      "true": 251,
+      "null": 1
+    },
+    "bilateralLower": {
+      "false": 387,
+      "true": 165
+    },
+    "axialLoad": {
+      "false": 431,
+      "true": 121
+    },
+    "impact": {
+      "false": 544,
+      "true": 8
+    },
+    "balanceDemand": {
+      "supported": 268,
+      "stable": 255,
+      "high": 29
+    },
+    "weightBearingHands": {
+      "false": 516,
+      "true": 23,
+      "null": 13
+    }
+  },
+  "demandAxisNullRowCounts": {
+    "position": 0,
+    "floorAccess": 0,
+    "overheadPosition": 0,
+    "gripDemand": 0,
+    "unilateralLoadable": 26,
+    "bilateralUpper": 1,
+    "bilateralLower": 0,
+    "axialLoad": 0,
+    "impact": 0,
+    "balanceDemand": 0,
+    "weightBearingHands": 13
+  },
+  "demandAxisNullRows": {
+    "position": [],
+    "floorAccess": [],
+    "overheadPosition": [],
+    "gripDemand": [],
+    "unilateralLoadable": [
+      "Machine Chest Press",
+      "Incline Machine Press",
+      "Decline Machine Press",
+      "Hammer Strength Chest Press",
+      "Machine Shoulder Press",
+      "Viking Press",
+      "Machine Lateral Raise",
+      "Machine Rear Delt Fly",
+      "Seated Rear Delt Machine",
+      "Machine Curl",
+      "Machine Tricep Extension",
+      "Neck Harness Flexion",
+      "Neck Harness Extension",
+      "Plate-Loaded Incline Press",
+      "Plate-Loaded Chest Press",
+      "Plate-Loaded Decline Press",
+      "Plate-Loaded Shoulder Press",
+      "Plate-Loaded Rear Delt",
+      "Plate-Loaded Preacher Curl",
+      "Plate-Loaded Overhead Extension",
+      "Lateral Raise Machine",
+      "Preacher Curl Machine",
+      "Triceps Extension Machine",
+      "Machine Shoulder Press (Front Delt Focus)",
+      "Tib Bar Raise (Machine)",
+      "Machine Y-Raise"
+    ],
+    "bilateralUpper": [
+      "Machine Y-Raise"
+    ],
+    "bilateralLower": [],
+    "axialLoad": [],
+    "impact": [],
+    "balanceDemand": [],
+    "weightBearingHands": [
+      "Weighted Dips (Chest)",
+      "Weighted Dips (Triceps)",
+      "Cycling (Stationary)",
+      "Terminal Knee Extension",
+      "Frog Pump",
+      "Dead Hang",
+      "Prowler Drag",
+      "Battle Ropes",
+      "Assault Bike",
+      "Cossack Squat",
+      "Side-Lying Adduction",
+      "Glute-Ham Raise Machine",
+      "Adductor Rock-Back (Kneeling)"
+    ]
+  },
+  "adaptedSetupClassDistribution": {
+    "none": 318,
+    "strap_cuff": 81,
+    "one_arm+seated": 38,
+    "supported": 31,
+    "seated": 20,
+    "one_arm+seated+strap_cuff": 12,
+    "one_arm+strap_cuff": 12,
+    "reduced_range+strap_cuff": 6,
+    "seated+strap_cuff": 5,
+    "strap_cuff+supported": 5,
+    "reduced_range": 4,
+    "reduced_range+supported": 4,
+    "one_arm": 3,
+    "reduced_range+strap_cuff+supported": 3,
+    "per_side+reduced_range": 2,
+    "per_side+seated+strap_cuff": 2,
+    "reduced_range+seated": 2,
+    "one_arm+per_side": 1,
+    "per_side": 1,
+    "per_side+seated": 1,
+    "per_side+supported": 1
+  },
+  "unclassifiedAdaptedSetupRowCount": 318,
+  "unclassifiedAdaptedSetupRows": [
+    "Incline Dumbbell Press",
+    "Decline Dumbbell Press",
+    "Dumbbell Fly",
+    "Incline Dumbbell Fly",
+    "Decline Dumbbell Fly",
+    "Pec Deck (Machine Fly)",
+    "Incline Machine Press",
+    "Decline Machine Press",
+    "Weighted Dips (Chest)",
+    "Wide-Grip Push-Up",
+    "Decline Push-Up",
+    "Ring Push-Up",
+    "Landmine Press",
+    "Smith Machine Bench Press",
+    "Incline Smith Machine Press",
+    "Svend Press",
+    "Dumbbell Pullover",
+    "Hammer Strength Chest Press",
+    "Reverse-Grip Bench Press",
+    "Dumbbell Squeeze Press",
+    "Dumbbell Pullover (Chest)",
+    "Hyperextension (Back Extension)",
+    "Reverse Hyperextension",
+    "Back Extension (Weighted)",
+    "Z-Press",
+    "Push Press",
+    "Viking Press",
+    "Machine Lateral Raise",
+    "Landmine Lateral Raise",
+    "Seated Lateral Raise",
+    "Plate Lateral Raise",
+    "Dumbbell Rear Delt Fly",
+    "Machine Rear Delt Fly",
+    "Reverse Pec Deck",
+    "Dumbbell Side-Lying Rear Delt",
+    "Prone Incline Y-Raise",
+    "Prone Incline T-Raise",
+    "Seated Rear Delt Machine",
+    "Barbell Curl",
+    "EZ Bar Curl",
+    "Incline Dumbbell Curl",
+    "Preacher Curl (Barbell)",
+    "Preacher Curl (Dumbbell)",
+    "Preacher Curl (EZ Bar)",
+    "Machine Curl",
+    "Concentration Curl",
+    "Spider Curl",
+    "Prone Incline Curl",
+    "Reverse Curl",
+    "EZ Bar Preacher Curl",
+    "TRX Curl",
+    "Close-Grip Bench Press",
+    "EZ Bar Skull Crusher",
+    "Dumbbell Skull Crusher",
+    "Decline Skull Crusher",
+    "Weighted Dips (Triceps)",
+    "Bench Dip",
+    "Diamond Push-Up",
+    "JM Press",
+    "Lying Tricep Extension",
+    "Machine Tricep Extension",
+    "Board Press",
+    "Close-Grip Floor Press",
+    "Tricep Dip (Parallel Bars)",
+    "Hack Squat Machine",
+    "Sissy Squat",
+    "Wall Sit",
+    "Cyclist Squat",
+    "Smith Machine Squat",
+    "Box Squat",
+    "Pause Squat",
+    "Heel-Elevated Squat",
+    "Single Leg Press",
+    "Pendulum Squat",
+    "Spanish Squat",
+    "Leg Press (Narrow Stance)",
+    "Sumo Squat",
+    "Safety Bar Squat",
+    "Front Squat (Dumbbell)",
+    "Leg Press (High Foot)",
+    "Cycling (Stationary)",
+    "Terminal Knee Extension",
+    "Nordic Curl",
+    "Nordic Hamstring Curl",
+    "Lying Leg Curl",
+    "Standing Leg Curl",
+    "Leg Curl (Cable)",
+    "Glute Ham Raise",
+    "Swiss Ball Leg Curl",
+    "Prone Leg Curl",
+    "Dumbbell Hip Thrust",
+    "Smith Machine Hip Thrust",
+    "Machine Hip Thrust",
+    "Glute Bridge",
+    "Single Leg Hip Thrust",
+    "Frog Pump",
+    "Cable Kickback",
+    "Donkey Kick",
+    "Abduction Machine",
+    "Cable Hip Abduction",
+    "Sumo Squat (Glute Focus)",
+    "Nordic Glute Curl",
+    "45-Degree Hip Extension",
+    "Reverse Hyperextension (Glute)",
+    "Cable Donkey Kickback",
+    "Donkey Kickback (Machine)",
+    "Kickstand Hip Thrust",
+    "Seated Calf Raise",
+    "Seated Machine Calf Raise",
+    "Seated Dumbbell Calf Raise",
+    "Leg Press Calf Raise",
+    "Box Jump",
+    "Calf Raise on Leg Press Sled",
+    "Tibialis Raise (Wall)",
+    "Tibialis Raise (Slant Board)",
+    "Toe Walk",
+    "Cable Crunch",
+    "Hanging Leg Raise",
+    "Side Plank",
+    "Ab Rollout",
+    "Ab Wheel Rollout",
+    "Decline Crunch",
+    "Russian Twist",
+    "Landmine Twist",
+    "Landmine Rotation",
+    "Bicycle Crunch",
+    "Crunch",
+    "Reverse Crunch",
+    "Leg Raise",
+    "Leg Raise (Flat Bench)",
+    "Dragon Flag",
+    "V-Up",
+    "Sit-Up",
+    "Cable Woodchop",
+    "Machine Crunch",
+    "Dead Bug",
+    "Hollow Body Hold",
+    "Stir the Pot",
+    "Hanging Knee Raise",
+    "Cable Woodchop (Low to High)",
+    "Ab Wheel (Kneeling)",
+    "Weighted Sit-Up",
+    "Toe-to-Bar",
+    "L-Sit Hold",
+    "Suitcase Carry",
+    "Pallof Press (Kneeling)",
+    "Copenhagen Plank",
+    "Barbell Wrist Curl",
+    "Reverse Wrist Curl",
+    "Plate Pinch",
+    "Dead Hang",
+    "Thick Bar Curl",
+    "Farmer Walk (Forearms)",
+    "Towel Pull-Up",
+    "Fat Grip Curl",
+    "Hand Gripper",
+    "Rice Bucket",
+    "Pinch Grip Carry",
+    "Neck Flexion (Machine)",
+    "Neck Extension (Machine)",
+    "Neck Lateral Flexion",
+    "Neck Curl",
+    "Neck Bridge",
+    "Plate Neck Curl",
+    "Plate Neck Extension",
+    "Neck Harness Flexion",
+    "Neck Harness Extension",
+    "Manual Resistance Neck Flexion",
+    "Manual Resistance Neck Extension",
+    "Neck Rotation (Resistance)",
+    "Sled Push",
+    "Battle Ropes",
+    "Assault Bike",
+    "Kettlebell Clean and Press",
+    "Jump Squat",
+    "Broad Jump",
+    "Depth Jump",
+    "Stair Running",
+    "Zercher Squat",
+    "Anderson Squat",
+    "Pin Squat",
+    "Hatfield Squat",
+    "Cambered Bar Squat",
+    "SSB Squat",
+    "Jefferson Curl",
+    "Serratus Punch",
+    "Kneeling Cable Crunch",
+    "Exercise Ball Crunch",
+    "Mountain Climber",
+    "Plank Row",
+    "Bear Crawl",
+    "Kneeling Ab Rollout",
+    "Dumbbell Side Bend",
+    "Cable Side Bend",
+    "Windmill",
+    "Close-Grip Push-Up",
+    "Archer Push-Up",
+    "Single-Arm Push-Up",
+    "Smith Machine Incline Press",
+    "Guillotine Press",
+    "Barbell Front Raise",
+    "Plate Front Raise",
+    "Kneeling Dumbbell Press",
+    "Single-Arm Dumbbell Press",
+    "Half-Kneeling Shoulder Press",
+    "Seated Dumbbell Curl",
+    "Barbell Drag Curl",
+    "Smith Machine Close-Grip Press",
+    "Dip Machine",
+    "Barbell Skull Crusher",
+    "Jefferson Squat",
+    "Kneeling Squat",
+    "Skater Squat",
+    "Landmine Squat",
+    "Glute Squeeze Hold",
+    "Monster Walk",
+    "Agility Ladder Drills",
+    "Rope Jump",
+    "Heel Walk",
+    "Seated Tibialis Raise",
+    "Dumbbell Pronation/Supination",
+    "Gripper Walks",
+    "Landmine Press (Abs)",
+    "Half-Kneeling Pallof Press",
+    "Tall-Kneeling Pallof Press",
+    "GHD Sit-Up",
+    "Incline Board Sit-Up",
+    "Hanging Oblique Raise",
+    "Seated Twist (Plate)",
+    "Hip Adduction Machine",
+    "Cable Hip Adduction",
+    "Copenhagen Adduction",
+    "Sumo Squat (Adductor Focus)",
+    "Side-Lying Adduction",
+    "Plate-Loaded Incline Press",
+    "Plate-Loaded Chest Press",
+    "Plate-Loaded Decline Press",
+    "Iso-Lateral Chest Press",
+    "Plate-Loaded Shoulder Press",
+    "Plate-Loaded Rear Delt",
+    "Plate-Loaded Preacher Curl",
+    "Plate-Loaded Hip Thrust",
+    "Plate-Loaded Overhead Extension",
+    "Seated Dip Machine",
+    "Lateral Raise Machine",
+    "Preacher Curl Machine",
+    "Triceps Extension Machine",
+    "Glute Kickback Machine",
+    "Ab Crunch Machine",
+    "Assisted Dip Machine",
+    "Band Pull-Apart",
+    "Band Lateral Raise",
+    "Band Chest Press",
+    "Band Bicep Curl",
+    "Band Tricep Pushdown",
+    "Band Squat",
+    "Band Overhead Tricep Extension",
+    "Banded Lateral Walk",
+    "Band Tibialis Raise",
+    "Band Wrist Curl",
+    "Band Wrist Extension",
+    "Band Leg Curl",
+    "Band Shoulder Press",
+    "Glute-Ham Raise Machine",
+    "Prone Reverse Fly",
+    "Incline Push-Up (Hands Elevated)",
+    "Machine Shoulder Press (Front Delt Focus)",
+    "Seated Bodyweight Calf Raise",
+    "Oblique V-Up",
+    "Cable Reverse Woodchop (Kneeling)",
+    "Weighted Russian Twist (Medicine Ball)",
+    "Cable Woodchop (Half-Kneeling)",
+    "Single-Arm Cable Woodchop (Standing)",
+    "Single-Arm Cable Lateral Raise",
+    "Single-Arm Cable Rear Delt Fly",
+    "Single-Arm Cable Wrist Curl",
+    "Single-Arm Farmer Carry",
+    "Adductor Squeeze (Ball)",
+    "Wide-Stance Goblet Squat (Adductor Bias)",
+    "Zercher Sumo Squat (Adductor Focus)",
+    "Adductor Rock-Back (Kneeling)",
+    "Dumbbell Tibialis Raise (Seated)",
+    "Tib Bar Raise (Machine)",
+    "Plate Neck Lateral Flexion",
+    "Neck Machine Lateral Flexion",
+    "Behind-the-Back Wrist Curl (Barbell)",
+    "Wrist Roller",
+    "Landmine Front Raise",
+    "Machine Y-Raise",
+    "Bradford Press",
+    "Seated Calf Raise (Barbell)",
+    "Sissy Squat Machine",
+    "Belt Squat",
+    "Reverse Nordic Curl",
+    "Smith Machine Front Squat",
+    "Wall Ball Squat",
+    "Cable Squat (Standing)",
+    "Slider Leg Curl (Bodyweight)",
+    "B-Stance Hip Thrust",
+    "Weighted Frog Pump",
+    "Landmine Chest Press (Single-Arm)",
+    "Deficit Push-Up",
+    "Floor Press (Dumbbell)",
+    "Push-Up Plus",
+    "Chest Press Machine (Single-Arm)",
+    "Machine Chest Fly (Single-Arm)",
+    "Standing Cable Chest Press (Single-Arm)",
+    "Cable Concentration Curl",
+    "EZ Bar Drag Curl",
+    "Zottman Preacher Curl",
+    "Incline Hammer Curl",
+    "Dumbbell Floor Skull Crusher",
+    "Single-Arm Overhead Cable Extension",
+    "Bench Press (Close Grip, Dumbbell)",
+    "Landmine Tricep Extension",
+    "Weighted Plank (Plate on Back)",
+    "Cable Anti-Rotation Hold (Half-Kneeling)",
+    "Reverse Plank"
+  ]
+}

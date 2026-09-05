@@ -1,0 +1,118 @@
+{
+  "totalRows": 552,
+  "trailingOrLeadingSpaceCount": 0,
+  "trailingOrLeadingSpace": [],
+  "doubleSpaceCount": 0,
+  "doubleSpace": [],
+  "emDashCount": 0,
+  "emDash": [],
+  "enDashInsteadOfHyphenCount": 0,
+  "enDashInsteadOfHyphen": [],
+  "capitalisationIssueCount": 0,
+  "capitalisationIssues": [],
+  "usSpellingCount": 0,
+  "usSpellings": [],
+  "abbreviationsInNameCount": 1,
+  "abbreviationsInName": [
+    "Single-Leg Romanian Deadlift (DB)"
+  ],
+  "brandNameCount": 15,
+  "brandNames": [
+    {
+      "name": "Smith Machine Bench Press",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
+      "name": "Incline Smith Machine Press",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
+      "name": "Hammer Strength Chest Press",
+      "brandTerm": "Hammer Strength",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "Machine Row (Hammer Strength)",
+      "brandTerm": "Hammer Strength",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Row",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "TRX Curl",
+      "brandTerm": "TRX",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "Smith Machine Squat",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
+      "name": "Swiss Ball Leg Curl",
+      "brandTerm": "Swiss Ball",
+      "actionable": true,
+      "note": "Proprietary brand term with a generic equivalent (plate-loaded/iso-lateral machine, suspension trainer, stability ball) — EL-2 candidate for alias, canonical name unchanged unless the lead rules otherwise."
+    },
+    {
+      "name": "Smith Machine Hip Thrust",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
+      "name": "Smith Machine Calf Raise",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
+      "name": "Smith Machine Shrug",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
+      "name": "Smith Machine Incline Press",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
+      "name": "Smith Machine Row",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
+      "name": "Smith Machine Close-Grip Press",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    },
+    {
+      "name": "Smith Machine Front Squat",
+      "brandTerm": "Smith",
+      "actionable": false,
+      "note": "\"Smith\" is this corpus's own generic equipmentCategory name for the guided-bar apparatus, not a proprietary alternative — not actionable."
+    }
+  ],
+  "oldCommaFormCount": 0,
+  "oldCommaForm": [],
+  "unmatchedParensCount": 0,
+  "unmatchedParens": [],
+  "startsWithArticleCount": 0,
+  "startsWithArticle": []
+}

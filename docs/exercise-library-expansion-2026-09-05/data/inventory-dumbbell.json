@@ -1,0 +1,925 @@
+{
+  "family": "dumbbell",
+  "generatedAt": "2026-09-05",
+  "existingRowsConsidered": 103,
+  "aliasesForExisting": [
+    {
+      "existing": "Dumbbell Row",
+      "aliases": [
+        "Two-Arm Bent-Over Dumbbell Row",
+        "Bent-Over Dumbbell Row"
+      ]
+    }
+  ],
+  "candidates": [
+    {
+      "name": "Single-Arm Dumbbell Bench Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [
+        "One-Arm Dumbbell Bench Press"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Bench Press",
+        "why": "pressing one dumbbell at a time adds an anti-rotation core demand the two-arm version does not have"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Same flat-bench mechanics as the bilateral version otherwise."
+    },
+    {
+      "name": "Alternating Dumbbell Bench Press",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [
+        "Alternating Dumbbell Press (Chest)"
+      ],
+      "tier": "niche",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Bench Press",
+        "why": "alternating one arm at a time changes the anti-rotation demand and time-under-tension pattern versus pressing both together"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Vocabulary gap: the app's real deriveLaterality() (src/lib/exerciseMetadata.js) has only bilateral/unilateral values keyed off name regex; 'alternating' names are not matched and would derive to bilateral at seed time. This candidate's schema-level laterality is 'alternating' per EL-2, but ships with a known mismatch against the app's internal derivation until that regex is extended - flagged for the lead."
+    },
+    {
+      "name": "Floor Fly (Dumbbell)",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [
+        "Dumbbell Floor Fly"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Fly",
+        "why": "lying on the floor rather than a bench shortens the bottom range of motion, the same range/depth relationship as Floor Press (Dumbbell) to Dumbbell Bench Press"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "No bench required, common home-gym substitution for the standard fly."
+    },
+    {
+      "name": "Single-Arm Dumbbell Fly",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "flat",
+      "aliases": [
+        "One-Arm Dumbbell Fly"
+      ],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Fly",
+        "why": "one arm at a time adds an anti-rotation core demand and lets the working side get a longer stretch, unlike the bilateral version"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Same flat-bench mechanics otherwise."
+    },
+    {
+      "name": "Seated Single-Arm Dumbbell Press",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "side_delts"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 4,
+      "subregion": "overhead_press",
+      "aliases": [
+        "Seated One-Arm Dumbbell Press"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Single-Arm Dumbbell Press",
+        "why": "seated removes leg drive and lower-back involvement, the same standing/seated split the corpus already uses for Dumbbell Shoulder Press vs Seated Dumbbell Press"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "axialLoad": true
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "axialLoad came back null; overridden to true to match the existing curated value for Seated Dumbbell Press (a seated overhead press still loads the spine axially)."
+    },
+    {
+      "name": "Z-Press (Dumbbell)",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [
+        "triceps",
+        "side_delts"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "push",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "overhead_press",
+      "aliases": [
+        "Dumbbell Z-Press"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Shoulder Press",
+        "why": "seated on the floor with legs straight out and no back support, removing every stabiliser but the trunk itself - a support condition change, not merely a seated/standing swap"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "position": "seated",
+        "floorAccess": true,
+        "axialLoad": true,
+        "balanceDemand": "stable"
+      },
+      "derivedNullAxes": [
+        "position",
+        "floorAccess",
+        "axialLoad",
+        "balanceDemand"
+      ],
+      "notes": "Demand axes came back null; overridden to exactly match the existing Barbell Z-Press's curated values (seated on the floor, floor access required, axially loaded, stable-not-supported balance) since the body position is identical, only the implement differs."
+    },
+    {
+      "name": "Incline Lateral Raise (Bench)",
+      "primaryMuscle": "side_delts",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "lateral_raise",
+      "aliases": [
+        "Prone Incline Lateral Raise",
+        "Chest-Supported Lateral Raise"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Dumbbell Lateral Raise",
+        "why": "lying prone on an incline bench removes any torso swing/momentum the standing version allows, changing the balance and support condition, not just the plane"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Distinct from the standing 'Leaning Lateral Raise' and 'Seated Lateral Raise' rows, which both keep the torso upright."
+    },
+    {
+      "name": "Alternating Dumbbell Front Raise",
+      "primaryMuscle": "front_delts",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [
+        "Alternating Front Raise"
+      ],
+      "tier": "niche",
+      "laterality": "alternating",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Front Raise",
+        "why": "alternating arms changes the anti-rotation/core demand and rest-per-side pattern versus raising both together"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Same alternating-laterality vocabulary gap noted on Alternating Dumbbell Bench Press applies here."
+    },
+    {
+      "name": "Seated Bent-Over Rear Delt Raise",
+      "primaryMuscle": "rear_delts",
+      "secondaryMuscles": [
+        "back"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "horiz_abduction",
+      "aliases": [
+        "Seated Bent-Over Lateral Raise",
+        "Seated Rear Delt Raise"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Rear Delt Fly",
+        "why": "seated with the torso bent forward over the knees, distinct from the existing row's prone/incline-bench-supported position and from standing bent-over variants"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "One of the most common gym rear-delt exercises; fills a real gap between the prone incline and side-lying variants already in the corpus."
+    },
+    {
+      "name": "Dumbbell Upright Row",
+      "primaryMuscle": "side_delts",
+      "secondaryMuscles": [
+        "biceps",
+        "traps"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "pull",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": "lateral_raise",
+      "aliases": [
+        "DB Upright Row"
+      ],
+      "tier": "never_auto",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Upright Row",
+        "why": "implement differs (a dumbbell in each hand travels its own path rather than a fixed bar), changing the wrist and grip demand"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "never_auto to match the mechanical caution already implied by the brief for the barbell version."
+    },
+    {
+      "name": "Single-Arm Dumbbell Row (Bench-Supported)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 4,
+      "sfr": 4,
+      "subregion": "horizontal_lat",
+      "aliases": [
+        "One-Arm Dumbbell Row",
+        "Bench-Supported Dumbbell Row"
+      ],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Row",
+        "why": "the existing 'Dumbbell Row' row is tagged bilateral (both dumbbells worked together); this is the classic one-arm-at-a-time bench-kneeling row, a distinct laterality"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {
+        "axialLoad": false
+      },
+      "derivedNullAxes": [
+        "axialLoad"
+      ],
+      "notes": "One of the most standard gym exercises and a genuine gap: the existing 'Dumbbell Row' entry is bilateral, so no unilateral bench-supported row exists in the corpus today. axialLoad came back null; overridden to false since one hand and knee are braced on the bench, removing standing spinal loading (matching Chest-Supported Row (Barbell)'s false value)."
+    },
+    {
+      "name": "Seal Row (Dumbbell)",
+      "primaryMuscle": "back",
+      "secondaryMuscles": [
+        "biceps"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "pull",
+      "isCompound": true,
+      "repMin": 6,
+      "repMax": 12,
+      "fatigueCost": 3,
+      "sfr": 5,
+      "subregion": "upper_mid_row",
+      "aliases": [
+        "Dumbbell Seal Row"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Seal Row",
+        "why": "implement family differs (two dumbbells vs a barbell), letting each arm move independently through a slightly different path"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Requires a raised bench platform, same setup logic as the barbell version."
+    },
+    {
+      "name": "Incline Dumbbell Pullover",
+      "primaryMuscle": "chest",
+      "secondaryMuscles": [
+        "back"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [
+        "Dumbbell Incline Pullover"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Pullover",
+        "why": "an inclined bench changes the shoulder angle and shortens the top-range stretch compared with the flat-bench version"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "subregion left null to match the existing Dumbbell Pullover's own null subregion (pullover isn't tracked on the chest angle taxonomy in this corpus)."
+    },
+    {
+      "name": "Spider Curl (Dumbbell)",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 2,
+      "sfr": 5,
+      "subregion": "long_head",
+      "aliases": [
+        "Dumbbell Spider Curl"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Spider Curl",
+        "why": "implement family differs (two independently-moving dumbbells vs a fixed barbell), the same distinction the corpus already draws for other curl variants (Barbell Curl vs Dumbbell Curl)"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Long-head-biased prone-incline curl position, same as the barbell version."
+    },
+    {
+      "name": "Dumbbell Drag Curl",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 12,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "long_head",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Barbell Drag Curl",
+        "why": "implement family differs; dumbbells also let the drag path continue further back at the torso than a barbell can clear"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Long-head-biased, matching the barbell drag curl's subregion."
+    },
+    {
+      "name": "Dumbbell Reverse Curl",
+      "primaryMuscle": "biceps",
+      "secondaryMuscles": [
+        "forearms"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 3,
+      "subregion": "brachialis",
+      "aliases": [],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Reverse Curl",
+        "why": "implement family differs (dumbbell vs barbell), the same distinction already drawn between the corpus's other curl families"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Overhand/pronated grip, brachialis-biased, matching the barbell reverse curl."
+    },
+    {
+      "name": "Single-Arm Overhead Dumbbell Tricep Extension",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "overhead",
+      "aliases": [
+        "One-Arm Overhead Extension"
+      ],
+      "tier": "common",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Overhead Tricep Extension",
+        "why": "one dumbbell in one hand rather than one dumbbell held with both hands changes the laterality and adds an anti-lateral-flexion core demand"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Very standard gym accessory movement."
+    },
+    {
+      "name": "Single-Arm Dumbbell Skull Crusher",
+      "primaryMuscle": "triceps",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "overhead",
+      "aliases": [
+        "One-Arm Dumbbell Skull Crusher"
+      ],
+      "tier": "niche",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Skull Crusher",
+        "why": "one dumbbell per arm moving independently rather than two dumbbells moving together, adding a per-side stability demand"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {
+        "overheadPosition": true
+      },
+      "derivedNullAxes": [
+        "overheadPosition"
+      ],
+      "notes": "overheadPosition came back null; overridden to true to match Dumbbell Skull Crusher's curated value (same overhead-arm-extension phase)."
+    },
+    {
+      "name": "Dumbbell Glute Bridge",
+      "primaryMuscle": "glutes",
+      "secondaryMuscles": [
+        "hamstrings"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "hinge",
+      "isCompound": true,
+      "repMin": 10,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "activator",
+      "aliases": [],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Glute Bridge",
+        "why": "implement differs (loaded dumbbell across the hips vs bodyweight-only), same movement pattern as the existing bodyweight row"
+      },
+      "sources": [
+        "Bret Contreras, Glute Lab"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Natural loaded progression from the bodyweight Glute Bridge before a barbell hip thrust."
+    },
+    {
+      "name": "Cossack Squat (Dumbbell)",
+      "primaryMuscle": "adductors",
+      "secondaryMuscles": [
+        "quads",
+        "glutes"
+      ],
+      "equipment": "dumbbell",
+      "movementPattern": "squat",
+      "isCompound": true,
+      "repMin": 8,
+      "repMax": 15,
+      "fatigueCost": 3,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [
+        "Cossack Squat",
+        "Lateral Squat"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Lateral Lunge",
+        "why": "goes to full squat depth on one side with the other leg extended straight, versus the lateral lunge's partial-depth stepping pattern - a range/depth class difference"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "subregion left null: adductors has no subregion taxonomy in the current corpus (empty list), so none is invented per the method's rule."
+    },
+    {
+      "name": "Deficit Dumbbell Calf Raise (Standing)",
+      "primaryMuscle": "calves",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "gastro",
+      "aliases": [
+        "Dumbbell Calf Raise (Deficit)"
+      ],
+      "tier": "specialist",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Dumbbell Calf Raise (Standing)",
+        "why": "standing on a raised platform (plate or step) extends the bottom range of motion for a deeper stretch, a range/depth class difference"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Same gastrocnemius bias as the standard standing raise, deeper range only."
+    },
+    {
+      "name": "Lying Dumbbell Leg Curl",
+      "primaryMuscle": "hamstrings",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 3,
+      "subregion": "knee_flexion",
+      "aliases": [
+        "Dumbbell Leg Curl"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Hack Squat Machine",
+        "why": "new movement family for this corpus: hamstring knee-flexion isolation performed lying prone holding a single dumbbell between the feet, in place of a leg-curl machine"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Old-school home-gym substitute for a lying leg curl machine; distinctFrom points to no directly analogous existing row since no dumbbell-family leg curl exists yet."
+    },
+    {
+      "name": "Weighted Dumbbell Crunch",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "flexion",
+      "aliases": [
+        "Dumbbell Crunch",
+        "Weighted Crunch (Dumbbell)"
+      ],
+      "tier": "common",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Weighted Sit-Up",
+        "why": "a crunch is a short-range spinal-flexion movement (shoulders lift off the floor) rather than a full sit-up to seated, matching the existing bodyweight Crunch vs Weighted Sit-Up split"
+      },
+      "sources": [
+        "Brad Schoenfeld, Science and Development of Muscle Hypertrophy"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Holds a single dumbbell on the chest or overhead for added resistance on the standard crunch."
+    },
+    {
+      "name": "Dumbbell Dead Bug",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": "anti_extension",
+      "aliases": [
+        "Weighted Dead Bug"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 1,
+      "distinctFrom": {
+        "existing": "Dead Bug",
+        "why": "implement differs (dumbbells held overhead in each hand add an anti-extension load vs bodyweight-only), same base movement pattern"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Anti-extension core work; loaded progression from the bodyweight version."
+    },
+    {
+      "name": "Dumbbell Woodchop",
+      "primaryMuscle": "abs",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 10,
+      "repMax": 15,
+      "fatigueCost": 2,
+      "sfr": 3,
+      "subregion": "rotation",
+      "aliases": [
+        "Standing Dumbbell Woodchop"
+      ],
+      "tier": "specialist",
+      "laterality": "unilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Side Bend",
+        "why": "a diagonal rotational chop pattern through the hips and trunk rather than a lateral flexion hold at the hip"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Rotation-subregion core movement, standing, matching the Russian Twist/rotation family already in the corpus."
+    },
+    {
+      "name": "Seated Dumbbell Shrug",
+      "primaryMuscle": "traps",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 12,
+      "repMax": 20,
+      "fatigueCost": 2,
+      "sfr": 4,
+      "subregion": null,
+      "aliases": [],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Dumbbell Shrug",
+        "why": "seated removes any leg/hip drive assistance the standing version allows, isolating the traps more strictly"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "subregion left null to match the corpus's convention that no trap exercise carries a subregion value."
+    },
+    {
+      "name": "Dumbbell Reverse Wrist Curl",
+      "primaryMuscle": "forearms",
+      "secondaryMuscles": [],
+      "equipment": "dumbbell",
+      "movementPattern": "isolation",
+      "isCompound": false,
+      "repMin": 15,
+      "repMax": 25,
+      "fatigueCost": 1,
+      "sfr": 3,
+      "subregion": null,
+      "aliases": [
+        "Reverse Wrist Curl (Dumbbell)"
+      ],
+      "tier": "niche",
+      "laterality": "bilateral",
+      "loadCharacter": "grind",
+      "difficulty": 2,
+      "distinctFrom": {
+        "existing": "Reverse Wrist Curl",
+        "why": "implement family differs (dumbbell vs barbell), matching the corpus's existing Dumbbell Wrist Curl vs Barbell Wrist Curl split"
+      },
+      "sources": [
+        "NSCA Essentials of Strength Training and Conditioning"
+      ],
+      "demandOverrides": {},
+      "derivedNullAxes": [],
+      "notes": "Extensor-focused counterpart to Dumbbell Wrist Curl."
+    }
+  ],
+  "rejected": [
+    {
+      "name": "Neutral-Grip Dumbbell Bench Press",
+      "reason": "not distinct under EL-2 \u2014 a standard dumbbell bench press grip is already neutral by default hand position; no alternate-grip variant exists to distinguish it from"
+    },
+    {
+      "name": "Reverse-Grip Dumbbell Fly",
+      "reason": "unattested \u2014 a fly's palms face a fixed direction throughout the arc; there is no meaningful grip variant to name separately"
+    },
+    {
+      "name": "Incline Bench Dumbbell Row",
+      "reason": "duplicate of 'Chest-Supported Row (Dumbbell)' \u2014 the same mechanics under a different name"
+    },
+    {
+      "name": "Pendlay-Style Dumbbell Row",
+      "reason": "unattested \u2014 Pendlay row is a barbell-specific dead-stop-from-floor technique, not documented as a dumbbell exercise in mainstream coaching literature"
+    },
+    {
+      "name": "Dumbbell Sumo Squat",
+      "reason": "duplicate of 'Sumo Squat (Glute Focus)' \u2014 same movement already in the corpus tagged by training focus; a quads-primary re-tag is not a new training stimulus"
+    },
+    {
+      "name": "JM Press (Dumbbell)",
+      "reason": "unattested \u2014 JM press is a barbell-specific hybrid between a skull crusher and a close-grip press; no standard dumbbell adaptation is documented"
+    },
+    {
+      "name": "Close-Grip Dumbbell Press",
+      "reason": "duplicate of 'Dumbbell Squeeze Press' \u2014 pressing two dumbbells together with a close grip is the same movement already in the corpus"
+    },
+    {
+      "name": "Suitcase Crunch",
+      "reason": "unattested \u2014 sources disagree whether this names a lying oblique crunch or a standing anti-lateral-flexion hold; not a single well-defined canonical movement"
+    },
+    {
+      "name": "Copenhagen Plank (Dumbbell)",
+      "reason": "not distinct under EL-2 \u2014 the brief directs that sumo squat variants already cover the adductor training need for this family"
+    },
+    {
+      "name": "Dumbbell Neck Lateral Flexion",
+      "reason": "unattested \u2014 this corpus's convention loads neck work with a plate or harness, not a hand-held dumbbell; no attested dumbbell-in-hand neck movement was found"
+    },
+    {
+      "name": "Dumbbell Waiter's Carry",
+      "reason": "owned by carries inventory"
+    },
+    {
+      "name": "Dumbbell Suitcase Deadlift",
+      "reason": "owned by carries inventory \u2014 unilateral suitcase-position pull-to-carry setup belongs with the loaded-carry family"
+    }
+  ]
+}
