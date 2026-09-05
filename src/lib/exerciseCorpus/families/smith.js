@@ -120,6 +120,10 @@ export default [
     fatigueCost: 3, sfr: 4,
     subregion: "horizontal_lat",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 metadataCorrectionsVerified
+    // (lead-overrides.json): the "row" name rule derives seated; this is a
+    // standing bent-over row on the Smith bar.
+    overrides: { demands: { position: "standing" } },
     cue: "",
   },
   {

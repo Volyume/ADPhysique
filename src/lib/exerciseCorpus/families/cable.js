@@ -589,6 +589,10 @@ export default [
     fatigueCost: 2, sfr: 5,
     subregion: "shoulder_extension",
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 metadataCorrectionsVerified
+    // (lead-overrides.json): performed standing at the high pulley, not
+    // seated.
+    overrides: { demands: { position: "standing" } },
     cue: "",
   },
   {
@@ -668,6 +672,10 @@ export default [
     subregion: "shoulder_extension",
     aliases: ["Lat Prayer","Rope Straight-Arm Pulldown","Straight-arm Pull Down (bar Attachment)"],
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 metadataCorrectionsVerified
+    // (lead-overrides.json): performed standing at the high pulley, not
+    // seated.
+    overrides: { demands: { position: "standing" } },
     cue: "",
   },
   {
@@ -786,6 +794,10 @@ export default [
     fatigueCost: 2, sfr: 4,
     subregion: null,
     loadCharacter: "grind",
+    // exercise-library-expansion-2026-09-05 metadataCorrectionsVerified
+    // (lead-overrides.json): a Y-raise pulls the cable through a diagonal,
+    // not a pushing pattern; the derivation had it as push.
+    overrides: { force: "pull" },
     cue: "",
   },
   {
@@ -1388,7 +1400,9 @@ export default [
     compound: false,
     repMin: 12, repMax: 20,
     fatigueCost: 1, sfr: 5,
-    subregion: "horiz_abduction",
+    // exercise-library-expansion-2026-09-05 subregionRuling (lead-overrides.json):
+    // 'rotation' replaces the 'horiz_abduction' placeholder for this row.
+    subregion: "rotation",
     aliases: ["Cable Shoulder External Rotation","cable standing shoulder external rotation","External Rotation with Cable","Shoulder External Rotation (Cable)"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"unilateralLoadable":true,"bilateralUpper":false}},
@@ -1432,7 +1446,9 @@ export default [
     compound: false,
     repMin: 12, repMax: 20,
     fatigueCost: 1, sfr: 5,
-    subregion: "horiz_abduction",
+    // exercise-library-expansion-2026-09-05 subregionRuling (lead-overrides.json):
+    // 'rotation' replaces the 'horiz_abduction' placeholder for this row.
+    subregion: "rotation",
     aliases: ["Cable Shoulder Internal Rotation","cable seated shoulder internal rotation","Shoulder Internal Rotation (Cable)"],
     loadCharacter: "grind",
     overrides: {"laterality":"unilateral","demands":{"unilateralLoadable":true,"bilateralUpper":false}},

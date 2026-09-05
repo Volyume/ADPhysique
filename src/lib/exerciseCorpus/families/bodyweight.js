@@ -217,6 +217,10 @@ export default [
     repMin: 10, repMax: 20,
     fatigueCost: 2, sfr: 4,
     subregion: "squat_press",
+    // exercise-library-expansion-2026-09-05 duplicateDrops: "Bodyweight
+    // Step-Up" was dropped (never shipped, same stimulus) and its own
+    // alias carried over.
+    aliases: ["Bodyweight Step-Up", "Step-ups"],
     loadCharacter: "grind",
     cue: "",
   },
@@ -739,6 +743,10 @@ export default [
     repMin: 10, repMax: 20,
     fatigueCost: 2, sfr: 4,
     subregion: "squat_press",
+    // exercise-library-expansion-2026-09-05 duplicateDrops: "Bodyweight
+    // Forward Lunge" was dropped (never shipped, same stimulus as this
+    // row) and its own alias carried over.
+    aliases: ["Bodyweight Forward Lunge", "forward lunge (male)"],
     loadCharacter: "grind",
     cue: "",
   },
@@ -1583,21 +1591,6 @@ export default [
     cue: "",
   },
   {
-    name: "Bodyweight Forward Lunge",
-    primaryMuscle: "quads",
-    secondaryMuscles: ["glutes"],
-    equipment: "bodyweight",
-    movementPattern: "lunge",
-    compound: true,
-    repMin: 10, repMax: 20,
-    fatigueCost: 2, sfr: 4,
-    subregion: "squat_press",
-    aliases: ["forward lunge (male)"],
-    loadCharacter: "grind",
-    overrides: {"difficulty":1,"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
-  },
-  {
     name: "Bodyweight Lateral Step-Up",
     primaryMuscle: "glutes",
     secondaryMuscles: ["quads","adductors"],
@@ -1635,21 +1628,6 @@ export default [
     repMin: 10, repMax: 20,
     fatigueCost: 2, sfr: 4,
     subregion: "squat_press",
-    loadCharacter: "grind",
-    overrides: {"difficulty":1,"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
-    cue: "",
-  },
-  {
-    name: "Bodyweight Step-Up",
-    primaryMuscle: "quads",
-    secondaryMuscles: ["glutes"],
-    equipment: "bodyweight",
-    movementPattern: "lunge",
-    compound: true,
-    repMin: 10, repMax: 20,
-    fatigueCost: 2, sfr: 4,
-    subregion: "squat_press",
-    aliases: ["Step-ups"],
     loadCharacter: "grind",
     overrides: {"difficulty":1,"demands":{"gripDemand":"none","axialLoad":false,"weightBearingHands":false}},
     cue: "",

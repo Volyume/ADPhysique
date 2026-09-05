@@ -45,6 +45,7 @@ import {
 } from './exercise/intent';
 import { isAutoEligible } from './exercise/canonicality';
 import { parseProfiles } from './poolGenerator';
+import { styleKeyFromTags, stylePoolFor } from './exercise/stylePools';
 
 // Where the per-plan rationale ("Why this plan?") is cached so the
 // enrollment reveal and the plan view can explain why the routine, sets,

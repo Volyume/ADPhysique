@@ -78,9 +78,14 @@ export const SUBREGIONS_BY_MUSCLE = Object.freeze({
     // campaign) — carried through honestly rather than silently narrowed.
     'face_pull',
   ],
-  front_delts: ['overhead_press'],
+  // 'rotation' added (exercise-library-expansion-2026-09-05 subregionRuling,
+  // lead-overrides.json): shoulder internal/external rotation is a real
+  // function no existing subregion named; no plan requirement consumes it
+  // so it cannot distort coverage. Replaces the 'horiz_abduction' placeholder
+  // that had been sitting on the two rotation rows.
+  front_delts: ['overhead_press', 'rotation'],
   side_delts: ['lateral_raise', 'overhead_press'],
-  rear_delts: ['horiz_abduction', 'face_pull'],
+  rear_delts: ['horiz_abduction', 'face_pull', 'rotation'],
   hamstrings: ['hip_extension', 'knee_flexion'],
   triceps: ['overhead', 'pushdown'],
   calves: ['gastro', 'soleus'],

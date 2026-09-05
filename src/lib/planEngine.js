@@ -696,6 +696,15 @@ export const POOL = {
 // muscle the library covers thinly keeps POOL's entries for that muscle.
 let _effectivePool = POOL;
 
+// EL-8/EL-11 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md,
+// 09-STYLE-PLANS.md section 1): when the plan being (re)generated carries a
+// `style:<pool>` tag, the caller resolves that pool to a Set of canonical
+// names via stylePoolFor (src/lib/exercise/stylePools.js) and hands it in
+// as `inputs.stylePool`. Same module-level pattern as _effectivePool: set at
+// the top of generatePlan, restored after, null (no constraint) for every
+// existing caller so an ordinary plan is generated exactly as before.
+let _styleAllowedNames = null;
+
 // Weak-point muscles for the current run (internal keys). Set in generatePlan,
 // restored after, like _effectivePool. buildSession flexes the per-session cap
 // for these, and buildFromMatrix gives them extra sessions, so a weak-point
@@ -1329,7 +1338,18 @@ function divisionGoalFor(goal) {
 
 function filterPool(muscle, equipment, goal) {
   const pool = _effectivePool[muscle] ?? [];
-  const byEquip = pool.filter(e => e.eq.includes(equipment));
+  let byEquip = pool.filter(e => e.eq.includes(equipment));
+
+  // EL-11: a style-tagged plan restricts the candidate set to its pool.
+  // Hard filter, deliberately no never-starve fallback — the pool IS the
+  // programming decision for this style of plan, not a preference to
+  // relax under pressure (the same reasoning selectExercisesForMuscle
+  // already applies to the NEVER_AUTO gate just below this call). An
+  // under-covered muscle surfaces as a thin/empty slot, which is the
+  // honest outcome for a plan whose whole style is a narrower pool.
+  if (_styleAllowedNames) {
+    byEquip = byEquip.filter(e => _styleAllowedNames.has(e.n));
+  }
 
   const rule = divisionPoolRule(divisionGoalFor(goal), muscle);
   if (!rule) return byEquip;
@@ -1428,7 +1448,16 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
   // assisted gates below. Those trade a preference for coverage; this one
   // would be trading the reason the exercise is banned. An empty slot is
   // the better failure.
-  available = available.filter(e => isAutoEligible(e.n));
+  //
+  // EL-8: a style pool is a DELIBERATE, EXPLICIT exception to this gate -
+  // kettlebell ballistics (Snatch, Clean, Swing (Single-Arm)...) are
+  // NEVER_AUTO in the general registry but are exactly what
+  // kettlebell_experienced exists to reach. `available` already came
+  // through filterPool's style restriction above, so re-admitting a
+  // NEVER_AUTO name here only ever re-admits one already vetted as a
+  // member of the active style pool - it can never broaden eligibility
+  // for an ordinary (non-style) plan, where _styleAllowedNames is null.
+  available = available.filter(e => isAutoEligible(e.n) || (_styleAllowedNames && _styleAllowedNames.has(e.n)));
   if (available.length === 0) return [];
 
   // C16 job 2 (FOUNDER RULING: staples first, common as filler). A NICHE
@@ -3118,6 +3147,7 @@ export function generatePlan(inputs) {
   // No library (every existing unit test) means _effectivePool stays POOL.
   const prevPool = _effectivePool;
   const prevWeakPoints = _weakPointKeys;
+  const prevStyle = _styleAllowedNames;
   // C16 job 9: `canonicalNames` is the FULL catalogue of exercise names that
   // exist on this device, used only to stop the hand-written fallback pool
   // offering a name the catalogue does not have. Optional: without it the
@@ -3127,11 +3157,19 @@ export function generatePlan(inputs) {
     inputs?.exerciseLibrary,
     inputs?.canonicalNames ?? null,
   );
+  // EL-8/EL-11: `inputs.stylePool` is an array of canonical names (the
+  // caller resolves the plan's `style:<pool>` tag via
+  // exercise/stylePools.js's stylePoolFor before calling generatePlan).
+  // Absent for every existing caller, so an ordinary plan is unaffected.
+  _styleAllowedNames = Array.isArray(inputs?.stylePool) && inputs.stylePool.length
+    ? new Set(inputs.stylePool)
+    : null;
   try {
     return _generatePlanInner(inputs);
   } finally {
     _effectivePool = prevPool;
     _weakPointKeys = prevWeakPoints;
+    _styleAllowedNames = prevStyle;
   }
 }
 

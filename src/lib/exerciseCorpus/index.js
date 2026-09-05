@@ -66,7 +66,7 @@ export const RETIRED_ENTRIES = Object.freeze(ALL_ENTRIES.filter((e) => e.retired
 export const RETIRED_NAME_TO_SURVIVOR = new Map(RETIRED_ENTRIES.map((e) => [e.name, e.retiredInto]));
 
 const VALID_OVERRIDE_KEYS = new Set([
-  'laterality', 'difficulty', 'exerciseType', 'loadSemantics', 'machineType', 'demands',
+  'laterality', 'difficulty', 'exerciseType', 'loadSemantics', 'machineType', 'demands', 'force',
 ]);
 
 /**
@@ -138,6 +138,10 @@ export function corpusEntryToSeedRow(entry) {
   if (overrides.difficulty != null) row.difficulty = overrides.difficulty;
   if (overrides.machineType !== undefined) row.machineType = overrides.machineType;
   if (overrides.demands) Object.assign(row, overrides.demands);
+  // EL-21 metadataCorrectionsVerified (lead-overrides.json): force is
+  // derived by deriveExerciseMetadata (equipMeta), not deriveDemandMetadata,
+  // so it needs its own override key rather than folding into `demands`.
+  if (overrides.force != null) row.force = overrides.force;
 
   return row;
 }

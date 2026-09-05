@@ -129,6 +129,13 @@ const STAPLE = [
 
   // Traps.
   'Barbell Shrug', 'Dumbbell Shrug',
+
+  // exercise-library-expansion-2026-09-05 (integration stage 2, tierRulings
+  // in lead-overrides.json): the four bodyweight lower-body patterns
+  // reachable only through the bodyweight and home profiles, whose pools
+  // are thin, so these genuine everyday movements earn STAPLE.
+  'Bodyweight Split Squat', 'Bodyweight Reverse Lunge',
+  'Bodyweight Walking Lunge', 'Single-Leg Glute Bridge',
 ];
 
 // ─── COMMON ──────────────────────────────────────────────────────────────
@@ -244,6 +251,47 @@ const COMMON = [
   // Traps
   'Cable Shrug', 'Smith Machine Shrug', 'Trap Bar Shrug', 'Hex Bar Shrug',
   'Incline Shrug', 'Single-Arm Dumbbell Shrug', 'Face Pull (Traps)',
+
+  // exercise-library-expansion-2026-09-05 (integration stage 2, tierRulings
+  // in lead-overrides.json): 75 rows promoted from SPECIALIST. Bodyweight,
+  // band and suspension rows are reachable only through the bodyweight and
+  // home profiles, whose pools are thin, so their genuine everyday
+  // movements earn COMMON here.
+  'Band Chest Press (Single-Arm)', 'Band Chest Fly (Standing)',
+  'Band Rear Delt Fly', 'Band Shoulder Press (Seated)',
+  'Band Row (Single-Arm)', 'Band Seated Row', 'Band Pull-Apart (Overhead)',
+  'Band Hammer Curl', 'Band Standing Curl (Single-Arm)',
+  'Band Tricep Kickback', 'Band Front Raise', 'Band Goblet Squat',
+  'Band Romanian Deadlift (Bilateral)', 'Band Glute Bridge',
+  'Band Clamshell', 'Band Monster Walk', 'Band Glute Kickback',
+  'Band Standing Hip Abduction', 'Band Pallof Press',
+  'Band Woodchop (High-to-Low)', 'Band Woodchop (Low-to-High)',
+  'Band Assisted Dip', 'Wide-Grip Bench Press', 'Floor Press (Barbell)',
+  'Seated Barbell Overhead Press', 'Low-Bar Back Squat',
+  'Barbell Glute Bridge', 'Knee Push-Up', 'Pike Push-Up',
+  'Close-Grip Pull-Up', 'Weighted Chin-Up', 'Straight Bar Dip (Chest-Lean)',
+  'Bench Dip (Feet Elevated)', 'Inverted Row (Feet Elevated)',
+  'Inverted Row (High Bar)', 'Inverted Row (Low Bar)',
+  'Inverted Row (Underhand Grip)', 'Bodyweight Curtsy Lunge',
+  'Bodyweight Lateral Step-Up', 'Bodyweight Box Squat',
+  'Marching Glute Bridge (Alternating)', 'Bird Dog',
+  'Single-Arm Cable Fly (Standing)', 'Seated Cable Row (Rope)',
+  'Standing Cable Row (Single-Arm)', 'Cross-Body Cable Lateral Raise',
+  'Single-Arm Cable Curl (Low Pulley)', 'Cable Pushdown (V-Bar)',
+  'Seated Bent-Over Rear Delt Raise',
+  'Single-Arm Dumbbell Row (Bench-Supported)',
+  'Single-Arm Overhead Dumbbell Tricep Extension', 'Dumbbell Glute Bridge',
+  'Weighted Dumbbell Crunch', 'Kettlebell Goblet Squat',
+  'Kettlebell Row (Single-Arm)', 'Converging Chest Press Machine',
+  'Converging Shoulder Press Machine',
+  'Plate-Loaded T-Bar Row (Chest-Supported)', 'Horizontal Leg Press',
+  'Reverse Hack Squat', 'Smith Machine Split Squat',
+  'Smith Machine Romanian Deadlift', 'Horizontal Back Extension',
+  'Machine Shrug', 'TRX Row (Single-Arm)', 'TRX Face Pull',
+  'TRX Reverse Fly', 'TRX Chest Press', 'TRX Knee Tuck',
+  'TRX Plank (Feet Suspended)', 'TRX Hamstring Curl', 'TRX Hip Press',
+  'TRX Assisted Squat', 'TRX Rear-Foot Elevated Lunge',
+  'Clamshell (Side-Lying)',
 ];
 
 // ─── NICHE ───────────────────────────────────────────────────────────────
@@ -562,70 +610,62 @@ const SPECIALIST = [
   // exercise-library-expansion-2026-09-05 (integration stage 2): 230 new corpus rows (EL-5 default tier plus the 94 STAPLE/COMMON proposals capped here pending lead review, see data/new-candidate-tier-proposals.json).
   // Band.
   'Band Ankle Dorsiflexion', 'Band Assisted Ab Wheel Rollout',
-  'Band Assisted Dip', 'Band Chest Fly (Standing)',
-  'Band Chest Press (Single-Arm)', 'Band Clamshell', 'Band Concentration Curl',
-  'Band Fire Hydrant (Kneeling)', 'Band Front Raise', 'Band Glute Bridge',
-  'Band Glute Kickback', 'Band Goblet Squat', 'Band Hammer Curl',
-  'Band Hip Thrust (Single-Leg)', 'Band Incline Press', 'Band Monster Walk',
-  'Band Pallof Press', 'Band Pull-Apart (Overhead)', 'Band Rear Delt Fly',
-  'Band Romanian Deadlift (Bilateral)', 'Band Romanian Deadlift (Single-Leg)',
-  'Band Row (Single-Arm)', 'Band Seated Row', 'Band Shoulder Press (Seated)',
-  'Band Standing Curl (Single-Arm)', 'Band Standing Hip Abduction',
+  'Band Concentration Curl',
+  'Band Fire Hydrant (Kneeling)',
+  'Band Hip Thrust (Single-Leg)', 'Band Incline Press',
+  'Band Romanian Deadlift (Single-Leg)',
   'Band Standing Hip Adduction', 'Band Straight-Arm Pulldown',
-  'Band Sumo Deadlift', 'Band T-Raise', 'Band Tricep Kickback', 'Band W-Raise',
-  'Band Woodchop (High-to-Low)', 'Band Woodchop (Low-to-High)', 'Band Y-Raise',
+  'Band Sumo Deadlift', 'Band T-Raise', 'Band W-Raise',
+  'Band Y-Raise',
   'Band Y-T-W Raise', 'Push-Up (Band-Resisted)',
   // Barbell.
   'Axle Deadlift', 'Band-Resisted Bench Press', 'Band-Resisted Deadlift',
-  'Band-Resisted Squat', 'Barbell Glute Bridge', 'Barbell Reverse Lunge',
+  'Band-Resisted Squat', 'Barbell Reverse Lunge',
   'Barbell Rollout', 'Barbell Thruster', 'Barbell Walking Lunge',
   'Block Pull (Deadlift)', 'Cambered Bar Bench Press',
   'Chain-Loaded Bench Press', 'Chain-Loaded Deadlift', 'Chain-Loaded Squat',
   'Close-Grip Barbell Curl', 'Close-Grip Incline Bench Press',
-  'Floor Press (Barbell)', 'Low-Bar Back Squat', 'Paused Bench Press',
+  'Paused Bench Press',
   'Paused Deadlift', 'Pin Press (Bench)', 'Pin Press (Overhead Press)',
-  'Seated Barbell Overhead Press', 'Snatch-Grip Romanian Deadlift',
+  'Snatch-Grip Romanian Deadlift',
   'Spoto Press', 'Standing Barbell Overhead Tricep Extension',
   'Swiss Bar Bench Press', 'Swiss Bar Row', 'Trap Bar Carry',
   'Trap Bar Floor Press', 'Trap Bar Row', 'Wide-Grip Barbell Curl',
-  'Wide-Grip Bench Press', 'Zercher Deadlift',
+  'Zercher Deadlift',
   // Bodyweight.
+  // 'Bodyweight Forward Lunge' and 'Bodyweight Step-Up' dropped as
+  // duplicates (exercise-library-expansion-2026-09-05 duplicateDrops,
+  // lead-overrides.json) — aliased onto 'Lunge' and 'Box Step-Up'
+  // respectively; both survivors sit in the EL-15 NEVER_AUTO list.
   'Arch Hold (Superman)', 'Assisted Pistol Squat (Chair-Assisted)',
-  'Bench Dip (Feet Elevated)', 'Bird Dog', 'Bodyweight Box Squat',
-  'Bodyweight Curtsy Lunge', 'Bodyweight Forward Lunge',
-  'Bodyweight Lateral Step-Up', 'Bodyweight Reverse Lunge',
-  'Bodyweight Split Squat', 'Bodyweight Step-Up', 'Bodyweight Walking Lunge',
-  'Clamshell (Side-Lying)', 'Close-Grip Pull-Up', 'Commando Pull-Up',
+  'Commando Pull-Up',
   'Elevated Pike Push-Up', 'Flutter Kick', 'Gironda Sternum Chin-Up',
-  'Hindu Push-Up', 'Inverted Row (Feet Elevated)', 'Inverted Row (High Bar)',
-  'Inverted Row (Low Bar)', 'Inverted Row (Underhand Grip)',
-  'Isometric Pull-Up Hold (Flexed Arm Hang)', 'Knee Push-Up',
-  'Long-Lever Plank', 'Marching Glute Bridge (Alternating)',
+  'Hindu Push-Up',
+  'Isometric Pull-Up Hold (Flexed Arm Hang)',
+  'Long-Lever Plank',
   'Mixed Grip Pull-Up', 'Neck Bridge (Front)',
   'Negative Pull-Up (Eccentric-Only)', 'Parallette Push-Up (Deep Range)',
-  'Pike Push-Up', 'Plank Shoulder Tap', 'Plank to Push-Up (Walk-Up)',
+  'Plank Shoulder Tap', 'Plank to Push-Up (Walk-Up)',
   'RKC Plank', 'Scapular Pull-Up', 'Scapular Push-Up', 'Scissor Kick',
-  'Side Plank with Hip Dip (Dynamic)', 'Single-Leg Glute Bridge',
+  'Side Plank with Hip Dip (Dynamic)',
   'Spiderman Push-Up', 'Stability Ball Knee Tuck', 'Staggered Hands Push-Up',
-  'Straight Bar Dip (Chest-Lean)', 'Weighted Chin-Up',
+
   // Cable.
   'Cable Drag Curl', 'Cable External Rotation', 'Cable Incline Curl',
-  'Cable Internal Rotation', 'Cable Pushdown (V-Bar)',
+  'Cable Internal Rotation',
   'Cable Romanian Deadlift', 'Cable Shoulder Press (Standing)',
-  'Cross-Body Cable Lateral Raise', 'Decline Cable Chest Press',
+  'Decline Cable Chest Press',
   'Incline Cable Chest Press (Single-Arm)', 'Rope Lat Pulldown',
-  'Seated Cable Row (Rope)', 'Single-Arm Cable Curl (Low Pulley)',
-  'Single-Arm Cable Fly (Standing)', 'Standing Cable Row (Single-Arm)',
+
   // Dumbbell.
   'Cossack Squat (Dumbbell)', 'Deficit Dumbbell Calf Raise (Standing)',
-  'Dumbbell Drag Curl', 'Dumbbell Glute Bridge', 'Dumbbell Reverse Curl',
+  'Dumbbell Drag Curl', 'Dumbbell Reverse Curl',
   'Dumbbell Thruster', 'Dumbbell Woodchop',
   'Incline Dumbbell Press (Single-Arm)', 'Neutral-Grip Dumbbell Bench Press',
-  'Seal Row (Dumbbell)', 'Seated Bent-Over Rear Delt Raise',
+  'Seal Row (Dumbbell)',
   'Seated Single-Arm Dumbbell Press', 'Single-Arm Dumbbell Bench Press',
-  'Single-Arm Dumbbell Row (Bench-Supported)',
-  'Single-Arm Overhead Dumbbell Tricep Extension', 'Spider Curl (Dumbbell)',
-  'Weighted Dumbbell Crunch', 'Z-Press (Dumbbell)',
+  'Spider Curl (Dumbbell)',
+  'Z-Press (Dumbbell)',
   // Kettlebell.
   'Double Kettlebell Press', 'Get-Up to Elbow', 'Gorilla Row',
   'Half-Kneeling Kettlebell Press', 'Kettlebell Deadlift',
@@ -633,10 +673,10 @@ const SPECIALIST = [
   'Kettlebell Floor Press (Single-Arm)',
   'Kettlebell Forward Lunge (Rack Position)',
   'Kettlebell Front Rack Squat (Double)',
-  'Kettlebell Front Rack Squat (Single-Arm)', 'Kettlebell Goblet Squat',
+  'Kettlebell Front Rack Squat (Single-Arm)',
   'Kettlebell Halo', 'Kettlebell Pistol Squat',
   'Kettlebell Press (Single-Arm)', 'Kettlebell Rack Carry',
-  'Kettlebell Reverse Lunge (Rack Position)', 'Kettlebell Row (Single-Arm)',
+  'Kettlebell Reverse Lunge (Rack Position)',
   'Kettlebell Single-Leg Deadlift', 'Kettlebell Sumo Deadlift',
   'Kettlebell Thruster (Double)', 'Kettlebell Windmill (Low)',
   'Seated Kettlebell Press', 'Turkish Get-Up (Half)',
@@ -647,27 +687,24 @@ const SPECIALIST = [
   'Landmine Split Squat', 'Landmine Sumo Squat', 'Landmine Thruster',
   'Landmine Zercher Squat', 'Rotational Landmine Press',
   // Machine.
-  'Converging Chest Press Machine', 'Converging Shoulder Press Machine',
-  'GHD Hip Extension', 'Horizontal Back Extension', 'Horizontal Leg Press',
+  'GHD Hip Extension',
   'Iso-Lateral Row Machine (Single-Arm)',
-  'Iso-Lateral Shoulder Press (Single-Arm)', 'Machine Shrug',
-  'Plate-Loaded T-Bar Row (Chest-Supported)', 'Reverse Hack Squat',
+  'Iso-Lateral Shoulder Press (Single-Arm)',
   'Rotary Torso Machine', 'Single-Leg Leg Extension',
   'Single-Leg Lying Leg Curl', 'V-Squat Machine', 'Vertical Leg Press',
   // Sled.
   'Sled Reverse Drag', 'Sled Row',
   // Smith.
-  'Smith Machine Overhead Press', 'Smith Machine Romanian Deadlift',
-  'Smith Machine Split Squat',
+  'Smith Machine Overhead Press',
+
   // Suspension.
   'Ring Chin-Up', 'Ring Dip', 'Ring Pull-Up', 'TRX Assisted Pistol Squat',
-  'TRX Assisted Squat', 'TRX Atomic Push-Up', 'TRX Bicep Curl (Single-Arm)',
-  'TRX Chest Fly', 'TRX Chest Press', 'TRX Face Pull', 'TRX Fallout (Rollout)',
-  'TRX Hamstring Curl', 'TRX Hip Press', 'TRX Knee Tuck',
+  'TRX Atomic Push-Up', 'TRX Bicep Curl (Single-Arm)',
+  'TRX Chest Fly', 'TRX Fallout (Rollout)',
   'TRX Mountain Climber (Feet Suspended)', 'TRX Pike',
-  'TRX Plank (Feet Suspended)', 'TRX Push-Up (Feet Suspended)',
-  'TRX Rear-Foot Elevated Lunge', 'TRX Reverse Fly', 'TRX Row (Feet Elevated)',
-  'TRX Row (Single-Arm)', 'TRX T-Raise', 'TRX Triceps Extension',
+  'TRX Push-Up (Feet Suspended)',
+  'TRX Row (Feet Elevated)',
+  'TRX T-Raise', 'TRX Triceps Extension',
   'TRX W-Raise', 'TRX Y-Raise',
 ];
 
