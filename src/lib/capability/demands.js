@@ -379,6 +379,26 @@ export const CURATED_DEMANDS = Object.freeze({
   'Hip Adduction Machine': { unilateralLoadable: false },
   'Hack Squat Machine': { unilateralLoadable: false },
   'Machine Hip Thrust': { unilateralLoadable: false },
+
+  // exercise-library-expansion-2026-09-05 (integration stage 2): NAME_BALANCE_HIGH's
+  // 'single-?leg' pattern fires on these hyphenated names even though each is
+  // a seated/lying, machine- or floor-supported movement — "single-leg"
+  // here describes which leg is loaded, not a balance challenge (unlike a
+  // genuinely unstable standing single-leg movement such as a pistol
+  // squat). Matches the "Single Leg Press" precedent (no hyphen, so the
+  // regex never fires there); these hyphenated new names need the same
+  // corrected answer stated explicitly.
+  'Single-Leg Leg Extension': { balanceDemand: 'supported' },
+  'Single-Leg Lying Leg Curl': { balanceDemand: 'supported' },
+  'Single-Leg Glute Bridge': { balanceDemand: 'supported' },
+  'Band Hip Thrust (Single-Leg)': { balanceDemand: 'supported' },
+  // A clap push-up is a genuine upper-body plyometric movement performed
+  // from the floor — the guard's "impact needs a standing base" rule
+  // assumes impact means jumping/landing, which is not what happens here;
+  // 'mixed' (the same bucket "Bench Dip"/"Inverted Row" use for a
+  // floor-adjacent-but-not-resting position) clears the contradiction
+  // without denying the impact axis its true value.
+  'Clap Push-Up': { position: 'mixed' },
 });
 
 // ── Derivation ──────────────────────────────────────────────────────────
