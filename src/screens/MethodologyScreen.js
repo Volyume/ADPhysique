@@ -32,7 +32,7 @@ import BackHeader from '../components/BackHeader';
 const INTRO =
   'Precision Coaching follows clear rules. Each week it ' +
   'reads your logged training, your morning-weight trend, your food data when ' +
-  'you use Eat, and your weekly check-in answers. It then decides what should ' +
+  'you use the food diary, and your weekly check-in answers. It then decides what should ' +
   'change, what should hold, and why.';
 
 // Collapsible sections. Each opens with the rule and closes with the
@@ -43,7 +43,7 @@ const SECTIONS = [
     title: 'What Precision Coaching reads',
     body:
       'The main inputs are your completed sessions, your morning-weight trend, ' +
-      'your nutrition target and diary data if you use Eat, and the weekly ' +
+      'your nutrition target and diary data if you use the food diary, and the weekly ' +
       'check-in. The check-in is where you add the context numbers cannot see: ' +
       'energy, soreness, sleep, stress, joint pain, illness, travel and anything ' +
       'else that affected the week. Volyume uses those inputs together; one ' +

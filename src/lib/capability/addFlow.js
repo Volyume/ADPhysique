@@ -406,7 +406,7 @@ export function whatHappensNext(draft, { nowMs, planDecision = null } = {}) {
       : 'Volyume keeps working around this until you end it. It never ends it for you.');
     out.push('When it has passed, end it under Injuries & limitations and training builds back up to your plan.');
   } else {
-    out.push('Every new plan and workout is built around this.');
+    out.push('Volyume takes this into account when it picks exercises and builds your plans.');
     out.push('You can change or remove it any time under Injuries & limitations.');
   }
   return out;

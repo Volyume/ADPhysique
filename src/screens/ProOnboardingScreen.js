@@ -211,11 +211,11 @@ const SESSION_LENGTH_OPTIONS = [
 const DAYS_PER_WEEK_OPTIONS = [2, 3, 4, 5, 6];
 
 const EQUIPMENT_OPTIONS = [
-  { value: 'full_gym',        label: 'Full Gym',          sub: 'Barbells, cables, machines, dumbbells' },
-  { value: 'machines_cables', label: 'Machines & Cables', sub: 'No free barbells' },
-  { value: 'dumbbells_only',  label: 'Dumbbells Only',    sub: 'Adjustable or fixed dumbbells' },
-  { value: 'barbell_plates',  label: 'Barbell & Plates',  sub: 'Power rack or squat stand setup' },
-  { value: 'home_gym',        label: 'Home Gym',          sub: 'Mixed equipment at home' },
+  { value: 'full_gym',        label: 'Full gym',          sub: 'Barbells, cables, machines, dumbbells' },
+  { value: 'machines_cables', label: 'Machines and cables', sub: 'No free barbells' },
+  { value: 'dumbbells_only',  label: 'Dumbbells only',    sub: 'Adjustable or fixed dumbbells' },
+  { value: 'barbell_plates',  label: 'Barbell and plates',  sub: 'Power rack or squat stand setup' },
+  { value: 'home_gym',        label: 'Home gym',          sub: 'Mixed equipment at home' },
   { value: 'bodyweight',      label: 'Bodyweight',        sub: 'No equipment needed' },
   // F-16 REVISED (docs/final-certification-2026-09-05/07-FINDINGS.md,
   // evidence A12): a kettlebell or band owner had to answer "Dumbbells Only"

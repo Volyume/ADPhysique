@@ -49,7 +49,12 @@ export function howYouTrainSummary(state, { nameOf = () => null } = {}) {
     const awaiting = ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION;
     const undecided = live.some((r) => r.ruleKind !== CONSTRAINT_RULE_KIND.EXERCISE_ALLOW && r.effectiveChoice == null && r.adaptationMode !== 'hold');
     attention = awaiting || undecided;
-    const head = subject ? `Working around ${subject}` : 'Working around a temporary change';
+    // D152 follow-up: an unnameable episode still says how many limitations
+    // it covers, never a bare "a temporary change".
+    const liveCount = restrictions(live).length;
+    const head = subject
+      ? `Working around ${subject}`
+      : `Working around ${liveCount} temporary ${liveCount === 1 ? 'limitation' : 'limitations'}`;
     const tail = awaiting ? 'still need it?' : (until != null ? `until about ${shortDate(until)}` : 'until you end it');
     parts.push(`${head}, ${tail}`);
     if (episodes.length > 1) parts.push(`${episodes.length - 1} more`);
@@ -64,7 +69,7 @@ export function howYouTrainSummary(state, { nameOf = () => null } = {}) {
       else if (subject) parts.push(`Leaves out ${subject}`);
       else parts.push(`${kept.length} ${kept.length === 1 ? 'injury or limitation' : 'injuries or limitations'} saved. Used when Volyume picks exercises and builds your plan.`);
     } else if (kept.length) {
-      parts.push(`${kept.length} long-term`);
+      parts.push(`${kept.length} long-term ${kept.length === 1 ? 'limitation' : 'limitations'} saved`);
     }
   }
   return { sub: parts.join(' · '), attention, empty: false };

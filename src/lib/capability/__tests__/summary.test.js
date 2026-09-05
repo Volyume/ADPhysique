@@ -58,7 +58,7 @@ describe('howYouTrainSummary', () => {
         { groupId: 'g2', status: 'active', rows: [rule({ ruleValue: 'standing' })] },
       ],
     };
-    expect(howYouTrainSummary(state, { nowMs: NOW }).sub).toBe('Working around overhead work, until about 10 Sep · 1 more · 1 long-term');
+    expect(howYouTrainSummary(state, { nowMs: NOW }).sub).toBe('Working around overhead work, until about 10 Sep · 1 more · 1 long-term limitation saved');
   });
   test('an unnameable subject falls back to a count, never an invented name', () => {
     const state = { ...empty, baseline: [rule({ ruleKind: 'exercise', ruleValue: 'e9' })] };

@@ -1703,7 +1703,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <Text style={[styles.gateBody, live.gateBody]}>
               Your coach needs at least {FIRST_CHECKIN_MIN_DAYS} days of data before the first weekly check-in. Right now there {daysToWait === 1 ? 'is 1 day' : `are ${daysToWait} days`} of baseline data left.
               {'\n\n'}
-              Volyume waits for your next {scheduledDayName} after that baseline is ready, so each check-in compares like for like. Keep logging your morning weight each day, and food if you use Eat. Your first check-in opens on {safeFirstCheckinLabel}.
+              Volyume waits for your next {scheduledDayName} after that baseline is ready, so each check-in compares like for like. Keep logging your morning weight each day, and food if you use the food diary. Your first check-in opens on {safeFirstCheckinLabel}.
               {'\n\n'}
               {/* PM-07 (D96): "the first review sets your baseline" was true,
                   honest and said only AFTER the first check-in, inside the
