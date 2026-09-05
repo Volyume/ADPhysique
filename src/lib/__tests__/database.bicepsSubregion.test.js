@@ -70,6 +70,14 @@
  * SELECT columns, so it no-ops - and every count below widens by one.
  * CC29 appended one further migration (swap cause + effective choice
  * columns; inert here), so each count widens by one more.
+ * 2026-09-05 (Exercise library expansion, EL-9/EL-7): two further
+ * migrations appended (routine_exercises.group_kind/round_rest_seconds +
+ * workout_sets.evidence_class; then exercises.aliases/load_character) -
+ * both now run alongside v64 in this window, so every count below is
+ * bumped by two (24 -> 26) to keep v64 itself inside the window. The
+ * exercises ALTERs are inert against this fixture's exercises table; the
+ * routine_exercises ALTERs are inert against its minimal table; the
+ * workout_sets ALTER needed a minimal table added above.
  */
 
 const { DatabaseSync } = require('node:sqlite');
@@ -135,6 +143,10 @@ function freshExercisesDb() {
   // and unique-indexes this table; empty here, so both statements are
   // no-ops against this fixture.
   raw.exec(`CREATE TABLE coach_outputs (id TEXT PRIMARY KEY, user_id TEXT, week_start INTEGER, applied INTEGER, created_at INTEGER, updated_at INTEGER);`);
+  // Exercise library expansion 2026-09-05 (EL-9/EL-7) now runs alongside
+  // v64 in this same window and ALTERs workout_sets (evidence_class);
+  // empty here, so it is a no-op against this fixture.
+  raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT);');
   return raw;
 }
 
@@ -177,7 +189,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
   test('tags long_head, short_head and brachialis exercises correctly', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 24);
+    await runLastMigrations(raw, 26);
 
     expect(subregionOf(raw, 'ex-1')).toBe('long_head');
     expect(subregionOf(raw, 'ex-2')).toBe('long_head');
@@ -190,7 +202,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
   test('is exactly scoped to biceps rows: a non-biceps exercise, and a same-named exercise on a different muscle, are never touched', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 24);
+    await runLastMigrations(raw, 26);
 
     expect(subregionOf(raw, 'ex-7')).toBeNull(); // Barbell Bench Press / chest
     expect(subregionOf(raw, 'ex-8')).toBeNull(); // Barbell Curl / forearms (name collision, wrong muscle)
@@ -199,7 +211,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
   test('is idempotent: running the migration a second time leaves the tags unchanged and errors on neither run', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    const total = await runLastMigrations(raw, 24);
+    const total = await runLastMigrations(raw, 26);
 
     raw.exec(`PRAGMA user_version = ${total - 7}`);
     const d = adapt(raw);
@@ -230,7 +242,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
     const raw = freshExercisesDb();
     raw.prepare('INSERT INTO exercises (id, name, primary_muscle, subregion) VALUES (?, ?, ?, ?)')
       .run('ex-1', 'Incline Dumbbell Curl', 'biceps', 'short_head');
-    await runLastMigrations(raw, 24);
+    await runLastMigrations(raw, 26);
     expect(subregionOf(raw, 'ex-1')).toBe('long_head');
   });
 });

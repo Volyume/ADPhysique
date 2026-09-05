@@ -42,44 +42,100 @@
  * of any build step — it is a generator, not a runtime module.
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadSeedRows } from './loadSeed.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const SEED_ROUTINES_PATH = join(ROOT, 'src/lib/seedRoutines.js');
 const FAMILIES_DIR = join(ROOT, 'src/lib/exerciseCorpus/families');
 const CAMPAIGN_DATA_DIR = join(ROOT, 'docs/exercise-library-expansion-2026-09-05/data');
 
 // ── 1. Load the 552 RAW rows (base fields only) ───────────────────────────
-const seedRows = loadSeedRows().map((r) => ({
-  name: r.name,
-  primaryMuscle: r.primaryMuscle,
-  secondaryMuscles: r.secondaryMuscles ?? [],
-  equipment: r.equipment,
-  movementPattern: r.movementPattern,
-  compound: r.compoundIsolation === 'compound',
-  repMin: r.defaultRepMin,
-  repMax: r.defaultRepMax,
-  fatigueCost: r.fatigueCost,
-  sfr: r.stimulusToFatigueRatio,
-  subregion: r.subregion ?? null,
+//
+// Read from the FROZEN pre-conversion git blob, never from the live tree
+// or via loadSeed.mjs: this script's own landing (a) deletes RAW/
+// SUBREGION_MAP/EXERCISE_TYPE_MAP from seedExercises.js and (b) repoints
+// loadSeed.mjs at the corpus this script generates, so a second run
+// reading either live source would feed the corpus back into itself.
+// `git show HEAD:...` is a deliberate one-time bootstrap — this script is
+// documented as ONE-TIME (see file header) and nothing else imports it.
+function readFrozenSeedSource() {
+  return execSync('git show HEAD:src/lib/seedExercises.js', { cwd: ROOT, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+}
+function extractBlock(src, startToken, endToken) {
+  const start = src.indexOf(startToken);
+  const end = src.indexOf(endToken, start);
+  if (start === -1 || end === -1) throw new Error(`convert-legacy: could not find ${JSON.stringify(startToken)}`);
+  return src.slice(start, end);
+}
+function parseFrozenRawRows(src) {
+  const body = extractBlock(src, 'const RAW = [', '\n];');
+  const rows = [];
+  for (const rawLine of body.split('\n')) {
+    const line = rawLine.trim();
+    if (!line.startsWith('[')) continue;
+    let depth = 0;
+    for (const ch of line) { if (ch === '[') depth++; else if (ch === ']') depth--; }
+    if (depth !== 0) continue; // not a complete single-line literal
+    const literal = line.replace(/,\s*$/, '');
+    // eslint-disable-next-line no-new-func
+    const tuple = Function(`"use strict"; return (${literal});`)();
+    if (Array.isArray(tuple) && tuple.length === 10) rows.push(tuple);
+  }
+  return rows;
+}
+function parseFrozenNameMap(src, startToken) {
+  const body = extractBlock(src, startToken, '\n};');
+  const map = {};
+  for (const m of body.matchAll(/^\s*'((?:[^'\\]|\\.)*)':\s*'(\w+)',?\s*$/gm)) map[m[1]] = m[2];
+  return map;
+}
+const frozenSrc = readFrozenSeedSource();
+const frozenSubregionMap = parseFrozenNameMap(frozenSrc, 'const SUBREGION_MAP = {');
+const frozenRawTuples = parseFrozenRawRows(frozenSrc);
+if (frozenRawTuples.length !== 552) {
+  throw new Error(`convert-legacy: expected 552 RAW rows from the frozen blob, found ${frozenRawTuples.length}`);
+}
+
+const seedRows = frozenRawTuples.map(([name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound, repMin, repMax, fatigueCost, sfr]) => ({
+  name,
+  primaryMuscle,
+  secondaryMuscles: secondaryMuscles ?? [],
+  equipment,
+  movementPattern,
+  compound: !!isCompound,
+  repMin, repMax, fatigueCost, sfr,
+  subregion: frozenSubregionMap[name] ?? null,
 }));
 
 // ── 2. Load the 18 REQUIRED_EXERCISES rows (EL-15) ────────────────────────
+// Frozen as a literal here rather than re-read from seedRoutines.js: this
+// script's own landing DELETES REQUIRED_EXERCISES from that file (EL-15),
+// so a second run of this one-time conversion has nothing left to parse.
+// This is the exact array seedRoutines.js carried immediately before that
+// deletion (git blame: 2026-09-05, exercise-library-expansion campaign).
+const REQUIRED_EXERCISES_SNAPSHOT = [
+  { name: 'HS Plate-Loaded Lat Pulldown',     primaryMuscle: 'back',      equipment: 'machine',  movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 8,  defaultRepMax: 12, fatigueCost: 3, stimulusToFatigueRatio: 4 },
+  { name: 'Underhand Lat Pulldown',            primaryMuscle: 'back',      equipment: 'cable',    movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 12, fatigueCost: 3, stimulusToFatigueRatio: 4 },
+  { name: 'Plate-Loaded Seated Row',           primaryMuscle: 'back',      equipment: 'machine',  movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 12, fatigueCost: 3, stimulusToFatigueRatio: 4 },
+  { name: 'HS ISO High Row',                   primaryMuscle: 'back',      equipment: 'machine',  movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 12, fatigueCost: 3, stimulusToFatigueRatio: 4 },
+  { name: 'Cable Serratus Punch',              primaryMuscle: 'abs',       equipment: 'cable',    movementPattern: 'push',      compoundIsolation: 'isolation', defaultRepMin: 15, defaultRepMax: 25, fatigueCost: 1, stimulusToFatigueRatio: 5 },
+  { name: 'Cable Lateral Raise (Low Pulley)',  primaryMuscle: 'side_delts',  equipment: 'cable',    movementPattern: 'isolation', compoundIsolation: 'isolation', defaultRepMin: 15, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 5 },
+  { name: 'Facing-In Shoulder Press',          primaryMuscle: 'front_delts', equipment: 'machine',  movementPattern: 'push',      compoundIsolation: 'compound',  defaultRepMin: 12, defaultRepMax: 15, fatigueCost: 2, stimulusToFatigueRatio: 4 },
+  { name: 'Cable Fly (Low to Mid, Incline)',  primaryMuscle: 'chest',       equipment: 'cable',    movementPattern: 'isolation', compoundIsolation: 'isolation', defaultRepMin: 12, defaultRepMax: 15, fatigueCost: 2, stimulusToFatigueRatio: 5 },
+  { name: 'Cable Fly (Mid Height, Cuff)',     primaryMuscle: 'chest',       equipment: 'cable',    movementPattern: 'isolation', compoundIsolation: 'isolation', defaultRepMin: 12, defaultRepMax: 15, fatigueCost: 2, stimulusToFatigueRatio: 5 },
+  { name: 'Box Step-Up',                       primaryMuscle: 'quads',     equipment: 'bodyweight', movementPattern: 'squat',   compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
+  { name: 'Single-Arm Dumbbell Row',           primaryMuscle: 'back',      equipment: 'dumbbell', movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 15, fatigueCost: 3, stimulusToFatigueRatio: 4 },
+  { name: 'Trap Bar Deadlift (Low Handle)',    primaryMuscle: 'quads',     equipment: 'barbell',  movementPattern: 'hinge',     compoundIsolation: 'compound',  defaultRepMin: 4,  defaultRepMax: 8,  fatigueCost: 5, stimulusToFatigueRatio: 4 },
+  { name: 'Hip Thrust (Barbell)',    primaryMuscle: 'glutes',   equipment: 'barbell',    movementPattern: 'hinge',     compoundIsolation: 'compound',  defaultRepMin: 8,  defaultRepMax: 15, fatigueCost: 3, stimulusToFatigueRatio: 5 },
+  { name: 'Dumbbell Goblet Squat',   primaryMuscle: 'quads',    equipment: 'dumbbell',   movementPattern: 'squat',     compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
+  { name: 'Lunge',                   primaryMuscle: 'quads',    equipment: 'bodyweight', movementPattern: 'squat',     compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
+  { name: 'Bodyweight Squat',        primaryMuscle: 'quads',    equipment: 'bodyweight', movementPattern: 'squat',     compoundIsolation: 'compound',  defaultRepMin: 15, defaultRepMax: 30, fatigueCost: 1, stimulusToFatigueRatio: 3 },
+  { name: 'Seated Band Row',         primaryMuscle: 'back',     equipment: 'bodyweight', movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 12, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
+  { name: 'Seated Band Lat Pulldown',primaryMuscle: 'back',     equipment: 'bodyweight', movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 12, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
+];
 function loadRequiredExercises() {
-  const src = readFileSync(SEED_ROUTINES_PATH, 'utf8');
-  const start = src.indexOf('const REQUIRED_EXERCISES = [');
-  const end = src.indexOf('\n];', start);
-  if (start === -1 || end === -1) {
-    throw new Error('convert-legacy: could not locate REQUIRED_EXERCISES in seedRoutines.js');
-  }
-  const literal = src.slice(start + 'const REQUIRED_EXERCISES = '.length, end + 2);
-  // eslint-disable-next-line no-new-func
-  const arr = Function(`"use strict"; return (${literal});`)();
-  if (!Array.isArray(arr) || arr.length === 0) {
-    throw new Error('convert-legacy: REQUIRED_EXERCISES did not parse to a non-empty array');
-  }
+  const arr = REQUIRED_EXERCISES_SNAPSHOT;
   return arr.map((e) => ({
     name: e.name,
     primaryMuscle: e.primaryMuscle,
@@ -168,6 +224,28 @@ const SUBREGION_FIXES = {
   'Incline Board Sit-Up': 'flexion',
   'Hanging Oblique Raise': 'flexion',
   'Seated Twist (Plate)': 'flexion',
+
+  // EL-15: the 18 former seedRoutines.js REQUIRED_EXERCISES rows never had
+  // a subregion at all (not covered by the audit's 59, which only ever
+  // saw the 552 RAW rows) — filled here from the movement on the same
+  // basis as the 59 above, now that they are ordinary canonical rows with
+  // an enforced subregion requirement.
+  'Hip Thrust (Barbell)': 'activator',
+  'Trap Bar Deadlift (Low Handle)': 'squat_press',
+  'Dumbbell Goblet Squat': 'squat_press',
+  'Single-Arm Dumbbell Row': 'horizontal_lat',
+  'Cable Fly (Low to Mid, Incline)': 'incline',
+  'Cable Fly (Mid Height, Cuff)': 'flat',
+  'Cable Serratus Punch': 'flexion',
+  'Underhand Lat Pulldown': 'vertical_pull',
+  'HS ISO High Row': 'upper_mid_row',
+  'HS Plate-Loaded Lat Pulldown': 'vertical_pull',
+  'Plate-Loaded Seated Row': 'horizontal_lat',
+  'Bodyweight Squat': 'squat_press',
+  'Box Step-Up': 'squat_press',
+  'Lunge': 'squat_press',
+  'Seated Band Lat Pulldown': 'vertical_pull',
+  'Seated Band Row': 'horizontal_lat',
 };
 
 // F7 / repRangeAbsurd (data/audit/metadata-anomalies.json): the 11
@@ -181,7 +259,7 @@ const EXERCISE_TYPE_FIXES = {
   'Sled Pull': { exerciseType: 'distance', repMin: 10, repMax: 30 },
   'Prowler Drag': { exerciseType: 'distance', repMin: 10, repMax: 30 },
   'Stair Running': { exerciseType: 'duration', repMin: 30, repMax: 120 },
-  'Mountain Climber': { exerciseType: 'reps_only', repMin: 20, repMax: 40 },
+  'Mountain Climber': { exerciseType: 'reps_only', repMin: 16, repMax: 30 },
   'Agility Ladder Drills': { exerciseType: 'duration', repMin: 20, repMax: 45 },
   'Rope Jump': { exerciseType: 'duration', repMin: 30, repMax: 90 },
 };
@@ -287,7 +365,9 @@ function buildEntry(row) {
   return entry;
 }
 
-const entries = allRows.map(buildEntry);
+// EL-21: a retired name gets ONLY the stub entry below, never a full
+// entry too — the survivor is the live row from here on.
+const entries = allRows.filter((row) => !(row.name in RETIRE_MAP)).map(buildEntry);
 
 // Retired stub entries: kept in the corpus so their canonical id stays
 // resolvable and the retirement mapping is explicit and reviewable.

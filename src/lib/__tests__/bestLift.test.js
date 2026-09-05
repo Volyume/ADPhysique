@@ -151,3 +151,20 @@ describe('pickBestLift', () => {
     expect(best.isNewBest).toBe(true);
   });
 });
+
+describe('EL-7: ballistic evidence class is never featured', () => {
+  test('a ballistic set never wins best lift even at a huge e1RM', () => {
+    const weekSets = [
+      { exerciseId: 'kb', exerciseName: 'Kettlebell Swing', weight: 200, reps: 30, evidenceClass: 'ballistic' },
+      { exerciseId: 'bench', exerciseName: 'Bench Press', weight: 100, reps: 5, evidenceClass: null },
+    ];
+    const best = pickBestLift(weekSets, new Map());
+    expect(best.exerciseName).toBe('Bench Press');
+  });
+
+  test('a plain circuit set is still eligible to be featured', () => {
+    const weekSets = [{ exerciseId: 'gs', exerciseName: 'Goblet Squat', weight: 40, reps: 10, evidenceClass: 'circuit' }];
+    const best = pickBestLift(weekSets, new Map());
+    expect(best.exerciseName).toBe('Goblet Squat');
+  });
+});

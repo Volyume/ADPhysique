@@ -11,48 +11,42 @@
  * that actually reaches real users.
  */
 
-const fs = require('fs');
-const path = require('path');
 const { deriveExerciseMetadata } = require('../exerciseMetadata');
+const { CORPUS } = require('../exerciseCorpus');
 
 /**
- * The real seeded library, parsed from seedExercises.js exactly as the
- * existing planEngineLibraryPool suite does, so the two agree on what
- * "the library" means.
+ * The real seeded library, built from the structured corpus
+ * (src/lib/exerciseCorpus/) exactly the way corpusEntryToSeedRow's base
+ * fields are derived, so every plan-quality suite in this campaign judges
+ * the SAME thing the seed actually inserts.
+ *
+ * Re-anchored EL-14/EL-21 (exercise-library-expansion-2026-09-05): this
+ * used to regex-parse seedExercises.js's RAW tuple text directly (the same
+ * approach the pre-campaign coverage scripts used, including their
+ * Farmer's Walk quote-blind-spot). RAW no longer exists — the corpus is
+ * the source of truth and retired stub entries ({ name, retiredInto }) are
+ * excluded from CORPUS already, so this shape is unaffected by them.
+ * `id` stays the exercise NAME (not a canonical hash) to match this rig's
+ * pre-existing convention — callers key off it as a map key, not a real DB
+ * id (see BY_NAME below).
  */
 function buildRealLibrary() {
-  const seedSrc = fs.readFileSync(path.join(__dirname, '../seedExercises.js'), 'utf8');
-  const start = seedSrc.indexOf('const RAW = [');
-  const end = seedSrc.indexOf('\n];', start);
-  const body = seedSrc.slice(start, end);
-
-  const smStart = seedSrc.indexOf('const SUBREGION_MAP = {');
-  const smEnd = seedSrc.indexOf('\n};', smStart);
-  const smBody = seedSrc.slice(smStart, smEnd);
-  const subMap = {};
-  for (const m of smBody.matchAll(/'([^']+)':\s*'(\w+)'/g)) subMap[m[1]] = m[2];
-
-  const rows = [];
-  const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
-  let m;
-  while ((m = re.exec(body)) !== null) {
+  return CORPUS.map((entry) => {
     const base = {
-      name: m[1],
-      primaryMuscle: m[2],
-      secondaryMuscles: m[3]
-        .split(',').map(s => s.trim().replace(/^'|'$/g, '')).filter(Boolean),
-      equipment: m[4],
-      movementPattern: m[5],
-      compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
-      minReps: parseInt(m[7], 10),
-      maxReps: parseInt(m[8], 10),
-      fatigueCost: parseInt(m[9], 10),
-      stimulusToFatigueRatio: parseInt(m[10], 10),
-      subregion: subMap[m[1]] ?? null,
+      name: entry.name,
+      primaryMuscle: entry.primaryMuscle,
+      secondaryMuscles: entry.secondaryMuscles ?? [],
+      equipment: entry.equipment,
+      movementPattern: entry.movementPattern,
+      compoundIsolation: entry.compound ? 'compound' : 'isolation',
+      minReps: entry.repMin,
+      maxReps: entry.repMax,
+      fatigueCost: entry.fatigueCost,
+      stimulusToFatigueRatio: entry.sfr,
+      subregion: entry.subregion ?? null,
     };
-    rows.push({ id: m[1], ...base, ...deriveExerciseMetadata(base) });
-  }
-  return rows;
+    return { id: entry.name, ...base, ...deriveExerciseMetadata(base) };
+  });
 }
 
 const LIBRARY = buildRealLibrary();

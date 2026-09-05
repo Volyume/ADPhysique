@@ -32,6 +32,14 @@ async function migrationCount() {
 // carries minimal exercise_intent and exercises tables for them to land on
 // (the mesocycles precedent in database.bicepsSubregion.test.js). The
 // load-semantics backfill itself is best-effort by design and no-ops here.
+// 2026-09-05 (Exercise library expansion, EL-9/EL-7 then EL-14/EL-19): two
+// further migrations appended - routine_exercises.group_kind/
+// round_rest_seconds + workout_sets.evidence_class, then exercises.aliases/
+// load_character - so each `total - N` offset below widens by two more to
+// keep testing the SAME Campaign 19 migrations. The exercises ALTER is
+// inert against this fixture's exercises table; minimal routine_exercises
+// and workout_sets tables are added below for the new ALTERs on tables
+// this fixture never created.
 function withExerciseIntent(raw) {
   raw.exec(`CREATE TABLE exercise_intent (
     id TEXT PRIMARY KEY, user_id TEXT, exercise_id TEXT, kind TEXT,
@@ -45,13 +53,15 @@ function withExerciseIntent(raw) {
   )`);
   raw.exec('CREATE TABLE custom_exercises (id TEXT PRIMARY KEY, name TEXT)');
   raw.exec('CREATE TABLE exercise_swaps (id TEXT PRIMARY KEY)');
+  raw.exec('CREATE TABLE routine_exercises (id TEXT PRIMARY KEY, routine_id TEXT, exercise_id TEXT)');
+  raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT)');
   return raw;
 }
 
 test('Campaign 19 local migrations create the one-row memo and revalidation marker', async () => {
   const raw = withExerciseIntent(new DatabaseSync(':memory:'));
   const total = await migrationCount();
-  raw.exec(`PRAGMA user_version = ${total - 9}`);
+  raw.exec(`PRAGMA user_version = ${total - 11}`);
   await runMigrations(adapt(raw));
 
   const columns = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all();
@@ -76,7 +86,7 @@ test('a database already at baseline Campaign 19 v80 upgrades additively', async
     evidence_signature TEXT NOT NULL,
     version_key TEXT NOT NULL
   )`);
-  raw.exec(`PRAGMA user_version = ${total - 8}`);
+  raw.exec(`PRAGMA user_version = ${total - 10}`);
   await runMigrations(adapt(raw));
 
   const names = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all()

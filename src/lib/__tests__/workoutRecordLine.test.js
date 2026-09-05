@@ -127,6 +127,27 @@ describe('the deliberate silences', () => {
   });
 });
 
+describe('EL-7: ballistic evidence class (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md)', () => {
+  test('a ballistic set never produces a record line, same as a warm-up', () => {
+    expect(buildRecordLine({ ...base, weight: 999, reps: 999, evidenceClass: 'ballistic' })).toBeNull();
+    expect(buildRecordLine({ ...base, weight: 999, reps: 999, evidenceClass: 'circuit_ballistic' })).toBeNull();
+  });
+
+  test('a plain circuit set stays a full record candidate', () => {
+    const line = buildRecordLine({ ...base, weight: 90, reps: 12, evidenceClass: 'circuit' });
+    expect(line.bestLabel).toBe('Best 90kg × 12');
+  });
+
+  test('a ballistic row in HISTORY never sets the bar to beat', () => {
+    const history = [
+      { weight: 200, actualReps: 30, evidenceClass: 'ballistic' }, // would dominate if counted
+      { weight: 90, actualReps: 12, evidenceClass: null },
+    ];
+    const line = buildRecordLine({ ...base, historySets: history, weight: 90, reps: 12 });
+    expect(line.bestLabel).toBe('Best 90kg × 12');
+  });
+});
+
 describe('history shape tolerance (rows arrive from the DB in snake_case too)', () => {
   test('actual_reps is read the same as actualReps', () => {
     const line = buildRecordLine({

@@ -21,6 +21,12 @@ export function topSetFromExerciseData(exerciseData) {
   for (const ex of exerciseData || []) {
     for (const s of ex.loggedSets || []) {
       if (s.setType === 'warmup') continue;
+      // EL-7: a ballistic set (light load, high reps) never wins "best
+      // lift" - it is not hypertrophy/strength evidence, and letting a
+      // light ballistic weight surface here would be meaningless, not
+      // merely directionally safe.
+      const evidenceClass = s.evidenceClass ?? s.evidence_class ?? null;
+      if (typeof evidenceClass === 'string' && evidenceClass.includes('ballistic')) continue;
       const w = parseFloat(s.weight) || 0;
       if (w > topWeight) {
         topWeight = w;

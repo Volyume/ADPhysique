@@ -59,10 +59,16 @@ export function buildRecordLine({
   isWarmup = false,
   exerciseType = 'weight_reps',
   loadSemantics = 'total',
+  // EL-7: the CURRENTLY-DIALLED set's evidence class (circuit/ballistic/
+  // circuit_ballistic/null), when the caller knows it (e.g. the live
+  // screen resolving a circuit station or a ballistic exercise). A
+  // ballistic set is never a record attempt, same as a warm-up.
+  evidenceClass = null,
 } = {}) {
   // Same gate the logger applies before calling detectPR at all.
   const isWeightReps = exerciseType === 'weight_reps' || exerciseType === 'weighted_bodyweight';
-  if (!isWeightReps || isWarmup) return null;
+  const isBallistic = typeof evidenceClass === 'string' && evidenceClass.includes('ballistic');
+  if (!isWeightReps || isWarmup || isBallistic) return null;
 
   const history = (Array.isArray(historySets) ? historySets : []).filter(Boolean);
   // The first-ever set beats nothing; the logger celebrates it as a starting
@@ -80,6 +86,12 @@ export function buildRecordLine({
   let best = null;
   let bestE1rm = 0;
   for (const s of history) {
+    // EL-7: ballistic rows never contribute the reference/"bar to beat" -
+    // mirrors detectPR's own isE1rmEligibleRow gate (this module's whole
+    // contract is agreeing with detectPR by construction). Circuit rows
+    // stay eligible: a circuit set can be a PR (CAP-14 precedent).
+    const evidenceClass = s.evidenceClass ?? s.evidence_class ?? null;
+    if (typeof evidenceClass === 'string' && evidenceClass.includes('ballistic')) continue;
     const w = Number(s.weight) || 0;
     const r = repsOf(s);
     if (w <= 0 || r <= 0) continue;

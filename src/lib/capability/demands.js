@@ -431,7 +431,12 @@ export function deriveDemandMetadata(ex = {}) {
   else if (NAME_STANDING_FAMILY.test(name) || out.impact === true) out.position = DEMAND_POSITION.STANDING;
   else if (/\bfly\b/i.test(name) && (equipment === 'dumbbell')) out.position = DEMAND_POSITION.LYING;
   else if (/\brear delt fly\b|\biron cross\b/i.test(name) && equipment !== 'machine') out.position = DEMAND_POSITION.STANDING;
-  else if (NAME_OVERHEAD.test(name) && (equipment === 'barbell' || equipment === 'dumbbell' || equipment === 'kettlebell' || equipment === 'cable')) out.position = DEMAND_POSITION.STANDING;
+  // 'landmine' added (EL-21, exercise-library-expansion-2026-09-05): a
+  // landmine row's coarse `equipment` moved from 'barbell' to its own
+  // category so the pool/swap layer treats it distinctly; without this,
+  // Landmine Press/Landmine Press (Abs) lost their standing position here
+  // (regression check against the pre-EL-21 corpus).
+  else if (NAME_OVERHEAD.test(name) && (equipment === 'barbell' || equipment === 'dumbbell' || equipment === 'kettlebell' || equipment === 'cable' || equipment === 'landmine')) out.position = DEMAND_POSITION.STANDING;
   else if (equipment === 'machine' && /\bpress\b|\bfly\b/i.test(name)) out.position = DEMAND_POSITION.SEATED;
   else if (NAME_STANDING_CONVENTION.test(name)
     && (equipment !== 'machine' || /\brow\b|\bwrist\b/i.test(name) === false)) {
@@ -555,7 +560,14 @@ export function deriveDemandMetadata(ex = {}) {
   else if (equipment === 'machine' || equipment === 'cable' || out.position === DEMAND_POSITION.LYING
     || (ex.compoundIsolation === 'isolation' && !NAME_AXIAL.test(name))) {
     out.axialLoad = false;
-  } else if (equipment === 'bodyweight' && !NAME_AXIAL.test(name)) {
+  } else if ((equipment === 'bodyweight' || equipment === 'band' || equipment === 'suspension') && !NAME_AXIAL.test(name)) {
+    // 'band'/'suspension' added (EL-21, exercise-library-expansion-2026-09-05):
+    // these used to arrive here tagged 'bodyweight' before the coarse
+    // equipment reclassification; neither implement transmits meaningful
+    // spinal load the way a barbell/dumbbell/landmine does, so the same
+    // "no axial pattern in the name -> not axial" fallback applies. A band
+    // squat/deadlift/good-morning still resolves true above (NAME_AXIAL
+    // matches) or via its own CURATED_DEMANDS entry.
     out.axialLoad = false;
   }
 

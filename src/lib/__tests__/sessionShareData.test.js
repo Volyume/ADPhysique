@@ -39,6 +39,23 @@ describe('topSetFromExerciseData', () => {
     const data = [{ name: 'Curl', loggedSets: [{ weight: '22.5', setType: 'straight' }] }];
     expect(topSetFromExerciseData(data)).toEqual({ weight: 22.5, reps: 0, exerciseName: 'Curl' });
   });
+
+  test('EL-7: never picks a ballistic set even when it is the heaviest', () => {
+    const data = [{
+      name: 'Kettlebell Swing',
+      loggedSets: [
+        { weight: 200, reps: 1, setType: 'straight', evidenceClass: 'ballistic' },
+        { weight: 20, reps: 20, setType: 'straight', evidenceClass: 'circuit_ballistic' },
+        { weight: 100, reps: 8, setType: 'straight', evidenceClass: null },
+      ],
+    }];
+    expect(topSetFromExerciseData(data)).toEqual({ weight: 100, reps: 8, exerciseName: 'Kettlebell Swing' });
+  });
+
+  test('EL-7: a plain circuit set is still a candidate', () => {
+    const data = [{ name: 'Goblet Squat', loggedSets: [{ weight: 40, reps: 10, setType: 'straight', evidenceClass: 'circuit' }] }];
+    expect(topSetFromExerciseData(data)).toEqual({ weight: 40, reps: 10, exerciseName: 'Goblet Squat' });
+  });
 });
 
 describe('intensityTier', () => {

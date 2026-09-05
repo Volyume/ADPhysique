@@ -11,8 +11,8 @@
  * free — importing it here does not add any I/O to the corpus package.
  */
 
-import { DEMAND_POSITION, DEMAND_GRIP, DEMAND_BALANCE, DEMAND_FIELDS } from '../capability/demands';
-import { AUTO_TIER } from '../exercise/canonicality';
+import { DEMAND_POSITION, DEMAND_GRIP, DEMAND_BALANCE, DEMAND_FIELDS } from '../capability/demands.js';
+import { AUTO_TIER } from '../exercise/canonicality.js';
 
 // Re-exported so a family module or the guard needs only ./vocab.
 export { DEMAND_POSITION, DEMAND_GRIP, DEMAND_BALANCE, DEMAND_FIELDS, AUTO_TIER };

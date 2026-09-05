@@ -1,14 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  getAllExercises, insertExercise, updateExerciseDemands, createRoutine, addExerciseToRoutine,
+  getAllExercises, createRoutine, addExerciseToRoutine,
   createProgramme, getLibraryPlans,
 } from './database';
 import { logError, logWarn, logInfo } from './errorLog';
-// Gap-closure final review: required exercises must land with derived
-// metadata like every seeded row, or capability filtering reads them as
-// UNKNOWN and excludes them for exactly the audiences their plans serve.
-import { deriveExerciseMetadata } from './exerciseMetadata';
-import { deriveDemandMetadata } from './capability/demands';
 
 // Bump to v12: adds Mens Physique Width Enhancement plan
 // v13 (CC28): the capability-led routine families - nine free plans
@@ -17,31 +12,17 @@ import { deriveDemandMetadata } from './capability/demands';
 // v14 (CC28): adds the five gap-closure families (Phase E).
 const SEED_KEY = '@volyume_routines_seeded_v14';
 
-// Extra exercises the plan templates rely on that may not be in the base exercise seed
-const REQUIRED_EXERCISES = [
-  { name: 'HS Plate-Loaded Lat Pulldown',     primaryMuscle: 'back',      equipment: 'machine',  movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 8,  defaultRepMax: 12, fatigueCost: 3, stimulusToFatigueRatio: 4 },
-  { name: 'Underhand Lat Pulldown',            primaryMuscle: 'back',      equipment: 'cable',    movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 12, fatigueCost: 3, stimulusToFatigueRatio: 4 },
-  { name: 'Plate-Loaded Seated Row',           primaryMuscle: 'back',      equipment: 'machine',  movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 12, fatigueCost: 3, stimulusToFatigueRatio: 4 },
-  { name: 'HS ISO High Row',                   primaryMuscle: 'back',      equipment: 'machine',  movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 12, fatigueCost: 3, stimulusToFatigueRatio: 4 },
-  { name: 'Cable Serratus Punch',              primaryMuscle: 'abs',       equipment: 'cable',    movementPattern: 'push',      compoundIsolation: 'isolation', defaultRepMin: 15, defaultRepMax: 25, fatigueCost: 1, stimulusToFatigueRatio: 5 },
-  { name: 'Cable Lateral Raise (Low Pulley)',  primaryMuscle: 'side_delts',  equipment: 'cable',    movementPattern: 'isolation', compoundIsolation: 'isolation', defaultRepMin: 15, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 5 },
-  { name: 'Facing-In Shoulder Press',          primaryMuscle: 'front_delts', equipment: 'machine',  movementPattern: 'push',      compoundIsolation: 'compound',  defaultRepMin: 12, defaultRepMax: 15, fatigueCost: 2, stimulusToFatigueRatio: 4 },
-  { name: 'Cable Fly (Low to Mid, Incline)',  primaryMuscle: 'chest',       equipment: 'cable',    movementPattern: 'isolation', compoundIsolation: 'isolation', defaultRepMin: 12, defaultRepMax: 15, fatigueCost: 2, stimulusToFatigueRatio: 5 },
-  { name: 'Cable Fly (Mid Height, Cuff)',     primaryMuscle: 'chest',       equipment: 'cable',    movementPattern: 'isolation', compoundIsolation: 'isolation', defaultRepMin: 12, defaultRepMax: 15, fatigueCost: 2, stimulusToFatigueRatio: 5 },
-  { name: 'Box Step-Up',                       primaryMuscle: 'quads',     equipment: 'bodyweight', movementPattern: 'squat',   compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
-  { name: 'Single-Arm Dumbbell Row',           primaryMuscle: 'back',      equipment: 'dumbbell', movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 15, fatigueCost: 3, stimulusToFatigueRatio: 4 },
-  { name: 'Trap Bar Deadlift (Low Handle)',    primaryMuscle: 'quads',     equipment: 'barbell',  movementPattern: 'hinge',     compoundIsolation: 'compound',  defaultRepMin: 4,  defaultRepMax: 8,  fatigueCost: 5, stimulusToFatigueRatio: 4 },
-  { name: 'Hip Thrust (Barbell)',    primaryMuscle: 'glutes',   equipment: 'barbell',    movementPattern: 'hinge',     compoundIsolation: 'compound',  defaultRepMin: 8,  defaultRepMax: 15, fatigueCost: 3, stimulusToFatigueRatio: 5 },
-  { name: 'Dumbbell Goblet Squat',   primaryMuscle: 'quads',    equipment: 'dumbbell',   movementPattern: 'squat',     compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
-  { name: 'Lunge',                   primaryMuscle: 'quads',    equipment: 'bodyweight', movementPattern: 'squat',     compoundIsolation: 'compound',  defaultRepMin: 10, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
-  { name: 'Bodyweight Squat',        primaryMuscle: 'quads',    equipment: 'bodyweight', movementPattern: 'squat',     compoundIsolation: 'compound',  defaultRepMin: 15, defaultRepMax: 30, fatigueCost: 1, stimulusToFatigueRatio: 3 },
-  { name: 'Seated Band Row',         primaryMuscle: 'back',     equipment: 'bodyweight', movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 12, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
-  { name: 'Seated Band Lat Pulldown',primaryMuscle: 'back',     equipment: 'bodyweight', movementPattern: 'pull',      compoundIsolation: 'compound',  defaultRepMin: 12, defaultRepMax: 20, fatigueCost: 2, stimulusToFatigueRatio: 4 },
-];
+// REQUIRED_EXERCISES removed (EL-15, exercise-library-expansion-2026-09-05):
+// these 18 rows are now ordinary canonical corpus entries
+// (src/lib/exerciseCorpus/), seeded by seedExercises.js before this module
+// runs, so getAllExercises()'s `byName` lookup below already resolves them
+// with a stable canonical id — no separate insertion pass is needed. An
+// install that seeded them under the old random uid() gets re-idded by
+// seedExercises.js's topUpNewExercisesIfNeeded (same-name merge).
 
 // ─── Library Plans ───────────────────────────────────────────────────────────
 
-const LIBRARY_PLANS = [
+export const LIBRARY_PLANS = [
 
   // ── 1. Aesthetic Upper Rotation ──────────────────────────────────────────
   {
@@ -2106,26 +2087,6 @@ export async function seedRoutinesIfNeeded(userId) {
     const byName = {};
     for (const ex of existing) {
       byName[ex.name] = ex;
-    }
-
-    // Ensure required exercises exist, WITH derived metadata (equipment +
-    // demand axes) so they are first-class for capability filtering. Rows
-    // inserted by earlier versions of this loop landed without demand
-    // axes; repair those honestly from the same pure derivation.
-    stage = 'requiredExercises';
-    for (const exData of REQUIRED_EXERCISES) {
-      stageDetail = exData?.name ?? null;
-      const existing = byName[exData.name];
-      if (!existing) {
-        const created = await insertExercise({
-          ...exData,
-          ...deriveExerciseMetadata(exData),
-          ...deriveDemandMetadata(exData),
-        });
-        byName[created.name] = created;
-      } else if (existing.position == null && existing.impact == null) {
-        await updateExerciseDemands(existing.id, deriveDemandMetadata(exData)).catch(() => {});
-      }
     }
 
     // Look up which library plans already exist by name so a SEED_KEY bump

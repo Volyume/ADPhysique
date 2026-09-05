@@ -20,6 +20,13 @@
  * more.
  * CC29 appended one further migration (swap cause + effective choice
  * columns; inert here), so each count widens by one more.
+ * 2026-09-05 (Exercise library expansion, EL-9/EL-7 then EL-14/EL-19): two
+ * further migrations appended - routine_exercises.group_kind/
+ * round_rest_seconds + workout_sets.evidence_class, then exercises.aliases/
+ * load_character - so each count widens by two more. The exercises and
+ * routine_exercises ALTERs are inert against this file's existing tables;
+ * a minimal workout_sets table is added below for the new ALTER on a
+ * table this fixture never created.
  */
 
 const { DatabaseSync } = require('node:sqlite');
@@ -63,6 +70,10 @@ function freshDb() {
   raw.exec('CREATE TABLE exercise_swaps (id TEXT PRIMARY KEY, user_id TEXT, from_exercise_id TEXT, to_exercise_id TEXT, scope TEXT, created_at INTEGER, updated_at INTEGER, deleted_at INTEGER);');
   // C18 adds the progression anchor column to mesocycles.
   raw.exec('CREATE TABLE mesocycles (id TEXT PRIMARY KEY, user_id TEXT, planned_weeks INTEGER, deload_week INTEGER);');
+  // Exercise library expansion 2026-09-05 (EL-9/EL-7) now runs alongside
+  // v72 in this window and ALTERs workout_sets (evidence_class); empty
+  // here, so it is a no-op against this fixture.
+  raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT);');
   return raw;
 }
 
@@ -85,7 +96,7 @@ test('v72 re-ids legacy uid() rows to the deterministic form, without touching u
   // the memo plus its audit remediation, so this window widens by four to
   // keep testing the SAME v72 migration rather than a later pair. CC26
   // appended the capability tables, widening it by one more.
-  return runLast(raw, 17).then(() => {
+  return runLast(raw, 19).then(() => {
     const after = rows(raw);
     expect(after).toEqual([
       // Already deterministic: byte-identical.
@@ -100,9 +111,9 @@ test('v72 is idempotent: a second run changes nothing', async () => {
   const raw = freshDb();
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
-  await runLast(raw, 17); // widened by four (C18 + Campaign 19), then CC26, then the gap-closure demand axis
+  await runLast(raw, 19); // widened by four (C18 + Campaign 19), then CC26, then the gap-closure demand axis
   const once = rows(raw);
-  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 15}`);
+  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 17}`);
   await runMigrations(adapt(raw));
   expect(rows(raw)).toEqual(once);
 });

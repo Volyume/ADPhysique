@@ -11,26 +11,26 @@
  * from each other the way the old per-row hand insert and three name-keyed
  * override maps did.
  */
-import barbell from './families/barbell';
-import dumbbell from './families/dumbbell';
-import cable from './families/cable';
-import machine from './families/machine';
-import smith from './families/smith';
-import bodyweight from './families/bodyweight';
-import band from './families/band';
-import suspension from './families/suspension';
-import kettlebell from './families/kettlebell';
-import landmine from './families/landmine';
-import carries from './families/carries';
-import power from './families/power';
-import specialty from './families/specialty';
-import medicine_ball from './families/medicine_ball';
-import sled from './families/sled';
+import barbell from './families/barbell.js';
+import dumbbell from './families/dumbbell.js';
+import cable from './families/cable.js';
+import machine from './families/machine.js';
+import smith from './families/smith.js';
+import bodyweight from './families/bodyweight.js';
+import band from './families/band.js';
+import suspension from './families/suspension.js';
+import kettlebell from './families/kettlebell.js';
+import landmine from './families/landmine.js';
+import carries from './families/carries.js';
+import power from './families/power.js';
+import specialty from './families/specialty.js';
+import medicine_ball from './families/medicine_ball.js';
+import sled from './families/sled.js';
 
-import { deriveExerciseMetadata } from '../exerciseMetadata';
-import { deriveDemandMetadata } from '../capability/demands';
-import { deriveLoadSemantics } from '../exercise/loadSemantics';
-import { canonicalExerciseId } from '../exercise/canonicalId';
+import { deriveExerciseMetadata } from '../exerciseMetadata.js';
+import { deriveDemandMetadata } from '../capability/demands.js';
+import { deriveLoadSemantics } from '../exercise/loadSemantics.js';
+import { canonicalExerciseId } from '../exercise/canonicalId.js';
 
 export const FAMILY_NAMES = Object.freeze([
   'barbell', 'dumbbell', 'cable', 'machine', 'smith', 'bodyweight', 'band',

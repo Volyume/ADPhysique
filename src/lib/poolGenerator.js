@@ -175,6 +175,16 @@ export function generatePoolFromLibrary(exercises) {
     if (!ex || !ex.name || !ex.primaryMuscle) continue;
     if (!ex.equipmentCategory || ex.equipmentCategory === 'other') continue;
     if (!isHypertrophyExercise(ex)) continue;
+    // EL-21 (exercise-library-expansion-2026-09-05, F4): a row whose
+    // logging type is not weight_reps (duration/distance/reps_only/
+    // weighted_bodyweight) cannot honestly carry the rep-range/weight
+    // prescription automatic generation writes. Hard screen, the same
+    // shape as NEVER_AUTO — a duration hold or a distance carry stays
+    // fully searchable and manually selectable, never auto-generated.
+    // exerciseType snake_case fallback: this pool also runs over rows read
+    // straight from SQLite in code paths that have not camelCased yet.
+    const exerciseType = ex.exerciseType ?? ex.exercise_type ?? 'weight_reps';
+    if (exerciseType !== 'weight_reps') continue;
     const entry = toPoolEntry(ex);
     if (entry.eq.length === 0) continue;
     if (!pool[ex.primaryMuscle]) pool[ex.primaryMuscle] = [];

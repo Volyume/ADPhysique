@@ -16,6 +16,13 @@
  */
 // CC29 appended one further migration (swap cause + effective choice
 // columns; inert here), so the window widens by one more.
+// 2026-09-05 (Exercise library expansion, EL-9/EL-7 then EL-14/EL-19): two
+// further migrations appended - routine_exercises.group_kind/
+// round_rest_seconds + workout_sets.evidence_class, then exercises.aliases/
+// load_character - so the window widens by two more. The exercises ALTERs
+// are inert against this fixture's exercises table; minimal
+// routine_exercises and workout_sets tables are added below for the new
+// ALTERs on tables this fixture never created.
 const { DatabaseSync } = require('node:sqlite');
 const { runMigrations, CURRENT_SCHEMA_VERSION } = require('../database');
 const { deriveDemandMetadata } = require('../capability/demands');
@@ -49,6 +56,8 @@ function freshDb() {
   raw.exec('CREATE TABLE custom_exercises (id TEXT PRIMARY KEY, user_id TEXT, updated_at INTEGER);');
   raw.exec('CREATE TABLE exercise_swaps (id TEXT PRIMARY KEY, user_id TEXT, from_exercise_id TEXT);');
   raw.exec('CREATE TABLE capability_constraints (id TEXT PRIMARY KEY, user_id TEXT, state TEXT, episode_group_id TEXT);');
+  raw.exec('CREATE TABLE routine_exercises (id TEXT PRIMARY KEY, routine_id TEXT, exercise_id TEXT);');
+  raw.exec('CREATE TABLE workout_sets (id TEXT PRIMARY KEY, user_id TEXT, workout_id TEXT, exercise_id TEXT);');
   raw.prepare('INSERT INTO exercises (id, name, primary_muscle, equipment, movement_pattern, compound_isolation, is_custom, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .run('ex-squat', 'Barbell Back Squat', 'quads', 'barbell', 'squat', 'compound', 0, 111);
   raw.prepare('INSERT INTO exercises (id, name, primary_muscle, equipment, movement_pattern, compound_isolation, is_custom, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
@@ -74,7 +83,7 @@ const demandRow = (raw, id) => raw.prepare(
 
 test('a pre-CC27 database upgrades: canonical rows derive, matching the seed derivation exactly', async () => {
   const raw = freshDb();
-  await runLast(raw, 4);
+  await runLast(raw, 6);
 
   const squat = demandRow(raw, 'ex-squat');
   const expected = deriveDemandMetadata({
@@ -96,7 +105,7 @@ test('a pre-CC27 database upgrades: canonical rows derive, matching the seed der
 test('a custom with an equipment string gains EQUIPMENT metadata (section 34.1), demands stay NULL', async () => {
   const raw = freshDb();
   raw.prepare("UPDATE exercises SET equipment = 'dumbbell' WHERE id = 'ex-custom'").run();
-  await runLast(raw, 4);
+  await runLast(raw, 6);
 
   const custom = raw.prepare('SELECT equipment_category, equipment_profiles, position, grip_demand FROM exercises WHERE id = ?').get('ex-custom');
   expect(custom.equipment_category).toBe('dumbbell');
@@ -108,7 +117,7 @@ test('a custom with an equipment string gains EQUIPMENT metadata (section 34.1),
 
 test('custom rows stay NULL on every axis (CAP-8), and updated_at is untouched everywhere', async () => {
   const raw = freshDb();
-  await runLast(raw, 4);
+  await runLast(raw, 6);
 
   const custom = demandRow(raw, 'ex-custom');
   for (const col of ['position', 'floor_access', 'overhead_position', 'grip_demand',
@@ -122,7 +131,7 @@ test('custom rows stay NULL on every axis (CAP-8), and updated_at is untouched e
 
 test('is idempotent: a second run changes nothing and errors on neither run', async () => {
   const raw = freshDb();
-  const total = await runLast(raw, 4);
+  const total = await runLast(raw, 6);
   const once = ['ex-squat', 'ex-legpress', 'ex-custom'].map((id) => demandRow(raw, id));
 
   raw.exec(`PRAGMA user_version = ${total - 3}`);

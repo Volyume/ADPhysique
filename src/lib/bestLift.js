@@ -51,6 +51,12 @@ export function pickBestLift(weekSets, priorBestByExercise, e1rmFn = calculate1R
   // Per-exercise top set this week (by e1RM).
   const topByEx = new Map();
   for (const s of weekSets) {
+    // EL-7 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md): a
+    // ballistic set is not hypertrophy/strength evidence - excluded here,
+    // same as the caller's existing warm-up pre-filter (doc comment above),
+    // so it can never be featured or inflate a gain.
+    const evidenceClass = s.evidenceClass ?? s.evidence_class ?? null;
+    if (typeof evidenceClass === 'string' && evidenceClass.includes('ballistic')) continue;
     const w = Number(s.weight);
     if (!Number.isFinite(w) || w <= 0) continue;
     const rRaw = Number(s.reps);

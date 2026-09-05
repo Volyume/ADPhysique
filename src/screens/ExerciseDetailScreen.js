@@ -935,6 +935,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                         {s.weight}{units} x {s.actualReps}
                         {s.set_type === 'warmup' || s.setType === 'warmup' ? ' - Warm-up' : ''}
                         {s.set_type === 'dropset' || s.setType === 'dropset' ? ' - Drop set' : ''}
+                        {/* EL-7: truthful label only, same mechanism as warm-up/drop-set above. */}
+                        {(s.evidenceClass ?? s.evidence_class) === 'circuit_ballistic' ? ' - Circuit, Ballistic'
+                          : (s.evidenceClass ?? s.evidence_class) === 'circuit' ? ' - Circuit'
+                          : (s.evidenceClass ?? s.evidence_class) === 'ballistic' ? ' - Ballistic' : ''}
                       </Text>
                     ))}
                   </View>

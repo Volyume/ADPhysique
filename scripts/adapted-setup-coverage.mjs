@@ -18,7 +18,7 @@
  * Deterministic; reads only repo files; writes only the report.
  * Run: node scripts/adapted-setup-coverage.mjs
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,18 +26,19 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const { deriveDemandMetadata } = await import(join(root, 'src/lib/capability/demands.js'));
 const { ADAPTED_SETUP, SETUP_CONTEXT, CLASS_TEXT, materialContextsFor } = await import(join(root, 'src/lib/exercise/adaptedSetup.js'));
 
-// ── Parse RAW rows (same approach as demand-coverage-report.mjs) ────────
-const seedSrc = readFileSync(join(root, 'src/lib/seedExercises.js'), 'utf8');
-const rawBlock = seedSrc.slice(seedSrc.indexOf('const RAW = ['), seedSrc.indexOf('\n];', seedSrc.indexOf('const RAW = [')));
-const rows = [];
-for (const line of rawBlock.split('\n')) {
-  const t = line.trim();
-  if (!t.startsWith("['")) continue;
-  // eslint-disable-next-line no-eval
-  const arr = (0, eval)(`(${t.replace(/,\s*$/, '')})`);
-  const [name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound] = arr;
-  rows.push({ name, primaryMuscle, secondaryMuscles, equipment, movementPattern, isCompound });
-}
+// EL-14 (exercise-library-expansion-2026-09-05): re-anchored onto the
+// structured corpus instead of parsing seedExercises.js's RAW text — RAW
+// no longer exists (the format migration replaced it). Retired stub
+// entries are already excluded from CORPUS.
+const { CORPUS } = await import(join(root, 'src/lib/exerciseCorpus/index.js'));
+const rows = CORPUS.map((entry) => ({
+  name: entry.name,
+  primaryMuscle: entry.primaryMuscle,
+  secondaryMuscles: entry.secondaryMuscles ?? [],
+  equipment: entry.equipment,
+  movementPattern: entry.movementPattern,
+  isCompound: entry.compound,
+}));
 
 const names = new Set(rows.map((r) => r.name));
 const lower = [...names].map((n) => n.toLowerCase());

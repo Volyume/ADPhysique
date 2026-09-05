@@ -53,6 +53,14 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
   const t = useTheme();
   const live = buildLiveStyles(t);
   const isWarmup = set.setType === 'warmup';
+  // EL-7 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+  // truthful label only, same mechanism as the warm-up suffix below - never
+  // a claim about the set's quality, just what kind of set it was.
+  const evidenceClass = set.evidenceClass ?? set.evidence_class ?? null;
+  const evidenceLabel = evidenceClass === 'circuit_ballistic' ? ' - Circuit, Ballistic'
+    : evidenceClass === 'circuit' ? ' - Circuit'
+    : evidenceClass === 'ballistic' ? ' - Ballistic'
+    : '';
 
   // In-place editor: replaces the row entirely while open. Delete sits on the
   // left (destructive, separated from Save so it is not fat-fingered), with
@@ -159,7 +167,7 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
       <Text style={[styles.loggedSetText, live.loggedSetText, isWarmup && [styles.loggedSetTextWarmup, live.loggedSetTextWarmup]]} numberOfLines={1}>
         {fmt.text}
         {perSide ? ` - ${perSide}` : ''}
-        {isWarmup ? ' - Warm-up' : ''}
+        {isWarmup ? ' - Warm-up' : evidenceLabel}
       </Text>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>

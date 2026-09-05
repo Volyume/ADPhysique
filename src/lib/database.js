@@ -99,7 +99,7 @@ function rowToCamel(row) {
   const result = {};
   for (const [key, value] of Object.entries(row)) {
     const camelKey = _camelKey(key);
-    if (key === 'secondary_muscles' && typeof value === 'string') {
+    if ((key === 'secondary_muscles' || key === 'aliases') && typeof value === 'string') {
       try { result[camelKey] = JSON.parse(value); } catch { result[camelKey] = []; }
     } else {
       result[camelKey] = value;
@@ -2795,6 +2795,38 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE routine_exercises ADD COLUMN round_rest_seconds INTEGER',
     'ALTER TABLE workout_sets ADD COLUMN evidence_class TEXT',
   ],
+  // Exercise library expansion 2026-09-05 (docs/exercise-library-expansion-
+  // 2026-09-05/05-DECISIONS.md EL-14, EL-19; 07-CORPUS-FORMAT.md section 5).
+  //   Purpose:  two additive columns on `exercises` the structured corpus
+  //             mapping (corpusEntryToSeedRow, src/lib/exerciseCorpus/
+  //             index.js) now populates for every canonical row:
+  //               aliases         JSON array of alternative search names
+  //                               (e.g. "RDL" for "Romanian Deadlift"),
+  //                               read back parsed by rowToCamel.
+  //               load_character  'grind' | 'ballistic' | NULL, the
+  //                               exercise-side half of EL-7's evidence
+  //                               classification (workout_sets.evidence_class
+  //                               is stamped from this at write time by the
+  //                               live workout screen, not here).
+  //   Applied locally: yes, on every device that reaches this migration
+  //             index; ALTER TABLE ADD COLUMN only, so existing rows read
+  //             NULL until the seed/re-derive pass (rederiveExerciseMetadataIfNeeded,
+  //             METADATA_REDERIVE_KEY v3) fills them.
+  //   Safe to re-run: yes — the benign-duplicate-column skip
+  //             (isProvenBenignMigrationError) covers a second run.
+  //   Synced: NO (EL-19). These are local-only, device-derived columns for
+  //             the canonical library; canonical rows are never pushed, and
+  //             a custom exercise's aliases stay out of scope for this
+  //             campaign. Verified: sync.js's syncExercises() push (custom
+  //             exercises only) does not read either column.
+  //   Rollback: leave the columns in place and ignore them; every reader
+  //             treats a NULL/absent value as "no aliases" / "grind"
+  //             (ActiveWorkoutScreen and ExerciseDetailScreen are unaffected
+  //             — neither reads these columns from this migration alone).
+  [
+    'ALTER TABLE exercises ADD COLUMN aliases TEXT',
+    'ALTER TABLE exercises ADD COLUMN load_character TEXT',
+  ],
 ];
 
 // Tests and diagnostics may compare a database's durable marker with the
@@ -3346,10 +3378,10 @@ export async function insertExerciseWithId(id, data) {
        machine_ok, home_ok, cue, equipment_profiles, exercise_type, load_semantics,
        position, floor_access, overhead_position, grip_demand, unilateral_loadable,
        bilateral_upper, bilateral_lower, axial_load, impact, balance_demand,
-       weight_bearing_hands)
+       weight_bearing_hands, aliases, load_character)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
              ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.name,
@@ -3396,6 +3428,12 @@ export async function insertExerciseWithId(id, data) {
       data.impact === true ? 1 : data.impact === false ? 0 : null,
       data.balanceDemand ?? null,
       data.weightBearingHands === true ? 1 : data.weightBearingHands === false ? 0 : null,
+      // Exercise-library-expansion-2026-09-05 (EL-14/EL-19): local-only,
+      // never synced for canonical rows. aliases is a JSON string array;
+      // an absent/empty value stores as NULL, read back as [] by
+      // rowToCamel's JSON-parse special case.
+      Array.isArray(data.aliases) && data.aliases.length ? JSON.stringify(data.aliases) : null,
+      data.loadCharacter ?? null,
     ],
   );
   _invalidateExercisesCache();
@@ -3460,27 +3498,43 @@ export async function updateExerciseDemands(id, meta = {}) {
   _scheduleSync();
 }
 
+// Exercise-library-expansion-2026-09-05 (EL-14/EL-16/EL-21): extended
+// beyond the original six equipment-derived columns to also carry the
+// corpus mapping's aliases/load_character/cue/exercise_category/
+// increment_kg and the coarse `equipment` column itself (a band/landmine/
+// suspension row's coarse equipment can change under the corpus
+// reclassification). Every new field is OPTIONAL on `meta`: the plain
+// backfill call (deriveExerciseMetadata output only) omits them, and an
+// omitted field leaves the column untouched rather than nulling it, so
+// backfillExerciseMetadataIfNeeded's existing behaviour is unchanged.
 export async function updateExerciseMetadata(id, meta) {
   const d = await db();
-  await d.runAsync(
-    `UPDATE exercises SET
-       equipment_category = ?, machine_type = ?, force = ?, laterality = ?,
-       difficulty = ?, machine_ok = ?, home_ok = ?, equipment_profiles = ?,
-       updated_at = ?
-     WHERE id = ?`,
-    [
-      meta.equipmentCategory ?? null,
-      meta.machineType ?? null,
-      meta.force ?? null,
-      meta.laterality ?? null,
-      meta.difficulty ?? null,
-      meta.machineOk ? 1 : 0,
-      meta.homeOk ? 1 : 0,
-      meta.equipmentProfiles ? JSON.stringify(meta.equipmentProfiles) : null,
-      Date.now(),
-      id,
-    ],
-  );
+  const sets = [
+    'equipment_category = ?', 'machine_type = ?', 'force = ?', 'laterality = ?',
+    'difficulty = ?', 'machine_ok = ?', 'home_ok = ?', 'equipment_profiles = ?',
+  ];
+  const args = [
+    meta.equipmentCategory ?? null,
+    meta.machineType ?? null,
+    meta.force ?? null,
+    meta.laterality ?? null,
+    meta.difficulty ?? null,
+    meta.machineOk ? 1 : 0,
+    meta.homeOk ? 1 : 0,
+    meta.equipmentProfiles ? JSON.stringify(meta.equipmentProfiles) : null,
+  ];
+  if (meta.equipment !== undefined) { sets.push('equipment = ?'); args.push(meta.equipment ?? null); }
+  if (meta.aliases !== undefined) {
+    sets.push('aliases = ?');
+    args.push(Array.isArray(meta.aliases) && meta.aliases.length ? JSON.stringify(meta.aliases) : null);
+  }
+  if (meta.loadCharacter !== undefined) { sets.push('load_character = ?'); args.push(meta.loadCharacter ?? null); }
+  if (meta.cue !== undefined) { sets.push('cue = ?'); args.push(meta.cue || null); }
+  if (meta.exerciseCategory !== undefined) { sets.push('exercise_category = ?'); args.push(meta.exerciseCategory ?? 'compound'); }
+  if (meta.incrementKg !== undefined) { sets.push('increment_kg = ?'); args.push(meta.incrementKg ?? 2.5); }
+  sets.push('updated_at = ?');
+  args.push(Date.now(), id);
+  await d.runAsync(`UPDATE exercises SET ${sets.join(', ')} WHERE id = ?`, args);
   _invalidateExercisesCache();
 }
 
@@ -4586,7 +4640,8 @@ export async function getRoutineExercisesWithDetails(routineId) {
             e.fatigue_cost,
             e.stimulus_to_fatigue_ratio,
             e.equipment_category,
-            e.laterality
+            e.laterality,
+            e.load_character
      FROM routine_exercises re
      LEFT JOIN exercises e ON e.id = re.exercise_id
      WHERE re.routine_id = ? AND re.deleted_at IS NULL
@@ -4624,6 +4679,12 @@ export async function getRoutineExercisesWithDetails(routineId) {
       // Previously computed and never read anywhere; ActiveWorkoutScreen
       // reads it to suggest per-side logging.
       laterality: row.laterality,
+      // EL-7 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
+      // 'grind' | 'ballistic' | null. ActiveWorkoutScreen reads this to
+      // stamp a logged set's evidence_class; read defensively there
+      // (loadCharacter ?? load_character ?? null) since the column can be
+      // null on a device that has not yet re-derived exercise metadata.
+      loadCharacter: row.load_character,
       // Flag for the UI: this row needs to be repaired by the user
       // because the exercise lookup failed. Active screens can render
       // an inline "Re-link exercise" affordance here.
@@ -10440,6 +10501,40 @@ const _tsToMs = (v) => {
 // user-settable on a custom exercise (createExerciseType), so it round-trips
 // here; syncExercises() (sync.js) now pushes it too, so the value survives
 // a full sign-out/sign-in cycle end to end.
+// Exercise-library-expansion-2026-09-05 (EL-14/EL-15/07-CORPUS-FORMAT.md
+// section 4): the shared same-name id-remap, extracted from
+// insertOrUpdateExerciseFromCloud's own inline block so seedExercises.js's
+// top-up (the 18 former REQUIRED_EXERCISES rows, id-mismatched under their
+// old random uid) and the EL-21 duplicate-retirement pass can reuse the
+// exact same rewrite instead of a second hand-copy. Rewrites every table
+// that references an exercise by id from `fromId` to `toId`, then deletes
+// the now-orphaned `fromId` row. Idempotent: once `fromId`'s row is gone
+// (or never existed), the UPDATEs touch zero rows and the DELETE is a
+// no-op — safe to call speculatively.
+export async function mergeExerciseIdInto(fromId, toId) {
+  if (!fromId || !toId || fromId === toId) return;
+  const d = await db();
+  await d.runAsync('UPDATE routine_exercises SET exercise_id = ? WHERE exercise_id = ?', [toId, fromId]);
+  await d.runAsync('UPDATE workout_sets SET exercise_id = ? WHERE exercise_id = ?', [toId, fromId]);
+  await d.runAsync(
+    'UPDATE exercise_user_notes SET exercise_id = ? WHERE exercise_id = ?',
+    [toId, fromId],
+  ).catch(() => {});
+  await d.runAsync(
+    'UPDATE exercise_goals SET exercise_id = ? WHERE exercise_id = ?',
+    [toId, fromId],
+  ).catch(() => {});
+  // Campaign 9: the intent layer's three tables reference exercises too
+  // (five id columns between them). Remapped in one helper at the end of
+  // this file so an exclusion, a remembered swap or an approved default
+  // is not orphaned when two devices' canonical ids merge.
+  await remapExerciseIdInIntentTables(d, fromId, toId);
+  // Remove the duplicate/retired row now that every reference points at
+  // `toId`.
+  await d.runAsync('DELETE FROM exercises WHERE id = ?', [fromId]);
+  _invalidateExercisesCache();
+}
+
 export async function insertOrUpdateExerciseFromCloud(e) {
   if (!e?.id || !e?.name) return;
   const d = await db();
@@ -10453,24 +10548,7 @@ export async function insertOrUpdateExerciseFromCloud(e) {
     [e.name, e.id],
   );
   if (sameName?.id) {
-    await d.runAsync('UPDATE routine_exercises SET exercise_id = ? WHERE exercise_id = ?', [e.id, sameName.id]);
-    await d.runAsync('UPDATE workout_sets SET exercise_id = ? WHERE exercise_id = ?', [e.id, sameName.id]);
-    await d.runAsync(
-      'UPDATE exercise_user_notes SET exercise_id = ? WHERE exercise_id = ?',
-      [e.id, sameName.id],
-    ).catch(() => {});
-    await d.runAsync(
-      'UPDATE exercise_goals SET exercise_id = ? WHERE exercise_id = ?',
-      [e.id, sameName.id],
-    ).catch(() => {});
-    // Campaign 9: the intent layer's three tables reference exercises too
-    // (five id columns between them). Remapped in one helper at the end of
-    // this file so an exclusion, a remembered swap or an approved default
-    // is not orphaned when two devices' canonical ids merge.
-    await remapExerciseIdInIntentTables(d, sameName.id, e.id);
-    // Remove the duplicate-by-name local row; the upsert below puts
-    // the cloud row in its place.
-    await d.runAsync('DELETE FROM exercises WHERE id = ?', [sameName.id]);
+    await mergeExerciseIdInto(sameName.id, e.id);
   }
   const secondary = (() => {
     if (e.secondary_muscles == null) return null;
