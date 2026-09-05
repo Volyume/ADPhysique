@@ -15,7 +15,7 @@ describe('section 9.2.6: default-on capability filter with show-anyway', () => {
     expect(src).toMatch(/setShowIncompatible\(false\)/); // re-armed per open
   });
   test('the toggle is its own control, not the set-aside toggle', () => {
-    expect(src).toMatch(/Show movements outside how you train/);
+    expect(src).toMatch(/Show movements that clash with your limitations/);
     expect(src).toMatch(/Show what you have set aside/);
   });
   test('the pinned intent clauses stay byte-exact (campaign9 guard strings)', () => {
@@ -28,7 +28,7 @@ describe('section 9.4: the manual-conflict flows', () => {
   test('clinician-reported: no inline override, one-tap route to the restriction editor', () => {
     const clin = src.slice(src.indexOf('capReason === CAPABILITY_BLOCK.CLINICIAN'), src.indexOf('capReason === CAPABILITY_BLOCK.UNKNOWN'));
     // Natural coach-language wording (2026-08-21) names the destination.
-    expect(clin).toMatch(/update it under How you train first/i);
+    expect(clin).toMatch(/update it under Injuries & limitations first/i);
     expect(clin).toMatch(/navigationRef\.navigate\('HowYouTrain'\)/);
     expect(clin).not.toMatch(/writeAllowance|Add anyway/);
   });
@@ -84,9 +84,9 @@ describe('red-team finding 1 (bundle): the capability read failure is never sile
   test('the no-known-state posture gets its own visible notice', () => {
     // Fires ONLY when the capability read failed with no known state this
     // session (unavailable && !stale) - the one posture where nothing is
-    // filtered for how you train (section 9.6 / CAP-17).
+    // filtered for Injuries & limitations (section 9.6 / CAP-17).
     expect(src).toMatch(/state\?\.capability\?\.unavailable && !state\.capability\.stale/);
-    expect(src).toMatch(/How you train could not be checked right now, so nothing is filtered for it\./);
+    expect(src).toMatch(/Injuries & limitations could not be checked right now, so nothing is filtered for it\./);
   });
   test('the notice is consent-gated so users without the feature never see it', () => {
     expect(src).toMatch(/getLocalCapabilityConsent\(userId\)/);

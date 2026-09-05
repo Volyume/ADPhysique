@@ -28,7 +28,7 @@ describe('D139 item 6: the library preview carries the compatibility fact', () =
     const idx = source.indexOf('planHeaderBadgeRow');
     const block = source.slice(idx, source.indexOf('<Text style={[styles.planName'));
     expect(block).toContain("compatibility?.fullyCompatible === true");
-    expect(block).toContain('Fits how you train');
+    expect(block).toContain('Fits your limitations');
     expect(block).toContain('compatibility.fullyCompatible === false');
     expect(block).toContain('{compatibility.conflicts.length + compatibility.unknowns.length} to swap');
   });

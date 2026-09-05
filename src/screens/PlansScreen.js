@@ -46,7 +46,7 @@ import { prepareStartWithPlan, commitStartWithPlan } from '../lib/startWithPlan'
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { loadExerciseIntentState, listActiveMovementConstraints } from '../lib/exercise/intent';
-// D134 (founder 2026-09-03): the How you train row's live line.
+// D134 (founder 2026-09-03): the Injuries & limitations row's live line.
 import { loadCapabilityState } from '../lib/capability/store';
 import { howYouTrainSummary } from '../lib/capability/summary';
 import useAppStore from '../store/useAppStore';
@@ -172,8 +172,8 @@ function CompactPlanRow({
 // preview (the model), which is the source of the exact copy this pins.
 function capabilityBlockedNote(n) {
   return n === 1
-    ? '1 movement sat outside how you train, so your plan works without it.'
-    : `${n} movements sat outside how you train, so your plan works without them.`;
+    ? "1 movement clashed with an injury or limitation you've set, so your plan works without it."
+    : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
 }
 
 export default function PlansScreen({ navigation }) {
@@ -236,7 +236,7 @@ export default function PlansScreen({ navigation }) {
   // the row hidden, which is the correct degrade (D109-2 fail-open: never
   // block, and there is nothing to filter here, only a count to show).
   const [avoidedMovementsCount, setAvoidedMovementsCount] = useState(0);
-  // D134: the live one-line status under the How you train row.
+  // D134: the live one-line status under the Injuries & limitations row.
   const [hytSummary, setHytSummary] = useState(() => howYouTrainSummary(null));
   // EP-09/P-06 (Codex end-user-polish audit): whether the most recent
   // loadData() attempt failed. Previously the catch block swallowed the
@@ -295,7 +295,7 @@ export default function PlansScreen({ navigation }) {
     }, [user?.id]),
   );
 
-  /** D134: the How you train line, refreshed on every focus so a change made there shows here on the way back. */
+  /** D134: the Injuries & limitations line, refreshed on every focus so a change made there shows here on the way back. */
   async function loadHowYouTrainSummary() {
     if (!user?.id) { setHytSummary(howYouTrainSummary(null)); return; }
     try {
@@ -608,8 +608,8 @@ export default function PlansScreen({ navigation }) {
                   const n = rw.lines.length;
                   const plural = n === 1 ? '' : 's';
                   appAlert(
-                    'Update this plan to match how you train?',
-                    `${n} exercise${plural} in it ${n === 1 ? 'sits' : 'sit'} outside how you train. Volyume can swap ${n === 1 ? 'it' : 'them'} for movements that fit. Your history is not rewritten.`,
+                    'Update this plan to match your limitations?',
+                    `${n} exercise${plural} in it ${n === 1 ? "clashes with an injury or limitation you've set" : 'clash with your injuries or limitations'}. Volyume can swap ${n === 1 ? 'it' : 'them'} for movements that fit. Your history is not rewritten.`,
                     [
                       // Round 8 (R8-3): the F-1 no-op wording here too -
                       // this cancel writes nothing, and in the
@@ -621,7 +621,7 @@ export default function PlansScreen({ navigation }) {
                         text: 'Update my plan',
                         onPress: async () => {
                           const res = await applyCapabilityPlanRewrite(user.id, rw.lines);
-                          if (res.applied > 0) toast.show(`Updated. ${res.applied} exercise${res.applied === 1 ? '' : 's'} swapped to fit how you train.`);
+                          if (res.applied > 0) toast.show(`Updated. ${res.applied} exercise${res.applied === 1 ? '' : 's'} swapped to fit your limitations.`);
                         },
                       },
                     ],
@@ -1304,7 +1304,7 @@ export default function PlansScreen({ navigation }) {
               {/* FOUNDER DECISION (fully free, no tier split): this note
                   renders for every account now. */}
               <Text style={[styles.proCoachNote, live.proCoachNote]}>
-                Your coach adjusts this plan as you progress and check in. Change training setup or switch plans from the options below.
+                Your coach reviews this plan each week and suggests changes for you to apply. Change training setup or switch plans from the options below.
               </Text>
               <View style={styles.activePlanActions}>
                 {/* R9 (D70): startNextBtn -> shared Button primary (fires its
@@ -1665,13 +1665,13 @@ export default function PlansScreen({ navigation }) {
           <Card
             style={styles.trainingBlocksRow}
             onPress={() => navigation.navigate('HowYouTrain')}
-            accessibilityLabel={`How you train. ${hytSummary.sub}`}
+            accessibilityLabel={`Injuries & limitations. ${hytSummary.sub}`}
           >
             <View style={[styles.trainingBlocksIcon, live.trainingBlocksIcon]}>
               <Ionicons name="body-outline" size={20} color={hytSummary.attention ? t.colors.primary : t.colors.textSecondary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>How you train</Text>
+              <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>Injuries & limitations</Text>
               <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>{hytSummary.sub}</Text>
             </View>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />

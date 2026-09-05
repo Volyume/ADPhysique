@@ -148,7 +148,7 @@ test('CLASS 1: capabilityKnown is the ONE predicate - no site rolls its own', ()
     'components/ExercisePickerModal.js', // the predicate's exact negation, written before the extraction
     'lib/capability/preflight.js', // IS the predicate, in its own vocabulary
     // Home and the session screen RENDER this signature rather than
-    // gating on it: "could not check how you train" is the honest
+    // gating on it: "could not check Injuries & limitations" is the honest
     // failure surface for exactly the unknown-empty state (B4, D121
     // ruling 3). Naming the state to SPEAK about it is the opposite of
     // rolling a private gate.

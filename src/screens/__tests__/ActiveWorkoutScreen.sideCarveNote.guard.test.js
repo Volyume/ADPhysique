@@ -131,7 +131,7 @@ describe('the rendered note: generic line, always visible, positioned near the c
   });
 
   test('exact generic copy - never a left/right-specific line', () => {
-    expect(noteBlock).toContain('Volyume counts this one side at a time, matching how you train.');
+    expect(noteBlock).toContain('Volyume counts this one side at a time, matching the side you set.');
     // Never "your left/right side", and never a template interpolation
     // (${...}) naming a side inside the copy string itself.
     expect(noteBlock.toLowerCase()).not.toMatch(/\byour left side\b|\byour right side\b/);

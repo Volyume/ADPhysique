@@ -1358,7 +1358,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       if (delta > 0 && holdMuscles === null) {
         // D112 R3: the re-check did not happen, so nothing is known about
         // what this user is training around. Wait, say so calmly, retry.
-        toast.show('Volyume could not check how you train just now, so this increase waits. Try again in a moment.', { variant: 'warning' });
+        toast.show('Volyume could not check Injuries & limitations just now, so this increase waits. Try again in a moment.', { variant: 'warning' });
         return;
       }
       const changes = computeVolumeApply(rows, delta, holdMuscles);

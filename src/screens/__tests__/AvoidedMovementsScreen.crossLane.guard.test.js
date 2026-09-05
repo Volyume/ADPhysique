@@ -1,8 +1,8 @@
 /**
  * CC33 D112 R6 (injury/disability audit W4, 2026-08-28) - closes audit
  * T1-20: the preference lane (this screen) and the capability lane
- * (How you train) never cross-referenced each other. Adds one quiet,
- * always-visible line pointing to How you train.
+ * (Injuries & limitations) never cross-referenced each other. Adds one
+ * quiet, always-visible line pointing to Injuries & limitations.
  *
  * Source-level guard (fs.readFileSync + regex): this screen has no
  * existing render harness (it reads live capability/db state on focus),
@@ -16,13 +16,13 @@ const path = require('path');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'AvoidedMovementsScreen.js'), 'utf8');
 
-describe('T1-20: AvoidedMovementsScreen cross-references How you train', () => {
+describe('T1-20: AvoidedMovementsScreen cross-references Injuries & limitations', () => {
   test('renders the exact cross-lane line', () => {
-    expect(SRC).toContain('Things your body needs training built around live under How you train.');
+    expect(SRC).toContain('Injuries, pain, conditions and disabilities live under Injuries & limitations.');
   });
 
   test('is tappable through to the HowYouTrain route', () => {
-    const site = SRC.indexOf('Things your body needs training built around live under How you train.');
+    const site = SRC.indexOf('Injuries, pain, conditions and disabilities live under Injuries & limitations.');
     expect(site).toBeGreaterThan(-1);
     const before = SRC.slice(Math.max(0, site - 400), site);
     expect(before).toMatch(/onPress=\{\(\) => \{ haptics\.selection\(\); navigation\.navigate\('HowYouTrain'\); \}\}/);
@@ -31,7 +31,7 @@ describe('T1-20: AvoidedMovementsScreen cross-references How you train', () => {
 
   test('renders unconditionally (above the unavailable/loading/empty/list branches), so it is visible regardless of list state', () => {
     const headerSite = SRC.indexOf('<BackHeader title="Avoided movements"');
-    const crossLaneSite = SRC.indexOf('Things your body needs training built around live under How you train.');
+    const crossLaneSite = SRC.indexOf('Injuries, pain, conditions and disabilities live under Injuries & limitations.');
     const unavailableSite = SRC.indexOf('{unavailable ? (');
     expect(headerSite).toBeGreaterThan(-1);
     expect(crossLaneSite).toBeGreaterThan(headerSite);

@@ -1591,7 +1591,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             quiet line naming what a temporary capability change worked
             around this session, secondary text style, never a banner - with
             an expandable "What changed" detail in plain words and a quiet
-            link to How you train. Independent of showProgressLink/
+            link to Injuries & limitations. Independent of showProgressLink/
             showCoachLink above (readOnly-safe: reachable from history too,
             since WorkoutSummaryScreen serves both the live finish flow and
             a history reopen). */}
@@ -1634,10 +1634,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 activeOpacity={0.85}
                 onPress={() => navigation.navigate('HowYouTrain')}
                 accessibilityRole="button"
-                accessibilityLabel="How you train"
+                accessibilityLabel="Injuries & limitations"
               >
                 <Ionicons name="body-outline" size={14} color={t.colors.textSecondary} />
-                <Text style={[styles.onwardLinkText, live.onwardLinkText]}>How you train</Text>
+                <Text style={[styles.onwardLinkText, live.onwardLinkText]}>Injuries & limitations</Text>
               </TouchableOpacity>
             </View>
           </RevealSection>

@@ -107,7 +107,7 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
 
   test('the standing revisit row: exact copy, and visible only when there is something to revisit', () => {
     expect(screen).toContain('icon="list-outline"');
-    expect(screen).toContain('label="Your plan and how you train"');
+    expect(screen).toContain('label="Your plan and your limitations"');
     expect(screen).toContain('sub="Review what Volyume works around in your current plan."');
     expect(screen).toContain('onPress={revisitCapabilityPlan}');
     expect(screen).toContain('{canRevisit ? (');

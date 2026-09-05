@@ -316,7 +316,7 @@ export async function clinicianSourcedIds(userId, ruleIds = []) {
 
 /**
  * D112 R4 (closes audit T2-23's recoverability half): whether the
- * standing "Your plan and how you train" revisit row has anything to
+ * standing "Your plan and your limitations" revisit row has anything to
  * offer right now. Both proposal paths need an active plan to have
  * anything to say, so that gates first; then either an undecided
  * episode rule (the caller supplies its own already-loaded ids - no
@@ -663,7 +663,7 @@ export async function computeCapabilityPlanRewrite(userId, { ruleIds = null } = 
         if (!exercise) continue;
         // Definite conflicts only (F1 class): the document is never
         // rewritten on an UNKNOWN conflict - a proposal reading "this
-        // sits outside how you train" about a movement fact the app has
+        // clashes with a limitation" about a movement fact the app has
         // not established would be false. Unknown rows keep their honest
         // quiet notice instead.
         let conflicts = blockingConflicts(capState, exercise).filter((c) => !c.unknown);

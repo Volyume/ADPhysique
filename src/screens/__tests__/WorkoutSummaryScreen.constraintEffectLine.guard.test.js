@@ -175,7 +175,7 @@ describe('detail-list names resolve via getAllExercises and never fall back to t
   });
 });
 
-describe('the render: one quiet line, secondary text style, independent of readOnly-gated links, with a How you train link', () => {
+describe('the render: one quiet line, secondary text style, independent of readOnly-gated links, with an Injuries & limitations link', () => {
   test('gated on constraintEffect alone - a sibling conditional to showProgressLink/showCoachLink, not nested inside it', () => {
     const showLinksIdx = SRC.indexOf('{(showProgressLink || showCoachLink) && (');
     const showLinksCloseIdx = SRC.indexOf(')}', showLinksIdx) + 2;
@@ -199,7 +199,7 @@ describe('the render: one quiet line, secondary text style, independent of readO
 
   test('the link navigates to the HowYouTrain route, RT2-2 naming', () => {
     expect(SRC).toContain("onPress={() => navigation.navigate('HowYouTrain')}");
-    expect(SRC).toContain('accessibilityLabel="How you train"');
+    expect(SRC).toContain('accessibilityLabel="Injuries & limitations"');
   });
 
   test('R12-5 (J2): the onward link meets the 48dp minimum, on the scale, never an off-scale literal', () => {

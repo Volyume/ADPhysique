@@ -29,11 +29,12 @@ describe('T1-13: the graded total-block state', () => {
   });
 
   test('the honest title/copy, never "safe to perform" or a condition name (CAP-18)', () => {
-    expect(SOURCE).toContain('Volyume could not build a full plan inside how you train.');
+    expect(SOURCE).toContain('Volyume could not build a full plan within your limitations.');
+    expect(SOURCE).toContain("clashes with an injury or limitation you've set right now.");
     expect(SOURCE).not.toMatch(/safe to perform/i);
   });
 
-  test('three actions in the given order: Open How you train, a plain hold, Try again', () => {
+  test('three actions in the given order: Open Injuries & limitations, a plain hold, Try again', () => {
     const site = SOURCE.indexOf("if (planResult.error === 'plan_blocked_by_exclusions' && planResult.blockedByCapability) {");
     // The outer else (the ORIGINAL generic-alert fallback) is found by its
     // own unique D88 comment, not by the first "} else {" textually - the
@@ -42,7 +43,7 @@ describe('T1-13: the graded total-block state', () => {
     const end = SOURCE.indexOf('// D88: the caught error is logged just above, never shown.', site);
     expect(end).toBeGreaterThan(site);
     const block = SOURCE.slice(site, end);
-    const openIdx = block.indexOf("text: 'Open How you train'");
+    const openIdx = block.indexOf("text: 'Open Injuries & limitations'");
     // Round 11 (R11-3): the dismiss says 'Got it' - 'Not now' is the
     // capability lane's decline word and this cancel writes nothing.
     const dismissIdx = block.indexOf("text: 'Got it'");
@@ -50,7 +51,7 @@ describe('T1-13: the graded total-block state', () => {
     expect(openIdx).toBeGreaterThan(-1);
     expect(dismissIdx).toBeGreaterThan(openIdx);
     expect(tryAgainIdx).toBeGreaterThan(dismissIdx);
-    // "Open How you train" navigates; the hold is a plain cancel dismiss
+    // "Open Injuries & limitations" navigates; the hold is a plain cancel dismiss
     // (no browse-plans action - first run has no library route from this
     // screen, matching FreeStarterScreen's own fromFirstRun precedent).
     expect(block).toMatch(/onPress: \(\) => navigation\.navigate\('HowYouTrain'\)/);
@@ -92,7 +93,7 @@ describe('T1-12: every generation entry reveals capability effects', () => {
 
   test('capabilityBlockedNote is a local pure helper with the exact singular/plural copy', () => {
     expect(SOURCE).toMatch(
-      /function capabilityBlockedNote\(n\) \{\s*\n\s*return n === 1\s*\n\s*\? '1 movement sat outside how you train, so your plan works without it\.'\s*\n\s*: `\$\{n\} movements sat outside how you train, so your plan works without them\.`;\s*\n\s*\}/,
+      /function capabilityBlockedNote\(n\) \{\s*\n\s*return n === 1\s*\n\s*\? "1 movement clashed with an injury or limitation you've set, so your plan works without it\."\s*\n\s*: `\$\{n\} movements clashed with your injuries or limitations, so your plan works without them\.`;\s*\n\s*\}/,
     );
   });
 });

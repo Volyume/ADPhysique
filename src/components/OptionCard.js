@@ -7,7 +7,7 @@ import useTheme from '../hooks/useTheme';
 // checkmark when selected. Shared by the onboarding wizard and the coached
 // builder for choices that read better with a description visible (experience,
 // equipment, focus, recovery) so the two flows use the same control.
-// `accessibilityRole` (additive, 2026-09-03): the How you train wizard uses
+// `accessibilityRole` (additive, 2026-09-03): the Injuries & limitations wizard uses
 // this card for multi-select steps too, where a screen reader must hear
 // "checkbox, checked" rather than "radio, selected". Default unchanged.
 export default function OptionCard({ icon, label, detail, active, onPress, iconSize = 18, accessibilityRole = 'radio' }) {

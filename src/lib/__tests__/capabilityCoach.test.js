@@ -309,7 +309,7 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
 
     it('an overdue restriction adds the close-it hint to the question (2026-08-21)', () => {
       expect(src.includes('episodeOverdue')).toBe(true);
-      expect(src).toContain("This has been going longer than you expected. If you're done with it, you can end it under How you train.");
+      expect(src).toContain("This has been going longer than you expected. If you're done with it, you can end it under Injuries & limitations.");
       // Detection uses the real status machine, not a re-derived clock rule.
       expect(/constraintStatus\(r,\s*Date\.now\(\)\)\s*===\s*EPISODE_STATUS\.AWAITING_CONFIRMATION/.test(src)).toBe(true);
     });
@@ -350,16 +350,16 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
       // the subject leads instead (pinned in constrainedTruth.w2).
       expect(out.adjustments.training.note).toContain('You said it got in the way more than expected; that mainly touches your chest work');
       expect(out.adjustments.training.note).not.toMatch(/You said your chest/);
-      expect(out.adjustments.training.note).toContain('you can adjust things under How you train');
-      expect(out.adjustments.training.note).not.toContain('you can end that under How you train');
+      expect(out.adjustments.training.note).toContain('you can adjust things under Injuries & limitations');
+      expect(out.adjustments.training.note).not.toContain('you can end that under Injuries & limitations');
     });
 
     it('"mostly didn\'t come up" appends the close suggestion, muscles as OUR reading only', () => {
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
       expect(out.adjustments.training.note).toContain("You said it mostly didn't get in the way; that mainly touches your chest work");
       expect(out.adjustments.training.note).not.toMatch(/You said your chest/);
-      expect(out.adjustments.training.note).toContain('you can end that under How you train');
-      expect(out.adjustments.training.note).not.toContain('you can adjust things under How you train');
+      expect(out.adjustments.training.note).toContain('you can end that under Injuries & limitations');
+      expect(out.adjustments.training.note).not.toContain('you can adjust things under Injuries & limitations');
     });
 
     it('no recorded muscles, or three or more, falls back to the generic wording', () => {
@@ -371,7 +371,7 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
         },
       });
       expect(generic.adjustments.training.note)
-        .toContain("You said it mostly didn't come up. If you're done with it, you can end it under How you train.");
+        .toContain("You said it mostly didn't come up. If you're done with it, you can end it under Injuries & limitations.");
       const wide = runWeeklyCoach({
         ...baseInputs,
         physicalConstraint: {
@@ -380,7 +380,7 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
         },
       });
       expect(wide.adjustments.training.note)
-        .toContain('You said it got in the way more than expected. If that carries on, you can adjust it under How you train.');
+        .toContain('You said it got in the way more than expected. If that carries on, you can adjust it under Injuries & limitations.');
     });
 
     it('"fine" acknowledges without changing anything; no answer stays silent', () => {
@@ -401,9 +401,9 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
       // the full-data path, so a user without regular weigh-ins never saw
       // either suggestion. Now applied at every note-bearing return.
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
-      expect(out.adjustments.training.note).toContain('you can end that under How you train');
+      expect(out.adjustments.training.note).toContain('you can end that under Injuries & limitations');
       const inWay = withAnswer(CAPABILITY_WEEK_ANSWER.IN_THE_WAY);
-      expect(inWay.adjustments.training.note).toContain('you can adjust things under How you train');
+      expect(inWay.adjustments.training.note).toContain('you can adjust things under Injuries & limitations');
     });
 
     it('suggestions never change a number: decisions identical across answers', () => {

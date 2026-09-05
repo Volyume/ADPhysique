@@ -41,7 +41,7 @@ describe('T1-12: PlansScreen reveals capability-blocked slots after generation',
 
   test('capabilityBlockedNote is a local pure helper with the exact singular/plural copy', () => {
     expect(source).toMatch(
-      /function capabilityBlockedNote\(n\) \{\s*\n\s*return n === 1\s*\n\s*\? '1 movement sat outside how you train, so your plan works without it\.'\s*\n\s*: `\$\{n\} movements sat outside how you train, so your plan works without them\.`;\s*\n\s*\}/,
+      /function capabilityBlockedNote\(n\) \{\s*\n\s*return n === 1\s*\n\s*\? "1 movement clashed with an injury or limitation you've set, so your plan works without it\."\s*\n\s*: `\$\{n\} movements clashed with your injuries or limitations, so your plan works without them\.`;\s*\n\s*\}/,
     );
   });
 });

@@ -308,7 +308,7 @@ export default function PlanPreviewSheet({
       {preview.thinSessions?.length ? (
         <View style={styles.thinSessionBanner}>
           <Text style={[styles.diffShortfall, live.diffShortfall]}>
-            {preview.thinSessions.map(ts => `${ts.workoutName} is unusually reduced: ${ts.omitted} of ${ts.requested} exercises have no match inside how you train.`).join(' ')}
+            {preview.thinSessions.map(ts => `${ts.workoutName} is unusually reduced: ${ts.omitted} of ${ts.requested} exercises have no match within your limitations.`).join(' ')}
             {' '}You can pick replacements yourself, create a custom exercise, or keep the reduced session. Volyume will not add lower-quality work to hit a number.
           </Text>
         </View>
@@ -337,7 +337,7 @@ export default function PlanPreviewSheet({
                 ? `${intentCount === 1 ? 'One slot' : `${intentCount} slots`} would normally use exercises you have set aside. `
                 : ''}
               {capabilityCount > 0
-                ? `${capabilityCount === 1 ? 'One slot has' : `${capabilityCount} slots have`} no match inside how you train.`
+                ? `${capabilityCount === 1 ? 'One slot has' : `${capabilityCount} slots have`} no match within your limitations.`
                 : ''}
             </Text>
           );

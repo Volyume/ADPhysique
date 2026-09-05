@@ -122,7 +122,7 @@ describe('T1-10 - the stored review never outranks capability', () => {
     // planRationale.capabilityLaneStop.guard for the full split).
     expect(read('lib/planAutoGen.js')).toContain('capabilityIneligible: capBaselineBlocked,');
     expect(read('lib/programmeEpoch.js')).toContain("CAPABILITY_EXCLUDED: 'capability_excluded',");
-    expect(read('lib/planRationale.js')).toContain("'This sits outside how you train.'");
+    expect(read('lib/planRationale.js')).toContain("This clashes with an injury or limitation you've set.");
   });
 });
 
@@ -266,7 +266,7 @@ describe('T1-02 / T2-10 - the remaining raw-library paths in this lane', () => {
   test('the coverage line no longer blames equipment alone', () => {
     const src = read('lib/divisionDiff.js');
     expect(src).not.toContain('your equipment has nothing that trains');
-    expect(src).toContain('nothing that fits your equipment and how you train covers');
+    expect(src).toContain('nothing that fits your equipment and your limitations covers');
   });
 });
 

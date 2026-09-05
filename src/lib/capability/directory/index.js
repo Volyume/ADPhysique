@@ -17,7 +17,7 @@ export const OTHER_PROFILE = Object.freeze({
   kind: 'other',
   canonicalName: 'Something else, or not listed',
   aliases: [],
-  routeNote: 'You do not need a name for it. Volyume works from what you tell it about how you train.',
+  routeNote: 'You do not need a name for it. Volyume works from what you tell it you cannot do.',
 });
 
 export function allConditionProfiles() {

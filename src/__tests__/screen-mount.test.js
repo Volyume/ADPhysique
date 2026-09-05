@@ -2887,7 +2887,7 @@ describe('ProOnboarding resumes past Step 1 after the consent detour', () => {
       expect(text).not.toMatch(/Create account and continue/i);
       // RA-3 (Review A, D96): the internal step is still 2, but the visible
       // counter no longer counts the finished sign-in leg, so the first
-      // rendered wizard screen reads "Step 1 of 6 - Baseline" (CC28 added the optional How you train step). Same meaning
+      // rendered wizard screen reads "Step 1 of 6 - Baseline" (CC28 added the optional Injuries & limitations step). Same meaning
       // as the old "Step 2 of" pin: the user is past the account step.
       expect(text).toMatch(/Step\s*1\s*of\s*6\s*-\s*Baseline/i);
     } finally {

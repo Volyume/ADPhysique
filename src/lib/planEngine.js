@@ -2798,7 +2798,7 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   // condition names, no "safe to perform" claim (the equipment sentence
   // above already had that claim removed, CC-D25) - one calm, generic line.
   if (inputs.capabilityShaped) {
-    result.capability = 'Built around how you train.';
+    result.capability = 'Built around your limitations.';
   }
 
   // recovery (conditional)

@@ -150,8 +150,8 @@ const READINESS_ROWS = [
 // copy (planShortfallNote), a different reason class entirely.
 function capabilityBlockedNote(n) {
   return n === 1
-    ? '1 movement sat outside how you train, so your plan works without it.'
-    : `${n} movements sat outside how you train, so your plan works without them.`;
+    ? "1 movement clashed with an injury or limitation you've set, so your plan works without it."
+    : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
 }
 
 export default function HomeScreen({ navigation, route }) {
@@ -317,7 +317,7 @@ export default function HomeScreen({ navigation, route }) {
   // saved flag is read; the loader reveals it for a brand-new user (no sessions
   // logged) who hasn't dismissed it. Auto-clears once totalSessions > 0.
   const [welcomeDismissed, setWelcomeDismissed] = useState(true);
-  // D134 (founder 2026-09-03): the one-time How you train offer. Defaults
+  // D134 (founder 2026-09-03): the one-time Injuries & limitations offer. Defaults
   // dismissed so it never flashes before the stored flag is read; shown only
   // for a person with NOTHING set up (no rows at all, history included).
   const [hytOfferDismissed, setHytOfferDismissed] = useState(true);
@@ -2602,7 +2602,7 @@ export default function HomeScreen({ navigation, route }) {
         {/* History / Lifts / Volume quick links removed from Train (founder
             2026-06-03): they are Progress items and live on the Progress tab. */}
 
-        {/* Founder order 2026-09-05: the "How you train" group is the LAST
+        {/* Founder order 2026-09-05: the "Injuries & limitations" group is the LAST
             item on Today. It reports how training is being worked around;
             it is not the day's action, so it sits below every action and
             evidence card rather than above them. */}
@@ -2612,7 +2612,7 @@ export default function HomeScreen({ navigation, route }) {
             active plan exists, independent of which brief headline fired
             (or none) and of whether the brief itself was dismissed. Same
             quiet styling as the former in-brief line; now tappable
-            through to How you train. */}
+            through to Injuries & limitations. */}
         {/* Premium UI pass. These rows are the capability lane's presence on
             Home, and they were five loose sentences floating on the
             background between two cards: no container, no heading, nothing
@@ -2624,14 +2624,14 @@ export default function HomeScreen({ navigation, route }) {
             the grouping is new. */}
         {hasConstraintRows ? (
         <View style={styles.constraintSection}>
-          <SectionLabel tone="muted">How you train</SectionLabel>
+          <SectionLabel tone="muted">Injuries & limitations</SectionLabel>
           <View style={[styles.constraintGroup, live.constraintGroup]}>
         {activeConstraint && activePlan ? (
           <TouchableOpacity
             style={[styles.constraintLineRow, live.constraintLineRow]}
             onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
             accessibilityRole="button"
-            accessibilityLabel={`${constraintLineText(constraintSubject)} Open How you train`}
+            accessibilityLabel={`${constraintLineText(constraintSubject)} Open Injuries & limitations`}
           >
             <Text style={[styles.constraintLineText, live.constraintLineText]}>
               {constraintLineText(constraintSubject)}
@@ -2642,14 +2642,14 @@ export default function HomeScreen({ navigation, route }) {
 
         {/* CC33 D112 R5 (closes audit T1-15/T2-24): the §22 AWAITING
             prompt, previously reachable only from HowYouTrain and the
-            weekly check-in. Quiet row, tappable through to How you train
+            weekly check-in. Quiet row, tappable through to Injuries & limitations
             to answer it there. */}
         {awaitingConstraintLine ? (
           <TouchableOpacity
             style={[styles.constraintLineRow, live.constraintLineRow]}
             onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
             accessibilityRole="button"
-            accessibilityLabel={`${awaitingConstraintLine} Open How you train`}
+            accessibilityLabel={`${awaitingConstraintLine} Open Injuries & limitations`}
           >
             <Text style={[styles.constraintLineText, live.constraintLineText]}>
               {awaitingConstraintLine}
@@ -2667,10 +2667,10 @@ export default function HomeScreen({ navigation, route }) {
             style={[styles.constraintLineRow, live.constraintLineRow]}
             onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
             accessibilityRole="button"
-            accessibilityLabel="A change to how you train is waiting for your decision. Open How you train"
+            accessibilityLabel="A change to your limitations is waiting for your decision. Open Injuries & limitations"
           >
             <Text style={[styles.constraintLineText, live.constraintLineText]}>
-              A change to how you train is waiting for your decision.
+              A change to your limitations is waiting for your decision.
             </Text>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </TouchableOpacity>
@@ -2695,12 +2695,12 @@ export default function HomeScreen({ navigation, route }) {
             quiet line (rampLine's non-tappable pattern) says the truth
             instead, in the lane's established honesty vocabulary
             (RoutineDetail and ActiveWorkout say the same at their swap
-            surfaces). Not tappable: it asks nothing, and How you train
+            surfaces). Not tappable: it asks nothing, and Injuries & limitations
             would face the same failed read. */}
         {capabilityCheckFailed ? (
           <View style={[styles.constraintLineRow, live.constraintLineRow]}>
             <Text style={[styles.constraintLineText, live.constraintLineText]}>
-              Volyume could not check how you train just now.
+              Volyume could not check Injuries & limitations just now.
             </Text>
           </View>
         ) : null}

@@ -81,7 +81,7 @@ const REASON_COPY = Object.freeze({
   // CC30 (section 7 matrix): an episode-affected slot is kept, not
   // judged. Calm, no medical language, and it names the temporary frame.
   [SLOT_REASON.CAPABILITY_HOLD]:
-    'This sits outside how you train while your temporary change lasts, so it is kept as it is rather than judged.',
+    "This clashes with an injury or limitation you've set while your temporary change lasts, so it is kept as it is rather than judged.",
   // Changed, and why.
   [SLOT_REASON.USER_EXCLUDED]:
     'You asked not to be suggested this.',
@@ -89,7 +89,7 @@ const REASON_COPY = Object.freeze({
   // line must never read as a preference ("asked not to be suggested")
   // for a rule that means the movement sits outside how the user trains.
   [SLOT_REASON.CAPABILITY_EXCLUDED]:
-    'This sits outside how you train.',
+    "This clashes with an injury or limitation you've set.",
   [SLOT_REASON.USER_SWAPPED_AWAY]:
     'You have swapped this out of your plan more than once.',
   [SLOT_REASON.JOINT_DISCOMFORT]:

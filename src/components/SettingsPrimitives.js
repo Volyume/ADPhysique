@@ -87,7 +87,7 @@ export function SectionHeader({ title }) {
 // header; the SafeAreaView then owns the top inset too, since no native bar
 // is left to claim it. Screens not yet converted omit `title` and keep
 // relying on the stack header, so this stays a no-op for them.
-// `scrollRef` (additive, 2026-09-03, D133): How you train scrolls to the
+// `scrollRef` (additive, 2026-09-03, D133): Injuries & limitations scrolls to the
 // card the add wizard just made, so a flow ends on the thing it created.
 export function SettingsPage({ title, children, scrollRef }) {
   // CP-10 stage 3: live theme (src/hooks/useTheme.js) for the page

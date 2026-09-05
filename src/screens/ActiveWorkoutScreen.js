@@ -852,7 +852,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   //
   // Round 14 (R14-2): reload on FOCUS too. The round-13 B5 ruling exists
   // for a rule captured mid-session through "Work around this" - which
-  // navigates to How you train and back - yet this state only ever
+  // navigates to Injuries & limitations and back - yet this state only ever
   // reloaded on exercise change or swap-sheet open, so the freshly
   // captured rule stayed invisible on the very row it was captured from
   // (the class R6-2 closed on RoutineDetailScreen). Same burst-window
@@ -1067,9 +1067,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const named = subjectPhrase(definiteBaseline
           .filter(c => c.ruleKind !== 'exercise')
           .map(c => (sidedUnionShape(c, capForPhrase) ? { ...c, laterality: null } : c)), {});
-        if (named) return { kind: 'baseline', copy: `This one involves ${named}, which sits outside how you train. Swap it when you're ready.` };
+        if (named) return { kind: 'baseline', copy: `This one involves ${named}, which clashes with an injury or limitation you've set. Swap it when you're ready.` };
       } catch (_e) { /* fall through to the generic line */ }
-      return { kind: 'baseline', copy: "This one sits outside how you train. Swap it when you're ready." };
+      return { kind: 'baseline', copy: "This one clashes with an injury or limitation you've set. Swap it when you're ready." };
     }
     if (kind === 'unknown') {
       try {
@@ -1086,7 +1086,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           .map(c => (unionShape(c, capUnk) ? { ...c, laterality: null } : c)), {});
         if (named) return { kind: 'unknown', copy: `Volyume doesn't know yet whether this involves ${named}, so it stays as planned.` };
       } catch (_e) { /* fall through to the generic line */ }
-      return { kind: 'unknown', copy: "Volyume doesn't know yet how this fits how you train, so it stays as planned." };
+      return { kind: 'unknown', copy: "Volyume couldn't check this against your limitations yet, so it stays as planned." };
     }
     return null;
   })();
@@ -1620,11 +1620,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // last-known state still filters with the user's own rules).
       const capUnknown = !!(state?.capability?.unavailable && state?.capability?.empty);
       if (state?.unavailable && capUnknown) {
-        toast.show('Avoided movements and how you train could not be checked, so nothing is filtered here.', { variant: 'warning' });
+        toast.show('Avoided movements and Injuries & limitations could not be checked, so nothing is filtered here.', { variant: 'warning' });
       } else if (state?.unavailable) {
         toast.show('Avoided movements could not be checked, so nothing is filtered for them here.', { variant: 'warning' });
       } else if (capUnknown) {
-        toast.show('Volyume could not check how you train just now, so nothing is filtered for it here.', { variant: 'warning' });
+        toast.show('Volyume could not check Injuries & limitations just now, so nothing is filtered for it here.', { variant: 'warning' });
       }
     } catch (_) { /* personalisation is additive: the structural list stands */ }
     // EL-11 (docs/exercise-library-expansion-2026-09-05/05-DECISIONS.md):
@@ -4441,9 +4441,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 // The label follows the lane: a permanent rule is not a
                 // "temporary change" (D112 R6 vocabulary law). An UNKNOWN
                 // notice (F4) labels by the lane's settings home too - it
-                // is a fact about how-you-train knowledge, not a change.
+                // is a fact about what the app knows, not a change.
                 label: (constraintNotice?.kind === 'baseline' || constraintNotice?.kind === 'unknown')
-                  ? 'How you train' : 'Temporary change',
+                  ? 'Limitation' : 'Temporary change',
                 icon: 'body-outline',
                 iconColor: t.colors.warning,
                 content: (
@@ -4600,7 +4600,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               (quiet text, not a tap-to-expand chip): no action to take. */}
           {carvedForOneSide ? (
             <Text style={[styles.sideCarveNote, live.sideCarveNote]}>
-              Volyume counts this one side at a time, matching how you train.
+              Volyume counts this one side at a time, matching the side you set.
             </Text>
           ) : null}
 
@@ -5491,7 +5491,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                         onPress: () => {
                           // T2-11: this used to ALSO open the swap sheet
                           // while navigating with no params, so the sheet
-                          // opened orphaned underneath and How you train
+                          // opened orphaned underneath and Injuries & limitations
                           // landed cold. It navigates only now, pre-filled
                           // from this exercise's own driving conflict
                           // (workAroundPreselect above); "Just swap it"
@@ -5950,7 +5950,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 ranking and filtering are unchanged. */}
             {swapNarrowedCount > 0 ? (
               <Text style={[styles.swapNote, live.swapNote]}>
-                {swapNarrowedCount} movement{swapNarrowedCount === 1 ? '' : 's'} left out for how you train.
+                {swapNarrowedCount} movement{swapNarrowedCount === 1 ? '' : 's'} left out for your limitations.
               </Text>
             ) : null}
             {/* EL-11: user intent outranks inference - the pool is a default,
@@ -5991,7 +5991,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               ListEmptyComponent={
                 <View style={styles.swapEmpty}>
                   <Text style={[styles.swapEmptyTitle, live.swapEmptyTitle]}>
-                    {swapNarrowedCount > 0 ? 'No close matches inside how you train.' : 'No close matches yet'}
+                    {swapNarrowedCount > 0 ? 'No close matches within your limitations.' : 'No close matches yet'}
                   </Text>
                   <Text style={[styles.swapEmptyText, live.swapEmptyText]}>Search the full library instead.</Text>
                 </View>

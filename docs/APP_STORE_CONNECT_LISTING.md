@@ -190,7 +190,7 @@ same health-metadata scrutiny, and that decision is recorded here so the two
 fields are known to differ on purpose.
 
 ```
-You can now tell Volyume which movements and positions to keep out of your plan, and it builds around them. Set it up in Settings, under How you train. Choose a whole movement family or a single exercise, keep it in place for a few weeks or leave it open, and allow individual exercises back in whenever you want.
+You can now tell Volyume which movements and positions to keep out of your plan, and it builds around them. Set it up in the Coach tab or Settings, under Injuries & limitations. Choose a whole movement family or a single exercise, keep it in place for a few weeks or leave it open, and allow individual exercises back in whenever you want.
 
 The personal best alert now fires every time you beat your best during a session, not only the first time. The summary still shows one per exercise, and says how many lifts you beat a best on.
 

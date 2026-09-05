@@ -428,12 +428,12 @@ describe('generatePlan, whyThis capability line', () => {
 
   test('capabilityShaped true: emits the one calm line, nothing else', () => {
     const plan = generatePlan({ ...BASE_INPUTS, capabilityShaped: true });
-    expect(plan.whyThis.capability).toBe('Built around how you train.');
+    expect(plan.whyThis.capability).toBe('Built around your limitations.');
   });
 
   test('capabilityShaped as a truthy count also emits the line (the input may be a boolean or a count)', () => {
     const plan = generatePlan({ ...BASE_INPUTS, capabilityShaped: 2 });
-    expect(plan.whyThis.capability).toBe('Built around how you train.');
+    expect(plan.whyThis.capability).toBe('Built around your limitations.');
   });
 
   test('capabilityShaped false/0: no capability key (falsy is falsy, not just undefined)', () => {

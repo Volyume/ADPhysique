@@ -454,7 +454,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                 carried onto the preview that actually decides. */}
             {compatibility?.fullyCompatible === true && (
               <View style={[styles.libraryBadge, live.libraryBadge]}>
-                <Text style={[styles.libraryBadgeText, live.libraryBadgeText]}>Fits how you train</Text>
+                <Text style={[styles.libraryBadgeText, live.libraryBadgeText]}>Fits your limitations</Text>
               </View>
             )}
             {compatibility && compatibility.fullyCompatible === false && (

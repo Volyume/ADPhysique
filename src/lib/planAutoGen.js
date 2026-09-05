@@ -513,7 +513,7 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
     // unknown as not-suggestable - right for generation's own picks
     // (CAP-8: a custom lift is never auto-picked), wrong for REPLACING a
     // trained incumbent: a custom lift under a demand rule was dropped
-    // from the plan with "This sits outside how you train." on a fact
+    // from the plan with "This clashes with a limitation you have set." on a fact
     // the app does not hold. REPLACE now demands a DEFINITE blocking
     // conflict, exactly blockAdvisor's gate, so the two engines answer
     // the same question the same way. A failed read answers false -

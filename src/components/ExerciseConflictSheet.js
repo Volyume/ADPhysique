@@ -68,8 +68,8 @@ export default function ExerciseConflictSheet({
   const reasonCaption = (c) => {
     const r = String(c?.reason ?? '');
     if (r === 'capability_clinician') return 'You told Volyume a clinician asked you to leave this one out';
-    if (r === 'capability_declared') return 'Outside how you train';
-    if (r === 'capability_unknown') return "Volyume doesn't know yet whether this fits how you train";
+    if (r === 'capability_declared') return "Clashes with an injury or limitation you've set";
+    if (r === 'capability_unknown') return "Volyume couldn't check this against your limitations yet";
     return null; // the intent lane keeps its existing wording below
   };
 
@@ -128,7 +128,7 @@ export default function ExerciseConflictSheet({
             {blocked
               ? 'Everything that would normally fit here is set aside, so Volyume has left these slots empty rather than putting back something you asked it not to suggest.'
               : hasCapability
-                ? 'You chose this plan, and some of it sits outside how you train or is set aside. Both facts stand, so each row below is your call.'
+                ? 'You chose this plan, and some of it clashes with your injuries or limitations, or is set aside. Both facts stand, so each row below is your call.'
                 : 'You chose this plan, and Volyume also remembers what you asked it to stop suggesting. Both still stand, so this is your call.'}
           </Text>
           <ScrollView contentContainerStyle={styles.list}>
@@ -163,7 +163,7 @@ export default function ExerciseConflictSheet({
                         // Same route as the picker's confirm flow: update
                         // the restriction first, then the plan follows.
                         <Button
-                          title="Update How you train"
+                          title="Open Injuries & limitations"
                           size="sm"
                           style={styles.actionBtn}
                           variant="secondary"
@@ -178,7 +178,7 @@ export default function ExerciseConflictSheet({
                               if (navigationRef.isReady()) navigationRef.navigate('HowYouTrain');
                             } catch (_e) { /* best effort */ }
                           }}
-                          accessibilityLabel={`Update How you train for ${c.exerciseName}`}
+                          accessibilityLabel={`Open Injuries & limitations for ${c.exerciseName}`}
                         />
                       ) : !blocked ? (
                         <Button
@@ -198,7 +198,7 @@ export default function ExerciseConflictSheet({
           </ScrollView>
           {!blocked ? (
             <Text style={[styles.footnote, live.footnote]}>
-              Keeping one here does not change what Volyume suggests elsewhere. It stays out of suggestions until you allow it again under How you train.
+              Keeping one here does not change what Volyume suggests elsewhere. It stays out of suggestions until you allow it again under Injuries & limitations.
             </Text>
           ) : null}
           <Button

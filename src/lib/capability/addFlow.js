@@ -2,7 +2,7 @@
  * capability/addFlow.js - the add flow's pure core (flow audit 2026-09-03,
  * ruling D133).
  *
- * "How you train" used to stage its add flow as a card that replaced its
+ * "Injuries & limitations" used to stage its add flow as a card that replaced its
  * own button mid-page: no title, no step count, no Back on eight of nine
  * stages, no Cancel, a readback that restated only the rule labels, and a
  * plan decision that arrived afterwards as a modal nobody had been told
@@ -45,7 +45,7 @@ export const ADD_STEP = Object.freeze({
   WHAT: 'what',       // which KIND of thing (movement/position, pattern, exercise, always-fine)
   WHICH: 'which',     // the rule content for that kind
   SIDE: 'side',       // only when a chosen demand axis carves by side
-  WHEN: 'when',       // how I train generally (baseline) vs temporary (episode)
+  WHEN: 'when',       // long-term (baseline) vs temporary (episode)
   SINCE: 'since',     // episode only
   UNTIL: 'until',     // episode only
   CHECK: 'check',     // the full readback; Save lives here
@@ -73,7 +73,7 @@ export const KIND_OPTIONS = Object.freeze([
 ]);
 
 export const ROLE_OPTIONS = Object.freeze([
-  { role: CONSTRAINT_ROLE.BASELINE, icon: 'body-outline', label: 'How I train generally', detail: 'Part of your normal setup. Full progression and coaching, no special labels.' },
+  { role: CONSTRAINT_ROLE.BASELINE, icon: 'body-outline', label: 'Long-term', detail: 'Part of your normal training. Full progression and coaching, no special labels.' },
   { role: CONSTRAINT_ROLE.EPISODE, icon: 'time-outline', label: 'Temporary, for now', detail: 'Volyume takes it as a passing change and helps you build back up when it ends.' },
 ]);
 
@@ -265,7 +265,7 @@ export function whichLabel(draft) {
 
 export function roleLabel(draft) {
   if (draft.kind === ADD_KIND.ALLOW) return 'Always fine for you';
-  return draft.role === CONSTRAINT_ROLE.EPISODE ? 'Temporary, for now' : 'How you train generally';
+  return draft.role === CONSTRAINT_ROLE.EPISODE ? 'Temporary, for now' : 'Long-term';
 }
 
 export function sinceLabel(days) {
@@ -306,7 +306,7 @@ export function summaryLines(draft, { nowMs } = {}) {
   const kindOpt = KIND_OPTIONS.find((k) => k.kind === draft.kind);
   lines.push({ key: 'what', label: kindOpt ? kindOpt.label : 'What', value: whichLabel(draft) || 'Nothing chosen yet', step: draft.preselected && !draft.editing ? null : ADD_STEP.WHICH });
   if (draft.kind === ADD_KIND.ALLOW) {
-    lines.push({ key: 'when', label: 'Applies', value: 'Always. It stays part of how you train.', step: null });
+    lines.push({ key: 'when', label: 'Applies', value: 'Always. It stays part of your normal training.', step: null });
   } else if (draft.role === CONSTRAINT_ROLE.EPISODE) {
     const when = untilDate(draft.endDays, nowMs);
     lines.push({
@@ -319,7 +319,7 @@ export function summaryLines(draft, { nowMs } = {}) {
     });
     lines.push({ key: 'since', label: 'Since', value: sinceLabel(draft.startDays), step: ADD_STEP.SINCE });
   } else {
-    lines.push({ key: 'when', label: 'How long', value: 'Part of how you train generally', step: ADD_STEP.WHEN });
+    lines.push({ key: 'when', label: 'How long', value: 'Long-term', step: ADD_STEP.WHEN });
   }
   const sq = sideQuestion(draft);
   if (sq) {
@@ -394,7 +394,7 @@ export function whatHappensNext(draft, { nowMs, planDecision = null } = {}) {
   const out = [];
   if (draft.kind === ADD_KIND.ALLOW) {
     out.push('It shows up in your sessions and suggestions like any other exercise.');
-    out.push('You can remove this any time under How you train.');
+    out.push('You can remove this any time under Injuries & limitations.');
     return out;
   }
   if (planDecision === 'applied') out.push('Your current plan is updated for this from your next session.');
@@ -404,10 +404,10 @@ export function whatHappensNext(draft, { nowMs, planDecision = null } = {}) {
     out.push(when
       ? `Around ${when}, Volyume asks whether you still need this. Nothing ends until you say so.`
       : 'Volyume keeps working around this until you end it. It never ends it for you.');
-    out.push('When it has passed, end it under How you train and training builds back up to your plan.');
+    out.push('When it has passed, end it under Injuries & limitations and training builds back up to your plan.');
   } else {
     out.push('Every new plan and workout is built around this.');
-    out.push('You can change or remove it any time under How you train.');
+    out.push('You can change or remove it any time under Injuries & limitations.');
   }
   return out;
 }

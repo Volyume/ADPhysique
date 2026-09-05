@@ -45,8 +45,8 @@ export async function capabilityPreflight(userId) {
  */
 export function offerCapabilityPreflightChoice({ onHold, onContinue } = {}) {
   appAlert(
-    'How you train could not be checked',
-    'Volyume could not read how you train just now. You can hold suggestions until it loads, or continue without those adjustments this once.',
+    'Injuries & limitations could not be checked',
+    'Volyume could not read your limitations just now. You can hold suggestions until it loads, or continue without those adjustments this once.',
     [
       { text: 'Hold suggestions', style: 'cancel', onPress: () => { try { onHold?.(); } catch (_e) { /* noop */ } } },
       { text: 'Continue without checks', onPress: () => { try { onContinue?.(); } catch (_e) { /* noop */ } } },

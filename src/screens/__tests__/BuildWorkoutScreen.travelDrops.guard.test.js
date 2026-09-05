@@ -46,7 +46,7 @@ describe('T1-23: travel mode drops are counted and classified', () => {
   test('one line per non-zero class, via the screen\'s toast, with the exact copy', () => {
     const body = applyTravelModeBody();
     expect(body).toMatch(
-      /\$\{capabilityDrops === 1 \? '1 movement' : `\$\{capabilityDrops\} movements`\} left out for how you train\./,
+      /\$\{capabilityDrops === 1 \? '1 movement' : `\$\{capabilityDrops\} movements`\} left out for your limitations\./,
     );
     expect(body).toMatch(
       /\$\{preferenceDrops === 1 \? '1 movement' : `\$\{preferenceDrops\} movements`\} left out for your avoided movements\./,

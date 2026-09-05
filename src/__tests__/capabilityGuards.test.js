@@ -228,7 +228,7 @@ describe('CAP-7 at the install-conflict sheet (red-team finding 3, bundle)', () 
       sheet.indexOf("=== 'capability_clinician' ?"),
       sheet.indexOf('title="Keep it in this plan"'),
     );
-    expect(clinician).toMatch(/title="Update How you train"/);
+    expect(clinician).toMatch(/title="Open Injuries & limitations"/);
     expect(clinician).toMatch(/navigate\('HowYouTrain'\)/);
     expect(clinician).not.toMatch(/onKeep/);
   });

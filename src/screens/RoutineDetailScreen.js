@@ -100,8 +100,8 @@ function capabilityPlanCaption(capState, exercise, serveOutcome = null) {
       if (serveOutcome === 'omitted') return 'Left out of sessions while your change lasts, with nothing forced in its place.';
       return 'Sits outside your temporary change.';
     }
-    if (kind === 'baseline') return 'Sits outside how you train.';
-    if (kind === 'unknown') return "Volyume doesn't know yet whether this fits how you train.";
+    if (kind === 'baseline') return "Clashes with an injury or limitation you've set.";
+    if (kind === 'unknown') return "Volyume couldn't check this against your limitations yet.";
     return null;
   } catch (_e) {
     return null;
@@ -410,7 +410,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
         // equipment, preference AND capability, under the block-scoped
         // intent state (loadScopedIntentState, the R6-1 loader). Fed the
         // raw library, the fingerprint described a plan generation never
-        // built, and the coverage line named "how you train" as a cause
+        // built, and the coverage line named "Injuries & limitations" as a cause
         // it never checked. Best-effort on failure: the lines render
         // ABSENT (round 8's A1 posture, stated below) - the round-7
         // wording here claimed a raw-library fallback that no longer
@@ -649,11 +649,11 @@ export default function RoutineDetailScreen({ navigation, route }) {
       // last-known state still filters with the user's own rules).
       const capUnknown = !!(state?.capability?.unavailable && state?.capability?.empty);
       if (state?.unavailable && capUnknown) {
-        toast.show('Avoided movements and how you train could not be checked, so nothing is filtered here.', { variant: 'warning' });
+        toast.show('Avoided movements and Injuries & limitations could not be checked, so nothing is filtered here.', { variant: 'warning' });
       } else if (state?.unavailable) {
         toast.show('Avoided movements could not be checked, so nothing is filtered for them here.', { variant: 'warning' });
       } else if (capUnknown) {
-        toast.show('Volyume could not check how you train just now, so nothing is filtered for it here.', { variant: 'warning' });
+        toast.show('Volyume could not check Injuries & limitations just now, so nothing is filtered for it here.', { variant: 'warning' });
       }
     } catch (_) { /* personalisation is additive: the structural list stands */ }
     setSwapCandidates(ordered);
@@ -1470,7 +1470,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               ranking and filtering are unchanged. */}
           {swapNarrowedCount > 0 ? (
             <Text style={[styles.swapNote, live.swapNote]}>
-              {swapNarrowedCount} movement{swapNarrowedCount === 1 ? '' : 's'} left out for how you train.
+              {swapNarrowedCount} movement{swapNarrowedCount === 1 ? '' : 's'} left out for your limitations.
             </Text>
           ) : null}
           {/* EL-11: user intent outranks inference - the pool is a default,
@@ -1518,7 +1518,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             )}
             ListEmptyComponent={
               <Text style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
-                {swapNarrowedCount > 0 ? 'No close matches inside how you train.' : 'No close matches yet.'}
+                {swapNarrowedCount > 0 ? 'No close matches within your limitations.' : 'No close matches yet.'}
               </Text>
             }
             ListFooterComponent={

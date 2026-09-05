@@ -85,7 +85,7 @@ const PROTEIN_SHORT = {
 // sexGate suite's guards (its step-2 pins are untouched). TOTAL_STEPS
 // moved from 6 to 7; every step after Training week shifted up by one.
 const TOTAL_STEPS = 7;
-const STEP_LABELS = ['Account', 'Baseline', 'Body composition', 'Training week', 'How you train', 'Targets', 'Check-in rhythm'];
+const STEP_LABELS = ['Account', 'Baseline', 'Body composition', 'Training week', 'Injuries & limitations', 'Targets', 'Check-in rhythm'];
 const STEP_OUTCOMES = {
   1: [
     { icon: 'shield-checkmark-outline', label: 'Secure sign-in' },
@@ -367,8 +367,8 @@ function QuestionGroup({ icon, title, sub, children }) {
 // preview (the model), which is the source of the exact copy this pins.
 function capabilityBlockedNote(n) {
   return n === 1
-    ? '1 movement sat outside how you train, so your plan works without it.'
-    : `${n} movements sat outside how you train, so your plan works without them.`;
+    ? "1 movement clashed with an injury or limitation you've set, so your plan works without it."
+    : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
 }
 
 export default function ProOnboardingScreen({ navigation }) {
@@ -1107,7 +1107,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   // CC28 (section 11.2): the capability step is OPTIONAL and one-tap
   // skippable - no gate, no required field. The full add flow (consent,
-  // cards, durability, readback) is the shared How you train surface;
+  // cards, durability, readback) is the shared Injuries & limitations surface;
   // this step only offers the entry choice, so the two paths cannot
   // drift (section 12: "Add flows = the onboarding cards").
   function advanceFrom5() {
@@ -1732,10 +1732,10 @@ export default function ProOnboardingScreen({ navigation }) {
           // capability) still reads as the plain generic failure, unchanged.
           if (planResult.error === 'plan_blocked_by_exclusions' && planResult.blockedByCapability) {
             appAlert(
-              'Volyume could not build a full plan inside how you train.',
-              'Your profile and targets are saved. Every session needed at least one movement that sits outside how you train right now.',
+              'Volyume could not build a full plan within your limitations.',
+              "Your profile and targets are saved. Every session needed at least one movement that clashes with an injury or limitation you've set right now.",
               [
-                { text: 'Open How you train', onPress: () => navigation.navigate('HowYouTrain') },
+                { text: 'Open Injuries & limitations', onPress: () => navigation.navigate('HowYouTrain') },
                 // First run has no plan library route from this screen
                 // (AUDIT-A precedent, FreeStarterScreen's own fromFirstRun
                 // branch): a plain hold instead of a browse action that
@@ -2320,10 +2320,10 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 5, How you train (CC28, section 11.2) ─────────────────────────────
+  // ── Step 5, Injuries & limitations (CC28, section 11.2) ───────────────────
   // OPTIONAL, one-tap skippable, skip is first-class. The full add flow
   // (consent moment, functional cards, durability, readback) is the shared
-  // How you train surface, so the two entry points can never drift.
+  // Injuries & limitations surface, so the two entry points can never drift.
 
   if (step === 5) {
     return (
@@ -2336,23 +2336,26 @@ export default function ProOnboardingScreen({ navigation }) {
             onBack={goBack}
           />
 
+          {/* D152 / certification finding A-1: there used to be TWO skip
+              buttons here, "Nothing in particular" and "Later, from
+              Settings", running the identical handler. Nothing recorded a
+              "later" and nothing ever followed up, so the second button
+              promised a reminder that did not exist. One honest skip now,
+              with the caption saying where the door actually is. */}
           <QuestionGroup icon="body-outline">
             <View style={styles.section}>
               <Button
-                title="Nothing in particular"
-                onPress={advanceFrom5}
-              />
-            </View>
-            <View style={styles.section}>
-              <Button
                 title="Yes, let's set that up"
-                variant="secondary"
                 onPress={() => navigation.navigate('HowYouTrain')}
               />
             </View>
             <View style={styles.sectionLast}>
+              {/* NOT "Not now": that phrase is reserved by the R8-3/R9
+                  guard for the button that actually DECLINES a capability
+                  change (HowYouTrainScreen.capabilityFlows.guard.test.js).
+                  This one writes nothing, so it says what it does. */}
               <Button
-                title="Later, from Settings"
+                title="Skip for now"
                 variant="secondary"
                 onPress={advanceFrom5}
               />
@@ -2360,7 +2363,7 @@ export default function ProOnboardingScreen({ navigation }) {
           </QuestionGroup>
 
           <Text style={[styles.fieldHint, live.fieldHint]}>
-            You can change any of this at any time under Settings, in How you train.
+            You can add this any time under Injuries & limitations, in the Coach tab or Settings.
           </Text>
         </ScrollView>
       </SafeAreaView>

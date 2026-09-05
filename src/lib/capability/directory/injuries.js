@@ -32,7 +32,7 @@ const REVIEWED = '2026-08-21';
 
 const PRO_NOTE = 'If something serious has happened, or things are getting worse rather than better, a professional needs to see it. Volyume supports training around what you confirm, nothing more.';
 const KEEP_TRAINING = 'Everything this does not touch carries on as normal; Volyume plans and judges only what you have set aside.';
-const RI_NOTE = 'When you end a temporary change, movements come back conservatively and volume rebuilds gradually toward your own plan. No timetable is assumed.';
+const RI_NOTE = 'When you end a temporary change, movements come back conservatively and volume rebuilds gradually towards your own plan. No timetable is assumed.';
 
 const dq = (id, demandId, wording, whyAsked) => ({ id, kind: Q.DEMAND, demandId, wording, whyAsked });
 const fq = (id, familyKeys, wording, whyAsked) => ({ id, kind: Q.FAMILY, familyKeys, wording, whyAsked });

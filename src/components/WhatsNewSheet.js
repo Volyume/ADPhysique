@@ -54,7 +54,7 @@ export const WHATS_NEW = {
   // where to look. The plain-English copy pass and the record-detection fixes
   // are felt rather than announced, so only the record one earns a line.
   '1.3.0': [
-    { icon: 'medkit-outline', text: 'You can tell Volyume what to build your training around, and which side it affects. Settings, then How you train.' },
+    { icon: 'medkit-outline', text: 'You can tell Volyume about injuries, pain, conditions or disabilities, and which side they affect. Coach tab or Settings, then Injuries & limitations.' },
     { icon: 'search-outline', text: 'Looking for a specific condition or injury finds better questions to ask you. You never need a name to get the same support.' },
     { icon: 'body-outline', text: 'Where an exercise is set up differently for you, the setup notes now say how instead of assuming one way of doing it.' },
     { icon: 'trophy-outline', text: 'Personal records show every time you beat your best, including the first time you meet an exercise.' },

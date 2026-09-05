@@ -6,7 +6,7 @@
  *  - T1-03: a BASELINE rule created while a plan was installed changed
  *    nothing, ever - the excluded exercise kept being served, unmarked,
  *    until a rebuild happened for unrelated reasons.
- *  - T2-01: "This is how I train now" ended the episode rows, minted
+ *  - T2-01: "Make it long-term" ended the episode rows, minted
  *    baseline rows, and serve-time substitution silently stopped - the
  *    excluded base exercise came straight back. The rewrite is the
  *    missing half: promotion's minted ids feed the same proposal, so
@@ -210,10 +210,10 @@ describe('source wiring', () => {
     // F1 (adversarial review): judged on the library-RESOLVED row - the
     // entry's own exercise object has no demand columns.
     expect(src).toContain('baselineConflicts(intentState.capability, judgedExercise)');
-    expect(src).toContain('sits outside how you train. Swap it when you\'re ready.');
+    expect(src).toContain("clashes with an injury or limitation you've set. Swap it when you're ready.");
     // The strip label follows the lane - a permanent rule is never
     // presented as a temporary change, and the F4 unknown notice labels
     // by the lane's settings home too.
-    expect(src).toMatch(/kind === 'baseline' \|\| constraintNotice\?\.kind === 'unknown'\)\s*\n\s*\? 'How you train' : 'Temporary change'/);
+    expect(src).toMatch(/kind === 'baseline' \|\| constraintNotice\?\.kind === 'unknown'\)\s*\n\s*\? 'Limitation' : 'Temporary change'/);
   });
 });

@@ -292,7 +292,7 @@ export default function BuildWorkoutScreen({ navigation }) {
     // screen's toast. No behaviour change to the filtering itself above.
     const dropLines = [];
     if (capabilityDrops > 0) {
-      dropLines.push(`${capabilityDrops === 1 ? '1 movement' : `${capabilityDrops} movements`} left out for how you train.`);
+      dropLines.push(`${capabilityDrops === 1 ? '1 movement' : `${capabilityDrops} movements`} left out for your limitations.`);
     }
     if (preferenceDrops > 0) {
       dropLines.push(`${preferenceDrops === 1 ? '1 movement' : `${preferenceDrops} movements`} left out for your avoided movements.`);

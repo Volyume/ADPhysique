@@ -4,7 +4,7 @@
  *
  * A person can find support for a named issue by searching for it, and
  * can get identical support without naming anything (the OTHER path and
- * the ordinary How you train flow). Selecting a profile is STATELESS:
+ * the ordinary Injuries & limitations flow). Selecting a profile is STATELESS:
  * this screen stores nothing, emits nothing, and never writes - each
  * question routes into the existing consent-gated add flow with the
  * question's functional content preselected, where the user still walks
@@ -55,7 +55,7 @@ const profileIcon = (p) => {
   return p.kind === PROFILE_KIND.INJURY ? 'medkit-outline' : 'body-outline';
 };
 
-// The question's functional content, shaped for the How you train add
+// The question's functional content, shaped for the Injuries & limitations add
 // flow's preselect contract (GC-D1: a suggestion, never a write).
 function preselectFor(question) {
   switch (question.kind) {
@@ -148,7 +148,7 @@ export default function TrainingConsiderationsScreen() {
         <SectionHeader title="Set up what applies to you" />
         <View style={styles.lead}>
           <Text style={[styles.leadText, { color: t.colors.textSecondary }]}>
-            People differ, so nothing is assumed. Tapping one opens How you train with the answer filled in, ready for you to confirm, change or skip.
+            People differ, so nothing is assumed. Tapping one opens Injuries & limitations with the answer filled in, ready for you to confirm, change or skip.
           </Text>
         </View>
         <View style={[settingsStyles.section, live.section]}>
@@ -159,7 +159,7 @@ export default function TrainingConsiderationsScreen() {
               label={q.wording}
               sub={q.whyAsked}
               accessibilityLabel={q.wording}
-              accessibilityHint="Opens How you train with this ready to confirm"
+              accessibilityHint="Opens Injuries & limitations with this ready to confirm"
               // D133: the wizard shows where the person came from and
               // pre-selects (never skips) the role this profile's kind
               // suggests. `from` is additive to the GC-D1 preselect shape.
@@ -172,8 +172,8 @@ export default function TrainingConsiderationsScreen() {
           <SettingRow
             icon="ellipsis-horizontal-circle-outline"
             label="Something else"
-            sub="If none of these fit, How you train covers anything else."
-            accessibilityLabel="Something else about how you train"
+            sub="If none of these fit, Injuries & limitations covers anything else."
+            accessibilityLabel="Something else"
             onPress={() => goToAddFlow(null)}
           />
         </View>
@@ -217,10 +217,10 @@ export default function TrainingConsiderationsScreen() {
     <SettingsPage title="Training considerations">
       <View style={styles.intro}>
         <Text style={[styles.introBody, { color: t.colors.textPrimary }]}>
-          Entirely optional. If a condition or an injury shapes how you train, finding it here brings up the questions that matter for it.
+          Entirely optional. If a condition or an injury shapes your training, finding it here brings up the questions that matter for it.
         </Text>
         <Text style={[styles.introHint, { color: t.colors.textSecondary }]}>
-          You never need a name: describing how you train under How you train gives you the same support.
+          You never need a name: saying what you cannot do under Injuries & limitations gives you the same support.
         </Text>
       </View>
 
@@ -239,7 +239,7 @@ export default function TrainingConsiderationsScreen() {
         <EmptyState
           icon="search-outline"
           title="Nothing matches that"
-          text="Try a different word, or describe how you train under How you train instead. You never need a name to get the same support."
+          text="Try a different word, or say what you cannot do under Injuries & limitations instead. You never need a name to get the same support."
           compact
         />
       ) : (

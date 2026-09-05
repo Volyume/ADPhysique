@@ -30,28 +30,28 @@ describe('T2-33/T1-08: ExercisePickerModal describeCapabilityConflict never says
     expect(codeOnly).not.toMatch(/set aside/);
   });
 
-  test('the exercise-kind fallback caption names how you train, not a preference', () => {
-    expect(body).toContain("return 'You keep this movement out under How you train.';");
+  test('the exercise-kind fallback caption names the lane, not a preference', () => {
+    expect(body).toContain("return 'You keep this movement out under Injuries & limitations.';");
   });
 
-  test('the demand-axis branch names how you train', () => {
+  test('the demand-axis branch names the lane', () => {
     expect(body).toContain(
-      "`Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you keep out under how you train`",
+      "`Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you keep out under Injuries & limitations`",
     );
   });
 
-  test('the family branch names how you train', () => {
+  test('the family branch names the lane', () => {
     expect(body).toContain(
-      "if (first?.ruleKind === 'family') return `Involves ${familyLabel(first.ruleValue)}, which you keep out under how you train`;",
+      "if (first?.ruleKind === 'family') return `Involves ${familyLabel(first.ruleValue)}, which you keep out under Injuries & limitations`;",
     );
   });
 });
 
 describe('T1-19: ExerciseConflictSheet footnote is capability-lane vocabulary', () => {
-  test('the footnote no longer says "stays set aside" and instead cross-references How you train', () => {
+  test('the footnote no longer says "stays set aside" and instead cross-references Injuries & limitations', () => {
     expect(CONFLICT_SHEET).not.toMatch(/stays set aside/);
     expect(CONFLICT_SHEET).toContain(
-      'Keeping one here does not change what Volyume suggests elsewhere. It stays out of suggestions until you allow it again under How you train.',
+      'Keeping one here does not change what Volyume suggests elsewhere. It stays out of suggestions until you allow it again under Injuries & limitations.',
     );
   });
 
@@ -63,7 +63,7 @@ describe('T1-19: ExerciseConflictSheet footnote is capability-lane vocabulary', 
     const site = CONFLICT_SHEET.lastIndexOf('{!blocked ? (');
     expect(site).toBeGreaterThan(-1);
     const block = CONFLICT_SHEET.slice(site, CONFLICT_SHEET.indexOf(') : null}', site));
-    expect(block).toMatch(/It stays out of suggestions until you allow it again under How you train\./);
+    expect(block).toMatch(/It stays out of suggestions until you allow it again under Injuries & limitations\./);
   });
 });
 
@@ -87,6 +87,6 @@ describe('R8-4 (round 8): the sided reason states only true mechanical facts und
     expect(body).toContain('does not work on either side');
     // The unsided-rule-covers-the-axis case falls to the unsided
     // wording rather than a side-specific claim.
-    expect(body).toContain('which you keep out under how you train');
+    expect(body).toContain('which you keep out under Injuries & limitations');
   });
 });

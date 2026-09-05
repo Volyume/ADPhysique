@@ -86,7 +86,7 @@ describe('a chosen published plan that contains a set-aside exercise', () => {
     expect(onKeep).not.toMatch(/clearExerciseIntent|setExerciseIntent/);
     // The sheet says so to the user, in plain words.
     expect(sheet).toMatch(/does not change what Volyume suggests elsewhere/);
-    expect(sheet).toMatch(/stays out of suggestions until you allow it again under How you train/);
+    expect(sheet).toMatch(/stays out of suggestions until you allow it again under Injuries & limitations/);
   });
 
   test('replacing edits THIS plan only, never the published original', () => {

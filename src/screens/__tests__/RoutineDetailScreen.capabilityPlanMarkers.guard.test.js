@@ -95,9 +95,9 @@ describe('capabilityPlanCaption: copy and precedence (T2-32)', () => {
     expect(FN).not.toMatch(/allApplied\s*\?\s*'Swapped in sessions/);
   });
 
-  test('baseline conflicts get the "how you train" line only when DEFINITE; unknown-only rows get the honest not-known line', () => {
-    expect(FN).toContain("if (kind === 'baseline') return 'Sits outside how you train.';");
-    expect(FN).toContain('"Volyume doesn\'t know yet whether this fits how you train."');
+  test('baseline conflicts get the limitation line only when DEFINITE; unknown-only rows get the honest not-known line', () => {
+    expect(FN).toContain('if (kind === \'baseline\') return "Clashes with an injury or limitation you\'ve set.";');
+    expect(FN).toContain('"Volyume couldn\'t check this against your limitations yet."');
   });
 
   test('a resolver throw is caught and answered with null, never a crash', () => {

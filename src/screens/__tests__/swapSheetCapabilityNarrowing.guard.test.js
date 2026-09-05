@@ -139,11 +139,11 @@ describe('ActiveWorkoutScreen swap sheet: quiet line + capability-aware empty st
 
   test('the count line renders only when swapNarrowedCount > 0, singular/plural handled', () => {
     expect(modalBlock).toContain('{swapNarrowedCount > 0 ? (');
-    expect(modalBlock).toContain("{swapNarrowedCount} movement{swapNarrowedCount === 1 ? '' : 's'} left out for how you train.");
+    expect(modalBlock).toContain("{swapNarrowedCount} movement{swapNarrowedCount === 1 ? '' : 's'} left out for your limitations.");
   });
 
   test('the empty-state title swaps to the capability-aware line, with "Search the full library instead." kept beneath', () => {
-    expect(modalBlock).toContain("{swapNarrowedCount > 0 ? 'No close matches inside how you train.' : 'No close matches yet'}");
+    expect(modalBlock).toContain("{swapNarrowedCount > 0 ? 'No close matches within your limitations.' : 'No close matches yet'}");
     expect(modalBlock).toContain('Search the full library instead.');
   });
 });
@@ -157,10 +157,10 @@ describe('RoutineDetailScreen swap sheet: quiet line + capability-aware empty st
 
   test('the count line renders only when swapNarrowedCount > 0, singular/plural handled', () => {
     expect(modalBlock).toContain('{swapNarrowedCount > 0 ? (');
-    expect(modalBlock).toContain("{swapNarrowedCount} movement{swapNarrowedCount === 1 ? '' : 's'} left out for how you train.");
+    expect(modalBlock).toContain("{swapNarrowedCount} movement{swapNarrowedCount === 1 ? '' : 's'} left out for your limitations.");
   });
 
   test('the empty-state text swaps to the capability-aware line when the narrowing caused it', () => {
-    expect(modalBlock).toContain("{swapNarrowedCount > 0 ? 'No close matches inside how you train.' : 'No close matches yet.'}");
+    expect(modalBlock).toContain("{swapNarrowedCount > 0 ? 'No close matches within your limitations.' : 'No close matches yet.'}");
   });
 });

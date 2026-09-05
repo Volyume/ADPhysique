@@ -25,7 +25,7 @@
 
 import { PROFILE_KIND, CONDITION_CATEGORY, QUESTION_KIND } from './schema';
 
-const PRO_NOTE = 'Anything a clinician or specialist has told you comes first. If you have been told to keep a movement out, add it under How you train and say that a clinician asked for it. Volyume then works around it, and will not offer it back unless you change it yourself.';
+const PRO_NOTE = 'Anything a clinician or specialist has told you comes first. If you have been told to keep a movement out, add it under Injuries & limitations and say that a clinician asked for it. Volyume then works around it, and will not offer it back unless you change it yourself.';
 // The one-sided training facts, shared so each profile adds only its own
 // lead clause (founder order 2026-08-21). Says ONLY what ships: the
 // both-arms / both-legs answers plan one-sided work, and a one-sided
@@ -170,7 +170,7 @@ export const CONDITION_PROFILES = Object.freeze([
       'Machines and supported positions give you somewhere steady on variable days.',
     ],
     accessibilityConsiderations: [],
-    fatigueNote: 'Energy with MS can change day to day. You set how many days you train and how long a session runs, and Volyume plans to what you set rather than to a fixed idea of a full week. For a rough patch, add a temporary change under How you train.',
+    fatigueNote: 'Energy with MS can change day to day. You set how many days you train and how long a session runs, and Volyume plans to what you set rather than to a fixed idea of a full week. For a rough patch, add a temporary change under Injuries & limitations.',
     lateralityNote: `If one side is more affected, ${SIDED}`,
     generalisable: [
       'Strength work is consistently supported by research in MS, built around how your MS affects you.',
@@ -622,10 +622,10 @@ export const CONDITION_PROFILES = Object.freeze([
     ],
     setupConsiderations: [
       'Machines and cables allow small load steps, which matter when joints have opinions.',
-      'On rough weeks, a temporary change under How you train keeps the plan honest without rewriting your normal.',
+      'On rough weeks, a temporary change under Injuries & limitations keeps the plan honest without rewriting your normal.',
     ],
     accessibilityConsiderations: [],
-    fatigueNote: 'Tiredness is part of these conditions for many people. Volyume plans to the days and session length you set, and on a rough week a temporary change under How you train covers it without rewriting your normal setup.',
+    fatigueNote: 'Tiredness is part of these conditions for many people. Volyume plans to the days and session length you set, and on a rough week a temporary change under Injuries & limitations covers it without rewriting your normal setup.',
     lateralityNote: null,
     generalisable: [
       'Research strongly supports regular strength and fitness work in rheumatoid arthritis, shaped around how things are week to week.',
@@ -672,7 +672,7 @@ export const CONDITION_PROFILES = Object.freeze([
       'Stopping movements short of end range is a performance note worth making your habit; equipment choice can help it.',
     ],
     accessibilityConsiderations: [],
-    fatigueNote: 'Building up gradually is the usual approach with hypermobile joints. If you hit a rough patch, a temporary change under How you train covers it without changing your normal setup.',
+    fatigueNote: 'Building up gradually is the usual approach with hypermobile joints. If you hit a rough patch, a temporary change under Injuries & limitations covers it without changing your normal setup.',
     lateralityNote: null,
     generalisable: [
       'Guidance for hypermobile EDS centres strength and control work, started gently and built gradually.',
@@ -717,7 +717,7 @@ export const CONDITION_PROFILES = Object.freeze([
     setupConsiderations: [
       'Machines, seats and a wall or rail nearby mean an unsteady day changes the setup rather than the session.',
       'Fixed and guided equipment beats free-standing work on unsteady days.',
-      'If balance comes and goes rather than staying the same, a temporary change under How you train covers a rough spell without changing your normal setup.',
+      'If balance comes and goes rather than staying the same, a temporary change under Injuries & limitations covers a rough spell without changing your normal setup.',
     ],
     accessibilityConsiderations: [],
     fatigueNote: null,

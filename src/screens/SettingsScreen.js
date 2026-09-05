@@ -40,9 +40,9 @@ export default function SettingsScreen({ navigation }) {
             words a person actually searches for. */}
         <SettingRow
           icon="body"
-          label="How you train"
-          sub="Injuries, pain, long-term conditions and disabilities. Anything Volyume should build your training around."
-          accessibilityLabel="How you train. Injuries, pain, long-term conditions and disabilities. Anything Volyume should build your training around."
+          label="Injuries & limitations"
+          sub="Injuries, pain, long-term conditions or disabilities that affect your training."
+          accessibilityLabel="Injuries & limitations. Injuries, pain, long-term conditions or disabilities that affect your training."
           onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
         />
         <SettingRow

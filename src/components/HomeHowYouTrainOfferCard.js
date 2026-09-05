@@ -1,9 +1,10 @@
 /**
- * HomeHowYouTrainOfferCard - the one-time How you train offer on Home
- * (founder decision D134, 2026-09-03).
+ * HomeHowYouTrainOfferCard - the one-time Injuries & limitations offer on
+ * Home (founder decision D134, 2026-09-03; renamed in copy by D152, the
+ * file name is deliberately unchanged).
  *
- * Shown to a person with nothing set up in How you train, once the welcome
- * card has retired and only when no ranked banner holds Home's attention
+ * Shown to a person with nothing set up under Injuries & limitations,
+ * once the welcome card has retired and only when no ranked banner holds Home's attention
  * slot. It is an OFFER in the person's words, never a question that asks
  * them to classify themselves (banked research: the DfE door). Either
  * button dismisses it forever; HomeScreen also retires it by itself the
@@ -20,7 +21,7 @@ import Button from './Button';
 export default function HomeHowYouTrainOfferCard({ onSetUp, onDismiss }) {
   const t = useTheme();
   return (
-    <Card style={styles.card} accessibilityLabel="Anything Volyume should build your training around? Entirely optional.">
+    <Card style={styles.card} accessibilityLabel="Anything Volyume should build your training around? Injuries, pain, long-term conditions or disabilities. Entirely optional.">
       <View style={styles.head}>
         <View style={[styles.icon, { backgroundColor: t.colors.primaryBg }]}>
           <Ionicons name="body-outline" size={20} color={t.colors.primary} />
@@ -28,7 +29,7 @@ export default function HomeHowYouTrainOfferCard({ onSetUp, onDismiss }) {
         <View style={styles.copy}>
           <Text style={[styles.title, { color: t.colors.textPrimary }]}>Anything Volyume should build your training around?</Text>
           <Text style={[styles.body, { color: t.colors.textSecondary }]}>
-            Injury, pain, a long-term condition or a disability. Tell Volyume once and every plan and workout is built around it. Entirely optional, and you can change it any time.
+            Injuries, pain, long-term conditions or disabilities. Tell Volyume once and it takes them into account when choosing exercises and building your training. Entirely optional, and you can change it any time.
           </Text>
         </View>
       </View>

@@ -33,7 +33,7 @@ describe('T1-08 closed: capability exclusions carry their own reason and words',
   test('CAPABILITY_EXCLUDED exists, replaces, and never wears the preference words', () => {
     expect(SLOT_REASON.CAPABILITY_EXCLUDED).toBe('capability_excluded');
     const copy = explainReason(SLOT_REASON.CAPABILITY_EXCLUDED);
-    expect(copy).toBe('This sits outside how you train.');
+    expect(copy).toBe("This clashes with an injury or limitation you've set.");
     expect(copy).not.toContain('asked not to be suggested');
   });
 
@@ -54,7 +54,7 @@ describe('T1-08 closed: capability exclusions carry their own reason and words',
 
   test('CAPABILITY_HOLD keeps its own distinct copy - the episode keep is a different case', () => {
     expect(explainReason(SLOT_REASON.CAPABILITY_HOLD)).toBe(
-      'This sits outside how you train while your temporary change lasts, so it is kept as it is rather than judged.',
+      "This clashes with an injury or limitation you've set while your temporary change lasts, so it is kept as it is rather than judged.",
     );
   });
 

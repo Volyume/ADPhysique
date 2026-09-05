@@ -1,5 +1,5 @@
 /**
- * How you train - the capability lane's settings home (CC26;
+ * Injuries & limitations - the capability lane's settings home (CC26;
  * ARCHITECTURE.md section 12, renamed per section 33's RT2-2 revision).
  *
  * ROLE-SCOPED PRESENTATION (CAP-1/CAP-2, RT2-1): baseline capability is
@@ -117,8 +117,8 @@ function planStatusSentence(st) {
   if (st.omitted) bits.push(`${st.omitted} left out`);
   const parts = [];
   if (bits.length) parts.push(`Right now: ${bits.join(', ')} while you work around a temporary change.`);
-  if (st.rewriteCount) parts.push(`${st.rewriteCount} exercise${st.rewriteCount === 1 ? '' : 's'} in your plan sit${st.rewriteCount === 1 ? 's' : ''} outside how you train.`);
-  return parts.length ? parts.join(' ') : 'Your current plan matches how you train.';
+  if (st.rewriteCount) parts.push(`${st.rewriteCount} exercise${st.rewriteCount === 1 ? '' : 's'} in your plan ${st.rewriteCount === 1 ? "clashes with an injury or limitation you've set" : 'clash with your injuries or limitations'}.`);
+  return parts.length ? parts.join(' ') : 'Your current plan matches your limitations.';
 }
 
 export default function HowYouTrainScreen() {
@@ -138,7 +138,7 @@ export default function HowYouTrainScreen() {
   // saveLineReview below.
   const [lineReview, setLineReview] = useState(null);
   // D112 R4 (closes audit T2-23's recoverability half): whether the
-  // standing "Your plan and how you train" row has anything to offer
+  // standing "Your plan and your limitations" row has anything to offer
   // right now. Computed on every refresh below.
   const [canRevisit, setCanRevisit] = useState(false);
   // T1-06/T2-23 shared guard: proposalPendingRef is set synchronously at
@@ -883,17 +883,17 @@ export default function HowYouTrainScreen() {
       const k = rw.substitutable;
       const u = rw.unsolvable;
       const plural = (c) => (c === 1 ? '' : 's');
-      const sits = n === 1 ? 'sits' : 'sit';
+      const clashes = n === 1 ? "clashes with an injury or limitation you've set" : 'clash with your injuries or limitations';
       let body;
       if (k === 0) {
-        body = `${n} exercise${plural(n)} in your current plan ${sits} outside how you train, and no close match fits right now. ${n === 1 ? 'It stays' : 'They stay'} in place with a quiet note, and you can swap ${n === 1 ? 'it' : 'them'} any time.`;
+        body = `${n} exercise${plural(n)} in your current plan ${clashes}, and no close match fits right now. ${n === 1 ? 'It stays' : 'They stay'} in place with a quiet note, and you can swap ${n === 1 ? 'it' : 'them'} any time.`;
       } else if (u === 0) {
-        body = `${n} exercise${plural(n)} in your current plan ${sits} outside how you train. Volyume can swap ${n === 1 ? 'it' : 'them'} for movements that fit. Your history is not rewritten.`;
+        body = `${n} exercise${plural(n)} in your current plan ${clashes}. Volyume can swap ${n === 1 ? 'it' : 'them'} for movements that fit. Your history is not rewritten.`;
       } else {
-        body = `${n} exercises in your current plan sit outside how you train. Volyume can swap ${k} for movements that fit; ${u === 1 ? '1 has no close match and stays' : `${u} have no close match and stay`} in place with a quiet note. Your history is not rewritten.`;
+        body = `${n} exercises in your current plan clash with your injuries or limitations. Volyume can swap ${k} for movements that fit; ${u === 1 ? '1 has no close match and stays' : `${u} have no close match and stay`} in place with a quiet note. Your history is not rewritten.`;
       }
       if (k === 0) {
-        appAlert('Some of your plan sits outside this', body, [{ text: 'OK' }]);
+        appAlert('Some of your plan clashes with this', body, [{ text: 'OK' }]);
         return { surfaced: true, checked: true };
       }
       appAlert(
@@ -917,8 +917,8 @@ export default function HowYouTrainScreen() {
               const res = await applyCapabilityPlanRewrite(userId, rw.lines);
               if (res.applied > 0) {
                 toast.show(subject
-                  ? `Updated. ${res.applied} exercise${plural(res.applied)} swapped to fit how you train with ${subject}.`
-                  : `Updated. ${res.applied} exercise${plural(res.applied)} swapped to fit how you train.`);
+                  ? `Updated. ${res.applied} exercise${plural(res.applied)} swapped to fit around ${subject}.`
+                  : `Updated. ${res.applied} exercise${plural(res.applied)} swapped to fit your limitations.`);
               }
               if (res.failed > 0) {
                 toast.show('Some swaps did not save. The affected exercises keep their quiet note, so nothing is lost.');
@@ -979,13 +979,13 @@ export default function HowYouTrainScreen() {
 
   const confirmPromote = (ep) => {
     const subject = groupSubject(ep.rows.filter(r => r.state === 'active'));
-    appAlert('Make this part of how you train?',
+    appAlert('Make this long-term?',
       subject
         ? `Volyume will keep building your training around ${subject} from now on, with full progression and coaching. Your history is not rewritten.`
         : 'Volyume will keep these as your normal setup from now on, with full progression and coaching. Your history is not rewritten.', [
       { text: 'Cancel', style: 'cancel' },
       {
-        text: 'This is how I train now',
+        text: 'Make it long-term',
         onPress: async () => {
           // CC33 D112 R1b (closes audit T2-01): promotion mints baseline
           // rows, and the serve-time overlay for the old episode stops -
@@ -1244,7 +1244,7 @@ export default function HowYouTrainScreen() {
   };
 
   return (
-    <SettingsPage title="How you train" scrollRef={scrollRef}>
+    <SettingsPage title="Injuries & limitations" scrollRef={scrollRef}>
       {state.unavailable ? (
         <Text style={[styles.hint, { color: t.colors.textSecondary, margin: spacing.lg }]}
           accessibilityLiveRegion="polite">
@@ -1260,7 +1260,8 @@ export default function HowYouTrainScreen() {
       <View style={styles.introWrap}>
         <Text style={[styles.body, { color: t.colors.textPrimary }]}>
           If you have an injury, pain, a long-term condition or a disability, tell
-          Volyume about it here. It will build your plans and your workouts around it.
+          Volyume about it here. It takes that into account when it picks
+          exercises and builds your training.
         </Text>
         <Text style={[styles.hint, { color: t.colors.textSecondary, marginTop: spacing.sm }]}>
           You do not need a diagnosis, or even a name for it. Just say what you cannot
@@ -1275,7 +1276,7 @@ export default function HowYouTrainScreen() {
         />
         {nothingYet ? (
           <Text style={[styles.hint, { color: t.colors.textMuted, marginTop: spacing.sm }]}>
-            Takes about a minute. Whatever you add is either part of how you train from now on, or worked around for a while, and you can change or remove it here any time.
+            Takes about a minute. Whatever you add is either long-term, or a temporary change worked around for a while, and you can change or remove it here any time.
           </Text>
         ) : null}
       </View>
@@ -1329,9 +1330,9 @@ export default function HowYouTrainScreen() {
             </View>
           <SettingRow
             icon="list-outline"
-            label="Your plan and how you train"
+            label="Your plan and your limitations"
             sub="Review what Volyume works around in your current plan."
-            accessibilityLabel="Your plan and how you train. Review what Volyume works around in your current plan."
+            accessibilityLabel="Your plan and your limitations. Review what Volyume works around in your current plan."
             onPress={revisitCapabilityPlan}
           />
           </View>
@@ -1410,7 +1411,7 @@ export default function HowYouTrainScreen() {
               <SettingRow
                 icon="ellipsis-horizontal-circle-outline"
                 label={ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION ? 'More options' : 'Options'}
-                sub="End it, extend it, hold your plan as it is, or make it part of how you train."
+                sub="End it, extend it, hold your plan as it is, or make it long-term."
                 onPress={() => { haptics.selection(); setOptionsFor(ep.groupId); }}
               />
             </View>
@@ -1505,7 +1506,7 @@ export default function HowYouTrainScreen() {
       {/* D133 slice C: every episode action, each with its consequence in
           plain words, one tap away. Rows close the sheet first so a confirm
           never presents over a dismissing sheet. */}
-      <BottomSheet visible={!!optionsEp || !!optionsRow} onClose={() => setOptionsFor(null)} accessibilityLabel={optionsRow ? 'Options for this part of how you train' : 'Options for this temporary change'}>
+      <BottomSheet visible={!!optionsEp || !!optionsRow} onClose={() => setOptionsFor(null)} accessibilityLabel={optionsRow ? 'Options for this limitation' : 'Options for this temporary change'}>
         {optionsRow ? (() => {
           const row = optionsRow;
           const after = (fn) => { setOptionsFor(null); setTimeout(fn, 260); };
@@ -1562,7 +1563,7 @@ export default function HowYouTrainScreen() {
                     sub="Volyume changes nothing for this until you say so. Your plan runs exactly as it is."
                     onPress={() => after(async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'hold'); toast.show('Volyume is holding your plan as-is for this. Adaptation is paused, not your training.'); refresh(); })} />
                 )}
-                <SettingRow icon="body-outline" label="This is how I train now"
+                <SettingRow icon="body-outline" label="Make it long-term"
                   sub="Becomes part of your normal setup, with full progression and coaching."
                   onPress={() => after(() => confirmPromote(ep))} />
                 <SettingRow icon="create-outline" label="Change what this covers"

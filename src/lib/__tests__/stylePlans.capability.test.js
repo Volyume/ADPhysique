@@ -111,7 +111,7 @@ describe('style plan capability compatibility (EL-8, 09 section 5)', () => {
     // Every one of these plans is built almost entirely from standing
     // work (kettlebell grinds/ballistics, standing circuit stations), so
     // a "seated only" user must see the honest needs-edit outcome, never
-    // a false "fits how you train" - this is the concrete case the
+    // a false "fits your limitations" - this is the concrete case the
     // honesty invariant above exists to catch.
     test('seated-only user sees at least one flagged station, not a false fit', () => {
       const verdict = computePlanCompatibility(SCENARIOS.seated_only, rows);

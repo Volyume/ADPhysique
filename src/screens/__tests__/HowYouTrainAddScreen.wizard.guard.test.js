@@ -64,13 +64,13 @@ describe('honesty at the end (adversarial review 2026-09-03)', () => {
     expect(src).toContain('let supersedeFailed = 0;');
     expect(src).toMatch(/markConstraintSuperseded\(userId, id, \{ nowMs \}\)\s*\n\s*\.catch\(\(e\) => \{ supersedeFailed \+= 1;/);
     expect(src).toMatch(/endEpisode\(userId, draft\.editing\.groupId, \{ nowMs, reason: 'superseded' \}\)\s*\n\s*\.catch\(\(e\) => \{ supersedeFailed \+= 1;/);
-    expect(src).toContain('The old version could not be closed. It still applies alongside this one until you remove it under How you train.');
+    expect(src).toContain('The old version could not be closed. It still applies alongside this one until you remove it under Injuries & limitations.');
     // New rows land BEFORE the old are closed: never a gap in which nothing applies.
     expect(src.indexOf('await createConstraints(userId, rows, { nowMs })')).toBeLessThan(src.indexOf('let supersedeFailed = 0;'));
   });
   test('a failed plan check is told, never rendered as "nothing to decide"', () => {
     expect((src.match(/planUnchecked: true/g) ?? []).length).toBe(2);
-    expect(src).toContain('Volyume could not check your current plan just now. It will ask you about this under How you train.');
+    expect(src).toContain('Volyume could not check your current plan just now. It will ask you about this under Injuries & limitations.');
   });
   test('a failed library load shows a retry, never a blank screen', () => {
     expect(src).toContain("libraryStatus === 'failed'");

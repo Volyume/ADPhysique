@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-// D134 (founder 2026-09-03): the tier-blind How you train row's live line.
+// D134 (founder 2026-09-03): the tier-blind Injuries & limitations row's live line.
 import { loadCapabilityState } from '../lib/capability/store';
 import { howYouTrainSummary } from '../lib/capability/summary';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
@@ -222,7 +222,7 @@ export default function YouScreen({ navigation }) {
   const [coachReadiness, setCoachReadiness] = useState(null);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  // D134: the live How you train line, tier-blind, refreshed on focus. Its
+  // D134: the live Injuries & limitations line, tier-blind, refreshed on focus. Its
   // own small loader so the tab's main load stays exactly as it was.
   const [hytSummary, setHytSummary] = useState(() => howYouTrainSummary(null));
   useFocusEffect(useCallback(() => {
@@ -511,7 +511,7 @@ export default function YouScreen({ navigation }) {
           <NavGroup>
             <NavRow
               icon="body-outline"
-              label="How you train"
+              label="Injuries & limitations"
               sub={hytSummary.sub}
               onPress={() => navigation.navigate('HowYouTrain')}
             />

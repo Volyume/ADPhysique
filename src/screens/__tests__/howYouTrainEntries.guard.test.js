@@ -1,6 +1,7 @@
 /**
- * howYouTrainEntries.guard.test.js - where "How you train" lives (founder
- * decision D134, 2026-09-03; repo convention: fs.readFileSync + regex).
+ * howYouTrainEntries.guard.test.js - where "Injuries & limitations" lives
+ * (founder decision D134, 2026-09-03; renamed in copy by D152, 2026-09-05;
+ * repo convention: fs.readFileSync + regex).
  *
  * The feature every plan is built from used to be reachable only three
  * taps deep in Settings until something was set up. It now has three
@@ -32,7 +33,7 @@ describe('1. Train tab: first row of Plan tools, always shown', () => {
     const firstCard = tools.indexOf('<Card');
     const block = tools.slice(firstCard, tools.indexOf('</Card>', firstCard));
     expect(block).toContain("onPress={() => navigation.navigate('HowYouTrain')}");
-    expect(block).toContain('>How you train</Text>');
+    expect(block).toContain('>Injuries & limitations</Text>');
     expect(block).toContain('{hytSummary.sub}');
     // Always shown: no count or state condition wraps it (unlike Avoided movements, D109-3).
     const before = tools.slice(0, firstCard);
@@ -48,7 +49,7 @@ describe('1. Train tab: first row of Plan tools, always shown', () => {
 
 describe('2. Coach tab: a tier-blind row above the Pro-only Setup', () => {
   test('the row sits outside every isPro branch and before "This week"', () => {
-    const rowIdx = coach.indexOf('label="How you train"');
+    const rowIdx = coach.indexOf('label="Injuries & limitations"');
     expect(rowIdx).toBeGreaterThan(-1);
     expect(rowIdx).toBeLessThan(coach.indexOf('<SectionLabel>This week</SectionLabel>'));
     // The nearest preceding tier branch must be CLOSED before the row.
@@ -59,7 +60,7 @@ describe('2. Coach tab: a tier-blind row above the Pro-only Setup', () => {
     expect(coach.slice(rowIdx - 400, rowIdx)).toContain('<SectionLabel>Your body</SectionLabel>');
   });
   test('the row navigates to the feature and carries the live line', () => {
-    const row = coach.slice(coach.indexOf('label="How you train"'), coach.indexOf('label="How you train"') + 200);
+    const row = coach.slice(coach.indexOf('label="Injuries & limitations"'), coach.indexOf('label="Injuries & limitations"') + 200);
     expect(row).toContain('sub={hytSummary.sub}');
     expect(row).toContain("navigation.navigate('HowYouTrain')");
     expect(row).not.toContain('pro={');
@@ -83,6 +84,7 @@ describe('3. Home: one calm, one-time offer', () => {
   });
   test('the card is an offer in the person\'s words, never a question about the person', () => {
     expect(card).toContain('Anything Volyume should build your training around?');
+    expect(card).toContain('Injuries, pain, long-term conditions or disabilities.');
     expect(card).toContain('Entirely optional');
     expect(card).not.toMatch(/are you disabled|do you have a disability/i);
     expect(card).not.toMatch(/—/);
@@ -91,14 +93,14 @@ describe('3. Home: one calm, one-time offer', () => {
 
 describe('the live line and the entries that stay', () => {
   test('the summary never uses diagnosis or restriction vocabulary and offers rather than asks', () => {
-    expect(summary).toContain("export const HOW_YOU_TRAIN_OFFER = 'Injury, pain, a condition or a disability? Volyume builds around it.';");
+    expect(summary).toContain("export const HOW_YOU_TRAIN_OFFER = 'Injuries, pain, long-term conditions or disabilities that affect your training.';");
     // Scoped to what a person can read: the string literals, not the
     // comments that explain the law.
     const text = (summary.match(/'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g) ?? []).join(' ');
     expect(text).not.toMatch(/restricted|modified|diagnos/i);
   });
   test('the Settings row stays', () => {
-    expect(settings).toContain('label="How you train"');
+    expect(settings).toContain('label="Injuries & limitations"');
     expect(settings).toContain("navigation.navigate('HowYouTrain')");
   });
   test('no em dash in any of the new copy', () => {

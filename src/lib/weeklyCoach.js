@@ -2608,16 +2608,16 @@ function appendWeeklyAnswerSuggestion(note, pcFact) {
   const subject = typeof pcFact.subject === 'string' && pcFact.subject ? pcFact.subject : null;
   const scope = constraintScopePhrase(pcFact);
   if (pcFact.weeklyAnswer === 'in_the_way') {
-    if (subject) return `${note} You said working around ${subject} got in the way more than expected. If that carries on, you can adjust things under How you train.`;
+    if (subject) return `${note} You said working around ${subject} got in the way more than expected. If that carries on, you can adjust things under Injuries & limitations.`;
     return scope
-      ? `${note} You said it got in the way more than expected; that mainly touches your ${scope} work. If that carries on, you can adjust things under How you train.`
-      : `${note} You said it got in the way more than expected. If that carries on, you can adjust it under How you train.`;
+      ? `${note} You said it got in the way more than expected; that mainly touches your ${scope} work. If that carries on, you can adjust things under Injuries & limitations.`
+      : `${note} You said it got in the way more than expected. If that carries on, you can adjust it under Injuries & limitations.`;
   }
   if (pcFact.weeklyAnswer === 'not_relevant') {
-    if (subject) return `${note} You said working around ${subject} mostly didn't get in the way. If you're done working around it, you can end that under How you train.`;
+    if (subject) return `${note} You said working around ${subject} mostly didn't get in the way. If you're done working around it, you can end that under Injuries & limitations.`;
     return scope
-      ? `${note} You said it mostly didn't get in the way; that mainly touches your ${scope} work. If you're done working around it, you can end that under How you train.`
-      : `${note} You said it mostly didn't come up. If you're done with it, you can end it under How you train.`;
+      ? `${note} You said it mostly didn't get in the way; that mainly touches your ${scope} work. If you're done working around it, you can end that under Injuries & limitations.`
+      : `${note} You said it mostly didn't come up. If you're done with it, you can end it under Injuries & limitations.`;
   }
   // D112 R4 (audit T2-17): 'fine' is an answer too. It changes no
   // number, and saying so is the point - the one question the app asked

@@ -27,7 +27,7 @@ describe('T2-19 - the coach Apply hold re-check fails SAFE', () => {
     expect(safety).toMatch(/return null/);
     expect(src).toMatch(/holdMuscles\s*=\s*await loadVolumeIncreaseHolds/);
     expect(src).toMatch(/holdMuscles === null/);
-    expect(src).toMatch(/could not check how you train just now, so this increase waits/);
+    expect(src).toMatch(/could not check Injuries & limitations just now, so this increase waits/);
   });
 
   test('round 19 (R19-1): the withhold triggers on KNOWLEDGE, not on a throw', () => {
@@ -143,7 +143,7 @@ describe('T2-04 - the serve effect cannot re-fire onto a manual add', () => {
 describe('T2-09 - a failed capability read on the swap surfaces says so, in the right lane', () => {
   test.each(['screens/ActiveWorkoutScreen.js', 'screens/RoutineDetailScreen.js'])('%s', (rel) => {
     const src = read(rel);
-    expect(src).toMatch(/could not check how you train just now, so nothing is filtered for it here/);
+    expect(src).toMatch(/could not check Injuries & limitations just now, so nothing is filtered for it here/);
     // The honest line only fires when nothing at all is known: an
     // unavailable read WITH last-known state still filters, so it must
     // key on unavailable AND empty together.

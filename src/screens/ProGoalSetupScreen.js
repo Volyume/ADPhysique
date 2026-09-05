@@ -90,8 +90,8 @@ const NUTRITION_KEY = '@volyume_nutrition_targets';
 // preview (the model), which is the source of the exact copy this pins.
 function capabilityBlockedNote(n) {
   return n === 1
-    ? '1 movement sat outside how you train, so your plan works without it.'
-    : `${n} movements sat outside how you train, so your plan works without them.`;
+    ? "1 movement clashed with an injury or limitation you've set, so your plan works without it."
+    : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
 }
 
 export default function ProGoalSetupScreen({ navigation }) {

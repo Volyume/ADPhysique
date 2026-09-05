@@ -129,7 +129,7 @@ describe('the preview states the blocked slot honestly', () => {
     // campaign 9 contract stands - the preview states why a slot is
     // empty, and never shows a set-aside exercise as the prescription.
     expect(sheet).toMatch(/would normally use exercises you have set aside/);
-    expect(sheet).toMatch(/no match inside how you train/);
+    expect(sheet).toMatch(/no match within your limitations/);
   });
 
   test('the screen passes the dry run\'s own blocked list to the summariser', () => {
@@ -137,7 +137,7 @@ describe('the preview states the blocked slot honestly', () => {
   });
 
   test('it neither chooses a replacement nor restores an exclusion', () => {
-    const anchor = sheet.indexOf('no match inside how you train');
+    const anchor = sheet.indexOf('no match within your limitations');
     const block = sheet.slice(anchor - 900, anchor + 500);
     expect(block).not.toMatch(/clearExerciseIntent|setExerciseIntent|updateRoutineExerciseExercise/);
   });

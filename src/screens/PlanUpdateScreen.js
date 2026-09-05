@@ -229,7 +229,7 @@ export default function PlanUpdateScreen({ navigation }) {
         // CC27 (sections 9.5, 33.11, 33.14): the capability reason class,
         // its near misses, and per-session thinness ride the preview so
         // the copy below never conflates "you set this aside" with
-        // "outside how you train".
+        // "clashes with a limitation you have set".
         capabilityBlockedCount: dry.capabilityBlockedCount ?? 0,
         capabilityNearMisses: dry.capabilityNearMisses ?? null,
         thinSessions: thinSessionReport(dry.plan, dry.blockedSlots ?? []),

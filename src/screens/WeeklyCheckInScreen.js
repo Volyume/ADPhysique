@@ -326,7 +326,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // CC31 (section 19): conditional question replaces joint-pain when user has
   // an active episode-role capability constraint. episodeOverdue marks a
   // restriction past its expected end (founder order 2026-08-21): the
-  // question gains a hint pointing at How you train, so the weekly loop
+  // question gains a hint pointing at Injuries & limitations, so the weekly loop
   // surfaces an overdue restriction without the user opening Settings.
   // Wording only - the rules stay in force until the user acts (fail safe).
   const [hasActiveEpisode, setHasActiveEpisode] = useState(false);
@@ -1015,10 +1015,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
         : goCoach;
       setSubmitSuccess(true);
     } catch (e) {
-      logError('WeeklyCheckInScreen.submit', e, { userId: user?.id });
+      // Certification finding: the raw exception message used to be the
+      // alert body, so a technical string reached the user. The diagnostic
+      // survives in the log with the message in context (the same posture
+      // as PlanUpdateScreen's REBUILD_FAILED_MESSAGE); the alert says one
+      // calm fixed line.
+      logError('WeeklyCheckInScreen.submit', e, { userId: user?.id, message: e?.message ?? null });
       appAlert(
         'Couldn\'t save check-in',
-        e?.message ?? 'Try again.',
+        'Nothing has been lost. Try again in a moment.',
       );
     } finally {
       setBusy(false);
@@ -1300,8 +1305,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
               <SectionLabel
                 hint={episodeOverdue
                   ? (episodeSubject
-                    ? `You thought you'd be back to ${episodeSubject} by about now. When you're ready, you can end this under How you train and everything comes back.`
-                    : "This has been going longer than you expected. If you're done with it, you can end it under How you train.")
+                    ? `You thought you'd be back to ${episodeSubject} by about now. When you're ready, you can end this under Injuries & limitations and everything comes back.`
+                    : "This has been going longer than you expected. If you're done with it, you can end it under Injuries & limitations.")
                   : undefined}
               >{episodeSubject
                   ? `How did you get on training without ${episodeSubject}?`

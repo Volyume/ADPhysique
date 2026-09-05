@@ -120,7 +120,7 @@ describe('summaryLines - the check step restates every decision', () => {
     const perm = demandDraft({ role: CONSTRAINT_ROLE.BASELINE });
     const keys = summaryLines(perm, { nowMs: NOW }).map((l) => l.key);
     expect(keys).toEqual(['what', 'when', 'clinician']);
-    expect(summaryLines(perm, { nowMs: NOW }).find((l) => l.key === 'when').value).toBe('Part of how you train generally');
+    expect(summaryLines(perm, { nowMs: NOW }).find((l) => l.key === 'when').value).toBe('Long-term');
   });
   test('no side row when no chosen axis carves by side', () => {
     expect(summaryLines(demandDraft({ role: CONSTRAINT_ROLE.BASELINE }), { nowMs: NOW }).some((l) => l.key === 'side')).toBe(false);
@@ -184,7 +184,7 @@ describe('savedSentence / whatHappensNext - the flow ends by saying what it did'
   test('a dated temporary rule says when Volyume will ask and that nothing ends by itself', () => {
     const next = whatHappensNext(demandDraft({ role: CONSTRAINT_ROLE.EPISODE, endDays: 14 }), { nowMs: NOW });
     expect(next[0]).toBe('Around 17 Sep, Volyume asks whether you still need this. Nothing ends until you say so.');
-    expect(next[1]).toMatch(/end it under How you train/);
+    expect(next[1]).toMatch(/end it under Injuries & limitations/);
   });
   test('an applied plan decision is reported first', () => {
     const next = whatHappensNext(demandDraft({ role: CONSTRAINT_ROLE.EPISODE }), { nowMs: NOW, planDecision: 'applied' });

@@ -36,7 +36,7 @@ import BottomSheet from '../components/BottomSheet';
 // ─── Collections ─────────────────────────────────────────────────────────────
 
 // EL-12 (docs/exercise-library-expansion-2026-09-05/09-STYLE-PLANS.md
-// section 4): order is meaningful here - All, Fits how you train (when
+// section 4): order is meaningful here - All, Fits your limitations (when
 // active), Featured, Kettlebell, Circuits, Minimal equipment, Dumbbells
 // only, Bodyweight, Bands, Short sessions, Beginner, For women, For men,
 // Bodybuilding divisions.
@@ -47,7 +47,7 @@ const COLLECTIONS = [
   // user actually has active constraints (see collectionsForUser below);
   // families appear in normal browse alongside everything else, never a
   // segregated shelf.
-  { key: 'compatible', label: 'Fits how you train' },
+  { key: 'compatible', label: 'Fits your limitations' },
   { key: 'featured',   label: 'Featured' },
   { key: 'kettlebell', label: 'Kettlebell' },
   { key: 'circuit',    label: 'Circuits' },
@@ -578,7 +578,7 @@ export default function PlanLibraryScreen({ navigation }) {
     if (activeCollection === 'division' && selectedDivision) {
       return hasTag(p, `division:${selectedDivision}`);
     }
-    // CC28: computed, never tagged - a plan is in "Fits how you train"
+    // CC28: computed, never tagged - a plan is in "Fits your limitations"
     // exactly when every one of its exercises passes the user's live
     // capability state (section 9.2.5).
     if (activeCollection === 'compatible') {
@@ -807,7 +807,7 @@ export default function PlanLibraryScreen({ navigation }) {
                         with active constraints; conflicts render as an
                         honest count, never hidden. */}
                     {compatibility?.byPlan?.get(plan.id)?.fullyCompatible === true && (
-                      <PlanBadge label="Fits how you train" />
+                      <PlanBadge label="Fits your limitations" />
                     )}
                     {compatibility && compatibility.byPlan?.get(plan.id)
                       && !compatibility.byPlan.get(plan.id).fullyCompatible && (

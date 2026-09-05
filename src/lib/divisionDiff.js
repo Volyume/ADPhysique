@@ -184,7 +184,7 @@ export function divisionCoverageLine(goal, coverage) {
   // gaps how-you-train may have caused. The copy now names what is
   // actually known, and nothing more.
   return blocked
-    ? `One piece of the ${GOAL_LABELS[goal] ?? goal} look is missing: nothing that fits your equipment and how you train covers ${list} the way this category is judged. Everything else is here.`
+    ? `One piece of the ${GOAL_LABELS[goal] ?? goal} look is missing: nothing that fits your equipment and your limitations covers ${list} the way this category is judged. Everything else is here.`
     : `Your ${list} work is lighter on the shaping side than this category usually wants. More session time, or a different exercise for that slot, would cover it.`;
 }
 

@@ -1,5 +1,5 @@
 /**
- * HowYouTrainAddScreen - the "Add something" wizard for How you train
+ * HowYouTrainAddScreen - the "Add something" wizard for Injuries & limitations
  * (flow audit 2026-09-03; ruling D133).
  *
  * The add flow used to be a card that replaced its own button in the
@@ -269,7 +269,7 @@ export default function HowYouTrainAddScreen() {
         }
       }
       if (supersedeFailed > 0) {
-        toast.show('Saved, but the old version could not be closed. It still applies alongside this one until you remove it under How you train.', { variant: 'warning' });
+        toast.show('Saved, but the old version could not be closed. It still applies alongside this one until you remove it under Injuries & limitations.', { variant: 'warning' });
       }
       const isEpisode = draft.role === CONSTRAINT_ROLE.EPISODE && draft.kind !== ADD_KIND.ALLOW;
       const subject = draftSubject(draft);
@@ -774,11 +774,11 @@ export default function HowYouTrainAddScreen() {
             <View style={[settingsStyles.section, live.section]}>
               {saved?.supersedeFailed ? (
                 <SettingRow icon="alert-circle-outline" destructive showArrow={false}
-                  label="The old version could not be closed. It still applies alongside this one until you remove it under How you train." />
+                  label="The old version could not be closed. It still applies alongside this one until you remove it under Injuries & limitations." />
               ) : null}
               {saved?.planUnchecked ? (
                 <SettingRow icon="alert-circle-outline" showArrow={false}
-                  label="Volyume could not check your current plan just now. It will ask you about this under How you train." />
+                  label="Volyume could not check your current plan just now. It will ask you about this under Injuries & limitations." />
               ) : null}
               {whatHappensNext(draft, { nowMs: saved?.nowMs ?? Date.now(), planDecision: saved?.planDecision === 'mixed' ? 'applied' : saved?.planDecision }).map((s, i) => (
                 <SettingRow key={i} icon="arrow-forward-outline" label={s} showArrow={false} />
@@ -812,7 +812,7 @@ function headingFor(step, draft, saved) {
       if (draft.kind === ADD_KIND.ALLOW) return 'Which exercise is always fine?';
       return 'Which exercise?';
     case ADD_STEP.SIDE: return sideQuestion(draft)?.question ?? 'Which side?';
-    case ADD_STEP.WHEN: return 'Is this how you train generally, or temporary?';
+    case ADD_STEP.WHEN: return 'Is this long-term, or temporary?';
     case ADD_STEP.SINCE: return 'Since when?';
     case ADD_STEP.UNTIL: return 'Roughly how long?';
     case ADD_STEP.CHECK: return 'Check and save';
@@ -858,10 +858,10 @@ function planSentence(plan) {
 function rewriteSentence(plan) {
   const n = plan.total; const k = plan.substitutable; const u = plan.unsolvable;
   const plural = (c) => (c === 1 ? '' : 's');
-  const sits = n === 1 ? 'sits' : 'sit';
-  if (k === 0) return `${n} exercise${plural(n)} in your current plan ${sits} outside how you train, and no close match fits right now. ${n === 1 ? 'It stays' : 'They stay'} in place with a quiet note, and you can swap ${n === 1 ? 'it' : 'them'} any time.`;
-  if (u === 0) return `${n} exercise${plural(n)} in your current plan ${sits} outside how you train. Volyume can swap ${n === 1 ? 'it' : 'them'} for movements that fit.`;
-  return `${n} exercises in your current plan sit outside how you train. Volyume can swap ${k} for movements that fit; ${u === 1 ? '1 has no close match and stays' : `${u} have no close match and stay`} in place with a quiet note.`;
+  const clashes = n === 1 ? "clashes with an injury or limitation you've set" : 'clash with your injuries or limitations';
+  if (k === 0) return `${n} exercise${plural(n)} in your current plan ${clashes}, and no close match fits right now. ${n === 1 ? 'It stays' : 'They stay'} in place with a quiet note, and you can swap ${n === 1 ? 'it' : 'them'} any time.`;
+  if (u === 0) return `${n} exercise${plural(n)} in your current plan ${clashes}. Volyume can swap ${n === 1 ? 'it' : 'them'} for movements that fit.`;
+  return `${n} exercises in your current plan clash with your injuries or limitations. Volyume can swap ${k} for movements that fit; ${u === 1 ? '1 has no close match and stays' : `${u} have no close match and stay`} in place with a quiet note.`;
 }
 
 function footerFor({ step, draft, plan, busy, showLines, t, onNext, onSave, onAgreeAndSave, onLeave, onApply, declineNow, onApplyRewrite, onKeepPlan, onContinue, onFinish }) {

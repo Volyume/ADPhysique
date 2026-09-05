@@ -65,7 +65,7 @@ describe('T1-15/T2-24: the AWAITING prompt reaches Today', () => {
     );
   });
 
-  test('the AWAITING row is tappable through to How you train', () => {
+  test('the AWAITING row is tappable through to Injuries & limitations', () => {
     const site = HOME.indexOf('{awaitingConstraintLine ? (');
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site, HOME.indexOf(') : null}', site));
@@ -121,7 +121,7 @@ describe('T1-12: quick-generate reveals capability-blocked slots', () => {
 
   test('capabilityBlockedNote is a local pure helper with the exact singular/plural copy', () => {
     expect(HOME).toMatch(
-      /function capabilityBlockedNote\(n\) \{\s*\n\s*return n === 1\s*\n\s*\? '1 movement sat outside how you train, so your plan works without it\.'\s*\n\s*: `\$\{n\} movements sat outside how you train, so your plan works without them\.`;\s*\n\s*\}/,
+      /function capabilityBlockedNote\(n\) \{\s*\n\s*return n === 1\s*\n\s*\? "1 movement clashed with an injury or limitation you've set, so your plan works without it\."\s*\n\s*: `\$\{n\} movements clashed with your injuries or limitations, so your plan works without them\.`;\s*\n\s*\}/,
     );
   });
 });
@@ -214,7 +214,7 @@ describe('R9 B4/E1: the honest could-not-check line', () => {
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site, HOME.indexOf(') : null}', site));
     expect(block).toContain('styles.constraintLineRow');
-    expect(block).toContain('Volyume could not check how you train just now.');
+    expect(block).toContain('Volyume could not check Injuries & limitations just now.');
     expect(block).not.toMatch(/TouchableOpacity|onPress/);
   });
 

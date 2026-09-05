@@ -246,7 +246,7 @@ all-NO marketing readiness matrix; the capability line uses the neutral
 in-app framing only. Facts trace to PRODUCT-FACTS section H.
 
 ```
-Tell Volyume what to build your training around, and which side it affects. You never need to say why. Look for How you train in Settings.
+Tell Volyume what to build your training around, and which side it affects. You never need to say why. Look for Injuries & limitations in the Coach tab or Settings.
 
 The personal best alert now fires every time you beat your best, not only the first time. The summary still shows one per exercise.
 

@@ -111,10 +111,10 @@ export default function AvoidedMovementsScreen({ navigation }) {
         onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
         style={styles.crossLaneRow}
         accessibilityRole="button"
-        accessibilityLabel="Things your body needs training built around live under How you train"
+        accessibilityLabel="Injuries, pain, conditions and disabilities live under Injuries & limitations"
       >
         <Text style={[styles.crossLaneText, live.crossLaneText]}>
-          Things your body needs training built around live under How you train.
+          Injuries, pain, conditions and disabilities live under Injuries & limitations.
         </Text>
         <Ionicons name="chevron-forward" size={14} color={t.colors.textMuted} />
       </TouchableOpacity>
@@ -148,7 +148,7 @@ export default function AvoidedMovementsScreen({ navigation }) {
              one list - and its icon chip was `surface` ON a `surface` card,
              i.e. invisible. The rows are the shared SettingRow inside one
              grouped section now, exactly like the sibling capability lane
-             (How you train) this screen points at, so the two surfaces read
+             (Injuries & limitations) this screen points at, so the two surfaces read
              as one feature. Copy, ordering and the remove action are
              unchanged. */
           <View style={[settingsStyles.section, settings.section]}>
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   list: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
   crossLaneRow: {
-    // The row is a real control (it routes to How you train), and a caption
+    // The row is a real control (it routes to Injuries & limitations), and a caption
     // between 8dp and 4dp of padding stood about 30dp tall - under the 48dp
     // floor in docs/rules/styling.md. Floored on the token; the line stays
     // exactly as quiet as T1-20 specified.
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   // ~26dp of box relying on hitSlop to clear the floor. Slop is invisible:
   // it does not show the user where to press and adjacent slop regions
   // steal each other's taps. The box carries the floor itself now (the
-  // shape How you train's own per-row Remove uses), and hitSlop stays as
+  // shape Injuries & limitations' own per-row Remove uses), and hitSlop stays as
   // the belt to that braces. Pinned by capabilityTouchTargets.guard.
   removeBtn: {
     minHeight: touchTarget.minimum,
