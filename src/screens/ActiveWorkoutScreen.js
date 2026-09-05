@@ -4109,7 +4109,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // D107-2: the assisted inversion must run on BOTH sides of the D87
     // agreement contract (this line and the on-log detectPR call).
     loadSemantics: exercise?.loadSemantics ?? 'total',
-  }), [currentSet.weight, currentSet.reps, currentSet.setType, allTimeSets, loggedSets, units, activeExerciseType, exercise?.loadSemantics]);
+    // EL-7: same agreement contract - detectPR (algorithms.js) already
+    // excludes a ballistic set via isE1rmEligibleRow, so this live line
+    // must too, or it could promise a record the log then withholds.
+    evidenceClass: currentEvidenceClass,
+  }), [currentSet.weight, currentSet.reps, currentSet.setType, allTimeSets, loggedSets, units, activeExerciseType, exercise?.loadSemantics, currentEvidenceClass]);
 
   const handleCurrentSetChange = useCallback((next) => {
     if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
