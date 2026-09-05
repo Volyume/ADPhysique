@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform,
@@ -34,6 +34,7 @@ import { buildContinuityReceipt } from '../lib/food/planExplain';
 import { hydrateLoadedTargetsWithAuthority, getRecommendedMeals } from '../lib/nutritionTargetsView';
 import { isValidBodyWeightKg, isValidBodyFatPercent } from '../lib/bodyMetricValidate';
 import useAppStore from '../store/useAppStore';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { useShallow } from 'zustand/react/shallow';
 import * as haptics from '../lib/haptics';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
@@ -301,8 +302,37 @@ function WhySection({ icon, color, title, body }) {
 const BODY_METRICS_KEY_PREFIX = '@volyume_body_metrics_';
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
-export default function NutritionTargetsScreen({ navigation }) {
+export default function NutritionTargetsScreen({ navigation, route }) {
   const toast = useToast();
+  // A6 (certification 2026-09-05): a screen that sent the person here can ask
+  // to get them back. MealPlanScreen.js:430-434 has always passed
+  // returnToTab/returnToScreen when a missing target blocked plan generation
+  // ("Set your nutrition targets first, then your plan builds from them"),
+  // and nothing read them: navigateCrossTab pops the destination stack to its
+  // root, so Back from here landed on the Coach tab root, not the meal plan
+  // they were in the middle of building.
+  //
+  // Honoured on EVERY way out of this screen (header chevron, Android
+  // hardware back, iOS swipe-back) through one beforeRemove listener rather
+  // than a handler per surface, so no exit can quietly miss it. With no
+  // params present nothing is intercepted and goBack behaves exactly as
+  // before.
+  const returnToTab = route?.params?.returnToTab;
+  const returnToScreen = route?.params?.returnToScreen;
+  const returningRef = useRef(false);
+  useEffect(() => {
+    if (!returnToTab) return undefined;
+    if (typeof navigation?.addListener !== 'function') return undefined;
+    return navigation.addListener('beforeRemove', (e) => {
+      // The cross-tab jump below does not remove this route, so this can only
+      // re-enter if something else pops the screen afterwards; the ref keeps
+      // that from looping.
+      if (returningRef.current) return;
+      e.preventDefault();
+      returningRef.current = true;
+      navigateCrossTab(navigation, returnToTab, returnToScreen);
+    });
+  }, [navigation, returnToTab, returnToScreen]);
   // Campaign 17A job 5: the dry-run plan reconciliation awaiting the user's yes.
   const [planReview, setPlanReview] = useState(null);
   // Founder device order 2026-08-17: which derivation explainer (from the

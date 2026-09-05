@@ -37,6 +37,7 @@ import { swapAdjacentBlocks } from '../lib/reorder';
 import { appAlert } from '../components/AppAlert';
 import { track } from '../lib/engineTelemetry';
 import useAppStore from '../store/useAppStore';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import * as haptics from '../lib/haptics';
@@ -389,6 +390,12 @@ export default function ManualBuilderScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planId]);
 
+  // A5: set the instant a completed save is about to leave the screen, so the
+  // D139 discard confirm below (which watches every removal) stays out of the
+  // way of a save that has already been written. Synchronous ref, not state:
+  // the removal is dispatched in the same tick.
+  const savedAndLeavingRef = useRef(false);
+
   // D139: hardware back / header back / swipe-back off page 2 with unsaved
   // exercises must ask before discarding them. Nothing has been written yet
   // at this point (the programme row is created by ensureProgramme on Save,
@@ -405,6 +412,9 @@ export default function ManualBuilderScreen({ navigation, route }) {
     const hasWork = days.some(d => d.exercises.length > 0);
     const unsub = navigation.addListener('beforeRemove', (e) => {
       if (!hasWork) return;
+      // A5: "Save draft" now pops this stack, which is a removal. The work
+      // has just been written, so the discard confirm must not fire on it.
+      if (savedAndLeavingRef.current) return;
       e.preventDefault();
       appAlert('Discard this plan?', 'The workouts you added here will not be saved.', [
         { text: 'Keep editing', style: 'cancel' },
@@ -1009,13 +1019,37 @@ export default function ManualBuilderScreen({ navigation, route }) {
       await updateProgrammeName(pid, editablePlanName.trim() || 'My Plan');
       await persistDays(pid);
       track(user.id, 'manual_plan_saved', { activated: false })?.catch?.(() => {});
-      navigation.navigate('PlansTab');
+      // A5 (certification 2026-09-05): this was navigate('PlansTab'), the tab
+      // this screen already lives in. The action bubbled to the tab navigator,
+      // which was already focused on PlansTab and was handed no nested screen,
+      // so nothing popped and "Save draft" left the person on the builder with
+      // only a toast. Popping the Train stack is the primitive that actually
+      // returns them to My plans, and it is what the sibling completions use
+      // (WorkoutSummaryScreen.js:864,1005; CoachOutputScreen.js:2489).
+      savedAndLeavingRef.current = true;
+      navigation.popToTop();
     } catch (e) {
       logError('ManualBuilderScreen.handleSaveDraft', e);
       toast.show("Couldn't save your draft, try again", { variant: 'error' });
     } finally {
       setSaving(false);
     }
+  }
+
+  // A5 (certification 2026-09-05): the activation success sheet's "Go to
+  // Today" used navigation.navigate('HomeTab'), a bare tab hop that bypassed
+  // the sanctioned cross-tab helper and left ManualBuilder sitting on the
+  // Train stack, so the next visit to Train re-opened the finished builder.
+  // Two synchronous dispatches, no timer: switch tabs through the helper
+  // (which also clears any retained history on Today), then pop the Train
+  // stack behind us. The tab's stack stays mounted through a tab switch, so
+  // the second dispatch lands; the saved-and-leaving ref keeps the D139
+  // discard confirm out of a plan that has just been activated.
+  function handleGoToToday() {
+    setSuccessModal(false);
+    savedAndLeavingRef.current = true;
+    navigateCrossTab(navigation, 'HomeTab', 'Home');
+    navigation.popToTop();
   }
 
   // S5 edit mode: a single Save, no separate Activate step. Re-running
@@ -1586,7 +1620,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
             fullWidth={false}
             style={styles.successPrimary}
             textStyle={[styles.successPrimaryText, live.successPrimaryText]}
-            onPress={() => { setSuccessModal(false); navigation.navigate('HomeTab'); }}
+            onPress={handleGoToToday}
             accessibilityLabel="Go to Today"
           />
         </View>

@@ -4,8 +4,10 @@
  * react-native-android-widget runs this in a headless JS context whenever the OS
  * needs to (re)render a widget. It reads the latest snapshot from the app
  * sandbox (AsyncStorage, written by src/lib/widgets/storage.js) and renders the
- * matching dumb widget. Tapping a widget opens the app via the volyume:// deep
- * link.
+ * matching dumb widget. Tapping a widget opens the app: the widget root
+ * declares the library's OPEN_APP click action (src/widgets/widgets.js,
+ * Shell), which the native provider handles directly - it never arrives here
+ * as a WIDGET_CLICK action, so this handler stays render-only.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WIDGET_SNAPSHOT_ASYNC_KEY } from '../lib/widgets/storage';

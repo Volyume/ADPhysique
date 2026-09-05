@@ -371,10 +371,15 @@ export default function BlockReflectionScreen({ navigation, route }) {
                 variant="tertiary"
                 icon="arrow-forward-circle-outline"
                 fullWidth={false}
-                onPress={() => {
-                  navigation.goBack();
-                  setTimeout(() => navigateCrossTab(navigation, 'PlansTab', 'Plans'), 300);
-                }}
+                // A7 (certification 2026-09-05): this was goBack() followed by
+                // a 300 ms setTimeout that called navigateCrossTab on the
+                // navigation object of a route that had just unmounted -- a
+                // timing arrangement, not a closed mechanism. One cross-tab
+                // call does the whole jump, exactly as the empty-state action
+                // above already does, and nothing on this screen needs the
+                // goBack: it has no unmount cleanup beyond a load-request
+                // guard ref, and no beforeRemove listener.
+                onPress={() => navigateCrossTab(navigation, 'PlansTab', 'Plans')}
                 accessibilityLabel="Choose your next block"
               />
             </View>

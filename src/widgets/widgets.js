@@ -35,13 +35,26 @@ const HAIRLINE = '#2E2E2C';   // theme.js borderSubtle
 const TEXT = '#FFFFFF';
 const MUTED = '#9E9E9E';
 
+// A1 (route-graph certification 2026-09-05): the widget root carries the
+// library's OPEN_APP click action, so a tap opens Volyume. Without it a
+// widget is inert -- react-native-android-widget has no container default
+// and requires an explicit per-element clickAction
+// (node_modules/react-native-android-widget/src/widgets/utils/click-action.ts:
+// `"OPEN_APP"` - this clickAction does not require clickActionData). OPEN_APP
+// is handled natively (RNWidgetProvider.java:54 -> openApp) and never reaches
+// the JS task handler, so widgetTaskHandler keeps its render-only behaviour.
+// Shell is the root of BOTH widgets, so one declaration covers both.
 function Shell({ eyebrow, children }) {
   return (
-    <FlexWidget style={{
-      height: 'match_parent', width: 'match_parent', backgroundColor: SURFACE,
-      borderRadius: 20, borderWidth: 1, borderColor: HAIRLINE,
-      padding: 14, flexDirection: 'column', justifyContent: 'space-between',
-    }}>
+    <FlexWidget
+      clickAction="OPEN_APP"
+      accessibilityLabel="Open Volyume"
+      style={{
+        height: 'match_parent', width: 'match_parent', backgroundColor: SURFACE,
+        borderRadius: 20, borderWidth: 1, borderColor: HAIRLINE,
+        padding: 14, flexDirection: 'column', justifyContent: 'space-between',
+      }}
+    >
       <FlexWidget style={{ flexDirection: 'row', alignItems: 'center' }}>
         <FlexWidget style={{
           width: 6, height: 6, borderRadius: 3, backgroundColor: AMBER, marginRight: 6,

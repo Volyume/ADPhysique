@@ -489,7 +489,7 @@ function PlansStack({ navigation }) {
           exercise long-press (RoutineDetailScreen); this is the list home
           with per-row removal. */}
       <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
-      {/* CC26: capability settings home ("How you train"). Free tier, CAP-19. */}
+      {/* CC26: capability settings home ("Injuries & limitations"). Free tier, CAP-19. */}
       <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
       <Stack.Screen name="HowYouTrainAdd" component={HowYouTrainAddScreen} options={{ headerShown: false }} />
       {/* Gap-closure Phase D: free-tier discovery surface (CAP-19), unguarded like HowYouTrain. */}
@@ -568,7 +568,7 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="AthleteProfile" component={AthleteProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
-      {/* SettingsScreen's "How you train" row links here, and the 1.3.0
+      {/* SettingsScreen's "Injuries & limitations" row links here, and the 1.3.0
           release note sends users to it by name, so this stack has to carry the
           route rather than rely on PlansStack having it. TrainingConsiderations
           rides along as HowYouTrain's own outbound target (transitive closure).
@@ -835,6 +835,25 @@ const linking = {
         screens: {
           // volyume://workout/start → Today tab → blank/build workout screen.
           BuildWorkout: 'workout/start',
+          // volyume://active-workout → Today tab root (A3, certification
+          // 2026-09-05). The Android foreground-service and rest-chronometer
+          // notifications hand this URL to the OS
+          // (lib/notifications/activeWorkout.js:152,
+          // restForeground.js:72,107) and nothing matched it, so the tap
+          // opened the app and navigated nowhere.
+          //
+          // It maps to Today, NOT to ActiveWorkout, because no route resumes
+          // a session on its own: the in-progress workout lives in memory
+          // only and is rehydrated by HomeScreen's mount effect
+          // (HomeScreen.js:246-248, restoreActiveWorkout). getStateFromPath
+          // builds the target route WITHOUT the stack's initial route, so
+          // `HomeTab: { ActiveWorkout: 'active-workout' }` would mount
+          // ActiveWorkout with a null activeWorkout and no rehydration —
+          // an empty live session, which is worse than landing one tap away.
+          // Today mounts the restore effect and shows the "Continue active
+          // workout" card (HomeScreen.js:2253-2258). Per the ruling: no new
+          // resume mechanism is built here.
+          Home: 'active-workout',
         },
       },
       DiaryTab: {
@@ -862,6 +881,19 @@ const linking = {
         screens: {
           // volyume://progress → Progress tab root (Analytics screen).
           Analytics: 'progress',
+          // volyume://partner/:code and https://volyume.app/partner/:code →
+          // Progress tab → Partner, with the invite code in hand (A2,
+          // certification 2026-09-05). src/lib/partners/link.js:18-19 mints
+          // both shapes and inviteShareMessage puts the web link in the
+          // share text, but no path matched them, so an invited partner had
+          // to type the code in by hand.
+          //
+          // The param MUST be named `code`: PartnerScreen.js:635 reads
+          // route.params.code through parseInviteCode, which also tolerates
+          // a whole link pasted in. `:code?` is OPTIONAL so a bare
+          // volyume://partner still opens the pairing screen (the redeem
+          // effect no-ops without a code) rather than failing to resolve.
+          Partner: 'partner/:code?',
         },
       },
       // §15 item 8: coach output + weekly check-in, the two most-requested

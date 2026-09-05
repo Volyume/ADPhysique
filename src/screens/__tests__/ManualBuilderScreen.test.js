@@ -82,7 +82,13 @@ import { track } from '../../lib/engineTelemetry';
 import ManualBuilderScreen from '../ManualBuilderScreen';
 
 const store = { user: { id: 'user-1' }, accessibility: { reduceMotion: true } };
-const nav = { navigate: jest.fn(), goBack: jest.fn() };
+// A5 (certification 2026-09-05): the builder's two completions now pop the
+// Train stack, and the activation success button goes through
+// navigateCrossTab, so the stub carries popToTop and a tab-navigator parent.
+const parentNav = { navigate: jest.fn(), getState: jest.fn(() => ({ routes: [] })), dispatch: jest.fn() };
+const nav = {
+  navigate: jest.fn(), goBack: jest.fn(), popToTop: jest.fn(), getParent: () => parentNav,
+};
 
 // All distinct pressables carrying an accessibilityLabel + onPress.
 // react-test-renderer surfaces both the composite TouchableOpacity and a
@@ -545,8 +551,15 @@ describe('ManualBuilderScreen — Save & Activate uses the current name (PLAN-00
     // one word meant two destinations. The label was corrected rather than
     // the route: Today is where the freshly activated plan's next session
     // waits. The pinned RULE (this button lands on HomeTab) is unchanged.
+    //
+    // A5 (certification 2026-09-05): the route is the same, the mechanism is
+    // not. A bare navigate('HomeTab') bypassed the sanctioned cross-tab helper
+    // and left the finished builder on the Train stack, so the next visit to
+    // Train re-opened it. It now goes through navigateCrossTab and pops the
+    // Train stack behind it.
     press(tree, 'Go to Today');
-    expect(nav.navigate).toHaveBeenCalledWith('HomeTab');
+    expect(parentNav.navigate).toHaveBeenCalledWith('HomeTab', { screen: 'Home', initial: false });
+    expect(nav.popToTop).toHaveBeenCalled();
   });
 
   test('leaving the name untouched keeps prior behaviour unchanged', async () => {
@@ -695,7 +708,13 @@ describe('ManualBuilderScreen — deferred programme creation (D139)', () => {
     expect(createProgramme).toHaveBeenCalledWith('user-1', 'Draft Plan', 'Build muscle', 0);
     expect(createRoutine).toHaveBeenCalled();
     expect(track).toHaveBeenCalledWith('user-1', 'manual_plan_saved', { activated: false });
-    expect(nav.navigate).toHaveBeenCalledWith('PlansTab');
+    // A5 (certification 2026-09-05): this used to assert navigate('PlansTab'),
+    // the tab ManualBuilder already lives in — an action that bubbles to a tab
+    // navigator already focused on that tab, carries no nested screen and
+    // therefore pops nothing, leaving the person on the builder with a toast.
+    // Popping the Train stack is what actually returns them to My plans.
+    expect(nav.popToTop).toHaveBeenCalled();
+    expect(nav.navigate).not.toHaveBeenCalledWith('PlansTab');
   });
 
   test('Save and activate creates the programme row for the first time and reports activated: true', async () => {
