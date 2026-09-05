@@ -30,6 +30,9 @@
  * other consumer of it are untouched.
  */
 
+import { format } from 'date-fns/format';
+import { localWeekEndMs } from './dayKey';
+
 // Matches a trailing " 3×/Week" / " 3x/Week" style suffix (with or without
 // a space before the multiplication sign/x, case-insensitive "week",
 // optionally preceded by a comma or middot separator).
@@ -77,6 +80,27 @@ export function dayDescriptor(dayIndex, totalDays) {
   const day = (Number.isFinite(dayIndex) ? dayIndex : 0) + 1;
   const total = Math.max(1, Number.isFinite(totalDays) ? totalDays : 1);
   return `Day ${day} of ${total}`;
+}
+
+/**
+ * B-1 (F-18): the week-complete body line. Names what is next and when the
+ * new week starts, so "every session done this week" is never a dead end.
+ *
+ * The Monday is the SAME UK-local week boundary every other "this week"
+ * window in the app uses (dayKey.localWeekEndMs -> the next local Monday at
+ * 00:00, DST-correct), never a hand-rolled +7 days, and the date is
+ * formatted 'd MMM' - the format Home already uses for a dated day, so this
+ * line cannot read differently from the rest of the screen.
+ *
+ * The session name is optional: with no readable name the line still states
+ * the Monday rather than inventing one.
+ */
+export function weekCompleteLine(nextSessionName, nowMs = Date.now()) {
+  const monday = format(new Date(localWeekEndMs(nowMs)), 'd MMM');
+  const name = typeof nextSessionName === 'string' ? nextSessionName.trim() : '';
+  return name
+    ? `Your next session is ${name}. Your new week starts on Monday ${monday}.`
+    : `Your new week starts on Monday ${monday}.`;
 }
 
 // The one-line active-plan reference: plan name first, then the day

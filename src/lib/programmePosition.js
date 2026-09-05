@@ -226,6 +226,25 @@ export async function resolveProgrammePosition(userId) {
 }
 
 /**
+ * IS EVERY REQUIRED SESSION AT THIS POSITION RESOLVED? (F-18 / evidence B-1.)
+ *
+ * The week-complete fact, derived in ONE place so Home and Train cannot
+ * disagree about it. True only when the position is readable, the active
+ * week's required sessions are all resolved (completed, skipped or ended
+ * early) and nothing outstanding is left to offer. A null position is an
+ * unreadable block, which is not evidence that anything is finished, so it
+ * is false.
+ *
+ * The defect this names: with nothing outstanding, `nextSession` is null and
+ * both surfaces fell back to the plan's FIRST routine, so an athlete who had
+ * done every required session this week was invited to start session 1 again
+ * under the eyebrow "Day 1 of N", with nothing saying the week was done.
+ */
+export function isWeekComplete(position) {
+  return !!position && position.nextSession == null && position.weekResolved === true;
+}
+
+/**
  * The next required session, or null. The single answer Home, Plans and Train
  * all consume, so they cannot disagree about what is next.
  */

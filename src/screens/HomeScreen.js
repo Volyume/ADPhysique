@@ -21,7 +21,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import TodayStrip from '../components/TodayStrip';
 import RecoveryStateCard from '../components/RecoveryStateCard';
 import { appAlert } from '../components/AppAlert';
-import { resolveProgrammePosition } from '../lib/programmePosition';
+import { resolveProgrammePosition, isWeekComplete } from '../lib/programmePosition';
 import {
   reEntryCheckDue, reEntryPrompt, reEntryOutcome, RE_ENTRY_ANSWER,
 } from '../lib/reEntryCheck';
@@ -65,7 +65,7 @@ import {
   MIN_WEIGH_INS,
 } from '../lib/trialActivation';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
-import { activePlanLine, planHeadingName } from '../lib/planDisplay';
+import { activePlanLine, planHeadingName, weekCompleteLine } from '../lib/planDisplay';
 import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE, NUDGE_WINDOW_GRACE_MS } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { localWeekStartMs, localWeekEndMs, localDayKey } from '../lib/dayKey';
@@ -181,6 +181,7 @@ export default function HomeScreen({ navigation, route }) {
     continueSub: { ...t.type.caption, color: withAlpha(t.colors.onPrimary, alpha.half) },
     workoutName: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
     workoutMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    heroBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     mesoBriefChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     mesoBriefText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     workoutOptionsText: { color: t.colors.textSecondary },
@@ -263,6 +264,11 @@ export default function HomeScreen({ navigation, route }) {
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
+  // B-2 (F-18): an ACTIVE plan that holds no sessions. Kept as its own
+  // fact rather than inferred from `planAllWorkouts.length === 0`, so a
+  // failed read (which also leaves that array empty) can never render the
+  // "no sessions yet" state for a plan that has them.
+  const [planHasNoSessions, setPlanHasNoSessions] = useState(false);
   const [exerciseCounts, setExerciseCounts] = useState({});
   // D112 R2 (closes audit T1-17): the effective (served) row count for the
   // DISPLAYED session only - null until resolved, so the raw exerciseCounts
@@ -1187,12 +1193,18 @@ export default function HomeScreen({ navigation, route }) {
         setNextWorkout(null);
         setPlanAllWorkouts([]);
         setSelectedWorkoutOverride(null);
+        setPlanHasNoSessions(false);
+        setProgrammePosition(null);
         return;
       }
       const routines = await getRoutinesForPlan(plan.id);
       setPlanAllWorkouts(routines);
       setSelectedWorkoutOverride(null);
-      if (routines.length === 0) { setNextWorkout(null); return; }
+      // B-2 (F-18): a plan with no sessions is its own hero state. It used to
+      // fall through to "No active plan yet", which was false for someone who
+      // owned a plan, and whose offered fix would have replaced it.
+      setPlanHasNoSessions(routines.length === 0);
+      if (routines.length === 0) { setNextWorkout(null); setProgrammePosition(null); return; }
       // C18 BLOCK PROGRESSION. This used to read
       // `(plan.nextWorkoutIndex || 0) % routines.length` - a single integer
       // advanced blindly on any completion, so training out of order moved it
@@ -1222,6 +1234,14 @@ export default function HomeScreen({ navigation, route }) {
       ) || null;
       maybeAskReEntry(position, lastCompletedAtMs);
       const next = position?.nextSession ?? null;
+      // B-1 (F-18). THE WEEK-COMPLETE FACT, not a fallback. With every
+      // required session at this position resolved there is no next workout,
+      // and `idx = 0` below used to hand back the plan's FIRST routine - so
+      // Today re-offered session 1 under the eyebrow "Day 1 of N" with
+      // nothing saying the week's work was done. The hero renders the
+      // week-complete state instead; an extra session stays available as a
+      // deliberate choice through the workout-options sheet.
+      if (!next && isWeekComplete(position)) { setNextWorkout(null); return; }
       const idx = next
         ? Math.max(0, routines.findIndex((r) => r.id === next.routineId))
         : 0;
@@ -1230,6 +1250,7 @@ export default function HomeScreen({ navigation, route }) {
       setNextWorkout(null);
       setPlanAllWorkouts([]);
       setSelectedWorkoutOverride(null);
+      setPlanHasNoSessions(false);
     }
   }
 
@@ -1616,6 +1637,25 @@ export default function HomeScreen({ navigation, route }) {
 
   const hasActiveWorkout = !!activeWorkout && !isStartingWorkout;
   const displayWorkout = selectedWorkoutOverride || nextWorkout;
+  // ── HERO PRECEDENCE (F-18; evidence B-1, B-2, B-3). Stated once, here,
+  // because three regions of this screen used to answer "what is today?"
+  // independently and could contradict one another (the Today line said
+  // "Block complete" while the hero below it offered "Start workout" on
+  // session 1). Exactly one branch of the hero renders, in this order:
+  //
+  //   1. active workout           - resume it; nothing outranks a live session
+  //   2. block awaiting decision  - the hero IS the decision (B-3)
+  //   3. week complete            - every required session resolved (B-1)
+  //   4. next session             - the normal training-day hero
+  //   5. empty states             - active plan with no sessions (B-2), then
+  //                                 no plan at all
+  //
+  // Picking a workout from the options sheet (selectedWorkoutOverride) is a
+  // deliberate choice to train anyway, so it drops states 2 and 3 to state 4
+  // and the athlete gets the ordinary Start action for what they chose.
+  const blockAwaitingDecision = !!currentMesoWeek?.awaitingDecision && !selectedWorkoutOverride;
+  const weekComplete = !blockAwaitingDecision
+    && isWeekComplete(programmePosition) && !selectedWorkoutOverride;
   // Canonical plan reference (issue 4): plan name + day descriptor from the
   // shared formatter, so this card can never drift from the Train tab again.
   // Must-fix 3 (2026-07-11): the hero eyebrow is a heading, so it drops the
@@ -1846,8 +1886,14 @@ export default function HomeScreen({ navigation, route }) {
   // otherwise claim a live "Deload week" that has already passed. Honest
   // maintenance language instead: targets hold at recovery-week volume
   // until the user chooses.
+  // B-1 (F-18): on a resolved week the default read below ("On track for
+  // this block.") spoke as though a session were still pending. The
+  // week-complete state gets its own honest line; the block-finished line
+  // above is unchanged.
   const readinessSummary = currentMesoWeek?.awaitingDecision
     ? { tone: 'go', line: 'Block finished. Targets hold at recovery-week volume until you choose what comes next.' }
+    : weekComplete
+    ? { tone: 'go', line: 'Nothing outstanding this week.' }
     : buildReadinessSummary({
       currentMesoWeek,
       // Campaign 22 Phase 2 Stage 1 (spec §8, the measured copy
@@ -2115,6 +2161,33 @@ export default function HomeScreen({ navigation, route }) {
   // components below, so passing them as props doesn't defeat the memo.
   // (openFirstReviewSurface lives above the arbiter call with the line it
   // serves.)
+  // The readiness chip, composed once: the hero renders it on the training
+  // day, on a complete week and on a finished block (F-18 hero precedence),
+  // and all three must read the same one calm line and open the same
+  // block-shape sheet.
+  const readinessChipEl = readinessSummary ? (
+    <TouchableOpacity
+      style={[styles.mesoBriefChip, live.mesoBriefChip]}
+      onPress={() => { haptics.selection(); setShowBlockShape(true); }}
+      accessibilityRole="button"
+      /* C5-P34-04 (D96): the chip is where "stop 2 short of
+         failure" is defined, but its label named only the block,
+         so a screen-reader user heard an offer to explain
+         something else entirely and had no reason to open the one
+         sheet that answers the phrase they just heard. The
+         definition stays exactly one tap away. */
+      accessibilityLabel="See the shape of your training block and what the effort target means"
+    >
+      <Ionicons
+        name={READINESS_ICON[readinessSummary.tone] ?? READINESS_ICON.go}
+        size={12}
+        color={BRIEF_ICON_COLOR[readinessSummary.tone] ?? BRIEF_ICON_COLOR.go}
+      />
+      <Text style={[styles.mesoBriefText, live.mesoBriefText]}>{readinessSummary.line}</Text>
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+    </TouchableOpacity>
+  ) : null;
+
   const goToWorkoutHistory = useCallback(() => navigation.navigate('WorkoutHistory'), [navigation]);
   const closeBlockShape = useCallback(() => setShowBlockShape(false), []);
   const closeChangeWorkout = useCallback(() => setShowChangeWorkout(false), []);
@@ -2268,6 +2341,71 @@ export default function HomeScreen({ navigation, route }) {
               <Ionicons name="chevron-forward" size={iconSize.md} color={withAlpha(t.colors.onPrimary, alpha.half)} />
             </View>
           </PressableCard>
+        ) : blockAwaitingDecision ? (
+          /* B-3 (F-18): the block is finished and waiting on the athlete's
+             next-block decision. The hero IS that decision. It used to offer
+             "Start workout" on session 1 under a "Day 1 of N" eyebrow while
+             the Today line and the readiness chip both said the block was
+             complete - three regions, two truths. Training during the wait is
+             still allowed, so it stays available as the quiet secondary, never
+             the primary. */
+          <Card surface="surfaceElevated" style={styles.heroCard}>
+            <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
+              Block complete
+            </SectionLabel>
+            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={3}>
+              Every week of this block is done
+            </Text>
+            {readinessChipEl}
+            <View style={styles.startWorkoutRow}>
+              <View style={styles.startBtnSplit}>
+                <Button
+                  title="Choose what's next"
+                  onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'Plans'); }}
+                  accessibilityLabel="Choose what comes after this block"
+                  style={[styles.primaryBtn, { marginTop: 0 }]}
+                />
+              </View>
+            </View>
+            <TouchableOpacity
+              onPress={() => { haptics.selection(); setShowChangeWorkout(true); }}
+              style={styles.skipSessionRow}
+              accessibilityRole="button"
+              accessibilityLabel="Do another session from your plan"
+            >
+              <Text style={[styles.skipSessionText, live.skipSessionText]}>
+                Do another session
+              </Text>
+            </TouchableOpacity>
+          </Card>
+        ) : weekComplete ? (
+          /* B-1 (F-18): every required session at this position is resolved.
+             There is no primary action, because nothing is owed: the week's
+             work is done and the next one starts on Monday. An extra session
+             is a deliberate choice, so it opens the same workout-options
+             sheet the training hero uses rather than starting session 1. */
+          <Card surface="surfaceElevated" style={styles.heroCard}>
+            <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
+              Week complete
+            </SectionLabel>
+            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={3}>
+              Every session done this week
+            </Text>
+            <Text style={[styles.heroBody, live.heroBody]}>
+              {weekCompleteLine(planAllWorkouts[0]?.name)}
+            </Text>
+            {readinessChipEl}
+            <TouchableOpacity
+              onPress={() => { haptics.selection(); setShowChangeWorkout(true); }}
+              style={styles.skipSessionRow}
+              accessibilityRole="button"
+              accessibilityLabel="Do another session from your plan"
+            >
+              <Text style={[styles.skipSessionText, live.skipSessionText]}>
+                Do another session
+              </Text>
+            </TouchableOpacity>
+          </Card>
         ) : activePlan && nextWorkout ? (
           <Card surface="surfaceElevated" style={styles.heroCard}>
             <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
@@ -2306,28 +2444,7 @@ export default function HomeScreen({ navigation, route }) {
                 Keeps Volyume's coaching identity visible at the start of
                 every session, the way an RP-style plan would. Tooltip-free
                 because the row is glanceable on its own. */}
-            {readinessSummary && (
-              <TouchableOpacity
-                style={[styles.mesoBriefChip, live.mesoBriefChip]}
-                onPress={() => { haptics.selection(); setShowBlockShape(true); }}
-                accessibilityRole="button"
-                /* C5-P34-04 (D96): the chip is where "stop 2 short of
-                   failure" is defined, but its label named only the block,
-                   so a screen-reader user heard an offer to explain
-                   something else entirely and had no reason to open the one
-                   sheet that answers the phrase they just heard. The
-                   definition stays exactly one tap away. */
-                accessibilityLabel="See the shape of your training block and what the effort target means"
-              >
-                <Ionicons
-                  name={READINESS_ICON[readinessSummary.tone] ?? READINESS_ICON.go}
-                  size={12}
-                  color={BRIEF_ICON_COLOR[readinessSummary.tone] ?? BRIEF_ICON_COLOR.go}
-                />
-                <Text style={[styles.mesoBriefText, live.mesoBriefText]}>{readinessSummary.line}</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-              </TouchableOpacity>
-            )}
+            {readinessChipEl}
             {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §8/§16/§17
                 R3, hero merge): CoachBriefCard's card-in-card render is
                 retired -- this is the SAME coachBrief content (A-job,
@@ -2406,6 +2523,25 @@ export default function HomeScreen({ navigation, route }) {
                 noise, not trusted as accurate, and unwanted streak framing.
                 Nothing replaces it here; no content beats low-value filler. */}
           </Card>
+        ) : activePlan && planHasNoSessions ? (
+          /* B-2 (F-18): the plan is real, it simply holds no sessions. This
+             used to fall through to "No active plan yet", which was false for
+             someone who owned a plan - and whose offered fix ("Start with a
+             plan") would have replaced the plan they already had. */
+          <EmptyState
+            icon="barbell-outline"
+            title="Your plan has no sessions yet"
+            text="Open your plan to add a workout, or pick a different plan to follow."
+            actionLabel="Open your plan"
+            onAction={() => {
+              haptics.selection();
+              navigateCrossTab(navigation, 'PlansTab', 'PlanDetail', { planId: activePlan.id, isLibrary: false });
+            }}
+            actionAccessibilityLabel="Open your plan to add a workout"
+            secondaryLabel="Choose a different plan"
+            onSecondary={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary'); }}
+            secondaryAccessibilityLabel="Choose a different plan from the library"
+          />
         ) : (
           <View style={styles.noPlanSection}>
             {/* FOUNDER DECISION (fully free, no tier split): the free
@@ -2993,6 +3129,9 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   workoutMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
+  // F-18: the hero's one body sentence (week-complete state). A
+  // sentence, so no line clamp - it wraps and the card grows.
+  heroBody: { ...type.bodySm, color: colors.textSecondary },
   mesoBriefChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs2,
     alignSelf: 'flex-start',

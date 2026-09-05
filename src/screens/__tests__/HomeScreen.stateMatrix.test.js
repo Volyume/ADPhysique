@@ -421,6 +421,12 @@ const REGION = {
   heroActive: (tree) => findByLabel(tree, 'Continue active workout').length > 0,
   heroPlanned: (tree) => findByLabel(tree, /^Workout options$/).length > 0,
   heroNoPlan: (tree) => flattenText(tree).includes('No active plan yet'),
+  // F-18 (evidence B-1/B-2/B-3): the three hero states added by the final
+  // certification repair. Matched on their own copy, as heroNoPlan already
+  // is, because none of them carries the training hero's options button.
+  heroWeekComplete: (tree) => flattenText(tree).includes('Every session done this week'),
+  heroBlockComplete: (tree) => flattenText(tree).includes('Every week of this block is done'),
+  heroPlanNoSessions: (tree) => flattenText(tree).includes('Your plan has no sessions yet'),
   welcomeCard: (tree) => findByLabel(tree, 'Dismiss the welcome guide').length > 0,
   todayStrip: (tree) => flattenText(tree).includes('Morning weight'),
   footerLastSession: (tree) => findByLabel(tree, 'Open workout history').length > 0,
@@ -542,6 +548,21 @@ function programmePosition(recoveryState = null) {
     activeWeekId: 'w1',
     blockId: 'b1',
     recoveryState,
+    weekResolved: false,
+  });
+}
+// F-18 (B-1): the position with every required session resolved. This is what
+// `resolveProgrammePosition` really returns once the week's work is done -
+// `nextSession: null` with `weekResolved: true` - and the real isWeekComplete
+// (deliberately NOT stubbed by applyFixture) reads it.
+function resolvedWeekPosition(recoveryState = null) {
+  return async () => ({
+    nextSession: null,
+    sessions: [{ routineId: 'r1', state: 'completed' }],
+    activeWeekId: 'w1',
+    blockId: 'b1',
+    recoveryState,
+    weekResolved: true,
   });
 }
 function completedWorkout(id, daysAgo = 1) {
@@ -721,6 +742,72 @@ describe('State matrix — S9: block finished, awaiting decision', () => {
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
     expect(REGION.todayLineText(tree)).toBe("Block complete. Choose what's next.");
+    // RE-PINNED (F-18 / B-3): this state used to render the training hero
+    // ("Start workout", eyebrow "Day 1 of N") directly beneath a Today line
+    // saying the block was complete. The hero IS the decision now.
+    expect(REGION.heroBlockComplete(tree)).toBe(true);
+    expect(REGION.heroPlanned(tree)).toBe(false);
+    expect(flattenText(tree)).not.toContain('Day 1 of');
+  });
+});
+
+// ─── F-18 hero states (evidence B-1, B-2, B-3) ─────────────────────────────
+describe('Hero precedence — week complete (B-1)', () => {
+  test('a resolved week states the week is done and never re-offers session 1', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: { ...withPlan(), getAllWorkouts: async () => [completedWorkout('w1', 0)] },
+      lib: { resolveProgrammePosition: resolvedWeekPosition(null) },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    const txt = flattenText(tree);
+    expect(REGION.heroWeekComplete(tree)).toBe(true);
+    expect(txt).toContain('Week complete');
+    expect(txt).toContain('Your new week starts on Monday');
+    // The defect: routines[0] handed back as "Day 1 of N" with a Start
+    // action and an "On track for this block." chip, as if work were due.
+    expect(txt).not.toContain('Day 1 of');
+    expect(txt).not.toContain('Start workout');
+    expect(txt).not.toContain('On track for this block.');
+    expect(REGION.heroPlanned(tree)).toBe(false);
+    // An extra session stays available, as a deliberate choice.
+    expect(findByLabel(tree, 'Do another session from your plan').length).toBeGreaterThan(0);
+  });
+});
+
+describe('Hero precedence — active plan with no sessions (B-2)', () => {
+  test('renders its own empty state, never "No active plan yet"', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getActivePlan: async () => ({ id: 'p1', name: 'My Plan' }),
+        getRoutinesForPlan: async () => [],
+      },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    expect(REGION.heroPlanNoSessions(tree)).toBe(true);
+    expect(REGION.heroNoPlan(tree)).toBe(false);
+    expect(findByLabel(tree, 'Open your plan to add a workout').length).toBeGreaterThan(0);
+  });
+});
+
+describe('Hero precedence — an active workout still outranks every new state', () => {
+  test('block awaiting a decision AND a resolved week: the resume card wins', async () => {
+    useAppStore.setState({ ...PRO_USER, activeWorkout: { id: 'w-live', routineId: 'r1' } });
+    applyFixture({
+      db: {
+        ...withPlan(),
+        getCurrentMesocycleWeek: async () => ({ awaitingDecision: true, mesocycleId: 'm1' }),
+      },
+      lib: { resolveProgrammePosition: resolvedWeekPosition(null) },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    expect(REGION.heroActive(tree)).toBe(true);
+    expect(REGION.heroBlockComplete(tree)).toBe(false);
+    expect(REGION.heroWeekComplete(tree)).toBe(false);
   });
 });
 

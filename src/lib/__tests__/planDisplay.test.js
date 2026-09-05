@@ -14,7 +14,8 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { dayDescriptor, activePlanLine, planHeadingName } from '../planDisplay';
+import { dayDescriptor, activePlanLine, planHeadingName, weekCompleteLine } from '../planDisplay';
+import { localWeekEndMs } from '../dayKey';
 
 describe('planDisplay formatters', () => {
   test('dayDescriptor is 1-based and clamps a missing total to 1', () => {
@@ -67,6 +68,38 @@ describe('planHeadingName strips frequency AND stored date suffixes (R1)', () =>
 
   test('a name that IS only a frequency falls back to the stored name', () => {
     expect(planHeadingName('4x/week')).toBe('4x/week');
+  });
+});
+
+// F-18 (evidence B-1): the week-complete body line.
+describe('weekCompleteLine names the next session and the Monday', () => {
+  // A Wednesday: 2026-09-09. The new week starts on Monday 14 Sep.
+  const wednesday = new Date(2026, 8, 9, 10, 0, 0).getTime();
+
+  test('names the session and the next local Monday', () => {
+    expect(weekCompleteLine('Legs', wednesday))
+      .toBe('Your next session is Legs. Your new week starts on Monday 14 Sep.');
+  });
+
+  test('with no readable session name it still states the Monday', () => {
+    expect(weekCompleteLine(null, wednesday)).toBe('Your new week starts on Monday 14 Sep.');
+    expect(weekCompleteLine('   ', wednesday)).toBe('Your new week starts on Monday 14 Sep.');
+  });
+
+  test('on a Monday the NEXT Monday is named, never today', () => {
+    // The week-complete state is reachable on the Monday itself (every
+    // session done in one day), where "starts on Monday" must not read as
+    // "starts today".
+    const monday = new Date(2026, 8, 7, 10, 0, 0).getTime();
+    expect(weekCompleteLine('Legs', monday))
+      .toBe('Your next session is Legs. Your new week starts on Monday 14 Sep.');
+  });
+
+  test('the Monday comes from the shared UK-local week helper, not a +7 days guess', () => {
+    const at = new Date(2026, 8, 9, 10, 0, 0).getTime();
+    const monday = new Date(localWeekEndMs(at));
+    expect(monday.getDay()).toBe(1);
+    expect(weekCompleteLine('Legs', at)).toContain(`Monday ${monday.getDate()} `);
   });
 });
 

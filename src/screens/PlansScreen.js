@@ -215,6 +215,11 @@ export default function PlansScreen({ navigation }) {
   const [exerciseCounts, setExerciseCounts] = useState({});
   const [refreshing, setRefreshing] = useState(false);
   const [blockAdvice, setBlockAdvice] = useState(null);
+  // B-1 (F-18): Train's next-workout row reads the SAME programme position
+  // Home does, so the two cannot disagree about whether the week's required
+  // work is done. False until proved: an unreadable position is not evidence
+  // that anything is finished.
+  const [weekComplete, setWeekComplete] = useState(false);
   // Stage 8: the finished block's ledger story for the decision card.
   const [ledgerStory, setLedgerStory] = useState(null);
   // C8 Work 1: the adjust-vs-repeat delta preview for the decision card.
@@ -366,6 +371,20 @@ export default function PlansScreen({ navigation }) {
       setTemplates(tmpl);
       setPlanWorkoutCounts(pwc);
       setExerciseCounts(exc);
+
+      // B-1 (F-18): the same authority handleStartNextWorkout already reads
+      // below, read here too so the ROW can say what the button would do.
+      // Best-effort: an unreadable position leaves the row as it was.
+      let position = null;
+      if (active) {
+        // eslint-disable-next-line global-require
+        const { resolveProgrammePosition, isWeekComplete } = require('../lib/programmePosition');
+        position = await resolveProgrammePosition(user.id).catch(() => null);
+        if (req !== ledgerLoadRef.current) return;
+        setWeekComplete(isWeekComplete(position));
+      } else {
+        setWeekComplete(false);
+      }
 
       if (block) {
         // FOUNDER DECISION (fully free, no tier split): every account gets
@@ -1306,23 +1325,41 @@ export default function PlansScreen({ navigation }) {
               <Text style={[styles.proCoachNote, live.proCoachNote]}>
                 Your coach reviews this plan each week and suggests changes for you to apply. Change training setup or switch plans from the options below.
               </Text>
+              {/* B-1 (F-18): once every required session this week is
+                  resolved there is no "next workout" to start, and the row
+                  used to start session 1 again. It states the position and
+                  its action becomes the choice, mirroring Today's own
+                  week-complete hero. */}
+              {weekComplete ? (
+                <Text style={[styles.proCoachNote, live.proCoachNote]}>
+                  Week complete. Your next session is on Monday.
+                </Text>
+              ) : null}
               <View style={styles.activePlanActions}>
                 {/* R9 (D70): startNextBtn -> shared Button primary (fires its
                     own selection() tick on press). */}
                 <Button
                   variant="primary"
-                  icon="play"
-                  title="Start next workout"
-                  onPress={() => handleStartNextWorkout(activePlan)}
-                  accessibilityLabel="Start next workout"
+                  icon={weekComplete ? 'list-outline' : 'play'}
+                  title={weekComplete ? 'Do another session' : 'Start next workout'}
+                  onPress={() => (weekComplete
+                    ? navigation.navigate('PlanDetail', { planId: activePlan.id, isLibrary: false })
+                    : handleStartNextWorkout(activePlan))}
+                  accessibilityLabel={weekComplete ? 'Do another session from your plan' : 'Start next workout'}
                   style={styles.startNextBtnWrap}
                 />
-                <Button
-                  variant="secondary"
-                  title="View plan"
-                  onPress={() => navigation.navigate('PlanDetail', { planId: activePlan.id, isLibrary: false })}
-                  accessibilityLabel="View plan"
-                />
+                {/* B-1 (F-18): in the week-complete state the primary above
+                    already opens the plan (to choose an extra session), so a
+                    second button to the same screen would be noise. Nothing
+                    is lost: the destination is identical. */}
+                {weekComplete ? null : (
+                  <Button
+                    variant="secondary"
+                    title="View plan"
+                    onPress={() => navigation.navigate('PlanDetail', { planId: activePlan.id, isLibrary: false })}
+                    accessibilityLabel="View plan"
+                  />
+                )}
               </View>
             </Card>
           </View>

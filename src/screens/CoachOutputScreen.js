@@ -2926,6 +2926,16 @@ export default function CoachOutputScreen({ navigation, route }) {
              claiming the plan is simply working. */
           <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
             <SectionLabel tone="primary" style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
+            {/* D-2 (final certification 2026-09-05): the Manual-mode
+                ownership note used to render only in the hero-card branch
+                above, so on a hold-everything week a Manual user saw rows
+                with no Apply pills and no line saying why. Same line, same
+                place, same style. */}
+            {applyDisabled ? (
+              <Text style={[styles.manualModeNote, live.manualModeNote]}>
+                Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.
+              </Text>
+            ) : null}
             <View style={[styles.holdHeroCard, live.holdHeroCard]}>
               <Text style={[styles.holdHeroText, live.holdHeroText]}>
                 {heldDecisions && heldDecisions.length > 0
