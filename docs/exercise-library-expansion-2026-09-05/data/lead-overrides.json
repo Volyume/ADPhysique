@@ -107,5 +107,57 @@
   "tierProposals": {
     "file": "data/tier-proposals.json",
     "ruling": "All 88 proposals accepted as proposed (83 SPECIALIST, 5 NICHE neck rows). The integration agent applies them to the registry lists."
-  }
+  },
+  "metadataCorrectionsToVerify": [
+    {
+      "name": "Ab Crunch Machine",
+      "field": "position",
+      "derived": "lying",
+      "expected": "seated",
+      "source": "cue lane flag"
+    },
+    {
+      "name": "Machine Crunch",
+      "field": "position",
+      "derived": "lying",
+      "expected": "seated",
+      "source": "cue lane flag"
+    },
+    {
+      "name": "Cable Straight-Arm Pulldown",
+      "field": "position",
+      "derived": "seated",
+      "expected": "standing",
+      "source": "cue lane flag"
+    },
+    {
+      "name": "Cable Rope Straight-Arm Pulldown (Single-Arm)",
+      "field": "position",
+      "derived": "seated",
+      "expected": "standing",
+      "source": "cue lane flag"
+    },
+    {
+      "name": "Smith Machine Row",
+      "field": "position",
+      "derived": "seated",
+      "expected": "standing",
+      "source": "cue lane flag"
+    },
+    {
+      "name": "Viking Press",
+      "field": "position",
+      "derived": "seated",
+      "expected": "standing",
+      "source": "cue lane flag"
+    },
+    {
+      "name": "Cable Y-Raise (Standing)",
+      "field": "force",
+      "derived": "push",
+      "expected": "pull",
+      "source": "cue lane flag"
+    }
+  ],
+  "metadataCorrectionsNote": "Verify each against the live derivation after integration; where the derivation is wrong, add an entry override (position is a capability demand axis and a wrong value misroutes seated-only or standing-only users). Do not change names."
 }
