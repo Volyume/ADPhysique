@@ -159,5 +159,31 @@
       "source": "cue lane flag"
     }
   ],
-  "metadataCorrectionsNote": "Verify each against the live derivation after integration; where the derivation is wrong, add an entry override (position is a capability demand axis and a wrong value misroutes seated-only or standing-only users). Do not change names."
+  "metadataCorrectionsNote": "Verify each against the live derivation after integration; where the derivation is wrong, add an entry override (position is a capability demand axis and a wrong value misroutes seated-only or standing-only users). Do not change names.",
+  "metadataCorrectionsVerified": {
+    "checkedAgainst": "corpusEntryToSeedRow on 2026-09-05",
+    "apply": {
+      "Machine Crunch": {
+        "position": "seated",
+        "floorAccess": false
+      },
+      "Cable Straight-Arm Pulldown": {
+        "position": "standing"
+      },
+      "Cable Rope Straight-Arm Pulldown (Single-Arm)": {
+        "position": "standing"
+      },
+      "Smith Machine Row": {
+        "position": "standing"
+      },
+      "Viking Press": {
+        "position": "standing"
+      },
+      "Cable Y-Raise (Standing)": {
+        "force": "pull"
+      }
+    },
+    "note": "Ab Crunch Machine is retired into Machine Crunch (EL-21), so only the survivor needs the override. Machine Crunch derived position=lying AND floorAccess=true from the word 'crunch': a seated machine misrouted as a floor exercise. Apply as entry overrides (demands.position / demands.floorAccess / force) in the family modules once integration has landed.",
+    "sweep": "After integration, list every machine, cable, smith or plate-loaded row whose derived position is lying or floorAccess is true, for lead review; the 'crunch' and 'row' name rules are the suspected causes."
+  }
 }
