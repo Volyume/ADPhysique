@@ -96,8 +96,12 @@ Stage 5 (in flight, sonnet):
   Recovery: relaunch per group; files are incremental.
 - [ ] S. Style pools, kettlebell and circuit templates, library
   collections per `09-STYLE-PLANS.md`. Recovery: relaunch from 09.
-Stage 6: wire the new cues (`apply-cues.mjs`), set cuesRequired true,
-full regression, device checklist, closure.
+- [x] F, C4-C5, S landed; cues wired (cuesRequired true); demand axes
+  annotated (demandAxesRequireReason true); EL-23 six template-row
+  retirements + any-id top-up merge; EL-25 ten word-order duplicates +
+  normalised-name guard. Live corpus 918, retired 21.
+Stage 6 (lead, hands-on): form tips fall back to the cue; ONE full
+regression; closure `11-CLOSURE.md`; merge to main.
 guards, search/builder, plan architecture, kettlebell, circuits, library
 integration, evidence eligibility, verification. Entries added as they
 start.
