@@ -4733,6 +4733,7 @@ export async function getRoutineExercisesWithDetails(routineId) {
       // (loadCharacter ?? load_character ?? null) since the column can be
       // null on a device that has not yet re-derived exercise metadata.
       loadCharacter: row.load_character,
+      cue: row.cue ?? null,
       // Flag for the UI: this row needs to be repaired by the user
       // because the exercise lookup failed. Active screens can render
       // an inline "Re-link exercise" affordance here.
