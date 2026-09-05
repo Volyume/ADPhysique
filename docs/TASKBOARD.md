@@ -33,6 +33,30 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## EXERCISE LIBRARY & ALTERNATIVE TRAINING EXPANSION (2026-09-05) — IN FLIGHT
+
+Founder brief in chat 2026-09-05 (one autonomous end-to-end task).
+Campaign folder: `docs/exercise-library-expansion-2026-09-05/` (README
+carries the document map). Branch `claude/exercise-library-expansion`,
+merged to main at each green landing.
+
+Stage 1 (discovery, agents on sonnet, parallel):
+- [ ] A. Schema and consumers audit + shared seed loader/export
+  (`scripts/exercise-library/loadSeed.mjs`, `data/seed-export.json`,
+  `01-SCHEMA-AND-CONSUMERS.md`). Recovery: relaunch from brief.
+- [ ] B. Competitor exercise-library benchmark (`03-MARKET-BENCHMARK.md`).
+  Recovery: relaunch from brief.
+- [ ] D. Alternative-plan market research (`04-ALT-PLAN-RESEARCH.md`).
+  Recovery: relaunch from brief.
+- [ ] C. Corpus quality audit (after A) (`02-CORPUS-AUDIT.md`, JSON
+  reports in `data/`). Recovery: relaunch from brief.
+Stage 2 onward: lead decisions (`05-DECISIONS.md`), then expansion,
+guards, search/builder, plan architecture, kettlebell, circuits, library
+integration, evidence eligibility, verification. Entries added as they
+start.
+
+---
+
 ## R3. CONNECTOR-BLOCKED WORK — CLEARED 2026-07-27
 
 **UNBLOCKED and DONE.** The founder removed and re-authorised the connectors on
