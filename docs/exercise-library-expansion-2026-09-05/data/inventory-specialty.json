@@ -34,11 +34,11 @@
         "NSCA Essentials of Strength Training and Conditioning"
       ],
       "demandOverrides": {
-        "position": null,
+        "position": "mixed",
         "floorAccess": false,
         "overheadPosition": false,
         "gripDemand": "bar",
-        "unilateralLoadable": null,
+        "unilateralLoadable": false,
         "bilateralUpper": false,
         "bilateralLower": true,
         "axialLoad": false,
@@ -131,7 +131,7 @@
         "unilateralLoadable": false,
         "bilateralUpper": true,
         "bilateralLower": false,
-        "axialLoad": null,
+        "axialLoad": true,
         "impact": false,
         "balanceDemand": "stable",
         "weightBearingHands": false
@@ -243,7 +243,7 @@
       "repMax": 10,
       "fatigueCost": 5,
       "sfr": 4,
-      "subregion": "spinal_erector",
+      "subregion": "hip_extension",
       "aliases": [],
       "tier": "specialist",
       "laterality": "bilateral",
@@ -349,16 +349,16 @@
         "Established S&C/powerlifting coaching literature (specialty-bar and accommodating-resistance texts: e.g. Westside Barbell conjugate-method material, EliteFTS/Elitefts specialty-bar guides)"
       ],
       "demandOverrides": {
-        "position": null,
-        "floorAccess": null,
+        "position": "standing",
+        "floorAccess": false,
         "overheadPosition": false,
         "gripDemand": "bar",
         "unilateralLoadable": false,
         "bilateralUpper": true,
         "bilateralLower": false,
-        "axialLoad": null,
+        "axialLoad": true,
         "impact": false,
-        "balanceDemand": null,
+        "balanceDemand": "stable",
         "weightBearingHands": false
       },
       "derivedNullAxes": [
@@ -452,7 +452,7 @@
         "unilateralLoadable": false,
         "bilateralUpper": true,
         "bilateralLower": false,
-        "axialLoad": null,
+        "axialLoad": true,
         "impact": false,
         "balanceDemand": "stable",
         "weightBearingHands": false

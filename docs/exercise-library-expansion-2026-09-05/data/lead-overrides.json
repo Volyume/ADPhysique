@@ -1,0 +1,32 @@
+{
+  "generatedAt": "2026-09-05",
+  "authority": "05-DECISIONS.md EL-2, lead pass over every inventory's rejected list",
+  "reinstate": [
+    {
+      "family": "dumbbell",
+      "name": "Neutral-Grip Dumbbell Bench Press",
+      "tier": "specialist",
+      "why": "The agent's reason was wrong: the standard dumbbell press is pronated or slightly angled; a palms-facing press changes shoulder position and elbow path and is a recognised, attested variant under EL-2 (grip changes the demand)."
+    },
+    {
+      "family": "landmine",
+      "name": "Landmine Clean",
+      "tier": "never_auto",
+      "loadCharacter": "ballistic",
+      "why": "Attested in athletic strength and conditioning as a named landmine power movement; power work is never_auto per EL-5."
+    }
+  ],
+  "aliasesForExisting": [
+    { "existing": "TRX Row", "aliases": ["Ring Row", "Inverted Row on Rings"] },
+    { "existing": "TRX Curl", "aliases": ["TRX Bicep Curl", "Suspension Curl"] }
+  ],
+  "newFamilies": [
+    {
+      "equipment": "sandbag",
+      "why": "Two inventories rejected sandbag movements only because the vocabulary lacked the implement. Sandbags are common home and garage equipment with a distinct shifting-load demand; a small attested family is in scope, cardio-style drills are not.",
+      "cap": 12,
+      "examples": ["Sandbag Bear-Hug Squat", "Sandbag Shouldering", "Sandbag Clean", "Sandbag Front Carry", "Sandbag Zercher Carry", "Sandbag Bent-Over Row", "Sandbag Get-Up", "Sandbag Lunge (Bear Hug)"]
+    }
+  ],
+  "upheld": "Every other rejection in every inventory stands as recorded, including all cardio rejections."
+}

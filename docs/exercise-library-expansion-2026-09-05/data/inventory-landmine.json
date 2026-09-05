@@ -289,7 +289,7 @@
       "repMax": 15,
       "fatigueCost": 4,
       "sfr": 5,
-      "subregion": "squat_press",
+      "subregion": null,
       "aliases": [
         "Landmine Sumo Squat (Adductor Focus)"
       ],
@@ -318,7 +318,7 @@
         "weightBearingHands": false
       },
       "derivedNullAxes": [],
-      "notes": "Bar held two-handed at the sleeve end, vertical, between a wide stance; a common landmine goblet-squat substitute."
+      "notes": "Bar held two-handed at the sleeve end, vertical, between a wide stance; a common landmine goblet-squat substitute. subregion left null: no existing glute subregion (activator/pumper/stretcher) matches a squat-pattern movement; squat_press is a quads-only subregion in the current corpus, not invented onto glutes."
     },
     {
       "name": "Landmine Reverse Lunge",

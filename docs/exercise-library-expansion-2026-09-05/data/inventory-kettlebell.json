@@ -426,7 +426,7 @@
       "aliases": [
         "Two-Kettlebell Swing"
       ],
-      "tier": "niche",
+      "tier": "never_auto",
       "laterality": "bilateral",
       "loadCharacter": "ballistic",
       "difficulty": 3,
@@ -1204,7 +1204,7 @@
       "notes": "Two kettlebells on the floor, deep athletic stance held throughout."
     },
     {
-      "name": "Renegade Row",
+      "name": "Kettlebell Renegade Row",
       "primaryMuscle": "back",
       "secondaryMuscles": [
         "abs",
@@ -1219,16 +1219,15 @@
       "sfr": 4,
       "subregion": "upper_mid_row",
       "aliases": [
-        "Kettlebell Renegade Row",
-        "Plank Row (Kettlebell)"
+        "Renegade Row (Kettlebell)"
       ],
       "tier": "niche",
       "laterality": "alternating",
       "loadCharacter": "grind",
       "difficulty": 3,
       "distinctFrom": {
-        "existing": "Gorilla Row",
-        "why": "performed from a push-up plank position (hands on the bells) rather than a standing hinge, adding a whole-body anti-rotation plank demand"
+        "existing": "Renegade Row",
+        "why": "implement family differs (kettlebell vs dumbbell); the existing seeded row is dumbbell equipment, so this candidate was almost a name collision until checked against the corpus"
       },
       "sources": [
         "RKC/Dragon Door Kettlebell instructor curriculum"
@@ -1247,7 +1246,7 @@
         "weightBearingHands": false
       },
       "derivedNullAxes": [],
-      "notes": "High core and shoulder-stability demand; light loads relative to the standing row variants."
+      "notes": "Performed from a push-up plank position (hands on the bells) rather than a standing hinge, adding a whole-body anti-rotation plank demand versus the standing Gorilla Row; distinguished from the existing dumbbell \"Renegade Row\" purely by implement family per EL-2."
     },
     {
       "name": "Kettlebell Farmer's Carry",
