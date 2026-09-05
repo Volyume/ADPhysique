@@ -84,10 +84,20 @@ Stage 4 (in flight, sonnet):
   group; partial files are kept.
 - [ ] Founder order 2026-09-05 (landed on the branch): the "How you
   train" group is the last item on Today.
-Stage 5: cues for new rows and cue wiring into the corpus, search and
-picker ranking (EL-20), style pools and plans (`09-STYLE-PLANS.md`),
-custom-exercise delete (EL-18), the detail-screen ballistic gap the
-circuit lane flagged, full regression, closure.
+- [x] I landed: 936 live rows; lead tier rulings, two duplicate drops,
+  rotation subregion recorded in `data/lead-overrides.json`. C1-C3 landed
+  (552 cues). Picker lane landed (EL-18, EL-20). Detail-screen ballistic
+  gap closed. Wording sweep re-anchored.
+Stage 5 (in flight, sonnet):
+- [ ] F. Corpus finish: tiers, drops, rotation subregion, cue wiring
+  script, metadata overrides, position sweep. Recovery: relaunch from
+  the rulings in lead-overrides.json.
+- [ ] C4-C5. Cues for the 388 new rows (`data/cues-new-a/b.json`).
+  Recovery: relaunch per group; files are incremental.
+- [ ] S. Style pools, kettlebell and circuit templates, library
+  collections per `09-STYLE-PLANS.md`. Recovery: relaunch from 09.
+Stage 6: wire the new cues (`apply-cues.mjs`), set cuesRequired true,
+full regression, device checklist, closure.
 guards, search/builder, plan architecture, kettlebell, circuits, library
 integration, evidence eligibility, verification. Entries added as they
 start.
