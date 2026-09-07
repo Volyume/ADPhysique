@@ -64,7 +64,14 @@ band. DECIDED (founder, chat 2026-09-07, "yes to all"): expo-location
 BACKGROUND location blocked; privacy guard amended so
 `src/lib/deviceLocation.js` is the only file that may name the
 dependency, forward-only (no watch, no background, no cached position,
-no storage). Lane S2 arms the adapter. Report 09 findings folded into S1/S2 briefs:
+no storage). Lane S2 arms the adapter.
+LANDED: S2 (finder, Join step, place picker) and S1 (migration 163)
+both lead-reviewed and committed. S3 (Find people filters + fixes) and
+S4 (sportscotland adapter) died on the 11:00 UTC session rate limit
+with implementation on disk; relaunched as RESUME lanes against their
+own files (recovery path: lead review of on-disk work, finish tests,
+land). Remaining after them: settled-tree run, records, merge to main,
+pipeline re-run with the register. Report 09 findings folded into S1/S2 briefs:
 brand-query candidate cut (S1), submit-time duplicate tokenizer 53%
 miss (S1), null-distance ranker bug (S2). DATA ITEM for the next
 pipeline run (not this build): `data/gyms/postcode-sectors.v1.csv`
