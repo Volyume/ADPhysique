@@ -58,3 +58,13 @@ training data only, never bodyweight or food; a person appears on a
 board only by opt-in; boards are withheld under calm mode or an open ED
 flag; minors never appear. Research `50`, recon `51`, design and build
 follow in section 5.
+
+## 5. Founder decision (chat, 2026-09-07): user-created groups
+People can create groups; others join. A group is open (anyone joins)
+or invite-only (admin approves or invites by handle or link). The
+creator is admin and can promote another admin, remove a member and
+close the group. Groups carry a consistency board over their members
+(same counters and opt-in as the gym board) and a Following-style feed
+of members' stories. Reports on a group go to the same moderator queue.
+Minors cannot create or join. This reverses the density deferral in
+judgement §8 by founder decision; design in section 6 with the boards.
