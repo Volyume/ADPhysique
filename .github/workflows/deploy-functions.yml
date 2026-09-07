@@ -31,6 +31,8 @@ on:
           - app-store-notifications
           - delete-account
           - partner-cheer
+          - community-notify
+          - community-public
           - all
 
 # GitHub forces JavaScript actions onto Node 24 on 2026-06-16. Opt in early so
@@ -111,4 +113,18 @@ jobs:
             # ON. Codex audit BSEC-13: previously never deployed.
             echo "Deploying partner-cheer (JWT verification on; authenticated endpoint)"
             supabase functions deploy partner-cheer --project-ref "$REF"
+          fi
+          if [ "$CHOICE" = "community-notify" ] || [ "$CHOICE" = "all" ]; then
+            # The client calls it with its own JWT and the function proves the
+            # action from the caller's own rows, so gateway verification stays
+            # ON. Needs migrate_160 and migrate_161 applied first.
+            echo "Deploying community-notify (JWT verification on; authenticated endpoint)"
+            supabase functions deploy community-notify --project-ref "$REF"
+          fi
+          if [ "$CHOICE" = "community-public" ] || [ "$CHOICE" = "all" ]; then
+            # Anonymous read-only GET for the volyume.app link pages; returns an
+            # explicit field allow-list only, 404 otherwise (SD-16). Deliberately
+            # --no-verify-jwt, as its header documents.
+            echo "Deploying community-public (--no-verify-jwt; anonymous link-page reads)"
+            supabase functions deploy community-public --project-ref "$REF" --no-verify-jwt
           fi

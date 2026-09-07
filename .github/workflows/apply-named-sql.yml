@@ -1,0 +1,122 @@
+# Applies a NAMED set of migration files and, optionally, a seed directory
+# to production with psql, each file in its own transaction, recording
+# every applied file so a re-dispatch skips what already landed. Manual
+# dispatch only, from main, and only after the founder's exact phrase
+# "run against production" for the batch that carries these files
+# (supabase/README.md).
+#
+# Why a separate workflow: deploy-migrations.yml walks EVERY unapplied
+# migrate_*.sql, which would also carry migrations that are deliberately
+# held (155 is blocked on a client prerequisite), and it cannot carry a
+# 70 MB data seed. This workflow applies exactly what it is told and
+# nothing else. Tracking rows go to the same `claude_schema_migrations`
+# table deploy-migrations.yml reads, so that workflow later skips them;
+# seed files are tracked in `claude_seed_files`.
+name: Apply named SQL
+
+on:
+  workflow_dispatch:
+    inputs:
+      migrations:
+        description: "Comma-separated migrate_*.sql basenames to apply, in order (may be empty)"
+        required: false
+        default: ""
+      seed_dir:
+        description: "Seed directory under the repo to apply after the migrations (may be empty)"
+        required: false
+        default: ""
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  apply:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Check required secret
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL is empty. Add it in repo Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+      - name: Install psql
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Apply named migrations
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          MIGRATIONS: ${{ github.event.inputs.migrations }}
+        run: |
+          set -euo pipefail
+          run_sql() { psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -tA -c "$1"; }
+          run_sql "CREATE TABLE IF NOT EXISTS claude_schema_migrations (filename text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());"
+          if [ -z "${MIGRATIONS:-}" ]; then echo "No migrations named."; exit 0; fi
+          IFS=',' read -ra names <<< "$MIGRATIONS"
+          for raw in "${names[@]}"; do
+            base="$(echo "$raw" | xargs)"
+            [ -z "$base" ] && continue
+            case "$base" in
+              migrate_*.sql) ;;
+              *) echo "::error::refusing '$base': only migrate_*.sql basenames are accepted"; exit 1;;
+            esac
+            f="supabase/$base"
+            if [ ! -f "$f" ]; then echo "::error::$f not found"; exit 1; fi
+            seen="$(run_sql "SELECT 1 FROM claude_schema_migrations WHERE filename='$base';")"
+            if [ "$seen" = "1" ]; then echo "Already applied, skipping $base"; continue; fi
+            echo "Applying $base …"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction -q -f "$f"
+            run_sql "INSERT INTO claude_schema_migrations(filename) VALUES ('$base') ON CONFLICT DO NOTHING;" >/dev/null
+            echo "Applied $base"
+          done
+
+      - name: Generate the gym seed from the repo data asset
+        if: ${{ github.event.inputs.seed_dir == 'supabase/seed_gyms_v1' }}
+        run: |
+          # supabase/seed_gyms_v1/ is git-ignored (70 MB of generated SQL);
+          # it is rebuilt here from data/gyms/*.gz with node built-ins only.
+          node scripts/gyms/seed-sql.mjs
+          ls supabase/seed_gyms_v1 | wc -l
+
+      - name: Apply seed directory
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SEED_DIR: ${{ github.event.inputs.seed_dir }}
+        run: |
+          set -euo pipefail
+          run_sql() { psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -tA -c "$1"; }
+          dir="${SEED_DIR:-}"
+          if [ -z "$dir" ]; then echo "No seed directory named."; exit 0; fi
+          case "$dir" in
+            supabase/seed_*) ;;
+            *) echo "::error::refusing '$dir': only supabase/seed_* directories are accepted"; exit 1;;
+          esac
+          if [ ! -d "$dir" ]; then echo "::error::$dir not found"; exit 1; fi
+          run_sql "CREATE TABLE IF NOT EXISTS claude_seed_files (filename text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());"
+          applied=0; skipped=0
+          for f in $(ls "$dir"/*.sql | sort); do
+            base="$(basename "$f")"
+            seen="$(run_sql "SELECT 1 FROM claude_seed_files WHERE filename='$dir/$base';")"
+            if [ "$seen" = "1" ]; then skipped=$((skipped+1)); continue; fi
+            echo "Applying $base …"
+            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction -q -f "$f"
+            run_sql "INSERT INTO claude_seed_files(filename) VALUES ('$dir/$base') ON CONFLICT DO NOTHING;" >/dev/null
+            applied=$((applied+1))
+          done
+          echo "Seed: applied $applied file(s), skipped $skipped already-applied file(s)."
+
+      - name: Verify application function owner/default-ACL contract
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/verify_application_function_acl.sql
