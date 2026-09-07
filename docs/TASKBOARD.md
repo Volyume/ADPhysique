@@ -33,6 +33,53 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07)
+
+Founder-reported (chat, screenshots): gym finder found no gyms within 50
+miles with location on, and a plain name search failed with no location at
+all, both showing "Could not search just now." Confirmed via Sentry
+(evidence-first per the founder's explicit instruction to check Sentry
+rather than continue guessing): VOLYUME-37, Postgres 25006 "cannot execute
+... in a read-only transaction", scope `Community.gyms_search`, first seen
+2026-09-06, escalating.
+
+FIRST FIX (`migrate_166_community_rate_check_hotfix.sql`) was WRONG — an
+inference stated as fact, corrected per the founder's direct pushback
+("stop the workarounds ... swallowing errors is never an acceptable
+solution"). It guessed the cause was some app connections landing on a
+read-only pooler/replica route and guarded `_community_rate_check`'s
+opportunistic-prune DELETE with an exception handler. Applied to
+production 2026-09-07 (run #7); Sentry recorded the identical error on the
+very next call, now on the mandatory INSERT the guard never touched — proof
+the diagnosis, not just the DELETE, was the mistake.
+
+REAL ROOT CAUSE (confirmed by reading `pg_get_functiondef` against the live
+database, not inferred): `gyms_search`, `gyms_near`, `gyms_in_place`,
+`gyms_get` and `gyms_place_centroid` are declared STABLE (`migrate_163`).
+PostgREST forces a hard READ ONLY transaction for any RPC call to a
+STABLE/IMMUTABLE function regardless of HTTP verb (GET or POST) — it
+trusts the function's own declared volatility. All five call
+`_community_rate_check`, which writes. Every call to any of the five was
+therefore guaranteed to fail on the write, deterministically — not
+intermittently — matching both symptoms reported (location search and
+plain name search both go through these functions). No other Community RPC
+calling `_community_rate_check` is STABLE; the bug is scoped exactly to the
+gym finder.
+
+FIX WRITTEN: `migrate_167_gyms_stable_volatility_fix.sql` — re-issues the
+five functions (bodies unchanged, pulled from the live database) with
+STABLE removed (now VOLATILE, the correct label for a function with side
+effects); reverts 166's exception guard back to a plain, unguarded DELETE,
+since the real cause is fixed and swallowing errors was never a cure.
+STATUS: WRITTEN, NOT YET APPLIED — awaiting the founder's exact phrase
+"run against production" for this migration specifically (166's earlier
+authorisation covered 166 only, and 166 turned out to be the wrong fix).
+Founder-side: say the phrase to apply 167; after apply, verify the
+five functions are VOLATILE in the live database and that Sentry VOLYUME-37
+stops recording new events.
+
+---
+
 ## COMMUNITY PRODUCT AUDIT + GAP CLOSURE + PROGRESS/GROUPS (2026-09-07) — LANDED and MERGED to main; cloud 160-163 + gym seed APPLIED (run 5), 164 + 165 applied after the final merge
 
 Final state and decisions: `docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` (§1 decisions, §2 removal, §3 build record, §4-5 founder redirection and groups) and `60-DESIGN-PROGRESS-COMMUNITY.md`. Copy QA pass: `docs/copy-qa-2026-09-07/02-corrections.md`. NEXT: founder build go; pipeline re-run with sportscotland; device walk.
