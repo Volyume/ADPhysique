@@ -39,6 +39,7 @@ import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import GymPicker from '../components/community/GymPicker';
+import GymDetailSheet from '../components/community/GymDetailSheet';
 import PlacePicker from '../components/community/PlacePicker';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
@@ -97,6 +98,12 @@ export default function CommunityEditProfileScreen({ navigation }) {
   const [legacyGymLabel, setLegacyGymLabel] = useState(null);
   const [editingPrimaryGym, setEditingPrimaryGym] = useState(false);
   const [addingOtherGym, setAddingOtherGym] = useState(false);
+  // Community product audit 2026-09-07 (gym finder brief): every tapped
+  // gym row opens GymDetailSheet before it is ever selected (same pattern
+  // as CommunityJoinScreen); `pendingGym.commit` is the one thing that
+  // differs between the primary-gym picker and the other-gyms picker.
+  const [pendingGym, setPendingGym] = useState(null); // { venue, commit } | null
+  function requestGymConfirm(venue, commit) { setPendingGym({ venue, commit }); }
   const [visibility, setVisibility] = useState('public');
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
@@ -337,7 +344,9 @@ export default function CommunityEditProfileScreen({ navigation }) {
           {editingPrimaryGym || (!primaryGym && !legacyGymLabel) ? (
             <GymPicker
               navigation={navigation}
-              onSelect={(venue) => { setPrimaryGym(venue); setLegacyGymLabel(null); setEditingPrimaryGym(false); }}
+              onSelect={(venue) => requestGymConfirm(venue, (v) => {
+                setPrimaryGym(v); setLegacyGymLabel(null); setEditingPrimaryGym(false);
+              })}
             />
           ) : (
             <Card padding="md" radius="md" style={styles.gymRow}>
@@ -395,10 +404,10 @@ export default function CommunityEditProfileScreen({ navigation }) {
             addingOtherGym ? (
               <GymPicker
                 navigation={navigation}
-                onSelect={(venue) => {
-                  setOtherGyms((prev) => (prev.some((g) => g.id === venue.id) ? prev : [...prev, venue]));
+                onSelect={(venue) => requestGymConfirm(venue, (v) => {
+                  setOtherGyms((prev) => (prev.some((g) => g.id === v.id) ? prev : [...prev, v]));
                   setAddingOtherGym(false);
-                }}
+                })}
               />
             ) : (
               <Button
@@ -469,6 +478,13 @@ export default function CommunityEditProfileScreen({ navigation }) {
           accessibilityLabel="Leave Community"
         />
       </ScrollView>
+
+      <GymDetailSheet
+        visible={!!pendingGym}
+        venue={pendingGym?.venue ?? null}
+        onClose={() => setPendingGym(null)}
+        onConfirm={(venue) => { pendingGym?.commit?.(venue); setPendingGym(null); }}
+      />
     </SafeAreaView>
   );
 }

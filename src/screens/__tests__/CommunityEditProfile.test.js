@@ -24,7 +24,13 @@
 
 import { create, act } from 'react-test-renderer';
 
-jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }) => children }));
+// GymDetailSheet's BottomSheet reads insets unconditionally on mount, so
+// this needs a stub too (community product audit 2026-09-07: every tapped
+// gym row now opens that sheet before it is selected).
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: ({ children }) => children,
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('../../components/BackHeader', () => () => null);
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));

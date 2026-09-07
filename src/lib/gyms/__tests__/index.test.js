@@ -23,7 +23,7 @@ jest.mock('../transport', () => ({
 
 import {
   venueLine, distanceLabel, isPendingVenue, milesToMetres, METRES_PER_MILE,
-  search, near, placeCentroid,
+  search, near, placeCentroid, get,
 } from '../index';
 import { callGyms } from '../transport';
 
@@ -63,6 +63,27 @@ describe('venueLine', () => {
   test('falls back to name and an empty secondary when nothing else is known', () => {
     expect(venueLine({ name: 'Volt Gym' })).toEqual({ primary: 'Volt Gym', secondary: '' });
     expect(venueLine(null)).toEqual({ primary: '', secondary: '' });
+  });
+
+  // Founder brief (gym finder): "brand only when not redundant with the
+  // name", and brand is the LAST part of the secondary line.
+  test('brand is omitted when the display name already names it', () => {
+    const out = venueLine({
+      display_name: 'PureGym Motherwell', brand: 'PureGym', town: 'Motherwell', outward: 'ML1', distance_m: 1200,
+    });
+    expect(out.secondary).toBe('Motherwell · ML1 · 0.7 miles');
+  });
+
+  test('brand appears, last, when the display name does not carry it', () => {
+    const out = venueLine({
+      display_name: 'The Warehouse Gym', brand: 'Anytime Fitness', town: 'Leeds', outward: 'LS1', distance_m: null,
+    });
+    expect(out.secondary).toBe('Leeds · LS1 · Anytime Fitness');
+  });
+
+  test('brand redundancy check is case- and punctuation-insensitive', () => {
+    const out = venueLine({ display_name: "Pure Gym - Motherwell", brand: 'PureGym', town: 'Motherwell' });
+    expect(out.secondary).toBe('Motherwell');
   });
 });
 
@@ -141,5 +162,21 @@ describe('search, near and placeCentroid (30-IMPLEMENTATION.md 1.1 A)', () => {
     const out = await placeCentroid('   ');
     expect(callGyms).not.toHaveBeenCalled();
     expect(out).toEqual({ kind: 'none', label: null, lat: null, lng: null });
+  });
+
+  // GymDetailSheet reads address_line and website off get()'s result
+  // (30-IMPLEMENTATION.md's gyms_get already returns both; normaliseVenue
+  // must carry them through, not drop them).
+  test('get() normalises address_line and website through', async () => {
+    callGyms.mockResolvedValue({
+      id: 'v1', display_name: 'PureGym Motherwell', town: 'Motherwell', outward: 'ML1',
+      postcode: 'ML1 1AA', address_line: '1 Windmillhill Street', website: 'https://www.puregym.com',
+      verification_status: 'verified', source_names: ['PureGym'],
+    });
+    const out = await get('v1');
+    expect(out.address_line).toBe('1 Windmillhill Street');
+    expect(out.website).toBe('https://www.puregym.com');
+    expect(out.postcode).toBe('ML1 1AA');
+    expect(out.source_names).toEqual(['PureGym']);
   });
 });
