@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>04 Programme</title>
+<style>
+:root{
+ --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
+ --border:#6E6E6E; --borderSubtle:#2E2E2C;
+ --primary:#F5A623; --primaryBg:rgba(245,166,35,0.12);
+ --textPrimary:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9C9C9C;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:#0b0b0b;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+.artboard{width:390px;background:var(--bg);position:relative;margin:0 auto;color:var(--textPrimary);}
+.statusbar{height:47px;}
+.backheader{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--borderSubtle);}
+.backheader .side{width:48px;min-height:48px;display:flex;align-items:center;}
+.backheader .title{flex:1;text-align:center;font-size:17px;font-weight:500;line-height:23px;margin:0 8px;}
+.headeracts{display:flex;align-items:center;justify-content:flex-end;width:96px;}
+.headerbtn{width:48px;height:48px;display:flex;align-items:center;justify-content:flex-end;color:var(--textSecondary);}
+.content{padding:16px;padding-bottom:16px;display:flex;flex-direction:column;gap:16px;}
+.t-h3{font-size:20px;font-weight:500;line-height:27px;}
+.t-bodySm{font-size:13px;line-height:20px;}
+.t-caption{font-size:11px;line-height:15px;}
+.c-secondary{color:var(--textSecondary);}
+.c-muted{color:var(--textMuted);}
+.card{background:var(--surface);border:1px solid var(--borderSubtle);border-radius:16px;padding:12px;}
+.pcard-row{display:flex;flex-direction:row;align-items:center;gap:12px;}
+.pcard-body{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0;}
+.avatar{width:40px;height:40px;border-radius:999px;border:2px solid rgba(110,110,110,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:14px;background:rgba(240,228,66,0.12);color:#F0E442;}
+.name{font-size:16px;font-weight:500;line-height:24px;color:var(--textPrimary);}
+.handle{font-size:11px;line-height:15px;color:var(--textMuted);}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;border-radius:16px;border:1px solid transparent;font-weight:600;padding:8px 12px;font-size:13px;line-height:18px;white-space:nowrap;flex-shrink:0;}
+.btn.primary{background:var(--surface2);color:var(--textPrimary);border-color:var(--border);}
+.btn.primary .icon{color:var(--primary);}
+.btn.secondary{background:var(--surface);color:var(--textSecondary);border-color:var(--border);}
+.icon svg{display:block;}
+.chiprow{display:flex;flex-wrap:wrap;gap:6px;}
+.chip{display:inline-flex;align-items:center;border-radius:999px;border:1px solid var(--border);background:var(--surface2);padding:8px 12px;min-height:32px;font-size:13px;font-weight:500;line-height:16px;color:var(--textSecondary);}
+.useCountRow{display:flex;align-items:center;gap:4px;}
+.sectionlabel{font-size:11px;font-weight:500;line-height:15px;letter-spacing:0.5px;text-transform:uppercase;color:var(--textSecondary);}
+.structure{display:flex;flex-direction:column;gap:24px;}
+.day{display:flex;flex-direction:column;gap:8px;}
+.exrow{display:flex;flex-direction:row;align-items:baseline;justify-content:space-between;gap:12px;padding:4px 0;}
+.exname{font-size:13px;line-height:20px;color:var(--textPrimary);flex:1;}
+.exmeta{font-size:11px;line-height:15px;color:var(--textSecondary);}
+.circuit{border:1px solid var(--border);background:var(--surface2);border-radius:10px;padding:8px 12px;display:flex;flex-direction:column;gap:2px;}
+.circuit-label-row{display:flex;align-items:center;gap:4px;margin-bottom:2px;}
+.circuit-label{font-size:11px;font-weight:600;line-height:15px;color:var(--textPrimary);}
+.actionbar{border-top:1px solid var(--borderSubtle);background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:8px;}
+.actionrow{display:flex;gap:8px;}
+.actionbtn{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;border-radius:16px;border:1px solid transparent;font-weight:600;padding:8px 12px;font-size:13px;line-height:18px;}
+.actionbtn.primary{background:var(--surface2);color:var(--textPrimary);border-color:var(--border);}
+.actionbtn.primary .icon{color:var(--primary);}
+.actionbtn.secondary{background:var(--surface);color:var(--textSecondary);border-color:var(--border);}
+.adaptline{font-size:11px;line-height:16px;color:var(--textMuted);text-align:center;margin-top:8px;}
+.commentnote{font-size:11px;line-height:15px;color:var(--textMuted);}
+</style>
+</head>
+<body>
+<svg style="display:none">
+<defs>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="18" cy="6" r="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="18" cy="18" r="2.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8.2 10.8l7.6-4.6M8.2 13.2l7.6 4.6" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+<symbol id="i-ellipsis" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></symbol>
+<symbol id="i-personadd" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 20c0-3.5 2.7-6 5.5-6s5.5 2.5 5.5 6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M18 8v6M15 11h6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="i-chevronf" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-options" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="7" r="1.6" fill="currentColor"/><circle cx="15" cy="12" r="1.6" fill="currentColor"/><circle cx="9" cy="17" r="1.6" fill="currentColor"/></symbol>
+<symbol id="i-repeat" viewBox="0 0 24 24"><path d="M4 7h13l-3-3M20 17H7l3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</defs>
+</svg>
+
+<div class="artboard">
+  <div class="statusbar"></div>
+  <div class="backheader">
+    <div class="side"><span class="icon" style="color:var(--textPrimary)"><svg width="24" height="24"><use href="#i-back"/></svg></span></div>
+    <div class="title">Programme</div>
+    <div class="headeracts">
+      <div class="headerbtn"><svg width="20" height="20"><use href="#i-share"/></svg></div>
+      <div class="headerbtn"><svg width="20" height="20"><use href="#i-ellipsis"/></svg></div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="t-h3" style="color:var(--textPrimary);">Upper/Lower Strength 4-Day</div>
+
+    <!-- creator card, compact -->
+    <div class="card"><div class="pcard-row">
+      <div class="avatar">R</div>
+      <div class="pcard-body">
+        <div class="name">Ryan</div>
+        <div class="handle">@ryanlifts &middot; Trains at PureGym Leeds</div>
+      </div>
+      <div class="btn primary"><span class="icon"><svg width="16" height="16"><use href="#i-personadd"/></svg></span>Connect</div>
+    </div></div>
+
+    <div class="chiprow">
+      <div class="chip">Strength</div>
+      <div class="chip">4 days</div>
+      <div class="chip">18 exercises</div>
+      <div class="chip">Circuits</div>
+    </div>
+
+    <div class="t-bodySm c-secondary">A straightforward upper/lower split for four days a week, built around the big compound lifts with accessory work to fill out the week.</div>
+
+    <div class="useCountRow">
+      <div class="t-caption c-muted">People on this programme &middot; 23</div>
+      <span class="icon" style="color:var(--textMuted);"><svg width="14" height="14"><use href="#i-chevronf"/></svg></span>
+    </div>
+
+    <!-- ProgrammeStructure -->
+    <div class="structure">
+      <div class="day">
+        <div class="sectionlabel">Day 1 &middot; Upper A</div>
+        <div class="exrow"><div class="exname">Barbell bench press</div><div class="exmeta">4 x 6 to 8 &middot; 150 s</div></div>
+        <div class="exrow"><div class="exname">Barbell row</div><div class="exmeta">4 x 6 to 8 &middot; 120 s</div></div>
+        <div class="exrow"><div class="exname">Overhead press</div><div class="exmeta">3 x 8 to 10 &middot; 90 s</div></div>
+        <div class="circuit">
+          <div class="circuit-label-row">
+            <span class="icon" style="color:var(--primary)"><svg width="14" height="14"><use href="#i-repeat"/></svg></span>
+            <div class="circuit-label">Circuit &middot; 3 rounds &middot; 60 s between rounds</div>
+          </div>
+          <div class="exrow"><div class="exname" style="font-size:13px;">Lateral raise</div><div class="exmeta">12 to 15</div></div>
+          <div class="exrow"><div class="exname" style="font-size:13px;">Face pull</div><div class="exmeta">15</div></div>
+        </div>
+      </div>
+
+      <div class="day">
+        <div class="sectionlabel">Day 2 &middot; Lower A</div>
+        <div class="exrow"><div class="exname">Back squat</div><div class="exmeta">4 x 5 &middot; 180 s</div></div>
+        <div class="exrow"><div class="exname">Romanian deadlift</div><div class="exmeta">3 x 8 to 10 &middot; 120 s</div></div>
+        <div class="exrow"><div class="exname">Leg press</div><div class="exmeta">3 x 10 to 12 &middot; 90 s</div></div>
+        <div class="exrow"><div class="exname">Calf raise</div><div class="exmeta">4 x 12 to 15 &middot; 60 s</div></div>
+      </div>
+
+      <div class="day">
+        <div class="sectionlabel">Day 3 &middot; Upper B</div>
+        <div class="exrow"><div class="exname">Incline dumbbell press</div><div class="exmeta">4 x 8 to 10 &middot; 120 s</div></div>
+        <div class="exrow"><div class="exname">Pull-up</div><div class="exmeta">4 x 6 to 10 &middot; 120 s</div></div>
+        <div class="exrow"><div class="exname">Cable lateral raise</div><div class="exmeta">3 x 12 to 15 &middot; 60 s</div></div>
+      </div>
+
+      <div class="day">
+        <div class="sectionlabel">Day 4 &middot; Lower B</div>
+        <div class="exrow"><div class="exname">Deadlift</div><div class="exmeta">3 x 4 to 6 &middot; 180 s</div></div>
+        <div class="exrow"><div class="exname">Front squat</div><div class="exmeta">3 x 6 to 8 &middot; 150 s</div></div>
+        <div class="exrow"><div class="exname">Leg curl</div><div class="exmeta">3 x 10 to 12 &middot; 90 s</div></div>
+      </div>
+    </div>
+
+    <div class="sectionlabel" style="margin-top:16px;">Comments</div>
+    <div class="commentnote">No comments yet. Anything useful about the training is welcome here.</div>
+  </div>
+
+  <div class="actionbar">
+    <div class="actionrow">
+      <div class="actionbtn primary"><span class="icon"><svg width="16" height="16"><use href="#i-options"/></svg></span>Adapt for me</div>
+      <div class="actionbtn secondary">Use as-is</div>
+    </div>
+    <div class="adaptline">Adapt keeps the creator's structure and swaps only what your kit, exclusions or limitations rule out. Every change is shown before anything is saved.</div>
+  </div>
+</div>
+</body>
+</html>

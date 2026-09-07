@@ -148,3 +148,24 @@ Glyphs on `primary` buttons, the selected Chip tint, unread and unseen
 dots, the Volyume chip, the five emphatic fills in V1, the spinner, the
 amber ring on the selected avatar, the receipt glyph. Nothing else. Amber
 is never body text (section 13.1).
+
+## Lead render review (2026-09-07, `render-visual-2026-09-07/`, seven surfaces at 390 x 844)
+Observed: Join, people list, programme page, Privacy and the menu sheet
+read as the same product with amber as accent. Three corrections:
+- **V4a** Join: "Community rules and contact" is `secondary` sm, not
+  tertiary; three amber-tinted pills on one screen was one too many
+  ("What is shared" and "Change" keep tertiary as in-card actions).
+- **V3a** Hub: the PrivacyReceipt is NOT nested in the hero; it is its
+  own compact card directly under the hero. The hero body has no line
+  cap and drops its last sentence ("Nothing about your body, food or
+  coaching is ever shared.") because the receipt beneath says exactly
+  that; the same applies to the Today intro card. Section 14.4 copy is
+  amended by this ruling.
+- **V7a** Profile: once connected, FollowButton renders icon-only
+  (`checkmark`, accessibility label "Following @handle", same press
+  behaviour) so the row is Following · Connected · Message on one line;
+  before connection it stays Follow · Connect. If Button has no
+  icon-only form, both Following and Connected drop their glyphs and
+  keep `size="sm"`.
+Observed and left: `EmptyState` renders its action at `size="md"`; it
+is the app-wide component and its size is not a Community matter.

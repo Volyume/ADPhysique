@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>06 Profile</title>
+<style>
+:root{
+ --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
+ --border:#6E6E6E; --borderSubtle:#2E2E2C;
+ --primary:#F5A623; --primaryBg:rgba(245,166,35,0.12);
+ --textPrimary:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9C9C9C;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:#0b0b0b;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+.artboard{width:390px;background:var(--bg);position:relative;margin:0 auto;color:var(--textPrimary);}
+.statusbar{height:47px;}
+.backheader{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--borderSubtle);}
+.backheader .side{width:48px;min-height:48px;display:flex;align-items:center;}
+.backheader .title{flex:1;text-align:center;font-size:17px;font-weight:500;line-height:23px;margin:0 8px;}
+.headerbtn{width:34px;height:34px;border-radius:17px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--textPrimary);}
+.content{padding:16px;padding-bottom:32px;display:flex;flex-direction:column;gap:16px;}
+.icon svg{display:block;}
+.hero{display:flex;flex-direction:column;gap:12px;margin-bottom:16px;}
+.herorow{display:flex;flex-direction:row;align-items:center;gap:12px;}
+.avatar{width:56px;height:56px;border-radius:999px;border:2px solid rgba(110,110,110,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:19px;background:rgba(240,228,66,0.12);color:#F0E442;}
+.name{font-size:20px;font-weight:500;line-height:27px;color:var(--textPrimary);}
+.handle{font-size:11px;line-height:15px;color:var(--textSecondary);}
+.bio{font-size:16px;line-height:24px;color:var(--textPrimary);}
+.facts{font-size:11px;line-height:15px;color:var(--textSecondary);}
+.place{font-size:13px;line-height:20px;color:var(--textSecondary);}
+.tpline{font-size:13px;line-height:20px;color:var(--textSecondary);}
+.counts{display:flex;gap:16px;}
+.count{font-size:13px;line-height:20px;color:var(--textSecondary);}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;border-radius:16px;border:1px solid transparent;font-weight:600;padding:12px 16px;font-size:16px;line-height:20px;}
+.btn.primary{background:var(--surface2);color:var(--textPrimary);border-color:var(--border);}
+.btn.primary .icon{color:var(--primary);}
+.btn.secondary{background:var(--surface);color:var(--textSecondary);border-color:var(--border);}
+.tabrow{display:flex;gap:8px;}
+.chip{display:inline-flex;align-items:center;border-radius:999px;border:1px solid var(--border);background:var(--surface2);padding:8px 12px;min-height:44px;font-size:13px;font-weight:500;line-height:18px;color:var(--textSecondary);}
+.chip.selected{background:var(--primaryBg);border-color:var(--primary);color:var(--primary);}
+.card{background:var(--surface);border:1px solid var(--borderSubtle);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;}
+.authorrow{display:flex;flex-direction:row;align-items:center;gap:12px;}
+.avatar32{width:32px;height:32px;border-radius:999px;border:2px solid rgba(110,110,110,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:12px;background:rgba(240,228,66,0.12);color:#F0E442;}
+.authorname{font-size:16px;font-weight:500;line-height:24px;color:var(--textPrimary);}
+.authorhandle{font-size:11px;line-height:15px;color:var(--textMuted);}
+.eyebrow{font-size:11px;font-weight:600;line-height:15px;color:var(--textPrimary);}
+.postbody{display:flex;flex-direction:column;gap:2px;}
+.hero-num{font-size:16px;line-height:24px;color:var(--textPrimary);font-variant-numeric:tabular-nums;}
+.postline{font-size:11px;line-height:15px;color:var(--textSecondary);}
+.caption{font-size:13px;line-height:20px;color:var(--textPrimary);}
+.postactions{display:flex;align-items:center;gap:24px;}
+.paction{display:flex;align-items:center;gap:4px;color:var(--textMuted);}
+.pactiontext{font-size:11px;line-height:15px;color:var(--textMuted);}
+</style>
+</head>
+<body>
+<svg style="display:none">
+<defs>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-ellipsis" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-people" viewBox="0 0 24 24"><circle cx="8" cy="9" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="9" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2 20c0-3 2.5-5.5 6-5.5s6 2.5 6 5.5M12 20c0-2.5 2-4.5 4.5-4.5S21 17.5 21 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4V5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+<symbol id="i-thumbsup" viewBox="0 0 24 24"><path d="M7 11v9H4v-9h3zM7 11l3.5-7a2 2 0 012 2v3h5a2 2 0 012 2l-1.5 6a2 2 0 01-2 1.5H7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+</defs>
+</svg>
+
+<div class="artboard">
+  <div class="statusbar"></div>
+  <div class="backheader">
+    <div class="side"><span class="icon" style="color:var(--textPrimary)"><svg width="24" height="24"><use href="#i-back"/></svg></span></div>
+    <div class="title">@ryanlifts</div>
+    <div class="side" style="justify-content:flex-end;">
+      <div class="headerbtn"><svg width="18" height="18"><use href="#i-ellipsis"/></svg></div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="hero">
+      <div class="herorow">
+        <div class="avatar">R</div>
+        <div style="flex:1;">
+          <div class="name">Ryan</div>
+          <div class="handle">@ryanlifts</div>
+        </div>
+      </div>
+
+      <div class="bio">Powerlifting-leaning strength training, four days a week.</div>
+      <div class="facts">Strength &middot; Get stronger &middot; Commercial gym</div>
+      <div class="place">Trains at PureGym Leeds &middot; Leeds</div>
+      <div class="tpline">Usually trains Mon, Wed and Fri evenings &middot; 4 to 5 sessions a week &middot; Intermediate</div>
+
+      <div class="counts">
+        <div class="count">128 followers</div>
+        <div class="count">54 following</div>
+        <div class="count">12 connections</div>
+      </div>
+
+      <div class="actions">
+        <div class="btn secondary"><span class="icon"><svg width="18" height="18"><use href="#i-check"/></svg></span>Following</div>
+        <div class="btn primary"><span class="icon"><svg width="18" height="18"><use href="#i-chat"/></svg></span>Message</div>
+        <div class="btn secondary"><span class="icon"><svg width="18" height="18"><use href="#i-people"/></svg></span>Connected</div>
+      </div>
+
+      <div class="tabrow">
+        <div class="chip selected">Stories</div>
+        <div class="chip">Programmes</div>
+      </div>
+    </div>
+
+    <!-- PostCard 1: PR -->
+    <div class="card">
+      <div class="authorrow">
+        <div class="avatar32">R</div>
+        <div style="flex:1;">
+          <div class="authorname">Ryan</div>
+          <div class="authorhandle">@ryanlifts &middot; Today</div>
+        </div>
+      </div>
+      <div class="postbody">
+        <div class="eyebrow">New PR &middot; Bench press</div>
+        <div class="hero-num">100 kg x 3</div>
+        <div class="postline">Previous best 95 kg</div>
+      </div>
+      <div class="caption">Finally cracked it after weeks stuck at 95.</div>
+      <div class="postactions">
+        <div class="paction"><svg width="16" height="16"><use href="#i-thumbsup"/></svg><span class="pactiontext">Respect 14</span></div>
+        <div class="paction"><svg width="16" height="16"><use href="#i-chat"/></svg><span class="pactiontext">3</span></div>
+      </div>
+    </div>
+
+    <!-- PostCard 2: Session -->
+    <div class="card">
+      <div class="authorrow">
+        <div class="avatar32">R</div>
+        <div style="flex:1;">
+          <div class="authorname">Ryan</div>
+          <div class="authorhandle">@ryanlifts &middot; 2 days ago</div>
+        </div>
+      </div>
+      <div class="postbody">
+        <div class="eyebrow">Session &middot; Upper/Lower 4-Day</div>
+        <div class="hero-num">Upper A</div>
+        <div class="postline">18 working sets &middot; 6 exercises &middot; 52 min</div>
+      </div>
+      <div class="postactions">
+        <div class="paction"><svg width="16" height="16"><use href="#i-thumbsup"/></svg><span class="pactiontext">Respect 8</span></div>
+        <div class="paction"><svg width="16" height="16"><use href="#i-chat"/></svg><span class="pactiontext">1</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>07 Menu Sheet</title>
+<style>
+:root{
+ --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27;
+ --border:#6E6E6E; --borderSubtle:#2E2E2C;
+ --primary:#F5A623; --primaryBg:rgba(245,166,35,0.12);
+ --textPrimary:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9C9C9C; --error:#F44336;
+ --scrim: rgba(0,0,0,0.55);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:#0b0b0b;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+.artboard{width:390px;height:844px;background:var(--bg);position:relative;margin:0 auto;color:var(--textPrimary);overflow:hidden;}
+.statusbar{height:47px;}
+.backheader{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--borderSubtle);}
+.backheader .side{width:48px;min-height:48px;display:flex;align-items:center;}
+.backheader .title{flex:1;text-align:center;font-size:17px;font-weight:500;line-height:23px;margin:0 8px;}
+.headerbtn{width:34px;height:34px;border-radius:17px;border:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:center;color:var(--textPrimary);}
+.content{padding:16px;display:flex;flex-direction:column;gap:16px;}
+.icon svg{display:block;}
+.hero{display:flex;flex-direction:column;gap:12px;}
+.herorow{display:flex;flex-direction:row;align-items:center;gap:12px;}
+.avatar{width:56px;height:56px;border-radius:999px;border:2px solid rgba(110,110,110,0.25);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:19px;background:rgba(240,228,66,0.12);color:#F0E442;}
+.name{font-size:20px;font-weight:500;line-height:27px;color:var(--textPrimary);}
+.handle{font-size:11px;line-height:15px;color:var(--textSecondary);}
+.bio{font-size:16px;line-height:24px;color:var(--textPrimary);}
+.facts{font-size:11px;line-height:15px;color:var(--textSecondary);}
+.place{font-size:13px;line-height:20px;color:var(--textSecondary);}
+.counts{display:flex;gap:16px;}
+.count{font-size:13px;line-height:20px;color:var(--textSecondary);}
+.actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;border-radius:16px;border:1px solid transparent;font-weight:600;padding:12px 16px;font-size:16px;line-height:20px;}
+.btn.primary{background:var(--surface2);color:var(--textPrimary);border-color:var(--border);}
+.btn.primary .icon{color:var(--primary);}
+.btn.secondary{background:var(--surface);color:var(--textSecondary);border-color:var(--border);}
+.tabrow{display:flex;gap:8px;}
+.chip{display:inline-flex;align-items:center;border-radius:999px;border:1px solid var(--border);background:var(--surface2);padding:8px 12px;min-height:44px;font-size:13px;font-weight:500;line-height:18px;color:var(--textSecondary);}
+.chip.selected{background:var(--primaryBg);border-color:var(--primary);color:var(--primary);}
+
+/* scrim + sheet */
+.scrim{position:absolute;inset:0;background:var(--scrim);}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);border-top-left-radius:20px;border-top-right-radius:20px;}
+.handlewrap{padding-top:8px;display:flex;justify-content:center;}
+.handleind{width:36px;height:4px;border-radius:2px;background:var(--border);}
+.modalheader{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--borderSubtle);}
+.modalheader .side{width:48px;min-height:48px;display:flex;align-items:center;justify-content:center;}
+.modalheader .title{flex:1;text-align:center;font-size:17px;font-weight:500;line-height:23px;color:var(--textPrimary);}
+.rows{padding-bottom:8px;}
+.settingrow{display:flex;align-items:center;gap:16px;padding:16px;min-height:48px;border-bottom:1px solid var(--borderSubtle);}
+.settingrow:last-child{border-bottom:none;}
+.settingicon{width:34px;height:34px;border-radius:10px;background:var(--primaryBg);display:flex;align-items:center;justify-content:center;color:var(--primary);flex-shrink:0;}
+.settingicon.destructive{background:rgba(244,67,54,0.15);color:var(--error);}
+.settinglabel{font-size:16px;line-height:24px;color:var(--textPrimary);}
+.settinglabel.destructive{color:var(--error);}
+</style>
+</head>
+<body>
+<svg style="display:none">
+<defs>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-ellipsis" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.7" fill="currentColor"/><circle cx="12" cy="12" r="1.7" fill="currentColor"/><circle cx="19" cy="12" r="1.7" fill="currentColor"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-people" viewBox="0 0 24 24"><circle cx="8" cy="9" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16" cy="9" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M2 20c0-3 2.5-5.5 6-5.5s6 2.5 6 5.5M12 20c0-2.5 2-4.5 4.5-4.5S21 17.5 21 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4V5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-link" viewBox="0 0 24 24"><path d="M8 13l-2 2a3.5 3.5 0 005 5l2-2M16 11l2-2a3.5 3.5 0 00-5-5l-2 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M9 15l6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-volumemute" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 6l12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 3v18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M5 4h13l-3 4 3 4H5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+</defs>
+</svg>
+
+<div class="artboard">
+  <div class="statusbar"></div>
+  <div class="backheader">
+    <div class="side"><span class="icon" style="color:var(--textPrimary)"><svg width="24" height="24"><use href="#i-back"/></svg></span></div>
+    <div class="title">@ryanlifts</div>
+    <div class="side" style="justify-content:flex-end;">
+      <div class="headerbtn"><svg width="18" height="18"><use href="#i-ellipsis"/></svg></div>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="hero">
+      <div class="herorow">
+        <div class="avatar">R</div>
+        <div style="flex:1;">
+          <div class="name">Ryan</div>
+          <div class="handle">@ryanlifts</div>
+        </div>
+      </div>
+      <div class="bio">Powerlifting-leaning strength training, four days a week.</div>
+      <div class="facts">Strength &middot; Get stronger &middot; Commercial gym</div>
+      <div class="place">Trains at PureGym Leeds &middot; Leeds</div>
+
+      <div class="counts">
+        <div class="count">128 followers</div>
+        <div class="count">54 following</div>
+        <div class="count">12 connections</div>
+      </div>
+
+      <div class="actions">
+        <div class="btn secondary"><span class="icon"><svg width="18" height="18"><use href="#i-check"/></svg></span>Following</div>
+        <div class="btn primary"><span class="icon"><svg width="18" height="18"><use href="#i-chat"/></svg></span>Message</div>
+        <div class="btn secondary"><span class="icon"><svg width="18" height="18"><use href="#i-people"/></svg></span>Connected</div>
+      </div>
+
+      <div class="tabrow">
+        <div class="chip selected">Stories</div>
+        <div class="chip">Programmes</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scrim"></div>
+  <div class="sheet">
+    <div class="handlewrap"><div class="handleind"></div></div>
+    <div class="modalheader">
+      <div class="side"></div>
+      <div class="title">@ryanlifts</div>
+      <div class="side"><span class="icon" style="color:var(--textPrimary)"><svg width="22" height="22"><use href="#i-close"/></svg></span></div>
+    </div>
+    <div class="rows">
+      <div class="settingrow">
+        <div class="settingicon"><svg width="18" height="18"><use href="#i-link"/></svg></div>
+        <div class="settinglabel">Share link</div>
+      </div>
+      <div class="settingrow">
+        <div class="settingicon"><svg width="18" height="18"><use href="#i-volumemute"/></svg></div>
+        <div class="settinglabel">Mute</div>
+      </div>
+      <div class="settingrow">
+        <div class="settingicon destructive"><svg width="18" height="18"><use href="#i-ban"/></svg></div>
+        <div class="settinglabel destructive">Block</div>
+      </div>
+      <div class="settingrow">
+        <div class="settingicon"><svg width="18" height="18"><use href="#i-flag"/></svg></div>
+        <div class="settinglabel">Report</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>01 Join</title>
+<style>
+:root{
+ --bg:#0D0D0D; --surface:#191917; --surface2:#2A2A27; --surface3:#343431;
+ --border:#6E6E6E; --borderSubtle:#2E2E2C;
+ --primary:#F5A623; --primaryFill:#E08C0B; --primaryBg:rgba(245,166,35,0.12); --primaryEdge:rgba(245,166,35,0.25);
+ --onPrimary:#0D0D0D; --onError:#FFFFFF;
+ --textPrimary:#FFFFFF; --textSecondary:#9E9E9E; --textMuted:#9C9C9C;
+ --success:#4CAF50; --error:#F44336;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:#0b0b0b;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+.artboard{width:390px;background:var(--bg);position:relative;margin:0 auto;color:var(--textPrimary);}
+.statusbar{height:47px;}
+.icon svg{display:block;}
+.backheader{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--borderSubtle);}
+.backheader .side{width:48px;min-height:48px;display:flex;align-items:center;}
+.backheader .title{flex:1;text-align:center;font-size:17px;font-weight:500;line-height:23px;margin:0 8px;}
+.content{padding:16px;padding-bottom:32px;display:flex;flex-direction:column;gap:16px;}
+.t-h3{font-size:20px;font-weight:500;line-height:27px;}
+.t-title{font-size:17px;font-weight:500;line-height:23px;}
+.t-body{font-size:16px;line-height:24px;}
+.t-bodyStrong{font-size:16px;font-weight:500;line-height:24px;}
+.t-bodySm{font-size:13px;line-height:20px;}
+.t-caption{font-size:11px;line-height:15px;}
+.t-captionStrong{font-size:11px;font-weight:600;line-height:15px;}
+.c-secondary{color:var(--textSecondary);}
+.c-muted{color:var(--textMuted);}
+.card{background:var(--surface);border:1px solid var(--borderSubtle);border-radius:16px;padding:16px;}
+.card.surface2{background:var(--surface2);}
+.card.padmd{padding:12px;}
+.card.rmd{border-radius:10px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:16px;border:1px solid transparent;font-weight:600;}
+.btn.full{display:flex;width:100%;}
+.btn.sm{padding:8px 12px;font-size:13px;line-height:18px;gap:4px;}
+.btn.md{padding:12px 16px;font-size:16px;line-height:22px;gap:8px;}
+.btn.emphatic{background:var(--primaryFill);color:var(--onPrimary);}
+.btn.tertiary{background:var(--primaryBg);color:var(--primary);border-color:var(--primaryEdge);}
+.field-wrap{display:flex;flex-direction:column;gap:8px;}
+.field-label{font-size:11px;font-weight:600;line-height:15px;color:var(--textSecondary);}
+.field{display:flex;align-items:center;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);min-height:48px;padding:8px 12px;}
+.field .val{font-size:16px;line-height:24px;color:var(--textPrimary);}
+.hint{font-size:11px;line-height:15px;}
+.sectionlabel{font-size:11px;font-weight:500;line-height:15px;letter-spacing:0.5px;text-transform:uppercase;color:var(--textSecondary);}
+.presets{display:flex;flex-wrap:wrap;gap:8px;}
+.avatar{border-radius:999px;border:2px solid;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0;}
+.avatar .badge{position:absolute;right:-3px;bottom:-3px;border-radius:999px;border:1px solid var(--surface);display:flex;align-items:center;justify-content:center;}
+.gymrow{display:flex;flex-direction:row;align-items:center;gap:12px;padding:12px;}
+.chiprow{display:flex;flex-wrap:wrap;gap:8px;}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;border:1px solid var(--border);background:var(--surface2);padding:8px 12px;min-height:44px;font-size:13px;font-weight:500;line-height:18px;color:var(--textSecondary);}
+.chip.selected{background:var(--primaryBg);border-color:var(--primary);color:var(--primary);}
+.tprow{display:flex;flex-direction:row;align-items:center;gap:12px;}
+.tpbody{flex:1;display:flex;flex-direction:column;gap:2px;}
+.switch{width:44px;height:26px;border-radius:13px;position:relative;flex-shrink:0;}
+.switch.on{background:rgba(245,166,35,0.5);}
+.switch.off{background:var(--surface3);}
+.switch .thumb{position:absolute;top:2px;width:22px;height:22px;border-radius:11px;background:var(--primary);}
+.switch.on .thumb{right:2px;}
+.switch.off .thumb{left:2px;}
+.rule{font-size:11px;line-height:15px;color:var(--textSecondary);margin:0;padding:2px 0;}
+</style>
+</head>
+<body>
+<svg style="display:none">
+<defs>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-barbell" viewBox="0 0 24 24"><path d="M2 12h20M4 8v8M20 8v8M7 9v6M17 9v6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+<symbol id="i-flash" viewBox="0 0 24 24"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+<symbol id="i-body" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 21l1.5-8H8l1-4h6l1 4h-1.5L16 21" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+<symbol id="i-camera" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="13.5" r="3.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 7l1.5-2h5L16 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 10h18M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-checkcircle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 12l3 3 5-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-trending" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 6h6v6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-analytics" viewBox="0 0 24 24"><path d="M4 20V10M11 20V4M18 20v-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7 4h10v4a5 5 0 01-10 0V4z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 6H3v2a4 4 0 004 4M19 6h2v2a4 4 0 01-4 4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 13v4M9 21h6M9.5 17h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+<symbol id="i-pulse" viewBox="0 0 24 24"><path d="M2 12h4l2-6 4 12 2-9 2 3h6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-stopwatch" viewBox="0 0 24 24"><circle cx="12" cy="13" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 9v4l3 2M10 2h4M12 2v3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+</defs>
+</svg>
+
+<div class="artboard">
+  <div class="statusbar"></div>
+  <div class="backheader">
+    <div class="side"><span class="icon" style="color:var(--textPrimary)"><svg width="24" height="24"><use href="#i-back"/></svg></span></div>
+    <div class="title">Join Community</div>
+    <div class="side"></div>
+  </div>
+
+  <div class="content">
+
+    <!-- PrivacyReceipt compact -->
+    <div class="card surface2 rmd padmd" style="display:flex;flex-direction:column;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="icon" style="color:var(--primary)"><svg width="20" height="20"><use href="#i-shield"/></svg></span>
+        <div class="t-caption" style="flex:1;color:var(--textPrimary);">Nothing about your body, food or coaching is ever shared.</div>
+      </div>
+      <div class="btn tertiary sm" style="align-self:flex-start;">What is shared</div>
+    </div>
+
+    <!-- Handle -->
+    <div class="field-wrap">
+      <div class="field-label">Handle</div>
+      <div class="field"><div class="val">jamie</div></div>
+      <div class="hint" style="color:var(--success);">Available</div>
+    </div>
+
+    <!-- Name -->
+    <div class="field-wrap">
+      <div class="field-label">Name</div>
+      <div class="field"><div class="val">Jamie</div></div>
+    </div>
+
+    <!-- Avatar -->
+    <div class="field-wrap">
+      <div class="sectionlabel">Avatar</div>
+      <div class="presets">
+        <div class="avatar" style="width:40px;height:40px;border-color:rgba(110,110,110,0.25);background:rgba(245,166,35,0.12);color:var(--primary);">
+          <svg width="15" height="15"><use href="#i-barbell"/></svg>
+        </div>
+        <div class="avatar" style="width:40px;height:40px;border-color:rgba(110,110,110,0.25);background:rgba(199,146,234,0.12);color:#C792EA;">
+          <svg width="15" height="15"><use href="#i-body"/></svg>
+        </div>
+        <div class="avatar" style="width:40px;height:40px;border-color:var(--primary);background:rgba(76,175,80,0.12);color:#4CAF50;">
+          <svg width="15" height="15"><use href="#i-calendar"/></svg>
+          <div class="badge" style="width:14px;height:14px;background:var(--primary);color:var(--onPrimary);">
+            <svg width="9" height="9"><use href="#i-check"/></svg>
+          </div>
+        </div>
+        <div class="avatar" style="width:40px;height:40px;border-color:rgba(110,110,110,0.25);background:rgba(86,180,233,0.12);color:#56B4E9;">
+          <svg width="15" height="15"><use href="#i-trending"/></svg>
+        </div>
+        <div class="avatar" style="width:40px;height:40px;border-color:rgba(110,110,110,0.25);background:rgba(240,228,66,0.12);color:#F0E442;">
+          <svg width="15" height="15"><use href="#i-flash"/></svg>
+        </div>
+        <div class="avatar" style="width:40px;height:40px;border-color:rgba(110,110,110,0.25);background:rgba(244,67,54,0.12);color:#F44336;">
+          <svg width="15" height="15"><use href="#i-pulse"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trains at -->
+    <div class="field-wrap">
+      <div class="sectionlabel">Trains at (optional)</div>
+      <div class="card" style="padding:0;">
+        <div class="gymrow">
+          <div class="t-bodyStrong" style="flex:1;color:var(--textPrimary);">PureGym Motherwell</div>
+          <div class="btn tertiary sm">Change</div>
+        </div>
+      </div>
+      <div class="hint c-muted">Only the gym you choose. Never your location. Can be added later from Edit profile.</div>
+    </div>
+
+    <!-- Who can follow -->
+    <div class="field-wrap">
+      <div class="sectionlabel">Who can follow you</div>
+      <div class="chiprow">
+        <div class="chip selected">Anyone</div>
+        <div class="chip">People I approve</div>
+      </div>
+      <div class="hint c-muted">Anyone signed in can follow you and see what you post.</div>
+    </div>
+
+    <!-- Training profile -->
+    <div class="field-wrap">
+      <div class="sectionlabel">Your training profile</div>
+      <div class="t-bodySm c-secondary">Worked out on your phone from your last twelve weeks of finished sessions. Only the ones you switch on are shared, and never anything more detailed than a band.</div>
+
+      <div class="card" style="display:flex;flex-direction:column;gap:2px;">
+        <div class="t-caption c-muted">What other people would see</div>
+        <div class="t-body" style="color:var(--textPrimary);">4 to 5 sessions a week · Intermediate</div>
+      </div>
+
+      <div class="tprow">
+        <div class="tpbody">
+          <div class="t-body" style="color:var(--textPrimary);">Days you usually train</div>
+          <div class="t-bodySm c-secondary">Mon, Wed, Fri</div>
+        </div>
+        <div class="switch off"><div class="thumb"></div></div>
+      </div>
+      <div class="tprow">
+        <div class="tpbody">
+          <div class="t-body" style="color:var(--textPrimary);">When you usually train</div>
+          <div class="t-bodySm c-secondary">Evenings</div>
+        </div>
+        <div class="switch off"><div class="thumb"></div></div>
+      </div>
+      <div class="tprow">
+        <div class="tpbody">
+          <div class="t-body" style="color:var(--textPrimary);">Sessions a week</div>
+          <div class="t-bodySm c-secondary">4 to 5</div>
+        </div>
+        <div class="switch on"><div class="thumb"></div></div>
+      </div>
+      <div class="tprow">
+        <div class="tpbody">
+          <div class="t-body" style="color:var(--textPrimary);">Lifts you train most</div>
+          <div class="t-bodySm c-secondary">3 lifts</div>
+        </div>
+        <div class="switch on"><div class="thumb"></div></div>
+      </div>
+      <div class="tprow">
+        <div class="tpbody">
+          <div class="t-body" style="color:var(--textPrimary);">Experience</div>
+          <div class="t-bodySm c-secondary">Intermediate</div>
+        </div>
+        <div class="switch on"><div class="thumb"></div></div>
+      </div>
+      <div class="tprow">
+        <div class="tpbody">
+          <div class="t-body" style="color:var(--textPrimary);">Programme</div>
+          <div class="t-bodySm c-secondary">Your current programme</div>
+        </div>
+        <div class="switch on"><div class="thumb"></div></div>
+      </div>
+      <div class="tprow">
+        <div class="tpbody">
+          <div class="t-body" style="color:var(--textPrimary);">Age band</div>
+          <div class="t-bodySm c-secondary">Worked out from your date of birth when this is on</div>
+        </div>
+        <div class="switch off"><div class="thumb"></div></div>
+      </div>
+
+      <div class="tprow">
+        <div class="tpbody">
+          <div class="t-body" style="color:var(--textPrimary);">Show which programmes I use</div>
+          <div class="t-bodySm c-secondary">Lets people find you on the "People on this programme" list for programmes you use or publish.</div>
+        </div>
+        <div class="switch on"><div class="thumb"></div></div>
+      </div>
+    </div>
+
+    <!-- Create profile -->
+    <div class="btn emphatic full md">Create profile</div>
+
+    <!-- Four rules -->
+    <div class="card surface2 rmd padmd" style="display:flex;flex-direction:column;gap:4px;">
+      <div class="t-captionStrong" style="color:var(--textPrimary);">Four rules</div>
+      <p class="rule">Training talk only.</p>
+      <p class="rule">Be decent to people.</p>
+      <p class="rule">No body-shaming, no diet or calorie talk.</p>
+      <p class="rule">Report what breaks this.</p>
+    </div>
+
+    <div class="btn tertiary sm" style="align-self:flex-start;">Community rules and contact</div>
+
+  </div>
+</div>
+</body>
+</html>
