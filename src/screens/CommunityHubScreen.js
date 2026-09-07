@@ -358,37 +358,42 @@ export default function CommunityHubScreen({ navigation, route }) {
       ) : null}
 
       {!joined && !browsing ? (
-        <Card style={styles.block}>
-          <Text style={[styles.heroTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
-            Programmes you can make your own
-          </Text>
-          <Text
-            numberOfLines={3}
-            style={[styles.heroBody, { ...t.type.bodySm, color: t.colors.textSecondary }]}
-          >
-            Use another lifter&apos;s programme as they built it, or let Volyume refit it to your kit and limits and show you every change. Share the training you actually did. Nothing about your body, food or coaching is ever shared.
-          </Text>
+        <>
+          {/* V3a: PrivacyReceipt lives directly under the hero, not nested
+              inside it, and the hero body drops its own privacy sentence
+              since the receipt beneath says exactly that
+              (docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md). */}
+          <Card style={styles.block}>
+            <Text style={[styles.heroTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
+              Programmes you can make your own
+            </Text>
+            <Text
+              style={[styles.heroBody, { ...t.type.bodySm, color: t.colors.textSecondary }]}
+            >
+              Use another lifter&apos;s programme as they built it, or let Volyume refit it to your kit and limits and show you every change. Share the training you actually did.
+            </Text>
+            <View style={styles.heroActions}>
+              <Button
+                variant="primary"
+                size="sm"
+                fullWidth={false}
+                icon="person-add-outline"
+                title="Create my profile"
+                onPress={() => navigation.navigate('CommunityJoin')}
+                accessibilityLabel="Create my Community profile"
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                title="Browse first"
+                onPress={() => setBrowsing(true)}
+                accessibilityLabel="Browse Community first"
+              />
+            </View>
+          </Card>
           <PrivacyReceipt />
-          <View style={styles.heroActions}>
-            <Button
-              variant="primary"
-              size="sm"
-              fullWidth={false}
-              icon="person-add-outline"
-              title="Create my profile"
-              onPress={() => navigation.navigate('CommunityJoin')}
-              accessibilityLabel="Create my Community profile"
-            />
-            <Button
-              variant="secondary"
-              size="sm"
-              fullWidth={false}
-              title="Browse first"
-              onPress={() => setBrowsing(true)}
-              accessibilityLabel="Browse Community first"
-            />
-          </View>
-        </Card>
+        </>
       ) : null}
 
       {joined ? (

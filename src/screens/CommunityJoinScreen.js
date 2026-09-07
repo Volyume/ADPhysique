@@ -427,7 +427,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
         </Card>
 
         <Button
-          variant="tertiary"
+          variant="secondary"
           size="sm"
           fullWidth={false}
           title="Community rules and contact"

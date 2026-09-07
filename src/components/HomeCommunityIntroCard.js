@@ -23,7 +23,9 @@ import Card from './Card';
 import Button from './Button';
 
 export const COMMUNITY_INTRO_TITLE = 'Other lifters, their programmes, your stories';
-export const COMMUNITY_INTRO_BODY = 'Use a programme another lifter built, as-is or refitted to your kit, and share the training you actually did. Nothing about your body, food or coaching is ever shared.';
+// V3a (docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md): drops the
+// closing privacy sentence, matching the Community hub hero.
+export const COMMUNITY_INTRO_BODY = 'Use a programme another lifter built, as-is or refitted to your kit, and share the training you actually did.';
 
 export default function HomeCommunityIntroCard({ onOpen, onDismiss }) {
   const t = useTheme();

@@ -205,6 +205,18 @@ export default function ConnectButton({
   return (
     <>
       <View style={styles.row}>
+        <Button
+          variant={shape.variant}
+          size={size}
+          fullWidth={fullWidth}
+          title={shape.title}
+          icon={shape.icon}
+          loading={busy}
+          onPress={press}
+          accessibilityLabel={`${shape.title} ${who}`.trim()}
+        />
+        {/* V7a: Message follows Connected so a profile row reads
+            Following · Connected · Message on one line. */}
         {state === 'connected' && onMessage ? (
           <Button
             variant="primary"
@@ -216,16 +228,6 @@ export default function ConnectButton({
             accessibilityLabel={`Message @${card?.handle ?? ''}`.trim()}
           />
         ) : null}
-        <Button
-          variant={shape.variant}
-          size={size}
-          fullWidth={fullWidth}
-          title={shape.title}
-          icon={shape.icon}
-          loading={busy}
-          onPress={press}
-          accessibilityLabel={`${shape.title} ${who}`.trim()}
-        />
       </View>
 
       <MenuSheet

@@ -56,7 +56,7 @@ import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, type, circle } from '../styles/theme';
 import {
-  getProfile, listFollows, profileUrl, reactToPost, unblockUser, relationships,
+  getProfile, listFollows, profileUrl, reactToPost, unblockUser, relationships, connectionState,
 } from '../lib/community';
 
 /**
@@ -309,10 +309,15 @@ export default function CommunityProfileScreen({ navigation, route }) {
           />
         </View>
       ) : (
+        // V7a (docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md): once
+        // connected, Following collapses to icon-only and the row reads
+        // Following · Connected · Message on one line; ConnectButton renders
+        // Message after Connected from `onMessage`.
         <View style={styles.actions}>
           <FollowButton
             card={card}
             size="md"
+            iconOnly={connectionState(card) === 'connected'}
             onChange={(relationship) => patchCard({ relationship })}
           />
           <ConnectButton
