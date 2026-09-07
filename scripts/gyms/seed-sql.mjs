@@ -110,6 +110,9 @@ function sqlBoolean(v) {
 function pad3(n) {
   return String(n).padStart(3, '0');
 }
+function pad4(n) {
+  return String(n).padStart(4, '0');
+}
 
 function houseHeader({ filename, purpose, dependsOn, rollback }) {
   return `-- ${filename}
@@ -337,8 +340,11 @@ function writeVenuesAndSourcesChunks(venues, carryNeedsReviewReason) {
         sqlString(v.website),
         sqlString(v.phone),
         sqlInt(v.facility_count),
-        v.parent_venue_id ? sqlUuid(v.parent_venue_id) : sqlNull(),
-        v.succeeded_by ? sqlUuid(v.succeeded_by) : sqlNull(),
+        // Venue-to-venue links are written by the links pass below, after
+        // every venue row exists: a child chunk can otherwise run before the
+        // chunk carrying its parent and fail the foreign key.
+        sqlNull(),
+        sqlNull(),
         sqlString(v.verification_status),
         sqlBoolean(needsReview),
         ...(carryNeedsReviewReason ? [sqlString(v.needs_review_reason)] : []),
@@ -358,7 +364,7 @@ function writeVenuesAndSourcesChunks(venues, carryNeedsReviewReason) {
       .join(', ');
     const statement = `INSERT INTO public.gym_venues (${venueColumns.join(', ')}) VALUES\n${rows.join(',\n')}\nON CONFLICT (id) DO UPDATE SET ${updateSet};`;
 
-    const filename = `${pad3(100 + i)}-venues-${pad3(i)}.sql`;
+    const filename = `100-venues-${pad4(i)}.sql`;
     const header = houseHeader({
       filename,
       purpose: `Seeds chunk ${i + 1}/${venueChunks.length} (${chunk.length} rows) of the canonical \`gym_venues\` table (GD-04 site-not-facility rows, from data/gyms/uk-gyms.v1.jsonl.gz).`,
@@ -368,6 +374,27 @@ function writeVenuesAndSourcesChunks(venues, carryNeedsReviewReason) {
     writeChunk(path.join(OUT_DIR, filename), header, [statement]);
   });
   log(`gym_venues: wrote ${venueChunks.length} chunk(s) (${venues.length} rows)`);
+
+  // Links pass: parent_venue_id (a gym inside a leisure centre) and
+  // succeeded_by (a merged row) both point at gym_venues, so they are set
+  // only once every venue row exists. Sorts after every venues chunk and
+  // before the sources chunks. Idempotent: the same UPDATE lands the same
+  // values.
+  const linkRows = venues.filter((v) => v.parent_venue_id || v.succeeded_by);
+  const linkChunks = chunkArray(linkRows, CHUNK_SIZE);
+  linkChunks.forEach((chunk, i) => {
+    const values = chunk.map((v) => `  (${sqlUuid(v.id)}, ${v.parent_venue_id ? sqlUuid(v.parent_venue_id) : sqlNull()}, ${v.succeeded_by ? sqlUuid(v.succeeded_by) : sqlNull()})`);
+    const statement = `UPDATE public.gym_venues AS v\nSET parent_venue_id = x.parent_venue_id::uuid, succeeded_by = x.succeeded_by::uuid, updated_at = ${sqlNow()}\nFROM (VALUES\n${values.join(',\n')}\n) AS x(id, parent_venue_id, succeeded_by)\nWHERE v.id = x.id::uuid;`;
+    const filename = `150-venue-links-${pad4(i)}.sql`;
+    const header = houseHeader({
+      filename,
+      purpose: `Sets chunk ${i + 1}/${linkChunks.length} (${chunk.length} rows) of the venue-to-venue links (parent_venue_id, succeeded_by) on \`gym_venues\`, after every venue row exists.`,
+      dependsOn: 'migrate_162 (gym directory schema) and every venues chunk',
+      rollback: `update public.gym_venues set parent_venue_id = null, succeeded_by = null where id in (${chunk.map((v) => `'${v.id}'`).join(', ')});`,
+    });
+    writeChunk(path.join(OUT_DIR, filename), header, [statement]);
+  });
+  log(`gym_venues links: wrote ${linkChunks.length} chunk(s) (${linkRows.length} rows)`);
 
   const sourceColumns = [
     'id',
@@ -405,7 +432,7 @@ function writeVenuesAndSourcesChunks(venues, carryNeedsReviewReason) {
       .join(', ');
     const statement = `INSERT INTO public.gym_venue_sources (${sourceColumns.join(', ')}) VALUES\n${rows.join(',\n')}\nON CONFLICT (id) DO UPDATE SET ${updateSet};`;
 
-    const filename = `${pad3(200 + i)}-sources-${pad3(i)}.sql`;
+    const filename = `200-sources-${pad4(i)}.sql`;
     const header = houseHeader({
       filename,
       purpose: `Seeds chunk ${i + 1}/${sourceChunks.length} (${chunk.length} rows) of \`gym_venue_sources\` provenance rows (GD-02). Payload is deliberately NOT the raw source payload - only {source_status, source_dataset, licence}.`,
