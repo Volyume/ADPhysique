@@ -1,17 +1,19 @@
 # Applies a NAMED set of migration files and, optionally, a seed directory
-# to production with psql, each file in its own transaction, recording
+# to production through the Supabase Management API (the same door the
+# Supabase connector uses: SQL sent with the account access token, no
+# database password), each file wrapped in one transaction, recording
 # every applied file so a re-dispatch skips what already landed. Manual
 # dispatch only, from main, and only after the founder's exact phrase
 # "run against production" for the batch that carries these files
 # (supabase/README.md).
 #
 # Why a separate workflow: deploy-migrations.yml walks EVERY unapplied
-# migrate_*.sql, which would also carry migrations that are deliberately
-# held (155 is blocked on a client prerequisite), and it cannot carry a
-# 70 MB data seed. This workflow applies exactly what it is told and
-# nothing else. Tracking rows go to the same `claude_schema_migrations`
-# table deploy-migrations.yml reads, so that workflow later skips them;
-# seed files are tracked in `claude_seed_files`.
+# migrate_*.sql (it would also carry the held 155) and needs a database
+# URL secret; it cannot carry a 70 MB data seed. This workflow applies
+# exactly what it is told, with the SUPABASE_ACCESS_TOKEN secret the
+# function deploys already use. Tracking rows go to the same
+# `claude_schema_migrations` table deploy-migrations.yml reads, so that
+# workflow later skips them; seed files are tracked in `claude_seed_files`.
 name: Apply named SQL
 
 on:
@@ -39,28 +41,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Check required secret
+      - name: Check required secrets
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
         run: |
-          if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "::error::SUPABASE_DB_URL is empty. Add it in repo Settings -> Secrets and variables -> Actions."
-            exit 1
-          fi
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then echo "::error::SUPABASE_ACCESS_TOKEN is empty."; exit 1; fi
+          if [ -z "$EXPO_PUBLIC_SUPABASE_URL" ]; then echo "::error::EXPO_PUBLIC_SUPABASE_URL is empty."; exit 1; fi
 
-      - name: Install psql
+      - name: Write the SQL helper
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client
+          cat > /tmp/sql.sh <<'EOF'
+          #!/usr/bin/env bash
+          # Usage: sql.sh <file>   runs the file's SQL through the Management API.
+          #        sql.sh -c "<sql>" runs an inline statement and prints the JSON rows.
+          set -euo pipefail
+          REF=$(printf '%s' "$EXPO_PUBLIC_SUPABASE_URL" | sed -E 's#https?://([^.]+)\..*#\1#')
+          if [ "$1" = "-c" ]; then printf '%s' "$2" > /tmp/inline.sql; f=/tmp/inline.sql; else f="$1"; fi
+          jq -n --rawfile q "$f" '{query: $q}' > /tmp/payload.json
+          code=$(curl -sS -o /tmp/resp.json -w '%{http_code}' -X POST \
+            "https://api.supabase.com/v1/projects/$REF/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            -H "Content-Type: application/json" --data-binary @/tmp/payload.json)
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "::error::Management API returned HTTP $code for $f"; head -c 2000 /tmp/resp.json; echo; exit 1
+          fi
+          cat /tmp/resp.json
+          EOF
+          chmod +x /tmp/sql.sh
 
       - name: Apply named migrations
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           MIGRATIONS: ${{ github.event.inputs.migrations }}
         run: |
           set -euo pipefail
-          run_sql() { psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -tA -c "$1"; }
-          run_sql "CREATE TABLE IF NOT EXISTS claude_schema_migrations (filename text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());"
+          /tmp/sql.sh -c "CREATE TABLE IF NOT EXISTS claude_schema_migrations (filename text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());" >/dev/null
           if [ -z "${MIGRATIONS:-}" ]; then echo "No migrations named."; exit 0; fi
           IFS=',' read -ra names <<< "$MIGRATIONS"
           for raw in "${names[@]}"; do
@@ -72,29 +89,33 @@ jobs:
             esac
             f="supabase/$base"
             if [ ! -f "$f" ]; then echo "::error::$f not found"; exit 1; fi
-            seen="$(run_sql "SELECT 1 FROM claude_schema_migrations WHERE filename='$base';")"
-            if [ "$seen" = "1" ]; then echo "Already applied, skipping $base"; continue; fi
+            seen="$(/tmp/sql.sh -c "SELECT 1 AS seen FROM claude_schema_migrations WHERE filename='$base';" | jq 'length')"
+            if [ "$seen" != "0" ]; then echo "Already applied, skipping $base"; continue; fi
             echo "Applying $base …"
-            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction -q -f "$f"
-            run_sql "INSERT INTO claude_schema_migrations(filename) VALUES ('$base') ON CONFLICT DO NOTHING;" >/dev/null
+            { printf 'BEGIN;\n'; cat "$f"; printf '\nCOMMIT;\n'; } > /tmp/wrapped.sql
+            /tmp/sql.sh /tmp/wrapped.sql >/dev/null
+            /tmp/sql.sh -c "INSERT INTO claude_schema_migrations(filename) VALUES ('$base') ON CONFLICT DO NOTHING;" >/dev/null
             echo "Applied $base"
           done
 
       - name: Generate the gym seed from the repo data asset
         if: ${{ github.event.inputs.seed_dir == 'supabase/seed_gyms_v1' }}
+        env:
+          SEED_CHUNK_SIZE: "250"
         run: |
-          # supabase/seed_gyms_v1/ is git-ignored (70 MB of generated SQL);
-          # it is rebuilt here from data/gyms/*.gz with node built-ins only.
+          # supabase/seed_gyms_v1/ is git-ignored (generated SQL); it is
+          # rebuilt here from data/gyms/*.gz with node built-ins only, in
+          # chunks small enough for one Management API request each.
           node scripts/gyms/seed-sql.mjs
-          ls supabase/seed_gyms_v1 | wc -l
+          echo "chunks: $(ls supabase/seed_gyms_v1 | wc -l)"
 
       - name: Apply seed directory
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           SEED_DIR: ${{ github.event.inputs.seed_dir }}
         run: |
           set -euo pipefail
-          run_sql() { psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -tA -c "$1"; }
           dir="${SEED_DIR:-}"
           if [ -z "$dir" ]; then echo "No seed directory named."; exit 0; fi
           case "$dir" in
@@ -102,21 +123,30 @@ jobs:
             *) echo "::error::refusing '$dir': only supabase/seed_* directories are accepted"; exit 1;;
           esac
           if [ ! -d "$dir" ]; then echo "::error::$dir not found"; exit 1; fi
-          run_sql "CREATE TABLE IF NOT EXISTS claude_seed_files (filename text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());"
+          have="$(/tmp/sql.sh -c "SELECT count(*)::int AS n FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('gym_brands','gym_postcode_sectors','gym_venues','gym_venue_sources','gym_venue_history');" | jq '.[0].n')"
+          if [ "$have" != "5" ]; then echo "::error::gym tables missing ($have of 5); apply migrate_162 first"; exit 1; fi
+          /tmp/sql.sh -c "CREATE TABLE IF NOT EXISTS claude_seed_files (filename text PRIMARY KEY, applied_at timestamptz NOT NULL DEFAULT now());" >/dev/null
           applied=0; skipped=0
           for f in $(ls "$dir"/*.sql | sort); do
             base="$(basename "$f")"
-            seen="$(run_sql "SELECT 1 FROM claude_seed_files WHERE filename='$dir/$base';")"
-            if [ "$seen" = "1" ]; then skipped=$((skipped+1)); continue; fi
-            echo "Applying $base …"
-            psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 --single-transaction -q -f "$f"
-            run_sql "INSERT INTO claude_seed_files(filename) VALUES ('$dir/$base') ON CONFLICT DO NOTHING;" >/dev/null
+            seen="$(/tmp/sql.sh -c "SELECT 1 AS seen FROM claude_seed_files WHERE filename='$dir/$base';" | jq 'length')"
+            if [ "$seen" != "0" ]; then skipped=$((skipped+1)); continue; fi
+            { printf 'BEGIN;\n'; cat "$f"; printf '\nCOMMIT;\n'; } > /tmp/wrapped.sql
+            /tmp/sql.sh /tmp/wrapped.sql >/dev/null
+            /tmp/sql.sh -c "INSERT INTO claude_seed_files(filename) VALUES ('$dir/$base') ON CONFLICT DO NOTHING;" >/dev/null
             applied=$((applied+1))
+            if [ $((applied % 50)) -eq 0 ]; then echo "…$applied applied"; fi
           done
           echo "Seed: applied $applied file(s), skipped $skipped already-applied file(s)."
+          /tmp/sql.sh -c "SELECT 'gym_brands' AS t, count(*)::int AS n FROM gym_brands UNION ALL SELECT 'gym_postcode_sectors', count(*)::int FROM gym_postcode_sectors UNION ALL SELECT 'gym_venues', count(*)::int FROM gym_venues UNION ALL SELECT 'gym_venue_sources', count(*)::int FROM gym_venue_sources UNION ALL SELECT 'gym_venue_history', count(*)::int FROM gym_venue_history;"
 
       - name: Verify application function owner/default-ACL contract
         env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
         run: |
-          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/verify_application_function_acl.sql
+          set -euo pipefail
+          # The verify script carries psql meta-commands on its first lines;
+          # the API takes plain SQL, so those lines are dropped.
+          grep -v '^\\' supabase/verify_application_function_acl.sql > /tmp/verify.sql
+          /tmp/sql.sh /tmp/verify.sql

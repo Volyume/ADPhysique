@@ -46,7 +46,9 @@ const OUT_DIR = path.join(__dirname, '../../supabase/seed_gyms_v1');
 // column fallback (see the module header note above).
 const MIGRATION_FILE = path.join(__dirname, '../../supabase/migrate_162_gym_directory.sql');
 
-const CHUNK_SIZE = 1000;
+// Rows per chunk file. 1,000 by default; the apply workflow sets
+// SEED_CHUNK_SIZE lower so each chunk fits one Management API request.
+const CHUNK_SIZE = Math.max(50, Number(process.env.SEED_CHUNK_SIZE) || 1000);
 const BRAND_ID_NAMESPACE_PREFIX = 'gym_brand:';
 const VENUE_SOURCE_ID_NAMESPACE_PREFIX = 'gym_venue_source:';
 const VENUE_HISTORY_ID_NAMESPACE_PREFIX = 'gym_venue_history:';
