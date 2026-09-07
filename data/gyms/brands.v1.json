@@ -1,0 +1,332 @@
+[
+  {
+    "key": "puregym",
+    "name": "PureGym",
+    "aliases": [
+      "puregym",
+      "pure gym",
+      "pure gym uk"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": null,
+    "website": null
+  },
+  {
+    "key": "the-gym-group",
+    "name": "The Gym Group",
+    "aliases": [
+      "the gym group",
+      "the gym",
+      "gym group"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": "Q48815022",
+    "website": "https://www.thegymgroup.com"
+  },
+  {
+    "key": "jd-gyms",
+    "name": "JD Gyms",
+    "aliases": [
+      "jd gyms",
+      "jd gym",
+      "j d gyms",
+      "jd",
+      "xercise4less",
+      "xercise 4 less"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": "Q112947108",
+    "website": "https://www.jdgyms.co.uk/"
+  },
+  {
+    "key": "nuffield-health",
+    "name": "Nuffield Health",
+    "aliases": [
+      "nuffield health",
+      "nuffield",
+      "nuffield health fitness wellbeing centre"
+    ],
+    "kind": "health_club",
+    "wikidata_qid": "Q7068711",
+    "website": "https://www.nuffieldhealth.com/"
+  },
+  {
+    "key": "david-lloyd",
+    "name": "David Lloyd",
+    "aliases": [
+      "david lloyd",
+      "david lloyd leisure",
+      "david lloyd clubs"
+    ],
+    "kind": "health_club",
+    "wikidata_qid": "Q5236716",
+    "website": "https://www.davidlloyd.co.uk/"
+  },
+  {
+    "key": "better",
+    "name": "Better",
+    "aliases": [
+      "better",
+      "better leisure",
+      "better gll",
+      "gll",
+      "greenwich leisure limited",
+      "greenwich leisure"
+    ],
+    "kind": "leisure_centre",
+    "wikidata_qid": "Q5604859",
+    "website": null
+  },
+  {
+    "key": "everyone-active",
+    "name": "Everyone Active",
+    "aliases": [
+      "everyone active",
+      "slm",
+      "sports and leisure management"
+    ],
+    "kind": "leisure_centre",
+    "wikidata_qid": "Q113562737",
+    "website": "https://www.everyoneactive.com/"
+  },
+  {
+    "key": "fitness-first",
+    "name": "Fitness First",
+    "aliases": [
+      "fitness first",
+      "dw fitness first",
+      "dw sports fitness first"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": "Q127120",
+    "website": "https://www.dwfitnessfirst.com"
+  },
+  {
+    "key": "virgin-active",
+    "name": "Virgin Active",
+    "aliases": [
+      "virgin active"
+    ],
+    "kind": "health_club",
+    "wikidata_qid": "Q4013942",
+    "website": "https://www.virginactive.it/"
+  },
+  {
+    "key": "bannatyne",
+    "name": "Bannatyne",
+    "aliases": [
+      "bannatyne",
+      "bannatynes",
+      "bannatyne health club",
+      "bannatyne spa"
+    ],
+    "kind": "health_club",
+    "wikidata_qid": null,
+    "website": null
+  },
+  {
+    "key": "energie",
+    "name": "énergie Fitness",
+    "aliases": [
+      "energie",
+      "energie fitness",
+      "nrg energie"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": "Q109855553",
+    "website": "https://www.energiefitness.com/"
+  },
+  {
+    "key": "snap-fitness",
+    "name": "Snap Fitness",
+    "aliases": [
+      "snap fitness"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": "Q7547254",
+    "website": "https://www.snapfitness.com/au"
+  },
+  {
+    "key": "anytime-fitness",
+    "name": "Anytime Fitness",
+    "aliases": [
+      "anytime fitness"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": "Q114544401",
+    "website": null
+  },
+  {
+    "key": "village-gym",
+    "name": "Village Gym",
+    "aliases": [
+      "village gym",
+      "village gyms",
+      "village hotels",
+      "village hotel"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": "Q16963550",
+    "website": "https://www.village-hotels.co.uk/"
+  },
+  {
+    "key": "total-fitness",
+    "name": "Total Fitness",
+    "aliases": [
+      "total fitness"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": "Q7828019",
+    "website": "https://www.totalfitness.co.uk/"
+  },
+  {
+    "key": "gymbox",
+    "name": "Gymbox",
+    "aliases": [
+      "gymbox"
+    ],
+    "kind": "boutique_studio",
+    "wikidata_qid": "Q18125924",
+    "website": "http://gymbox.com/"
+  },
+  {
+    "key": "third-space",
+    "name": "Third Space",
+    "aliases": [
+      "third space"
+    ],
+    "kind": "boutique_studio",
+    "wikidata_qid": "Q112671088",
+    "website": "https://www.thirdspace.london/"
+  },
+  {
+    "key": "1rebel",
+    "name": "1Rebel",
+    "aliases": [
+      "1rebel",
+      "one rebel"
+    ],
+    "kind": "boutique_studio",
+    "wikidata_qid": null,
+    "website": null
+  },
+  {
+    "key": "f45",
+    "name": "F45",
+    "aliases": [
+      "f45",
+      "f45 training"
+    ],
+    "kind": "crossfit_functional",
+    "wikidata_qid": "Q64390973",
+    "website": "https://f45training.com/"
+  },
+  {
+    "key": "crossfit",
+    "name": "CrossFit",
+    "aliases": [
+      "crossfit"
+    ],
+    "kind": "crossfit_functional",
+    "wikidata_qid": "Q2072840",
+    "website": "https://www.crossfit.com/"
+  },
+  {
+    "key": "places-leisure",
+    "name": "Places Leisure",
+    "aliases": [
+      "places leisure"
+    ],
+    "kind": "leisure_centre",
+    "wikidata_qid": "Q130223830",
+    "website": "https://www.placesleisure.org/"
+  },
+  {
+    "key": "freedom-leisure",
+    "name": "Freedom Leisure",
+    "aliases": [
+      "freedom leisure"
+    ],
+    "kind": "leisure_centre",
+    "wikidata_qid": null,
+    "website": null
+  },
+  {
+    "key": "parkwood-leisure",
+    "name": "Parkwood Leisure",
+    "aliases": [
+      "parkwood leisure",
+      "parkwood"
+    ],
+    "kind": "leisure_centre",
+    "wikidata_qid": null,
+    "website": null
+  },
+  {
+    "key": "serco-leisure",
+    "name": "Serco Leisure",
+    "aliases": [
+      "serco leisure",
+      "serco"
+    ],
+    "kind": "leisure_centre",
+    "wikidata_qid": null,
+    "website": null
+  },
+  {
+    "key": "everlast",
+    "name": "Everlast Gyms",
+    "aliases": [
+      "everlast",
+      "everlast gyms",
+      "sports direct fitness"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": "Q112947134",
+    "website": "https://www.everlastgyms.com/"
+  },
+  {
+    "key": "ultimate-fitness",
+    "name": "Ultimate Fitness",
+    "aliases": [
+      "ultimate fitness",
+      "ultimate fitness group"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": "Q58239434",
+    "website": "http://ufultimatefitness.com"
+  },
+  {
+    "key": "247-fitness",
+    "name": "24/7 Fitness",
+    "aliases": [
+      "24 7 fitness",
+      "247 fitness",
+      "24 hour fitness"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": "Q112671987",
+    "website": "https://247.fitness"
+  },
+  {
+    "key": "simply-gym",
+    "name": "Simply Gym",
+    "aliases": [
+      "simply gym"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": null,
+    "website": null
+  },
+  {
+    "key": "trainmore",
+    "name": "Trainmore",
+    "aliases": [
+      "trainmore",
+      "train more"
+    ],
+    "kind": "commercial_gym",
+    "wikidata_qid": null,
+    "website": null
+  }
+]

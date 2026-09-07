@@ -1,14 +1,27 @@
 /**
- * CommunityEditProfileScreen (blueprint section 6; SD-05)
+ * CommunityEditProfileScreen (blueprint section 6; SD-05; discovery
+ * blueprint `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md`
+ * section 8; SD-27)
  *
  * Every fact on a Community profile is typed here. Nothing is read from
  * onboarding, the body profile or the engine: the styles, goal, setting,
  * area and gym are choices the user makes for Community and nowhere
  * else.
  *
- * The gym and area fields are honest labels, not places: "only the name
- * you type, never your location". There is no map, no radius and no
- * verification behind them (SD-10).
+ * The gym field is a picker over the gym directory (gym database
+ * blueprint `docs/gym-database-2026-09-06/20-BLUEPRINT.md`, GD-14), which
+ * replaced the old free-text typeahead: "PureGym Motherwell" is the same
+ * row every time, never a near-miss retype. A profile from before this
+ * campaign that only ever had a typed label (no linked gym_id) still
+ * shows that label read-only until the picker replaces it. Up to three
+ * "other gyms" can be added alongside the primary one. GD-13: this is
+ * still a chosen fact, never a place: the device's own location is never
+ * read or stored here.
+ *
+ * "Training profile" links out to its own screen (bands, toggles, the
+ * training partner section) rather than living here: it is a bigger
+ * decision than the rest of this form, and it is worth its own screen so
+ * the preview line has room to be read before anything is shared.
  *
  * Leaving Community is here too, as the destructive action it is: it
  * withdraws the consent and deletes everything the user authored.
@@ -17,24 +30,30 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
+import Card from '../components/Card';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import SegmentedControl from '../components/SegmentedControl';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
+import GymPicker from '../components/community/GymPicker';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type } from '../styles/theme';
+import { colors, spacing, type, iconSize } from '../styles/theme';
 import { AVATAR_PRESETS } from '../lib/profileAvatarPresets';
+import { get as getGym, setGyms, venueLine } from '../lib/gyms';
 import {
   upsertProfile, leaveCommunity, COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS,
   COMMUNITY_SETTINGS, MAX_STYLES_PER_PROFILE, DISPLAY_NAME_MAX, BIO_MAX,
-  AREA_LABEL_MAX, GYM_LABEL_MAX,
+  AREA_LABEL_MAX,
 } from '../lib/community';
+
+const MAX_OTHER_GYMS = 3;
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
@@ -58,7 +77,17 @@ export default function CommunityEditProfileScreen({ navigation }) {
   const [goal, setGoal] = useState(null);
   const [setting, setSetting] = useState(null);
   const [area, setArea] = useState('');
-  const [gym, setGym] = useState('');
+  // GD-14: the free-text gym label is replaced by a picker over the
+  // directory. `primaryGym`/`otherGyms` hold the venue objects the picker
+  // returns (at least {id, display_name}); a LEGACY profile (gym_key not
+  // starting "gym:") has no gym_id at all, only the free-text
+  // `gym_label` it was saved with before this campaign, which is shown
+  // read-only via `legacyGymLabel` until the picker replaces it.
+  const [primaryGym, setPrimaryGym] = useState(null);
+  const [otherGyms, setOtherGyms] = useState([]);
+  const [legacyGymLabel, setLegacyGymLabel] = useState(null);
+  const [editingPrimaryGym, setEditingPrimaryGym] = useState(false);
+  const [addingOtherGym, setAddingOtherGym] = useState(false);
   const [visibility, setVisibility] = useState('public');
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
@@ -74,10 +103,35 @@ export default function CommunityEditProfileScreen({ navigation }) {
     setGoal(profile.goal ?? null);
     setSetting(profile.setting ?? null);
     setArea(profile.area_label ?? '');
-    setGym(profile.gym_label ?? '');
+    if (profile.gym_id) {
+      setPrimaryGym({ id: profile.gym_id, display_name: profile.gym_label ?? '' });
+      setLegacyGymLabel(null);
+    } else {
+      setPrimaryGym(null);
+      setLegacyGymLabel(profile.gym_label ?? null);
+    }
     setVisibility(profile.visibility ?? 'public');
     setReady(true);
   }, [profile, ready]);
+
+  // The other gyms are stored as bare ids on the profile; a display name
+  // needs its own read, best effort (a gym that fails to load is simply
+  // left off the list rather than failing the whole screen).
+  useEffect(() => {
+    if (!ready) return undefined;
+    let alive = true;
+    const ids = Array.isArray(profile?.other_gym_ids) ? profile.other_gym_ids : [];
+    if (!ids.length) { setOtherGyms([]); return undefined; }
+    (async () => {
+      const rows = await Promise.all(ids.map((id) => getGym(id).catch(() => null)));
+      if (alive) setOtherGyms(rows.filter(Boolean));
+    })();
+    return () => { alive = false; };
+  }, [ready, profile]);
+
+  function removeOtherGym(id) {
+    setOtherGyms((prev) => prev.filter((g) => g.id !== id));
+  }
 
   function toggleStyle(key) {
     setStyleKeys((prev) => {
@@ -99,9 +153,11 @@ export default function CommunityEditProfileScreen({ navigation }) {
         goal,
         setting,
         area_label: area.trim() || null,
-        gym_label: gym.trim() || null,
         visibility,
       });
+      // GD-14: the gym is saved through community_set_gyms, not the old
+      // area/label gym field above.
+      await setGyms(primaryGym?.id ?? null, otherGyms.map((g) => g.id));
       await refresh(true);
       toast.show('Profile saved');
       navigation.goBack();
@@ -110,7 +166,10 @@ export default function CommunityEditProfileScreen({ navigation }) {
     } finally {
       setBusy(false);
     }
-  }, [busy, displayName, bio, preset, styleKeys, goal, setting, area, gym, visibility, refresh, toast, navigation]);
+  }, [
+    busy, displayName, bio, preset, styleKeys, goal, setting, area, visibility,
+    primaryGym, otherGyms, refresh, toast, navigation,
+  ]);
 
   function confirmLeave() {
     appAlert(
@@ -232,16 +291,92 @@ export default function CommunityEditProfileScreen({ navigation }) {
         />
 
         <View style={styles.field}>
-          <TextField
-            label="Trains at"
-            value={gym}
-            onChangeText={(v) => setGym(v.slice(0, GYM_LABEL_MAX))}
-            accessibilityLabel="Gym you train at"
-          />
+          <SectionLabel>Trains at</SectionLabel>
+          {editingPrimaryGym || (!primaryGym && !legacyGymLabel) ? (
+            <GymPicker
+              navigation={navigation}
+              onSelect={(venue) => { setPrimaryGym(venue); setLegacyGymLabel(null); setEditingPrimaryGym(false); }}
+            />
+          ) : (
+            <Card style={styles.gymRow}>
+              <View style={styles.gymBody}>
+                <Text style={[styles.linkLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
+                  {primaryGym ? venueLine(primaryGym).primary : legacyGymLabel}
+                </Text>
+                {!primaryGym && legacyGymLabel ? (
+                  <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+                    Not yet linked to the directory.
+                  </Text>
+                ) : null}
+              </View>
+              <Pressable
+                onPress={() => setEditingPrimaryGym(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Change gym"
+              >
+                <Text style={[styles.changeLink, { ...t.type.bodySm, color: t.colors.primary }]}>Change</Text>
+              </Pressable>
+            </Card>
+          )}
           <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-            Only the name you type. Never your location.
+            Only the gym you choose. Never your location.
           </Text>
         </View>
+
+        <View style={styles.field}>
+          <SectionLabel>Other gyms</SectionLabel>
+          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+            {`Up to ${MAX_OTHER_GYMS} more gyms you train at.`}
+          </Text>
+          {otherGyms.map((venue) => (
+            <Card key={venue.id} style={styles.gymRow}>
+              <Text style={[styles.linkLabel, { ...t.type.body, color: t.colors.textPrimary, flex: 1 }]} numberOfLines={1}>
+                {venueLine(venue).primary}
+              </Text>
+              <Pressable
+                onPress={() => removeOtherGym(venue.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove ${venueLine(venue).primary}`}
+              >
+                <Ionicons name="close" size={iconSize.sm} color={t.colors.textMuted} />
+              </Pressable>
+            </Card>
+          ))}
+          {otherGyms.length < MAX_OTHER_GYMS ? (
+            addingOtherGym ? (
+              <GymPicker
+                navigation={navigation}
+                onSelect={(venue) => {
+                  setOtherGyms((prev) => (prev.some((g) => g.id === venue.id) ? prev : [...prev, venue]));
+                  setAddingOtherGym(false);
+                }}
+              />
+            ) : (
+              <Button
+                variant="tertiary"
+                title="Add another gym"
+                onPress={() => setAddingOtherGym(true)}
+                accessibilityLabel="Add another gym"
+              />
+            )
+          ) : null}
+        </View>
+
+        <Card
+          onPress={() => navigation.navigate('CommunityTrainingProfile')}
+          style={styles.linkRow}
+          accessibilityLabel="Training profile"
+        >
+          <View style={styles.linkBody}>
+            <Text style={[styles.linkLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
+              Training profile
+            </Text>
+            <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+              The bands worked out from your training, and what you share of them.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+        </Card>
 
         <View style={styles.field}>
           <SectionLabel>Who can follow you</SectionLabel>
@@ -280,6 +415,12 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   field: { gap: spacing.sm },
   hint: { ...type.caption, color: colors.textMuted },
+  gymRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  gymBody: { flex: 1, gap: spacing.xxs },
+  changeLink: { ...type.bodySm, color: colors.primary },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   presets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  linkBody: { flex: 1, gap: spacing.xxs },
+  linkLabel: { ...type.bodyStrong, color: colors.textPrimary },
 });

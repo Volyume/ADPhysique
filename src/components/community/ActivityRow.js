@@ -34,6 +34,12 @@ const LINES = {
   reaction: 'gave your post respect',
   comment: 'commented on your post',
   programme_used: 'is using your programme',
+  // The connection tier (discovery blueprint `docs/social-discovery-
+  // 2026-09-06/70-DISCOVERY-BLUEPRINT.md` section 1). A request is
+  // ANSWERED in the "Connection requests" section at the top of the
+  // screen, exactly as a follow request is; the row here is the record.
+  connect_request: 'wants to connect',
+  connect_accepted: 'is now connected with you',
 };
 
 /** The sentence for one activity row, actor first. */

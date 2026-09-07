@@ -20,6 +20,14 @@
  *              own card and inside a picker)
  *   onFollowChange (relationship, card) after a successful follow toggle
  *   compact    drops the fact chips, for a creator line above a programme
+ *   showConnect render the ConnectButton beside Follow (discovery
+ *              blueprint section 4: every scored list row carries Follow,
+ *              Connect and, once connected, Message)
+ *   me         the `community_get_me` payload, for the minor check
+ *   onConnect  (card) open the ConnectSheet
+ *   onConnectChange (card) after any connection state change
+ *   onMessage  (card) open the conversation, from the Connected menu
+ *   onRulesOutdated () the rules changed and must be accepted first
  */
 
 import { View, Text, StyleSheet } from 'react-native';
@@ -27,6 +35,7 @@ import Card from '../Card';
 import Chip from '../Chip';
 import ProfileAvatarMark from '../ProfileAvatarMark';
 import FollowButton from './FollowButton';
+import ConnectButton from './ConnectButton';
 import { spacing, type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS, COMMUNITY_SETTINGS } from '../../lib/community';
@@ -59,6 +68,12 @@ export default function ProfileCard({
   showFollow = true,
   onFollowChange,
   compact = false,
+  showConnect = false,
+  me = null,
+  onConnect,
+  onConnectChange,
+  onMessage,
+  onRulesOutdated,
 }) {
   const t = useTheme();
   if (!card) return null;
@@ -91,8 +106,22 @@ export default function ProfileCard({
             </Text>
           ) : null}
         </View>
-        {showFollow ? (
-          <FollowButton card={card} onChange={onFollowChange} />
+        {showFollow || showConnect ? (
+          <View style={styles.actions}>
+            {showFollow ? (
+              <FollowButton card={card} onChange={onFollowChange} />
+            ) : null}
+            {showConnect ? (
+              <ConnectButton
+                card={card}
+                me={me}
+                onConnect={onConnect}
+                onChange={onConnectChange}
+                onMessage={onMessage}
+                onRulesOutdated={onRulesOutdated}
+              />
+            ) : null}
+          </View>
         ) : null}
       </View>
       {facts.length ? (
@@ -113,5 +142,6 @@ const styles = StyleSheet.create({
   name: { ...type.bodyStrong, color: colors.textPrimary },
   handle: { ...type.caption, color: colors.textSecondary },
   reasons: { ...type.captionStrong, color: colors.textPrimary },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
 });

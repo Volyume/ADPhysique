@@ -48,6 +48,7 @@ jest.mock('../../lib/community', () => ({
   deleteComment: jest.fn(),
   notifyCommunityEvent: jest.fn(),
   hasProfile: (me) => !!me?.profile?.handle,
+  connectionState: (card) => card?.connection ?? 'none',
   REPORT_REASONS: {},
   COMMENT_MAX: 500,
 }));

@@ -9,6 +9,13 @@
  * this kind of decision). Muting is quiet and reversible, so it is a
  * single tap with a toast. The muted person is never told.
  *
+ * Removing a connection (discovery blueprint
+ * `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md` section 1)
+ * lives ONLY in the `ConnectButton`'s own "Connected" menu next to it on
+ * the profile action row (product review 2026-09-06 finding 5): a second
+ * copy of the same action here duplicated it under near-identical confirm
+ * copy from a different component, so it is not repeated in this sheet.
+ *
  * Props:
  *   visible    controlled
  *   onClose    close the sheet
@@ -53,7 +60,9 @@ function MenuRow({ icon, label, tone, onPress, accessibilityLabel }) {
   );
 }
 
-export default function ProfileMenuSheet({ visible, onClose, card, onChanged, onReport }) {
+export default function ProfileMenuSheet({
+  visible, onClose, card, onChanged, onReport,
+}) {
   const t = useTheme();
   const toast = useToast();
   const [busy, setBusy] = useState(false);

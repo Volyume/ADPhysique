@@ -25,6 +25,13 @@ export default function SearchBar({
   testID,
   accessibilityLabel,
   loading = false,
+  // Discovery blueprint section 4 (`docs/social-discovery-2026-09-06/
+  // 70-DISCOVERY-BLUEPRINT.md`): the Find people screen's field hands the
+  // query on to the search screen when the keyboard's Search key is
+  // pressed. The bar already sets returnKeyType="search"; this is the
+  // callback that key had nowhere to go before. Optional, so every
+  // existing caller is byte-for-byte unchanged.
+  onSubmitEditing,
 }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
@@ -45,6 +52,7 @@ export default function SearchBar({
         autoCorrect={false}
         autoFocus={autoFocus}
         returnKeyType="search"
+        onSubmitEditing={onSubmitEditing}
         accessibilityLabel={accessibilityLabel || placeholder}
         testID={testID}
       />

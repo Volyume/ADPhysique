@@ -31,6 +31,13 @@ jest.mock('../../hooks/useCommunityMe', () => ({
   default: jest.fn(() => ({ me: { profile: null, is_minor: false }, loading: false, error: null, refresh: jest.fn() })),
 }));
 
+// The discovery training profile step (`docs/social-discovery-2026-09-06/
+// 70-DISCOVERY-BLUEPRINT.md` section 3) imports `bandRows` from the
+// Training profile screen, which imports the closed-set band labels and
+// the pure preview functions alongside the I/O ones this mock replaces.
+// Everything below the handle/profile mocks is that closed set, hand-held
+// rather than `requireActual` so this suite never has to boot the real
+// transport module.
 jest.mock('../../lib/community', () => ({
   // The real shape rule, not a stand-in: 3 to 20 lowercase letters,
   // digits or underscores, no leading or trailing underscore.
@@ -39,9 +46,38 @@ jest.mock('../../lib/community', () => ({
   upsertProfile: jest.fn(),
   DISPLAY_NAME_MAX: 40,
   COMMUNITY_RULES_VERSION: 1,
+  currentUserId: () => 'u1',
+  TP_DAYS: { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' },
+  TP_TIME_BANDS: {
+    morning: 'mornings', midday: 'at midday', afternoon: 'in the afternoon', evening: 'evenings', late: 'late',
+  },
+  TP_SESSIONS_BANDS: {
+    '1_2': '1 to 2', 3: '3', '4_5': '4 to 5', '6_plus': '6 or more',
+  },
+  TP_EXPERIENCE_BANDS: { new: 'New', intermediate: 'Intermediate', experienced: 'Experienced' },
+  TP_AGE_BANDS: {
+    '18_24': '18 to 24', '25_34': '25 to 34', '35_44': '35 to 44', '45_54': '45 to 54', '55_plus': '55 or over',
+  },
+  TP_DEFAULT_SHARE: {
+    days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, programme: true, age_band: false,
+  },
+  dayListLabel: () => '',
+  timeBandsLabel: () => '',
+  previewLine: () => '',
+  shareablePayload: () => ({}),
+  loadTrainingProfile: jest.fn(() => Promise.resolve({})),
+  readShareSettings: jest.fn(() => Promise.resolve({
+    days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, programme: true, age_band: false,
+  })),
+  writeShareSettings: jest.fn(() => Promise.resolve()),
+  syncTrainingProfile: jest.fn(() => Promise.resolve({ sent: true, reason: null, payload: null })),
+  setShowProgrammes: jest.fn(() => Promise.resolve()),
+  setPartner: jest.fn(() => Promise.resolve()),
 }));
 
-import { checkHandle, upsertProfile, COMMUNITY_RULES_VERSION } from '../../lib/community';
+import {
+  checkHandle, upsertProfile, COMMUNITY_RULES_VERSION, syncTrainingProfile, setShowProgrammes,
+} from '../../lib/community';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityJoinScreen from '../CommunityJoinScreen';
 
@@ -167,6 +203,18 @@ describe('creating the profile', () => {
     }));
   });
 
+  test('the training profile syncs, forced, once the profile exists (SD-22)', async () => {
+    const { tree } = await mount();
+    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(syncTrainingProfile).toHaveBeenCalledWith('u1', { force: true });
+    expect(setShowProgrammes).toHaveBeenCalledWith(true);
+  });
+
   test('a refusal is spoken calmly and nothing is claimed to have happened', async () => {
     const err = new Error('handle_taken');
     err.code = 'handle_taken';
@@ -183,6 +231,17 @@ describe('creating the profile', () => {
       expect.objectContaining({ variant: 'error' }),
     );
     expect(navigation.goBack).not.toHaveBeenCalled();
+  });
+});
+
+describe('the training profile step (SD-22)', () => {
+  test('shows the toggles and a preview line before Create profile', async () => {
+    const { tree } = await mount();
+    const text = flattenText(tree.toJSON());
+
+    expect(text).toContain('Your training profile');
+    expect(text).toContain('Show which programmes I use');
+    expect(text).toContain('Nothing from your training is shared just now.');
   });
 });
 

@@ -46,6 +46,13 @@ const COMPONENT_DIR = path.join(ROOT, 'src/components/community');
 const SCREEN_DIR = path.join(ROOT, 'src/screens');
 const HOOK = path.join(ROOT, 'src/hooks/useCommunityMe.js');
 const MIGRATION = path.join(ROOT, 'supabase/migrate_160_community.sql');
+// Gym database blueprint (`docs/gym-database-2026-09-06/20-BLUEPRINT.md`,
+// GD-13): the gym directory is infrastructure UNDER Community, and this
+// guard's walk is extended to cover it rather than left to a guard of its
+// own, so the one sentence at the top of this file ("nothing about a
+// person's body... may enter it") and the location rule below are both
+// enforced from the same place a future rename cannot quietly miss.
+const GYMS_DIR = path.join(ROOT, 'src/lib/gyms');
 
 const { SENSITIVE_COMMUNITY_KEYS, POST_PAYLOAD_KEYS } = require('../lib/community/validation');
 const { BLOCKED_TERMS } = require('../lib/community/keywordFilter');
@@ -93,6 +100,7 @@ function communityFiles() {
   return [
     ...walk(LIB_DIR),
     ...walk(COMPONENT_DIR),
+    ...walk(GYMS_DIR),
     ...screens,
     ...(fs.existsSync(HOOK) ? [HOOK] : []),
   ];
@@ -139,6 +147,52 @@ const CAPABILITY_ALLOWED_FILE = path.join(LIB_DIR, 'adapt.js');
 const CAPABILITY_ALLOWED_IMPORTS = [
   "import { bestEligibleSubstitute } from '../capability/effective';",
   "import { blockingConflicts, capabilityKnown, loadCapabilityResolveState } from '../capability/resolve';",
+];
+
+/**
+ * The discovery campaign's files (discovery blueprint
+ * `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md` section 3;
+ * SD-30). These are the first Community files that read the training
+ * history at all, which makes them the first place a body, food or
+ * coaching read could plausibly be added by someone reaching for "one
+ * more useful signal". They are named here so a rename cannot quietly
+ * drop them out of the walk, and they are held to a STRICTER list than
+ * the rest: none of them has the adaptation lane's reason to name the
+ * capability layer, so for these four the bare words are refused too.
+ */
+const DISCOVERY_FILES = [
+  'src/lib/community/trainingProfile.js',
+  'src/lib/community/connections.js',
+  'src/lib/community/messages.js',
+  'src/lib/community/findPeople.js',
+];
+
+const DISCOVERY_EXTRA_FORBIDDEN = [
+  /\bscan\b/i,
+  /\bcapability\b/i,
+  /\bcapabilities\b/i,
+  /\bprotein\b/i,
+  /\bcarbs\b/i,
+  /\bcheck_?in\b/i,
+  /\binjur/i,
+  /\blimitation\b/i,
+  /\bmeasurement/i,
+  /\bage\b(?!_band)/i,
+];
+
+/**
+ * The ONLY device reads `trainingProfile.js` may make (SD-30: "the
+ * training profile reads completed-workout timestamps and exercise ids
+ * only"). An allow-list rather than a deny-list, for the same reason the
+ * post payloads are: a database helper added to the app next year cannot
+ * be pulled in here, because it was never named.
+ */
+const TRAINING_PROFILE_FILE = path.join(LIB_DIR, 'trainingProfile.js');
+const TRAINING_PROFILE_DB_READS = [
+  'getCompletedWorkoutStartTimestamps',
+  'getWorkoutSetsSince',
+  'getAllExercises',
+  'getActivePlan',
 ];
 
 describe('no Community file reads personal data', () => {
@@ -190,6 +244,38 @@ describe('no Community file reads personal data', () => {
     expect(source).not.toMatch(/callCommunity|invokeCommunityFunction/);
   });
 
+  test('every discovery file is present and inside the walk', () => {
+    // A rename that moved one of these out of src/lib/community would
+    // leave the guard passing over a file it no longer sees.
+    const walked = new Set(communityFiles().map((f) => path.relative(ROOT, f).split(path.sep).join('/')));
+    const missing = DISCOVERY_FILES.filter((rel) => !walked.has(rel));
+    expect({ missing }).toEqual({ missing: [] });
+  });
+
+  test.each(DISCOVERY_FILES)('%s reads nothing personal, on the stricter list', (rel) => {
+    const source = code(fs.readFileSync(path.join(ROOT, rel), 'utf8'));
+    for (const pattern of [...FORBIDDEN_READS, ...DISCOVERY_EXTRA_FORBIDDEN]) {
+      expect({ rel, pattern: String(pattern), matched: pattern.test(source) })
+        .toEqual({ rel, pattern: String(pattern), matched: false });
+    }
+  });
+
+  test('trainingProfile.js reads only the four device functions SD-30 allows', () => {
+    const source = code(fs.readFileSync(TRAINING_PROFILE_FILE, 'utf8'));
+    // The single database import, and everything it takes from it.
+    const imports = source.match(/import\s*\{[^}]*\}\s*from\s*'\.\.\/database';/g) ?? [];
+    expect(imports).toHaveLength(1);
+    const named = imports[0]
+      .replace(/^import\s*\{|\}\s*from\s*'\.\.\/database';$/g, '')
+      .split(',')
+      .map((s2) => s2.trim())
+      .filter(Boolean);
+    expect(named.sort()).toEqual([...TRAINING_PROFILE_DB_READS].sort());
+    // And no second route to the device: a lazy require would sidestep
+    // the import above entirely.
+    expect(source).not.toMatch(/require\(['"][^'"]*database['"]\)/);
+  });
+
   test('no Community file imports the food, nutrition, wellbeing or ED modules', () => {
     for (const full of communityFiles()) {
       const source = code(fs.readFileSync(full, 'utf8'));
@@ -202,6 +288,59 @@ describe('no Community file reads personal data', () => {
       }
     }
   });
+});
+
+/**
+ * GD-13 (gym database blueprint `docs/gym-database-2026-09-06/
+ * 20-BLUEPRINT.md`): "A person's gym is a chosen fact... there is no
+ * inference from sessions, no check-ins, no live presence." The half of
+ * that rule a behavioural test cannot see is the one a future "nice
+ * touch" would add silently: a location permission read, a device
+ * coordinate cached to survive a restart, or any local-storage write at
+ * all from a module whose whole design is "ask the server, at the
+ * moment the user asks, and keep nothing back". `src/lib/gyms` is a
+ * transport-and-ranking layer with no cache of its own on purpose (the
+ * profile's own `gym_id`/`other_gym_ids` are the only place a choice
+ * persists, and those are Community's tables, not this module's).
+ */
+const LOCATION_FORBIDDEN = [
+  // The dependency the blueprint says never to add without a founder
+  // decision (CLAUDE.md: never add a dependency without asking); catches
+  // it whether it arrives as an import or a bare package reference.
+  /expo-location/i,
+  // The device location APIs that dependency would expose.
+  /watchPositionAsync/,
+  /getCurrentPositionAsync/,
+  /getLastKnownPositionAsync/,
+  /startLocationUpdatesAsync/,
+  /requestForegroundPermissionsAsync/,
+  /requestBackgroundPermissionsAsync/,
+  // Every local-storage route the rest of the app uses to persist
+  // something between sessions. None belongs in this module at all: a
+  // coordinate is used at the moment it is supplied to a search and never
+  // written anywhere.
+  /AsyncStorage/,
+  /SecureStore/,
+  /expo-sqlite/,
+];
+
+describe('GD-13: the gym directory never tracks or persists a coordinate', () => {
+  test('there is gyms source to guard', () => {
+    // Same self-check as the Community walk above: if this ever fails,
+    // the guard has quietly stopped guarding anything.
+    expect(walk(GYMS_DIR).length).toBeGreaterThan(0);
+  });
+
+  test.each(walk(GYMS_DIR).map((f) => [path.relative(ROOT, f), f]))(
+    '%s never reads a location API and never writes to local storage',
+    (rel, full) => {
+      const source = code(fs.readFileSync(full, 'utf8'));
+      for (const pattern of LOCATION_FORBIDDEN) {
+        expect({ rel, pattern: String(pattern), matched: pattern.test(source) })
+          .toEqual({ rel, pattern: String(pattern), matched: false });
+      }
+    },
+  );
 });
 
 describe('the client and the SQL agree', () => {
@@ -235,5 +374,64 @@ describe('the client and the SQL agree', () => {
     for (const keys of Object.values(POST_PAYLOAD_KEYS)) {
       for (const key of keys) expect(sql).toContain(`'${key}'`);
     }
+  });
+});
+
+/**
+ * The training profile's closed sets exist twice: once in
+ * `trainingProfile.js` and `connections.js`, once in migrate_161, which
+ * validates every value it is sent against them. Two copies of a closed
+ * set drift, and the failure is quiet in the worst way: a band the client
+ * offers and the server rejects makes a toggle that silently does
+ * nothing. migrate_161 says in its own comments that a Jest guard compares
+ * the two; this is that guard.
+ */
+describe('the closed sets are the same on both sides', () => {
+  const MIGRATION_161 = path.join(ROOT, 'supabase/migrate_161_community_connections.sql');
+  const sql161 = fs.existsSync(MIGRATION_161) ? fs.readFileSync(MIGRATION_161, 'utf8') : null;
+
+  const {
+    TP_DAYS, TP_TIME_BANDS, TP_SESSIONS_BANDS, TP_SESSIONS_BAND_ORDER,
+    TP_EXPERIENCE_BANDS, TP_AGE_BANDS,
+  } = require('../lib/community/trainingProfile');
+  const { CONNECT_REASONS, CONNECT_FROM_VALUES } = require('../lib/community/connections');
+
+  /** The array literal one `_community_*_list()` helper returns. */
+  function sqlList(helper) {
+    const re = new RegExp(`FUNCTION public\\.${helper}\\(\\)[\\s\\S]*?ARRAY\\[([^\\]]*)\\]`, 'i');
+    const m = re.exec(sql161);
+    if (!m) return null;
+    return m[1].split(',').map((s2) => s2.trim().replace(/^'|'$/g, '')).filter(Boolean);
+  }
+
+  test.each([
+    ['_community_tp_days_list', () => Object.keys(TP_DAYS)],
+    ['_community_tp_time_bands_list', () => Object.keys(TP_TIME_BANDS)],
+    // Not Object.keys: '3' is an integer-like key and JavaScript would
+    // hoist it to the front. TP_SESSIONS_BAND_ORDER is the order.
+    ['_community_tp_sessions_list', () => [...TP_SESSIONS_BAND_ORDER]],
+    ['_community_tp_experience_list', () => Object.keys(TP_EXPERIENCE_BANDS)],
+    ['_community_tp_age_bands_list', () => Object.keys(TP_AGE_BANDS)],
+    ['_community_connect_reasons_list', () => Object.keys(CONNECT_REASONS)],
+  ])('%s carries the client set, in the same order', (helper, clientKeys) => {
+    if (!sql161) { expect(fs.existsSync(MIGRATION_161)).toBe(false); return; }
+    expect({ helper, values: sqlList(helper) })
+      .toEqual({ helper, values: clientKeys() });
+  });
+
+  test('the connect_from CHECK carries the client values', () => {
+    if (!sql161) { expect(fs.existsSync(MIGRATION_161)).toBe(false); return; }
+    for (const value of Object.keys(CONNECT_FROM_VALUES)) {
+      expect(sql161).toContain(`'${value}'`);
+    }
+  });
+
+  test('the band phrases the reasons line uses read the same on both sides', () => {
+    if (!sql161) { expect(fs.existsSync(MIGRATION_161)).toBe(false); return; }
+    // "Both usually train evenings", "Both train 4 to 5 times a week": the
+    // server composes these, and a phrase that differs from the client's
+    // preview line would show one person a band worded two ways.
+    for (const label of Object.values(TP_TIME_BANDS)) expect(sql161).toContain(`'${label}'`);
+    for (const label of Object.values(TP_SESSIONS_BANDS)) expect(sql161).toContain(`'${label}'`);
   });
 });

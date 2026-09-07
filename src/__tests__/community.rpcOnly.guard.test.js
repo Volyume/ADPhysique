@@ -10,7 +10,8 @@
  * SECURITY DEFINER RPCs pinned to a fixed search_path are the only way in or
  * out. Effective privilege lives in the database and no Jest test can read
  * it, so what this suite CAN do, and does, is fail the moment
- * supabase/migrate_160_community.sql stops saying that.
+ * supabase/migrate_160_community.sql, or migrate_161_community_connections.sql
+ * beneath it, stops saying that.
  *
  * It also pins the erasure surface: delete_user_data() must name every
  * community table, because a table added to the schema and forgotten there is
@@ -214,5 +215,446 @@ describe('consent is recorded on the existing rail', () => {
   test('joining writes a granted row and leaving writes a withdrawal', () => {
     expect(CODE).toMatch(/VALUES \(v_uid, 'community_visibility', true, now\(\), '1'\)/);
     expect(CODE).toMatch(/VALUES \(v_uid, 'community_visibility', false, now\(\), '1'\)/);
+  });
+});
+
+/**
+ * ── migrate_161: connections, conversations and messages ─────────────────
+ *
+ * Same sentence, three more tables, and one of them holds MESSAGE BODIES:
+ * the most private thing Community stores. So the rules above are re-run
+ * against 161 rather than assumed to carry over, and four things specific to
+ * this migration are pinned as well: the closed sets that decide what a
+ * training profile may say are exposed as functions a client guard can read;
+ * the three CHECK widenings keep every value they already had; erasure names
+ * the three new tables from BOTH sides; and the rules-version gate exists at
+ * all, because a re-consent path that no RPC enforces is not a consent path.
+ */
+const MIGRATION_161 = path.join(ROOT, 'supabase', 'migrate_161_community_connections.sql');
+const SQL161 = fs.readFileSync(MIGRATION_161, 'utf8');
+const CODE_LINES_161 = SQL161.split('\n').filter((l) => !l.trim().startsWith('--'));
+const CODE_161 = CODE_LINES_161.join('\n');
+
+const NEW_TABLES_161 = [
+  'community_connections',
+  'community_conversations',
+  'community_messages',
+];
+
+function declaredIn(sql) {
+  const out = [];
+  const re = /CREATE OR REPLACE FUNCTION\s+public\.([a-z_0-9]+)\s*\(/g;
+  let m;
+  while ((m = re.exec(sql)) !== null) {
+    const name = m[1];
+    const bodyStart = sql.indexOf('AS $$', m.index);
+    out.push({ name, header: sql.slice(m.index, bodyStart === -1 ? m.index + 400 : bodyStart) });
+  }
+  return out;
+}
+
+function signatureListIn(sql, revokeClause) {
+  const at = sql.indexOf(revokeClause);
+  if (at === -1) return [];
+  const arrayStart = sql.lastIndexOf('FOREACH sig IN ARRAY ARRAY[', at);
+  if (arrayStart === -1) return [];
+  return [...sql.slice(arrayStart, at).matchAll(/'([a-z_0-9]+\([^']*\))'/g)].map((m) => m[1]);
+}
+
+const HELPER_SIGNATURES_161 = signatureListIn(
+  SQL161, "REVOKE ALL ON FUNCTION public.%s FROM PUBLIC, anon, authenticated'",
+);
+const RPC_SIGNATURES_161 = signatureListIn(
+  SQL161, "REVOKE ALL ON FUNCTION public.%s FROM PUBLIC, anon'",
+);
+const FUNCTIONS_161 = declaredIn(SQL161).filter(
+  (f) => f.name.startsWith('community_') || f.name.startsWith('_community_'),
+);
+const RPCS_161 = FUNCTIONS_161.filter((f) => f.name.startsWith('community_'));
+const HELPERS_161 = FUNCTIONS_161.filter((f) => f.name.startsWith('_community_'));
+
+describe('161: no connection or message row is reachable directly', () => {
+  test.each(NEW_TABLES_161)('%s exists, has RLS on and is revoked', (table) => {
+    expect(CODE_161).toContain(`CREATE TABLE IF NOT EXISTS public.${table} `);
+    expect(CODE_161).toContain(`'${table}'`);
+    expect(CODE_161).toMatch(/ENABLE ROW LEVEL SECURITY/);
+    expect(CODE_161).toMatch(/REVOKE ALL ON public\.%I FROM anon, authenticated/);
+  });
+
+  test('the RLS/revoke loop covers every new table by name', () => {
+    const at = CODE_161.indexOf('FOREACH t IN ARRAY ARRAY[');
+    const loop = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    for (const table of NEW_TABLES_161) expect(loop).toContain(`'${table}'`);
+  });
+
+  test('the migration creates no policy at all', () => {
+    expect(CODE_161).not.toMatch(/CREATE POLICY/i);
+  });
+
+  test('nothing grants a community table to anon or authenticated', () => {
+    const grants = CODE_LINES_161.filter(
+      (l) => /GRANT\s/i.test(l) && /community_/i.test(l) && !/ON FUNCTION/i.test(l),
+    );
+    expect(grants).toEqual([]);
+  });
+});
+
+describe('161: every function is a pinned SECURITY DEFINER, granted deliberately', () => {
+  test('it declares both RPCs and internal helpers', () => {
+    expect(RPCS_161.length).toBeGreaterThanOrEqual(23);
+    expect(HELPERS_161.length).toBeGreaterThanOrEqual(20);
+  });
+
+  test.each(FUNCTIONS_161.map((f) => [f.name, f]))(
+    '%s is SECURITY DEFINER with a pinned search_path',
+    (_name, fn) => {
+      expect(fn.header).toMatch(/SECURITY DEFINER/);
+      expect(fn.header).toMatch(/SET search_path = public, pg_temp/);
+    },
+  );
+
+  test('the two privilege loops exist and say the right thing', () => {
+    expect(CODE_161).toContain("REVOKE ALL ON FUNCTION public.%s FROM PUBLIC, anon, authenticated'");
+    expect(CODE_161).toContain("REVOKE ALL ON FUNCTION public.%s FROM PUBLIC, anon'");
+    expect(CODE_161).toContain("GRANT EXECUTE ON FUNCTION public.%s TO authenticated'");
+  });
+
+  test.each(RPCS_161.map((f) => f.name))('%s is in the grant-to-authenticated list', (name) => {
+    expect(RPC_SIGNATURES_161.some((sig) => sig.startsWith(`${name}(`))).toBe(true);
+    expect(HELPER_SIGNATURES_161.some((sig) => sig.startsWith(`${name}(`))).toBe(false);
+  });
+
+  test.each(HELPERS_161.map((f) => f.name))('%s is in the revoke-from-authenticated list', (name) => {
+    expect(HELPER_SIGNATURES_161.some((sig) => sig.startsWith(`${name}(`))).toBe(true);
+    expect(RPC_SIGNATURES_161.some((sig) => sig.startsWith(`${name}(`))).toBe(false);
+  });
+
+  test('no helper is granted to authenticated anywhere', () => {
+    for (const line of CODE_LINES_161.filter((l) => /GRANT EXECUTE ON FUNCTION/i.test(l))) {
+      expect(line).not.toMatch(/public\._community_/);
+    }
+  });
+});
+
+describe('161: erasure covers connections and messaging completely', () => {
+  const DELETE_BODY_161 = SQL161.slice(
+    SQL161.indexOf('CREATE OR REPLACE FUNCTION public.delete_user_data()'),
+    SQL161.indexOf('GRANT EXECUTE ON FUNCTION public.delete_user_data() TO authenticated'),
+  );
+
+  test('delete_user_data is re-issued IN FULL, keeping every earlier table', () => {
+    expect(DELETE_BODY_161).toContain('CREATE OR REPLACE FUNCTION public.delete_user_data()');
+    for (const table of ['workout_sets', 'food_entries', 'users_profile', 'user_prefs',
+      'progress_photos', 'capability_constraints', 'consent_log',
+      'community_profiles', 'community_follows', 'community_posts']) {
+      expect(DELETE_BODY_161).toContain(table);
+    }
+  });
+
+  test.each(NEW_TABLES_161)('delete_user_data names %s', (table) => {
+    expect(DELETE_BODY_161).toContain(table);
+  });
+
+  test('the two-sided rows are deleted from both sides', () => {
+    expect(DELETE_BODY_161).toMatch(
+      /community_conversations WHERE user_a = uid OR user_b = uid/,
+    );
+    expect(DELETE_BODY_161).toMatch(
+      /community_connections WHERE user_a = uid OR user_b = uid/,
+    );
+    expect(DELETE_BODY_161).toMatch(/community_messages WHERE sender_id = uid/);
+  });
+
+  test('community_leave takes the same three tables, two-sided', () => {
+    const leave = CODE_161.slice(
+      CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_leave()'),
+      CODE_161.indexOf('Part 15'),
+    );
+    expect(leave).toMatch(/DELETE FROM public\.community_messages WHERE sender_id = v_uid/);
+    expect(leave).toMatch(
+      /DELETE FROM public\.community_conversations WHERE user_a = v_uid OR user_b = v_uid/,
+    );
+    expect(leave).toMatch(
+      /DELETE FROM public\.community_connections WHERE user_a = v_uid OR user_b = v_uid/,
+    );
+  });
+
+  test('the users_profile delete stays last', () => {
+    const connIdx = DELETE_BODY_161.indexOf('community_connections');
+    const profileIdx = DELETE_BODY_161.indexOf('DELETE FROM users_profile WHERE id = uid;');
+    expect(connIdx).toBeGreaterThan(-1);
+    expect(profileIdx).toBeGreaterThan(connIdx);
+  });
+});
+
+describe('161: the CHECK widenings keep every value they already had', () => {
+  function checkBody(name) {
+    const at = CODE_161.indexOf(`ADD CONSTRAINT ${name}`);
+    expect(at).toBeGreaterThan(-1);
+    return CODE_161.slice(at, CODE_161.indexOf(';', at));
+  }
+
+  test('community_activity.kind gains the two connection kinds and keeps 160s six', () => {
+    const check = checkBody('community_activity_kind_check');
+    for (const kind of ['follow', 'follow_request', 'follow_accepted', 'reaction',
+      'comment', 'programme_used', 'connect_request', 'connect_accepted']) {
+      expect(check).toContain(`'${kind}'`);
+    }
+  });
+
+  test('community_reports.target_kind gains message and keeps the four', () => {
+    const check = checkBody('community_reports_target_kind_check');
+    for (const kind of ['profile', 'post', 'comment', 'programme', 'message']) {
+      expect(check).toContain(`'${kind}'`);
+    }
+  });
+
+  test('notification_preferences.category gains community_message and keeps all 25', () => {
+    const check = checkBody('notification_preferences_category_check');
+    for (const cat of ['daily_checkin_reminder', 'partner_cheer', 'rest_timer',
+      'activation_nudge', 'community_follow', 'community_activity', 'community_message']) {
+      expect(check).toContain(`'${cat}'`);
+    }
+  });
+});
+
+describe('161: the closed sets are readable, so the client cannot drift from them', () => {
+  // SD-22: nothing finer than a band ever leaves the device, and a band the
+  // server does not know is invalid input. These five functions are the
+  // single definition in SQL; community.privacy.guard.test.js compares them
+  // to the client constants character for character.
+  const EXPECTED = {
+    _community_tp_days_list: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'],
+    _community_tp_time_bands_list: ['morning', 'midday', 'afternoon', 'evening', 'late'],
+    _community_tp_sessions_list: ['1_2', '3', '4_5', '6_plus'],
+    _community_tp_experience_list: ['new', 'intermediate', 'experienced'],
+    _community_tp_age_bands_list: ['18_24', '25_34', '35_44', '45_54', '55_plus'],
+  };
+
+  test.each(Object.entries(EXPECTED))('%s returns exactly its set', (fn, values) => {
+    const at = SQL161.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}()`);
+    expect(at).toBeGreaterThan(-1);
+    const body = SQL161.slice(at, SQL161.indexOf('$$;', SQL161.indexOf('AS $$', at)));
+    const literals = [...body.matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1]);
+    expect(literals).toEqual(values);
+  });
+
+  test('the connect reasons are the four the sheet offers', () => {
+    const at = SQL161.indexOf('CREATE OR REPLACE FUNCTION public._community_connect_reasons_list()');
+    const body = SQL161.slice(at, SQL161.indexOf('$$;', SQL161.indexOf('AS $$', at)));
+    expect([...body.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]))
+      .toEqual(['same_gym', 'same_programme', 'train_like_me', 'train_together']);
+  });
+});
+
+describe('161: the new refusals and the rules gate exist', () => {
+  test('the three new error codes are raised, not merely documented', () => {
+    for (const code of ['not_connected', 'connect_not_allowed', 'minor_restricted',
+      'rules_outdated']) {
+      expect(CODE_161).toContain(`RAISE EXCEPTION USING message = '${code}'`);
+    }
+  });
+
+  test('connect, send_message and the training profile all take the rules gate', () => {
+    for (const fn of ['community_connect', 'community_send_message',
+      'community_update_training_profile']) {
+      const at = CODE_161.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);
+      expect(at).toBeGreaterThan(-1);
+      const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+      expect(body).toContain('_community_require_rules');
+    }
+  });
+
+  test('a profile is created at the current rules version, never a literal', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_upsert_profile(');
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    expect(body).toContain('v_accept IS DISTINCT FROM public._community_rules_version()');
+    expect(body).toContain("VALUES (v_uid, 'community_visibility', true, now(),");
+    expect(body).not.toMatch(/'active', 1, now\(\)\)/);
+  });
+
+  test('minors never connect or message, on either side', () => {
+    for (const fn of ['community_connect', 'community_send_message']) {
+      const at = CODE_161.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);
+      const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+      // Security review 2026-09-06 (finding 1): the receiving side must not
+      // trust the target's stored is_minor column alone (`v_them.is_minor`
+      // is only as current as their last profile save) - it is derived FRESH
+      // via _community_other_is_minor, which re-checks the target's own date
+      // of birth inside this SECURITY DEFINER function.
+      expect(body).toMatch(
+        /_community_caller_is_minor\(v_uid\) OR public\._community_other_is_minor\(_target\)/,
+      );
+      expect(body).toContain("RAISE EXCEPTION USING message = 'minor_restricted'");
+      expect(body).not.toMatch(/OR v_them\.is_minor\b/);
+    }
+  });
+
+  /**
+   * Security review 2026-09-06, finding 1 (P0): the other-side minor gate was
+   * a stale stored boolean nothing refreshed, so an adult could connect to
+   * and message a child whose profile predates their date of birth reaching
+   * the cloud. The lead ruling: the RECEIVING side of connect,
+   * respond_connect and send_message derives minor status FRESH from the
+   * target's own date of birth inside the SECURITY DEFINER function (the date
+   * itself never leaves the function); community_get_me additionally writes
+   * the fresh value back so every stored-column read elsewhere self-heals.
+   */
+  test('the receiving side of connect, respond_connect and send_message derives minor status fresh, not from a stale stored flag (security review finding 1)', () => {
+    const getMeAt = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_get_me()');
+    const getMeBody = CODE_161.slice(getMeAt, CODE_161.indexOf('END $$;', getMeAt));
+    expect(getMeBody).toMatch(/is_minor\s*=\s*public\._community_minor\(v_uid\)/);
+
+    const respondAt = CODE_161.indexOf(
+      'CREATE OR REPLACE FUNCTION public.community_respond_connect(',
+    );
+    const respondBody = CODE_161.slice(respondAt, CODE_161.indexOf('END $$;', respondAt));
+    expect(respondBody).toMatch(
+      /_community_caller_is_minor\(v_uid\) OR public\._community_other_is_minor\(_requester\)/,
+    );
+    expect(respondBody).toContain("RAISE EXCEPTION USING message = 'minor_restricted'");
+
+    // The helper itself must derive fresh (call _community_minor), not merely
+    // read the stored column - reading only the column is the exact bug the
+    // P0 finding names.
+    const helperAt = CODE_161.indexOf(
+      'CREATE OR REPLACE FUNCTION public._community_other_is_minor(',
+    );
+    const helperBody = CODE_161.slice(helperAt, CODE_161.indexOf('$$;', CODE_161.indexOf('AS $$', helperAt)));
+    expect(helperBody).toContain('public._community_minor(_uid)');
+  });
+
+  test('messaging is refused unless the two people are connected', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_send_message(');
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    expect(body).toMatch(/IF NOT public\._community_is_connected\(v_uid, _target\) THEN/);
+    expect(body).toContain("RAISE EXCEPTION USING message = 'not_connected'");
+  });
+
+  test('the training profile nulls every band the payload leaves out', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_update_training_profile(');
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    // The UPDATE assigns from local variables which start NULL, so an absent
+    // key is an erasure rather than a value left behind (SD-22).
+    for (const col of ['tp_days', 'tp_time_bands', 'tp_sessions_band', 'tp_staple_lifts',
+      'tp_experience_band', 'tp_programme_key', 'tp_age_band']) {
+      expect(body).toMatch(new RegExp(`${col}\\s*=\\s*v_`));
+    }
+    expect(body).toContain('public._community_forbidden_keys(_p)');
+  });
+
+  test('the age band is derived from the callers own record, never from the payload', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_update_training_profile(');
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    expect(body).toContain('FROM public.user_body_profile');
+    expect(body).toContain('WHERE user_id = v_uid');
+    expect(body).toMatch(/NOT public\._community_caller_is_minor\(v_uid\)/);
+    expect(body).not.toMatch(/_p ->> 'tp_age_band'/);
+  });
+});
+
+describe('161: nothing in this campaign reads body, food or coaching data (SD-30)', () => {
+  test('the only table outside Community it reads is the callers own date of birth', () => {
+    const forbidden = [
+      'morning_weights', 'body_metrics', 'progress_photos', 'food_entries',
+      'daily_intake_rollups', 'nutrition_targets', 'coach_outputs',
+      'weekly_checkins', 'capability_constraints', 'ed_pattern_flags',
+    ];
+    // delete_user_data names every table in the database by design, so it is
+    // excluded: what this pins is the RPCs above it.
+    const beforeErasure = CODE_161.slice(
+      0, CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.delete_user_data()'),
+    );
+    for (const table of forbidden) expect(beforeErasure).not.toContain(table);
+    expect(beforeErasure).toContain('user_body_profile');
+  });
+});
+
+/**
+ * ── security review 2026-09-06, remaining P1/P2 fixes ─────────────────────
+ * `72-REVIEW-SECURITY-CONNECTIONS.md`. Finding 1 (P0) is pinned above,
+ * alongside the connect/send_message tests it extends.
+ */
+describe('161: security review 2026-09-06 - push replay, programme door, block', () => {
+  test('community_activity gains pushed_at (finding 4, additive)', () => {
+    expect(CODE_161).toMatch(
+      /ALTER TABLE public\.community_activity\s+ADD COLUMN IF NOT EXISTS pushed_at timestamptz/,
+    );
+  });
+
+  test('find_people programme mode gates the label the same way community_dimension does (finding 2)', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_find_people(');
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    expect(body).toMatch(
+      /ELSIF v_key IS NOT NULL AND public\._community_can_view_programme\(v_uid, v_key::uuid\) THEN/,
+    );
+  });
+
+  test('tp_programme_key is dropped to null unless the caller may view that programme (finding 8)', () => {
+    const at = CODE_161.indexOf(
+      'CREATE OR REPLACE FUNCTION public.community_update_training_profile(',
+    );
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    expect(body).toMatch(
+      /NOT public\._community_can_view_programme\(v_uid, v_prog::uuid\)/,
+    );
+  });
+
+  test('community_block does not delete a declined connection row (finding 3)', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_block(');
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    const del = body.match(/DELETE FROM public\.community_connections\s+WHERE[^;]*;/);
+    expect(del).not.toBeNull();
+    // The declined bar (community_connect reads it from declined_at) must
+    // survive: only requested and connected rows may be deleted, and a
+    // block-then-unblock must not be able to erase a decline.
+    expect(del[0]).toMatch(/state IN \('requested', 'connected'\)/);
+    expect(del[0]).not.toMatch(/^DELETE FROM public\.community_connections\s+WHERE user_a = v_a AND user_b = v_b;$/);
+  });
+
+  test('partners mode honours partner_prefs.same_gym_only (finding 5)', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_find_people(');
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    const clause = /partner_prefs ->> 'same_gym_only'\)::boolean, false\)\s*\n\s*OR \(v_me\.gym_key IS NOT NULL AND p\.gym_key = v_me\.gym_key\)/;
+    expect(body).toMatch(clause);
+  });
+
+  test('the programme door honours show_programmes (finding 6)', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_find_people(');
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    expect(body).toMatch(/p\.tp_programme_key = v_key AND p\.show_programmes = true/);
+  });
+
+  test('community_remove_follower also removes a live connection and closes the conversation (finding 9)', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_remove_follower(');
+    expect(at).toBeGreaterThan(-1);
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    expect(body).toMatch(/_community_is_connected\(v_uid, _follower\)/);
+    expect(body).toMatch(
+      /DELETE FROM public\.community_connections\s+WHERE user_a = v_a AND user_b = v_b AND state = 'connected'/,
+    );
+    expect(body).toMatch(/UPDATE public\.community_conversations SET closed_at = now\(\)/);
+  });
+
+  test('the previously un-railed RPCs, and find_people, now call the rate check', () => {
+    for (const fn of [
+      'community_respond_connect', 'community_update_training_profile',
+      'community_set_partner', 'community_set_connect_from',
+      'community_set_show_programmes', 'community_list_connections',
+      'community_gym_summary', 'community_gym_suggest', 'community_find_people',
+    ]) {
+      const at = CODE_161.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);
+      expect(at).toBeGreaterThan(-1);
+      const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+      expect(body).toContain('_community_rate_check(');
+    }
+  });
+
+  test('gym_summary and gym_suggest require a Community profile', () => {
+    for (const fn of ['community_gym_summary', 'community_gym_suggest']) {
+      const at = CODE_161.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);
+      const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+      expect(body).toContain('_community_require_profile(');
+    }
   });
 });

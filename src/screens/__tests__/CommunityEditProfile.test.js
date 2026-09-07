@@ -51,10 +51,31 @@ jest.mock('../../lib/community', () => ({
   DISPLAY_NAME_MAX: 40,
   BIO_MAX: 160,
   AREA_LABEL_MAX: 60,
-  GYM_LABEL_MAX: 60,
+  setConnectFrom: jest.fn(),
+  setShowProgrammes: jest.fn(),
+  CONNECT_FROM_VALUES: { anyone: 'Anyone', followers: 'People who follow me', nobody: 'Nobody' },
 }));
 
-import { upsertProfile, relationships } from '../../lib/community';
+// GD-14 (gym database blueprint `docs/gym-database-2026-09-06/
+// 20-BLUEPRINT.md`): the gym field is now GymPicker over `src/lib/gyms`,
+// saved through `setGyms` rather than the old free-text `gym_label` on
+// `upsertProfile`. Nothing here types a gym or opens the picker (the
+// fixture profile carries a LEGACY `gym_label` with no `gym_id`, which
+// renders read-only), so these stubs only need to exist for `save()`'s
+// unconditional `setGyms` call and for the module graph to resolve.
+jest.mock('../../lib/gyms', () => ({
+  __esModule: true,
+  get: jest.fn(() => Promise.resolve(null)),
+  setGyms: jest.fn(() => Promise.resolve({})),
+  search: jest.fn(() => Promise.resolve({ venues: [], recognisedPostcode: null })),
+  isPostcodeLike: jest.fn(() => false),
+  recognisePostcode: jest.fn(() => ({ kind: 'none', normalised: null, outward: null })),
+  venueLine: (v) => ({ primary: v?.display_name || v?.name || '', secondary: '' }),
+  isPendingVenue: jest.fn(() => false),
+}));
+
+import { upsertProfile, relationships, setConnectFrom } from '../../lib/community';
+import { setGyms } from '../../lib/gyms';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityEditProfileScreen from '../CommunityEditProfileScreen';
 import CommunityPrivacyScreen from '../CommunityPrivacyScreen';
@@ -82,6 +103,10 @@ function flattenText(node) {
 
 async function flush() {
   await act(async () => {
+    // GymTypeahead debounces its suggestion read (250ms), the same pattern
+    // the Join screen's handle check uses; fake timers keep that pending
+    // read from firing after a test has already finished.
+    jest.advanceTimersByTime(400);
     for (let i = 0; i < 12; i += 1) await Promise.resolve();
   });
 }
@@ -107,6 +132,7 @@ async function mount(Screen) {
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
   jest.clearAllMocks();
   upsertProfile.mockResolvedValue({ ...PROFILE });
   relationships.mockResolvedValue({ blocked: [], muted: [] });
@@ -117,6 +143,8 @@ beforeEach(() => {
     refresh: jest.fn(),
   });
 });
+
+afterEach(() => { jest.useRealTimers(); });
 
 describe('Edit profile saves the fields it owns', () => {
   test('the save carries no handle, and no handle field is on the screen', async () => {
@@ -135,6 +163,11 @@ describe('Edit profile saves the fields it owns', () => {
       visibility: 'public',
     }));
     expect(field(tree, 'Handle')).toBeUndefined();
+    expect(sent).not.toHaveProperty('gym_label');
+    // GD-14: the gym is saved through community_set_gyms, not this call.
+    // The fixture profile has no gym_id (a legacy free-text label), so
+    // nothing was picked and both arguments stay empty.
+    expect(setGyms).toHaveBeenCalledWith(null, []);
     expect(mockToastShow).toHaveBeenCalledWith('Profile saved');
     expect(navigation.goBack).toHaveBeenCalled();
   });
@@ -216,5 +249,58 @@ describe('the privacy screen visibility control', () => {
     });
     const moderator = await mount(CommunityPrivacyScreen);
     expect(flattenText(moderator.tree.toJSON())).toContain('Moderation queue');
+  });
+});
+
+// ─── Discovery additions (`docs/social-discovery-2026-09-06/
+// 70-DISCOVERY-BLUEPRINT.md` sections 1, 3, 7; SD-20, SD-22, SD-26) ──────
+describe('who can send a connection request, and the two discovery links', () => {
+  function connectSegment(tree) {
+    return tree.root.findAll(
+      (n) => typeof n.type === 'function'
+        && n.props?.accessibilityLabel === 'Who can send you connection requests',
+    )[0];
+  }
+
+  test('changes connect_from through its own RPC, never through upsertProfile', async () => {
+    const { tree } = await mount(CommunityPrivacyScreen);
+
+    await act(async () => { connectSegment(tree).props.onChange('followers'); });
+    await flush();
+
+    expect(setConnectFrom).toHaveBeenCalledWith('followers');
+    expect(upsertProfile).not.toHaveBeenCalled();
+  });
+
+  // Product review 2026-09-06 finding 4: `rules_outdated` was mishandled as
+  // a generic "could not change that" refusal on this screen.
+  test('rules_outdated reverts the segment and sends the person to accept the rules', async () => {
+    setConnectFrom.mockRejectedValueOnce({ code: 'rules_outdated' });
+    const { tree, navigation } = await mount(CommunityPrivacyScreen);
+
+    await act(async () => { connectSegment(tree).props.onChange('followers'); });
+    await flush();
+
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityRules', { mustAccept: true });
+    expect(connectSegment(tree).props.value).toBe('anyone');
+    expect(mockToastShow).not.toHaveBeenCalledWith('Could not change that just now.', { variant: 'error' });
+  });
+
+  test('any other connect_from refusal reverts the segment and shows the existing toast', async () => {
+    setConnectFrom.mockRejectedValueOnce({ code: 'offline' });
+    const { tree } = await mount(CommunityPrivacyScreen);
+
+    await act(async () => { connectSegment(tree).props.onChange('followers'); });
+    await flush();
+
+    expect(connectSegment(tree).props.value).toBe('anyone');
+    expect(mockToastShow).toHaveBeenCalledWith('Could not change that just now.', { variant: 'error' });
+  });
+
+  test('"Training profile" opens its own screen', async () => {
+    const { tree, navigation } = await mount(CommunityPrivacyScreen);
+    await act(async () => { byLabel(tree, 'Training profile').props.onPress(); });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityTrainingProfile');
   });
 });

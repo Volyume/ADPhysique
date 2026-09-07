@@ -286,3 +286,37 @@ describe('linking config — the exact app-scheme forms links.js builds', () => 
     expect(routeFor(url)).toMatchObject({ tab: 'HomeTab', name, params });
   });
 });
+
+// ─── APPENDED 2026-09-06 (discovery blueprint, messaging lane) ───────────
+//
+// The message push hands the OS `volyume://m/?id=<conversation>` (discovery
+// blueprint `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md`
+// section 10, "Deep link `m` (`volyume://m/?id=`) for the conversation push
+// tap"). It takes the same query shape as the three share pages above,
+// because the site is static and the app form must match what the push
+// mints. The param must arrive as `id`: that is what
+// CommunityConversationScreen reads to resolve the thread, and a link that
+// routes with the wrong param name opens an empty conversation.
+describe('linking config — the conversation deep link (discovery section 10)', () => {
+  test.each([
+    'volyume://m/?id=conv-1',
+    'https://volyume.app/m/?id=conv-1',
+  ])('%s opens the conversation in the Home tab', (url) => {
+    expect(routeFor(url)).toMatchObject({
+      tab: 'HomeTab',
+      name: 'CommunityConversation',
+      params: { id: 'conv-1' },
+    });
+  });
+
+  test('the query form without the slash resolves the same way', () => {
+    expect(routeFor('volyume://m?id=conv-1')).toMatchObject({
+      name: 'CommunityConversation',
+      params: { id: 'conv-1' },
+    });
+  });
+
+  test('the path was actually read out of RootNavigator.js', () => {
+    expect(config.screens.HomeTab.screens.CommunityConversation).toBe('m');
+  });
+});

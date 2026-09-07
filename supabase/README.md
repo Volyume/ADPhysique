@@ -120,6 +120,104 @@ contract must not delegate its authority to a superseded audit.
   every one; 72 functions, all `security_definer = t` with the search_path
   in `settings`; `authenticated_can_execute = t` for exactly the 41
   `community_*` RPCs and `f` for every `_community_*` helper).
+- **161 WRITTEN, NOT APPLIED (Community connections and messaging; founder gate).**
+  `migrate_161_community_connections.sql` extends 160 with the
+  discovery campaign's server half (`docs/social-discovery-2026-09-06/
+  70-DISCOVERY-BLUEPRINT.md` section 11; SD-20 to SD-32): thirteen additive
+  columns on `community_profiles` (`connect_from`, `open_to_partner`,
+  `partner_prefs`, `show_programmes`, `connection_count` and the eight
+  `tp_*` training-profile bands), three new tables
+  (`community_connections`, `community_conversations`,
+  `community_messages`) with RLS enabled, NO policy and all privileges
+  revoked from anon and authenticated, and 23 SECURITY DEFINER RPCs
+  (`search_path = public, pg_temp`, revoked from PUBLIC and anon, granted
+  to authenticated) as the only ingress and egress. It widens three
+  CHECKs, keeping every existing value: `community_activity.kind`
+  (`connect_request`, `connect_accepted`), `community_reports.target_kind`
+  (`message`) and `notification_preferences.category`
+  (`community_message`, so the recipient's message toggle can be stored at
+  all). It re-issues `_community_profile_card`, `community_get_me`,
+  `community_upsert_profile`, `community_block`, `community_unfollow`,
+  `community_leave` and `delete_user_data()` IN FULL. The Community rules
+  move to version 2 (`docs/community-safety/COMMUNITY-RULES.md`):
+  `_community_rules_version()` is the single definition, a new profile must
+  accept 2, an existing profile re-accepts by sending
+  `accept_rules_version` alone, and `community_connect`,
+  `community_send_message` and `community_update_training_profile` raise
+  `rules_outdated` until it does. It DEPENDS ON 160 and must never run
+  before it; nothing has been applied, and it waits for the founder's exact
+  phrase "run against production" for the batch that carries it.
+  Verified twice (fresh and re-run) against a throwaway PostgreSQL 16 with
+  160 applied and stubs for `auth`, `consent_log`,
+  `notification_preferences`, `user_body_profile` and `partnerships`:
+  idempotent, 3 tables with RLS on and zero policies, every function
+  SECURITY DEFINER with the search_path pinned, `authenticated` executing
+  exactly the `community_*` RPCs and no helper. Verification after any
+  future apply: the acceptance check at the end of the file (3 tables,
+  `rls_enabled = t`, `policy_count = 0`; the 13 columns; the 3 widened
+  CHECKs carrying their new values; the function privilege table).
+- **162 WRITTEN, NOT APPLIED (UK gym directory; founder gate).**
+  Seed data lives OUTSIDE the migration: the pipeline's `seed-sql.mjs`
+  writes `supabase/seed_gyms_v1/` as chunked idempotent files (brands,
+  postcode sectors, venues, sources; at most 1,000 rows each; GD-24),
+  applied AFTER 162 on the same founder phrase, sectors before venues
+  because `gyms_submit` validates a postcode against
+  `gym_postcode_sectors` and refuses an unseeded sector as
+  `invalid_postcode` (lead ruling 2026-09-07: correct until seeded, so
+  the seed is a precondition of the add-a-gym flow, not of the build).
+  `migrate_162_gym_directory.sql` ships the UK gym master database
+  (founder brief 2026-09-06, `docs/gym-database-2026-09-06/
+  20-BLUEPRINT.md`, GD-01 to GD-17) as infrastructure under Community
+  (GD-01), schema only, no venue rows: seven new tables --
+  `gym_brands`, `gym_venues` and `gym_postcode_sectors` are
+  `global_read_only` (RLS on, exactly one SELECT policy for
+  `authenticated`, the same disposition `exercises`/`foods` carry);
+  `gym_venue_sources`, `gym_venue_history`, `gym_submissions` and
+  `gym_reports` are `rpc_only` (RLS on, no policy, all privileges
+  revoked from anon and authenticated). Two additive
+  `community_profiles` columns (`gym_id`, `other_gym_ids`, capped at
+  3) plus a trigger that derives `gym_key`/`gym_label` from `gym_id`
+  the moment it is set (GD-14), so `community_gym_summary` and Find
+  people's 'gym' mode need no change to find its members. Eleven new
+  SECURITY DEFINER RPCs (`search_path = public, pg_temp`, revoked from
+  PUBLIC and anon, granted to authenticated only): five reads
+  (`gyms_search`, `gyms_near`, `gyms_in_place`, `gyms_get`,
+  `gyms_suggest`), three write-throughs (`gyms_submit`,
+  `gyms_confirm_submission`, `gyms_report`), two moderator actions
+  (`gyms_review_submission`, `gyms_review_report`, both writing
+  `gym_venue_history`) and `community_set_gyms`.
+  `community_gym_summary` and `community_gym_suggest` (both declared
+  in migrate_161) are RE-ISSUED here, CREATE OR REPLACE, so a
+  `gym:<uuid>` key resolves its label and venue fields from
+  `gym_venues` while the legacy `<area fold>:<gym fold>` free-text key
+  keeps its exact 161 path; `community_gym_suggest` keeps its exact
+  signature and delegates its matching to `gyms_suggest`.
+  `delete_user_data()` is re-issued IN FULL a third time to anonymise
+  `gym_submissions.submitter_id` and `gym_reports.reporter_id` (the
+  submission/report content survives, the same posture
+  `community_reports.reporter_id` already has). It DEPENDS ON 160 and
+  161 and must never run before them; nothing has been applied, and it
+  waits for the founder's exact phrase "run against production" for
+  the batch that carries it. Verified twice (fresh and re-run) against
+  a throwaway PostgreSQL 16 with 160 and 161 applied and stubs for
+  `auth`, `consent_log`, `notification_preferences`,
+  `user_body_profile` and `partnerships`: idempotent, 7 tables with the
+  disposition-exact RLS/policy counts (1 for the three
+  `global_read_only` tables, 0 for the four `rpc_only` ones), every
+  function SECURITY DEFINER with the search_path pinned,
+  `authenticated` executing exactly the eleven client RPCs and no
+  helper. A full functional smoke test (search by token and by brand
+  alias, near, in-place, get, suggest, submit with a duplicate hit,
+  confirm-by-a-second-distinct-user flipping the venue open, two
+  distinct reports flipping `needs_review`, a moderator resolving the
+  report, `community_set_gyms` round-tripping through the sync
+  trigger, `community_gym_summary` resolving a `gym:<uuid>` key with
+  venue fields, `community_gym_suggest` delegating to `gyms_suggest`,
+  a non-moderator refused on the review RPC, and `delete_user_data`
+  anonymising `submitter_id`) passed end to end. Verification after any
+  future apply: the acceptance check at the end of the file (7 tables,
+  `rls_enabled = t` with the disposition-exact `policy_count`; the 2
+  columns; the function privilege table).
 - **132-136 APPLIED 2026-08-12** (founder order, Claude-run, project
   `sujrylzzxcqxxfygptns`, eu-west-1). Every object verified read-only
   after the apply:
@@ -465,6 +563,8 @@ themselves; add a row here whenever a migration is added.
 | 158 | `migrate_158_routine_exercise_groups.sql` | Exercise library expansion EL-9: two nullable columns on `routine_exercises` (`group_kind` 'circuit'\|null=superset, `round_rest_seconds`) for the circuit model. Client push omits both while `CIRCUIT_SYNC_COLUMNS_ENABLED` (src/lib/sync/featureFlags.js) is false; pull reads both via `?? null`. | **APPLIED AND VERIFIED 2026-09-05** (Claude-run batch below). |
 | 159 | `migrate_159_workout_set_evidence_class.sql` | Exercise library expansion EL-7: nullable `workout_sets.evidence_class` (null=conventional \| 'circuit' \| 'ballistic' \| 'circuit_ballistic'), stamped by the live screen, never user-chosen. Client push omits it while `CIRCUIT_SYNC_COLUMNS_ENABLED` is false; pull reads it via `?? null`. | **APPLIED AND VERIFIED 2026-09-05** (Claude-run batch below); flag flipped ON in the same landing. |
 | 160 | `migrate_160_community.sql` | Community (Social / Community / Discovery campaign, `docs/social-discovery-2026-09-06/30-BLUEPRINT.md` section 3). Fourteen `community_*` tables (profiles, follows, blocks, mutes, programmes + uses, posts, reactions, comments, reports, moderators, moderation log, activity, rate events), all RLS-enabled with NO anon/authenticated policy and ALL privileges revoked from both; 41 SECURITY DEFINER RPCs pinned to `search_path = public, pg_temp` as the only ingress and egress (SD-14). Widens the `consent_log` CHECK (`community_visibility`) and the `notification_preferences` category CHECK (`community_follow`, `community_activity`); seeds `community_moderators`; re-issues `delete_user_data()` in full with two-sided Community deletes. Rollback: drop the fourteen tables and the `community_*` / `_community_*` functions, re-apply migrate_154, re-narrow both CHECKs (see the file header). | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase.** |
+| 161 | `migrate_161_community_connections.sql` | Community connections, messaging, the shared training profile and the discovery surfaces (Discovery campaign, `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md` section 11; SD-20 to SD-32). Thirteen additive `community_profiles` columns (`connect_from`, `open_to_partner`, `partner_prefs`, `show_programmes`, `connection_count`, eight `tp_*` bands); three new tables (`community_connections`, `community_conversations`, `community_messages`), all RLS-enabled with NO anon/authenticated policy and ALL privileges revoked from both; 23 SECURITY DEFINER RPCs pinned to `search_path = public, pg_temp` as the only ingress and egress (SD-14). Widens the `community_activity.kind` CHECK (`connect_request`, `connect_accepted`), the `community_reports.target_kind` CHECK (`message`) and the `notification_preferences.category` CHECK (`community_message`). Moves the Community rules to version 2 with a re-consent path and the new `rules_outdated` refusal. Re-issues `_community_profile_card`, `community_get_me`, `community_upsert_profile`, `community_block`, `community_unfollow`, `community_leave` and `delete_user_data()` in full, the last with two-sided deletes for the three new tables. DEPENDS ON 160. Rollback: drop the three tables and the thirteen columns, drop the `community_*` / `_community_*` functions this file creates, re-apply migrate_160, re-narrow the three CHECKs (see the file header). | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase.** |
+| 162 | `migrate_162_gym_directory.sql` | The UK gym master database (founder brief 2026-09-06, `docs/gym-database-2026-09-06/20-BLUEPRINT.md`, GD-01 to GD-17), schema only, no venue rows. Seven new tables: `gym_brands`/`gym_venues`/`gym_postcode_sectors` (`global_read_only`, RLS on, one SELECT policy for `authenticated`) and `gym_venue_sources`/`gym_venue_history`/`gym_submissions`/`gym_reports` (`rpc_only`, RLS on, no policy, all privileges revoked from anon/authenticated). Two additive `community_profiles` columns (`gym_id`, `other_gym_ids`, capped at 3) plus a trigger deriving `gym_key`/`gym_label` from `gym_id`. Eleven new SECURITY DEFINER RPCs pinned to `search_path = public, pg_temp`, granted to `authenticated` only: `gyms_search`, `gyms_near`, `gyms_in_place`, `gyms_get`, `gyms_suggest`, `gyms_submit`, `gyms_confirm_submission`, `gyms_report`, `gyms_review_submission`, `gyms_review_report`, `community_set_gyms`. Re-issues `community_gym_summary` (resolves `gym:<uuid>` keys from `gym_venues`, keeps the legacy free-text path), `community_gym_suggest` (delegates to `gyms_suggest`, same signature) and `delete_user_data()` in full (anonymises `gym_submissions.submitter_id`/`gym_reports.reporter_id`). DEPENDS ON 160 and 161. Rollback: drop the seven tables and the two columns, drop the `gyms_*`/`_gyms_*` functions and `_community_gym_key_sync`, re-apply migrate_161 to restore `community_gym_summary`/`community_gym_suggest`/`delete_user_data()` to their 161 bodies (see the file header). | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase.** |
 
 > Ledger gap noted 2026-08-20: `migrate_144_apple_review_password_reset.sql`
 > exists in this folder but has no row in this table (it predates CC26 and

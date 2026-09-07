@@ -57,6 +57,7 @@ jest.mock('expo-haptics', () => ({
 // asserts what the screen HANDS them rather than how they draw.
 jest.mock('../../components/community/ProfileCard', () => () => null);
 jest.mock('../../components/community/ReportSheet', () => () => null);
+jest.mock('../../components/community/ConnectSheet', () => () => null);
 
 jest.mock('../../hooks/useCommunityMe', () => ({
   __esModule: true,
@@ -471,6 +472,55 @@ describe('a reader who has already copied this programme (item 34)', () => {
       expect.stringContaining('Nothing is activated'),
       expect.any(Array),
     );
+    act(() => { tree.unmount(); });
+  });
+});
+
+// ─── Product review 2026-09-06 (finding 1) ──────────────────────────────
+describe('the creator header offers Connect and Message', () => {
+  /** ProfileCard is mocked to render nothing (this suite is about what the
+   * screen HANDS its sibling components, not how they draw, see the file
+   * header), so the ConnectButton it would render for a non-self creator
+   * is asserted the same way `reportSheet` is above: by the props the
+   * screen passed it. */
+  function creatorCard(tree) {
+    // The header is an unrendered element inside the mocked FlatList's
+    // props (see `renderHeader` above), so it is pulled out and rendered
+    // for real before it can be searched, same as every other header
+    // assertion in this suite.
+    return renderHeader(tree).root.findAll(
+      (n) => n.props?.card?.user_id === 'u2' && 'showConnect' in n.props,
+    )[0];
+  }
+
+  test('a non-self creator gets showConnect, so a Connect/Message control is offered', async () => {
+    const tree = await mount();
+    const card = creatorCard(tree);
+    expect(card).toBeTruthy();
+    expect(card.props.showConnect).toBe(true);
+    expect(card.props.me).toEqual(expect.objectContaining({ profile: expect.objectContaining({ user_id: 'u1' }) }));
+    act(() => { tree.unmount(); });
+  });
+
+  test('onMessage opens the conversation with the programme as the context reference', async () => {
+    const navigation = { navigate: jest.fn(), goBack: jest.fn(), replace: jest.fn() };
+    let tree;
+    await act(async () => {
+      tree = create(
+        <CommunityProgrammeScreen
+          navigation={navigation}
+          route={{ params: { id: 'prog1' }, name: 'CommunityProgramme' }}
+        />,
+      );
+    });
+    await flush();
+
+    creatorCard(tree).props.onMessage({ user_id: 'u2' });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityConversation', {
+      userId: 'u2',
+      ref: { kind: 'programme', id: 'prog1' },
+    });
     act(() => { tree.unmount(); });
   });
 });

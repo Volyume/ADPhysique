@@ -33,6 +33,72 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## UK GYM MASTER DATABASE (2026-09-06, third workstream) — BUILT on `claude/volyume-social-discovery-h7dknu`; 162 RE-REVIEW + RECORDS 30/40/50 IN FLIGHT; NOT YET MERGED
+
+Founder brief in chat: a national canonical gym and fitness-venue
+directory under Community (onboarding gym, primary and other gyms, people
+at my gym, gyms near me, gym pages, local recommendations). Folder
+`docs/gym-database-2026-09-06/` (README = document map). Law: nothing is
+imported before its licence is resolved; the founder decides paid
+licences. Phase 1 (read-only Sonnet research, four agents): `01` England,
+OS, Google, OSM, open places; `02` Scotland, Wales, NI; `03` operators
+and industry; `04` design precedents and dedup. Recovery: re-dispatch
+from the README document map. Phase 2: lead synthesis `10`, blueprint
+`20`. Phase 3: pipeline scripts, cloud tables, search RPCs, app
+integration, coverage report `30`. Reachability probe from this
+container (2026-09-06): activeplacespower.com, opendatani.gov.uk,
+geoportal.statistics.gov.uk, api.os.uk, puregym.com, thegymgroup.com
+reachable; spatialdata.gov.scot returns 403 to a bare request;
+overpass-api.de unreachable through the proxy (to re-test).
+Phase 3 lanes (2026-09-07; recovery = re-dispatch the lane from
+`20-BLUEPRINT.md` sections named, over whatever the tree holds; agents
+never commit): pipeline (Sonnet: `scripts/gyms/*`, `data/gyms/*`,
+acquisition docs 05-11, blueprint "Pipeline"); operators acquisition
+(Sonnet: `08-acquisition-operators.md`, blueprint GD-04, doc 03);
+migration 162 + targets + README + rpc-only guard (Sonnet: blueprint
+"Data model", GD-09..GD-14); app side (Sonnet: `src/lib/gyms/`,
+`GymPicker`, `CommunityGymAddScreen`, profile and Join wiring, gym
+dimension report sheet, blueprint "App" + "Tests and records"). Then:
+Opus security review of 162, coverage report `30`, verification `40`,
+final report `50`, device checklist, merge.
+Status 2026-09-07 06:00 UTC: pipeline landed and rebuilt four times
+under lead audit (rulings GD-18..GD-26 in `20-BLUEPRINT.md`; commits
+7c0c6f0, 41ac05c, 3a3c4ce; 46,817 venues, both named lookups present);
+migration 162 landed (25282a2) with all twenty security-review findings
+fixed (35, f09c612); app side landed (7ca3b76). Full tree at 3a3c4ce:
+lint 0, tsc 0, 1245 suites / 17709 tests passed. IN FLIGHT: Opus
+re-review of 162 (appends to `35`; recovery: re-dispatch from the
+re-review brief in the handover), Sonnet records `30`/`40`/`50`
+(recovery: re-dispatch from the blueprint "Tests and records" list).
+Then merge to main. Founder items: section 3 (gym block).
+
+---
+
+## COMMUNITY: DISCOVERY, CONNECTIONS AND MESSAGING (2026-09-06, second campaign) — LANDED on `claude/volyume-social-discovery-h7dknu` (records `50`/`60` updated 9b72a0c); MERGE PENDING with the gym workstream; CLOUD 161 WRITTEN NOT APPLIED
+
+Founder addition to the Community brief (in chat): best-in-class people
+discovery, a Follow / Connect / Message relationship model, training
+profile bands from observed training (opt-in, coarse), Find people with
+six doors, training-partner flag, programme and gym as bridges. Spec
+`docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md`; rulings
+SD-20..SD-32; media model `71-MEDIA-MODEL.md` (founder decision).
+Lanes (Opus unless noted; recovery = re-dispatch the lane from the
+blueprint sections named; lead reviews every diff; agents never commit):
+A migration 161 + community-notify kinds (§11, §2); B client library
+(§3-§9); C1 screens: Find people, people list, training profile, connect
+sheet, profile/activity/hub changes (§10); C2 screens: conversations and
+conversation, message entry points (§2, §10); D (Sonnet) message
+notification category; E (Sonnet) safety records; then reviews (security
+and product), fixes, full regression, merge to main.
+Status 2026-09-07: A-E landed; security review `72` fixed and landed
+(`6fe42da`); product review `73-REVIEW-PRODUCT-DISCOVERY.md` written,
+five P0/P1 findings lead-verified against source, fix lane (Sonnet) in
+flight (recovery: re-dispatch from the 73 findings 1-5, marking each
+finding's status line). Remaining: settled-tree lint/tsc/tests, update
+`50`/`60`, handover, merge to main.
+
+---
+
 ## COMMUNITY REPLACES PARTNERS (2026-09-06) — LANDED on `claude/volyume-social-discovery-h7dknu`, merged to main; CLOUD 160 WRITTEN NOT APPLIED
 
 Founder brief in chat 2026-09-06 (one autonomous end-to-end task). Campaign
@@ -2314,6 +2380,27 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **GYM DIRECTORY (2026-09-07) - founder items after the build.** (a)
+  When 162 passes re-review: say "run against production" for the batch
+  160 + 161 + 162 and the generated seed chunks (`node
+  scripts/gyms/seed-sql.mjs` writes `supabase/seed_gyms_v1/`, sectors
+  before venues); Claude runs and re-verifies read-only. (b) DECISION:
+  add `expo-location` (MIT, Expo SDK module) so "gyms near me" can use
+  the device position on an explicit tap only, never stored (GD-13)?
+  Without it near-me runs from a typed postcode, which is what ships now.
+  (c) sportscotland: send the Fitness Suites download or WFS link when
+  the account is live; Scotland today rests on Overture plus operator
+  feeds (2,770 venues). Earlier unlocks, kept for the record:
+  three unlocks, none blocking the free stack.** Founder 2026-09-07: (1) registering the sportscotland account now
+  (instructions delivered in chat; send the Fitness Suites download or the
+  WFS link and token); (2) DuckDB APPROVED as a pipeline-only binary in the
+  scratch space (never the app or package.json); (3) not raised. (1) Register a free sportscotland Spatial Hub account
+  (data.spatialhub.scot) so Scotland's Sports Facilities register can be
+  pulled. (2) Say yes to a pipeline-only DuckDB command-line binary (never
+  in the app) so Foursquare Open Source Places and Overture Places, both
+  permissively licensed Parquet datasets, become cross-checks and
+  gap-fillers. (3) Optional: price an OS Points of Interest licence. Standard
+  recorded as GD-15 in `docs/gym-database-2026-09-06/20-BLUEPRINT.md`.
 - **COMMUNITY (2026-09-06) - four actions, in order.** (1) Say "run
   against production" for migration 160 (`supabase/migrate_160_community.sql`)
   and the deploy of `community-notify` and `community-public`; Claude

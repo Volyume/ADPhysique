@@ -19,8 +19,20 @@ Document map (filled as the campaign runs):
 - `40-DECISIONS.md`                  SD-nn rulings with rationale
 - `50-VERIFICATION.md`               Tests, journeys, device checklist
 - `60-FINAL-REPORT.md`               Final report per the brief's section 64
+- `70-DISCOVERY-BLUEPRINT.md`        Second campaign blueprint: relationship model, messaging, training profile bands, Find people, scoring, gyms (SD-20..SD-32)
+- `71-MEDIA-MODEL.md`                Media in Community: the Volyume-native model (designed, not built; founder decision record, SD-29)
+- `72-REVIEW-SECURITY-CONNECTIONS.md` Hostile security review of connections, messaging and discovery
+- `73-REVIEW-PRODUCT-DISCOVERY.md`   Adversarial product/UX review of discovery, connections and messaging
 
 Agent window: the founder brief explicitly commissions heavy lower-cost agent
 use ("Use lower-cost agents aggressively"), so Phase A runs a wider window
 than the standing two-at-a-time rule. All Phase A agents are READ-ONLY;
 recovery path is simply re-dispatch.
+
+Founder order (in chat, 2026-09-06, standing for this and the gym
+workstream): use the lowest agent tier that meets the elite standard for
+the task in hand. Haiku for mechanical work (inventories, renames,
+fixtures, counts), Sonnet for well-specified builds, tests, documents and
+the product/UX review, Opus only where judgement drives the outcome (the
+security review of a new schema, engine-adjacent composition). Fable stays
+in the main loop and reads to judge, not to learn.

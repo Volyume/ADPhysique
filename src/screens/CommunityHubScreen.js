@@ -17,6 +17,15 @@
  * Offline is a first-class state, not an error: the hub payload is
  * cached per user, so an offline open shows the last thing the user saw
  * with one quiet line.
+ *
+ * Discovery additions (discovery blueprint `docs/social-discovery-
+ * 2026-09-06/70-DISCOVERY-BLUEPRINT.md` section 4 and 10; SD-23): a "Find
+ * people" card opens the six-door screen; a messages glyph beside
+ * Activity carries its own unread dot (the hub sends people to two
+ * different places, so one dot cannot serve both); "People you may want
+ * to follow" becomes "Lifters like you", the top five from
+ * `findPeople('like_me')`, read separately from the rest of the hub
+ * payload because it is a scored list, not a feed page.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -50,8 +59,8 @@ import { logError } from '../lib/errorLog';
 import { getLibraryPlans, getPlanWorkoutCounts } from '../lib/database';
 import { styleKeyFromTags } from '../lib/exercise/stylePools';
 import {
-  loadHub, hasProfile, hasUnseen, reactToPost,
-  COMMUNITY_DIMENSION_MIN_FOR_HUB,
+  loadHub, hasProfile, hasUnseen, hasUnreadMessages, reactToPost,
+  COMMUNITY_DIMENSION_MIN_FOR_HUB, findPeople,
 } from '../lib/community';
 
 const PAGE = 20;
@@ -108,6 +117,7 @@ export default function CommunityHubScreen({ navigation, route }) {
   const [legacyCardShown, setLegacyCardShown] = useState(!!legacyPartnerCode);
   const [browsing, setBrowsing] = useState(false);
   const [focusProgrammes, setFocusProgrammes] = useState(route?.params?.focus === 'programmes');
+  const [likeMe, setLikeMe] = useState([]);
   const listRef = useRef(null);
   // Where the Programmes section sits inside the list header, measured on
   // layout. 0 until it has been measured, which is the top of the list and
@@ -160,6 +170,19 @@ export default function CommunityHubScreen({ navigation, route }) {
       .catch((e) => logError('CommunityHub.loadVolyumeTiles', e, {}));
     return () => { alive = false; };
   }, []);
+
+  // "Lifters like you" (discovery blueprint section 4): a scored list, so
+  // it is read on its own rather than folded into `loadHub`'s feed page.
+  // Without a profile there is no caller to score against, and the RPC
+  // would only answer `no_profile`.
+  useEffect(() => {
+    if (!joined) { setLikeMe([]); return undefined; }
+    let alive = true;
+    findPeople('like_me', { limit: 5 })
+      .then((page) => { if (alive) setLikeMe(page.people ?? []); })
+      .catch(() => { if (alive) setLikeMe([]); });
+    return () => { alive = false; };
+  }, [joined, me?.profile?.user_id]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -270,6 +293,20 @@ export default function CommunityHubScreen({ navigation, route }) {
           ) : null}
         </Pressable>
       ) : null}
+      {joined ? (
+        <Pressable
+          onPress={() => navigation.navigate('CommunityConversations')}
+          hitSlop={spacing.sm}
+          style={[styles.headerBtn, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
+          accessibilityRole="button"
+          accessibilityLabel={hasUnreadMessages(me) ? 'Messages, unread' : 'Messages'}
+        >
+          <Ionicons name="chatbubbles-outline" size={18} color={t.colors.primary} />
+          {hasUnreadMessages(me) ? (
+            <View style={[styles.dot, { backgroundColor: t.colors.primary, borderColor: t.colors.background }]} />
+          ) : null}
+        </Pressable>
+      ) : null}
     </View>
   );
 
@@ -353,6 +390,29 @@ export default function CommunityHubScreen({ navigation, route }) {
         />
       ) : null}
 
+      {joined ? (
+        <Card
+          onPress={() => navigation.navigate('CommunityFindPeople')}
+          style={styles.findCard}
+          accessibilityLabel="Find people. At your gym, near you, on your programme and more."
+        >
+          <View style={styles.findRow}>
+            <View style={[styles.findGlyph, { backgroundColor: t.colors.surface2 }]}>
+              <Ionicons name="compass-outline" size={20} color={t.colors.textSecondary} />
+            </View>
+            <View style={styles.findBody}>
+              <Text style={[styles.findTitle, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
+                Find people
+              </Text>
+              <Text style={[styles.findSub, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+                At your gym, near you, on your programme and more
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={t.colors.textMuted} />
+          </View>
+        </Card>
+      ) : null}
+
       {offline ? (
         <Text style={[styles.offline, { ...t.type.caption, color: t.colors.textMuted }]}>
           Showing what you last saw. You are offline.
@@ -400,10 +460,10 @@ export default function CommunityHubScreen({ navigation, route }) {
             </View>
           ) : null}
 
-          {people.length ? (
+          {likeMe.length ? (
             <View style={styles.section}>
-              <SectionLabel>People you may want to follow</SectionLabel>
-              {people.map((row) => (
+              <SectionLabel>Lifters like you</SectionLabel>
+              {likeMe.map((row) => (
                 <ProfileCard
                   key={(row.card ?? row).user_id}
                   card={row.card ?? row}
@@ -434,10 +494,10 @@ export default function CommunityHubScreen({ navigation, route }) {
         </>
       ) : null}
 
-      {shown === 'following' && people.length ? (
+      {shown === 'following' && likeMe.length ? (
         <View style={styles.section}>
-          <SectionLabel>People you may want to follow</SectionLabel>
-          {people.slice(0, 5).map((row) => (
+          <SectionLabel>Lifters like you</SectionLabel>
+          {likeMe.map((row) => (
             <ProfileCard
               key={(row.card ?? row).user_id}
               card={row.card ?? row}
@@ -475,7 +535,7 @@ export default function CommunityHubScreen({ navigation, route }) {
       onAction={() => navigation.navigate('CommunitySearch')}
       actionAccessibilityLabel="Find people to follow"
     />
-  ) : programmes.length || people.length || dimensions.length ? null : (
+  ) : programmes.length || people.length || likeMe.length || dimensions.length ? null : (
     <EmptyState
       icon="sparkles-outline"
       title="You are early"
@@ -553,6 +613,18 @@ const styles = StyleSheet.create({
   blockActions: { flexDirection: 'row', gap: spacing.sm },
   heroTitle: { ...type.h2, color: colors.textPrimary },
   heroBody: { ...type.body, color: colors.textSecondary },
+  findCard: { padding: spacing.md },
+  findRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  findGlyph: {
+    width: 36,
+    height: 36,
+    borderRadius: circle(36),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  findBody: { flex: 1, gap: spacing.xxs },
+  findTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  findSub: { ...type.bodySm, color: colors.textSecondary },
   section: { gap: spacing.md },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   offline: { ...type.caption, color: colors.textMuted },

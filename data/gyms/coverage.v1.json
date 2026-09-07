@@ -1,0 +1,631 @@
+{
+  "generated_at": "2026-09-07T02:45:15.998Z",
+  "total_canonical_venues": 46817,
+  "ukactive_reference_total": 5842,
+  "pct_of_ukactive_reference": 801.4,
+  "by_nation": {
+    "England": 40075,
+    "null": 366,
+    "Northern Ireland": 1353,
+    "Wales": 1854,
+    "Scotland": 3169
+  },
+  "by_venue_type": {
+    "commercial_gym": 5262,
+    "health_club": 401,
+    "leisure_centre": 2583,
+    "other_fitness": 7808,
+    "boutique_studio": 1002,
+    "independent_gym": 16759,
+    "womens_gym": 214,
+    "hotel_gym": 19,
+    "crossfit_functional": 508,
+    "martial_arts": 11863,
+    "strength_gym": 343,
+    "university_gym": 55
+  },
+  "by_source_count": {
+    "1": 41147,
+    "2+": 5670
+  },
+  "by_coord_source": {
+    "source": 46685,
+    "postcode_sector": 82,
+    "none": 50
+  },
+  "by_area_source": {
+    "postcode": 42520,
+    "nearest_sector": 4037,
+    "null": 260
+  },
+  "by_brand": {
+    "nuffield-health": 130,
+    "ultimate-fitness": 16,
+    "anytime-fitness": 243,
+    "the-gym-group": 379,
+    "fitness-first": 194,
+    "snap-fitness": 120,
+    "puregym": 501,
+    "everyone-active": 166,
+    "david-lloyd": 128,
+    "freedom-leisure": 123,
+    "energie": 127,
+    "better": 252,
+    "total-fitness": 56,
+    "places-leisure": 96,
+    "village-gym": 40,
+    "everlast": 77,
+    "bannatyne": 76,
+    "third-space": 15,
+    "247-fitness": 12,
+    "virgin-active": 74,
+    "jd-gyms": 134,
+    "parkwood-leisure": 13,
+    "simply-gym": 21,
+    "crossfit": 474,
+    "gymbox": 12,
+    "serco-leisure": 4,
+    "f45": 62,
+    "1rebel": 11
+  },
+  "local_authority_top10": [
+    [
+      "Birmingham",
+      571
+    ],
+    [
+      "Leeds",
+      554
+    ],
+    [
+      "Cornwall",
+      490
+    ],
+    [
+      "Buckinghamshire",
+      460
+    ],
+    [
+      "North Yorkshire",
+      458
+    ],
+    [
+      "Somerset",
+      429
+    ],
+    [
+      "Glasgow City",
+      423
+    ],
+    [
+      "Wiltshire",
+      409
+    ],
+    [
+      "Bristol, City of",
+      397
+    ],
+    [
+      "Westminster",
+      389
+    ]
+  ],
+  "local_authority_bottom10": [
+    [
+      "Isles of Scilly",
+      1
+    ],
+    [
+      "Shetland Islands",
+      6
+    ],
+    [
+      "Orkney Islands",
+      6
+    ],
+    [
+      "Na h-Eileanan Siar",
+      11
+    ],
+    [
+      "Clackmannanshire",
+      27
+    ],
+    [
+      "East Renfrewshire",
+      28
+    ],
+    [
+      "Blaenau Gwent",
+      28
+    ],
+    [
+      "Merthyr Tydfil",
+      31
+    ],
+    [
+      "Ceredigion",
+      33
+    ],
+    [
+      "Boston",
+      34
+    ]
+  ],
+  "postcode_area_top10": [
+    [
+      "BT",
+      1358
+    ],
+    [
+      "B",
+      1137
+    ],
+    [
+      "SW",
+      926
+    ],
+    [
+      "S",
+      848
+    ],
+    [
+      "NE",
+      836
+    ],
+    [
+      "M",
+      832
+    ],
+    [
+      "BS",
+      810
+    ],
+    [
+      "NG",
+      805
+    ],
+    [
+      "BN",
+      779
+    ],
+    [
+      "G",
+      762
+    ]
+  ],
+  "postcode_area_bottom10": [
+    [
+      "NPT",
+      1
+    ],
+    [
+      "Z",
+      1
+    ],
+    [
+      "U",
+      1
+    ],
+    [
+      "JE",
+      1
+    ],
+    [
+      "BF",
+      1
+    ],
+    [
+      "C",
+      2
+    ],
+    [
+      "F",
+      2
+    ],
+    [
+      "ZE",
+      6
+    ],
+    [
+      "HS",
+      11
+    ],
+    [
+      "KW",
+      14
+    ]
+  ],
+  "operator_branch_count_vs_research": {
+    "jd-gyms": {
+      "researched": 114,
+      "brand_key": "jd-gyms",
+      "own_feed_count": 103,
+      "any_source_count": 134,
+      "operator_unconfirmed_count": 31,
+      "pipeline_count": 134
+    },
+    "the-gym-group": {
+      "researched": 264,
+      "brand_key": "the-gym-group",
+      "own_feed_count": 267,
+      "any_source_count": 379,
+      "operator_unconfirmed_count": 112,
+      "pipeline_count": 379
+    },
+    "total-fitness": {
+      "researched": 15,
+      "brand_key": "total-fitness",
+      "own_feed_count": 2,
+      "any_source_count": 56,
+      "operator_unconfirmed_count": 54,
+      "pipeline_count": 56
+    },
+    "third-space": {
+      "researched": 15,
+      "brand_key": "third-space",
+      "own_feed_count": 15,
+      "any_source_count": 15,
+      "operator_unconfirmed_count": 1,
+      "pipeline_count": 15
+    },
+    "fitness-first": {
+      "researched": 39,
+      "brand_key": "fitness-first",
+      "own_feed_count": 21,
+      "any_source_count": 194,
+      "operator_unconfirmed_count": 173,
+      "pipeline_count": 194
+    },
+    "247-fitness": {
+      "researched": null,
+      "brand_key": "247-fitness",
+      "own_feed_count": 1,
+      "any_source_count": 12,
+      "operator_unconfirmed_count": 11,
+      "pipeline_count": 12
+    },
+    "nuffield-health": {
+      "researched": null,
+      "brand_key": "nuffield-health",
+      "own_feed_count": 108,
+      "any_source_count": 130,
+      "operator_unconfirmed_count": 22,
+      "pipeline_count": 130
+    },
+    "puregym": {
+      "researched": null,
+      "brand_key": "puregym",
+      "own_feed_count": 480,
+      "any_source_count": 501,
+      "operator_unconfirmed_count": 22,
+      "pipeline_count": 501
+    },
+    "david-lloyd": {
+      "researched": null,
+      "brand_key": "david-lloyd",
+      "own_feed_count": 107,
+      "any_source_count": 128,
+      "operator_unconfirmed_count": 21,
+      "pipeline_count": 128
+    },
+    "freedom-leisure": {
+      "researched": null,
+      "brand_key": "freedom-leisure",
+      "own_feed_count": 115,
+      "any_source_count": 123,
+      "operator_unconfirmed_count": 8,
+      "pipeline_count": 123
+    },
+    "snap-fitness": {
+      "researched": null,
+      "brand_key": "snap-fitness",
+      "own_feed_count": 107,
+      "any_source_count": 120,
+      "operator_unconfirmed_count": 13,
+      "pipeline_count": 120
+    },
+    "better-gll": {
+      "researched": null,
+      "brand_key": "better",
+      "own_feed_count": 164,
+      "any_source_count": 252,
+      "operator_unconfirmed_count": 89,
+      "pipeline_count": 252
+    },
+    "village-gym": {
+      "researched": null,
+      "brand_key": "village-gym",
+      "own_feed_count": 34,
+      "any_source_count": 40,
+      "operator_unconfirmed_count": 6,
+      "pipeline_count": 40
+    },
+    "places-leisure": {
+      "researched": null,
+      "brand_key": "places-leisure",
+      "own_feed_count": 86,
+      "any_source_count": 96,
+      "operator_unconfirmed_count": 10,
+      "pipeline_count": 96
+    },
+    "bannatyne": {
+      "researched": null,
+      "brand_key": "bannatyne",
+      "own_feed_count": 65,
+      "any_source_count": 76,
+      "operator_unconfirmed_count": 11,
+      "pipeline_count": 76
+    },
+    "virgin-active": {
+      "researched": null,
+      "brand_key": "virgin-active",
+      "own_feed_count": 27,
+      "any_source_count": 74,
+      "operator_unconfirmed_count": 47,
+      "pipeline_count": 74
+    },
+    "ultimate-fitness": {
+      "researched": null,
+      "brand_key": "ultimate-fitness",
+      "own_feed_count": 0,
+      "any_source_count": 16,
+      "operator_unconfirmed_count": 0,
+      "pipeline_count": 16
+    },
+    "anytime-fitness": {
+      "researched": null,
+      "brand_key": "anytime-fitness",
+      "own_feed_count": 0,
+      "any_source_count": 243,
+      "operator_unconfirmed_count": 0,
+      "pipeline_count": 243
+    },
+    "everyone-active": {
+      "researched": null,
+      "brand_key": "everyone-active",
+      "own_feed_count": 0,
+      "any_source_count": 166,
+      "operator_unconfirmed_count": 0,
+      "pipeline_count": 166
+    },
+    "energie": {
+      "researched": null,
+      "brand_key": "energie",
+      "own_feed_count": 0,
+      "any_source_count": 127,
+      "operator_unconfirmed_count": 0,
+      "pipeline_count": 127
+    },
+    "everlast": {
+      "researched": null,
+      "brand_key": "everlast",
+      "own_feed_count": 0,
+      "any_source_count": 77,
+      "operator_unconfirmed_count": 0,
+      "pipeline_count": 77
+    },
+    "parkwood-leisure": {
+      "researched": null,
+      "brand_key": "parkwood-leisure",
+      "own_feed_count": 0,
+      "any_source_count": 13,
+      "operator_unconfirmed_count": 0,
+      "pipeline_count": 13
+    },
+    "simply-gym": {
+      "researched": null,
+      "brand_key": "simply-gym",
+      "own_feed_count": 0,
+      "any_source_count": 21,
+      "operator_unconfirmed_count": 0,
+      "pipeline_count": 21
+    },
+    "crossfit": {
+      "researched": null,
+      "brand_key": "crossfit",
+      "own_feed_count": 0,
+      "any_source_count": 474,
+      "operator_unconfirmed_count": 0,
+      "pipeline_count": 474
+    },
+    "gymbox": {
+      "researched": null,
+      "brand_key": "gymbox",
+      "own_feed_count": 0,
+      "any_source_count": 12,
+      "operator_unconfirmed_count": 0,
+      "pipeline_count": 12
+    },
+    "serco-leisure": {
+      "researched": null,
+      "brand_key": "serco-leisure",
+      "own_feed_count": 0,
+      "any_source_count": 4,
+      "operator_unconfirmed_count": 0,
+      "pipeline_count": 4
+    },
+    "f45": {
+      "researched": null,
+      "brand_key": "f45",
+      "own_feed_count": 0,
+      "any_source_count": 62,
+      "operator_unconfirmed_count": 0,
+      "pipeline_count": 62
+    },
+    "1rebel": {
+      "researched": null,
+      "brand_key": "1rebel",
+      "own_feed_count": 0,
+      "any_source_count": 11,
+      "operator_unconfirmed_count": 0,
+      "pipeline_count": 11
+    }
+  },
+  "review_queue_likely_total": 3967,
+  "review_queue_likely_by_kind": {
+    "possible_duplicate": 1265,
+    "possible_independent_gym": 2702
+  },
+  "review_queue_weak_total": 10743,
+  "review_queue_weak_by_kind": {
+    "possible_duplicate": 10743
+  },
+  "review_queue_total": 14710,
+  "review_queue_by_kind": {
+    "possible_duplicate": 1265,
+    "possible_independent_gym": 2702
+  },
+  "name_sanity_gd25": {
+    "raw_operator_rejections": {
+      "247-fitness": {
+        "total": 9,
+        "name_present": 9,
+        "rejected": 0
+      },
+      "bannatyne": {
+        "total": 65,
+        "name_present": 65,
+        "rejected": 0
+      },
+      "better-gll": {
+        "total": 193,
+        "name_present": 192,
+        "rejected": 12
+      },
+      "david-lloyd": {
+        "total": 119,
+        "name_present": 119,
+        "rejected": 0
+      },
+      "fitness-first": {
+        "total": 25,
+        "name_present": 25,
+        "rejected": 0
+      },
+      "freedom-leisure": {
+        "total": 129,
+        "name_present": 129,
+        "rejected": 0
+      },
+      "jd-gyms": {
+        "total": 113,
+        "name_present": 113,
+        "rejected": 0
+      },
+      "nuffield-health": {
+        "total": 133,
+        "name_present": 133,
+        "rejected": 4
+      },
+      "parkwood-leisure": {
+        "total": 0,
+        "name_present": 0,
+        "rejected": 0
+      },
+      "places-leisure": {
+        "total": 90,
+        "name_present": 90,
+        "rejected": 0
+      },
+      "puregym": {
+        "total": 496,
+        "name_present": 496,
+        "rejected": 0
+      },
+      "snap-fitness": {
+        "total": 107,
+        "name_present": 107,
+        "rejected": 7
+      },
+      "the-gym-group": {
+        "total": 276,
+        "name_present": 276,
+        "rejected": 0
+      },
+      "third-space": {
+        "total": 17,
+        "name_present": 17,
+        "rejected": 4
+      },
+      "total-fitness": {
+        "total": 16,
+        "name_present": 16,
+        "rejected": 0
+      },
+      "ultimate-fitness": {
+        "total": 0,
+        "name_present": 0,
+        "rejected": 0
+      },
+      "village-gym": {
+        "total": 35,
+        "name_present": 35,
+        "rejected": 0
+      },
+      "virgin-active": {
+        "total": 42,
+        "name_present": 31,
+        "rejected": 0
+      }
+    },
+    "pipeline_name_fallbacks": {
+      "total": 309,
+      "by_source": {
+        "active_places": 44,
+        "operator:freedom-leisure": 1,
+        "overture": 264
+      }
+    },
+    "display_names_over_80_chars": 0
+  },
+  "operator_unconfirmed_gd26_total": 631,
+  "named_lookups": {
+    "volt_gym_burscough": {
+      "present": true,
+      "matches": [
+        {
+          "id": "54603096-b9d2-5291-ba8f-727927feed0f",
+          "display_name": "Volt Gym",
+          "town": "Burscough",
+          "postcode": "L40 8TG",
+          "source_count": 1
+        }
+      ],
+      "all_volt_matches_any_town": [
+        {
+          "display_name": "Voltz Fitness",
+          "town": "Rochdale",
+          "postcode": "OL11 2UF"
+        },
+        {
+          "display_name": "Volt Gym",
+          "town": "Burscough",
+          "postcode": "L40 8TG"
+        },
+        {
+          "display_name": "VOLT Studio Fitness",
+          "town": "Penrith",
+          "postcode": "CA11 7EH"
+        },
+        {
+          "display_name": "Volt Fitness",
+          "town": "Rochdale",
+          "postcode": "OL11 2UF"
+        }
+      ]
+    },
+    "puregym_motherwell": {
+      "present": true,
+      "matches": [
+        {
+          "id": "a9e6d071-0b56-52eb-b1a7-74616113dbc7",
+          "display_name": "PureGym Motherwell",
+          "town": "Motherwell",
+          "postcode": "ML1 1LX",
+          "source_count": 2
+        }
+      ]
+    }
+  }
+}

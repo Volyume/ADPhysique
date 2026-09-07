@@ -1,0 +1,78 @@
+/**
+ * GymRow (gym database blueprint `docs/gym-database-2026-09-06/
+ * 20-BLUEPRINT.md`, "## App"; GD-11).
+ *
+ * One search result: the display name, then "town · outward · distance"
+ * underneath (whichever of those the venue actually has). A venue still
+ * waiting on its second independent confirmation (GD-11) carries a
+ * "Pending" badge, so picking it is an informed choice, not a surprise.
+ */
+
+import { View, Text, StyleSheet } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import PressableCard from '../PressableCard';
+import { spacing, type, iconSize, radius, circle } from '../../styles/theme';
+import useTheme from '../../hooks/useTheme';
+import { venueLine, isPendingVenue } from '../../lib/gyms';
+
+export default function GymRow({ venue, onPress }) {
+  const t = useTheme();
+  const { primary, secondary } = venueLine(venue);
+  const pending = isPendingVenue(venue);
+
+  return (
+    <PressableCard
+      onPress={onPress}
+      style={styles.row}
+      accessibilityLabel={pending ? `${primary}, pending confirmation` : primary}
+    >
+      <View style={[styles.glyph, { backgroundColor: t.colors.surface2 }]}>
+        <Ionicons name="business-outline" size={iconSize.sm} color={t.colors.textSecondary} />
+      </View>
+      <View style={styles.body}>
+        <Text
+          style={[styles.name, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}
+          numberOfLines={1}
+        >
+          {primary}
+        </Text>
+        {secondary ? (
+          <Text
+            style={[styles.sub, { ...t.type.bodySm, color: t.colors.textSecondary }]}
+            numberOfLines={1}
+          >
+            {secondary}
+          </Text>
+        ) : null}
+      </View>
+      {pending ? (
+        <View style={[styles.badge, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}>
+          <Text style={[styles.badgeText, { ...t.type.caption, color: t.colors.textSecondary }]}>
+            Pending
+          </Text>
+        </View>
+      ) : null}
+    </PressableCard>
+  );
+}
+
+const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  glyph: {
+    width: 36,
+    height: 36,
+    borderRadius: circle(36),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  body: { flex: 1, gap: spacing.xxs },
+  name: { ...type.bodyStrong },
+  sub: { ...type.bodySm },
+  badge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    borderRadius: radius.full,
+    borderWidth: 1,
+  },
+  badgeText: { ...type.caption },
+});

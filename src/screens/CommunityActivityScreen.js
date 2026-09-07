@@ -8,7 +8,11 @@
  * hours).
  *
  * Follow requests sit above the list with Accept and Decline, because
- * deciding on them is the reason to open this screen.
+ * deciding on them is the reason to open this screen. Connection requests
+ * sit ABOVE those (discovery blueprint `docs/social-discovery-2026-09-06/
+ * 70-DISCOVERY-BLUEPRINT.md` section 1): a connection is the stronger tie
+ * and it carries the reasons and the note the person wrote, so it is the
+ * first thing to answer.
  *
  * Opening the screen marks everything seen, which clears the amber dot
  * on the Today header.
@@ -27,6 +31,7 @@ import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import ActivityRow from '../components/community/ActivityRow';
 import ProfileCard from '../components/community/ProfileCard';
+import ConnectRequestRow from '../components/community/ConnectRequestRow';
 import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
@@ -34,9 +39,35 @@ import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing } from '../styles/theme';
 import {
   loadActivity, markActivitySeen, pendingFollowRequests, respondToFollow,
+  respondToConnect, callCommunity,
 } from '../lib/community';
 
 const PAGE = 30;
+
+/**
+ * The connection requests waiting for an answer, with the reasons and the
+ * note the requester attached.
+ *
+ * Those two fields live on the connection row, and
+ * `community_list_connections` is the only place that serves them
+ * (migrate_161: "Those two fields live on the connection row, so this is
+ * the only place the Activity screen can read them from"). The landed
+ * client helper `listConnections` answers `{people, cursor}` and drops
+ * `requests`, so this screen reads the same RPC through the same
+ * transport (the one place the consent, session and sign-out gates live)
+ * and takes the array the helper leaves behind. Never throws: a screen
+ * about what happened must still render the activity it did read.
+ */
+export async function pendingConnectRequests({ limit = PAGE } = {}) {
+  try {
+    const data = await callCommunity('community_list_connections', {
+      _uid: null, _cursor: null, _limit: limit,
+    });
+    return Array.isArray(data?.requests) ? data.requests : [];
+  } catch (_e) {
+    return [];
+  }
+}
 
 export default function CommunityActivityScreen({ navigation }) {
   const t = useTheme();
@@ -45,6 +76,7 @@ export default function CommunityActivityScreen({ navigation }) {
 
   const [rows, setRows] = useState([]);
   const [requests, setRequests] = useState([]);
+  const [connectRequests, setConnectRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [paging, setPaging] = useState(false);
@@ -55,12 +87,14 @@ export default function CommunityActivityScreen({ navigation }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [page, pending] = await Promise.all([
+      const [page, pending, connects] = await Promise.all([
         loadActivity({ limit: PAGE }),
         pendingFollowRequests({ limit: PAGE }).catch(() => ({ people: [] })),
+        pendingConnectRequests({ limit: PAGE }),
       ]);
       setRows(page.activity);
       setRequests(pending?.people ?? []);
+      setConnectRequests(connects);
       // The server mints the cursor (`ts|uuid`); a client-built one is
       // refused as `invalid_input`.
       setCursor(page.cursor);
@@ -114,9 +148,46 @@ export default function CommunityActivityScreen({ navigation }) {
     }
   }
 
-  const header = requests.length ? (
+  async function respondConnect(card, accept) {
+    if (busyId) return;
+    setBusyId(card.user_id);
+    try {
+      await respondToConnect(card.user_id, accept);
+      setConnectRequests((prev) => prev.filter(
+        (r) => (r.requester ?? r.card ?? r).user_id !== card.user_id,
+      ));
+      // Declining is silent to the other person, and the toast says
+      // nothing that suggests otherwise.
+      toast.show(accept ? `You are connected with @${card.handle}` : 'Request declined');
+      refreshMe(true).catch(() => { /* best effort */ });
+    } catch (_e) {
+      toast.show('Could not do that just now.', { variant: 'error' });
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const header = connectRequests.length || requests.length ? (
     <View style={styles.requests}>
-      <SectionLabel>Follow requests</SectionLabel>
+      {connectRequests.length ? (
+        <>
+          <SectionLabel>Connection requests</SectionLabel>
+          {connectRequests.map((row) => {
+            const card = row.requester ?? row.card ?? row;
+            return (
+              <ConnectRequestRow
+                key={card.user_id}
+                request={{ ...row, requester: card }}
+                busy={busyId === card.user_id}
+                onPress={() => navigation.navigate('CommunityProfile', { handle: card.handle })}
+                onAccept={() => respondConnect(card, true)}
+                onDecline={() => respondConnect(card, false)}
+              />
+            );
+          })}
+        </>
+      ) : null}
+      {requests.length ? <SectionLabel>Follow requests</SectionLabel> : null}
       {requests.map((row) => {
         const card = row.card ?? row;
         return (
@@ -194,7 +265,9 @@ export default function CommunityActivityScreen({ navigation }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title="Activity" />
       <FlashList
-        data={rows.filter((r) => r.kind !== 'follow_request')}
+        // A request is ANSWERED above, so its own row is not repeated in
+        // the list beneath (the same rule follow requests already follow).
+        data={rows.filter((r) => r.kind !== 'follow_request' && r.kind !== 'connect_request')}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <ActivityRow item={item} onPress={() => open(item)} />}
         ListHeaderComponent={header}
