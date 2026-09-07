@@ -35,12 +35,30 @@
 --                        NOT edit migrate_161_community_connections.sql --
 --                        exactly the same "latest definition wins" pattern
 --                        161 itself used to extend 160 without editing it;
+--                      * Review 35 fix lane (2026-09-07): three more
+--                        migrate_161 functions are RE-ISSUED here for the
+--                        same reason, each with the review's own fix and
+--                        nothing else changed from its 161 body:
+--                        `community_upsert_profile` (finding 2 -- a
+--                        picker-derived `gym_label`/`gym_key` is never
+--                        re-validated or re-derived once `gym_id` is set,
+--                        so the trigger is the sole owner of both, same
+--                        seam as finding 5), `_community_profile_card`
+--                        (lead addition (a) -- carries `gym_id` alongside
+--                        `gym_label` under the same visibility gate, and
+--                        `other_gym_ids` for the self view only) and
+--                        `community_find_people` (lead addition (b) --
+--                        'gym' mode also matches a person whose
+--                        `other_gym_ids` contains the viewer's `gym_id`,
+--                        reason "Also trains at your gym", score 2, the
+--                        primary match staying 3);
 --                      * `delete_user_data()` is re-issued IN FULL a third
 --                        time (160 defined it, 161 re-issued it in full,
 --                        this file does too) so a deleted account's
---                        `gym_submissions.submitter_id` and
---                        `gym_reports.reporter_id` are anonymised the same
---                        way `community_reports.reporter_id` already is.
+--                        `gym_submissions.submitter_id`,
+--                        `gym_submissions.reviewed_by` (review 35 finding 8)
+--                        and `gym_reports.reporter_id` are anonymised the
+--                        same way `community_reports.reporter_id` already is.
 --
 --                    RLS shape (GD data model header): `gym_brands`,
 --                    `gym_venues` and `gym_postcode_sectors` are
@@ -167,17 +185,29 @@
 --                    SAME chosen fact the free-text `gym_label` already was
 --                    (GD-13): no inference, no check-ins, no session-to-
 --                    venue association anywhere in this file. Erasure:
---                    `delete_user_data()` is re-issued below to NULL both
---                    `submitter_id` and `reporter_id` for the deleted user
---                    (the submission/report content itself survives, the
---                    same posture `community_reports.reporter_id` already
---                    has) -- `community_profiles.gym_id`/`other_gym_ids`
---                    need no separate handling because the whole profile
---                    row is deleted by the existing Community block above
---                    it. It carries NO Article 9 health data: nothing in
---                    this file reads bodyweight, body composition, Progress
---                    Scan, nutrition, injuries, coaching output or
---                    check-ins.
+--                    `delete_user_data()` is re-issued below to NULL
+--                    `submitter_id`, `reviewed_by` (review 35 finding 8 --
+--                    a moderator's id, missed in the first draft) and
+--                    `reporter_id` for the deleted user (the submission/
+--                    report content itself survives, the same posture
+--                    `community_reports.reporter_id` already has) --
+--                    `community_profiles.gym_id`/`other_gym_ids` need no
+--                    separate handling because the whole profile row is
+--                    deleted by the existing Community block above it. It
+--                    carries NO Article 9 health data: nothing in this file
+--                    reads bodyweight, body composition, Progress Scan,
+--                    nutrition, injuries, coaching output or check-ins.
+--
+--                    Retention (review 35 finding 20): `gym_venue_history`
+--                    is kept for the life of the venue -- GD-07 "nothing is
+--                    deleted" -- and is never pruned on a schedule the way
+--                    `community_rate_events` is; its `actor` and any
+--                    `confirmer` id inside `after` are anonymised to
+--                    `'deleted'` on the acting user's own erasure (this
+--                    file's `delete_user_data()`, Part 10), so the row
+--                    survives as an anonymous fact about the venue rather
+--                    than a personal-data record about the person who
+--                    caused it.
 --
 -- Transaction:       no explicit BEGIN/COMMIT; the runner supplies one.
 
@@ -620,6 +650,11 @@ $$;
 -- (migrate_160/161): this trigger only overrides the pair when gym_id IS
 -- NOT NULL, and only on the row being written.
 
+-- Review 35 findings 1, 2 and 5: this trigger is the SOLE writer of
+-- gym_key/gym_label whenever gym_id is set -- community_upsert_profile
+-- (re-issued below, Part 13) leaves both columns alone in that case, so
+-- there is exactly one place that can produce a value either of them has
+-- to accept.
 CREATE OR REPLACE FUNCTION public._community_gym_key_sync()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -632,7 +667,21 @@ BEGIN
   IF NEW.gym_id IS NOT NULL THEN
     SELECT display_name INTO v_display FROM public.gym_venues WHERE id = NEW.gym_id;
     NEW.gym_key := 'gym:' || NEW.gym_id::text;
-    NEW.gym_label := v_display;
+    -- Finding 1 belt-and-braces / finding 2: clamp to the SAME 60
+    -- characters community_upsert_profile's own gym_label cap enforces,
+    -- so a catalogue display_name longer than that (145 open venues in
+    -- the real catalogue, one 4,598 characters) can never lock the
+    -- profile out of saving.
+    NEW.gym_label := left(v_display, 60);
+  ELSIF TG_OP = 'UPDATE' AND coalesce(OLD.gym_key, '') LIKE 'gym:%' THEN
+    -- Finding 5: gym_id went from set to NULL (community_set_gyms(NULL,
+    -- ...)) -- clear the derived key/label rather than leaving a stale
+    -- picker-linked value the person no longer chose. A legacy free-text
+    -- gym_key (never 'gym:%') is untouched, which is the case the
+    -- original bare IF was written to protect; the TG_OP guard keeps this
+    -- branch from ever reading OLD on an INSERT, where it does not exist.
+    NEW.gym_key := NULL;
+    NEW.gym_label := NULL;
   END IF;
   RETURN NEW;
 END $$;
@@ -649,6 +698,28 @@ CREATE TRIGGER community_profiles_gym_key_sync
 -- on `tokens` (exact via the GIN `&&`, prefix via unnest+LIKE), by brand
 -- alias, and by town_key. A ~40 km bounding box restricts the scan when
 -- coordinates are supplied; distance_m is returned whenever they are.
+--
+-- Review 35 finding 3 (measured 61 s on a 46k-row catalogue): `_q` is now
+-- capped at 80 characters and 8 tokens (truncated, never refused, so a
+-- long paste still searches on its first words) and `_limit` clamped to
+-- 1..50; a shared read rail (`_community_rate_check`, key 'gyms_read', 120
+-- calls a minute) covers this and the other four read RPCs, since
+-- `gyms_suggest` delegates straight into this function below and so is
+-- covered by the same call. The un-indexable prefix `LIKE` scan that made
+-- the query 61 s no longer drives the row scan at all: the WHERE clause
+-- below matches only via the GIN `tokens && v_toks` array-overlap, an
+-- exact brand-alias fold or an exact `town_key`, all indexed or cheap; the
+-- prefix fallback runs ONLY on the LAST query token (the "still typing"
+-- token) and ONLY once the row set is already narrowed by a caller-
+-- supplied bounding box or a recognised outward code, never over the
+-- whole table. The brand_match/town_match columns below keep their
+-- broader prefix check because they run on the SELECT list, over rows the
+-- WHERE clause has already narrowed, not on the scan itself (finding 3's
+-- own suggested fix: "restrict the prefix EXISTS to rows already selected
+-- by the indexable predicates").
+-- Finding 10: ORDER BY now runs INSIDE the subquery, before LIMIT, so the
+-- 40 candidates handed to the client's ranker are the best 40, not an
+-- arbitrary scan-order sample.
 CREATE OR REPLACE FUNCTION public.gyms_search(
   _q text, _lat double precision DEFAULT NULL, _lng double precision DEFAULT NULL,
   _limit int DEFAULT 40
@@ -661,17 +732,24 @@ SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_uid       uuid := public._community_caller();
-  v_raw       text := btrim(coalesce(_q, ''));
+  v_raw       text := left(btrim(coalesce(_q, '')), 80);
   v_is_pc     boolean := public._gyms_postcode_full_valid(v_raw)
                       OR public._gyms_postcode_outward_valid(v_raw);
   v_outward   text := public._gyms_outward_of(v_raw);
-  v_toks      text[] := array_remove(
-                  string_to_array(public._community_fold(v_raw), ' '), '');
-  v_limit     int := least(greatest(coalesce(_limit, 40), 1), 40);
+  v_toks      text[] := (array_remove(
+                  string_to_array(public._community_fold(v_raw), ' '), ''))[1:8];
+  v_last_tok  text;
+  v_limit     int := least(greatest(coalesce(_limit, 40), 1), 50);
   v_lat_delta double precision;
   v_lng_delta double precision;
   v_venues    jsonb;
 BEGIN
+  PERFORM public._community_rate_check(v_uid, 'gyms_read', 120, 120, interval '1 minute');
+
+  IF array_length(v_toks, 1) > 0 THEN
+    v_last_tok := v_toks[array_length(v_toks, 1)];
+  END IF;
+
   IF _lat IS NOT NULL AND _lng IS NOT NULL THEN
     v_lat_delta := public._gyms_bbox_lat_delta(40000);
     v_lng_delta := public._gyms_bbox_lng_delta(_lat, 40000);
@@ -706,18 +784,35 @@ BEGIN
         (v_is_pc AND v_outward IS NOT NULL AND v.outward = v_outward)
         OR (NOT v_is_pc AND array_length(v_toks, 1) > 0 AND (
           v.tokens && v_toks
-          OR EXISTS (SELECT 1 FROM unnest(v.tokens) t, unnest(v_toks) qt WHERE t LIKE qt || '%')
           OR EXISTS (SELECT 1 FROM unnest(coalesce(b.aliases, ARRAY[]::text[])) al
-                     WHERE public._community_fold(al) = ANY (v_toks)
-                        OR EXISTS (SELECT 1 FROM unnest(v_toks) qt WHERE public._community_fold(al) LIKE qt || '%'))
+                     WHERE public._community_fold(al) = ANY (v_toks))
           OR v.town_key = ANY (v_toks)
-          OR EXISTS (SELECT 1 FROM unnest(v_toks) qt WHERE v.town_key LIKE qt || '%')
+          OR (
+            -- Finding 3: the un-indexable prefix fallback, bounded to the
+            -- last token and to a row set already narrowed by an indexed
+            -- predicate (the bounding box, or a recognised outward code).
+            v_last_tok IS NOT NULL
+            AND (
+              (_lat IS NOT NULL AND _lng IS NOT NULL
+                AND v.lat IS NOT NULL AND v.lng IS NOT NULL
+                AND v.lat BETWEEN _lat - v_lat_delta AND _lat + v_lat_delta
+                AND v.lng BETWEEN _lng - v_lng_delta AND _lng + v_lng_delta)
+              OR (v_outward IS NOT NULL AND v.outward = v_outward)
+            )
+            AND (
+              EXISTS (SELECT 1 FROM unnest(v.tokens) t WHERE t LIKE v_last_tok || '%')
+              OR v.town_key LIKE v_last_tok || '%'
+              OR EXISTS (SELECT 1 FROM unnest(coalesce(b.aliases, ARRAY[]::text[])) al
+                         WHERE public._community_fold(al) LIKE v_last_tok || '%')
+            )
+          )
         ))
       )
       AND (_lat IS NULL OR _lng IS NULL OR v.lat IS NULL OR v.lng IS NULL OR (
         v.lat BETWEEN _lat - v_lat_delta AND _lat + v_lat_delta AND
         v.lng BETWEEN _lng - v_lng_delta AND _lng + v_lng_delta
       ))
+    ORDER BY brand_match DESC, town_match DESC, distance_m ASC NULLS LAST, v.display_name ASC
     LIMIT v_limit
   ) z;
 
@@ -740,11 +835,13 @@ AS $$
 DECLARE
   v_uid       uuid := public._community_caller();
   v_radius    double precision := least(greatest(coalesce(_radius_m, 8000), 1), 50000);
-  v_limit     int := least(greatest(coalesce(_limit, 40), 1), 40);
+  v_limit     int := least(greatest(coalesce(_limit, 40), 1), 50);
   v_lat_delta double precision := public._gyms_bbox_lat_delta(v_radius);
   v_lng_delta double precision := public._gyms_bbox_lng_delta(_lat, v_radius);
   v_venues    jsonb;
 BEGIN
+  PERFORM public._community_rate_check(v_uid, 'gyms_read', 120, 120, interval '1 minute');
+
   IF _lat IS NULL OR _lng IS NULL THEN
     RAISE EXCEPTION USING message = 'invalid';
   END IF;
@@ -781,9 +878,11 @@ AS $$
 DECLARE
   v_uid    uuid := public._community_caller();
   v_key    text := nullif(btrim(coalesce(_town_key, '')), '');
-  v_limit  int := least(greatest(coalesce(_limit, 60), 1), 60);
+  v_limit  int := least(greatest(coalesce(_limit, 60), 1), 80);
   v_venues jsonb;
 BEGIN
+  PERFORM public._community_rate_check(v_uid, 'gyms_read', 120, 120, interval '1 minute');
+
   IF v_key IS NULL THEN
     RETURN jsonb_build_object('venues', '[]'::jsonb);
   END IF;
@@ -823,6 +922,8 @@ DECLARE
   v_brand        text;
   v_source_names jsonb;
 BEGIN
+  PERFORM public._community_rate_check(v_uid, 'gyms_read', 120, 120, interval '1 minute');
+
   SELECT * INTO v_v FROM public.gym_venues WHERE id = _id;
   IF NOT FOUND OR NOT public._gyms_visible(v_v, v_uid) THEN
     RETURN NULL;
@@ -910,14 +1011,39 @@ BEGIN
   v_website  := nullif(btrim(coalesce(_p ->> 'website', '')), '');
   v_operator := nullif(btrim(coalesce(_p ->> 'operator', '')), '');
 
+  -- Finding 1: every free-text field goes through the SAME blocked-terms
+  -- gate every other Community free-text field uses
+  -- (`_community_clean_text`, migrate_160:913), which raises
+  -- `content_not_allowed` on a match. Without this a pro-ED string became
+  -- gym_venues.display_name and, via the sync trigger, another user's
+  -- profile card.
+  v_name := public._community_clean_text(v_name);
+  v_address := public._community_clean_text(v_address);
+  v_town := public._community_clean_text(v_town);
+  IF v_operator IS NOT NULL THEN v_operator := public._community_clean_text(v_operator); END IF;
+  IF v_website IS NOT NULL THEN v_website := public._community_clean_text(v_website); END IF;
+
   -- GD-11 client contract (src/lib/gyms/transport.js GYM_ERROR_CODES,
   -- CommunityGymAddScreen's REFUSALS map): a postcode-shaped failure is
   -- `invalid_postcode` specifically, so the screen can say "check the
   -- postcode" rather than a generic "check what you have typed"; every
-  -- other field failure is the generic `invalid`.
-  IF length(v_name) < 1 OR length(v_name) > 120
+  -- other field failure is the generic `invalid`. Finding 2: `name` is
+  -- capped at 60, the same cap `community_upsert_profile` enforces on
+  -- `gym_label`, so a submitted name can never be longer than what the
+  -- profile field (and the sync trigger's own clamp) will accept.
+  IF length(v_name) < 1 OR length(v_name) > 60
      OR length(v_address) < 1 OR length(v_address) > 200
      OR length(v_town) < 1 OR length(v_town) > 80 THEN
+    RAISE EXCEPTION USING message = 'invalid';
+  END IF;
+  -- Finding 13: website and operator had no length or format validation
+  -- (a 200,000-character website was measured, stored twice). `website`
+  -- must look like a URL so nothing else can ever render it as a tappable
+  -- link.
+  IF v_website IS NOT NULL AND (length(v_website) > 200 OR v_website !~* '^https?://') THEN
+    RAISE EXCEPTION USING message = 'invalid';
+  END IF;
+  IF v_operator IS NOT NULL AND length(v_operator) > 80 THEN
     RAISE EXCEPTION USING message = 'invalid';
   END IF;
   IF NOT public._gyms_postcode_full_valid(v_postcode) THEN
@@ -937,22 +1063,30 @@ BEGIN
 
   v_tokens := public._gyms_tokens_of(v_name, v_town);
 
-  -- GD-06 duplicate check: 150 m of an existing open/pending venue, OR the
-  -- same postcode unit with token Jaccard >= 0.6.
+  -- Finding 9: gyms_submit always geocodes to the postcode SECTOR centroid
+  -- (above), so a 150 m distance test between two sector-centroid points
+  -- is meaningless -- two unrelated gyms in the same sector sit at
+  -- distance 0 by construction, which refused every submission after the
+  -- first in a sector. The duplicate test is text-only instead: same
+  -- postcode UNIT with token Jaccard >= 0.6 (a tight address match), or
+  -- same OUTWARD code with Jaccard >= 0.85 (a looser area match that
+  -- needs a near-identical name). Finding 15: bounded to the submission's
+  -- own outward code first (`gym_venues_outward_idx`) rather than scanning
+  -- every venue's tokens. Finding 4: only a row this caller may SEE is
+  -- ever offered back as a duplicate -- a stranger's invisible pending
+  -- venue inserts as normal and the moderator queue catches it.
   SELECT v.id, v.display_name INTO v_dup_id, v_dup_name
   FROM public.gym_venues v
   WHERE v.status IN ('open', 'pending')
+    AND v.outward = public._gyms_outward_of(v_postcode)
+    AND public._gyms_visible(v, v_uid)
     AND (
-      (v.lat IS NOT NULL AND v.lng IS NOT NULL
-        AND public._gyms_distance_m(v_lat, v_lng, v.lat, v.lng) <= 150)
-      OR (
-        v.postcode IS NOT NULL
+      (v.postcode IS NOT NULL
         AND public._gyms_postcode_compact(v.postcode) = public._gyms_postcode_compact(v_postcode)
-        AND public._gyms_token_jaccard(v.tokens, v_tokens) >= 0.6
-      )
+        AND public._gyms_token_jaccard(v.tokens, v_tokens) >= 0.6)
+      OR public._gyms_token_jaccard(v.tokens, v_tokens) >= 0.85
     )
-  ORDER BY (CASE WHEN v.lat IS NOT NULL
-                 THEN public._gyms_distance_m(v_lat, v_lng, v.lat, v.lng) ELSE 999999 END) ASC
+  ORDER BY public._gyms_token_jaccard(v.tokens, v_tokens) DESC
   LIMIT 1;
 
   IF v_dup_id IS NOT NULL THEN
@@ -1026,12 +1160,23 @@ AS $$
 DECLARE
   v_uid      uuid := public._community_caller();
   v_sub      public.gym_submissions%ROWTYPE;
+  v_venue    public.gym_venues%ROWTYPE;
   v_distinct int;
 BEGIN
   PERFORM public._community_rate_check(v_uid, 'gyms_confirm', 20, 20, interval '1 hour');
 
   SELECT * INTO v_sub FROM public.gym_submissions WHERE id = _id;
   IF NOT FOUND THEN RAISE EXCEPTION USING message = 'not_found'; END IF;
+  -- Finding 7: neither the venue nor the submission had a pending
+  -- precondition, so an ordinary account could flip a moderator-rejected
+  -- (or already-verified) row back to open.
+  IF v_sub.status <> 'pending' THEN
+    RAISE EXCEPTION USING message = 'not_allowed';
+  END IF;
+  SELECT * INTO v_venue FROM public.gym_venues WHERE id = _id;
+  IF NOT FOUND OR v_venue.status <> 'pending' THEN
+    RAISE EXCEPTION USING message = 'not_allowed';
+  END IF;
   IF v_sub.submitter_id = v_uid THEN
     RAISE EXCEPTION USING message = 'not_allowed';
   END IF;
@@ -1056,7 +1201,9 @@ BEGIN
     UPDATE public.gym_venues
        SET status = 'open', verification_status = 'user_submitted_verified'
      WHERE id = _id AND status = 'pending';
-    UPDATE public.gym_submissions SET status = 'verified', reviewed_at = now() WHERE id = _id;
+    UPDATE public.gym_submissions
+       SET status = 'verified', reviewed_at = now()
+     WHERE id = _id AND status = 'pending';
     INSERT INTO public.gym_venue_history (id, venue_id, change, before, after, actor, created_at)
     VALUES (gen_random_uuid(), _id, 'verify',
             jsonb_build_object('status', 'pending'), jsonb_build_object('status', 'open'),
@@ -1087,10 +1234,23 @@ BEGIN
   IF v_detail IS NOT NULL AND length(v_detail) > 500 THEN
     RAISE EXCEPTION USING message = 'invalid';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.gym_venues WHERE id = _venue_id) THEN
+  -- Finding 1: detail is free text and goes through the same blocked-terms
+  -- gate every other Community free-text field uses.
+  IF v_detail IS NOT NULL THEN v_detail := public._community_clean_text(v_detail); END IF;
+
+  -- Finding 14: the rail now runs BEFORE the existence check below, so
+  -- probing whether a venue id exists is itself rated rather than a free
+  -- oracle.
+  PERFORM public._community_rate_check(v_uid, 'gyms_report', 10, 10, interval '24 hours');
+
+  -- Finding 11: a closed venue, a merged venue and another user's
+  -- invisible pending venue all used to report `{"ok": true}`. Only a
+  -- venue this caller may SEE can be reported.
+  IF NOT EXISTS (
+    SELECT 1 FROM public.gym_venues v WHERE v.id = _venue_id AND public._gyms_visible(v, v_uid)
+  ) THEN
     RAISE EXCEPTION USING message = 'not_found';
   END IF;
-  PERFORM public._community_rate_check(v_uid, 'gyms_report', 10, 10, interval '24 hours');
 
   INSERT INTO public.gym_reports (id, venue_id, reporter_id, kind, detail, status, created_at)
   VALUES (gen_random_uuid(), _venue_id, v_uid, v_kind, v_detail, 'open', now());
@@ -1139,6 +1299,12 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION USING message = 'not_found'; END IF;
 
   IF v_action = 'approve' THEN
+    -- Finding 17: approve had no status precondition, so it could reopen a
+    -- venue that was already merged or closed while `succeeded_by` still
+    -- pointed elsewhere.
+    IF v_venue.status <> 'pending' THEN
+      RAISE EXCEPTION USING message = 'not_allowed';
+    END IF;
     UPDATE public.gym_venues
        SET status = 'open', verification_status = 'moderator_verified'
      WHERE id = _id;
@@ -1163,7 +1329,10 @@ BEGIN
             jsonb_build_object('status', 'closed'), v_uid::text, now());
 
   ELSIF v_action = 'merge' THEN
-    IF _merge_into IS NULL OR NOT EXISTS (SELECT 1 FROM public.gym_venues WHERE id = _merge_into) THEN
+    -- Finding 17: refuse a self-merge, and refuse a target that does not
+    -- exist.
+    IF _merge_into IS NULL OR _merge_into = _id
+       OR NOT EXISTS (SELECT 1 FROM public.gym_venues WHERE id = _merge_into) THEN
       RAISE EXCEPTION USING message = 'invalid';
     END IF;
     UPDATE public.gym_venues SET status = 'merged', succeeded_by = _merge_into WHERE id = _id;
@@ -1172,14 +1341,26 @@ BEGIN
      WHERE id = _id;
     -- GD-07: user associations survive a merge.
     UPDATE public.community_profiles SET gym_id = _merge_into WHERE gym_id = _id;
+    -- Finding 17: array_replace alone can leave a duplicate `_merge_into`
+    -- entry when the profile already held both gyms in other_gym_ids; the
+    -- replace and the de-duplicate happen together.
     UPDATE public.community_profiles
-       SET other_gym_ids = array_replace(other_gym_ids, _id, _merge_into)
+       SET other_gym_ids = (
+         SELECT coalesce(array_agg(DISTINCT g), ARRAY[]::uuid[])
+         FROM unnest(array_replace(other_gym_ids, _id, _merge_into)) g
+       )
      WHERE _id = ANY (other_gym_ids);
     INSERT INTO public.gym_venue_history (id, venue_id, change, before, after, actor, created_at)
     VALUES (gen_random_uuid(), _id, 'moderator_merge',
             jsonb_build_object('status', v_venue.status),
             jsonb_build_object('status', 'merged', 'succeeded_by', _merge_into),
             v_uid::text, now());
+    -- Finding 17: the merge also writes a history row on the TARGET venue
+    -- that absorbed it, never only on the source.
+    INSERT INTO public.gym_venue_history (id, venue_id, change, before, after, actor, created_at)
+    VALUES (gen_random_uuid(), _merge_into, 'moderator_merge_absorbed',
+            jsonb_build_object('absorbed_venue_id', _id),
+            jsonb_build_object('absorbed_venue_id', _id), v_uid::text, now());
   END IF;
 
   RETURN jsonb_build_object('ok', true, 'id', _id, 'action', v_action);
@@ -1212,9 +1393,13 @@ BEGIN
          resolved_at = now()
    WHERE id = _id;
 
+  -- Finding 12: this used to recount only the dismissed report's OWN kind,
+  -- so clearing needs_review for one kind's queue silently dropped another
+  -- kind's still-open reports off the moderator queue. Count open reports
+  -- across every kind for the venue.
   SELECT count(*) INTO v_other_open
   FROM public.gym_reports
-  WHERE venue_id = v_report.venue_id AND kind = v_report.kind AND status = 'open';
+  WHERE venue_id = v_report.venue_id AND status = 'open';
 
   IF v_other_open = 0 THEN
     UPDATE public.gym_venues SET needs_review = false WHERE id = v_report.venue_id;
@@ -1243,11 +1428,19 @@ SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_uid    uuid := public._community_caller();
-  v_others uuid[] := coalesce(_other_gym_ids, ARRAY[]::uuid[]);
+  v_others uuid[];
   v_id     uuid;
 BEGIN
   PERFORM public._community_require_profile(v_uid, true);
   PERFORM public._community_rate_check(v_uid, 'set_gyms', 60, 60, interval '1 hour');
+
+  -- Finding 16: de-duplicate and exclude the primary gym BEFORE the cap
+  -- and selectability checks below, so a repeated id can neither inflate
+  -- the count past 3 nor sit in the array twice.
+  SELECT coalesce(array_agg(DISTINCT g), ARRAY[]::uuid[])
+    INTO v_others
+  FROM unnest(coalesce(_other_gym_ids, ARRAY[]::uuid[])) g
+  WHERE g IS NOT NULL AND g IS DISTINCT FROM _gym_id;
 
   IF array_length(v_others, 1) > 3 THEN
     RAISE EXCEPTION USING message = 'invalid_input';
@@ -1307,6 +1500,11 @@ BEGIN
   IF v_key LIKE 'gym:%'
      AND v_key ~ '^gym:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' THEN
     v_gym_uuid := substring(v_key FROM 5)::uuid;
+    -- Finding 4: this branch had no visibility predicate at all, so a
+    -- pending venue was disclosed (name, coordinates, status) to every
+    -- caller, not only its submitter. A row this caller may not SEE
+    -- simply leaves v_venue/v_label NULL, the same "not found" shape
+    -- gyms_get already returns for the same case.
     SELECT jsonb_build_object(
              'id', gv.id, 'display_name', gv.display_name, 'venue_type', gv.venue_type,
              'town', gv.town, 'outward', gv.outward, 'postcode', gv.postcode,
@@ -1314,7 +1512,8 @@ BEGIN
              'verification_status', gv.verification_status),
            gv.display_name
       INTO v_venue, v_label
-    FROM public.gym_venues gv WHERE gv.id = v_gym_uuid;
+    FROM public.gym_venues gv
+    WHERE gv.id = v_gym_uuid AND public._gyms_visible(gv, v_uid);
   ELSE
     SELECT gym_label INTO v_label FROM public.community_profiles
     WHERE gym_key = v_key AND status = 'active' AND visibility = 'public'
@@ -1468,14 +1667,649 @@ BEGIN
          ORDER BY x.member_count DESC, x.display_name ASC), '[]'::jsonb)
   INTO v_out
   FROM (
+    -- Finding 6: this count had dropped every membership filter 161's own
+    -- body had (status, visibility, is_minor, area_key), so a minor on a
+    -- followers-only profile could be counted and named nationally, with
+    -- `count: 1` identifying them uniquely. All four are restored,
+    -- verbatim, exactly as 161's body enforced them.
     SELECT (elem ->> 'id')::uuid AS id, elem ->> 'display_name' AS display_name,
       (SELECT count(*)::int FROM public.community_profiles p
-        WHERE p.gym_key = 'gym:' || (elem ->> 'id')) AS member_count
+        WHERE p.gym_key = 'gym:' || (elem ->> 'id')
+          AND p.status = 'active' AND p.visibility = 'public' AND p.is_minor = false
+          AND p.area_key = v_area) AS member_count
     FROM jsonb_array_elements(coalesce(v_result -> 'venues', '[]'::jsonb)) elem
     LIMIT 8
   ) x;
 
   RETURN jsonb_build_object('gyms', v_out);
+END $$;
+
+-- ─── Part 9b: three more migrate_161 functions, re-issued (review 35) ────
+--
+-- Same "latest definition wins" pattern as community_gym_summary/
+-- community_gym_suggest above: each body below is migrate_161's, verbatim,
+-- with only the one review fix named in its own comment changed.
+
+-- Finding 2 (and finding 5's "same seam" note): migrate_161's merge step
+-- re-injects the EXISTING gym_label into every save that omits it, and the
+-- validation immediately below re-derives and re-caps it -- so a
+-- picker-derived label the trigger already wrote (up to the catalogue's
+-- own length, unfiltered) could fail community_upsert_profile's OWN 60-
+-- character cap or blocked-terms check on every future save, permanently
+-- locking the privacy toggle and rules re-consent. The fix: once a profile
+-- has gym_id set, `_community_gym_key_sync` (Part 5 above) is the SOLE
+-- writer of gym_key/gym_label -- this function leaves both columns
+-- exactly as they stood, never re-validating or re-deriving a value it
+-- did not itself receive from the caller. A profile with no gym_id (never
+-- picked one, or free-text from before the picker existed) keeps the
+-- exact 161 validation path, unchanged.
+CREATE OR REPLACE FUNCTION public.community_upsert_profile(_p jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_uid        uuid := public._community_caller();
+  v_existing   public.community_profiles%ROWTYPE;
+  v_is_new     boolean;
+  v_handle     text;
+  v_display    text;
+  v_bio        text;
+  v_avatar     text;
+  v_styles     text[];
+  v_goal       text;
+  v_setting    text;
+  v_area_label text;
+  v_area_key   text;
+  v_gym_label  text;
+  v_gym_key    text;
+  v_visibility text;
+  v_minor      boolean;
+  v_accept     int;
+  v_style      text;
+BEGIN
+  IF _p IS NULL OR jsonb_typeof(_p) <> 'object' THEN
+    RAISE EXCEPTION USING message = 'invalid_input';
+  END IF;
+
+  SELECT * INTO v_existing FROM public.community_profiles WHERE user_id = v_uid;
+  v_is_new := NOT FOUND;
+  -- Product review 2026-09-06 (findings 1-2): on an UPDATE, a key that is
+  -- absent from the payload keeps its current value; a key sent as null
+  -- clears it. Edit profile and the privacy screen send only the fields
+  -- they own, and a full-replace contract made every such save fail on
+  -- handle_invalid.
+  IF NOT v_is_new THEN
+    _p := jsonb_build_object(
+      'handle',        v_existing.handle,
+      'display_name',  v_existing.display_name,
+      'avatar_preset', v_existing.avatar_preset,
+      'bio',           v_existing.bio,
+      'styles',        to_jsonb(v_existing.styles),
+      'goal',          v_existing.goal,
+      'setting',       v_existing.setting,
+      'area_label',    v_existing.area_label,
+      'gym_label',     v_existing.gym_label,
+      'visibility',    v_existing.visibility
+    ) || coalesce(_p, '{}'::jsonb);
+  END IF;
+
+  IF NOT v_is_new AND v_existing.status = 'suspended' THEN
+    RAISE EXCEPTION USING message = 'profile_suspended';
+  END IF;
+
+  -- Handle.
+  v_handle := lower(btrim(coalesce(_p ->> 'handle', '')));
+  IF NOT public._community_handle_valid(v_handle) THEN
+    RAISE EXCEPTION USING message = 'handle_invalid';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM public.community_profiles
+    WHERE handle = v_handle AND user_id <> v_uid
+  ) THEN
+    RAISE EXCEPTION USING message = 'handle_taken';
+  END IF;
+  IF NOT v_is_new AND v_handle <> v_existing.handle THEN
+    IF v_existing.handle_changed_at IS NOT NULL
+       AND v_existing.handle_changed_at > now() - interval '30 days' THEN
+      RAISE EXCEPTION USING message = 'not_allowed';
+    END IF;
+  END IF;
+
+  -- Display name, bio, avatar. Free text goes through the keyword filter.
+  v_display := public._community_clean_text(btrim(coalesce(_p ->> 'display_name', '')));
+  IF v_display IS NULL OR length(v_display) < 1 OR length(v_display) > 40 THEN
+    RAISE EXCEPTION USING message = 'invalid_input';
+  END IF;
+
+  v_bio := nullif(btrim(coalesce(_p ->> 'bio', '')), '');
+  IF v_bio IS NOT NULL THEN
+    v_bio := public._community_clean_text(v_bio);
+    IF length(v_bio) > 160 THEN RAISE EXCEPTION USING message = 'invalid_input'; END IF;
+  END IF;
+
+  v_avatar := nullif(btrim(coalesce(_p ->> 'avatar_preset', '')), '');
+  IF v_avatar IS NOT NULL AND v_avatar !~ '^[a-z0-9_]{1,32}$' THEN
+    RAISE EXCEPTION USING message = 'invalid_input';
+  END IF;
+
+  -- Styles: at most three chosen keys. The key SHAPE is enforced here; the
+  -- list of offered styles is the app's (SD-05, "chosen, not inferred"), and a
+  -- key that is not offered simply never appears in any dimension.
+  v_styles := ARRAY[]::text[];
+  IF _p ? 'styles' AND jsonb_typeof(_p -> 'styles') = 'array' THEN
+    FOR v_style IN SELECT jsonb_array_elements_text(_p -> 'styles') LOOP
+      v_style := lower(btrim(coalesce(v_style, '')));
+      IF v_style = '' THEN CONTINUE; END IF;
+      IF v_style !~ '^[a-z0-9_]{2,32}$' THEN
+        RAISE EXCEPTION USING message = 'invalid_input';
+      END IF;
+      IF NOT (v_style = ANY (v_styles)) THEN v_styles := v_styles || v_style; END IF;
+    END LOOP;
+  END IF;
+  IF array_length(v_styles, 1) > 3 THEN RAISE EXCEPTION USING message = 'invalid_input'; END IF;
+
+  v_goal := nullif(btrim(coalesce(_p ->> 'goal', '')), '');
+  IF v_goal IS NOT NULL
+     AND v_goal NOT IN ('build_muscle', 'get_stronger', 'general_fitness', 'returning') THEN
+    RAISE EXCEPTION USING message = 'invalid_input';
+  END IF;
+
+  v_setting := nullif(btrim(coalesce(_p ->> 'setting', '')), '');
+  IF v_setting IS NOT NULL
+     AND v_setting NOT IN ('commercial_gym', 'home_gym', 'minimal_kit') THEN
+    RAISE EXCEPTION USING message = 'invalid_input';
+  END IF;
+
+  v_area_label := nullif(btrim(coalesce(_p ->> 'area_label', '')), '');
+  IF v_area_label IS NOT NULL THEN
+    v_area_label := public._community_clean_text(v_area_label);
+    IF length(v_area_label) > 40 THEN RAISE EXCEPTION USING message = 'invalid_input'; END IF;
+    v_area_key := nullif(public._community_fold(v_area_label), '');
+  END IF;
+
+  -- Review 35 finding 2: once the picker has set gym_id, the trigger
+  -- (Part 5) is the sole owner of gym_key/gym_label -- this function never
+  -- re-derives or re-validates them, so a catalogue name the picker wrote
+  -- can never fail THIS function's own 60-character cap or blocked-terms
+  -- check on a later, unrelated save (a privacy toggle, a re-consent).
+  IF v_existing.gym_id IS NOT NULL THEN
+    v_gym_label := v_existing.gym_label;
+    v_gym_key   := v_existing.gym_key;
+  ELSE
+    v_gym_label := nullif(btrim(coalesce(_p ->> 'gym_label', '')), '');
+    IF v_gym_label IS NOT NULL THEN
+      v_gym_label := public._community_clean_text(v_gym_label);
+      IF length(v_gym_label) > 60 THEN RAISE EXCEPTION USING message = 'invalid_input'; END IF;
+      -- A gym key is scoped by area, so two same-named chain branches in
+      -- different towns are different gyms and never merge into one
+      -- dimension.
+      v_gym_key := nullif(coalesce(v_area_key, '') || ':' || public._community_fold(v_gym_label), ':');
+    END IF;
+  END IF;
+
+  v_visibility := coalesce(nullif(btrim(coalesce(_p ->> 'visibility', '')), ''), 'public');
+  IF v_visibility NOT IN ('public', 'followers') THEN
+    RAISE EXCEPTION USING message = 'invalid_input';
+  END IF;
+
+  -- The minor rule runs on EVERY call, not only on create, so a birthday or a
+  -- corrected date of birth is honoured the next time the profile is saved.
+  v_minor := public._community_minor(v_uid);
+  IF v_minor THEN v_visibility := 'followers'; END IF;
+
+  -- The rate check runs LAST, after every validation, so a rejected save
+  -- (a taken handle, a name that fails the filter) does not spend one of the
+  -- day's five.
+  PERFORM public._community_rate_check(v_uid, 'profile_upsert', 5, 5);
+
+  IF v_is_new THEN
+    IF coalesce(_p ->> 'accept_rules_version', '') !~ '^[0-9]{1,6}$' THEN
+      RAISE EXCEPTION USING message = 'invalid_input';
+    END IF;
+    v_accept := (_p ->> 'accept_rules_version')::int;
+    IF v_accept IS DISTINCT FROM public._community_rules_version() THEN
+      RAISE EXCEPTION USING message = 'invalid_input';
+    END IF;
+
+    INSERT INTO public.community_profiles (
+      user_id, handle, display_name, avatar_preset, bio, styles, goal, setting,
+      area_label, area_key, gym_label, gym_key, visibility, is_minor, status,
+      rules_version, last_active_at)
+    VALUES (
+      v_uid, v_handle, v_display, v_avatar, v_bio, v_styles, v_goal, v_setting,
+      v_area_label, v_area_key, v_gym_label, v_gym_key, v_visibility, v_minor,
+      'active', public._community_rules_version(), now());
+
+    -- Article 6(1)(a) record on the existing append-only rail.
+    INSERT INTO public.consent_log
+      (user_id, consent_type, granted, granted_at, notice_version)
+    VALUES (v_uid, 'community_visibility', true, now(),
+            public._community_rules_version()::text);
+
+    PERFORM public._community_convert_partnerships(v_uid);
+  ELSE
+    UPDATE public.community_profiles SET
+      handle            = v_handle,
+      handle_changed_at = CASE WHEN v_handle <> v_existing.handle THEN now()
+                               ELSE v_existing.handle_changed_at END,
+      display_name      = v_display,
+      avatar_preset     = v_avatar,
+      bio               = v_bio,
+      styles            = v_styles,
+      goal              = v_goal,
+      setting           = v_setting,
+      area_label        = v_area_label,
+      area_key          = v_area_key,
+      gym_label         = v_gym_label,
+      gym_key           = v_gym_key,
+      visibility        = v_visibility,
+      is_minor          = v_minor,
+      last_active_at    = now()
+    WHERE user_id = v_uid;
+
+    -- Re-consent (rules version 2). An absent key changes nothing; a version
+    -- that is not the current one is bad input rather than a silent no-op.
+    IF _p ? 'accept_rules_version' THEN
+      IF coalesce(_p ->> 'accept_rules_version', '') !~ '^[0-9]{1,6}$' THEN
+        RAISE EXCEPTION USING message = 'invalid_input';
+      END IF;
+      v_accept := (_p ->> 'accept_rules_version')::int;
+      IF v_accept IS DISTINCT FROM public._community_rules_version() THEN
+        RAISE EXCEPTION USING message = 'invalid_input';
+      END IF;
+      IF coalesce(v_existing.rules_version, 0) < v_accept THEN
+        UPDATE public.community_profiles SET rules_version = v_accept WHERE user_id = v_uid;
+        INSERT INTO public.consent_log
+          (user_id, consent_type, granted, granted_at, notice_version)
+        VALUES (v_uid, 'community_visibility', true, now(), v_accept::text);
+      END IF;
+    END IF;
+
+    -- Also runs on update: a partner who joined AFTER this user did becomes a
+    -- mutual follow the next time either of them saves a profile.
+    PERFORM public._community_convert_partnerships(v_uid);
+  END IF;
+
+  RETURN public._community_profile_card(v_uid, v_uid);
+END $$;
+
+-- Lead addition (a): _community_profile_card carries gym_id wherever it
+-- already carries gym_label, under the SAME v_viewable gate (self, public,
+-- or accepted follower -- nothing about where a followers-only or minor
+-- profile trains leaks any wider than gym_label already did), plus
+-- other_gym_ids for the SELF view only (_viewer = _uid), since "other
+-- gyms" is used to power the caller's own Find People matching (lead
+-- addition (b) below) and is not a fact anyone else needs read back.
+-- Everything else is migrate_161's body, verbatim.
+CREATE OR REPLACE FUNCTION public._community_profile_card(_uid uuid, _viewer uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  p public.community_profiles%ROWTYPE;
+  v_following text;
+  v_viewable boolean;
+BEGIN
+  SELECT * INTO p FROM public.community_profiles WHERE user_id = _uid;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  -- Security review 2026-09-06 (finding 12): a suspended profile has no
+  -- card for anyone but itself.
+  IF p.status = 'suspended' AND _viewer <> _uid THEN RETURN NULL; END IF;
+  v_viewable := public._community_can_view(_viewer, _uid);
+
+  SELECT f.state INTO v_following
+  FROM public.community_follows f
+  WHERE f.follower_id = _viewer AND f.followee_id = _uid;
+
+  RETURN jsonb_build_object(
+    'user_id',         p.user_id,
+    'handle',          p.handle,
+    'display_name',    p.display_name,
+    'avatar_preset',   p.avatar_preset,
+    'bio',             p.bio,
+    -- Security review 2026-09-06 (finding 5): the chosen facts travel only
+    -- to someone who may view the profile (self, public, or accepted
+    -- follower). A followers-only card, and so every minor's card, is
+    -- handle, name, avatar, bio and counts. Nothing about where they train.
+    'styles',          CASE WHEN v_viewable THEN to_jsonb(p.styles) ELSE '[]'::jsonb END,
+    'goal',            CASE WHEN v_viewable THEN p.goal END,
+    'setting',         CASE WHEN v_viewable THEN p.setting END,
+    'area_label',      CASE WHEN v_viewable THEN p.area_label END,
+    'gym_id',          CASE WHEN v_viewable THEN p.gym_id END,
+    'gym_label',       CASE WHEN v_viewable THEN p.gym_label END,
+    'visibility',      p.visibility,
+    'follower_count',  p.follower_count,
+    'following_count', p.following_count,
+    -- Discovery campaign (blueprint section 11).
+    'connection',      public._community_connection_state(_viewer, _uid),
+    'connection_count', CASE WHEN v_viewable THEN p.connection_count END,
+    'open_to_partner', CASE WHEN v_viewable THEN p.open_to_partner ELSE false END,
+    'tp_days',           CASE WHEN v_viewable THEN to_jsonb(p.tp_days) END,
+    'tp_time_bands',     CASE WHEN v_viewable THEN to_jsonb(p.tp_time_bands) END,
+    'tp_sessions_band',  CASE WHEN v_viewable THEN p.tp_sessions_band END,
+    'tp_staple_lifts',   CASE WHEN v_viewable THEN to_jsonb(p.tp_staple_lifts) END,
+    'tp_experience_band', CASE WHEN v_viewable THEN p.tp_experience_band END,
+    'tp_programme_key',  CASE WHEN v_viewable THEN p.tp_programme_key END,
+    'tp_age_band',       CASE WHEN v_viewable THEN p.tp_age_band END,
+    -- Lead addition (a): the caller's OWN other gyms, never a viewer's.
+    'other_gym_ids',    CASE WHEN _viewer = _uid THEN to_jsonb(p.other_gym_ids) END,
+    'relationship',    jsonb_build_object(
+      'following',   coalesce(v_following, 'none'),
+      'followed_by', EXISTS (
+        SELECT 1 FROM public.community_follows f2
+        WHERE f2.follower_id = _uid AND f2.followee_id = _viewer
+          AND f2.state = 'accepted'),
+      'muted',       EXISTS (
+        SELECT 1 FROM public.community_mutes m
+        WHERE m.muter_id = _viewer AND m.muted_id = _uid),
+      'blocked',     EXISTS (
+        SELECT 1 FROM public.community_blocks b
+        WHERE b.blocker_id = _viewer AND b.blocked_id = _uid)
+    )
+  );
+END $$;
+
+-- Lead addition (b): 'gym' mode also matches a person whose other_gym_ids
+-- contains the VIEWER's gym_id (reason "Also trains at your gym", score
+-- 2); the primary gym_key match stays first and stays worth 3. No
+-- privacy predicate changes: the row-selection WHERE clause below keeps
+-- every 161 predicate (active, public, not minor, not blocked, not
+-- already connected) and only widens WHICH gym_key/other_gym_ids
+-- combination counts as a 'gym'-mode match. Everything else is
+-- migrate_161's body, verbatim.
+CREATE OR REPLACE FUNCTION public.community_find_people(
+  _mode text DEFAULT 'like_me', _cursor text DEFAULT NULL, _limit int DEFAULT 20)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_uid     uuid := public._community_caller();
+  v_lim     int  := public._community_limit(_limit);
+  v_off     int  := 0;
+  v_me      public.community_profiles%ROWTYPE;
+  v_key     text;
+  v_label   text;
+  v_count   int := 0;
+  v_row     record;
+  v_score   int;
+  v_reasons text[];
+  v_items   jsonb[] := ARRAY[]::jsonb[];
+  v_out     jsonb := '[]'::jsonb;
+  v_style   text;
+  v_band    text;
+  v_days    text[];
+  v_mconn   int;
+  v_mfoll   int;
+  v_lifts   int;
+  v_total   int;
+BEGIN
+  IF _mode IS NULL OR _mode NOT IN
+     ('like_me', 'gym', 'area', 'programme', 'partners', 'might_know') THEN
+    RAISE EXCEPTION USING message = 'invalid_input';
+  END IF;
+  v_me := public._community_require_profile(v_uid, false);
+  -- Security review 2026-09-06 (finding 10): the most expensive read in this
+  -- file, up to 300 profiles with four correlated subqueries each, had no
+  -- rail at all.
+  PERFORM public._community_rate_check(v_uid, 'find_people', 120, 120, interval '1 hour');
+
+  IF _cursor IS NOT NULL AND btrim(_cursor) <> '' THEN
+    IF btrim(_cursor) !~ '^[0-9]{1,6}$' THEN
+      RAISE EXCEPTION USING message = 'invalid_input';
+    END IF;
+    v_off := btrim(_cursor)::int;
+  END IF;
+
+  IF _mode = 'gym' THEN
+    v_key := v_me.gym_key; v_label := v_me.gym_label;
+  ELSIF _mode = 'area' THEN
+    v_key := v_me.area_key; v_label := v_me.area_label;
+  ELSIF _mode = 'programme' THEN
+    v_key := v_me.tp_programme_key;
+    IF v_key LIKE 'style:%' THEN
+      v_label := public._community_style_label(substring(v_key FROM 7));
+    -- Security review 2026-09-06 (finding 2): the label must re-ask the same
+    -- "may I see this programme" predicate community_dimension already gates
+    -- on, rather than reading the title with no visibility, owner-status or
+    -- block check at all. `tp_programme_key` is validated at write time now
+    -- (finding 8), so this is belt and braces against a value written before
+    -- that validation existed.
+    ELSIF v_key IS NOT NULL AND public._community_can_view_programme(v_uid, v_key::uuid) THEN
+      SELECT g.title INTO v_label FROM public.community_programmes g
+      WHERE g.id = v_key::uuid;
+    END IF;
+  ELSIF _mode = 'partners' THEN
+    -- Security review 2026-09-06 (finding 5): the label must say what the
+    -- scan and count actually restrict to, since the client renders this
+    -- string rather than composing its own claim.
+    IF coalesce((v_me.partner_prefs ->> 'same_gym_only')::boolean, false)
+       AND v_me.gym_key IS NOT NULL THEN
+      v_label := 'at your gym';
+    ELSE
+      v_label := 'in your area';
+    END IF;
+  END IF;
+
+  -- An honest empty door rather than a pretend list: the row on the screen
+  -- already says what would make it work (SD-28).
+  IF (_mode IN ('gym', 'area', 'programme') AND v_key IS NULL)
+     OR (_mode = 'partners' AND NOT coalesce(v_me.open_to_partner, false)) THEN
+    RETURN jsonb_build_object(
+      'mode', _mode, 'key', v_key, 'label', v_label,
+      'count', 0, 'people', '[]'::jsonb, 'cursor', NULL);
+  END IF;
+
+  FOR v_row IN
+    SELECT p.*
+    FROM public.community_profiles p
+    WHERE p.status = 'active'
+      AND p.visibility = 'public'
+      AND p.is_minor = false
+      AND p.user_id <> v_uid
+      AND NOT public._community_is_blocked(v_uid, p.user_id)
+      AND NOT public._community_is_connected(v_uid, p.user_id)
+      AND (_mode <> 'gym'       OR p.gym_key = v_key
+             OR (v_me.gym_id IS NOT NULL AND v_me.gym_id = ANY (p.other_gym_ids)))
+      AND (_mode <> 'area'      OR p.area_key = v_key)
+      AND (_mode <> 'programme' OR (p.tp_programme_key = v_key AND p.show_programmes = true))
+      AND (_mode <> 'partners'  OR p.open_to_partner = true)
+      -- Security review 2026-09-06 (finding 5): "same gym only" is a stored
+      -- preference (SD-25), not an unread column. A person who switched it
+      -- on is listed only to callers who share their gym.
+      AND (_mode <> 'partners'
+           OR NOT coalesce((p.partner_prefs ->> 'same_gym_only')::boolean, false)
+           OR (v_me.gym_key IS NOT NULL AND p.gym_key = v_me.gym_key))
+    ORDER BY p.last_active_at DESC
+    LIMIT 300
+  LOOP
+    v_score := 0;
+    v_reasons := ARRAY[]::text[];
+
+    IF v_me.gym_key IS NOT NULL AND v_row.gym_key = v_me.gym_key THEN
+      v_score := v_score + 3;
+      v_reasons := v_reasons || ('Trains at ' || coalesce(v_row.gym_label, v_me.gym_label));
+    -- Lead addition (b): a person who lists MY gym as one of their OTHER
+    -- gyms is a weaker, but still real, signal -- worth less than the
+    -- primary match above, which stays 3.
+    ELSIF v_me.gym_id IS NOT NULL AND v_row.other_gym_ids IS NOT NULL
+          AND v_me.gym_id = ANY (v_row.other_gym_ids) THEN
+      v_score := v_score + 2;
+      v_reasons := v_reasons || 'Also trains at your gym'::text;
+    END IF;
+
+    -- Every bare reason literal is cast to text: `text[] || 'literal'`
+    -- resolves to array || array against an UNKNOWN-typed literal and fails
+    -- at runtime with "malformed array literal". The concatenated reasons
+    -- ('Trains at ' || ...) are already text, so only the bare ones need it.
+    IF v_me.tp_programme_key IS NOT NULL
+       AND v_row.tp_programme_key = v_me.tp_programme_key THEN
+      v_score := v_score + 3;
+      v_reasons := v_reasons || 'On the same programme'::text;
+    END IF;
+
+    SELECT s INTO v_style
+    FROM unnest(v_me.styles) AS s
+    WHERE s = ANY (v_row.styles)
+    LIMIT 1;
+    IF v_style IS NOT NULL THEN
+      v_score := v_score + 2;
+      v_reasons := v_reasons || ('Also trains ' || public._community_style_label(v_style));
+    END IF;
+
+    IF v_me.area_key IS NOT NULL AND v_row.area_key = v_me.area_key THEN
+      v_score := v_score + 2;
+      v_reasons := v_reasons || ('Lists ' || coalesce(v_row.area_label, v_me.area_label));
+    END IF;
+
+    -- Mutual connections: two points each, capped at three.
+    SELECT count(*) INTO v_mconn FROM (
+      SELECT CASE WHEN c.user_a = v_uid THEN c.user_b ELSE c.user_a END AS m
+      FROM public.community_connections c
+      WHERE c.state = 'connected' AND (c.user_a = v_uid OR c.user_b = v_uid)
+      INTERSECT
+      SELECT CASE WHEN d.user_a = v_row.user_id THEN d.user_b ELSE d.user_a END
+      FROM public.community_connections d
+      WHERE d.state = 'connected'
+        AND (d.user_a = v_row.user_id OR d.user_b = v_row.user_id)
+    ) q;
+    IF v_mconn > 0 THEN
+      v_score := v_score + least(v_mconn * 2, 3);
+      v_reasons := v_reasons || ('Connected to ' || v_mconn::text || ' of your connections');
+    END IF;
+
+    -- Mutual follows: one point each, capped at three.
+    SELECT count(*) INTO v_mfoll
+    FROM public.community_follows mine
+    JOIN public.community_follows theirs ON theirs.follower_id = mine.followee_id
+    WHERE mine.follower_id = v_uid AND mine.state = 'accepted'
+      AND theirs.followee_id = v_row.user_id AND theirs.state = 'accepted';
+    IF v_mfoll > 0 THEN
+      v_score := v_score + least(v_mfoll, 3);
+      v_reasons := v_reasons || ('Followed by ' || v_mfoll::text || ' you follow');
+    END IF;
+
+    IF v_me.goal IS NOT NULL AND v_row.goal = v_me.goal THEN
+      v_score := v_score + 1;
+      v_reasons := v_reasons || 'Same goal'::text;
+    END IF;
+
+    -- Shared bands only ever compare what BOTH people chose to share.
+    IF v_me.tp_time_bands IS NOT NULL AND v_row.tp_time_bands IS NOT NULL THEN
+      SELECT b INTO v_band
+      FROM unnest(v_me.tp_time_bands) AS b
+      WHERE b = ANY (v_row.tp_time_bands)
+      ORDER BY array_position(public._community_tp_time_bands_list(), b)
+      LIMIT 1;
+      IF v_band IS NOT NULL THEN
+        v_score := v_score + 2;
+        v_reasons := v_reasons
+          || ('Both usually train ' || public._community_time_band_phrase(v_band));
+      END IF;
+    END IF;
+
+    IF v_me.tp_days IS NOT NULL AND v_row.tp_days IS NOT NULL THEN
+      SELECT array_agg(s.d ORDER BY array_position(public._community_tp_days_list(), s.d))
+      INTO v_days
+      FROM (SELECT unnest(v_me.tp_days) AS d
+            INTERSECT
+            SELECT unnest(v_row.tp_days)) s;
+      IF v_days IS NOT NULL AND array_length(v_days, 1) >= 2 THEN
+        v_score := v_score + 1;
+        v_reasons := v_reasons || ('Both train ' || public._community_day_list(v_days));
+      END IF;
+    END IF;
+
+    IF v_me.tp_sessions_band IS NOT NULL
+       AND v_row.tp_sessions_band = v_me.tp_sessions_band THEN
+      v_score := v_score + 1;
+      v_reasons := v_reasons
+        || ('Both train ' || public._community_sessions_phrase(v_me.tp_sessions_band)
+            || ' times a week');
+    END IF;
+
+    IF v_me.tp_experience_band IS NOT NULL
+       AND v_row.tp_experience_band = v_me.tp_experience_band THEN
+      v_score := v_score + 1;
+      v_reasons := v_reasons || 'Similar experience'::text;
+    END IF;
+
+    IF v_me.tp_staple_lifts IS NOT NULL AND v_row.tp_staple_lifts IS NOT NULL THEN
+      SELECT count(*) INTO v_lifts FROM (
+        SELECT unnest(v_me.tp_staple_lifts) AS l
+        INTERSECT
+        SELECT unnest(v_row.tp_staple_lifts)) s;
+      IF v_lifts > 0 THEN
+        v_score := v_score + least(v_lifts, 3);
+        -- Singular when there is one. The blueprint fixes the wording as
+        -- "<n> staple lifts in common"; "1 staple lifts in common" is not
+        -- English, and calm plain copy is a standing rule (CLAUDE.md 3).
+        v_reasons := v_reasons || (v_lifts::text ||
+          CASE WHEN v_lifts = 1 THEN ' staple lift in common'
+               ELSE ' staple lifts in common' END);
+      END IF;
+    END IF;
+
+    IF coalesce(v_me.open_to_partner, false) AND coalesce(v_row.open_to_partner, false) THEN
+      v_score := v_score + 2;
+      v_reasons := v_reasons || 'Both open to training together'::text;
+    END IF;
+
+    -- Minimum score 1 for the two modes with no key of their own; a keyed
+    -- door returns its matching rows even when nothing else is shared.
+    IF v_score >= 1 OR _mode IN ('gym', 'area', 'programme', 'partners') THEN
+      v_items := v_items || jsonb_build_object(
+        'card',    public._community_profile_card(v_row.user_id, v_uid),
+        'reasons', to_jsonb(v_reasons),
+        'score',   v_score,
+        'last_active_at', v_row.last_active_at);
+    END IF;
+  END LOOP;
+
+  v_total := coalesce(array_length(v_items, 1), 0);
+
+  SELECT coalesce(jsonb_agg(z.x ORDER BY (z.x ->> 'score')::int DESC,
+                            (z.x ->> 'last_active_at')::timestamptz DESC), '[]'::jsonb)
+  INTO v_out
+  FROM (
+    SELECT t.x
+    FROM (SELECT unnest(v_items) AS x) t
+    ORDER BY (t.x ->> 'score')::int DESC, (t.x ->> 'last_active_at')::timestamptz DESC
+    OFFSET v_off
+    LIMIT v_lim
+  ) z;
+
+  -- The door's live count: every candidate the mode matches, before scoring.
+  SELECT count(*) INTO v_count
+  FROM public.community_profiles p
+  WHERE p.status = 'active'
+    AND p.visibility = 'public'
+    AND p.is_minor = false
+    AND p.user_id <> v_uid
+    AND NOT public._community_is_blocked(v_uid, p.user_id)
+    AND NOT public._community_is_connected(v_uid, p.user_id)
+    AND (_mode <> 'gym'       OR p.gym_key = v_key
+           OR (v_me.gym_id IS NOT NULL AND v_me.gym_id = ANY (p.other_gym_ids)))
+    AND (_mode <> 'area'      OR p.area_key = v_key)
+    AND (_mode <> 'programme' OR (p.tp_programme_key = v_key AND p.show_programmes = true))
+    AND (_mode <> 'partners'  OR p.open_to_partner = true)
+    AND (_mode <> 'partners'
+         OR NOT coalesce((p.partner_prefs ->> 'same_gym_only')::boolean, false)
+         OR (v_me.gym_key IS NOT NULL AND p.gym_key = v_me.gym_key));
+
+  RETURN jsonb_build_object(
+    'mode',   _mode,
+    'key',    v_key,
+    'label',  v_label,
+    'count',  CASE WHEN _mode IN ('like_me', 'might_know') THEN v_total ELSE v_count END,
+    'people', v_out,
+    'cursor', CASE WHEN v_total > v_off + v_lim THEN (v_off + v_lim)::text END);
 END $$;
 
 -- ─── Part 10: delete_user_data() re-issued IN FULL a third time ──────────
@@ -1665,6 +2499,10 @@ BEGIN
   -- link back to the deleted person does not, the same posture
   -- community_reports.reporter_id already has above.
   BEGIN UPDATE gym_submissions SET submitter_id = NULL WHERE submitter_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
+  -- Finding 8: a moderator's id, which this same file introduces on
+  -- gym_submissions.reviewed_by, survived erasure. Anonymised alongside
+  -- submitter_id above.
+  BEGIN UPDATE gym_submissions SET reviewed_by = NULL WHERE reviewed_by = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
   BEGIN UPDATE gym_reports SET reporter_id = NULL WHERE reporter_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
   -- Lead ruling 2026-09-07 (GDPR data minimisation): the history actor and
   -- the 'user' source record also carry the caller's id as text, so they are
@@ -1683,6 +2521,12 @@ BEGIN
 END;
 $$;
 
+-- Finding 19: this used to rely solely on CREATE OR REPLACE preserving
+-- migrate_130's original revoke of PUBLIC/anon, which the contract test
+-- (src/lib/__tests__/dbFunctionPrivilege.contract.test.js) confirms is
+-- true in practice -- but that made this file incorrect on a genuinely
+-- fresh cluster (130 never applied). A defensive revoke costs nothing.
+REVOKE ALL ON FUNCTION public.delete_user_data() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.delete_user_data() TO authenticated;
 
 -- ─── Part 11: privileges ─────────────────────────────────────────────────
@@ -1712,7 +2556,15 @@ BEGIN
     '_gyms_token_jaccard(text[], text[])',
     '_gyms_visible(public.gym_venues, uuid)',
     '_gyms_selectable(uuid, uuid)',
-    '_community_gym_key_sync()'
+    '_community_gym_key_sync()',
+    -- Review 35 lead addition (a): restated here for the same reason
+    -- community_gym_summary/community_gym_suggest are restated below --
+    -- CREATE OR REPLACE alone does not change an already-granted ACL, and
+    -- this internal helper's ACL (revoked from authenticated since
+    -- migrate_161) is unchanged by this file, but pinning it here keeps
+    -- the acceptance check and the guard tests honest about what this
+    -- file actually re-issues.
+    '_community_profile_card(uuid, uuid)'
   ] LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION public.%s FROM PUBLIC, anon, authenticated', sig);
   END LOOP;
@@ -1730,7 +2582,12 @@ BEGIN
     'gyms_review_report(uuid, text)',
     'community_set_gyms(uuid, uuid[])',
     'community_gym_summary(text)',
-    'community_gym_suggest(text, text)'
+    'community_gym_suggest(text, text)',
+    -- Review 35 fixes F2 and lead addition (b): restated for the same
+    -- readability/honesty reason as the two lines above; the ACL itself
+    -- is unchanged from migrate_161.
+    'community_upsert_profile(jsonb)',
+    'community_find_people(text, text, int)'
   ] LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION public.%s FROM PUBLIC, anon', sig);
     EXECUTE format('GRANT EXECUTE ON FUNCTION public.%s TO authenticated', sig);
@@ -1746,6 +2603,14 @@ END $$;
 -- pinned, executable by `authenticated` for exactly the gyms_*/
 -- community_set_gyms client RPCs and by nobody for any `_gyms_*` helper or
 -- `_community_gym_key_sync`; the two community_profiles columns must exist.
+-- Review 35 finding 18: the function query below now also names every
+-- migrate_161 function this file re-issues (community_gym_summary,
+-- community_gym_suggest, community_upsert_profile, _community_profile_card,
+-- community_find_people) plus delete_user_data, so a bad apply that left
+-- any of them in its 161 (or, for delete_user_data, 160/161) state shows up
+-- here rather than passing silently; and a table-grants query covers the
+-- SELECT-only re-grant to `authenticated` the header promises, since the
+-- earlier check above only proved RLS was ON, never what was GRANTed.
 -- Run this after the apply and read the output before declaring the
 -- migration landed.
 
@@ -1760,6 +2625,18 @@ WHERE t.table_schema = 'public'
     'gym_brands', 'gym_venues', 'gym_venue_sources', 'gym_venue_history',
     'gym_submissions', 'gym_reports', 'gym_postcode_sectors')
 ORDER BY t.table_name;
+
+-- Finding 18: table GRANTs, not just RLS-enabled. Expect SELECT/
+-- authenticated on the three catalogue tables and NOTHING for the four
+-- rpc_only tables (an empty result for those four is the PASS state).
+SELECT g.table_name, g.grantee, g.privilege_type
+FROM information_schema.role_table_grants g
+WHERE g.table_schema = 'public'
+  AND g.table_name IN (
+    'gym_brands', 'gym_venues', 'gym_venue_sources', 'gym_venue_history',
+    'gym_submissions', 'gym_reports', 'gym_postcode_sectors')
+  AND g.grantee IN ('anon', 'authenticated')
+ORDER BY g.table_name, g.grantee, g.privilege_type;
 
 SELECT column_name, data_type, is_nullable, column_default
 FROM information_schema.columns
@@ -1776,5 +2653,10 @@ FROM pg_proc p
 JOIN pg_namespace n ON n.oid = p.pronamespace
 WHERE n.nspname = 'public'
   AND (p.proname LIKE 'gyms\_%' OR p.proname LIKE '\_gyms\_%'
-       OR p.proname IN ('community_set_gyms', '_community_gym_key_sync'))
+       OR p.proname IN (
+         'community_set_gyms', '_community_gym_key_sync',
+         'community_gym_summary', 'community_gym_suggest',
+         'community_upsert_profile', '_community_profile_card',
+         'community_find_people', 'delete_user_data'
+       ))
 ORDER BY p.proname;

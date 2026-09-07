@@ -317,8 +317,16 @@ describe('GD-11: submission and confirmation follow the founder brief exactly', 
     const at = CODE.indexOf('CREATE OR REPLACE FUNCTION public.gyms_submit(');
     const body = CODE.slice(at, CODE.indexOf('END $$;', at));
     expect(body).toMatch(/RETURN jsonb_build_object\('duplicate_of', v_dup_id, 'display_name', v_dup_name\)/);
-    expect(body).toMatch(/<= 150/);
+    // Review 35 finding 9: every submission is geocoded to the postcode
+    // SECTOR centroid, so a 150 m distance test is meaningless and was
+    // dropped; the duplicate test is text-only (postcode unit >= 0.6,
+    // outward >= 0.85), bounded to the outward code (finding 15) and
+    // restricted to a row this caller may SEE (finding 4).
+    expect(body).not.toMatch(/<= 150/);
     expect(body).toMatch(/>= 0\.6/);
+    expect(body).toMatch(/>= 0\.85/);
+    expect(body).toContain('v.outward = public._gyms_outward_of(v_postcode)');
+    expect(body).toContain('public._gyms_visible(v, v_uid)');
   });
 
   test('a second distinct confirmer flips the venue open and verified', () => {
@@ -390,8 +398,18 @@ describe('GD-14: Community integration', () => {
     const at = CODE.indexOf('CREATE OR REPLACE FUNCTION public._community_gym_key_sync()');
     const body = CODE.slice(at, CODE.indexOf('END $$;', at));
     expect(body).toContain("NEW.gym_key := 'gym:' || NEW.gym_id::text");
-    expect(body).toContain('NEW.gym_label := v_display');
+    // Review 35 findings 1/2: clamped to the same 60 characters
+    // community_upsert_profile's own gym_label cap enforces.
+    expect(body).toContain('NEW.gym_label := left(v_display, 60)');
     expect(CODE).toMatch(/BEFORE INSERT OR UPDATE OF gym_id ON public\.community_profiles/);
+  });
+
+  test('review 35 finding 5: the trigger clears a picker-linked gym_key/gym_label when gym_id goes back to NULL', () => {
+    const at = CODE.indexOf('CREATE OR REPLACE FUNCTION public._community_gym_key_sync()');
+    const body = CODE.slice(at, CODE.indexOf('END $$;', at));
+    expect(body).toMatch(/ELSIF TG_OP = 'UPDATE' AND coalesce\(OLD\.gym_key, ''\) LIKE 'gym:%' THEN/);
+    expect(body).toContain('NEW.gym_key := NULL');
+    expect(body).toContain('NEW.gym_label := NULL');
   });
 
   test('community_set_gyms validates every id and caps other gyms at 3', () => {
@@ -406,7 +424,9 @@ describe('GD-14: Community integration', () => {
     const at = CODE.indexOf('CREATE OR REPLACE FUNCTION public.community_gym_summary(');
     const body = CODE.slice(at, CODE.indexOf("CREATE OR REPLACE FUNCTION public.community_gym_suggest(", at));
     expect(body).toMatch(/v_key LIKE 'gym:%'/);
-    expect(body).toMatch(/FROM public\.gym_venues gv WHERE gv\.id = v_gym_uuid/);
+    // Review 35 finding 4: the gym: branch now applies _gyms_visible, so a
+    // pending venue is disclosed only to its submitter.
+    expect(body).toMatch(/FROM public\.gym_venues gv\s+WHERE gv\.id = v_gym_uuid AND public\._gyms_visible\(gv, v_uid\)/);
     expect(body).toMatch(
       /SELECT gym_label INTO v_label FROM public\.community_profiles\s+WHERE gym_key = v_key AND status = 'active' AND visibility = 'public'/,
     );
