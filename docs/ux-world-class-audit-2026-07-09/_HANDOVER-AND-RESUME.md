@@ -1,6 +1,32 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-07 — COMMUNITY DISCOVERY (campaign 2) LANDED; UK GYM DATABASE BUILT; both on branch, merge pending ★
+
+Branch `claude/volyume-social-discovery-h7dknu`. Campaign 2 (discovery,
+connections, messaging): spec `docs/social-discovery-2026-09-06/
+70-DISCOVERY-BLUEPRINT.md`, rulings SD-20..SD-32 in `40-DECISIONS.md`,
+security review `72` and product review `73` fixed (6fe42da, 847167c),
+records `50-VERIFICATION.md` and `60-FINAL-REPORT.md` campaign 2
+sections (9b72a0c). Gym database: folder `docs/gym-database-2026-09-06/`
+(README = map). Rulings GD-01..GD-26 in `20-BLUEPRINT.md`; the lead
+audited each of four pipeline builds by sampling and ruled GD-18..GD-26
+on what was observed (names, corroboration, hierarchy, matching, review
+tiers, repository hygiene, name bounds, town casing, operator-feed
+absence). Landed: pipeline `scripts/gyms/` + `data/gyms/*.gz` (46,817
+venues; Volt Gym Burscough and PureGym Motherwell present), migration
+162 (WRITTEN NOT APPLIED) with the twenty findings of security review
+`35` fixed (f09c612), app side (`src/lib/gyms`, GymPicker,
+CommunityGymAddScreen, profile/Join wiring, confirm and report rows;
+7ca3b76). Full tree at 3a3c4ce: lint 0, tsc 0, 1245 suites / 17709
+tests. IN FLIGHT at 06:00 UTC: Opus re-review of 162 (append to `35`;
+brief: re-run probes 1-9, 11-14, 16, 18; compare the three re-issued
+Community functions with their 161 bodies; check the 120/min read rail;
+fresh verdict line) and Sonnet records `30`/`40`/`50`. NEXT: land both,
+merge to main (reset local main to origin/main first), push; founder
+items in `docs/TASKBOARD.md` section 3 (gym block: apply batch on the
+phrase, expo-location decision, sportscotland feed).
+===============================================================================
 ## ★ 2026-09-06 — COMMUNITY REPLACES PARTNERS (social / discovery / sharing) ★
 
 Founder brief (in chat): one autonomous end-to-end task to replace

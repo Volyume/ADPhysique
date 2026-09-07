@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## UK GYM MASTER DATABASE (2026-09-06, third workstream) — RESEARCH IN FLIGHT on `claude/volyume-social-discovery-h7dknu`
+## UK GYM MASTER DATABASE (2026-09-06, third workstream) — BUILT on `claude/volyume-social-discovery-h7dknu`; 162 RE-REVIEW + RECORDS 30/40/50 IN FLIGHT; NOT YET MERGED
 
 Founder brief in chat: a national canonical gym and fitness-venue
 directory under Community (onboarding gym, primary and other gyms, people
@@ -61,10 +61,20 @@ migration 162 + targets + README + rpc-only guard (Sonnet: blueprint
 dimension report sheet, blueprint "App" + "Tests and records"). Then:
 Opus security review of 162, coverage report `30`, verification `40`,
 final report `50`, device checklist, merge.
+Status 2026-09-07 06:00 UTC: pipeline landed and rebuilt four times
+under lead audit (rulings GD-18..GD-26 in `20-BLUEPRINT.md`; commits
+7c0c6f0, 41ac05c, 3a3c4ce; 46,817 venues, both named lookups present);
+migration 162 landed (25282a2) with all twenty security-review findings
+fixed (35, f09c612); app side landed (7ca3b76). Full tree at 3a3c4ce:
+lint 0, tsc 0, 1245 suites / 17709 tests passed. IN FLIGHT: Opus
+re-review of 162 (appends to `35`; recovery: re-dispatch from the
+re-review brief in the handover), Sonnet records `30`/`40`/`50`
+(recovery: re-dispatch from the blueprint "Tests and records" list).
+Then merge to main. Founder items: section 3 (gym block).
 
 ---
 
-## COMMUNITY: DISCOVERY, CONNECTIONS AND MESSAGING (2026-09-06, second campaign) — IN FLIGHT on `claude/volyume-social-discovery-h7dknu`
+## COMMUNITY: DISCOVERY, CONNECTIONS AND MESSAGING (2026-09-06, second campaign) — LANDED on `claude/volyume-social-discovery-h7dknu` (records `50`/`60` updated 9b72a0c); MERGE PENDING with the gym workstream; CLOUD 161 WRITTEN NOT APPLIED
 
 Founder addition to the Community brief (in chat): best-in-class people
 discovery, a Follow / Connect / Message relationship model, training
@@ -2370,8 +2380,18 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
-- **GYM DIRECTORY (2026-09-06) - three unlocks, none blocking the free
-  stack.** Founder 2026-09-07: (1) registering the sportscotland account now
+- **GYM DIRECTORY (2026-09-07) - founder items after the build.** (a)
+  When 162 passes re-review: say "run against production" for the batch
+  160 + 161 + 162 and the generated seed chunks (`node
+  scripts/gyms/seed-sql.mjs` writes `supabase/seed_gyms_v1/`, sectors
+  before venues); Claude runs and re-verifies read-only. (b) DECISION:
+  add `expo-location` (MIT, Expo SDK module) so "gyms near me" can use
+  the device position on an explicit tap only, never stored (GD-13)?
+  Without it near-me runs from a typed postcode, which is what ships now.
+  (c) sportscotland: send the Fitness Suites download or WFS link when
+  the account is live; Scotland today rests on Overture plus operator
+  feeds (2,770 venues). Earlier unlocks, kept for the record:
+  three unlocks, none blocking the free stack.** Founder 2026-09-07: (1) registering the sportscotland account now
   (instructions delivered in chat; send the Fitness Suites download or the
   WFS link and token); (2) DuckDB APPROVED as a pipeline-only binary in the
   scratch space (never the app or package.json); (3) not raised. (1) Register a free sportscotland Spatial Hub account
