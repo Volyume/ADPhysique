@@ -15,11 +15,14 @@
  * blocked by distance.
  *
  * "Use my location" only ever appears when `deviceLocation.isAvailable()`
- * is true (false in this build until the founder's location-permission
- * dependency decision), and the coordinate it returns is held in this
- * component's own state for the session only: it is never read from or
- * written to any storage, and this file names no location API directly
- * (`deviceLocation.js` is the one place that boundary can move).
+ * is true (founder decision 2026-09-07, "yes to both": `expo-location`
+ * armed for exactly this one use). The coordinate it returns is held in
+ * this component's own state for the session only: it is never read from
+ * or written to any storage, and this file names no location API
+ * directly (`deviceLocation.js` is the ONLY file allowed to). A refused
+ * permission (`code: 'denied'`) withdraws the button and shows the calm
+ * line instead of re-prompting; the search route stays available either
+ * way.
  *
  * A venue still waiting on its second confirmation carries a "Pending"
  * badge (`GymRow`); a venue whose operator has not confirmed it still
@@ -177,6 +180,12 @@ export default function GymPicker({
     return () => { alive = false; };
   }, [centroid, radiusMiles]);
 
+  // 'denied' | 'timeout' | 'unavailable' | null. Once 'denied', the
+  // button itself is withdrawn (see the render below) rather than left
+  // to be tapped again: neither platform re-prompts after a refusal
+  // without a trip to Settings this screen does not offer, so a second
+  // tap could only ever fail the same way - "never re-prompt
+  // automatically" (founder decision 2026-09-07).
   async function useMyLocation() {
     setLocating(true);
     setLocateError(null);
@@ -187,7 +196,7 @@ export default function GymPicker({
       // than the near() argument below (GD-13, LJ-01).
       setCentroid({ kind: 'device', label: null, lat, lng });
     } catch (e) {
-      setLocateError(e?.code === 'offline' ? 'offline' : 'unavailable');
+      setLocateError(e?.code === 'denied' ? 'denied' : (e?.code === 'timeout' ? 'timeout' : 'unavailable'));
     } finally {
       setLocating(false);
     }
@@ -218,7 +227,7 @@ export default function GymPicker({
         </View>
       ) : null}
 
-      {locationAvailable ? (
+      {locationAvailable && locateError !== 'denied' ? (
         <Button
           variant="secondary"
           size="sm"
@@ -229,11 +238,15 @@ export default function GymPicker({
           accessibilityLabel="Use my location"
         />
       ) : null}
-      {locateError ? (
+      {locateError === 'denied' ? (
+        <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+          Location is off for Volyume. Search by gym, town or postcode instead.
+        </Text>
+      ) : locateError ? (
         <Text style={[styles.error, { ...t.type.bodySm, color: t.colors.error }]}>
-          {locateError === 'offline'
-            ? 'You are offline. Try again when you have a connection.'
-            : 'Could not find your location just now.'}
+          {locateError === 'timeout'
+            ? 'Could not find your location in time. Try again, or search instead.'
+            : 'Could not find your location just now. Search by gym, town or postcode instead.'}
         </Text>
       ) : null}
 

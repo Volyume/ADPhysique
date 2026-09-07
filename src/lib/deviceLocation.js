@@ -4,47 +4,89 @@
  * 1.2; `20-JUDGEMENT.md` section 7, LJ-01: "Current or live location:
  * Never stored... discarded").
  *
- * STUB. No location API of any kind is wired in yet, and `expo-location`
- * is NOT in package.json (CLAUDE.md: never add a dependency without
- * asking). Nothing else in the client may reference a location API
- * directly: `GymPicker` only ever calls the two functions this module
- * exports, and reacts to `isAvailable()` to decide whether to offer
- * "Use my location" at all. The gym directory guard
- * (`src/__tests__/community.privacy.guard.test.js`, GD-13 section) walks
- * `src/lib/gyms` for exactly the API names this stub would introduce once
- * armed, so this file is the ONE place that boundary can ever move.
+ * ARMED (founder decision 2026-09-07, "yes to both", relayed in chat).
+ * `expo-location` is added for exactly one use: "Use my location" in the
+ * gym finder, an explicit tap, foreground-only, approximate accuracy, the
+ * coordinate handed to a single gym search and then discarded. This is
+ * the ONLY file under `src/` allowed to name the dependency or a
+ * position API (`src/__tests__/community.privacy.guard.test.js`,
+ * "the device location adapter is the only door" section, enforces
+ * this); every caller (`GymPicker`) only ever calls the two functions
+ * below and branches on their result or `.code`. This file may request a
+ * foreground permission and read ONE current position; it may never
+ * watch, subscribe, background, read a cached last-known position, or
+ * write anything to any local storage - the same guard's
+ * `LOCATION_ADAPTER_FORBIDDEN` list pins that half.
  *
- * TO ARM (once the founder approves the location-permission dependency):
- * change exactly these two things, nothing else.
- *   1. `isAvailable()` returns `true` instead of `false` (guarded on the
- *      approved API actually being present, e.g. a module existence
- *      check), once the dependency is added.
- *   2. `getApproximatePosition()` resolves `{ lat, lng }` from that API's
- *      one-shot, approximate-accuracy read, instead of rejecting.
- * `GymPicker` already calls both functions and only branches on their
- * result, so no caller needs to change.
+ * `require('expo-location')` is lazy and wrapped in try/catch rather
+ * than a static import, so a build where the native module failed to
+ * link (rather than one where the founder has simply not approved it -
+ * that stub state is `git`-history now) degrades to `isAvailable()`
+ * false instead of crashing the whole picker.
  */
 
+const TIMEOUT_MS = 15000;
+
+/** Lazy, defensive load of the dependency - see the header. */
+function loadLocation() {
+  try {
+    // eslint-disable-next-line global-require
+    return require('expo-location');
+  } catch (_e) {
+    return null;
+  }
+}
+
 /**
- * True once a location API is wired and the app is allowed to offer
- * "Use my location". Always false in this build.
+ * True once the location dependency is actually present. Checked live
+ * (never cached) so a caller always reflects the real module state.
  *
  * @returns {boolean}
  */
 export function isAvailable() {
-  return false;
+  return !!loadLocation();
 }
 
 /**
  * A one-off, approximate device position for a single "Use my location"
- * tap. The coordinate this would resolve is never persisted anywhere
- * (LJ-01, GD-13): the caller holds it in component state for that
- * session only, and it is never written to storage, the profile, or the
- * server as anything other than a momentary search argument.
+ * tap: requests the FOREGROUND permission only, then one low-accuracy
+ * fix. The coordinate this resolves is never persisted anywhere (LJ-01,
+ * GD-13): the caller holds it in component state for that session only,
+ * and it is never written to storage, the profile, or the server as
+ * anything other than a momentary search argument.
  *
  * @returns {Promise<{lat: number, lng: number}>}
- * @rejects {Error & {code: 'unavailable'}} always, until armed.
+ * @rejects {Error & {code: ('denied'|'unavailable'|'timeout')}}
  */
-export function getApproximatePosition() {
-  return Promise.reject(Object.assign(new Error('unavailable'), { code: 'unavailable' }));
+export async function getApproximatePosition() {
+  const Location = loadLocation();
+  if (!Location) {
+    throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
+  }
+  try {
+    const permission = await Location.requestForegroundPermissionsAsync();
+    if (permission?.status !== 'granted') {
+      throw Object.assign(new Error('denied'), { code: 'denied' });
+    }
+    // The timer is cleared whichever side settles first: an uncleared
+    // timeout would reject a promise nobody is listening to fifteen
+    // seconds after every successful read.
+    let timer = null;
+    const timeout = new Promise((_resolve, reject) => {
+      timer = setTimeout(
+        () => reject(Object.assign(new Error('timeout'), { code: 'timeout' })),
+        TIMEOUT_MS,
+      );
+    });
+    const read = Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low })
+      .then((pos) => ({ lat: pos.coords.latitude, lng: pos.coords.longitude }));
+    try {
+      return await Promise.race([read, timeout]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  } catch (e) {
+    if (e?.code === 'denied' || e?.code === 'timeout') throw e;
+    throw Object.assign(new Error('unavailable'), { code: 'unavailable' });
+  }
 }

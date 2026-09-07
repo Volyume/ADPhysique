@@ -218,7 +218,42 @@ CommunityHubScreen.js`, `src/lib/community/feed.js`,
   `_filters` absent.
 
 ## 2. Build record
-(filled by the lead as lanes land)
+
+- **S2 gym finder, Join step, place picker (Sonnet) — landed after lead
+  review.** `src/lib/deviceLocation.js` (armed on the founder's yes;
+  lead fixed an uncleared timeout timer that would have rejected an
+  unlistened promise after every successful read), `src/lib/gyms/index.js`
+  (`placeCentroid`, `near` returns `{venues, truncated}`), `rank.js`
+  (null distance scores 0, unconfirmed penalty 40, reasons never
+  rendered), `GymPicker.js` rebuilt as the finder (Use my location,
+  visible 5/10/25/50 band chips, text matches never cut by the band,
+  truncation footer, add-gym on every list and empty state, denied
+  withdraws the button and never re-prompts), new `PlacePicker.js`,
+  `CommunityJoinScreen.js` gym step (main + up to three others, "Not
+  now"; required onboarding fields untouched), `CommunityEditProfileScreen.js`
+  place picker replacing the area box with "Use my gym's town",
+  `profile.js` `setPlace`, `__mocks__/expo-location.js` + jest mapper.
+  Deviations accepted: SectionLabel not h3 (V19); four radio chips for
+  the band (V6/V12); `distanceLabel` always one decimal; `near()` shape
+  change (no prior caller). Lane tests 12 suites / 953 green; lint clean.
+- **Lead: dependency and platform config.** `expo-location` ~19.0.8;
+  app.json plugin, iOS `NSLocationDefaultAccuracyReduced`, Android
+  FINE and BACKGROUND location blocked; privacy guard extended so the
+  adapter is the only door and only opens forwards (guard green on the
+  full tree).
+- **S1 migration 163 (Sonnet) — reviewed; two follow-ups in flight
+  (brand+postcode merge signal in `gyms_submit`, message preview in the
+  moderation queue).** Lead review of the privacy-critical bodies:
+  `community_set_place` takes text only and stores the PLACE centroid;
+  `_community_profile_card` exposes `age_band` only through the
+  consented column; every fallback and filter branch keeps
+  `is_minor = false`; `community_report('message')` requires the caller
+  to be a party and names the sender as owner. Weights +2/+1/+1 for
+  place reasons confirmed. Lane tests 6 suites / 289 green; full
+  `src/__tests__` scope 108 suites green.
+- **Lead slip, corrected:** earlier board commits used `git add -A`
+  and swept in-flight lane files into intermediate commits. From here
+  files are staged explicitly after review.
 
 ## 3. Verification
 (lint, tests, guards, device checklist; filled at landing)

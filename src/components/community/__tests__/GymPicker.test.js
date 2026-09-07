@@ -18,7 +18,9 @@
  *    navigates to CommunityGymAdd carrying the typed text AND this
  *    picker's own `onSelect`, so an added gym is selected here;
  *  - "Use my location" appears only when `deviceLocation.isAvailable()`
- *    is true, and never persists the coordinate it obtains;
+ *    is true, and never persists the coordinate it obtains; a `denied`
+ *    refusal withdraws the button and shows the calm line instead of
+ *    re-prompting, and a `timeout` says so without hanging the picker;
  *  - selecting a row calls `onSelect` with the venue;
  *  - a query under the minimum length never reaches the network.
  *
@@ -406,6 +408,34 @@ describe('"Use my location" (deviceLocation.js)', () => {
     expect(near).toHaveBeenCalledWith(51.5, -0.1, expect.objectContaining({ radiusM: expect.any(Number) }));
     // The band appears (a centroid is now known) with no place label rendered.
     expect(texts(tree)).toContain('5 miles');
+    act(() => { tree.unmount(); });
+  });
+
+  test('a denied permission withdraws the button and shows the calm line, never re-prompting', async () => {
+    deviceLocation.isAvailable.mockReturnValue(true);
+    deviceLocation.getApproximatePosition.mockRejectedValue(Object.assign(new Error('denied'), { code: 'denied' }));
+    const tree = render({});
+
+    await act(async () => { await byLabel(tree, 'Use my location').props.onPress(); });
+    await flush();
+
+    expect(texts(tree)).toContain('Location is off for Volyume. Search by gym, town or postcode instead.');
+    expect(byLabel(tree, 'Use my location')).toBeUndefined();
+    // The search route stays available either way.
+    expect(tree.root.findByProps({ accessibilityLabel: 'Gym, town or postcode' })).toBeDefined();
+    act(() => { tree.unmount(); });
+  });
+
+  test('a timeout says so without hanging the picker', async () => {
+    deviceLocation.isAvailable.mockReturnValue(true);
+    deviceLocation.getApproximatePosition.mockRejectedValue(Object.assign(new Error('timeout'), { code: 'timeout' }));
+    const tree = render({});
+
+    await act(async () => { await byLabel(tree, 'Use my location').props.onPress(); });
+    await flush();
+
+    expect(texts(tree)).toContain('Could not find your location in time. Try again, or search instead.');
+    expect(byLabel(tree, 'Use my location')).toBeDefined(); // still offered, unlike a denial
     act(() => { tree.unmount(); });
   });
 });
