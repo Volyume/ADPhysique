@@ -114,44 +114,13 @@ serve(async (req: Request) => {
   })
 
   try {
-    if (kind === 'programme') {
-      if (!UUID_RE.test(id)) return notFound()
-      const { data: prog } = await admin
-        .from('community_programmes')
-        .select('id, owner_id, title, description, style_key, days_per_week, '
-          + 'exercise_count, has_circuits, snapshot, use_count, visibility, status, updated_at')
-        .eq('id', id)
-        .maybeSingle()
-      if (!prog) return notFound()
-      const row = prog as Record<string, unknown>
-      if (row.status !== 'visible') return notFound()
-      if (row.visibility !== 'public' && row.visibility !== 'link') return notFound()
-
-      const { data: owner } = await admin
-        .from('community_profiles').select(PROFILE_COLUMNS)
-        .eq('user_id', row.owner_id as string).maybeSingle()
-      if (!publiclyVisible(owner as ProfileRow | null)) return notFound()
-
-      return jsonResponse({
-        ok: true,
-        kind: 'programme',
-        programme: {
-          title: row.title,
-          description: row.description,
-          style_key: row.style_key,
-          days_per_week: row.days_per_week,
-          exercise_count: row.exercise_count,
-          has_circuits: row.has_circuits,
-          // Structure only, never load: starting_weight and every personal
-          // column are rejected at publish time by migrate_160's
-          // _community_forbidden_keys, so the snapshot cannot carry them.
-          snapshot: row.snapshot,
-          use_count: row.use_count,
-          updated_at: row.updated_at,
-          creator: creatorCard(owner as ProfileRow),
-        },
-      }, 200)
-    }
+    // migrate_164 (40-GAP-CLOSURE.md section 2): the shared-programme layer
+    // is retired, so the 'p' deep link / public programme page 404s rather
+    // than reading the now-empty community_programmes table. Not folded
+    // into the shared `notFound()` fall-through below so this stays an
+    // explicit, documented refusal rather than an accident of an unhandled
+    // kind.
+    if (kind === 'programme') return notFound()
 
     if (kind === 'post') {
       if (!UUID_RE.test(id)) return notFound()
