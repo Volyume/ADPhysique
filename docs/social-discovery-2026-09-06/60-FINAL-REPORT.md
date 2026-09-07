@@ -163,3 +163,91 @@ adherence broadcast; person-to-person comparison; contacts import.
 4. App Store id on the three link pages once the iOS app is on the store.
 5. A full children's risk assessment follows the access assessment's
    conclusion (recorded in `docs/community-safety/`).
+
+## Campaign 2: discovery, connections and messaging
+
+Founder addition to the Community brief (in chat, 2026-09-06): "make
+Volyume the easiest and most intelligent fitness platform for discovering
+the right people, programmes and training communities". Spec
+`70-DISCOVERY-BLUEPRINT.md`; rulings SD-20..SD-32 and SD-20a in
+`40-DECISIONS.md`; landed on `claude/volyume-social-discovery-h7dknu`
+across commits `ee8168a`, `a4fe904`, `8560a27`, `b8bae87`, `6fe42da`,
+`847167c`, not yet merged to main.
+
+### What shipped
+Follow / Connect / Message, a three-tier relationship model (SD-20): a
+mutual Connect request carries up to two fixed reasons and a 120-char
+note, accepting creates mutual follows, removing a connection ends
+messaging and keeps the follows. A training profile of coarse, opted-in
+bands (days, time bands, sessions band, staple lifts, experience band,
+programme key, age band) derived on device from real completed workouts,
+never finer than a band, shown before sharing (SD-22). Find people with
+six doors: at my gym, near me, train like me, on my programme, open to
+training together, people you might know (SD-23), each with a real count
+and an honest zero state, reasons shown instead of percentages (SD-24). A
+training-partner opt-in flag with day/time/same-gym preferences (SD-25).
+The programme screen as a bridge ("People on this programme", Connect and
+Message on the creator, `847167c`). The gym dimension page as a summary
+(counts by style, time band, partner flag; a typeahead that de-duplicates
+labels, SD-27). One-to-one text messaging between connected people only,
+with an optional programme/story reference tile, one push per
+conversation per 15 minutes with no content, minors excluded server-side
+(SD-21, SD-32).
+
+### What makes this distinctive (blueprint's own list, `40-DECISIONS.md`
+"Final product pass")
+> (1) Adapt for me: a shared programme refitted to the recipient's kit,
+> exclusions and limitations by the same deterministic chain the coach
+> uses, circuits intact, every change explained, the original untouched.
+> No researched product does this. (2) Training stories are computed from
+> the coaching model, not typed... every story is a human choice, never
+> an auto-post. (3) Discovery through chosen training facts with the
+> reasons shown ("Uses a programme you use", "Trains at PureGym Leeds"),
+> honest at 25 people because it needs relevance, not volume. Privacy by
+> construction... is the fourth thing, and it is what lets the first
+> three exist.
+
+The second campaign adds a fifth, its own (SD-20a): real observed
+training turned into coarse, opted-in bands is "the differentiator no
+competitor has... delivered in the only form that is safe (bands,
+chosen)", Garmin dropped mutual requests for one-way follow in 2026,
+Strava gates messaging on a Following/Mutuals/No-one setting, no
+researched product shows a match percentage, and GymBuddy is the only
+app matching on schedule at all, in coarse bands.
+
+### Deliberately not built, and the decision that says so
+Media (post photos/video, photo avatars): designed in `71-MEDIA-MODEL.md`
+but not built, SD-29 records it as still a founder decision on the
+image-moderation processor dependency (new data category, EU residency
+check, DPA), so the decision is informed, not deferred. Challenges,
+leaderboards, live presence, community rooms, gym verification, contacts
+import, person-to-person comparison: reconsidered against the new
+connection graph and still rejected (SD-29), "none becomes more honest
+at 25 people because a graph exists". Distance bands on the gym page:
+recorded as a later question needing a geocoding source (SD-27), not
+built.
+
+### Founder-gated
+Migration 161 (`supabase/migrate_161_community_connections.sql`) is
+WRITTEN, NOT APPLIED, same as 160, both wait for the founder's exact
+phrase "run against production" (`supabase/README.md:105-155`). The
+image-upload/media-processor decision above (`71-MEDIA-MODEL.md`). The
+App Store id on the three static link pages (`p`/`s`/`u`), pending iOS
+being on the store.
+
+### Open items
+1. Apply migrations 160 and 161 (and deploy the updated `community-notify`
+   function) on the founder's exact phrase, after a device walk of
+   `50-VERIFICATION.md`'s checklist on a build.
+2. Product review `73` findings 6-10 (inert age-band toggle; Training
+   profile screen's own band rows have no minor filter unlike Join; gym
+   typeahead scoping; a context reference only attaches to a brand-new
+   conversation's first message; a sub-44dp header touch target) are not
+   reviewed this pass and remain open.
+3. Server-side quiet hours for server-sent pushes, unresolved since
+   campaign 1 (SD-15a) and now also true of `connect_request`,
+   `connect_accepted` and `community_message`.
+4. The media decision above.
+5. Merge to main once the device checklist has been walked (Section 2 of
+   CLAUDE.md: build on a branch, merge continually once green and
+   lead-reviewed, this campaign has not yet merged).
