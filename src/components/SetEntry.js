@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    marginTop: spacing.xxs,
+    marginTop: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1,
     paddingHorizontal: spacing.md,
