@@ -13,10 +13,14 @@ WRITTEN, NOT APPLIED; agents STOP and report on ambiguity.
 - **GD-01 The directory is infrastructure under Community**, not a
   profile field. It ships as its own cloud tables and RPCs, a versioned
   data asset in the repo, and a pipeline that can be re-run.
-- **GD-02 Sources by role.** Canonical: Active Places (England), VOA
-  rating list (England and Wales), Active Places NI, DataMapWales leisure
-  centres, sportscotland Sports Facilities (once the founder's free
-  account exists). Candidate signal: Companies House SIC 93130 and 93110
+- **GD-02 Sources by role.** Canonical: Active Places (England), Active
+  Places NI, DataMapWales leisure centres, sportscotland Sports Facilities
+  (once the founder's free account exists), Foursquare Open Source Places
+  and Overture Places (permissive, pipeline-only DuckDB approved by the
+  founder 2026-09-07). NOT USED: the VOA rating list, whose download
+  terms state that the Open Government Licence does not apply and confine
+  use to non-domestic rating purposes (acquisition record 09); the
+  extract was deleted on 2026-09-07 (GD-16). Candidate signal: Companies House SIC 93130 and 93110
   (a company is not a venue until a premises-like address or another
   source confirms it). Verification and gap-fill: operator branch pages
   (provenance URL, polite fetch, facts only). Cross-check only: OSM by
@@ -175,3 +179,12 @@ each source's cadence; users correct it. Three founder unlocks raise the
 ceiling and are recorded on the board: the free sportscotland account,
 a pipeline-only Parquet reader for Foursquare and Overture, and an
 optional paid OS Points of Interest licence.
+
+## GD-16 VOA is excluded on licence grounds (2026-09-07)
+The VOA compiled rating list download page states "An open government
+licence does not apply" and limits use to non-domestic rating purposes
+with a deletion obligation (record `09`). The 17,370-row extract was
+deleted the same day and no VOA field enters the pipeline. Independents
+are reached instead through Companies House (OGL; it found Volt Fitness
+UK Limited at Swordfish Business Park, Burscough), Foursquare and Overture
+places, operator feeds, Active Places where registered, and submissions.
