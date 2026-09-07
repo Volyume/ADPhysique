@@ -98,6 +98,12 @@ export default function GymPicker({
   const [loading, setLoading] = useState(false);
   const [nearLoading, setNearLoading] = useState(false);
   const [error, setError] = useState(null);
+  // Mirrors `error` for the near-list effect specifically (GD-13 fix,
+  // founder device report 2026-09-07): the two effects run independently
+  // (a typed query and an active centroid can both be live at once), so a
+  // shared `error` would let one effect's success silently clear the
+  // other's genuine failure. A separate flag for each keeps them honest.
+  const [nearError, setNearError] = useState(null);
   const [locating, setLocating] = useState(false);
   const [locateError, setLocateError] = useState(null);
   const seqRef = useRef(0);
@@ -159,6 +165,7 @@ export default function GymPicker({
     }
     let alive = true;
     setNearLoading(true);
+    setNearError(null);
     const seq = nearSeqRef.current + 1;
     nearSeqRef.current = seq;
     (async () => {
@@ -169,10 +176,18 @@ export default function GymPicker({
         if (!alive || nearSeqRef.current !== seq) return;
         setNearVenues(out.venues);
         setTruncated(out.truncated);
-      } catch (_e) {
+      } catch (e) {
         if (!alive || nearSeqRef.current !== seq) return;
+        // Founder device report 2026-09-07: this catch silently discarded
+        // every failure (auth, network, rate limit) and left `nearVenues`
+        // at its empty default, which `showEmpty` then read as an honest
+        // "no gyms near you" - a real RPC failure rendered as a false
+        // negative rather than the retry state every other failure in
+        // this screen gets. Never again: the near list gets the same
+        // error surface the text search already has.
         setNearVenues([]);
         setTruncated(false);
+        setNearError(e?.code ?? 'unavailable');
       } finally {
         if (alive && nearSeqRef.current === seq) setNearLoading(false);
       }
@@ -210,7 +225,7 @@ export default function GymPicker({
   const results = rankVenues(mergeVenues(nearVenues, textVenues), query);
   const knownCentroid = !!(centroid && centroid.lat != null && centroid.lng != null);
   const hasSearched = trimmed.length >= MIN_QUERY || knownCentroid;
-  const showEmpty = !loading && !nearLoading && !error && hasSearched && results.length === 0;
+  const showEmpty = !loading && !nearLoading && !error && !nearError && hasSearched && results.length === 0;
   const showFooter = !showEmpty && results.length > 0 && knownCentroid && truncated;
 
   return (
@@ -282,9 +297,9 @@ export default function GymPicker({
         </View>
       ) : null}
 
-      {error ? (
+      {error || nearError ? (
         <Text style={[styles.error, { ...t.type.bodySm, color: t.colors.error }]}>
-          {error === 'offline'
+          {(error ?? nearError) === 'offline'
             ? 'You are offline. Try again when you have a connection.'
             : 'Could not search just now. Try again in a moment.'}
         </Text>

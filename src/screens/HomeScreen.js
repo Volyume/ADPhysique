@@ -2479,7 +2479,12 @@ export default function HomeScreen({ navigation, route }) {
           </Card>
         ) : activePlan && nextWorkout ? (
           <Card surface="surfaceElevated" style={styles.heroCard}>
-            <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
+            {/* Founder device report 2026-09-07: planProgress bakes in the
+                plan's own name (goal, phase and split can all be present),
+                so a single clamped line ellipsised mid-word on longer
+                names/larger text scales. Raised to 2 lines, the same fix
+                already applied to workoutName below for the same reason. */}
+            <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={2}>
               {recoveryLabel ? `${recoveryLabel} · ${planProgress}` : planProgress}
             </SectionLabel>
             {/* Campaign 27 Pillar A (D104): workoutName is a session NAME, an
