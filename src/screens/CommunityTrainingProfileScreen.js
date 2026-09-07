@@ -96,11 +96,12 @@ export function bandRows(bands, me) {
   ];
 }
 
-export default function CommunityTrainingProfileScreen() {
+export default function CommunityTrainingProfileScreen({ navigation }) {
   const t = useTheme();
   const toast = useToast();
   const { me, refresh } = useCommunityMe();
   const uid = me?.profile?.user_id ?? null;
+  const isMinor = !!me?.is_minor;
 
   const [bands, setBands] = useState(null);
   const [share, setShare] = useState(TP_DEFAULT_SHARE);
@@ -150,12 +151,22 @@ export default function CommunityTrainingProfileScreen() {
   const preview = previewLine(shared);
 
   async function toggleBand(key, next) {
+    const prevSettings = share;
     const settings = { ...share, [key]: next };
     setShare(settings);
     await writeShareSettings(uid, settings);
     // `force`: the person has just changed a toggle and expects it to take.
     const out = await syncTrainingProfile(uid, { force: true });
-    if (!out?.sent) toast.show('Saved on this device. It will share when you are back online.');
+    if (out?.reason === 'rules_outdated') {
+      // The rules text moved with this campaign, not the connection: the
+      // toggle reverts and the person reads and accepts before it is
+      // shared, rather than being told (wrongly) that it is offline.
+      setShare(prevSettings);
+      await writeShareSettings(uid, prevSettings);
+      navigation.navigate('CommunityRules', { mustAccept: true });
+    } else if (!out?.sent) {
+      toast.show('Saved on this device. It will share when you are back online.');
+    }
   }
 
   async function recalculate() {
@@ -170,7 +181,15 @@ export default function CommunityTrainingProfileScreen() {
     }
   }
 
-  async function savePartner(next) {
+  /**
+   * `revert` undoes the one optimistic change the caller just made (product
+   * review 2026-09-06 finding 2/4): every path here sets local state before
+   * the server confirms it, so any failure reverts it rather than leaving
+   * the person believing something is saved that was refused. `rules_outdated`
+   * is spoken as itself, not as "could not save" (finding 4): the fix is
+   * accepting the rules, not trying again.
+   */
+  async function savePartner(next, revert) {
     try {
       await setPartner(next.open, {
         days: next.days,
@@ -178,8 +197,13 @@ export default function CommunityTrainingProfileScreen() {
         same_gym_only: next.same_gym_only,
       });
       refresh(true).catch(() => { /* the next open reads it again */ });
-    } catch (_e) {
-      toast.show('Could not save that just now.', { variant: 'error' });
+    } catch (e) {
+      revert?.();
+      if (e?.code === 'rules_outdated') {
+        navigation.navigate('CommunityRules', { mustAccept: true });
+      } else {
+        toast.show('Could not save that just now.', { variant: 'error' });
+      }
     }
   }
 
@@ -247,93 +271,106 @@ export default function CommunityTrainingProfileScreen() {
           />
         </View>
 
-        <View style={styles.section}>
-          <SectionLabel>Open to training together</SectionLabel>
-          <View style={styles.bandRow}>
-            <View style={styles.bandBody}>
-              <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
-                Open to training together
-              </Text>
-              <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                Your profile shows this, and you appear to people looking for someone to train with.
-              </Text>
-            </View>
-            <Switch
-              value={partnerOpen}
-              onValueChange={(next) => {
-                setPartnerOpen(next);
-                savePartner(partnerState({ open: next }));
-              }}
-              accessibilityLabel="Open to training together"
-              {...switchColours}
-            />
+        {isMinor ? (
+          <View style={styles.section}>
+            <SectionLabel>Open to training together</SectionLabel>
+            <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+              Training partner matching opens at 18.
+            </Text>
           </View>
-
-          {partnerOpen ? (
-            <>
-              <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-                Days that suit you
-              </Text>
-              <View style={styles.chips}>
-                {Object.entries(TP_DAYS).map(([key, label]) => (
-                  <Chip
-                    key={key}
-                    label={label}
-                    selected={partnerDays.includes(key)}
-                    onPress={() => {
-                      const next = partnerDays.includes(key)
-                        ? partnerDays.filter((k) => k !== key)
-                        : [...partnerDays, key];
-                      setPartnerDays(next);
-                      savePartner(partnerState({ days: next }));
-                    }}
-                  />
-                ))}
+        ) : (
+          <View style={styles.section}>
+            <SectionLabel>Open to training together</SectionLabel>
+            <View style={styles.bandRow}>
+              <View style={styles.bandBody}>
+                <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
+                  Open to training together
+                </Text>
+                <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+                  Your profile shows this, and you appear to people looking for someone to train with.
+                </Text>
               </View>
+              <Switch
+                value={partnerOpen}
+                onValueChange={(next) => {
+                  const prev = partnerOpen;
+                  setPartnerOpen(next);
+                  savePartner(partnerState({ open: next }), () => setPartnerOpen(prev));
+                }}
+                accessibilityLabel="Open to training together"
+                {...switchColours}
+              />
+            </View>
 
-              <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-                Times that suit you
-              </Text>
-              <View style={styles.chips}>
-                {Object.keys(TP_TIME_BANDS).map((key) => (
-                  <Chip
-                    key={key}
-                    label={PARTNER_TIME_LABELS[key]}
-                    selected={partnerBands.includes(key)}
-                    onPress={() => {
-                      const next = partnerBands.includes(key)
-                        ? partnerBands.filter((k) => k !== key)
-                        : [...partnerBands, key];
-                      setPartnerBands(next);
-                      savePartner(partnerState({ time_bands: next }));
-                    }}
-                  />
-                ))}
-              </View>
-
-              <View style={styles.bandRow}>
-                <View style={styles.bandBody}>
-                  <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
-                    Same gym only
-                  </Text>
+            {partnerOpen ? (
+              <>
+                <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+                  Days that suit you
+                </Text>
+                <View style={styles.chips}>
+                  {Object.entries(TP_DAYS).map(([key, label]) => (
+                    <Chip
+                      key={key}
+                      label={label}
+                      selected={partnerDays.includes(key)}
+                      onPress={() => {
+                        const prev = partnerDays;
+                        const next = partnerDays.includes(key)
+                          ? partnerDays.filter((k) => k !== key)
+                          : [...partnerDays, key];
+                        setPartnerDays(next);
+                        savePartner(partnerState({ days: next }), () => setPartnerDays(prev));
+                      }}
+                    />
+                  ))}
                 </View>
-                <Switch
-                  value={sameGymOnly}
-                  onValueChange={(next) => {
-                    setSameGymOnly(next);
-                    savePartner(partnerState({ same_gym_only: next }));
-                  }}
-                  accessibilityLabel="Same gym only"
-                  {...switchColours}
-                />
-              </View>
-            </>
-          ) : null}
 
-          <Text style={[styles.safety, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-            {PARTNER_SAFETY_LINE}
-          </Text>
-        </View>
+                <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+                  Times that suit you
+                </Text>
+                <View style={styles.chips}>
+                  {Object.keys(TP_TIME_BANDS).map((key) => (
+                    <Chip
+                      key={key}
+                      label={PARTNER_TIME_LABELS[key]}
+                      selected={partnerBands.includes(key)}
+                      onPress={() => {
+                        const prev = partnerBands;
+                        const next = partnerBands.includes(key)
+                          ? partnerBands.filter((k) => k !== key)
+                          : [...partnerBands, key];
+                        setPartnerBands(next);
+                        savePartner(partnerState({ time_bands: next }), () => setPartnerBands(prev));
+                      }}
+                    />
+                  ))}
+                </View>
+
+                <View style={styles.bandRow}>
+                  <View style={styles.bandBody}>
+                    <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
+                      Same gym only
+                    </Text>
+                  </View>
+                  <Switch
+                    value={sameGymOnly}
+                    onValueChange={(next) => {
+                      const prev = sameGymOnly;
+                      setSameGymOnly(next);
+                      savePartner(partnerState({ same_gym_only: next }), () => setSameGymOnly(prev));
+                    }}
+                    accessibilityLabel="Same gym only"
+                    {...switchColours}
+                  />
+                </View>
+              </>
+            ) : null}
+
+            <Text style={[styles.safety, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+              {PARTNER_SAFETY_LINE}
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

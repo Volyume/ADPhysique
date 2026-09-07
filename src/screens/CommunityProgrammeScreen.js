@@ -40,6 +40,7 @@ import ProgrammeStructure from '../components/community/ProgrammeStructure';
 import CommentRow, { CommentComposer } from '../components/community/CommentRow';
 import JoinToInteractRow from '../components/community/JoinToInteractRow';
 import ReportSheet from '../components/community/ReportSheet';
+import ConnectSheet from '../components/community/ConnectSheet';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import useAppStore from '../store/useAppStore';
@@ -99,6 +100,10 @@ export default function CommunityProgrammeScreen({ navigation, route }) {
   const [reportTarget, setReportTarget] = useState(null);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
+  // The creator's own Connect state, opened from the header ProfileCard
+  // (product review 2026-09-06 finding 1): the reasons/note sheet, same
+  // component every other Connect surface uses.
+  const [connectCard, setConnectCard] = useState(null);
 
   const load = useCallback(async () => {
     if (!id) { setLoading(false); setErrorCode('not_found'); return; }
@@ -205,6 +210,13 @@ export default function CommunityProgrammeScreen({ navigation, route }) {
     }
   }
 
+  /** Replace the creator card in place after a follow/connect change,
+   * so accepting or sending a request never reloads the whole screen. */
+  function patchCreator(card) {
+    if (!card?.user_id) return;
+    setData((prev) => (prev ? { ...prev, creator: { ...prev.creator, ...card } } : prev));
+  }
+
   function handleDeleteComment(comment) {
     appAlert('Delete this comment?', 'It is removed for everyone.', [
       { text: 'Cancel', style: 'cancel' },
@@ -241,9 +253,19 @@ export default function CommunityProgrammeScreen({ navigation, route }) {
         <ProfileCard
           card={creator}
           compact
+          me={me}
+          showConnect
           onPress={() => navigation.navigate('CommunityProfile', {
             userId: creator.user_id, handle: creator.handle,
           })}
+          onFollowChange={(relationship) => patchCreator({ ...creator, relationship })}
+          onConnect={(card) => setConnectCard(card)}
+          onConnectChange={patchCreator}
+          onMessage={(card) => navigation.navigate('CommunityConversation', {
+            userId: card.user_id,
+            ref: { kind: 'programme', id: programme.id },
+          })}
+          onRulesOutdated={() => navigation.navigate('CommunityRules', { mustAccept: true })}
         />
       ) : null}
       {chips.length ? (
@@ -389,6 +411,13 @@ export default function CommunityProgrammeScreen({ navigation, route }) {
         onClose={() => setReportTarget(null)}
         targetKind={reportTarget?.targetKind ?? 'programme'}
         targetId={reportTarget?.targetId ?? null}
+      />
+      <ConnectSheet
+        visible={!!connectCard}
+        onClose={() => setConnectCard(null)}
+        card={connectCard}
+        onSent={patchCreator}
+        onRulesOutdated={() => navigation.navigate('CommunityRules', { mustAccept: true })}
       />
     </SafeAreaView>
   );

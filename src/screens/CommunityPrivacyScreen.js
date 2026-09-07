@@ -104,9 +104,16 @@ export default function CommunityPrivacyScreen({ navigation }) {
     try {
       await setConnectFrom(next);
       await refresh(true);
-    } catch (_e) {
+    } catch (e) {
       setConnectFromLocal(previous);
-      toast.show('Could not change that just now.', { variant: 'error' });
+      // `rules_outdated` is the rules text moving, not a network problem
+      // (product review 2026-09-06 finding 4): sent to the rules screen
+      // rather than told, wrongly, to try again.
+      if (e?.code === 'rules_outdated') {
+        navigation.navigate('CommunityRules', { mustAccept: true });
+      } else {
+        toast.show('Could not change that just now.', { variant: 'error' });
+      }
     }
   }
 
@@ -116,9 +123,13 @@ export default function CommunityPrivacyScreen({ navigation }) {
     try {
       await setShowProgrammes(next);
       await refresh(true);
-    } catch (_e) {
+    } catch (e) {
       setShowProgrammesLocal(previous);
-      toast.show('Could not change that just now.', { variant: 'error' });
+      if (e?.code === 'rules_outdated') {
+        navigation.navigate('CommunityRules', { mustAccept: true });
+      } else {
+        toast.show('Could not change that just now.', { variant: 'error' });
+      }
     }
   }
 

@@ -57,7 +57,6 @@ import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, type, circle } from '../styles/theme';
 import {
   getProfile, listFollows, profileUrl, reactToPost, unblockUser, relationships,
-  connectionState,
 } from '../lib/community';
 
 /**
@@ -185,7 +184,6 @@ export default function CommunityProfileScreen({ navigation, route }) {
     ? [...facts, 'Open to training together']
     : facts;
   const place = card ? placeLine(card) : null;
-  const connection = connectionState(card);
   // Null when the viewer may not see the profile: an absent count is not
   // a zero, and "0 connections" about a private profile would be a claim
   // the card never made.
@@ -326,17 +324,6 @@ export default function CommunityProfileScreen({ navigation, route }) {
             onMessage={() => navigation.navigate('CommunityConversation', { userId: card.user_id })}
             onRulesOutdated={() => navigation.navigate('CommunityRules', { mustAccept: true })}
           />
-          {connection === 'connected' ? (
-            <Button
-              variant="secondary"
-              size="md"
-              fullWidth={false}
-              title="Message"
-              icon="chatbubble-outline"
-              onPress={() => navigation.navigate('CommunityConversation', { userId: card.user_id })}
-              accessibilityLabel={`Message @${card.handle}`}
-            />
-          ) : null}
         </View>
       )}
 
@@ -471,7 +458,6 @@ export default function CommunityProfileScreen({ navigation, route }) {
         onClose={() => setMenuOpen(false)}
         card={card}
         onChanged={(relationship) => patchCard({ relationship })}
-        onConnectionChanged={(state) => patchCard({ connection: state })}
         onReport={() => setReportOpen(true)}
       />
 

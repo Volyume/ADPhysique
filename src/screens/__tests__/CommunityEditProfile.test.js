@@ -51,18 +51,31 @@ jest.mock('../../lib/community', () => ({
   DISPLAY_NAME_MAX: 40,
   BIO_MAX: 160,
   AREA_LABEL_MAX: 60,
-  GYM_LABEL_MAX: 60,
-  // GymTypeahead's own suggestion read (discovery blueprint section 8);
-  // no test here types a gym label, so this stub never fires, but a
-  // pre-filled value long enough to satisfy MIN_PREFIX must still find a
-  // real function on its debounce tick.
-  callCommunity: jest.fn(() => Promise.resolve({ gyms: [] })),
   setConnectFrom: jest.fn(),
   setShowProgrammes: jest.fn(),
   CONNECT_FROM_VALUES: { anyone: 'Anyone', followers: 'People who follow me', nobody: 'Nobody' },
 }));
 
+// GD-14 (gym database blueprint `docs/gym-database-2026-09-06/
+// 20-BLUEPRINT.md`): the gym field is now GymPicker over `src/lib/gyms`,
+// saved through `setGyms` rather than the old free-text `gym_label` on
+// `upsertProfile`. Nothing here types a gym or opens the picker (the
+// fixture profile carries a LEGACY `gym_label` with no `gym_id`, which
+// renders read-only), so these stubs only need to exist for `save()`'s
+// unconditional `setGyms` call and for the module graph to resolve.
+jest.mock('../../lib/gyms', () => ({
+  __esModule: true,
+  get: jest.fn(() => Promise.resolve(null)),
+  setGyms: jest.fn(() => Promise.resolve({})),
+  search: jest.fn(() => Promise.resolve({ venues: [], recognisedPostcode: null })),
+  isPostcodeLike: jest.fn(() => false),
+  recognisePostcode: jest.fn(() => ({ kind: 'none', normalised: null, outward: null })),
+  venueLine: (v) => ({ primary: v?.display_name || v?.name || '', secondary: '' }),
+  isPendingVenue: jest.fn(() => false),
+}));
+
 import { upsertProfile, relationships, setConnectFrom } from '../../lib/community';
+import { setGyms } from '../../lib/gyms';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityEditProfileScreen from '../CommunityEditProfileScreen';
 import CommunityPrivacyScreen from '../CommunityPrivacyScreen';
@@ -150,6 +163,11 @@ describe('Edit profile saves the fields it owns', () => {
       visibility: 'public',
     }));
     expect(field(tree, 'Handle')).toBeUndefined();
+    expect(sent).not.toHaveProperty('gym_label');
+    // GD-14: the gym is saved through community_set_gyms, not this call.
+    // The fixture profile has no gym_id (a legacy free-text label), so
+    // nothing was picked and both arguments stay empty.
+    expect(setGyms).toHaveBeenCalledWith(null, []);
     expect(mockToastShow).toHaveBeenCalledWith('Profile saved');
     expect(navigation.goBack).toHaveBeenCalled();
   });
@@ -252,6 +270,31 @@ describe('who can send a connection request, and the two discovery links', () =>
 
     expect(setConnectFrom).toHaveBeenCalledWith('followers');
     expect(upsertProfile).not.toHaveBeenCalled();
+  });
+
+  // Product review 2026-09-06 finding 4: `rules_outdated` was mishandled as
+  // a generic "could not change that" refusal on this screen.
+  test('rules_outdated reverts the segment and sends the person to accept the rules', async () => {
+    setConnectFrom.mockRejectedValueOnce({ code: 'rules_outdated' });
+    const { tree, navigation } = await mount(CommunityPrivacyScreen);
+
+    await act(async () => { connectSegment(tree).props.onChange('followers'); });
+    await flush();
+
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityRules', { mustAccept: true });
+    expect(connectSegment(tree).props.value).toBe('anyone');
+    expect(mockToastShow).not.toHaveBeenCalledWith('Could not change that just now.', { variant: 'error' });
+  });
+
+  test('any other connect_from refusal reverts the segment and shows the existing toast', async () => {
+    setConnectFrom.mockRejectedValueOnce({ code: 'offline' });
+    const { tree } = await mount(CommunityPrivacyScreen);
+
+    await act(async () => { connectSegment(tree).props.onChange('followers'); });
+    await flush();
+
+    expect(connectSegment(tree).props.value).toBe('anyone');
+    expect(mockToastShow).toHaveBeenCalledWith('Could not change that just now.', { variant: 'error' });
   });
 
   test('"Training profile" opens its own screen', async () => {

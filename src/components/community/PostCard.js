@@ -132,7 +132,10 @@ export default function PostCard({
         />
         <View style={styles.authorText}>
           <Text style={[styles.authorName, { color: t.colors.textPrimary }]} numberOfLines={1}>
-            {author?.display_name ?? 'A lifter'}
+            {/* "A lifter" is the no-author line, never the no-name line
+                (product review 2026-09-06 finding 3): once a card exists
+                its own handle names the person. */}
+            {author ? (author.display_name || author.handle) : 'A lifter'}
           </Text>
           <Text style={[styles.authorHandle, { color: t.colors.textSecondary }]} numberOfLines={1}>
             {[handle, day].filter(Boolean).join(' · ')}

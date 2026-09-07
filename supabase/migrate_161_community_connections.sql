@@ -736,7 +736,11 @@ $$;
 -- (SD-14b: "may I see this programme / post" is a different question from
 -- "may I see this person"), so a programme that has since been hidden, or was
 -- always followers-only to this reader, renders as text with no tile rather
--- than leaking a title.
+-- than leaking a title. A post reference also carries its author as a
+-- viewer-gated profile card (product review 2026-09-06 finding 3): without
+-- it the bubble can never say whose story the message is about, only that
+-- there is one; the card is NULL exactly when the author is not otherwise
+-- viewable to this reader, same as everywhere else a card travels.
 CREATE OR REPLACE FUNCTION public._community_message_json(_r public.community_messages, _viewer uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -756,7 +760,10 @@ BEGIN
   ELSIF _r.ref_kind = 'post' AND _r.ref_id IS NOT NULL
      AND public._community_can_view_post(_viewer, _r.ref_id) THEN
     SELECT * INTO v_p FROM public.community_posts WHERE id = _r.ref_id;
-    IF FOUND THEN v_ref := public._community_post_json(v_p); END IF;
+    IF FOUND THEN
+      v_ref := public._community_post_json(v_p)
+        || jsonb_build_object('author', public._community_profile_card(v_p.author_id, _viewer));
+    END IF;
   END IF;
 
   RETURN jsonb_build_object(

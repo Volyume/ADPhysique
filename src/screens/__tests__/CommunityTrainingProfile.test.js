@@ -195,6 +195,61 @@ describe('toggling a band', () => {
   });
 });
 
+describe('a minor and the partner section (SD-32, product review 2026-09-06 finding 2)', () => {
+  test('renders no partner switch, only a calm line saying matching opens at 18', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { ...ME, is_minor: true },
+      loading: false,
+      error: null,
+      refresh: jest.fn(() => Promise.resolve()),
+    });
+    const { tree } = await mount();
+
+    expect(switchFor(tree, 'Open to training together')).toBeUndefined();
+    expect(flattenText(tree.toJSON())).toContain('Training partner matching opens at 18.');
+  });
+});
+
+describe('rules_outdated on a training-profile save (product review 2026-09-06 finding 4)', () => {
+  test('a band toggle reverts and sends the person to accept the rules, never "saved on this device"', async () => {
+    syncTrainingProfile.mockResolvedValueOnce({ sent: false, reason: 'rules_outdated', payload: null });
+    const { tree, navigation } = await mount();
+    const daysSwitch = switchFor(tree, 'Share days you usually train');
+
+    await act(async () => { daysSwitch.props.onValueChange(true); });
+    await flush();
+
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityRules', { mustAccept: true });
+    expect(mockToastShow).not.toHaveBeenCalledWith('Saved on this device. It will share when you are back online.');
+    expect(switchFor(tree, 'Share days you usually train').props.value).toBe(false);
+  });
+
+  test('a partner-section change reverts the switch and sends the person to accept the rules', async () => {
+    setPartner.mockRejectedValueOnce({ code: 'rules_outdated' });
+    const { tree, navigation } = await mount();
+    const partnerSwitch = switchFor(tree, 'Open to training together');
+
+    await act(async () => { partnerSwitch.props.onValueChange(true); });
+    await flush();
+
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityRules', { mustAccept: true });
+    expect(switchFor(tree, 'Open to training together').props.value).toBe(false);
+    expect(mockToastShow).not.toHaveBeenCalledWith('Could not save that just now.', { variant: 'error' });
+  });
+
+  test('any other partner-save error reverts the switch and shows the existing toast', async () => {
+    setPartner.mockRejectedValueOnce({ code: 'offline' });
+    const { tree } = await mount();
+    const partnerSwitch = switchFor(tree, 'Open to training together');
+
+    await act(async () => { partnerSwitch.props.onValueChange(true); });
+    await flush();
+
+    expect(switchFor(tree, 'Open to training together').props.value).toBe(false);
+    expect(mockToastShow).toHaveBeenCalledWith('Could not save that just now.', { variant: 'error' });
+  });
+});
+
 describe('open to training together (SD-25)', () => {
   test('switching it on sends the flag with whatever preferences are already chosen', async () => {
     const { tree } = await mount();
