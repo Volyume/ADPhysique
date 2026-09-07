@@ -10,6 +10,11 @@
  * The dot is the one amber affordance a row may carry (blueprint `30`
  * section 13, ruling 1). Everything else is neutral ink.
  *
+ * Lead visual review 2026-09-06, ruling V18: `Card padding="md"
+ * radius="md"`, avatar 36, one-line `body` title (the name), one-line
+ * `caption` sub (the handle and the last message, combined), day and the
+ * unread dot trailing.
+ *
  * Props:
  *   conversation  {id, other, unread, preview, ref_kind, last_message_at,
  *                  created_at}
@@ -23,7 +28,7 @@ import { spacing, type, colors, circle } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { postDayLabel } from './PostCard';
 
-const AVATAR = 40;
+const AVATAR = 36;
 
 /**
  * The line under the name: the last message, cut at its first line
@@ -50,10 +55,13 @@ export default function ConversationRow({ conversation, onPress }) {
   const line = conversationLine(conversation);
   const day = postDayLabel(conversation.last_message_at ?? conversation.created_at);
   const unread = Number(conversation.unread) > 0;
+  const sub = [handle, line].filter(Boolean).join(' · ');
 
   return (
     <Card
       onPress={onPress}
+      padding="md"
+      radius="md"
       style={styles.card}
       accessibilityLabel={[
         `Conversation with ${name}`, handle, line, day, unread ? 'Unread' : null,
@@ -69,19 +77,14 @@ export default function ConversationRow({ conversation, onPress }) {
           <Text style={[styles.name, { ...t.type.body, color: t.colors.textPrimary }]} numberOfLines={1}>
             {name}
           </Text>
-          {handle ? (
-            <Text style={[styles.handle, { ...t.type.caption, color: t.colors.textSecondary }]} numberOfLines={1}>
-              {handle}
-            </Text>
-          ) : null}
           <Text
-            style={[styles.preview, {
+            style={[styles.sub, {
               ...t.type.caption,
               color: unread ? t.colors.textPrimary : t.colors.textMuted,
             }]}
             numberOfLines={1}
           >
-            {line}
+            {sub}
           </Text>
         </View>
         <View style={styles.meta}>
@@ -100,8 +103,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   body: { flex: 1, gap: spacing.xxs },
   name: { ...type.body, color: colors.textPrimary },
-  handle: { ...type.caption, color: colors.textSecondary },
-  preview: { ...type.caption, color: colors.textMuted },
+  sub: { ...type.caption, color: colors.textMuted },
   meta: { alignItems: 'flex-end', gap: spacing.xs },
   day: { ...type.caption, color: colors.textMuted },
   dot: { width: 8, height: 8, borderRadius: circle(8) },

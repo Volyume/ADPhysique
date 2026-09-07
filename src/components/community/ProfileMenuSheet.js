@@ -16,6 +16,10 @@
  * copy of the same action here duplicated it under near-identical confirm
  * copy from a different component, so it is not repeated in this sheet.
  *
+ * Lead visual review 2026-09-06, ruling V16: composes the one shared
+ * `MenuSheet` (BottomSheet + ModalHeader + SettingRow-style rows) rather
+ * than its own hand-rolled menu rows.
+ *
  * Props:
  *   visible    controlled
  *   onClose    close the sheet
@@ -26,14 +30,10 @@
  */
 
 import { useState } from 'react';
-import { View, Text, StyleSheet, Share } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
-import BottomSheet from '../BottomSheet';
-import PressableCard from '../PressableCard';
+import { Share } from 'react-native';
+import MenuSheet from './MenuSheet';
 import { appAlert } from '../AppAlert';
 import { useToast } from '../Toast';
-import { spacing, type, colors, iconSize } from '../../styles/theme';
-import useTheme from '../../hooks/useTheme';
 import {
   profileUrl, blockUser, unblockUser, muteUser, unmuteUser,
 } from '../../lib/community';
@@ -44,26 +44,9 @@ const REFUSALS = {
   not_found: 'This profile is no longer available.',
 };
 
-function MenuRow({ icon, label, tone, onPress, accessibilityLabel }) {
-  const t = useTheme();
-  return (
-    <PressableCard
-      onPress={onPress}
-      style={styles.row}
-      accessibilityLabel={accessibilityLabel ?? label}
-    >
-      <Ionicons name={icon} size={iconSize.md} color={tone ?? t.colors.textSecondary} />
-      <Text style={[styles.rowLabel, { ...t.type.body, color: tone ?? t.colors.textPrimary }]}>
-        {label}
-      </Text>
-    </PressableCard>
-  );
-}
-
 export default function ProfileMenuSheet({
   visible, onClose, card, onChanged, onReport,
 }) {
-  const t = useTheme();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const rel = card?.relationship ?? {};
@@ -98,66 +81,35 @@ export default function ProfileMenuSheet({
     );
   }
 
+  const rows = [
+    {
+      icon: 'link-outline',
+      label: 'Share link',
+      onPress: async () => {
+        try { await Share.share({ message: profileUrl(card?.handle) }); }
+        catch (_) { /* the user dismissed the share sheet */ }
+        onClose?.();
+      },
+    },
+    rel.muted
+      ? { icon: 'volume-high-outline', label: 'Unmute', onPress: () => run(unmuteUser, { muted: false }, 'Unmuted') }
+      : { icon: 'volume-mute-outline', label: 'Mute', onPress: () => run(muteUser, { muted: true }, 'Muted. They are not told.') },
+    rel.blocked
+      ? { icon: 'lock-open-outline', label: 'Unblock', onPress: () => run(unblockUser, { blocked: false }, 'Unblocked') }
+      : { icon: 'ban-outline', label: 'Block', tone: 'destructive', onPress: confirmBlock },
+    {
+      icon: 'flag-outline',
+      label: 'Report',
+      onPress: () => { onClose?.(); onReport?.(); },
+    },
+  ];
+
   return (
-    <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Profile options">
-      <View style={styles.body}>
-        <Text style={[styles.title, { ...t.type.h3, color: t.colors.textPrimary }]}>
-          {card?.handle ? `@${card.handle}` : 'Options'}
-        </Text>
-        <MenuRow
-          icon="link-outline"
-          label="Share link"
-          onPress={async () => {
-            try { await Share.share({ message: profileUrl(card?.handle) }); }
-            catch (_) { /* the user dismissed the share sheet */ }
-            onClose?.();
-          }}
-        />
-        {rel.muted ? (
-          <MenuRow
-            icon="volume-high-outline"
-            label="Unmute"
-            onPress={() => run(unmuteUser, { muted: false }, 'Unmuted')}
-          />
-        ) : (
-          <MenuRow
-            icon="volume-mute-outline"
-            label="Mute"
-            onPress={() => run(muteUser, { muted: true }, 'Muted. They are not told.')}
-          />
-        )}
-        {rel.blocked ? (
-          <MenuRow
-            icon="lock-open-outline"
-            label="Unblock"
-            onPress={() => run(unblockUser, { blocked: false }, 'Unblocked')}
-          />
-        ) : (
-          <MenuRow
-            icon="ban-outline"
-            label="Block"
-            tone={t.colors.error}
-            onPress={confirmBlock}
-          />
-        )}
-        <MenuRow
-          icon="flag-outline"
-          label="Report"
-          onPress={() => { onClose?.(); onReport?.(); }}
-        />
-      </View>
-    </BottomSheet>
+    <MenuSheet
+      visible={visible}
+      onClose={onClose}
+      title={card?.handle ? `@${card.handle}` : 'Options'}
+      rows={rows}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  body: { gap: spacing.xs, paddingBottom: spacing.md },
-  title: { ...type.h3, color: colors.textPrimary, marginBottom: spacing.xs },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  rowLabel: { ...type.body, color: colors.textPrimary },
-});

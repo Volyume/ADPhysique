@@ -21,12 +21,13 @@
  */
 
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from '../Button';
+import ComposerInput from './ComposerInput';
 import ProfileAvatarMark from '../ProfileAvatarMark';
 import useTheme from '../../hooks/useTheme';
-import { spacing, radius, type, hitSlop, iconSize } from '../../styles/theme';
+import { spacing, type, hitSlop, iconSize } from '../../styles/theme';
 import { touchTarget } from '../../styles/layout';
 import { COMMENT_MAX } from '../../lib/community/validation';
 import { postDayLabel } from './PostCard';
@@ -54,18 +55,16 @@ export function CommentComposer({ onSubmit, placeholder = 'Add a comment' }) {
 
   return (
     <View style={[styles.composer, { borderTopColor: t.colors.borderSubtle }]}>
-      <TextInput
-        style={[styles.composerInput, {
-          backgroundColor: t.colors.inputBg, borderColor: t.colors.border, color: t.colors.textPrimary,
-        }]}
-        value={body}
-        onChangeText={setBody}
-        placeholder={placeholder}
-        placeholderTextColor={t.colors.textDisabled}
-        maxLength={COMMENT_MAX}
-        multiline
-        accessibilityLabel="Comment"
-      />
+      <View style={styles.composerField}>
+        <ComposerInput
+          value={body}
+          onChangeText={setBody}
+          placeholder={placeholder}
+          maxLength={COMMENT_MAX}
+          minHeight={touchTarget.minimum}
+          accessibilityLabel="Comment"
+        />
+      </View>
       <Button
         title="Send"
         size="sm"
@@ -139,10 +138,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm,
     paddingTop: spacing.md, marginTop: spacing.sm, borderTopWidth: 1,
   },
-  composerInput: {
-    flex: 1, minHeight: touchTarget.minimum, maxHeight: 120,
-    borderWidth: 1, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    ...type.bodySm,
-  },
+  composerField: { flex: 1 },
 });

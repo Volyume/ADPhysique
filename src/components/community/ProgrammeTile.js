@@ -11,6 +11,10 @@
  * Community screen (section 13, ruling 1); everything else on the tile
  * is neutral ink.
  *
+ * Lead visual review 2026-09-06, ruling V10: mirrors the plan library
+ * card (`src/screens/PlanLibraryScreen.js`) — title `bodyStrong`, meta
+ * `caption`, the Volyume chip as today.
+ *
  * Props:
  *   programme  {id, title, style_key, days_per_week, exercise_count,
  *               has_circuits, use_count}
@@ -51,7 +55,7 @@ export default function ProgrammeTile({ programme, creator, volyume = false, onP
       style={styles.tile}
       accessibilityLabel={`${programme.title}${by ? `, ${by}` : ''}`}
     >
-      <Text style={[styles.title, { ...t.type.title, color: t.colors.textPrimary }]} numberOfLines={2}>
+      <Text style={[styles.title, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={2}>
         {programme.title}
       </Text>
       {by ? (
@@ -84,7 +88,7 @@ export default function ProgrammeTile({ programme, creator, volyume = false, onP
 
 const styles = StyleSheet.create({
   tile: { gap: spacing.sm, borderRadius: radius.lg },
-  title: { ...type.title, color: colors.textPrimary },
+  title: { ...type.bodyStrong, color: colors.textPrimary },
   by: { ...type.caption, color: colors.textSecondary },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   uses: { ...type.caption, color: colors.textMuted },

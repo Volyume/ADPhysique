@@ -25,7 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import SearchBar from '../components/SearchBar';
-import SegmentedControl from '../components/SegmentedControl';
+import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
 import ProfileCard from '../components/community/ProfileCard';
 import ProgrammeTile from '../components/community/ProgrammeTile';
@@ -158,12 +158,10 @@ export default function CommunitySearchScreen({ navigation, route }) {
           loading={loading}
           accessibilityLabel="Search Community"
         />
-        <SegmentedControl
-          options={[{ label: 'People', value: 'people' }, { label: 'Programmes', value: 'programmes' }]}
-          value={tab}
-          onChange={setTab}
-          accessibilityLabel="Search in"
-        />
+        <View style={styles.chipRow} accessibilityLabel="Search in">
+          <Chip label="People" selected={tab === 'people'} onPress={() => setTab('people')} accessibilityRole="radio" />
+          <Chip label="Programmes" selected={tab === 'programmes'} onPress={() => setTab('programmes')} accessibilityRole="radio" />
+        </View>
       </View>
       <FlashList
         data={results}
@@ -212,6 +210,7 @@ export default function CommunitySearchScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   controls: { padding: spacing.lg, gap: spacing.md },
+  chipRow: { flexDirection: 'row', gap: spacing.sm },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
   footer: { paddingVertical: spacing.lg },
 });

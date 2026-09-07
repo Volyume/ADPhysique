@@ -239,7 +239,7 @@ export default function CommunityPostScreen({ navigation, route }) {
           ref: { kind: 'post', id },
         }) : undefined}
       />
-      <SectionLabel style={styles.commentsLabel}>Comments</SectionLabel>
+      <SectionLabel tone="muted" style={styles.commentsLabel}>Comments</SectionLabel>
       {comments.length === 0 ? (
         <Text style={[styles.noComments, { color: t.colors.textMuted }]}>
           No comments yet. Anything useful about the training is welcome here.

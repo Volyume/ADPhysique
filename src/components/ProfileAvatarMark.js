@@ -26,7 +26,11 @@ export default function ProfileAvatarMark({
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const preset = presetKey ? avatarPresetFor(presetKey) : null;
   const accent = t.colors[preset?.tone || 'primary'] || t.colors.primary;
-  const borderColor = selected ? t.colors.primary : withAlpha(accent, alpha.edge);
+  // Lead visual review 2026-09-06, ruling V5: an unselected preset's ring is
+  // neutral (`border` at `alpha.edge`), never the preset's own accent — the
+  // accent stays in the glyph and the tint below. Only the selected ring is
+  // amber.
+  const borderColor = selected ? t.colors.primary : withAlpha(t.colors.border, alpha.edge);
   const baseStyle = [
     styles.avatar,
     {

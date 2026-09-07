@@ -12,6 +12,10 @@
  * row is a plain line here like every other kind (product review
  * 2026-09-06, item 27).
  *
+ * Lead visual review 2026-09-06, ruling V18: `Card padding="md"
+ * radius="md"`, avatar 36, one-line `body` title, one-line `caption` sub
+ * (the preview and the relative time, combined), trailing unread dot.
+ *
  * Props:
  *   item        {id, kind, actor, target_kind, target_id, preview,
  *                created_at, seen}
@@ -25,7 +29,7 @@ import { spacing, type, colors, circle } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { calendarRelativeLabel } from '../../lib/workoutDate';
 
-const AVATAR = 40;
+const AVATAR = 36;
 
 const LINES = {
   follow: 'followed you',
@@ -58,10 +62,13 @@ export default function ActivityRow({ item, onPress }) {
   if (!item) return null;
   const line = activityLine(item);
   const when = whenLabel(item.created_at);
+  const sub = [item.preview, when].filter(Boolean).join(' · ');
 
   return (
     <Card
       onPress={onPress}
+      padding="md"
+      radius="md"
       style={styles.card}
       accessibilityLabel={when ? `${line}. ${when}` : line}
     >
@@ -72,20 +79,12 @@ export default function ActivityRow({ item, onPress }) {
           size={AVATAR}
         />
         <View style={styles.body}>
-          <Text style={[styles.line, { ...t.type.body, color: t.colors.textPrimary }]}>
+          <Text style={[styles.line, { ...t.type.body, color: t.colors.textPrimary }]} numberOfLines={1}>
             {line}
           </Text>
-          {item.preview ? (
-            <Text
-              style={[styles.preview, { ...t.type.caption, color: t.colors.textSecondary }]}
-              numberOfLines={2}
-            >
-              {item.preview}
-            </Text>
-          ) : null}
-          {when ? (
-            <Text style={[styles.when, { ...t.type.caption, color: t.colors.textMuted }]}>
-              {when}
+          {sub ? (
+            <Text style={[styles.sub, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
+              {sub}
             </Text>
           ) : null}
         </View>
@@ -102,7 +101,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   body: { flex: 1, gap: spacing.xxs },
   line: { ...type.body, color: colors.textPrimary },
-  preview: { ...type.caption, color: colors.textSecondary },
-  when: { ...type.caption, color: colors.textMuted },
+  sub: { ...type.caption, color: colors.textMuted },
   dot: { width: 8, height: 8, borderRadius: circle(8) },
 });

@@ -22,12 +22,11 @@ import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
-import Card from '../components/Card';
 import Button from '../components/Button';
+import Chip from '../components/Chip';
 import SectionLabel from '../components/SectionLabel';
-import SegmentedControl from '../components/SegmentedControl';
+import { SettingRow, settingsStyles, useSettingsStyles } from '../components/SettingsPrimitives';
 import EmptyState from '../components/EmptyState';
 import ProfileCard from '../components/community/ProfileCard';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
@@ -35,7 +34,7 @@ import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, iconSize, withAlpha, alpha } from '../styles/theme';
+import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
 import {
   relationships, unblockUser, unmuteUser, upsertProfile, leaveCommunity,
   hasProfile, setConnectFrom, setShowProgrammes, CONNECT_FROM_VALUES,
@@ -46,6 +45,7 @@ const CONNECT_FROM_OPTIONS = Object.entries(CONNECT_FROM_VALUES)
 
 export default function CommunityPrivacyScreen({ navigation }) {
   const t = useTheme();
+  const settings = useSettingsStyles();
   const toast = useToast();
   const { me, refresh } = useCommunityMe();
   const joined = hasProfile(me);
@@ -186,16 +186,23 @@ export default function CommunityPrivacyScreen({ navigation }) {
         ) : (
           <>
             <View style={styles.section}>
-              <SectionLabel>Who can follow you</SectionLabel>
-              <SegmentedControl
-                options={[
-                  { label: 'Anyone', value: 'public' },
-                  { label: 'People I approve', value: 'followers' },
-                ]}
-                value={visibility}
-                onChange={busy ? () => {} : changeVisibility}
-                accessibilityLabel="Who can follow you"
-              />
+              <SectionLabel tone="muted">Who can follow you</SectionLabel>
+              <View style={styles.chipRow} accessibilityLabel="Who can follow you">
+                <Chip
+                  label="Anyone"
+                  selected={visibility === 'public'}
+                  disabled={busy}
+                  onPress={() => changeVisibility('public')}
+                  accessibilityRole="radio"
+                />
+                <Chip
+                  label="People I approve"
+                  selected={visibility === 'followers'}
+                  disabled={busy}
+                  onPress={() => changeVisibility('followers')}
+                  accessibilityRole="radio"
+                />
+              </View>
               <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
                 {visibility === 'public'
                   ? 'Anyone signed in can follow you and see what you post.'
@@ -204,13 +211,18 @@ export default function CommunityPrivacyScreen({ navigation }) {
             </View>
 
             <View style={styles.section}>
-              <SectionLabel>Who can send you connection requests</SectionLabel>
-              <SegmentedControl
-                options={CONNECT_FROM_OPTIONS}
-                value={connectFrom}
-                onChange={changeConnectFrom}
-                accessibilityLabel="Who can send you connection requests"
-              />
+              <SectionLabel tone="muted">Who can send you connection requests</SectionLabel>
+              <View style={styles.chipRow} accessibilityLabel="Who can send you connection requests">
+                {CONNECT_FROM_OPTIONS.map((opt) => (
+                  <Chip
+                    key={opt.value}
+                    label={opt.label}
+                    selected={connectFrom === opt.value}
+                    onPress={() => changeConnectFrom(opt.value)}
+                    accessibilityRole="radio"
+                  />
+                ))}
+              </View>
               <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
                 {{
                   anyone: 'Anyone can send you a request to connect.',
@@ -220,45 +232,32 @@ export default function CommunityPrivacyScreen({ navigation }) {
               </Text>
             </View>
 
-            <View style={styles.section}>
-              <View style={styles.switchRow}>
-                <View style={styles.switchBody}>
-                  <Text style={[styles.linkLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
-                    Show which programmes I use
-                  </Text>
-                  <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                    Lets people find you on the &quot;People on this programme&quot; list for programmes you use or publish.
-                  </Text>
-                </View>
-                <Switch
-                  value={showProgrammes}
-                  onValueChange={toggleShowProgrammes}
-                  accessibilityLabel="Show which programmes I use"
-                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                  thumbColor={t.colors.primary}
-                  ios_backgroundColor={t.colors.surface2}
-                />
-              </View>
+            <View style={[settingsStyles.section, settings.section]}>
+              <SettingRow
+                icon="megaphone-outline"
+                label="Show which programmes I use"
+                sub='Lets people find you on the "People on this programme" list for programmes you use or publish.'
+                showArrow={false}
+                rightElement={(
+                  <Switch
+                    value={showProgrammes}
+                    onValueChange={toggleShowProgrammes}
+                    trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+                    thumbColor={t.colors.primary}
+                    ios_backgroundColor={t.colors.surface2}
+                  />
+                )}
+              />
+              <SettingRow
+                icon="body-outline"
+                label="Training profile"
+                sub="The bands worked out from your training, and what you share of them."
+                onPress={() => navigation.navigate('CommunityTrainingProfile')}
+              />
             </View>
 
-            <Card
-              onPress={() => navigation.navigate('CommunityTrainingProfile')}
-              style={styles.linkRow}
-              accessibilityLabel="Training profile"
-            >
-              <View style={styles.switchBody}>
-                <Text style={[styles.linkLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
-                  Training profile
-                </Text>
-                <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                  The bands worked out from your training, and what you share of them.
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-            </Card>
-
             <View style={styles.section}>
-              <SectionLabel>Blocked</SectionLabel>
+              <SectionLabel tone="muted">Blocked</SectionLabel>
               {loading ? <ActivityIndicator color={t.colors.primary} /> : null}
               {!loading && !lists.blocked.length ? (
                 <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
@@ -284,7 +283,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
             </View>
 
             <View style={styles.section}>
-              <SectionLabel>Muted</SectionLabel>
+              <SectionLabel tone="muted">Muted</SectionLabel>
               {!loading && !lists.muted.length ? (
                 <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
                   You have not muted anyone.
@@ -308,35 +307,35 @@ export default function CommunityPrivacyScreen({ navigation }) {
               })}
             </View>
 
-            <Button
-              variant="secondary"
-              title="Edit profile"
-              onPress={() => navigation.navigate('CommunityEditProfile')}
-              accessibilityLabel="Edit my Community profile"
-            />
-
-            {me?.is_moderator ? (
-              <Button
-                variant="secondary"
-                title="Moderation queue"
-                onPress={() => navigation.navigate('CommunityModeration')}
-                accessibilityLabel="Open the moderation queue"
+            <View style={[settingsStyles.section, settings.section]}>
+              <SettingRow
+                icon="create-outline"
+                label="Edit profile"
+                onPress={() => navigation.navigate('CommunityEditProfile')}
+                accessibilityLabel="Edit my Community profile"
               />
-            ) : null}
-
-            <Button
-              variant="secondary"
-              title="Community rules"
-              onPress={() => navigation.navigate('CommunityRules')}
-              accessibilityLabel="Read the Community rules"
-            />
-
-            <Button
-              variant="destructive"
-              title="Leave Community"
-              onPress={confirmLeave}
-              accessibilityLabel="Leave Community"
-            />
+              {me?.is_moderator ? (
+                <SettingRow
+                  icon="shield-outline"
+                  label="Moderation queue"
+                  onPress={() => navigation.navigate('CommunityModeration')}
+                  accessibilityLabel="Open the moderation queue"
+                />
+              ) : null}
+              <SettingRow
+                icon="document-text-outline"
+                label="Community rules"
+                onPress={() => navigation.navigate('CommunityRules')}
+                accessibilityLabel="Read the Community rules"
+              />
+              <SettingRow
+                icon="exit-outline"
+                label="Leave Community"
+                destructive
+                onPress={confirmLeave}
+                accessibilityLabel="Leave Community"
+              />
+            </View>
           </>
         )}
       </ScrollView>
@@ -349,9 +348,6 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   section: { gap: spacing.sm },
   row: { gap: spacing.sm },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   hint: { ...type.caption, color: colors.textMuted },
-  switchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  switchBody: { flex: 1, gap: spacing.xxs },
-  linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
-  linkLabel: { ...type.bodyStrong, color: colors.textPrimary },
 });

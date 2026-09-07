@@ -32,8 +32,9 @@ import ProfileCard from '../components/community/ProfileCard';
 import ProgrammeTile from '../components/community/ProgrammeTile';
 import GymSummary from '../components/community/GymSummary';
 import BottomSheet from '../components/BottomSheet';
+import ModalHeader from '../components/ModalHeader';
 import Chip from '../components/Chip';
-import TextField from '../components/TextField';
+import ComposerInput from '../components/community/ComposerInput';
 import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
@@ -102,10 +103,8 @@ function GymReportSheet({ visible, onClose, venueId }) {
 
   return (
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Report a problem with this gym">
+      <ModalHeader title="Report a problem" onClose={onClose} />
       <View style={styles.reportBody}>
-        <Text style={[styles.reportTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
-          Report a problem
-        </Text>
         <Text style={[styles.sub, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
           Pick the closest reason. Two matching reports send this for a moderator to check.
         </Text>
@@ -120,11 +119,12 @@ function GymReportSheet({ visible, onClose, venueId }) {
             />
           ))}
         </View>
-        <TextField
-          label="Anything else we should know (optional)"
+        <ComposerInput
           value={detail}
           onChangeText={(v) => setDetail(v.slice(0, REPORT_DETAIL_MAX))}
-          multiline
+          placeholder="Anything else we should know (optional)"
+          maxLength={REPORT_DETAIL_MAX}
+          minHeight={72}
           accessibilityLabel="Report detail"
         />
         <Button
@@ -221,23 +221,22 @@ export default function CommunityDimensionScreen({ navigation, route }) {
         <GymSummary summary={summary} label={label} />
       ) : (
         <>
-          <Text style={[styles.title, { ...t.type.h2, color: t.colors.textPrimary }]}>{label}</Text>
+          <Text style={[styles.title, { ...t.type.h3, color: t.colors.textPrimary }]}>{label}</Text>
           <Text style={[styles.sub, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
             {peopleLine(data?.count ?? people.length)}
           </Text>
         </>
       )}
       {venueId && isPendingVenue(venue) ? (
-        <Pressable
+        <Button
+          variant="tertiary"
+          size="sm"
+          fullWidth={false}
+          title="Is this gym real? Confirm it"
           onPress={confirmVenue}
           disabled={confirmBusy}
-          accessibilityRole="button"
           accessibilityLabel="Is this gym real? Confirm it"
-        >
-          <Text style={[styles.confirmLink, { ...t.type.bodySm, color: t.colors.primary }]}>
-            Is this gym real? Confirm it
-          </Text>
-        </Pressable>
+        />
       ) : null}
       {venueId ? (
         <Pressable
@@ -250,13 +249,13 @@ export default function CommunityDimensionScreen({ navigation, route }) {
           </Text>
         </Pressable>
       ) : null}
-      {people.length ? <SectionLabel>People</SectionLabel> : null}
+      {people.length ? <SectionLabel tone="muted">People</SectionLabel> : null}
     </View>
   );
 
   const footer = programmes.length ? (
     <View style={styles.footerBlock}>
-      <SectionLabel>Programmes</SectionLabel>
+      <SectionLabel tone="muted">Programmes</SectionLabel>
       {programmes.map((row) => (
         <ProgrammeTile
           key={(row.programme ?? row).id}
@@ -338,13 +337,11 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
   header: { gap: spacing.xs, marginBottom: spacing.md },
-  title: { ...type.h2, color: colors.textPrimary },
+  title: { ...type.h3, color: colors.textPrimary },
   sub: { ...type.bodySm, color: colors.textSecondary },
   reportLink: { textDecorationLine: 'underline', marginTop: spacing.xxs },
-  confirmLink: { textDecorationLine: 'underline', marginBottom: spacing.xxs },
   footerBlock: { gap: spacing.md, marginTop: spacing.lg },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
   reportBody: { gap: spacing.md, paddingBottom: spacing.md },
-  reportTitle: { ...type.h3, color: colors.textPrimary },
   reportChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
 });

@@ -395,13 +395,21 @@ describe('reporting', () => {
     act(() => { row.unmount(); tree.unmount(); });
   });
 
+  // Visual rulings 2026-09-07 (V10, V16): Report moved off the header's
+  // direct kebab press into the shared MenuSheet, opened by the header's
+  // "Programme options" button (Share now owns its own header icon).
   test('the header menu still reports the programme', async () => {
     const tree = await mount();
-    const menu = tree.root.findAll(
+    const open = tree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Programme options',
+    )[0];
+    await act(async () => { open.props.onPress(); });
+    await flush();
+
+    const report = tree.root.findAll(
       (n) => n.props?.accessibilityLabel === 'Report this programme',
     )[0];
-
-    await act(async () => { menu.props.onPress(); });
+    await act(async () => { report.props.onPress(); });
 
     expect(reportSheet(tree).props).toEqual(expect.objectContaining({
       visible: true, targetKind: 'programme', targetId: 'prog1',

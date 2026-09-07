@@ -14,6 +14,10 @@
  * Declining is silent (blueprint section 1): nothing here tells the
  * requester anything, and the row says nothing that suggests it will.
  *
+ * Lead visual review 2026-09-06, ruling V18: sits on `Card padding="md"
+ * radius="md"`. Accept/Decline stay the one Button pair a V18 row may
+ * carry (V7: Accept `primary` sm, Decline `secondary` sm).
+ *
  * Props:
  *   request   {requester, reasons, note, created_at} from the connections
  *             list. `requester` is a profile card.
@@ -25,6 +29,7 @@
 
 import { View, Text, StyleSheet } from 'react-native';
 import Button from '../Button';
+import Card from '../Card';
 import ProfileCard from './ProfileCard';
 import { spacing, type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
@@ -48,7 +53,7 @@ export default function ConnectRequestRow({ request, onPress, onAccept, onDeclin
   const note = typeof request?.note === 'string' ? request.note.trim() : '';
 
   return (
-    <View style={styles.row}>
+    <Card padding="md" radius="md" style={styles.row}>
       <ProfileCard card={card} showFollow={false} compact onPress={onPress} />
       <Text style={[styles.line, { ...t.type.bodySm, color: t.colors.textPrimary }]}>
         {line}
@@ -83,7 +88,7 @@ export default function ConnectRequestRow({ request, onPress, onAccept, onDeclin
           accessibilityLabel={`Decline the connection request from @${card.handle}`}
         />
       </View>
-    </View>
+    </Card>
   );
 }
 

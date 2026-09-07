@@ -236,14 +236,14 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
         ) : null}
 
         <Card style={styles.preview}>
-          <SectionLabel>What other people see</SectionLabel>
+          <SectionLabel tone="muted">What other people see</SectionLabel>
           <Text style={[styles.previewLine, { ...t.type.body, color: t.colors.textPrimary }]}>
             {preview || NOTHING_SHARED_LINE}
           </Text>
         </Card>
 
         <View style={styles.section}>
-          <SectionLabel>Your bands</SectionLabel>
+          <SectionLabel tone="muted">Your bands</SectionLabel>
           {bandRows(bands, me).map((row) => (
             <View key={row.key} style={styles.bandRow}>
               <View style={styles.bandBody}>
@@ -264,6 +264,8 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
           ))}
           <Button
             variant="tertiary"
+            size="sm"
+            fullWidth={false}
             title="Recalculate"
             loading={busy}
             onPress={recalculate}
@@ -273,14 +275,14 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
 
         {isMinor ? (
           <View style={styles.section}>
-            <SectionLabel>Open to training together</SectionLabel>
+            <SectionLabel tone="muted">Open to training together</SectionLabel>
             <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
               Training partner matching opens at 18.
             </Text>
           </View>
         ) : (
           <View style={styles.section}>
-            <SectionLabel>Open to training together</SectionLabel>
+            <SectionLabel tone="muted">Open to training together</SectionLabel>
             <View style={styles.bandRow}>
               <View style={styles.bandBody}>
                 <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>

@@ -233,7 +233,7 @@ export default function CommunityAdaptScreen({ navigation, route }) {
 
             {changes.length ? (
               <View style={styles.changes}>
-                <SectionLabel>Changes</SectionLabel>
+                <SectionLabel tone="muted">Changes</SectionLabel>
                 {changes.map((change, i) => (
                   <View
                     key={`${change.day}-${change.order}-${i}`}
@@ -269,11 +269,12 @@ export default function CommunityAdaptScreen({ navigation, route }) {
               // Fail closed on the adaptation, but never on the screen: the
               // line names two actions, so both are here. Nothing adapted is
               // offered to save, because nothing was checked.
-              <>
+              <View style={styles.footerRow}>
                 <Button
                   variant="secondary"
                   title="Use as-is"
-                  size="lg"
+                  size="sm"
+                  fullWidth={false}
                   onPress={handleUseAsIs}
                   loading={saving}
                   disabled={saving}
@@ -282,11 +283,13 @@ export default function CommunityAdaptScreen({ navigation, route }) {
                 <Button
                   variant="tertiary"
                   title="Try again"
+                  size="sm"
+                  fullWidth={false}
                   onPress={load}
                   disabled={saving}
                   accessibilityLabel="Read my limitations again"
                 />
-              </>
+              </View>
             ) : (
               <>
                 <Button
@@ -323,5 +326,6 @@ const styles = StyleSheet.create({
   toKept: { ...type.bodySm },
   why: { ...type.captionStrong },
   footer: { borderTopWidth: 1, padding: spacing.lg, gap: spacing.sm },
+  footerRow: { flexDirection: 'row', gap: spacing.sm },
   footerNote: { ...type.caption, textAlign: 'center' },
 });

@@ -18,21 +18,22 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, ActivityIndicator, Share,
+  View, Text, StyleSheet, ScrollView, ActivityIndicator, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
-import SegmentedControl from '../components/SegmentedControl';
+import TextField from '../components/TextField';
+import ComposerInput from '../components/community/ComposerInput';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import ProgrammeStructure from '../components/community/ProgrammeStructure';
 import useTheme from '../hooks/useTheme';
-import { spacing, radius, type } from '../styles/theme';
-import { touchTarget } from '../styles/layout';
+import { spacing, type } from '../styles/theme';
 import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
 import {
@@ -243,50 +244,49 @@ export default function CommunityPublishProgrammeScreen({ navigation, route }) {
           </Card>
 
           <View style={styles.field}>
-            <SectionLabel>Title</SectionLabel>
-            <TextInput
-              style={[styles.input, {
-                backgroundColor: t.colors.inputBg, borderColor: t.colors.border, color: t.colors.textPrimary,
-              }]}
+            <SectionLabel tone="muted">Title</SectionLabel>
+            <TextField
+              size="sm"
               value={title}
               onChangeText={setTitle}
               maxLength={PROGRAMME_TITLE_MAX}
               placeholder="Name this programme"
-              placeholderTextColor={t.colors.textDisabled}
               accessibilityLabel="Programme title"
             />
           </View>
 
           <View style={styles.field}>
-            <SectionLabel>Description</SectionLabel>
-            <TextInput
-              style={[styles.input, styles.inputMultiline, {
-                backgroundColor: t.colors.inputBg, borderColor: t.colors.border, color: t.colors.textPrimary,
-              }]}
+            <SectionLabel tone="muted">Description</SectionLabel>
+            <ComposerInput
               value={description}
               onChangeText={setDescription}
               maxLength={PROGRAMME_DESCRIPTION_MAX}
-              multiline
+              minHeight={96}
               placeholder="What is this programme for, and who is it for?"
-              placeholderTextColor={t.colors.textDisabled}
               accessibilityLabel="Programme description"
             />
           </View>
 
           <View style={styles.field}>
-            <SectionLabel>Who can see it</SectionLabel>
-            <SegmentedControl
-              options={VISIBILITY_OPTIONS}
-              value={visibility}
-              onChange={setVisibility}
-            />
+            <SectionLabel tone="muted">Who can see it</SectionLabel>
+            <View style={styles.chipRow}>
+              {VISIBILITY_OPTIONS.map((opt) => (
+                <Chip
+                  key={opt.value}
+                  label={opt.label}
+                  selected={visibility === opt.value}
+                  onPress={() => setVisibility(opt.value)}
+                  accessibilityRole="radio"
+                />
+              ))}
+            </View>
             {visibility === 'link' ? (
               <Text style={[styles.hint, { color: t.colors.textMuted }]}>{LINK_ONLY_LINE}</Text>
             ) : null}
           </View>
 
           <View style={styles.field}>
-            <SectionLabel>{`Preview · ${stats?.days ?? 0} days · ${stats?.exercises ?? 0} exercises`}</SectionLabel>
+            <SectionLabel tone="muted">{`Preview · ${stats?.days ?? 0} days · ${stats?.exercises ?? 0} exercises`}</SectionLabel>
             <ProgrammeStructure snapshot={snapshot} />
             {snapshotHasNotes(snapshot) ? (
               <Text style={[styles.hint, { color: t.colors.textMuted }]}>{NOTES_TRAVEL_LINE}</Text>
@@ -295,17 +295,24 @@ export default function CommunityPublishProgrammeScreen({ navigation, route }) {
 
           <Button
             variant="emphatic"
-            title={publishedId ? 'Update' : 'Publish'}
+            title={publishedId ? 'Update' : 'Share programme'}
             size="lg"
             onPress={handlePublish}
             loading={busy}
             disabled={!canPublish}
           />
           {publishedId ? (
-            <>
-              <Button title="Share link" variant="secondary" icon="share-social-outline" onPress={handleShareLink} />
-              <Button title="Unpublish" variant="tertiary" onPress={handleUnpublish} />
-            </>
+            <View style={styles.footerRow}>
+              <Button
+                title="Share link"
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                icon="share-social-outline"
+                onPress={handleShareLink}
+              />
+              <Button title="Unpublish" variant="tertiary" size="sm" fullWidth={false} onPress={handleUnpublish} />
+            </View>
           ) : null}
         </ScrollView>
       )}
@@ -320,9 +327,6 @@ const styles = StyleSheet.create({
   disclosure: { ...type.bodySm },
   hint: { ...type.caption },
   field: { gap: spacing.sm },
-  input: {
-    minHeight: touchTarget.minimum, borderWidth: 1, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, ...type.body,
-  },
-  inputMultiline: { minHeight: 96, textAlignVertical: 'top' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  footerRow: { flexDirection: 'row', gap: spacing.sm },
 });

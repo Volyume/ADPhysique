@@ -15,6 +15,10 @@
  * Opened from the partners list, "Want to train together?" is
  * pre-selected, because that is the door the person came through (SD-25).
  *
+ * Lead visual review 2026-09-06, ruling V16: `BottomSheet` with the shared
+ * `ModalHeader` (title, close) in place of a bare title line; the one
+ * primary action stays full width, last.
+ *
  * Props:
  *   visible    controlled
  *   onClose    close the sheet
@@ -28,6 +32,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import BottomSheet from '../BottomSheet';
+import ModalHeader from '../ModalHeader';
 import Button from '../Button';
 import Chip from '../Chip';
 import TextField from '../TextField';
@@ -98,10 +103,13 @@ export default function ConnectSheet({
       keyboardAvoiding
       accessibilityLabel="Send a connection request"
     >
+      <View style={styles.headerBleed}>
+        <ModalHeader
+          title={card?.handle ? `Connect with @${card.handle}` : 'Connect'}
+          onClose={onClose}
+        />
+      </View>
       <View style={styles.body}>
-        <Text style={[styles.title, { ...t.type.h3, color: t.colors.textPrimary }]}>
-          {card?.handle ? `Connect with @${card.handle}` : 'Connect'}
-        </Text>
         <Text style={[styles.line, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
           {CONNECT_EXPLAINS_LINE}
         </Text>
@@ -150,8 +158,8 @@ export default function ConnectSheet({
 }
 
 const styles = StyleSheet.create({
+  headerBleed: { marginHorizontal: -spacing.lg, marginBottom: spacing.xs },
   body: { gap: spacing.md, paddingBottom: spacing.md },
-  title: { ...type.h3, color: colors.textPrimary },
   line: { ...type.bodySm, color: colors.textSecondary },
   field: { gap: spacing.sm },
   hint: { ...type.caption, color: colors.textMuted },

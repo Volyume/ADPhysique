@@ -198,14 +198,16 @@ describe('why a plan cannot be shared (item 33)', () => {
 });
 
 describe('the visibility control (item 33)', () => {
+  // Visual rulings 2026-09-07 (V6): the visibility picker is a Chip row now,
+  // not SegmentedControl, so "Link only" is pressed directly by its label.
   test('"Link only" explains itself, and the other choices do not borrow the line', async () => {
     const { tree } = await mount();
     expect(texts(tree)).not.toContain(LINK_ONLY_LINE);
 
-    const control = tree.root.findAll(
-      (n) => typeof n.type === 'function' && n.props && 'options' in n.props && 'onChange' in n.props,
+    const chip = tree.root.findAll(
+      (n) => typeof n.type === 'function' && n.props?.label === 'Link only' && n.props?.accessibilityRole === 'radio',
     )[0];
-    await act(async () => { control.props.onChange('link'); });
+    await act(async () => { chip.props.onPress(); });
 
     expect(texts(tree)).toContain(LINK_ONLY_LINE);
     expect(LINK_ONLY_LINE).toBe('Anyone with the link can open it. It is not listed anywhere.');

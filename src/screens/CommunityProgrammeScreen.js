@@ -41,6 +41,7 @@ import CommentRow, { CommentComposer } from '../components/community/CommentRow'
 import JoinToInteractRow from '../components/community/JoinToInteractRow';
 import ReportSheet from '../components/community/ReportSheet';
 import ConnectSheet from '../components/community/ConnectSheet';
+import MenuSheet from '../components/community/MenuSheet';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import useAppStore from '../store/useAppStore';
@@ -104,6 +105,7 @@ export default function CommunityProgrammeScreen({ navigation, route }) {
   // (product review 2026-09-06 finding 1): the reasons/note sheet, same
   // component every other Connect surface uses.
   const [connectCard, setConnectCard] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) { setLoading(false); setErrorCode('not_found'); return; }
@@ -248,7 +250,7 @@ export default function CommunityProgrammeScreen({ navigation, route }) {
 
   const header = (
     <View style={styles.header}>
-      <Text style={[styles.title, { color: t.colors.textPrimary }]}>{programme?.title ?? 'Programme'}</Text>
+      <Text style={[styles.title, { ...t.type.h3, color: t.colors.textPrimary }]}>{programme?.title ?? 'Programme'}</Text>
       {creator ? (
         <ProfileCard
           card={creator}
@@ -294,7 +296,7 @@ export default function CommunityProgrammeScreen({ navigation, route }) {
         </Pressable>
       ) : null}
       <ProgrammeStructure snapshot={snapshot} />
-      <SectionLabel style={styles.commentsLabel}>Comments</SectionLabel>
+      <SectionLabel tone="muted" style={styles.commentsLabel}>Comments</SectionLabel>
       {comments.length === 0 ? (
         <Text style={[styles.noComments, { color: t.colors.textMuted }]}>
           No comments yet. Anything useful about the training is welcome here.
@@ -308,15 +310,26 @@ export default function CommunityProgrammeScreen({ navigation, route }) {
       <BackHeader
         title="Programme"
         right={programme ? (
-          <TouchableOpacity
-            onPress={() => { haptics.selection(); setReportTarget({ targetKind: 'programme', targetId: programme.id }); }}
-            hitSlop={hitSlop}
-            style={styles.headerAction}
-            accessibilityRole="button"
-            accessibilityLabel="Report this programme"
-          >
-            <Ionicons name="ellipsis-horizontal" size={iconSize.md} color={t.colors.textSecondary} />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              onPress={handleShareLink}
+              hitSlop={hitSlop}
+              style={styles.headerAction}
+              accessibilityRole="button"
+              accessibilityLabel="Share this programme"
+            >
+              <Ionicons name="share-social-outline" size={iconSize.md} color={t.colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => { haptics.selection(); setMenuOpen(true); }}
+              hitSlop={hitSlop}
+              style={styles.headerAction}
+              accessibilityRole="button"
+              accessibilityLabel="Programme options"
+            >
+              <Ionicons name="ellipsis-horizontal" size={iconSize.md} color={t.colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
         ) : null}
       />
       {loading ? (
@@ -376,6 +389,7 @@ export default function CommunityProgrammeScreen({ navigation, route }) {
               <Button
                 title="Adapt for me"
                 icon="options-outline"
+                size="sm"
                 onPress={() => {
                   haptics.selection();
                   navigation.navigate('CommunityAdapt', { id: programme.id });
@@ -386,6 +400,7 @@ export default function CommunityProgrammeScreen({ navigation, route }) {
               <Button
                 title="Use as-is"
                 variant="secondary"
+                size="sm"
                 onPress={handleUseAsIs}
                 loading={busy}
                 disabled={busy}
@@ -396,16 +411,25 @@ export default function CommunityProgrammeScreen({ navigation, route }) {
             <Text style={[styles.adaptLine, { ...t.type.captionTight, color: t.colors.textMuted }]}>
               {ADAPT_EXPLAINS_LINE}
             </Text>
-            <Button
-              title="Share link"
-              variant="tertiary"
-              size="sm"
-              icon="share-social-outline"
-              onPress={handleShareLink}
-            />
           </View>
         </>
       )}
+      <MenuSheet
+        visible={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        title="Programme options"
+        rows={[
+          {
+            icon: 'flag-outline',
+            label: 'Report',
+            onPress: () => {
+              setMenuOpen(false);
+              setReportTarget({ targetKind: 'programme', targetId: programme?.id });
+            },
+            accessibilityLabel: 'Report this programme',
+          },
+        ]}
+      />
       <ReportSheet
         visible={!!reportTarget}
         onClose={() => setReportTarget(null)}
@@ -429,7 +453,7 @@ const styles = StyleSheet.create({
   centre: { flex: 1, justifyContent: 'center', padding: spacing.lg },
   content: { padding: spacing.lg, paddingBottom: spacing.xl },
   header: { gap: spacing.md, marginBottom: spacing.md },
-  title: { ...type.h2 },
+  title: { ...type.h3 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   description: { ...type.bodySm },
   useCountRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2 },
@@ -437,6 +461,7 @@ const styles = StyleSheet.create({
   myUse: { ...type.caption },
   commentsLabel: { marginTop: spacing.lg },
   noComments: { ...type.caption },
+  headerActions: { flexDirection: 'row', alignItems: 'center' },
   headerAction: {
     width: touchTarget.minimum, height: touchTarget.minimum,
     alignItems: 'flex-end', justifyContent: 'center',

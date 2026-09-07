@@ -206,16 +206,23 @@ describe('Edit profile saves the fields it owns', () => {
 });
 
 describe('the privacy screen visibility control', () => {
-  function segment(tree) {
-    return tree.root.findAll(
-      (n) => typeof n.type === 'function' && n.props?.accessibilityLabel === 'Who can follow you',
+  // Visual rulings 2026-09-07 (V6, V13): the privacy screen's pick-one
+  // controls are Chip rows now, not SegmentedControl, so these look up the
+  // "People I approve" / "Anyone" Chip inside its labelled row rather than
+  // a single onChange/value component.
+  function chipGroup(tree, groupLabel) {
+    return tree.root.findAll((n) => n.props?.accessibilityLabel === groupLabel)[0];
+  }
+  function chip(tree, groupLabel, chipLabel) {
+    return chipGroup(tree, groupLabel).findAll(
+      (n) => typeof n.type === 'function' && n.props?.label === chipLabel && n.props?.accessibilityRole === 'radio',
     )[0];
   }
 
   test('sends only the visibility, and nothing else', async () => {
     const { tree } = await mount(CommunityPrivacyScreen);
 
-    await act(async () => { segment(tree).props.onChange('followers'); });
+    await act(async () => { chip(tree, 'Who can follow you', 'People I approve').props.onPress(); });
     await flush();
 
     expect(upsertProfile).toHaveBeenCalledTimes(1);
@@ -227,10 +234,11 @@ describe('the privacy screen visibility control', () => {
     upsertProfile.mockRejectedValueOnce(Object.assign(new Error('offline'), { code: 'offline' }));
 
     const { tree } = await mount(CommunityPrivacyScreen);
-    await act(async () => { segment(tree).props.onChange('followers'); });
+    await act(async () => { chip(tree, 'Who can follow you', 'People I approve').props.onPress(); });
     await flush();
 
-    expect(segment(tree).props.value).toBe('public');
+    expect(chip(tree, 'Who can follow you', 'Anyone').props.selected).toBe(true);
+    expect(chip(tree, 'Who can follow you', 'People I approve').props.selected).toBe(false);
     expect(mockToastShow).toHaveBeenCalledWith(
       'Could not change that just now.',
       expect.objectContaining({ variant: 'error' }),
@@ -255,17 +263,21 @@ describe('the privacy screen visibility control', () => {
 // ─── Discovery additions (`docs/social-discovery-2026-09-06/
 // 70-DISCOVERY-BLUEPRINT.md` sections 1, 3, 7; SD-20, SD-22, SD-26) ──────
 describe('who can send a connection request, and the two discovery links', () => {
-  function connectSegment(tree) {
-    return tree.root.findAll(
-      (n) => typeof n.type === 'function'
-        && n.props?.accessibilityLabel === 'Who can send you connection requests',
+  // Visual rulings 2026-09-07 (V6, V13): a Chip row, same lookup shape as
+  // the visibility control above.
+  function chipGroup(tree, groupLabel) {
+    return tree.root.findAll((n) => n.props?.accessibilityLabel === groupLabel)[0];
+  }
+  function connectChip(tree, chipLabel) {
+    return chipGroup(tree, 'Who can send you connection requests').findAll(
+      (n) => typeof n.type === 'function' && n.props?.label === chipLabel && n.props?.accessibilityRole === 'radio',
     )[0];
   }
 
   test('changes connect_from through its own RPC, never through upsertProfile', async () => {
     const { tree } = await mount(CommunityPrivacyScreen);
 
-    await act(async () => { connectSegment(tree).props.onChange('followers'); });
+    await act(async () => { connectChip(tree, 'People who follow me').props.onPress(); });
     await flush();
 
     expect(setConnectFrom).toHaveBeenCalledWith('followers');
@@ -278,11 +290,11 @@ describe('who can send a connection request, and the two discovery links', () =>
     setConnectFrom.mockRejectedValueOnce({ code: 'rules_outdated' });
     const { tree, navigation } = await mount(CommunityPrivacyScreen);
 
-    await act(async () => { connectSegment(tree).props.onChange('followers'); });
+    await act(async () => { connectChip(tree, 'People who follow me').props.onPress(); });
     await flush();
 
     expect(navigation.navigate).toHaveBeenCalledWith('CommunityRules', { mustAccept: true });
-    expect(connectSegment(tree).props.value).toBe('anyone');
+    expect(connectChip(tree, 'Anyone').props.selected).toBe(true);
     expect(mockToastShow).not.toHaveBeenCalledWith('Could not change that just now.', { variant: 'error' });
   });
 
@@ -290,10 +302,10 @@ describe('who can send a connection request, and the two discovery links', () =>
     setConnectFrom.mockRejectedValueOnce({ code: 'offline' });
     const { tree } = await mount(CommunityPrivacyScreen);
 
-    await act(async () => { connectSegment(tree).props.onChange('followers'); });
+    await act(async () => { connectChip(tree, 'People who follow me').props.onPress(); });
     await flush();
 
-    expect(connectSegment(tree).props.value).toBe('anyone');
+    expect(connectChip(tree, 'Anyone').props.selected).toBe(true);
     expect(mockToastShow).toHaveBeenCalledWith('Could not change that just now.', { variant: 'error' });
   });
 

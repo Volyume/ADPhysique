@@ -171,7 +171,7 @@ export default function CommunityActivityScreen({ navigation }) {
     <View style={styles.requests}>
       {connectRequests.length ? (
         <>
-          <SectionLabel>Connection requests</SectionLabel>
+          <SectionLabel tone="muted">Connection requests</SectionLabel>
           {connectRequests.map((row) => {
             const card = row.requester ?? row.card ?? row;
             return (
@@ -187,7 +187,7 @@ export default function CommunityActivityScreen({ navigation }) {
           })}
         </>
       ) : null}
-      {requests.length ? <SectionLabel>Follow requests</SectionLabel> : null}
+      {requests.length ? <SectionLabel tone="muted">Follow requests</SectionLabel> : null}
       {requests.map((row) => {
         const card = row.card ?? row;
         return (
@@ -221,7 +221,7 @@ export default function CommunityActivityScreen({ navigation }) {
           </View>
         );
       })}
-      <SectionLabel>Activity</SectionLabel>
+      <SectionLabel tone="muted">Activity</SectionLabel>
     </View>
   ) : null;
 

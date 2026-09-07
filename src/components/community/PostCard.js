@@ -14,6 +14,11 @@
  * count; comments use `chatbubble-outline`. No hearts, and no amber body
  * text anywhere on the card.
  *
+ * Ruling V11: header avatar 32, name `bodyStrong`, handle and day
+ * `caption` `textMuted`. The training facts read as a compact fact block
+ * (`captionStrong` label, `body` value) ahead of the caption text. Footer
+ * actions are glyph plus count in `textMuted`, no Button.
+ *
  * Props:
  *   post        the post row: { id, kind, payload, caption, reaction_count,
  *               comment_count, created_at }
@@ -34,7 +39,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Card from '../Card';
-import SectionLabel from '../SectionLabel';
 import ProfileAvatarMark from '../ProfileAvatarMark';
 import useTheme from '../../hooks/useTheme';
 import { spacing, type, hitSlop, iconSize } from '../../styles/theme';
@@ -128,7 +132,7 @@ export default function PostCard({
         <ProfileAvatarMark
           presetKey={author?.avatar_preset ?? null}
           displayName={author?.display_name ?? ''}
-          size={40}
+          size={32}
         />
         <View style={styles.authorText}>
           <Text style={[styles.authorName, { color: t.colors.textPrimary }]} numberOfLines={1}>
@@ -137,16 +141,16 @@ export default function PostCard({
                 its own handle names the person. */}
             {author ? (author.display_name || author.handle) : 'A lifter'}
           </Text>
-          <Text style={[styles.authorHandle, { color: t.colors.textSecondary }]} numberOfLines={1}>
+          <Text style={[styles.authorHandle, { color: t.colors.textMuted }]} numberOfLines={1}>
             {[handle, day].filter(Boolean).join(' · ')}
           </Text>
         </View>
       </TouchableOpacity>
 
       <View style={styles.body}>
-        {eyebrow ? <SectionLabel>{eyebrow}</SectionLabel> : null}
+        {eyebrow ? <Text style={[styles.eyebrow, { color: t.colors.textPrimary }]}>{eyebrow}</Text> : null}
         {hero ? (
-          <Text style={[styles.hero, t.type.num('h2'), { color: t.colors.textPrimary }]}>{hero}</Text>
+          <Text style={[styles.hero, t.type.num('body'), { color: t.colors.textPrimary }]}>{hero}</Text>
         ) : null}
         {line ? (
           <Text style={[styles.line, { color: t.colors.textSecondary }]}>{line}</Text>
@@ -170,9 +174,9 @@ export default function PostCard({
           <Ionicons
             name={myReaction ? 'thumbs-up' : 'thumbs-up-outline'}
             size={iconSize.sm}
-            color={myReaction ? t.colors.textPrimary : t.colors.textSecondary}
+            color={t.colors.textMuted}
           />
-          <Text style={[styles.actionText, { color: myReaction ? t.colors.textPrimary : t.colors.textSecondary }]}>
+          <Text style={[styles.actionText, { color: t.colors.textMuted }]}>
             {`Respect ${number(post?.reaction_count)}`}
           </Text>
         </TouchableOpacity>
@@ -184,8 +188,8 @@ export default function PostCard({
           accessibilityRole="button"
           accessibilityLabel="Open the comments"
         >
-          <Ionicons name="chatbubble-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-          <Text style={[styles.actionText, { color: t.colors.textSecondary }]}>
+          <Ionicons name="chatbubble-outline" size={iconSize.sm} color={t.colors.textMuted} />
+          <Text style={[styles.actionText, { color: t.colors.textMuted }]}>
             {String(number(post?.comment_count))}
           </Text>
         </TouchableOpacity>
@@ -197,8 +201,8 @@ export default function PostCard({
             accessibilityRole="button"
             accessibilityLabel={author?.handle ? `Message @${author.handle}` : 'Message this lifter'}
           >
-            <Ionicons name="chatbubble-ellipses-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-            <Text style={[styles.actionText, { color: t.colors.textSecondary }]}>Message</Text>
+            <Ionicons name="chatbubble-ellipses-outline" size={iconSize.sm} color={t.colors.textMuted} />
+            <Text style={[styles.actionText, { color: t.colors.textMuted }]}>Message</Text>
           </TouchableOpacity>
         ) : null}
       </View>
@@ -210,9 +214,10 @@ const styles = StyleSheet.create({
   card: { gap: spacing.md },
   authorRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   authorText: { flex: 1, gap: spacing.xxs },
-  authorName: { ...type.label },
+  authorName: { ...type.bodyStrong },
   authorHandle: { ...type.caption },
   body: { gap: spacing.xxs },
+  eyebrow: { ...type.captionStrong },
   hero: {},
   line: { ...type.caption },
   caption: { ...type.bodySm },

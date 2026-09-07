@@ -37,14 +37,13 @@ import Button from '../components/Button';
 import Chip from '../components/Chip';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
-import SegmentedControl from '../components/SegmentedControl';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import GymPicker from '../components/community/GymPicker';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, iconSize } from '../styles/theme';
+import { colors, spacing, type, iconSize, circle } from '../styles/theme';
 import { AVATAR_PRESETS } from '../lib/profileAvatarPresets';
 import { get as getGym, setGyms, venueLine } from '../lib/gyms';
 import {
@@ -213,7 +212,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
                 <ProfileAvatarMark
                   presetKey={p.key}
                   displayName={displayName || 'Athlete'}
-                  size={48}
+                  size={40}
                   selected={preset === p.key}
                 />
               </Pressable>
@@ -225,6 +224,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
           label="Name"
           value={displayName}
           onChangeText={(v) => setDisplayName(v.slice(0, DISPLAY_NAME_MAX))}
+          size="sm"
           accessibilityLabel="Display name"
         />
 
@@ -233,6 +233,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
           value={bio}
           onChangeText={(v) => setBio(v.slice(0, BIO_MAX))}
           multiline
+          size="sm"
           accessibilityLabel="Bio"
         />
 
@@ -287,6 +288,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
           label="Area"
           value={area}
           onChangeText={(v) => setArea(v.slice(0, AREA_LABEL_MAX))}
+          size="sm"
           accessibilityLabel="Area"
         />
 
@@ -298,24 +300,28 @@ export default function CommunityEditProfileScreen({ navigation }) {
               onSelect={(venue) => { setPrimaryGym(venue); setLegacyGymLabel(null); setEditingPrimaryGym(false); }}
             />
           ) : (
-            <Card style={styles.gymRow}>
+            <Card padding="md" radius="md" style={styles.gymRow}>
+              <View style={[styles.gymGlyph, { backgroundColor: t.colors.surface2 }]}>
+                <Ionicons name="business-outline" size={iconSize.sm} color={t.colors.textSecondary} />
+              </View>
               <View style={styles.gymBody}>
-                <Text style={[styles.linkLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
+                <Text style={[styles.linkLabel, { ...t.type.body, color: t.colors.textPrimary }]} numberOfLines={1}>
                   {primaryGym ? venueLine(primaryGym).primary : legacyGymLabel}
                 </Text>
                 {!primaryGym && legacyGymLabel ? (
-                  <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+                  <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
                     Not yet linked to the directory.
                   </Text>
                 ) : null}
               </View>
-              <Pressable
+              <Button
+                variant="tertiary"
+                size="sm"
+                fullWidth={false}
+                title="Change"
                 onPress={() => setEditingPrimaryGym(true)}
-                accessibilityRole="button"
                 accessibilityLabel="Change gym"
-              >
-                <Text style={[styles.changeLink, { ...t.type.bodySm, color: t.colors.primary }]}>Change</Text>
-              </Pressable>
+              />
             </Card>
           )}
           <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
@@ -329,7 +335,10 @@ export default function CommunityEditProfileScreen({ navigation }) {
             {`Up to ${MAX_OTHER_GYMS} more gyms you train at.`}
           </Text>
           {otherGyms.map((venue) => (
-            <Card key={venue.id} style={styles.gymRow}>
+            <Card key={venue.id} padding="md" radius="md" style={styles.gymRow}>
+              <View style={[styles.gymGlyph, { backgroundColor: t.colors.surface2 }]}>
+                <Ionicons name="business-outline" size={iconSize.sm} color={t.colors.textSecondary} />
+              </View>
               <Text style={[styles.linkLabel, { ...t.type.body, color: t.colors.textPrimary, flex: 1 }]} numberOfLines={1}>
                 {venueLine(venue).primary}
               </Text>
@@ -354,6 +363,8 @@ export default function CommunityEditProfileScreen({ navigation }) {
             ) : (
               <Button
                 variant="tertiary"
+                size="sm"
+                fullWidth={false}
                 title="Add another gym"
                 onPress={() => setAddingOtherGym(true)}
                 accessibilityLabel="Add another gym"
@@ -380,15 +391,25 @@ export default function CommunityEditProfileScreen({ navigation }) {
 
         <View style={styles.field}>
           <SectionLabel>Who can follow you</SectionLabel>
-          <SegmentedControl
-            options={[
-              { label: 'Anyone', value: 'public' },
-              { label: 'People I approve', value: 'followers' },
-            ]}
-            value={visibility}
-            onChange={setVisibility}
-            accessibilityLabel="Who can follow you"
-          />
+          <View style={styles.chips} accessibilityLabel="Who can follow you">
+            <Chip
+              label="Anyone"
+              selected={visibility === 'public'}
+              onPress={() => setVisibility('public')}
+              accessibilityRole="radio"
+            />
+            <Chip
+              label="People I approve"
+              selected={visibility === 'followers'}
+              onPress={() => setVisibility('followers')}
+              accessibilityRole="radio"
+            />
+          </View>
+          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+            {visibility === 'public'
+              ? 'Anyone signed in can follow you and see what you post.'
+              : 'You approve every follower before they see what you post.'}
+          </Text>
         </View>
 
         <Button
@@ -401,6 +422,8 @@ export default function CommunityEditProfileScreen({ navigation }) {
 
         <Button
           variant="destructive"
+          size="sm"
+          fullWidth={false}
           title="Leave Community"
           onPress={confirmLeave}
           accessibilityLabel="Leave Community"
@@ -415,11 +438,17 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   field: { gap: spacing.sm },
   hint: { ...type.caption, color: colors.textMuted },
-  gymRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  gymRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  gymGlyph: {
+    width: 36,
+    height: 36,
+    borderRadius: circle(36),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   gymBody: { flex: 1, gap: spacing.xxs },
-  changeLink: { ...type.bodySm, color: colors.primary },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
-  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   linkBody: { flex: 1, gap: spacing.xxs },
   linkLabel: { ...type.bodyStrong, color: colors.textPrimary },
