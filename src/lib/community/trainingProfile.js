@@ -348,11 +348,20 @@ export function timeBandsLabel(bands) {
  * passes the FILTERED bands: the preview is a promise about what leaves
  * the device, and a preview that showed more than that would be a lie.
  *
+ * `ageBand` (spec 1.3) is the raw key ('18_24', etc), never the label:
+ * this is the one place that maps it, exactly like every other band
+ * here, so a caller never has to know `TP_AGE_BANDS` exists to preview
+ * correctly. It is a SEPARATE argument rather than a field on `bands`
+ * because `shareablePayload` never puts a value on the wire for it (the
+ * server derives the band itself); the caller passes the person's own
+ * `tp_age_band` only when their `age_band` toggle is on.
+ *
  * @param {object} bands
+ * @param {string|null} [ageBand]
  * @returns {string} e.g. "Usually trains Mon, Wed and Fri evenings ·
- *   4 to 5 sessions a week · Intermediate"
+ *   4 to 5 sessions a week · Intermediate · 35 to 44"
  */
-export function previewLine(bands = {}) {
+export function previewLine(bands = {}, ageBand = null) {
   const parts = [];
   const days = dayListLabel(bands?.tp_days);
   const times = timeBandsLabel(bands?.tp_time_bands);
@@ -365,6 +374,9 @@ export function previewLine(bands = {}) {
 
   const level = TP_EXPERIENCE_BANDS[bands?.tp_experience_band];
   if (level) parts.push(level);
+
+  const ageLabel = TP_AGE_BANDS[ageBand];
+  if (ageLabel) parts.push(ageLabel);
 
   return parts.join(' · ');
 }

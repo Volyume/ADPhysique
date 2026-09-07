@@ -163,7 +163,13 @@ export default function CommunityConversationScreen({ navigation, route }) {
       }
       setMessages(rows);
       setCursor(next);
-      refSent.current = rows.length > 0;
+      // Spec 1.3: whether the ref has been sent is about THIS opening of
+      // the screen, never about how many messages the conversation
+      // already has. `refSent` starts false on every mount and is set
+      // true only by `handleSend` actually sending it (below); it must
+      // never be re-derived from `rows.length` here, or a ref opened
+      // into an EXISTING conversation would look "already sent" before
+      // a single message of this visit had gone.
 
       // A thread that exists but is no longer listed has been closed:
       // `community_conversations` lists open conversations only, which is
@@ -331,7 +337,11 @@ export default function CommunityConversationScreen({ navigation, route }) {
 
   const name = other?.display_name || other?.handle || 'Messages';
   const handle = other?.handle ? `@${other.handle}` : '';
-  const placeholder = !messages.length && ref ? placeholderFor(ref) : 'Write a message';
+  // Spec 1.3: the placeholder follows the same condition as the attach
+  // itself (a ref that has not been sent THIS opening), not the row
+  // count -- an existing conversation opened with a ref prompts for it
+  // exactly as an empty one does.
+  const placeholder = !refSent.current && ref ? placeholderFor(ref) : 'Write a message';
   const canCompose = !closed && !errorCode && !sendCode;
 
   const notice = sendCode === 'not_connected' ? (

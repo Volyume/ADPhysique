@@ -11,10 +11,15 @@
  *    from `created_at` is refused by `_community_cursor_parts` as
  *    `invalid_input`, so nothing here mints its own;
  *  - reading Discover never requires a Community profile (SD-04). Without
- *    one, `community_suggested_people` and `community_dimensions_me` are
- *    not called at all: both raise `no_profile`;
+ *    one, `community_dimensions_me` is not called at all: it raises
+ *    `no_profile`;
  *  - one failing section never empties Discover. The reads are settled
- *    independently, and a rejected optional section is simply empty.
+ *    independently, and a rejected optional section is simply empty;
+ *  - `community_suggested_people` is never called by `loadHub` at all
+ *    (spec 1.3, community-product-audit-2026-09-07 section 1.3): the hub
+ *    never rendered `people`, so the read was removed rather than kept
+ *    unrendered. The RPC and `suggestedPeople()` stay for compatibility;
+ *    `hub.people` is simply always empty.
  */
 
 jest.mock('../transport', () => ({ callCommunity: jest.fn() }));
@@ -87,7 +92,7 @@ describe('the wrapper objects are unwrapped', () => {
 });
 
 describe('Discover without a Community profile (SD-04)', () => {
-  test('the two reads that need a profile are not made', async () => {
+  test('the read that needs a profile is not made', async () => {
     server({
       community_discover_programmes: PROGRAMME_PAGE,
       community_discover_posts: POST_PAGE,
@@ -96,13 +101,26 @@ describe('Discover without a Community profile (SD-04)', () => {
     const hub = await loadHub('discover', { joined: false });
 
     const called = callCommunity.mock.calls.map(([name]) => name);
-    expect(called).not.toContain('community_suggested_people');
     expect(called).not.toContain('community_dimensions_me');
     expect(hub.programmes).toEqual(PROGRAMME_PAGE.programmes);
     expect(hub.posts).toEqual(POST_PAGE.posts);
     expect(hub.people).toEqual([]);
     expect(hub.dimensions).toEqual([]);
     expect(hub.error).toBeNull();
+  });
+
+  test('community_suggested_people is never called by loadHub, joined or not (spec 1.3)', async () => {
+    server({
+      community_discover_programmes: PROGRAMME_PAGE,
+      community_discover_posts: POST_PAGE,
+      community_dimensions_me: { dimensions: [] },
+    });
+
+    await loadHub('discover', { joined: false });
+    await loadHub('discover', { joined: true });
+
+    expect(callCommunity.mock.calls.map(([name]) => name))
+      .not.toContain('community_suggested_people');
   });
 
   test('the paging cursor is the stories cursor the server minted', async () => {
@@ -116,12 +134,11 @@ describe('Discover without a Community profile (SD-04)', () => {
 });
 
 describe('one failing section never empties Discover', () => {
-  test('a refused suggestions read leaves the programmes and stories standing', async () => {
+  test('a refused dimensions read leaves the programmes and stories standing', async () => {
     server({
       community_discover_programmes: PROGRAMME_PAGE,
       community_discover_posts: POST_PAGE,
-      community_suggested_people: refusal('no_profile'),
-      community_dimensions_me: { dimensions: [{ kind: 'style', key: 'kb', count: 4 }] },
+      community_dimensions_me: refusal('no_profile'),
     });
 
     const hub = await loadHub('discover', { joined: true });
@@ -129,14 +146,13 @@ describe('one failing section never empties Discover', () => {
     expect(hub.programmes).toEqual(PROGRAMME_PAGE.programmes);
     expect(hub.posts).toEqual(POST_PAGE.posts);
     expect(hub.people).toEqual([]);
-    expect(hub.dimensions).toHaveLength(1);
+    expect(hub.dimensions).toEqual([]);
   });
 
   test('only a Discover with neither programmes nor stories is a failure', async () => {
     server({
       community_discover_programmes: refusal('offline'),
       community_discover_posts: refusal('offline'),
-      community_suggested_people: { people: [] },
       community_dimensions_me: { dimensions: [] },
     });
 
@@ -151,7 +167,6 @@ describe('one failing section never empties Discover', () => {
     server({
       community_discover_programmes: PROGRAMME_PAGE,
       community_discover_posts: POST_PAGE,
-      community_suggested_people: { people: [] },
       community_dimensions_me: { dimensions: [] },
     });
     await loadHub('discover', { joined: true });
@@ -159,7 +174,6 @@ describe('one failing section never empties Discover', () => {
     server({
       community_discover_programmes: refusal('offline'),
       community_discover_posts: refusal('offline'),
-      community_suggested_people: refusal('offline'),
       community_dimensions_me: refusal('offline'),
     });
     const hub = await loadHub('discover', { joined: true });
@@ -189,7 +203,6 @@ describe('paging Discover', () => {
     server({
       community_discover_programmes: PROGRAMME_PAGE,
       community_discover_posts: POST_PAGE,
-      community_suggested_people: { people: [] },
       community_dimensions_me: { dimensions: [] },
     });
 

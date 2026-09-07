@@ -157,6 +157,56 @@ describe('reasons, never a score or a percentage', () => {
   });
 });
 
+// ─── Lead addendum (`09-gym-journey-tests.md` finding R1/R1b): a null
+// distance must never score, or reason, as if the venue were 0 m away. ──
+describe('a missing distance never outranks or reasons as "Nearby" (finding R1)', () => {
+  const NO_COORD = {
+    id: 'nc1', display_name: 'No Coordinate Gym', name: 'No Coordinate Gym',
+    brand: null, town: null, outward: null, distance_m: null,
+  };
+  const REAL_NEARBY = {
+    id: 'real1', display_name: 'Real Nearby Gym', name: 'Real Nearby Gym',
+    brand: null, town: null, outward: null, distance_m: 2574, // 1.6 miles
+  };
+
+  test('the real 1.6-mile venue ranks ahead of the coordinate-less one', () => {
+    const out = rankVenues([NO_COORD, REAL_NEARBY], '');
+    expect(out[0].id).toBe('real1');
+  });
+
+  test('the coordinate-less venue never carries the "Nearby" reason', () => {
+    const out = rankVenues([NO_COORD], '');
+    expect(out[0].reasons).not.toContain('Nearby');
+  });
+
+  test('the real nearby venue does carry the "Nearby" reason', () => {
+    const out = rankVenues([REAL_NEARBY], '');
+    expect(out[0].reasons).toContain('Nearby');
+  });
+});
+
+describe('operator_unconfirmed is a small deprioritisation, never a filter', () => {
+  const CONFIRMED = {
+    id: 'c1', display_name: 'Confirmed Gym', name: 'Confirmed Gym',
+    brand: null, town: 'Leeds', outward: 'LS1', distance_m: null, operator_unconfirmed: false,
+  };
+  const UNCONFIRMED = {
+    id: 'u1', display_name: 'Confirmed Gym', name: 'Confirmed Gym',
+    brand: null, town: 'Leeds', outward: 'LS1', distance_m: null, operator_unconfirmed: true,
+  };
+
+  test('an otherwise-identical confirmed venue outranks the unconfirmed one', () => {
+    const out = rankVenues([UNCONFIRMED, CONFIRMED], 'Confirmed Gym Leeds');
+    expect(out[0].id).toBe('c1');
+  });
+
+  test('the unconfirmed venue still appears, never dropped from the list', () => {
+    const out = rankVenues([UNCONFIRMED], 'Confirmed Gym Leeds');
+    expect(out).toHaveLength(1);
+    expect(out[0].id).toBe('u1');
+  });
+});
+
 describe('an empty candidate list or query never throws', () => {
   test('empty candidates', () => {
     expect(rankVenues([], 'PureGym')).toEqual([]);

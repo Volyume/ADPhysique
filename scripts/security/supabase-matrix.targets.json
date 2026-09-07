@@ -197,6 +197,8 @@
     "gyms_report",
     "gyms_review_submission",
     "gyms_review_report",
-    "community_set_gyms"
+    "community_set_gyms",
+    "gyms_place_centroid",
+    "community_set_place"
   ]
 }

@@ -324,6 +324,66 @@ const LOCATION_FORBIDDEN = [
   /expo-sqlite/,
 ];
 
+/*
+ * Founder decision 2026-09-07 (in chat, "yes to both"): `expo-location`
+ * is added for exactly one use, "Use my location" in the gym finder:
+ * an explicit tap, foreground "while using" only, approximate accuracy,
+ * the coordinate handed to a gym search and discarded. The ONLY file in
+ * `src/` allowed to name the dependency or a position API is
+ * `src/lib/deviceLocation.js`; that file may request a foreground
+ * permission and read one current position, and may never watch,
+ * subscribe, run in the background, read a cached last-known position,
+ * or write to any local storage. Every other file under `src/` stays
+ * under the original ban.
+ */
+const LOCATION_ADAPTER = path.join(ROOT, 'src/lib/deviceLocation.js');
+const LOCATION_ADAPTER_FORBIDDEN = [
+  /watchPositionAsync/,
+  /getLastKnownPositionAsync/,
+  /startLocationUpdatesAsync/,
+  /requestBackgroundPermissionsAsync/,
+  /startGeofencingAsync/,
+  /AsyncStorage/,
+  /SecureStore/,
+  /expo-sqlite/,
+];
+const LOCATION_ANYWHERE_FORBIDDEN = [
+  /expo-location/i,
+  /watchPositionAsync/,
+  /getCurrentPositionAsync/,
+  /getLastKnownPositionAsync/,
+  /startLocationUpdatesAsync/,
+  /requestForegroundPermissionsAsync/,
+  /requestBackgroundPermissionsAsync/,
+];
+const SRC_DIR = path.join(ROOT, 'src');
+
+describe('the device location adapter is the only door, and it only opens forwards', () => {
+  test('the adapter exists', () => {
+    expect(fs.existsSync(LOCATION_ADAPTER)).toBe(true);
+  });
+
+  test('the adapter never watches, backgrounds, reads a cached position or persists', () => {
+    const source = code(fs.readFileSync(LOCATION_ADAPTER, 'utf8'));
+    for (const pattern of LOCATION_ADAPTER_FORBIDDEN) {
+      expect({ pattern: String(pattern), matched: pattern.test(source) })
+        .toEqual({ pattern: String(pattern), matched: false });
+    }
+  });
+
+  test.each(
+    walk(SRC_DIR)
+      .filter((f) => f !== LOCATION_ADAPTER)
+      .map((f) => [path.relative(ROOT, f), f]),
+  )('%s never names the location dependency or a position API', (rel, full) => {
+    const source = code(fs.readFileSync(full, 'utf8'));
+    for (const pattern of LOCATION_ANYWHERE_FORBIDDEN) {
+      expect({ rel, pattern: String(pattern), matched: pattern.test(source) })
+        .toEqual({ rel, pattern: String(pattern), matched: false });
+    }
+  });
+});
+
 describe('GD-13: the gym directory never tracks or persists a coordinate', () => {
   test('there is gyms source to guard', () => {
     // Same self-check as the Community walk above: if this ever fails,

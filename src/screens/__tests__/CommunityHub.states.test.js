@@ -50,6 +50,11 @@ jest.mock('../../lib/community', () => ({
   COMMUNITY_STYLE_KEYS: { strength: 'Strength', kettlebell: 'Kettlebell' },
   COMMUNITY_GOALS: { get_stronger: 'Get stronger' },
   COMMUNITY_SETTINGS: { home_gym: 'Home gym' },
+  // `ProfileCard` (real, unmocked) reads these directly (spec 1.3).
+  TP_AGE_BANDS: {
+    '18_24': '18 to 24', '25_34': '25 to 34', '35_44': '35 to 44', '45_54': '45 to 54', '55_plus': '55 or over',
+  },
+  reasonLines: (reasons) => (Array.isArray(reasons) ? reasons : []),
   follow: jest.fn(),
   unfollow: jest.fn(),
 }));

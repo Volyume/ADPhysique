@@ -53,6 +53,7 @@ jest.mock('../../lib/community', () => ({
   AREA_LABEL_MAX: 60,
   setConnectFrom: jest.fn(),
   setShowProgrammes: jest.fn(),
+  setPlace: jest.fn(() => Promise.resolve({ kind: 'none', label: null, lat: null, lng: null })),
   CONNECT_FROM_VALUES: { anyone: 'Anyone', followers: 'People who follow me', nobody: 'Nobody' },
 }));
 
@@ -63,19 +64,35 @@ jest.mock('../../lib/community', () => ({
 // fixture profile carries a LEGACY `gym_label` with no `gym_id`, which
 // renders read-only), so these stubs only need to exist for `save()`'s
 // unconditional `setGyms` call and for the module graph to resolve.
-jest.mock('../../lib/gyms', () => ({
-  __esModule: true,
-  get: jest.fn(() => Promise.resolve(null)),
-  setGyms: jest.fn(() => Promise.resolve({})),
-  search: jest.fn(() => Promise.resolve({ venues: [], recognisedPostcode: null })),
-  isPostcodeLike: jest.fn(() => false),
-  recognisePostcode: jest.fn(() => ({ kind: 'none', normalised: null, outward: null })),
-  venueLine: (v) => ({ primary: v?.display_name || v?.name || '', secondary: '' }),
-  isPendingVenue: jest.fn(() => false),
+jest.mock('../../lib/gyms', () => {
+  // 30-IMPLEMENTATION.md 1.2: GymPicker (rebuilt as the finder) also uses
+  // `near`, `rankVenues` and `milesToMetres` from this module. Only
+  // `search`/`get`/`setGyms`/`isPostcodeLike`/`recognisePostcode` need
+  // faking for this suite (nothing here types a gym or opens the
+  // picker); the rest stay the real, pure implementations so GymPicker
+  // renders exactly as it does in the app.
+  const actual = jest.requireActual('../../lib/gyms');
+  return {
+    __esModule: true,
+    ...actual,
+    get: jest.fn(() => Promise.resolve(null)),
+    setGyms: jest.fn(() => Promise.resolve({})),
+    search: jest.fn(() => Promise.resolve({ venues: [], recognisedPostcode: null, centroid: null })),
+    near: jest.fn(() => Promise.resolve({ venues: [], truncated: false })),
+    placeCentroid: jest.fn(() => Promise.resolve({ kind: 'none', label: null, lat: null, lng: null })),
+    isPostcodeLike: jest.fn(() => false),
+    recognisePostcode: jest.fn(() => ({ kind: 'none', normalised: null, outward: null })),
+    venueLine: (v) => ({ primary: v?.display_name || v?.name || '', secondary: '' }),
+    isPendingVenue: jest.fn(() => false),
+  };
+});
+jest.mock('../../lib/deviceLocation', () => ({
+  isAvailable: jest.fn(() => false),
+  getApproximatePosition: jest.fn(),
 }));
 
-import { upsertProfile, relationships, setConnectFrom } from '../../lib/community';
-import { setGyms } from '../../lib/gyms';
+import { upsertProfile, relationships, setConnectFrom, setPlace } from '../../lib/community';
+import { setGyms, placeCentroid, get as getGymModule } from '../../lib/gyms';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityEditProfileScreen from '../CommunityEditProfileScreen';
 import CommunityPrivacyScreen from '../CommunityPrivacyScreen';
@@ -136,6 +153,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   upsertProfile.mockResolvedValue({ ...PROFILE });
   relationships.mockResolvedValue({ blocked: [], muted: [] });
+  setPlace.mockResolvedValue({ kind: 'town', label: 'Motherwell', lat: 55.79, lng: -3.99 });
+  placeCentroid.mockResolvedValue({ kind: 'town', label: 'Motherwell', lat: 55.79, lng: -3.99 });
   useCommunityMe.mockReturnValue({
     me: { profile: PROFILE, is_moderator: false },
     loading: false,
@@ -202,6 +221,48 @@ describe('Edit profile saves the fields it owns', () => {
       'That is a lot of changes for one day. Try again tomorrow.',
       expect.objectContaining({ variant: 'error' }),
     );
+  });
+});
+
+// ─── 30-IMPLEMENTATION.md 1.1 B / 1.2: the Place picker replaces the old
+// "Area" text box, and is its own RPC (`setPlace`), called only when the
+// person actually changed it this session. ───────────────────────────
+describe('the Place picker (replaces the old Area text box)', () => {
+  test('picking a new place and saving calls setPlace, not upsertProfile, with it', async () => {
+    const { tree } = await mount(CommunityEditProfileScreen);
+
+    await act(async () => { field(tree, 'Place').props.onChangeText('Motherwell'); });
+    await flush();
+    await act(async () => { byLabel(tree, 'Use this place').props.onPress(); });
+
+    await act(async () => { byLabel(tree, 'Save profile').props.onPress(); });
+    await flush();
+
+    expect(setPlace).toHaveBeenCalledWith('Motherwell');
+    const sent = upsertProfile.mock.calls[0][0];
+    expect(sent).not.toHaveProperty('area_label');
+  });
+
+  test('saving without touching the place never calls setPlace', async () => {
+    const { tree } = await mount(CommunityEditProfileScreen);
+
+    await act(async () => { byLabel(tree, 'Save profile').props.onPress(); });
+    await flush();
+
+    expect(setPlace).not.toHaveBeenCalled();
+  });
+
+  test('"Use my gym\'s town" is offered once the linked gym\'s town is known', async () => {
+    getGymModule.mockResolvedValue({ id: 'g1', display_name: 'PureGym Leeds', town: 'Leeds' });
+    useCommunityMe.mockReturnValue({
+      me: { profile: { ...PROFILE, gym_id: 'g1', gym_label: 'PureGym Leeds' }, is_moderator: false },
+      loading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+    const { tree } = await mount(CommunityEditProfileScreen);
+    await flush();
+    expect(byLabel(tree, "Use my gym's town")).toBeDefined();
   });
 });
 

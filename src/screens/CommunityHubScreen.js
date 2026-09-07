@@ -212,7 +212,9 @@ export default function CommunityHubScreen({ navigation, route }) {
     () => (hub?.posts ?? []).map(normalisePostRow).filter(Boolean),
     [hub],
   );
-  const people = hub?.people ?? [];
+  // `hub.people` (once `community_suggested_people`) was never rendered
+  // here, so `loadHub` no longer reads it (feed.js, spec 1.3); nothing
+  // reads it from the hub payload on this screen either.
   const programmes = hub?.programmes ?? [];
   const dimensions = (hub?.dimensions ?? [])
     .filter((d) => Number(d?.count ?? 0) >= COMMUNITY_DIMENSION_MIN_FOR_HUB);
@@ -558,7 +560,7 @@ export default function CommunityHubScreen({ navigation, route }) {
       onAction={() => navigation.navigate('CommunitySearch')}
       actionAccessibilityLabel="Find people to follow"
     />
-  ) : programmes.length || people.length || likeMe.length || dimensions.length ? null : (
+  ) : programmes.length || likeMe.length || dimensions.length ? null : (
     <EmptyState
       icon="sparkles-outline"
       title="You are early"

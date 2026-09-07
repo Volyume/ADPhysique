@@ -73,12 +73,18 @@ function listPage(data, key) {
 /**
  * Load one half of the hub.
  *
- * Discover is readable without a Community profile (SD-04), so the two
- * sections that are ABOUT the reader's own profile — suggestions and the
- * dimensions they share — are only asked for once there is one: both
- * raise `no_profile` otherwise. The four reads are settled independently
- * as well, so one section failing leaves the rest of Discover standing
- * rather than emptying the screen.
+ * Discover is readable without a Community profile (SD-04), so the
+ * section that is ABOUT the reader's own profile — the dimensions they
+ * share — is only asked for once there is one: it raises `no_profile`
+ * otherwise. The reads are settled independently too, so one section
+ * failing leaves the rest of Discover standing rather than emptying the
+ * screen.
+ *
+ * `people` (once `community_suggested_people`, spec 1.3): the hub never
+ * rendered this section, so the read is no longer made here at all. The
+ * RPC itself, and `suggestedPeople` below, stay exactly as they were for
+ * compatibility (a future surface may still want them); `hub.people`
+ * simply stays the empty array `empty` already answers.
  *
  * @param {'following'|'discover'} segment
  * @param {{cursor?: string|null, limit?: number, userId?: string,
@@ -107,10 +113,9 @@ export async function loadHub(segment = 'following', {
       const settled = await Promise.allSettled([
         discoverProgrammes({ limit }),
         loadDiscoverPosts({ limit }),
-        joined ? suggestedPeople({ limit: 5 }) : Promise.resolve({ people: [] }),
         joined ? myDimensions() : Promise.resolve({ dimensions: [] }),
       ]);
-      const [programmes, posts, people, dimensions] = settled;
+      const [programmes, posts, dimensions] = settled;
       // Discover IS the programmes and the stories. If neither read
       // answered there is nothing to show, so fall through to the cache.
       if (programmes.status === 'rejected' && posts.status === 'rejected') {
@@ -120,7 +125,6 @@ export async function loadHub(segment = 'following', {
         ...empty,
         programmes: programmes.value?.programmes ?? [],
         posts: posts.value?.posts ?? [],
-        people: people.value?.people ?? [],
         dimensions: dimensions.value?.dimensions ?? [],
         // `cursor` pages the training stories: they are the list. The
         // programmes have a cursor of their own and it is kept apart from

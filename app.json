@@ -30,7 +30,8 @@
         "NSSupportsLiveActivities": true,
         "NSCameraUsageDescription": "Volyume uses the camera to scan barcodes, read nutrition labels, and take progress photos.",
         "NSMotionUsageDescription": "Volyume uses motion sensing for the shake-to-send-feedback gesture.",
-        "NSLocationWhenInUseUsageDescription": "Volyume does not track your location. This entry is required by a bundled camera library and the permission is never requested.",
+        "NSLocationWhenInUseUsageDescription": "Volyume uses your approximate location only when you tap Use my location, to list gyms near you. It is never stored and never shared.",
+        "NSLocationDefaultAccuracyReduced": true,
         "NSMicrophoneUsageDescription": "Volyume does not record audio. This entry is required by a bundled media library used for timer sounds and the permission is never requested.",
         "NSFaceIDUsageDescription": "Volyume uses Face ID to unlock the app when you turn on App lock in Settings > Privacy. Off unless you switch it on.",
         "UIBackgroundModes": [
@@ -72,6 +73,8 @@
         "android.permission.SCHEDULE_EXACT_ALARM"
       ],
       "blockedPermissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.SYSTEM_ALERT_WINDOW",
@@ -169,6 +172,15 @@
         }
       ],
       "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Volyume uses your approximate location only when you tap Use my location, to list gyms near you. It is never stored and never shared.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
+      ],
       [
         "expo-media-library",
         {

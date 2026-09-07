@@ -33,6 +33,54 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## COMMUNITY PRODUCT AUDIT (2026-09-07, founder prompt 2) — LANDED on `claude/community-product-audit-m50z2y`, MERGED to main; cloud 163 WRITTEN NOT APPLIED
+
+Founder brief in chat: exhaustive implementation + competitive product
+audit of Community (not visual); missing vs underpowered; judge; then
+implement only justified improvements on the existing architecture.
+Folder `docs/community-product-audit-2026-09-07/` (README = map).
+Phase A: eight READ-ONLY inventory/evidence agents (Sonnet for 01-07,
+Haiku for 08; founder reaffirmed lowest adequate tier in chat), each writing
+only its own numbered file. Recovery path: re-dispatch the same brief;
+nothing on disk to reconcile. Founder addition (chat): gym onboarding journey is a required
+capability (Use my location optional, progressive radius, name/town/
+postcode search, branch identity, add gym, main + other gyms); evidence
+lanes 09 (Sonnet, dataset + ranker tests) and 10 (Sonnet, UX research).
+OPEN FOUNDER QUESTION: expo-location dependency + amending the pinned
+location guard in `community.privacy.guard.test.js` (asked in chat).
+Phase A DONE: reports 01-08 and 10 landed (09 gym journey tests in
+flight). Phase B DONE: `20-JUDGEMENT.md` (capability map, missing vs
+underpowered, cold start, location model LJ-01, priorities P0-A..F,
+P1, P2, Future, Reject). Phase C IN FLIGHT: spec `30-IMPLEMENTATION.md`
+section 1 is the edit gate. Lanes: S1 (Sonnet) migration 163 + guard
+tests; S2 (Sonnet) gym finder, deviceLocation stub, Join step, place
+picker; S3 (Sonnet, after S1 or S2) Find people filters and fixes.
+Recovery path for any lane: `git status`, lead-review the on-disk diff
+against the spec section named in the brief, land or relaunch the same
+brief; agents never commit. Founder order (chat): distance band is an
+always-visible 5/10/25/50 mile selector, text matches never cut by the
+band. DECIDED (founder, chat 2026-09-07, "yes to all"): expo-location
+~19.0.8 added; app.json plugin + iOS reduced accuracy + Android FINE and
+BACKGROUND location blocked; privacy guard amended so
+`src/lib/deviceLocation.js` is the only file that may name the
+dependency, forward-only (no watch, no background, no cached position,
+no storage). Lane S2 arms the adapter.
+LANDED: S2 (finder, Join step, place picker) and S1 (migration 163)
+both lead-reviewed and committed. S3 (Find people filters + fixes) and
+S4 (sportscotland adapter) died on the 11:00 UTC session rate limit
+with implementation on disk; relaunched as RESUME lanes against their
+own files (recovery path: lead review of on-disk work, finish tests,
+land). S3 and S4 resumed and landed. Settled tree: lint clean, tsc clean,
+1256 suites / 18676 tests. Closing record `30-IMPLEMENTATION.md`
+section 3. NEXT: founder phrase for 160-163 + seed; pipeline re-run
+with sportscotland (fresh raw acquisition), coverage report before
+re-seed; device walk from a green build. Report 09 findings folded into S1/S2 briefs:
+brand-query candidate cut (S1), submit-time duplicate tokenizer 53%
+miss (S1), null-distance ranker bug (S2). DATA ITEM for the next
+pipeline run (not this build): `data/gyms/postcode-sectors.v1.csv`
+row `CA13 3` has a corrupt centroid (North Sea, not Cumbria); Ravenscraig
+duplicate pair and the Shetland pony stud misclass (report 06 §4).
+
 ## COMMUNITY VISUAL REFINEMENT (2026-09-07, founder prompt 1) — LANDED on `claude/volyume-social-discovery-h7dknu` (a5aab73, fac2451); MERGE PENDING the settled-tree run
 
 Founder brief in chat: visual only; bring every Community surface into
@@ -2409,9 +2457,12 @@ conditional on the decision; recorded here so they are visible, not lost._
   add `expo-location` (MIT, Expo SDK module) so "gyms near me" can use
   the device position on an explicit tap only, never stored (GD-13)?
   Without it near-me runs from a typed postcode, which is what ships now.
-  (c) sportscotland: send the Fitness Suites download or WFS link when
-  the account is live; Scotland today rests on Overture plus operator
-  feeds (2,770 venues). Earlier unlocks, kept for the record:
+  (c) sportscotland: DELIVERED 2026-09-07 (WFS access key given in
+  chat; held outside the repo, used pipeline-only via env var, never
+  committed). All eleven layers pulled to scratch: fitness suites 629,
+  sports halls 3,129, pools 562. Gap analysis in
+  `docs/community-product-audit-2026-09-07/11-sportscotland-register.md`;
+  adapter + re-run follow after the P0 build lanes land. Earlier unlocks, kept for the record:
   three unlocks, none blocking the free stack.** Founder 2026-09-07: (1) registering the sportscotland account now
   (instructions delivered in chat; send the Fitness Suites download or the
   WFS link and token); (2) DuckDB APPROVED as a pipeline-only binary in the

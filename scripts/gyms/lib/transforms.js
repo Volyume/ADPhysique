@@ -6,7 +6,7 @@
 // function here per row/line.
 
 const { matchBrand, aliasTokenSetsFor } = require('./brands');
-const { foldText } = require('./fold');
+const { foldText, tokenize } = require('./fold');
 const {
   cleanDisplayName,
   composeBrandBranch,
@@ -16,7 +16,8 @@ const {
   stripTrailingOutward,
   boundName,
 } = require('./names');
-const { outwardCode } = require('./postcode');
+const { outwardCode, normalisePostcode } = require('./postcode');
+const { haversineMetres } = require('./geo');
 const { SEED_BRANDS } = require('./brands');
 
 // Built once: brand-casing exceptions (PureGym, not Puregym) layered over
@@ -166,6 +167,201 @@ function transformWalesFeature(feature) {
       status: safeText(props.status),
     },
     payload: { uprn: props.uprn, built: props.built },
+  };
+}
+
+// --- Scotland: sportscotland Sports Facilities (Spatial Hub), GD-27 ------
+// The register has no cross-layer site id and no operator/access field
+// (docs/community-product-audit-2026-09-07/11-sportscotland-register.md
+// Section 1), so GD-04's "one row per site" collapse has to be done here,
+// across all three layers, before a record is ever emitted — exactly the
+// method the analysis validated (Section 2): union-find over every
+// fitness-suite/sports-hall/pool feature, joining two features when their
+// site_name folds to the same token string AND either they share a
+// normalised postcode unit or sit within 100m by haversine distance (the
+// postcode-or-100m fallback is what lets a pool feature, which carries no
+// postcode field at all, still join its site).
+const SPORTSCOTLAND_SCHOOL_TOKENS = new Set(['school', 'academy', 'primary', 'high', 'grammar']);
+
+function foldedSiteNameKey(siteName) {
+  return foldText(siteName || '');
+}
+
+/**
+ * GD-04 site collapse for the sportscotland register. Pure, no I/O.
+ * @param {object[]} fsFeatures - raw pub_spffs GeoJSON features (fitness suites)
+ * @param {object[]} shFeatures - raw pub_spfsh GeoJSON features (sports halls)
+ * @param {object[]} spFeatures - raw pub_spfsp GeoJSON features (swimming pools)
+ * @returns {object[][]} one array of tagged features (`{ layer, properties, geometry }`) per collapsed site
+ */
+function collapseSportscotlandFacilities(fsFeatures, shFeatures, spFeatures) {
+  const facilities = [
+    ...(fsFeatures || []).map((f) => ({ layer: 'fs', properties: f.properties || {}, geometry: f.geometry })),
+    ...(shFeatures || []).map((f) => ({ layer: 'sh', properties: f.properties || {}, geometry: f.geometry })),
+    ...(spFeatures || []).map((f) => ({ layer: 'sp', properties: f.properties || {}, geometry: f.geometry })),
+  ];
+
+  const n = facilities.length;
+  const parent = Array.from({ length: n }, (_, i) => i);
+  function find(x) {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  }
+  function union(a, b) {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  }
+
+  // Bucket by folded site_name first — only same-name features can ever be
+  // joined, so this keeps the pairwise postcode/distance check cheap
+  // instead of O(n^2) over the whole register (matches the analysis's own
+  // method note, Section 2).
+  const buckets = new Map();
+  facilities.forEach((f, idx) => {
+    const key = foldedSiteNameKey(f.properties.site_name);
+    if (!buckets.has(key)) buckets.set(key, []);
+    buckets.get(key).push(idx);
+  });
+
+  for (const idxs of buckets.values()) {
+    for (let a = 0; a < idxs.length; a += 1) {
+      for (let b = a + 1; b < idxs.length; b += 1) {
+        const i = idxs[a];
+        const j = idxs[b];
+        const fi = facilities[i];
+        const fj = facilities[j];
+        const pi = normalisePostcode(fi.properties.postcode);
+        const pj = normalisePostcode(fj.properties.postcode);
+        let same = Boolean(pi && pj && pi.normalised === pj.normalised);
+        if (!same) {
+          const ci = fi.geometry?.coordinates;
+          const cj = fj.geometry?.coordinates;
+          if (
+            Array.isArray(ci) &&
+            Array.isArray(cj) &&
+            Number.isFinite(ci[0]) &&
+            Number.isFinite(ci[1]) &&
+            Number.isFinite(cj[0]) &&
+            Number.isFinite(cj[1])
+          ) {
+            same = haversineMetres(ci[1], ci[0], cj[1], cj[0]) <= 100;
+          }
+        }
+        if (same) union(i, j);
+      }
+    }
+  }
+
+  const groups = new Map();
+  facilities.forEach((f, idx) => {
+    const root = find(idx);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root).push(f);
+  });
+  return Array.from(groups.values());
+}
+
+// GD-27: "a school-housed fitness suite enters as other_fitness ...
+// unless a public token ... or a second public source". The public-token
+// half is name evidence, checkable here; the second-public-source escape
+// needs cross-source dedupe output this single-source adapter never sees
+// (dedupe.mjs runs after classify.mjs in run-all.mjs), so it is NOT
+// implemented at this layer — flagged in the build report, not silently
+// dropped.
+function hasScotlandPublicToken(tokens) {
+  const set = new Set(tokens);
+  if (set.has('community')) return true;
+  if (set.has('leisure')) return true;
+  if (set.has('sports') && (set.has('centre') || set.has('center'))) return true;
+  return false;
+}
+
+/**
+ * One collapsed site (from collapseSportscotlandFacilities) -> one common
+ * record, or null when GD-27 says the site is not a venue at all.
+ * @param {{layer:string, properties:object, geometry:object}[]} siteFacilities
+ * @returns {object|null}
+ */
+function transformSportscotlandSite(siteFacilities) {
+  if (!Array.isArray(siteFacilities) || siteFacilities.length === 0) return null;
+
+  // GD-27: sports halls and pools only corroborate a site that already has
+  // a fitness suite; they never create a venue on their own.
+  const fsFacilities = siteFacilities
+    .filter((f) => f.layer === 'fs')
+    .slice()
+    .sort((a, b) => (a.properties.fid ?? 0) - (b.properties.fid ?? 0));
+  if (fsFacilities.length === 0) return null;
+
+  const shFacilities = siteFacilities.filter((f) => f.layer === 'sh');
+  const spFacilities = siteFacilities.filter((f) => f.layer === 'sp');
+
+  const primary = fsFacilities[0];
+  const props = primary.properties;
+  const name = safeText(props.site_name);
+  if (!name) return null;
+
+  // GD-27: drop the visible test record ("Stuarts TESTING Secondary School").
+  const tokens = tokenize(name);
+  if (tokens.includes('testing')) return null;
+
+  const postcode =
+    safeText(props.postcode) ||
+    [...fsFacilities, ...shFacilities, ...spFacilities].map((f) => safeText(f.properties.postcode)).find(Boolean) ||
+    null;
+  const coords = primary.geometry?.coordinates;
+  const hasCoords = Array.isArray(coords) && Number.isFinite(coords[0]) && Number.isFinite(coords[1]);
+
+  // GD-27: drop any site with neither a postcode nor coordinates.
+  if (!postcode && !hasCoords) return null;
+
+  const isSchool = tokens.some((t) => SPORTSCOTLAND_SCHOOL_TOKENS.has(t));
+  const venueTypeHint = isSchool ? (hasScotlandPublicToken(tokens) ? 'leisure_centre' : 'other_fitness') : null;
+
+  const sourceRecordId = `fs:${fsFacilities.map((f) => f.properties.fid).join(',')}`;
+  const addressLine = safeText(props.address);
+
+  return {
+    source: 'sportscotland',
+    source_record_id: sourceRecordId,
+    source_url: null,
+    source_name: 'sportscotland Sports Facilities (Spatial Hub)',
+    source_status: 'open',
+    source_updated_at: null,
+    retrieved_at: new Date().toISOString(),
+    name,
+    brand_guess: null,
+    venue_type_hint: venueTypeHint,
+    address_line: addressLine,
+    town: safeText(props.town),
+    postcode,
+    lat: hasCoords ? coords[1] : null,
+    lng: hasCoords ? coords[0] : null,
+    coord_source: hasCoords ? 'source' : 'none',
+    phone: null,
+    website: null,
+    facility_count: fsFacilities.length,
+    status: 'open',
+    hasAddress: Boolean(addressLine || postcode),
+    scotland: {
+      la_name: safeText(props.la_name),
+      layer: 'fs',
+      sub_type: safeText(props.facility_sub_type),
+      sh_date_uploaded: safeText(props.sh_date_uploaded),
+      has_sports_hall: shFacilities.length > 0,
+      has_swimming_pool: spFacilities.length > 0,
+    },
+    payload: {
+      fs_fids: fsFacilities.map((f) => f.properties.fid ?? null),
+      sh_fids: shFacilities.map((f) => f.properties.fid ?? null),
+      sp_fids: spFacilities.map((f) => f.properties.fid ?? null),
+      sh_sub_types: shFacilities.map((f) => safeText(f.properties.fac_sub_type)).filter(Boolean),
+      sp_sub_types: spFacilities.map((f) => safeText(f.properties.fac_sub_type)).filter(Boolean),
+    },
   };
 }
 
@@ -412,6 +608,8 @@ module.exports = {
   transformOperatorBranch,
   transformOvertureRow,
   transformCompaniesHouseRow,
+  collapseSportscotlandFacilities,
+  transformSportscotlandSite,
   CATEGORY_VENUE_TYPE_HINT,
   PREMISES_LIKE_RE,
 };

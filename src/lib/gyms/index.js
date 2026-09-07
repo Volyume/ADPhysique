@@ -5,17 +5,18 @@
  * Screens and components import from here, never from a module inside
  * this folder directly (same convention as `src/lib/community/index.js`).
  *
- * DEVIATION (GD-10, recorded per the brief): "near me" is meant to offer
- * "Use my location" only when the app already carries a location
- * permission dependency. `expo-location` is NOT in package.json, and
- * nothing here adds it (CLAUDE.md: never add a dependency without
- * asking). So `near()` below is implemented against `gyms_near` for
- * completeness and for a future permission decision, but nothing in
- * `GymPicker` calls it: "near me" today is reached only through the
- * recognised-postcode chip / town search path (`search()`, which the
- * server resolves via the postcode's ONSPD sector centroid, GD-08),
- * never through the device's own coordinates. No coordinate is ever
- * requested, read, or stored by this module (GD-13).
+ * Community product audit 2026-09-07 (`30-IMPLEMENTATION.md` section
+ * 1.2): the finder (`GymPicker`) now calls `near()` for every recognised
+ * postcode, town or "Use my location" tap, at whichever mile band the
+ * person has chosen, merged with `search()`'s own text matches. The
+ * coordinate `near()` takes is always either a PLACE centroid the server
+ * resolved from typed text (`search()`'s `centroid`, `placeCentroid()`),
+ * or, for "Use my location" only, the device's own momentary position -
+ * which `deviceLocation.js` still gates behind `isAvailable()` (false
+ * until the founder's location-permission dependency decision) and which
+ * is held in the caller's component state for that session only, never
+ * read or written by this module (GD-13). No coordinate is ever stored
+ * here, in AsyncStorage, SecureStore or SQLite by any function below.
  */
 
 import { callCommunity } from '../community/transport';
@@ -70,6 +71,10 @@ function normaliseVenue(row) {
     distance_m: toNumberOrNull(row.distance_m),
     status: row.status ?? null,
     verification_status: row.verification_status ?? null,
+    // migrate_163 (30-IMPLEMENTATION.md 1.1 A): the sort key search/near
+    // insert ahead of distance. `rank.js` applies a small deprioritisation
+    // for it; nothing here removes an unconfirmed venue from the list.
+    operator_unconfirmed: !!row.operator_unconfirmed,
   };
 }
 
@@ -78,42 +83,100 @@ function venuesFrom(data) {
   return rows.map(normaliseVenue).filter(Boolean);
 }
 
+/** A search or near response's resolved place centroid
+ * (`{kind, label, lat, lng}`), or null when nothing resolved. Shared by
+ * `search()` and `placeCentroid()` so both normalise the same shape. */
+function centroidFrom(data) {
+  const c = data?.centroid;
+  if (!c || typeof c !== 'object') return null;
+  return {
+    kind: c.kind ?? 'none',
+    label: c.label ?? null,
+    lat: toNumberOrNull(c.lat),
+    lng: toNumberOrNull(c.lng),
+  };
+}
+
+/** Metres in one mile, so every mile/metre conversion in the app agrees. */
+export const METRES_PER_MILE = 1609.344;
+
+/** Miles to metres, rounded to the nearest metre (a `_radius_m` argument
+ * a server RPC accepts). */
+export function milesToMetres(miles) {
+  return Math.round(Number(miles) * METRES_PER_MILE);
+}
+
 /**
  * Search the directory (GD-09). A recognised postcode is searched by its
  * outward/district code server-side; a town name matches the town field.
- * The candidates come back client-ranked (`rankVenues`).
+ * The candidates come back client-ranked (`rankVenues`). When the query
+ * resolves to a place (a postcode or a known town), the response also
+ * carries that place's centroid (30-IMPLEMENTATION.md 1.1 A), which the
+ * finder uses to run a separate `near()` at whatever mile band is
+ * selected; text matches from THIS function are never filtered by that
+ * band (the finder merges rather than replaces).
  *
  * @param {string} q
- * @param {{lat?: (number|null), lng?: (number|null), limit?: number}} [opts]
- * @returns {Promise<{venues: Array<object>, recognisedPostcode: (string|null)}>}
+ * @param {{lat?: (number|null), lng?: (number|null), limit?: number,
+ *   radiusM?: (number|null)}} [opts] `radiusM` is the server's own
+ *   postcode-union radius (default 8047 m / 5 miles server-side when
+ *   omitted); it does not affect the name/brand/town matches.
+ * @returns {Promise<{venues: Array<object>, recognisedPostcode: (string|null),
+ *   centroid: (object|null)}>}
  */
-export async function search(q, { lat = null, lng = null, limit = 40 } = {}) {
+export async function search(q, {
+  lat = null, lng = null, limit = 40, radiusM = null,
+} = {}) {
   const text = String(q ?? '').trim();
   const data = await callGyms('gyms_search', {
-    _q: text, _lat: lat, _lng: lng, _limit: limit,
+    _q: text, _lat: lat, _lng: lng, _limit: limit, _radius_m: radiusM,
   });
   return {
     venues: rankVenues(venuesFrom(data), text),
     recognisedPostcode: data?.recognised_postcode ?? null,
+    centroid: centroidFrom(data),
   };
 }
 
 /**
- * Near me (GD-10). See the header deviation note: nothing in the app
- * currently calls this with a device coordinate, since there is no
- * location permission dependency, but it stays here against the day a
- * founder decision adds one.
+ * Near a known point (GD-10). Used by the finder for every recognised
+ * postcode, town or "Use my location" tap, at the chosen mile band
+ * (`milesToMetres`). The coordinate is supplied by the caller and is
+ * never read, stored or cached by this module (GD-13); for a device
+ * position specifically, `deviceLocation.js` gates whether the caller
+ * may ever obtain one at all.
  *
  * @param {number} lat
  * @param {number} lng
  * @param {{radiusM?: number, limit?: number}} [opts]
- * @returns {Promise<Array<object>>}
+ * @returns {Promise<{venues: Array<object>, truncated: boolean}>}
  */
 export async function near(lat, lng, { radiusM = 8047, limit = 40 } = {}) {
   const data = await callGyms('gyms_near', {
     _lat: lat, _lng: lng, _radius_m: radiusM, _limit: limit,
   });
-  return venuesFrom(data);
+  const venues = venuesFrom(data);
+  return {
+    venues,
+    truncated: !!data?.truncated || venues.length >= limit,
+  };
+}
+
+/**
+ * Resolve a typed postcode or town to its public centroid, without
+ * searching for venues (30-IMPLEMENTATION.md 1.1 A,
+ * `public.gyms_place_centroid`). Used by `PlacePicker` to preview a
+ * place before it is saved, and by the "Use my gym's town" shortcut.
+ *
+ * @param {string} q
+ * @returns {Promise<{kind: ('postcode'|'town'|'none'), label: (string|null),
+ *   lat: (number|null), lng: (number|null)}>}
+ */
+export async function placeCentroid(q) {
+  const text = String(q ?? '').trim();
+  if (!text) return { kind: 'none', label: null, lat: null, lng: null };
+  const data = await callGyms('gyms_place_centroid', { _q: text });
+  return centroidFrom({ centroid: data }) ?? { kind: 'none', label: null, lat: null, lng: null };
 }
 
 /**
@@ -235,17 +298,14 @@ export async function setGyms(gymId, otherGymIds = []) {
   });
 }
 
-function round1(n) {
-  return Math.round(n * 10) / 10;
-}
-
-/** "1.2 mi" under 10 miles (one decimal), "12 mi" at or above (whole);
- * null when there is nothing to show. */
+/** "0.7 miles" (one decimal, always miles) - 30-IMPLEMENTATION.md 1.2:
+ * "distance only when known, one decimal, miles"; null when there is
+ * nothing to show. */
 export function distanceLabel(distanceM) {
   const n = toNumberOrNull(distanceM);
   if (n === null) return null;
-  const miles = n / 1609.344;
-  return miles < 10 ? `${round1(miles)} mi` : `${Math.round(miles)} mi`;
+  const miles = n / METRES_PER_MILE;
+  return `${miles.toFixed(1)} miles`;
 }
 
 /**

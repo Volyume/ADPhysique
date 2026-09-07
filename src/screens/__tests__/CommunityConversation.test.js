@@ -223,6 +223,47 @@ describe('sending a message', () => {
     act(() => { plain.tree.unmount(); });
   });
 
+  // Spec 1.3: whether the ref has been sent is about THIS OPENING of the
+  // screen, never about how many messages the conversation already has --
+  // `refSent` must not derive from row count.
+  test('a ref attaches on the first send even into an EXISTING conversation with history', async () => {
+    listConversations.mockResolvedValue({
+      conversations: [{
+        id: 'conv-1', other: OTHER, unread: 0, preview: 'x', last_message_at: Date.now(),
+      }],
+      cursor: null,
+    });
+    listMessages.mockResolvedValue({ messages: [MESSAGE], cursor: null });
+
+    const { tree } = await mount({ id: 'conv-1', userId: 'u2', ref: { kind: 'programme', id: 'prog-1' } });
+
+    // The placeholder follows the same condition as the attach itself,
+    // not the row count either.
+    expect(field(tree).props.placeholder).toBe('Ask about this programme');
+
+    await type(tree, 'How is week 3 going?');
+    await press(tree, 'Send message');
+
+    expect(sendMessage).toHaveBeenCalledWith('u2', 'How is week 3 going?', {
+      refKind: 'programme', refId: 'prog-1',
+    });
+    act(() => { tree.unmount(); });
+  });
+
+  test('a second send in the same opening does not re-attach the ref', async () => {
+    const { tree } = await mount({ userId: 'u2', ref: { kind: 'programme', id: 'prog-1' } });
+
+    await type(tree, 'First message');
+    await press(tree, 'Send message');
+    sendMessage.mockClear();
+
+    await type(tree, 'Second message');
+    await press(tree, 'Send message');
+
+    expect(sendMessage).toHaveBeenCalledWith('u2', 'Second message', {});
+    act(() => { tree.unmount(); });
+  });
+
   test('the composer stops at MESSAGE_MAX and counts only near the ceiling', async () => {
     const { tree } = await mount({ userId: 'u2' });
 

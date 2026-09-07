@@ -340,6 +340,27 @@ describe('the preview line is the sentence the blueprint specifies', () => {
     expect(previewLine({})).toBe('');
   });
 
+  // Spec 1.3: the age band, a SEPARATE argument (never a field on
+  // `bands`: `shareablePayload` never puts a value on the wire for it,
+  // the server derives it), joins the line last when given.
+  test('an age band joins the line as its own part, last', () => {
+    expect(previewLine({ tp_experience_band: 'intermediate' }, '35_44'))
+      .toBe('Intermediate · 35 to 44');
+  });
+
+  test('no age band given: unaffected, exactly the old behaviour', () => {
+    expect(previewLine({ tp_experience_band: 'intermediate' })).toBe('Intermediate');
+    expect(previewLine({ tp_experience_band: 'intermediate' }, null)).toBe('Intermediate');
+  });
+
+  test('an unrecognised age band key is silently dropped, never a raw key on screen', () => {
+    expect(previewLine({ tp_experience_band: 'new' }, 'not_a_band')).toBe('New');
+  });
+
+  test('an age band on its own still reads as a sentence', () => {
+    expect(previewLine({}, '18_24')).toBe('18 to 24');
+  });
+
   test('every band label the preview can use is a real label', () => {
     expect(TP_TIME_BANDS.midday).toBe('at midday');
     expect(TP_SESSIONS_BANDS['6_plus']).toBe('6 or more');

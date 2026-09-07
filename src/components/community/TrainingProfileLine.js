@@ -27,7 +27,10 @@ import { type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { previewLine } from '../../lib/community';
 
-/** The line for a card, or '' when nothing is shared. */
+/** The line for a card, or '' when nothing is shared. Spec 1.3: the age
+ * band joins the line when the card carries one (`age_band`, gated
+ * server-side to an owner who shared it and is not a minor; `tp_age_band`
+ * is read too for a card shaped before that key existed). */
 export function trainingProfileLine(card) {
   if (!card) return '';
   return previewLine({
@@ -35,7 +38,7 @@ export function trainingProfileLine(card) {
     tp_time_bands: card.tp_time_bands,
     tp_sessions_band: card.tp_sessions_band,
     tp_experience_band: card.tp_experience_band,
-  });
+  }, card.age_band ?? card.tp_age_band ?? null);
 }
 
 export default function TrainingProfileLine({ card, style }) {

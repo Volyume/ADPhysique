@@ -283,3 +283,25 @@ export async function unmuteUser(targetUserId) {
 export async function relationships() {
   return callCommunity('community_relationships', {});
 }
+
+/**
+ * Set (or clear, with an empty string) the caller's own Community place -
+ * a chosen town or postcode district, never a device coordinate
+ * (community product audit 2026-09-07, `30-IMPLEMENTATION.md` section 1.1
+ * B; `20-JUDGEMENT.md` section 7, LJ-01). Its own RPC, the same shape as
+ * `setGyms` (`src/lib/gyms`) rather than a field on `upsertProfile`:
+ * resolution happens server-side, from the typed text only, and the
+ * server also mirrors the result onto `area_label`/`area_key` so every
+ * existing display of "area" keeps working.
+ *
+ * This does not touch the cached `me` payload itself: the caller
+ * (`CommunityEditProfileScreen`) already calls `refresh(true)` after
+ * every profile-shaped save, the same pattern `setGyms` follows.
+ *
+ * @param {string} q a town, postcode or postcode district; '' clears it
+ * @returns {Promise<{kind: ('postcode'|'town'|'none'), label: (string|null),
+ *   lat: (number|null), lng: (number|null)}>} the resolved place
+ */
+export async function setPlace(q) {
+  return callCommunity('community_set_place', { _q: String(q ?? '').trim() });
+}

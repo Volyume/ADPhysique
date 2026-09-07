@@ -1,6 +1,31 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-07 — COMMUNITY PRODUCT AUDIT (founder prompt 2 + gym-onboarding addition) ★
+
+Branch `claude/community-product-audit-m50z2y`. Folder
+`docs/community-product-audit-2026-09-07/` (README = map). Ten
+read-only evidence lanes (01-10) landed; lead judgement `20-JUDGEMENT.md`
+rules: cloud 160-162 unapplied is the governing fact; place is a
+string and doors do not combine (the real discovery gaps); the gym
+directory is the unmatched asset once selection is universal and the
+finder can widen by distance; P0-A..F, P1, P2, Future, Reject listed.
+Spec `30-IMPLEMENTATION.md` section 1 is the edit gate for lanes S1
+(migration 163), S2 (finder + Join step + place picker), S3 (Find people
+filters + fixes). Founder orders in chat: lowest adequate agent tier;
+distance band always visible 5/10/25/50 miles. Founder "yes to all" on
+expo-location (~19.0.8, approximate, explicit tap, never stored) and
+the guard amendment; both applied by the lead. sportscotland WFS access
+delivered (key outside the repo); register analysis `11`, ruling GD-27. All four
+lanes landed after lead review (S3/S4 resumed after the 11:00 UTC rate
+limit). Settled tree: lint clean, tsc clean, 1256 suites / 18676 tests.
+Closing record `30-IMPLEMENTATION.md` section 3. MERGED to main. Founder
+said "run against production" for the migrations (batch 160-163 + gym
+seed + the two Community functions); apply record in `supabase/README`.
+NEXT: pipeline re-run with sportscotland (fresh raw acquisition, ids
+stable by construction), coverage report before any re-seed; device walk
+from a green build.
+===============================================================================
 ## ★ 2026-09-07 — COMMUNITY VISUAL REFINEMENT (founder prompt 1) ★
 
 Visual only. Evidence `docs/social-discovery-2026-09-06/80-VISUAL-
