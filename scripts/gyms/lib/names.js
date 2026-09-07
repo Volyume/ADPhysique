@@ -1,15 +1,22 @@
-// GD-18 display-name cleanup, pure, no I/O. Fixes the defects the first
-// full pipeline run turned up: HTML entities left undecoded (115 rows with
-// &amp;), status baked into the name ("(CLOSED)", "- CLOSED", "(TEMPORARILY
-// CLOSED)" and case variants — 1,983 rows), all-caps source names, and a
-// trailing bracketed qualifier that should read as a plain suffix
-// ("Third Space (Moorgate)" -> "Third Space Moorgate"). Also composes a
-// brand + branch display name when a branded venue's own name is bare
-// (just the town, or just a generic word like "Gym").
+// GD-18/GD-25 display-name cleanup, pure, no I/O. Fixes the defects the
+// first full pipeline run turned up: HTML entities left undecoded (115
+// rows with &amp;), status baked into the name ("(CLOSED)", "- CLOSED",
+// "(TEMPORARILY CLOSED)" and case variants — 1,983 rows), all-caps source
+// names, and a trailing bracketed qualifier that should read as a plain
+// suffix ("Third Space (Moorgate)" -> "Third Space Moorgate"). Also
+// composes a brand + branch display name when a branded venue's own name
+// is bare (just the town, or just a generic word like "Gym"). GD-25 adds
+// the name sanity bound (saneName/boundName — reject a name over 80
+// characters/8 tokens, the Third Space/Better GLL "whole club page as
+// name" defect), the outward-code trailing-token strip
+// (stripTrailingOutward — "Third Space Tower Bridge Se1" -> "Third Space
+// Tower Bridge"), and widens composeBrandBranch's "already carries the
+// brand" check to the brand's aliases, not just its canonical name.
 //
-// Wired from: normalise.mjs (per-record cleanup on every source, plus the
-// GD-22 operator brand+branch composition via lib/transforms.js) and
-// build.mjs (cluster-level display_name, source preference order operator
+// Wired from: normalise.mjs (per-record cleanup on every source, the
+// GD-25 sanity rejection + brand/town fallback, plus the GD-22 operator
+// brand+branch composition via lib/transforms.js) and build.mjs (cluster-
+// level display_name, source preference order operator
 // feed > Overture > Active Places per GD-18).
 
 const { foldText, tokenize } = require('./fold');
@@ -30,6 +37,13 @@ const STATUS_SUFFIX_PATTERNS = [
 ];
 
 const ROMAN_NUMERAL_RE = /^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$/i;
+
+// GD-25 name sanity bounds. A real UK gym/leisure-centre name never
+// exceeds these; a name that does is scraped page text (the Third Space
+// and Better GLL defect: a whole club page's body copy landed in `name`),
+// not a venue name, and is rejected rather than shown to a user.
+const MAX_NAME_LENGTH = 80;
+const MAX_NAME_TOKENS = 8;
 
 const HTML_ENTITY_MAP = {
   amp: '&',
@@ -161,6 +175,61 @@ function bracketQualifierToSuffix(input) {
   return `${base} ${qualifier}`;
 }
 
+/**
+ * GD-25 name sanity check: at most 80 characters and 8 tokens. Anything
+ * beyond this is treated as not a name at all (page body text, a runaway
+ * composition) rather than an unusually long real name.
+ * @param {string} name
+ * @returns {boolean}
+ */
+function saneName(name) {
+  if (!name) return false;
+  const trimmed = String(name).trim();
+  if (!trimmed) return false;
+  if (trimmed.length > MAX_NAME_LENGTH) return false;
+  const tokenCount = trimmed.split(/\s+/).filter(Boolean).length;
+  return tokenCount <= MAX_NAME_TOKENS;
+}
+
+/**
+ * Bound an over-long name down to the GD-25 sanity bound: first 8 tokens,
+ * then a hard 80-character cap. Pure truncation, used only as the very
+ * last resort when neither a URL slug nor a brand+town composition is
+ * available.
+ * @param {string} name
+ * @returns {string}
+ */
+function boundName(name) {
+  if (!name) return '';
+  const tokens = String(name).trim().split(/\s+/).filter(Boolean).slice(0, MAX_NAME_TOKENS);
+  let bounded = tokens.join(' ');
+  if (bounded.length > MAX_NAME_LENGTH) bounded = bounded.slice(0, MAX_NAME_LENGTH).trim();
+  return bounded;
+}
+
+/**
+ * GD-25: "a trailing token that equals the venue's outward code is
+ * removed from the name (the outward lives in its own field)" — fixes
+ * "Third Space Tower Bridge Se1" (postcode SE1 2AP) -> "Third Space Tower
+ * Bridge". Case-insensitive on the token's letters/digits; only the
+ * FINAL token is checked, so an outward-shaped word earlier in a real
+ * name is left alone.
+ * @param {string} name
+ * @param {string|null} outward
+ * @returns {string}
+ */
+function stripTrailingOutward(name, outward) {
+  if (!name) return name || '';
+  const foldedOutward = outward ? String(outward).replace(/\s+/g, '').toUpperCase() : '';
+  if (!foldedOutward) return name;
+  const tokens = String(name).trim().split(/\s+/);
+  if (tokens.length === 0) return name;
+  const lastFolded = tokens[tokens.length - 1].replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+  if (lastFolded !== foldedOutward) return name;
+  tokens.pop();
+  return tokens.join(' ').trim();
+}
+
 const GENERIC_TRAILING_WORDS = ['gym', 'fitness', 'health club', 'leisure centre', 'club'];
 
 function stripTrailingGenericWord(input) {
@@ -191,20 +260,31 @@ function containsTokenSubsequence(haystack, needle) {
 }
 
 /**
- * GD-18/GD-22 brand + branch composition: when the (already-cleaned)
+ * GD-18/GD-22/GD-25 brand + branch composition: when the (already-cleaned)
  * source name doesn't itself mention the brand, compose brand + branch
- * ("PureGym Motherwell"); when it already does ("JD Gyms York"), leave it.
+ * ("PureGym Motherwell"); when it already does ("JD Gyms York"), leave it
+ * as-is rather than prefixing a second time. GD-25 widens "already
+ * mentions the brand" from the brand's own name to any of the brand's
+ * known aliases, so a branch name built from an alias ("The Gym Health
+ * And Fitness St Helens College", alias "the gym") is not double-branded
+ * into "The Gym Group The Gym Health And Fitness St Helens College".
  * @param {string} cleanedName
  * @param {string|null} brandName
+ * @param {string[][]} [aliasTokenSets] - folded token arrays, one per
+ *   known alias of the brand (see brands.js's aliasTokenSetsFor)
  * @returns {string}
  */
-function composeBrandBranch(cleanedName, brandName) {
+function composeBrandBranch(cleanedName, brandName, aliasTokenSets = []) {
   if (!brandName) return cleanedName;
   if (!cleanedName) return brandName;
 
   const brandTokens = tokenize(brandName);
   const nameTokens = tokenize(cleanedName);
-  if (containsTokenSubsequence(nameTokens, brandTokens)) return cleanedName;
+  const candidateTokenSets = [brandTokens, ...(aliasTokenSets || [])];
+  const alreadyCarriesBrand = candidateTokenSets.some(
+    (tokens) => tokens.length > 0 && containsTokenSubsequence(nameTokens, tokens),
+  );
+  if (alreadyCarriesBrand) return cleanedName;
 
   const branch = stripTrailingGenericWord(cleanedName);
   return branch ? `${brandName} ${branch}` : brandName;
@@ -241,4 +321,9 @@ module.exports = {
   buildExceptionsMap,
   brandCasingExceptions,
   BASE_EXCEPTIONS,
+  saneName,
+  boundName,
+  stripTrailingOutward,
+  MAX_NAME_LENGTH,
+  MAX_NAME_TOKENS,
 };

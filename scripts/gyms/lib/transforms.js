@@ -5,9 +5,18 @@
 // scripts/gyms/sources/*.mjs is a thin I/O wrapper that calls the matching
 // function here per row/line.
 
-const { matchBrand } = require('./brands');
+const { matchBrand, aliasTokenSetsFor } = require('./brands');
 const { foldText } = require('./fold');
-const { cleanDisplayName, composeBrandBranch, buildExceptionsMap, brandCasingExceptions } = require('./names');
+const {
+  cleanDisplayName,
+  composeBrandBranch,
+  buildExceptionsMap,
+  brandCasingExceptions,
+  saneName,
+  stripTrailingOutward,
+  boundName,
+} = require('./names');
+const { outwardCode } = require('./postcode');
 const { SEED_BRANDS } = require('./brands');
 
 // Built once: brand-casing exceptions (PureGym, not Puregym) layered over
@@ -160,6 +169,28 @@ function transformWalesFeature(feature) {
   };
 }
 
+// GD-25 root-cause fix: the URL path's last segment, for when the raw
+// scraped name overruns the sanity bound (a club page's full body text —
+// the Third Space and Better GLL defect, seen on club pages where the
+// scraper's bounded-title element wasn't found and it fell back to the
+// whole page). Every operator branch page's URL carries a stable, short,
+// human-meaningful slug for exactly this branch ("clubs/queens-park/" ->
+// "queens-park"), which is what the branch is actually named -- never
+// the page body.
+function slugFromUrl(url) {
+  if (!url) return null;
+  const pathOnly = String(url).split(/[?#]/)[0];
+  const segments = pathOnly.split('/').filter(Boolean);
+  return segments.length ? segments[segments.length - 1] : null;
+}
+
+function titleCaseSlug(slug) {
+  if (!slug) return null;
+  const words = slug.split(/[-_]+/).filter(Boolean);
+  if (words.length === 0) return null;
+  return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
 // --- Operator branch pages ----------------------------------------------
 // GD-22: "Operator branch names are composed brand plus branch at
 // normalisation" — an operator branch page's own name is often bare (just
@@ -168,13 +199,46 @@ function transformWalesFeature(feature) {
 // and then composed with the resolved brand right here, before the record
 // ever reaches dedupe/build — this is what lets e.g. PureGym's operator
 // feed name-match an Overture row that already carries "PureGym".
+//
+// GD-25: a raw branch name can also be scraped page body text rather than
+// a title (Third Space and Better GLL club pages up to 2,600+ characters)
+// or carry the postcode outward code as a trailing word ("Tower Bridge
+// Se1"). Both are cleaned up HERE, at the source, rather than left for
+// normalise.mjs's general GD-25 safety net to catch as a brand+town
+// fallback — the URL slug gives a real, specific branch name in every
+// case tried ("Third Space Chelsea", not "Third Space <town>").
 function transformOperatorBranch(branch, slug, idx) {
   const rawName = safeText(branch.name);
   if (!rawName) return null;
 
   const brand = matchBrand(rawName) || matchBrand(slug.replace(/-/g, ' '));
   const { name: cleaned } = cleanDisplayName(rawName, { exceptionsMap: NAME_EXCEPTIONS_MAP });
-  const name = brand ? composeBrandBranch(cleaned, brand.name) : cleaned;
+  const outward = branch.postcode ? outwardCode(branch.postcode) : null;
+  const destatused = stripTrailingOutward(cleaned, outward);
+
+  const slugTitle = () => {
+    const t = titleCaseSlug(slugFromUrl(branch.source_url));
+    return t && saneName(t) ? t : null;
+  };
+
+  let branchName = destatused;
+  if (!saneName(branchName)) {
+    branchName = slugTitle() || boundName(destatused);
+  }
+
+  const aliasTokenSets = brand ? aliasTokenSetsFor(brand.key) : [];
+  let name = brand ? composeBrandBranch(branchName, brand.name, aliasTokenSets) : branchName;
+  // A branch name that was sane on its own (a place name repeated with a
+  // long generic suffix, e.g. Nuffield's "East Kilbride Fitness &
+  // Wellbeing Gym East Kilbride") can still overrun the bound once the
+  // brand is prefixed. Re-check the COMPOSED name too, and re-compose
+  // from the URL slug (short and specific) rather than let this fall
+  // through to normalise.mjs's general fallback, which only has the
+  // brand and a town to work with and loses the specific branch.
+  if (!saneName(name)) {
+    const fallbackBranch = slugTitle() || boundName(branchName);
+    name = brand ? composeBrandBranch(fallbackBranch, brand.name, aliasTokenSets) : fallbackBranch;
+  }
   const status = branch.status === 'coming_soon' ? 'pending' : branch.status === 'closed' ? 'closed' : 'open';
 
   return {

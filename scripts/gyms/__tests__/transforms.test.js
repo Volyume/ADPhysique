@@ -160,6 +160,79 @@ describe('transformOperatorBranch', () => {
     const rec = transformOperatorBranch(branch, 'jd-gyms', 1);
     expect(rec.name).toBe('JD Gyms York');
   });
+
+  // GD-25 root cause: the Third Space club page for Chelsea carried its
+  // whole page body (3,449 characters) as `name` because the scraper's
+  // bounded-title element wasn't found/matched on that page. The fix
+  // takes the branch name from the URL slug instead, never the page body.
+  it('GD-25: falls back to the URL slug when the raw name is a whole scraped club page ("Third Space Chelsea")', () => {
+    const pageBody =
+      'Chelsea SW3 Overview Club Facilities Classes Trainers Rates Enquire Book a Tour – Chelsea Book a Tour Overview Club Facilities Classes Rates Enquire Reformer Pilates Stretch, strengthen and tone in a luxurious space designed for focus and calm. Parametric acoustic walls, natural lighting, and wood flooring create a serene studio environment. Just off the iconic King’s Road, Third Space Chelsea brings high-spec luxury training to the heart of SW3.';
+    const rec = transformOperatorBranch(
+      {
+        source_url: 'https://www.thirdspace.london/clubs/chelsea/',
+        retrieved_at: '2026-09-07T01:19:00.491Z',
+        name: pageBody,
+        street_address: null,
+        town: null,
+        postcode: 'SW3 6AP',
+        coords: null,
+        phone: '020 7534 2877',
+        status: 'open',
+        hours_24: false,
+      },
+      'third-space',
+      6,
+    );
+    expect(rec.name).toBe('Third Space Chelsea');
+  });
+
+  // GD-25: the outward code baked in as a trailing word ("Tower Bridge
+  // Se1", postcode SE1 2AP) is stripped before brand composition — the
+  // outward lives in its own field, not the name.
+  it('GD-25: strips a trailing outward-code token before composing brand + branch ("Third Space Tower Bridge")', () => {
+    const rec = transformOperatorBranch(
+      {
+        source_url: 'https://www.thirdspace.london/clubs/tower-bridge/',
+        retrieved_at: '2026-09-07T01:19:05.000Z',
+        name: 'Tower Bridge Se1',
+        street_address: null,
+        town: null,
+        postcode: 'SE1 2AP',
+        coords: null,
+        phone: '020 7534 2877',
+        status: 'open',
+        hours_24: false,
+      },
+      'third-space',
+      11,
+    );
+    expect(rec.name).toBe('Third Space Tower Bridge');
+  });
+
+  // GD-25: a branch name already built from a brand ALIAS ("the gym") must
+  // not be double-branded into "The Gym Group The Gym Health And Fitness
+  // St Helens College".
+  it('GD-25: does not double-brand a name already carrying a brand alias ("The Gym Group ... St Helens College")', () => {
+    const rec = transformOperatorBranch(
+      {
+        source_url: 'https://www.thegymgroup.com/find-a-gym/st-helens-college/',
+        retrieved_at: '2026-09-07T01:19:10.000Z',
+        name: 'The Gym Health And Fitness St Helens College',
+        street_address: null,
+        town: 'St Helens',
+        postcode: 'WA10 1TF',
+        coords: null,
+        phone: null,
+        status: 'open',
+        hours_24: true,
+      },
+      'the-gym-group',
+      1,
+    );
+    expect(rec.name).toBe('The Gym Health And Fitness St Helens College');
+    expect(rec.name.startsWith('The Gym Group The Gym')).toBe(false);
+  });
 });
 
 describe('transformOvertureRow', () => {

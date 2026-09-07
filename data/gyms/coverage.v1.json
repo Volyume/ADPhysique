@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-07T02:16:22.981Z",
+  "generated_at": "2026-09-07T02:33:16.366Z",
   "total_canonical_venues": 46817,
   "ukactive_reference_total": 5842,
   "pct_of_ukactive_reference": 801.4,
@@ -14,19 +14,19 @@
     "commercial_gym": 5262,
     "health_club": 401,
     "leisure_centre": 2583,
-    "other_fitness": 7807,
-    "boutique_studio": 1012,
-    "independent_gym": 16734,
-    "womens_gym": 220,
-    "hotel_gym": 21,
+    "other_fitness": 7808,
+    "boutique_studio": 1002,
+    "independent_gym": 16759,
+    "womens_gym": 214,
+    "hotel_gym": 19,
     "crossfit_functional": 508,
-    "martial_arts": 11869,
-    "strength_gym": 344,
-    "university_gym": 56
+    "martial_arts": 11863,
+    "strength_gym": 343,
+    "university_gym": 55
   },
   "by_source_count": {
-    "1": 41144,
-    "2+": 5673
+    "1": 41147,
+    "2+": 5670
   },
   "by_coord_source": {
     "source": 46685,
@@ -434,19 +434,122 @@
       "pipeline_count": 11
     }
   },
-  "review_queue_likely_total": 3968,
+  "review_queue_likely_total": 3967,
   "review_queue_likely_by_kind": {
-    "possible_duplicate": 1266,
+    "possible_duplicate": 1265,
     "possible_independent_gym": 2702
   },
   "review_queue_weak_total": 10743,
   "review_queue_weak_by_kind": {
     "possible_duplicate": 10743
   },
-  "review_queue_total": 14711,
+  "review_queue_total": 14710,
   "review_queue_by_kind": {
-    "possible_duplicate": 1266,
+    "possible_duplicate": 1265,
     "possible_independent_gym": 2702
+  },
+  "name_sanity_gd25": {
+    "raw_operator_rejections": {
+      "247-fitness": {
+        "total": 9,
+        "name_present": 9,
+        "rejected": 0
+      },
+      "bannatyne": {
+        "total": 65,
+        "name_present": 65,
+        "rejected": 0
+      },
+      "better-gll": {
+        "total": 193,
+        "name_present": 192,
+        "rejected": 12
+      },
+      "david-lloyd": {
+        "total": 119,
+        "name_present": 119,
+        "rejected": 0
+      },
+      "fitness-first": {
+        "total": 25,
+        "name_present": 25,
+        "rejected": 0
+      },
+      "freedom-leisure": {
+        "total": 129,
+        "name_present": 129,
+        "rejected": 0
+      },
+      "jd-gyms": {
+        "total": 113,
+        "name_present": 113,
+        "rejected": 0
+      },
+      "nuffield-health": {
+        "total": 133,
+        "name_present": 133,
+        "rejected": 4
+      },
+      "parkwood-leisure": {
+        "total": 0,
+        "name_present": 0,
+        "rejected": 0
+      },
+      "places-leisure": {
+        "total": 90,
+        "name_present": 90,
+        "rejected": 0
+      },
+      "puregym": {
+        "total": 496,
+        "name_present": 496,
+        "rejected": 0
+      },
+      "snap-fitness": {
+        "total": 107,
+        "name_present": 107,
+        "rejected": 7
+      },
+      "the-gym-group": {
+        "total": 276,
+        "name_present": 276,
+        "rejected": 0
+      },
+      "third-space": {
+        "total": 17,
+        "name_present": 17,
+        "rejected": 4
+      },
+      "total-fitness": {
+        "total": 16,
+        "name_present": 16,
+        "rejected": 0
+      },
+      "ultimate-fitness": {
+        "total": 0,
+        "name_present": 0,
+        "rejected": 0
+      },
+      "village-gym": {
+        "total": 35,
+        "name_present": 35,
+        "rejected": 0
+      },
+      "virgin-active": {
+        "total": 42,
+        "name_present": 31,
+        "rejected": 0
+      }
+    },
+    "pipeline_name_fallbacks": {
+      "total": 309,
+      "by_source": {
+        "active_places": 44,
+        "operator:freedom-leisure": 1,
+        "overture": 264
+      }
+    },
+    "display_names_over_80_chars": 0
   },
   "named_lookups": {
     "volt_gym_burscough": {

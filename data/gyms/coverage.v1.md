@@ -1,10 +1,10 @@
 # UK gym directory — coverage report
 
-Generated 2026-09-07T02:16:22.981Z.
+Generated 2026-09-07T02:33:16.366Z.
 
 ## Headline
 - **46817** canonical venues built (801.4% of ukactive's cited 5,842 UK health & fitness clubs, 2026 report — a report estimate/extrapolation, not a census; see docs/gym-database-2026-09-06/03 §4).
-- Review queue (GD-23): **3968** likely ({"possible_duplicate":1266,"possible_independent_gym":2702}), **10743** weak/proximity-only ({"possible_duplicate":10743}).
+- Review queue (GD-23): **3967** likely ({"possible_duplicate":1265,"possible_independent_gym":2702}), **10743** weak/proximity-only ({"possible_duplicate":10743}).
 
 ## By nation
 - England: 40075
@@ -17,19 +17,19 @@ Generated 2026-09-07T02:16:22.981Z.
 - commercial_gym: 5262
 - health_club: 401
 - leisure_centre: 2583
-- other_fitness: 7807
-- boutique_studio: 1012
-- independent_gym: 16734
-- womens_gym: 220
-- hotel_gym: 21
+- other_fitness: 7808
+- boutique_studio: 1002
+- independent_gym: 16759
+- womens_gym: 214
+- hotel_gym: 19
 - crossfit_functional: 508
-- martial_arts: 11869
-- strength_gym: 344
-- university_gym: 56
+- martial_arts: 11863
+- strength_gym: 343
+- university_gym: 55
 
 ## Source count (single- vs multi-source corroborated)
-- 1 source(s): 41144
-- 2+ source(s): 5673
+- 1 source(s): 41147
+- 2+ source(s): 5670
 
 ## Coordinate source
 - source: 46685
@@ -78,6 +78,34 @@ Bottom: NPT (1), Z (1), U (1), JE (1), BF (1), C (2), F (2), ZE (6), HS (11), KW
 - serco-leisure: own feed 0, any source 4, researched not established
 - f45: own feed 0, any source 62, researched not established
 - 1rebel: own feed 0, any source 11, researched not established
+
+## Name sanity (GD-25)
+Raw operator feed rejections — raw `branch.name` over 80 characters or 8 tokens, before any pipeline fix (a persistent signal of which operator's feed still carries bad source data; the pipeline fixes the display name from these regardless, via the URL slug):
+- 247-fitness: 0/9 raw names rejected (9 branches total)
+- bannatyne: 0/65 raw names rejected (65 branches total)
+- better-gll: 12/192 raw names rejected (193 branches total)
+- david-lloyd: 0/119 raw names rejected (119 branches total)
+- fitness-first: 0/25 raw names rejected (25 branches total)
+- freedom-leisure: 0/129 raw names rejected (129 branches total)
+- jd-gyms: 0/113 raw names rejected (113 branches total)
+- nuffield-health: 4/133 raw names rejected (133 branches total)
+- parkwood-leisure: 0/0 raw names rejected (0 branches total)
+- places-leisure: 0/90 raw names rejected (90 branches total)
+- puregym: 0/496 raw names rejected (496 branches total)
+- snap-fitness: 7/107 raw names rejected (107 branches total)
+- the-gym-group: 0/276 raw names rejected (276 branches total)
+- third-space: 4/17 raw names rejected (17 branches total)
+- total-fitness: 0/16 raw names rejected (16 branches total)
+- ultimate-fitness: 0/0 raw names rejected (0 branches total)
+- village-gym: 0/35 raw names rejected (35 branches total)
+- virgin-active: 0/31 raw names rejected (42 branches total)
+
+Pipeline name-sanity fallbacks applied at normalisation (brand + town used in place of a rejected name): **309** total.
+- active_places: 44
+- operator:freedom-leisure: 1
+- overture: 264
+
+Canonical display names still over 80 characters: **0** (must be 0).
 
 ## Named lookups (founder test cases)
 - **"Volt Gym" Burscough**: PRESENT — [{"id":"54603096-b9d2-5291-ba8f-727927feed0f","display_name":"Volt Gym","town":"Burscough","postcode":"L40 8TG","source_count":1}]

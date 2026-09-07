@@ -1,6 +1,9 @@
 // GD-18 display-name cleanup fixtures, against the defects the first full
 // pipeline run turned up (entities, baked-in status, all-caps, bracket
-// qualifiers) plus the GD-18/GD-22 brand+branch composition.
+// qualifiers) plus the GD-18/GD-22 brand+branch composition. GD-25 name
+// sanity bounds (saneName/boundName/stripTrailingOutward, and the widened
+// alias-aware composition rule) against the defects the second full
+// pipeline run turned up.
 const {
   decodeEntities,
   stripStatusSuffix,
@@ -11,7 +14,11 @@ const {
   cleanDisplayName,
   buildExceptionsMap,
   brandCasingExceptions,
+  saneName,
+  boundName,
+  stripTrailingOutward,
 } = require('../lib/names');
+const { aliasTokenSetsFor } = require('../lib/brands');
 
 describe('decodeEntities', () => {
   it('decodes &amp; and other named entities', () => {
@@ -134,6 +141,91 @@ describe('composeBrandBranch', () => {
 
   it('returns the bare name when there is no brand', () => {
     expect(composeBrandBranch('Iron Temple Gym', null)).toBe('Iron Temple Gym');
+  });
+
+  // GD-25: the St Helens College case — a branch name built from a brand
+  // ALIAS ("the gym"), not the brand's canonical name ("The Gym Group"),
+  // must not be double-branded into "The Gym Group The Gym Health And
+  // Fitness St Helens College". The old brand-name-only check missed this
+  // because "the gym group" is not a contiguous run in the branch name.
+  it('GD-25: does not double-brand a name already carrying a brand ALIAS, not just the canonical name', () => {
+    const aliasTokenSets = aliasTokenSetsFor('the-gym-group');
+    const result = composeBrandBranch('The Gym Health And Fitness St Helens College', 'The Gym Group', aliasTokenSets);
+    expect(result).toBe('The Gym Health And Fitness St Helens College');
+    expect(result.startsWith('The Gym Group The Gym')).toBe(false);
+  });
+
+  it('GD-25: still composes brand + branch when no alias is present in the name', () => {
+    const aliasTokenSets = aliasTokenSetsFor('the-gym-group');
+    expect(composeBrandBranch('York', 'The Gym Group', aliasTokenSets)).toBe('The Gym Group York');
+  });
+});
+
+describe('saneName (GD-25)', () => {
+  it('accepts an ordinary venue name', () => {
+    expect(saneName('PureGym Motherwell')).toBe(true);
+    expect(saneName('Third Space Chelsea')).toBe(true);
+  });
+
+  it('rejects a name over 80 characters', () => {
+    expect(saneName('A'.repeat(81))).toBe(false);
+    expect(saneName('A'.repeat(80))).toBe(true);
+  });
+
+  it('rejects a name with more than 8 tokens', () => {
+    expect(saneName('One Two Three Four Five Six Seven Eight Nine')).toBe(false);
+    expect(saneName('One Two Three Four Five Six Seven Eight')).toBe(true);
+  });
+
+  it('rejects a whole scraped club-page body (the Third Space Chelsea defect)', () => {
+    const pageBody =
+      'Chelsea SW3 Overview Club Facilities Classes Trainers Rates Enquire Book a Tour – Chelsea Book a Tour Overview Club Facilities Classes Rates Enquire Reformer Pilates Stretch, strengthen and tone in a luxurious space designed for focus and calm.';
+    expect(saneName(pageBody)).toBe(false);
+  });
+
+  it('rejects empty/null/whitespace-only names', () => {
+    expect(saneName('')).toBe(false);
+    expect(saneName(null)).toBe(false);
+    expect(saneName('   ')).toBe(false);
+  });
+});
+
+describe('boundName (GD-25)', () => {
+  it('truncates to at most 8 tokens', () => {
+    expect(boundName('One Two Three Four Five Six Seven Eight Nine Ten')).toBe('One Two Three Four Five Six Seven Eight');
+  });
+
+  it('hard-caps at 80 characters', () => {
+    const bounded = boundName('Word '.repeat(30).trim());
+    expect(bounded.length).toBeLessThanOrEqual(80);
+  });
+
+  it('returns an empty string for no input', () => {
+    expect(boundName('')).toBe('');
+    expect(boundName(null)).toBe('');
+  });
+});
+
+describe('stripTrailingOutward (GD-25)', () => {
+  it('strips a trailing token matching the outward code (the Tower Bridge SE1 case)', () => {
+    expect(stripTrailingOutward('Tower Bridge Se1', 'SE1')).toBe('Tower Bridge');
+    expect(stripTrailingOutward('Third Space Tower Bridge SE1', 'SE1')).toBe('Third Space Tower Bridge');
+  });
+
+  it('is case-insensitive', () => {
+    expect(stripTrailingOutward('Moorgate ec2', 'EC2')).toBe('Moorgate');
+  });
+
+  it('leaves a name alone when the trailing token does not match the outward code', () => {
+    expect(stripTrailingOutward('PureGym Motherwell', 'ML1')).toBe('PureGym Motherwell');
+  });
+
+  it('leaves a name alone when no outward code is supplied', () => {
+    expect(stripTrailingOutward('PureGym Motherwell', null)).toBe('PureGym Motherwell');
+  });
+
+  it('does not strip a mid-name token that happens to match', () => {
+    expect(stripTrailingOutward('W1 Studio London', 'W1')).toBe('W1 Studio London');
   });
 });
 

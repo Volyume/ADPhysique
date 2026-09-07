@@ -212,16 +212,27 @@ function buildVenueFromCluster(memberKeys, recordsByKey) {
   // as brand + branch when that source's own name is bare. Falls back to
   // brand + town (the original composition) when no member in
   // DISPLAY_NAME_PRIORITY order has a usable name at all.
-  const nameSourceMember = members
-    .filter((m) => m.name)
-    .sort((a, b) => DISPLAY_NAME_PRIORITY(a.source) - DISPLAY_NAME_PRIORITY(b.source))[0];
+  //
+  // GD-25: a member's own name can itself already be a normalise.mjs
+  // brand+town fallback (name_source === 'fallback', its real source name
+  // having been rejected as insane) — the display name skips that member
+  // whenever a saner, non-fallback name exists ANYWHERE in the cluster,
+  // even one that DISPLAY_NAME_PRIORITY would otherwise rank behind it,
+  // and only uses the fallback name when it's genuinely all the cluster
+  // has.
+  const namedMembers = members.filter((m) => m.name);
+  const nonFallbackNamedMembers = namedMembers.filter((m) => m.name_source !== 'fallback');
+  const nameSourceMember = (nonFallbackNamedMembers.length > 0 ? nonFallbackNamedMembers : namedMembers).sort(
+    (a, b) => DISPLAY_NAME_PRIORITY(a.source) - DISPLAY_NAME_PRIORITY(b.source),
+  )[0];
   const nameSourceName = nameSourceMember ? nameSourceMember.name : null;
+  const brandAliasTokenSets = brand ? aliasTokenSetsFor(brand.key) : [];
   const displayName = brand
-    ? composeBrandBranch(nameSourceName || town, brand.name)
+    ? composeBrandBranch(nameSourceName || town, brand.name, brandAliasTokenSets)
     : nameSourceName || best.name;
 
   const nameTokens = tokenize(displayName);
-  const brandAliasTokens = brand ? aliasTokenSetsFor(brand.key).flat() : [];
+  const brandAliasTokens = brandAliasTokenSets.flat();
   const sector = firstNonNull(sorted, 'sector') || (postcode ? sectorCode(postcode) : null);
   const areaSource = postcode ? 'postcode' : firstNonNull(sorted, 'area_source');
   const outward = postcode ? outwardCode(postcode) : sector ? sector.split(' ')[0] : null;

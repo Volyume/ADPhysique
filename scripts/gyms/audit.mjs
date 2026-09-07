@@ -2,7 +2,8 @@
 // audit.mjs — GD-15 coverage report: counts by nation, venue_type, source,
 // source_count (1 vs 2+), local authority top/bottom, postcode area,
 // operator branch counts vs docs/03's recorded figures, unresolved review
-// count, and the two named test-case lookups. Writes:
+// count, GD-25 name sanity (per-operator raw rejections plus pipeline
+// fallbacks applied), and the two named test-case lookups. Writes:
 //   data/gyms/coverage.v1.json
 //   data/gyms/coverage.v1.md
 
@@ -16,11 +17,19 @@ const require = createRequire(import.meta.url);
 const { readJsonlGz } = require('./lib/jsonl.js');
 const { foldText } = require('./lib/fold.js');
 const { matchBrand } = require('./lib/brands.js');
+const { saneName } = require('./lib/names.js');
 
 const DATA_DIR = path.join(__dirname, '../../data/gyms');
+const WORK_DIR = path.join(DATA_DIR, '_work');
 const VENUES_FILE = path.join(DATA_DIR, 'uk-gyms.v1.jsonl.gz');
 const REVIEW_FILE = path.join(DATA_DIR, 'review-queue.v1.jsonl.gz');
 const REVIEW_WEAK_FILE = path.join(DATA_DIR, 'review-weak.v1.jsonl.gz');
+// GD-25: normalise.mjs's per-source name-sanity fallback counts.
+const NAME_REJECTIONS_FILE = path.join(WORK_DIR, 'name-rejections.v1.json');
+
+const DEFAULT_RAW_DIR =
+  '/tmp/claude-0/-home-user-ADPhysique/8a1da388-bf6f-50f3-8ac9-99853301c7d5/scratchpad/gyms/raw';
+const RAW_DIR = process.env.RAW_DIR || process.argv[2] || DEFAULT_RAW_DIR;
 
 const UKACTIVE_TOTAL = 5842;
 
@@ -55,6 +64,53 @@ function postcodeArea(outward) {
   if (!outward) return null;
   const match = outward.match(/^[A-Z]+/);
   return match ? match[0] : null;
+}
+
+// GD-25: per-operator count of RAW branch names that violate the name
+// sanity bound (>80 chars or >8 tokens) BEFORE any pipeline fix is
+// applied — a persistent signal of which operator feeds still carry bad
+// source data (the Third Space/Better GLL "whole club page as name"
+// defect), independent of whether transforms.js/normalise.mjs already
+// recover a sane display name downstream. "so the adapter, not the name
+// rule, is fixed next" (GD-25).
+function rawOperatorNameRejections(rawDir) {
+  const opsDir = path.join(rawDir, 'operators');
+  const out = {};
+  if (!fs.existsSync(opsDir)) return out;
+  const slugs = fs
+    .readdirSync(opsDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
+    .sort();
+  for (const slug of slugs) {
+    const branchesFile = path.join(opsDir, slug, 'branches.jsonl');
+    if (!fs.existsSync(branchesFile)) continue;
+    const lines = fs
+      .readFileSync(branchesFile, 'utf8')
+      .split('\n')
+      .filter((l) => l.trim());
+    let total = 0;
+    let namePresent = 0;
+    let rejected = 0;
+    for (const line of lines) {
+      let branch;
+      try {
+        branch = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      total += 1;
+      // An empty/missing name is dropped entirely by transformOperatorBranch
+      // (a different, pre-existing rule) — GD-25's sanity bound only
+      // applies to a name that IS present, so it is excluded from this
+      // count rather than counted as "rejected".
+      if (!branch.name) continue;
+      namePresent += 1;
+      if (!saneName(branch.name)) rejected += 1;
+    }
+    out[slug] = { total, name_present: namePresent, rejected };
+  }
+  return out;
 }
 
 function findLookup(venues, needleTokens) {
@@ -139,6 +195,19 @@ function run() {
   const reviewByKind = countBy(review, (r) => r.kind);
   const reviewWeakByKind = countBy(reviewWeak, (r) => r.kind);
 
+  // GD-25 name sanity.
+  const rawOperatorRejections = rawOperatorNameRejections(RAW_DIR);
+  let pipelineNameRejections = { total: 0, by_source: {} };
+  if (fs.existsSync(NAME_REJECTIONS_FILE)) {
+    try {
+      pipelineNameRejections = JSON.parse(fs.readFileSync(NAME_REJECTIONS_FILE, 'utf8'));
+    } catch {
+      // leave the zeroed default — name-rejections.v1.json is a
+      // gitignored scratch file normalise.mjs writes each run
+    }
+  }
+  const displayNamesOver80 = venues.filter((v) => (v.display_name || '').length > 80);
+
   const coverage = {
     generated_at: new Date().toISOString(),
     total_canonical_venues: venues.length,
@@ -164,6 +233,11 @@ function run() {
     // Back-compat aliases for the pre-GD-23 single-queue field names.
     review_queue_total: review.length + reviewWeak.length,
     review_queue_by_kind: reviewByKind,
+    name_sanity_gd25: {
+      raw_operator_rejections: rawOperatorRejections,
+      pipeline_name_fallbacks: pipelineNameRejections,
+      display_names_over_80_chars: displayNamesOver80.length,
+    },
     named_lookups: {
       volt_gym_burscough: {
         present: voltGym.length > 0 || voltGymBroad.some((v) => foldText(v.town || '').includes('burscough')),
@@ -231,6 +305,15 @@ ${Object.entries(operatorComparison)
   )
   .join('\n')}
 
+## Name sanity (GD-25)
+Raw operator feed rejections — raw \`branch.name\` over 80 characters or 8 tokens, before any pipeline fix (a persistent signal of which operator's feed still carries bad source data; the pipeline fixes the display name from these regardless, via the URL slug):
+${Object.entries(rawOperatorRejections).map(([slug, c]) => `- ${slug}: ${c.rejected}/${c.name_present} raw names rejected (${c.total} branches total)`).join('\n') || '(no operator folders found)'}
+
+Pipeline name-sanity fallbacks applied at normalisation (brand + town used in place of a rejected name): **${pipelineNameRejections.total}** total.
+${Object.entries(pipelineNameRejections.by_source || {}).map(([src, n]) => `- ${src}: ${n}`).join('\n') || '(none)'}
+
+Canonical display names still over 80 characters: **${displayNamesOver80.length}** (must be 0).
+
 ## Named lookups (founder test cases)
 - **"Volt Gym" Burscough**: ${coverage.named_lookups.volt_gym_burscough.present ? 'PRESENT' : 'ABSENT'} — ${JSON.stringify(coverage.named_lookups.volt_gym_burscough.matches)}
 - **"PureGym Motherwell"**: ${coverage.named_lookups.puregym_motherwell.present ? 'PRESENT' : 'ABSENT'} — ${JSON.stringify(coverage.named_lookups.puregym_motherwell.matches)}
@@ -238,6 +321,11 @@ ${Object.entries(operatorComparison)
   fs.writeFileSync(path.join(DATA_DIR, 'coverage.v1.md'), md);
 
   console.log(`[audit] wrote coverage.v1.json and coverage.v1.md (${venues.length} venues, ${review.length} review entries)`);
+  console.log(
+    `[audit] GD-25: ${displayNamesOver80.length} display name(s) over 80 chars, ` +
+      `${pipelineNameRejections.total} pipeline name fallback(s) applied, ` +
+      `raw operator rejections: ${JSON.stringify(Object.fromEntries(Object.entries(rawOperatorRejections).map(([k, v]) => [k, v.rejected])))}`,
+  );
   console.log(`[audit] Volt Gym Burscough: ${coverage.named_lookups.volt_gym_burscough.present ? 'PRESENT' : 'ABSENT'}`);
   console.log(`[audit] PureGym Motherwell: ${coverage.named_lookups.puregym_motherwell.present ? 'PRESENT' : 'ABSENT'}`);
 }
