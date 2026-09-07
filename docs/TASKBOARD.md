@@ -59,8 +59,12 @@ Recovery path for any lane: `git status`, lead-review the on-disk diff
 against the spec section named in the brief, land or relaunch the same
 brief; agents never commit. Founder order (chat): distance band is an
 always-visible 5/10/25/50 mile selector, text matches never cut by the
-band. OPEN: expo-location yes/no (P0-B "Use my location" waits on it;
-everything else ships). Report 09 findings folded into S1/S2 briefs:
+band. DECIDED (founder, chat 2026-09-07, "yes to all"): expo-location
+~19.0.8 added; app.json plugin + iOS reduced accuracy + Android FINE and
+BACKGROUND location blocked; privacy guard amended so
+`src/lib/deviceLocation.js` is the only file that may name the
+dependency, forward-only (no watch, no background, no cached position,
+no storage). Lane S2 arms the adapter. Report 09 findings folded into S1/S2 briefs:
 brand-query candidate cut (S1), submit-time duplicate tokenizer 53%
 miss (S1), null-distance ranker bug (S2). DATA ITEM for the next
 pipeline run (not this build): `data/gyms/postcode-sectors.v1.csv`

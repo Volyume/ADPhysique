@@ -13,8 +13,10 @@ finder can widen by distance; P0-A..F, P1, P2, Future, Reject listed.
 Spec `30-IMPLEMENTATION.md` section 1 is the edit gate for lanes S1
 (migration 163), S2 (finder + Join step + place picker), S3 (Find people
 filters + fixes). Founder orders in chat: lowest adequate agent tier;
-distance band always visible 5/10/25/50 miles. OPEN founder question:
-expo-location dependency + amending the location guard test. NEXT:
+distance band always visible 5/10/25/50 miles. Founder "yes to all" on
+expo-location (~19.0.8, approximate, explicit tap, never stored) and
+the guard amendment; both applied by the lead. sportscotland WFS access
+delivered (key outside the repo); register analysis `11`, ruling GD-27. NEXT:
 lead-review S1/S2 diffs, dispatch S3, settled-tree run, record section
 2/3 of `30`, merge to main, device checklist in chat.
 ===============================================================================
