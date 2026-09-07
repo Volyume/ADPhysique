@@ -323,6 +323,48 @@ describe('the distance band (30-IMPLEMENTATION.md 1.2 item 5)', () => {
   });
 });
 
+describe('a name query with an existing centroid (founder device report 2026-09-07)', () => {
+  test('a plain name search drops unrelated nearby venues the near-list would otherwise inject', async () => {
+    // "Use my location" already resolved a centroid and populated the
+    // near-list with whatever is nearby; the person then types a specific
+    // gym name that is not itself a place and does not resolve one.
+    near.mockResolvedValue({
+      venues: [{ ...PUREGYM, id: 'nearby-unrelated', display_name: 'Nearby Unrelated Gym', distance_m: 400 }],
+      truncated: false,
+    });
+    deviceLocation.isAvailable.mockReturnValue(true);
+    deviceLocation.getApproximatePosition.mockResolvedValue({ lat: 51.5, lng: -0.1 });
+    const tree = render({});
+    await act(async () => { await byLabel(tree, 'Use my location').props.onPress(); });
+    await flush();
+    expect(getList(tree).props.data.map((v) => v.id)).toEqual(['nearby-unrelated']);
+
+    search.mockResolvedValue({
+      venues: [{ ...PUREGYM, id: 'volt-1', display_name: 'Volt Gym', distance_m: null }],
+      recognisedPostcode: null,
+      centroid: null, // a plain name, no place resolved
+    });
+    await type(tree, 'volt');
+    await flush();
+
+    const list = getList(tree);
+    expect(list.props.data.map((v) => v.id)).toEqual(['volt-1']);
+    expect(list.props.data.map((v) => v.id)).not.toContain('nearby-unrelated');
+    act(() => { tree.unmount(); });
+  });
+
+  test('a town-name search that resolves its own centroid still gets the full near-list merge', async () => {
+    search.mockResolvedValue({ venues: [], recognisedPostcode: null, centroid: MOTHERWELL_CENTROID });
+    near.mockResolvedValue({ venues: [{ ...PUREGYM }], truncated: false });
+    const tree = render({});
+    await type(tree, 'Motherwell');
+    await flush();
+
+    expect(getList(tree).props.data.map((v) => v.id)).toEqual(['v1']);
+    act(() => { tree.unmount(); });
+  });
+});
+
 describe('a truncated near list', () => {
   test('shows the "Showing the nearest 40" footer, and keeps the band chips active', async () => {
     search.mockResolvedValue({ venues: [], recognisedPostcode: null, centroid: MOTHERWELL_CENTROID });

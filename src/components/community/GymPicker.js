@@ -68,7 +68,10 @@ const DEFAULT_BAND_MILES = DISTANCE_BANDS_MILES[0];
 
 /** Text matches (already ranked by `search()`) are never dropped for
  * being outside the chosen band; `near()`'s own candidates fill in a
- * `distance_m` a text match may not have carried on its own. */
+ * `distance_m` a text match may not have carried on its own. Used only
+ * when there is no active name filter (see `hasNameFilter` below): an
+ * empty query (plain "browse nearby") or a recognised postcode/place,
+ * where "everything within the chosen band" is exactly the point. */
 function mergeVenues(nearVenues, textVenues) {
   const byId = new Map();
   for (const v of nearVenues) byId.set(v.id, v);
@@ -77,6 +80,24 @@ function mergeVenues(nearVenues, textVenues) {
     byId.set(v.id, existing ? { ...v, distance_m: v.distance_m ?? existing.distance_m } : v);
   }
   return Array.from(byId.values());
+}
+
+/** A typed NAME must only ever show what the name actually matched.
+ * Founder device report 2026-09-07: with a centroid already known (from
+ * "Use my location" or an earlier place search), typing a plain name
+ * like "volt" still showed a page of unrelated nearby gyms ahead of the
+ * real Volt-named venues, because `mergeVenues` above unions in the
+ * ENTIRE near-list regardless of whether it has anything to do with what
+ * was typed. This keeps only the venues the text search itself matched,
+ * backfilling `distance_m` from the near-list where the same venue also
+ * happens to appear there - never adding an id the text search did not
+ * return. */
+function withNearDistance(textVenues, nearVenues) {
+  const nearById = new Map(nearVenues.map((v) => [v.id, v]));
+  return textVenues.map((v) => {
+    const nearMatch = nearById.get(v.id);
+    return nearMatch ? { ...v, distance_m: v.distance_m ?? nearMatch.distance_m } : v;
+  });
 }
 
 export default function GymPicker({
@@ -106,6 +127,15 @@ export default function GymPicker({
   const [nearError, setNearError] = useState(null);
   const [locating, setLocating] = useState(false);
   const [locateError, setLocateError] = useState(null);
+  // Did the MOST RECENT search() response resolve a place (a postcode or
+  // a recognised town), rather than a plain name/brand? Founder device
+  // report 2026-09-07: `postcodeHit` alone is not enough to tell a place
+  // query from a name query, because a recognised TOWN name resolves a
+  // centroid server-side too without being postcode-shaped. This is what
+  // `hasNameFilter` below actually needs: reset the moment a search comes
+  // back with no centroid, even if an OLDER centroid (from an earlier
+  // place search, or "Use my location") is still sitting in `centroid`.
+  const [textResolvedPlace, setTextResolvedPlace] = useState(false);
   const seqRef = useRef(0);
   const nearSeqRef = useRef(0);
   const centroidKeyRef = useRef(null);
@@ -121,6 +151,7 @@ export default function GymPicker({
       setTextVenues([]);
       setLoading(false);
       setError(null);
+      setTextResolvedPlace(false);
       return undefined;
     }
     setLoading(true);
@@ -134,11 +165,13 @@ export default function GymPicker({
         if (seqRef.current !== seq) return;
         setTextVenues(out.venues);
         setError(null);
+        setTextResolvedPlace(!!out.centroid);
         if (out.centroid) setCentroid(out.centroid);
       } catch (e) {
         if (seqRef.current !== seq) return;
         setTextVenues([]);
         setError(e?.code ?? 'unavailable');
+        setTextResolvedPlace(false);
       } finally {
         if (seqRef.current === seq) setLoading(false);
       }
@@ -222,11 +255,26 @@ export default function GymPicker({
   }
 
   const trimmed = query.trim();
-  const results = rankVenues(mergeVenues(nearVenues, textVenues), query);
+  // A typed name filters to what it actually matched; an empty query or a
+  // resolved place (postcode, or a town this exact search resolved) keeps
+  // the full near-list, since "everything within the band" is the point
+  // there (see the two merge helpers above). `postcodeHit` catches a
+  // postcode being typed before its debounced search has answered yet;
+  // `textResolvedPlace` catches the settled answer for both postcodes and
+  // towns.
+  const hasNameFilter = trimmed.length >= MIN_QUERY && !postcodeHit && !textResolvedPlace;
+  const candidates = hasNameFilter
+    ? withNearDistance(textVenues, nearVenues)
+    : mergeVenues(nearVenues, textVenues);
+  const results = rankVenues(candidates, query);
   const knownCentroid = !!(centroid && centroid.lat != null && centroid.lng != null);
   const hasSearched = trimmed.length >= MIN_QUERY || knownCentroid;
   const showEmpty = !loading && !nearLoading && !error && !nearError && hasSearched && results.length === 0;
-  const showFooter = !showEmpty && results.length > 0 && knownCentroid && truncated;
+  // The "nearest 40" wording describes the near-list specifically: once a
+  // name filter has taken over `candidates` (above), `truncated` is still
+  // reporting the near-list's own state and must not be shown against a
+  // results set the near-list no longer determines.
+  const showFooter = !showEmpty && results.length > 0 && knownCentroid && truncated && !hasNameFilter;
 
   return (
     <View style={styles.wrap}>

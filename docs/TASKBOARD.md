@@ -84,6 +84,60 @@ functions.
 
 ---
 
+## GYM FINDER RELEVANCE + ORDERING DEFECTS (2026-09-07, found immediately after 167) — FIXES WRITTEN, NOT YET APPLIED
+
+Distinct from VOLYUME-37 above — pre-existing gym-finder quality defects,
+invisible while the finder was hard-failing, surfaced the moment 167 made
+it reachable again. Founder device reports (screenshots), evidence
+gathered directly against production before writing any fix.
+
+1. **`gyms_near` ordering.** Sorted `operator_unconfirmed ASC, distance_m
+   ASC` — verification status BEFORE distance, so a confirmed venue miles
+   away outranked a closer unconfirmed one on a "nearest first" screen
+   (device report: Anytime Fitness Southport 4.2mi listed above Formby
+   Hall Golf Resort 0.4mi and My Gym at Formby Hall 0.6mi). Every row shows
+   a mile badge implying distance order; the query didn't honour it.
+
+2. **`gyms_search` generic-word matching.** Free-text matching qualifies a
+   venue on ANY shared token, with no distinction between a distinguishing
+   word and a generic venue-type word. Verified directly against
+   production: "volt gym" matches 4,075 of ~10,600 open venues on the word
+   "gym" alone (4,073 open venues carry that token) — with no coordinate
+   on this call (by design, so a name match is never distance-filtered)
+   the result is capped at 40 and tie-broken alphabetically, so the real
+   "Volt Gym" routinely loses the cap to alphabetically-earlier noise.
+   Founder isolated this precisely: searching bare "volt" (no generic word
+   at all) still surfaced ~30 unrelated nearby venues — see item 3, the
+   actual cause of THAT specific reproduction.
+
+3. **Client-side merge bug (`GymPicker.js`), the one the founder actually
+   reproduced with "volt".** `results = rankVenues(mergeVenues(nearVenues,
+   textVenues), query)` unconditionally unions the ENTIRE near-list
+   (populated independently of the typed text, as long as a centroid is
+   known from an earlier "Use my location" or place search) into the
+   displayed results. Nothing ever dropped a near-list venue for having
+   zero relevance to what was typed. Confirmed via the "volt" search
+   screenshots: real Volt-named venues appeared with no distance shown at
+   all (correct: the text search never sends a coordinate), buried behind
+   ~30 unrelated nearby venues with real mile badges (from the stale
+   near-list). Fixed: a new `textResolvedPlace` flag distinguishes "this
+   exact search resolved a place" (town or postcode — keep the full merge,
+   the radius-widening feature is legitimate there) from "this is a plain
+   name with nothing resolved" (show only what the text search itself
+   matched, backfilling distance from the near-list only where the same
+   venue also happens to appear there). Two new regression tests pin both
+   branches.
+
+FIXES: `supabase/migrate_168_gym_finder_relevance_and_order_fix.sql`
+(items 1-2, server-side, verified against production before writing) and
+`src/components/community/GymPicker.js` (item 3, client-side, JS — not a
+migration). Lint clean; GymPicker suite green (22/22, two new); full suite
+pending. STATUS: WRITTEN, NOT YET APPLIED to production — awaiting the
+founder's exact phrase for migrate_168 specifically (this is new work,
+not covered by any earlier "run against production").
+
+---
+
 ## COMMUNITY PRODUCT AUDIT + GAP CLOSURE + PROGRESS/GROUPS (2026-09-07) — LANDED and MERGED to main; cloud 160-163 + gym seed APPLIED (run 5), 164 + 165 applied after the final merge
 
 Final state and decisions: `docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` (§1 decisions, §2 removal, §3 build record, §4-5 founder redirection and groups) and `60-DESIGN-PROGRESS-COMMUNITY.md`. Copy QA pass: `docs/copy-qa-2026-09-07/02-corrections.md`. NEXT: founder build go; pipeline re-run with sportscotland; device walk.
