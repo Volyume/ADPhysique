@@ -339,7 +339,9 @@ function writeVenuesAndSourcesChunks(venues, carryNeedsReviewReason) {
         sqlString(v.geocell),
         sqlString(v.website),
         sqlString(v.phone),
-        sqlInt(v.facility_count),
+        // Schema default is 1 and the column is NOT NULL; most rows carry
+        // no count (one countable facility per site, GD-04).
+        sqlInt(v.facility_count ?? 1),
         // Venue-to-venue links are written by the links pass below, after
         // every venue row exists: a child chunk can otherwise run before the
         // chunk carrying its parent and fail the foreign key.
