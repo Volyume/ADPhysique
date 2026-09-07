@@ -23,6 +23,6 @@ Document map (filled as the audit runs):
 
 Agent window: all phase-A agents are READ-ONLY (they write only their
 own numbered file here). Recovery path: re-dispatch the same brief.
-Tier: Sonnet for mechanism inventories, Opus for competitor evidence,
+Tier (founder reaffirmed in chat 2026-09-07: lowest tier that does the job well): Sonnet for mechanism inventories and competitor evidence collection (the lead synthesises),
 Haiku for the test/flag inventory (founder order 2026-09-06 on lowest
 adequate tier).

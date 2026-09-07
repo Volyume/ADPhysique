@@ -39,8 +39,8 @@ Founder brief in chat: exhaustive implementation + competitive product
 audit of Community (not visual); missing vs underpowered; judge; then
 implement only justified improvements on the existing architecture.
 Folder `docs/community-product-audit-2026-09-07/` (README = map).
-Phase A: eight READ-ONLY inventory/evidence agents (Sonnet mechanism
-inventories 01-06 and 08, Opus competitor evidence 07), each writing
+Phase A: eight READ-ONLY inventory/evidence agents (Sonnet for 01-07,
+Haiku for 08; founder reaffirmed lowest adequate tier in chat), each writing
 only its own numbered file. Recovery path: re-dispatch the same brief;
 nothing on disk to reconcile. Phase B: lead judgement `20-JUDGEMENT.md`.
 Phase C: targeted implementation, `30-IMPLEMENTATION.md`, then merge.
