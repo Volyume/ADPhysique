@@ -60,7 +60,7 @@ const NEW_RPCS = ['gyms_place_centroid', 'community_set_place'];
 const REISSUED_RPCS = [
   'gyms_search', 'gyms_near', 'gyms_get', 'gyms_in_place', 'gyms_submit',
   'community_set_gyms', 'community_upsert_profile', 'community_find_people',
-  'community_suggested_people', 'community_report',
+  'community_suggested_people', 'community_report', 'community_moderation_queue',
 ];
 const RPCS = FUNCTIONS.filter((f) => [...NEW_RPCS, ...REISSUED_RPCS].includes(f.name));
 const HELPERS = FUNCTIONS.filter((f) => f.name.startsWith('_gyms_') || f.name.startsWith('_community_'));
@@ -137,8 +137,16 @@ describe('every statement is re-runnable', () => {
   test('nothing destructive touches an existing table', () => {
     expect(CODE).not.toMatch(/DROP TABLE/i);
     expect(CODE).not.toMatch(/DROP COLUMN/i);
-    expect(CODE).not.toMatch(/TRUNCATE/i);
-    const drops = CODE.split('\n').filter((l) => /^\s*(ALTER TABLE|DROP)/i.test(l) && /DROP/i.test(l));
+    // Word-bounded: several jsonb keys/variables are legitimately named
+    // count_truncated/'truncated', which a bare /TRUNCATE/i would also
+    // match as a substring.
+    expect(CODE).not.toMatch(/\bTRUNCATE\s+TABLE\b/i);
+    // Every bare DROP statement (outside the two dynamic DROP FUNCTION
+    // loops, which target only functions this same file recreates) is a
+    // trigger/policy/constraint drop-before-recreate, never a table drop.
+    const drops = CODE.split('\n').filter(
+      (l) => /^\s*(ALTER TABLE|DROP)\s/i.test(l) && /DROP/i.test(l),
+    );
     for (const line of drops) {
       expect(line).toMatch(/DROP (TRIGGER IF EXISTS|POLICY IF EXISTS|CONSTRAINT IF EXISTS)/i);
     }
@@ -150,9 +158,11 @@ describe('every statement is re-runnable', () => {
   });
 
   test('it ends with a read-only acceptance check', () => {
-    expect(SQL).toContain('information_schema.columns');
-    expect(SQL).toContain('prosecdef');
-    expect(SQL).not.toMatch(/^\s*(INSERT|UPDATE|DELETE)\s/im);
+    const acceptance = SQL.slice(SQL.indexOf('-- ─── Part 19'));
+    expect(acceptance).toContain('information_schema.columns');
+    expect(acceptance).toContain('prosecdef');
+    const acceptanceCode = acceptance.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+    expect(acceptanceCode).not.toMatch(/^\s*(INSERT|UPDATE|DELETE)\s/im);
   });
 });
 
@@ -189,9 +199,10 @@ describe('EXECUTE is granted deliberately, never by default', () => {
 
   test.each([
     '_gyms_outward_centroid', '_gyms_brand_alias_tokens', '_gyms_tokens_strip',
-    '_gyms_dedupe_jaccard', '_community_can_connect', '_community_place_band_m',
-    '_community_populate_place_from_gym', '_community_find_people_cursor_of',
-    '_community_find_people_cursor_parts', '_community_profile_card',
+    '_gyms_dedupe_jaccard', '_gyms_name_brand_id', '_community_can_connect',
+    '_community_place_band_m', '_community_populate_place_from_gym',
+    '_community_find_people_cursor_of', '_community_find_people_cursor_parts',
+    '_community_profile_card',
   ])('%s is in the revoke-from-authenticated (helper) list', (name) => {
     expect(HELPER_SIGNATURES.some((sig) => sig.startsWith(`${name}(`))).toBe(true);
     expect(RPC_SIGNATURES.some((sig) => sig.startsWith(`${name}(`))).toBe(false);
@@ -293,5 +304,49 @@ describe('a place is a chosen PUBLIC centroid, never a device coordinate (LJ-01)
     for (const line of writes) {
       expect(line).not.toMatch(/=\s*_lat\b/);
     }
+  });
+});
+
+describe('lead follow-up (A): GD-06 brand signal in gyms_submit (Finding D2 residual)', () => {
+  function bodyOf(fnHeader) {
+    const at = CODE.indexOf(fnHeader);
+    expect(at).toBeGreaterThan(-1);
+    const nextFn = CODE.indexOf('CREATE OR REPLACE FUNCTION public.', at + 10);
+    return CODE.slice(at, nextFn === -1 ? CODE.length : nextFn);
+  }
+
+  test('_gyms_name_brand_id is declared and takes text only', () => {
+    expect(FUNCTIONS.map((f) => f.name)).toContain('_gyms_name_brand_id');
+  });
+
+  test('gyms_submit computes the name brand and both duplicate/twin scans gain a brand-based merge condition, independent of Jaccard', () => {
+    const body = bodyOf('CREATE OR REPLACE FUNCTION public.gyms_submit(');
+    expect(body).toContain('v_name_brand_id := public._gyms_name_brand_id(v_name)');
+    // Same brand + same postcode unit (brand 3 + postcode-unit 2 = 5).
+    const brandPostcodeUnit = (body.match(
+      /v_name_brand_id IS NOT NULL AND v\.brand_id = v_name_brand_id\s*\n\s*AND v\.postcode IS NOT NULL/g,
+    ) || []).length;
+    expect(brandPostcodeUnit).toBe(2); // duplicate scan + twin scan
+    // Same brand + same sector + within 150 m, guarded off a real
+    // (non-sector-fallback) coordinate so it never degenerates into
+    // comparing two sector-centroid points (Finding 9).
+    const brandSector150 = (body.match(
+      /v\.sector = v_sector AND v\.coord_source <> 'postcode_sector'/g,
+    ) || []).length;
+    expect(brandSector150).toBe(2);
+    expect(body).toContain('<= 150');
+  });
+});
+
+describe("lead follow-up (B): community_moderation_queue's message content preview", () => {
+  test('community_moderation_queue is re-issued with the same signature and a message branch', () => {
+    const at = CODE.indexOf('CREATE OR REPLACE FUNCTION public.community_moderation_queue(');
+    expect(at).toBeGreaterThan(-1);
+    const nextFn = CODE.indexOf('CREATE OR REPLACE FUNCTION public.', at + 10);
+    const body = CODE.slice(at, nextFn === -1 ? CODE.length : nextFn);
+    expect(body).toContain("WHEN page.target_kind = 'message' THEN");
+    expect(body).toContain("'body', left(m.body, 200)");
+    expect(body).toContain("'conversation_id', m.conversation_id");
+    expect(body).toContain('FROM public.community_messages m WHERE m.id = page.target_id');
   });
 });

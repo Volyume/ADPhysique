@@ -123,9 +123,21 @@ describe('client RPC arguments match the migration signatures', () => {
   // 11). Both files are parsed together so a client call is checked
   // against whichever one declares it.
   const MIGRATION_161 = path.join(ROOT, 'supabase/migrate_161_community_connections.sql');
+  // migrate_162 (gym directory) and migrate_163 (community place + finder,
+  // community product audit 2026-09-07) each re-issue or add a handful of
+  // `community_*` functions too (`community_set_gyms`, `community_set_
+  // place`); folded in here the same way 161 was added alongside 160, so a
+  // client call to either is checked against whichever file declares it
+  // rather than being reported as a phantom cross-lane drift.
+  const MIGRATION_162 = path.join(ROOT, 'supabase/migrate_162_gym_directory.sql');
+  const MIGRATION_163 = path.join(ROOT, 'supabase/migrate_163_community_place_and_finder.sql');
   const sql160 = fs.existsSync(MIGRATION) ? fs.readFileSync(MIGRATION, 'utf8') : null;
   const sql161 = fs.existsSync(MIGRATION_161) ? fs.readFileSync(MIGRATION_161, 'utf8') : null;
-  const sql = sql160 === null && sql161 === null ? null : `${sql160 ?? ''}\n${sql161 ?? ''}`;
+  const sql162 = fs.existsSync(MIGRATION_162) ? fs.readFileSync(MIGRATION_162, 'utf8') : null;
+  const sql163 = fs.existsSync(MIGRATION_163) ? fs.readFileSync(MIGRATION_163, 'utf8') : null;
+  const sql = [sql160, sql161, sql162, sql163].every((s2) => s2 === null)
+    ? null
+    : `${sql160 ?? ''}\n${sql161 ?? ''}\n${sql162 ?? ''}\n${sql163 ?? ''}`;
 
   /**
    * The RPCs migrate_161 must declare (blueprint section 11), listed here
@@ -164,6 +176,8 @@ describe('client RPC arguments match the migration signatures', () => {
 
   const NAMES_160 = sql160 ? namesIn(sql160) : new Set();
   const NAMES_161 = sql161 ? namesIn(sql161) : new Set();
+  const NAMES_162 = sql162 ? namesIn(sql162) : new Set();
+  const NAMES_163 = sql163 ? namesIn(sql163) : new Set();
 
   /** name -> Set of declared parameter names, from the SQL. */
   function declaredParams() {
@@ -276,12 +290,12 @@ describe('client RPC arguments match the migration signatures', () => {
 
   test('every discovery RPC the client calls is one the blueprint named', () => {
     // The other direction, and the one that catches a client typo: a
-    // `community_*` call that neither migration declares must at least be
-    // a name migrate_161 is on record to declare. Anything else is a call
+    // `community_*` call that no migration declares must at least be a
+    // name migrate_161 is on record to declare. Anything else is a call
     // nobody is writing a function for.
     const called = [...new Set(callSites().map((s2) => s2.name))];
-    const unaccounted = called
-      .filter((name) => !NAMES_160.has(name) && !NAMES_161.has(name) && !RPCS_161.includes(name));
+    const unaccounted = called.filter((name) => !NAMES_160.has(name) && !NAMES_161.has(name)
+      && !NAMES_162.has(name) && !NAMES_163.has(name) && !RPCS_161.includes(name));
     expect({ unaccounted }).toEqual({ unaccounted: [] });
   });
 });

@@ -105,11 +105,27 @@
 --      guard is added to the CASE anyway, redundant today, to make that
 --      invariant self-evident in the SQL and trivially guardable by a
 --      source test, per the lead's specific naming of this concern.
---  11. Unrelated observation, not fixed (touch only what the task
---      requires): `community_moderation_queue`'s `content` CASE
---      (migrate_160:3571-3587) has no branch for `target_kind = 'message'`
---      and would fall into the profile branch with a message id, reading
---      nothing useful. Spec 1.1 D does not name this RPC; left alone.
+--  11. Lead board answers (same lane, after this file's first pass):
+--      place reason weights +2/+1/+1 CONFIRMED; `operator_unconfirmed =
+--      (verification_status = 'unverified')` CONFIRMED. Two follow-ups
+--      landed in this same file as a result -- see items 12 and 13.
+--  12. `gyms_submit` gains the GD-06 brand signal (`_gyms_name_brand_id`,
+--      Part 2): same brand + same postcode unit, or same brand + same
+--      sector + within 150 m against a candidate with a REAL (non-
+--      sector-fallback) coordinate, is a merge regardless of the
+--      stripped-Jaccard score (GD-06: brand 3 + postcode-unit 2 = 5,
+--      "merge >= 5"). Re-measured on the real 3,002-row fixture: the
+--      residual below-0.6 rate falls further; `gymsSubmitDedupeTokenizer.
+--      test.js`'s `KNOWN_RESIDUAL` is updated to whatever genuinely
+--      remains after this pass (see that file's own header for the new
+--      measured numbers).
+--  13. `community_moderation_queue` is now re-issued (Part 17, previously
+--      flagged in this list as an unrelated observation and left alone
+--      until the lead asked for it in this lane) with a `'message'`
+--      content-preview branch: first 200 characters of the message body
+--      plus its conversation id, so a reported message is actually
+--      readable by a moderator rather than falling into the profile
+--      branch with a message id and reading nothing useful.
 --
 -- Purpose:            Community product audit 2026-09-07 (authority
 --                    `docs/community-product-audit-2026-09-07/
@@ -196,10 +212,11 @@
 -- Applied remotely:  NO -- WRITTEN, NOT APPLIED. Waits for the founder's
 --                    exact phrase "run against production" for the batch
 --                    that contains it (supabase/README.md status block,
---                    CLAUDE.md section 2). DEPENDS ON migrate_160_
---                    community.sql, migrate_161_community_connections.sql
---                    and migrate_162_gym_directory.sql; must never run
---                    before any of them.
+--                    CLAUDE.md section 2). DEPENDS ON
+--                    migrate_160_community.sql,
+--                    migrate_161_community_connections.sql and
+--                    migrate_162_gym_directory.sql; must never run before
+--                    any of them.
 --
 -- Safe to re-run:    YES. `ADD COLUMN IF NOT EXISTS`, the one new CHECK
 --                    inside a `duplicate_object`-tolerant `DO` block,
@@ -221,6 +238,7 @@
 --                      public._gyms_brand_alias_tokens(uuid),
 --                      public._gyms_tokens_strip(text[], text[]),
 --                      public._gyms_dedupe_jaccard(text[], uuid, text[], text),
+--                      public._gyms_name_brand_id(text),
 --                      public._community_can_connect(uuid, uuid),
 --                      public._community_place_band_m(uuid, uuid),
 --                      public._community_populate_place_from_gym(uuid),
@@ -232,19 +250,25 @@
 --                      gyms_search(text,double precision,double precision,int),
 --                      gyms_near, gyms_get, gyms_in_place, gyms_submit,
 --                      community_set_gyms, community_upsert_profile,
---                      _community_profile_card and community_report to
---                      their pre-163 bodies; re-apply migrate_161_
---                      community_connections.sql to restore
---                      community_find_people(text,text,int) and
---                      community_suggested_people to their pre-163 bodies
---                      (CREATE OR REPLACE means the LATEST definition wins
---                      until a later file replaces it again -- there is no
---                      automatic revert). Nothing existing is dropped or
---                      rewritten beyond those function bodies and the five
---                      additive columns, so a rollback loses only the
+--                      _community_profile_card and community_find_people
+--                      (text,text,int) to their pre-163 bodies (162 is the
+--                      LAST file before this one that re-issued each of
+--                      them, so re-applying 162 alone -- not 161 -- is what
+--                      restores the correct pre-163 state for these nine);
+--                      re-apply migrate_160_community.sql to restore
+--                      community_suggested_people, community_report and
+--                      community_moderation_queue to their pre-163 bodies
+--                      (160 is the ONLY file before this one that ever
+--                      declared these three -- neither 161 nor 162 touches
+--                      them). CREATE OR REPLACE means the LATEST definition
+--                      wins until a later file replaces it again -- there
+--                      is no automatic revert. Nothing existing is dropped
+--                      or rewritten beyond those function bodies and the
+--                      five additive columns, so a rollback loses only the
 --                      place feature, the finder's radius/centroid/
---                      unconfirmed-sort/fuzzy-token improvements and the
---                      combinable Find People filters.
+--                      unconfirmed-sort/fuzzy-token/brand-signal
+--                      improvements, the combinable Find People filters
+--                      and the moderation-queue message preview.
 --
 -- GDPR note:         `place_lat`/`place_lng` are the PUBLIC centroid of a
 --                    chosen postcode district or town -- never a device
@@ -393,6 +417,39 @@ BEGIN
     public._gyms_tokens_strip(_candidate_tokens, v_strip),
     public._gyms_tokens_strip(_submission_tokens, v_strip)
   );
+END $$;
+
+-- Lead follow-up (A), Finding D2 residual (community-product-audit-
+-- 2026-09-07 board answer, same lane): the brand the SUBMITTED NAME text
+-- itself names, independent of the `operator` field gyms_submit's own
+-- v_brand_id already derives -- a submitter who types "Nuffield Health
+-- Oxfordshire" and leaves the optional operator box empty still named a
+-- brand. Detected the same way `gyms_search`'s brand_match already is
+-- (fold the alias, test containment), picking the LONGEST matching alias
+-- across every brand so "pure gym uk" outranks a shorter false match.
+-- NULL when the name names no known brand.
+CREATE OR REPLACE FUNCTION public._gyms_name_brand_id(_name text)
+RETURNS uuid
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_brand_id uuid;
+BEGIN
+  SELECT b.id INTO v_brand_id
+  FROM public.gym_brands b
+  WHERE EXISTS (
+    SELECT 1 FROM unnest(b.aliases) al
+    WHERE al <> '' AND position(public._community_fold(al) IN public._community_fold(coalesce(_name, ''))) > 0
+  )
+  ORDER BY (
+    SELECT max(length(public._community_fold(al))) FROM unnest(b.aliases) al
+    WHERE al <> '' AND position(public._community_fold(al) IN public._community_fold(coalesce(_name, ''))) > 0
+  ) DESC
+  LIMIT 1;
+  RETURN v_brand_id;
 END $$;
 
 -- ─── Part 3: community-side internal helpers (revoked from authenticated) ─
@@ -960,6 +1017,9 @@ DECLARE
   -- noise (outward code, 'uk', the matched candidate's own brand alias
   -- words) is stripped from both sides of the Jaccard comparison.
   v_outward_tok text;
+  -- Lead follow-up (A): the brand the submitted NAME text itself names
+  -- (GD-06's brand signal, independent of Jaccard).
+  v_name_brand_id uuid;
 BEGIN
   IF _p IS NULL OR jsonb_typeof(_p) <> 'object' THEN
     RAISE EXCEPTION USING message = 'invalid';
@@ -1003,7 +1063,22 @@ BEGIN
 
   v_tokens := public._gyms_tokens_of(v_name, v_town);
   v_outward_tok := lower(public._gyms_outward_of(v_postcode));
+  v_name_brand_id := public._gyms_name_brand_id(v_name);
 
+  -- Lead follow-up (A), Finding D2 residual: GD-06's own multi-signal
+  -- score (brand 3, name-Jaccard, postcode-unit 2, street, proximity,
+  -- phone, website; merge >= 5, review 3-5, distinct < 5) names two
+  -- combinations that are a merge on their own, independent of the
+  -- stripped-Jaccard threshold above: same brand + same postcode unit
+  -- (3 + 2 = 5), and same brand + same sector + within 150 m. The 150 m
+  -- distance is tested ONLY against a candidate whose OWN coordinate is
+  -- NOT itself a postcode-sector fallback (`coord_source <> 'postcode_
+  -- sector'`) -- Finding 9 (migrate_162:1081-1096) already established
+  -- that comparing two SECTOR-CENTROID points is meaningless (every
+  -- submission in a sector sits at distance 0 from every other by
+  -- construction); restricting to a candidate with a real, non-fallback
+  -- coordinate keeps this signal genuine (submission-centroid to a real
+  -- venue's real address) rather than reintroducing that exact defect.
   SELECT v.id, v.display_name INTO v_dup_id, v_dup_name
   FROM public.gym_venues v
   WHERE v.status IN ('open', 'pending')
@@ -1014,6 +1089,13 @@ BEGIN
         AND public._gyms_postcode_compact(v.postcode) = public._gyms_postcode_compact(v_postcode)
         AND public._gyms_dedupe_jaccard(v.tokens, v.brand_id, v_tokens, v_outward_tok) >= 0.6)
       OR public._gyms_dedupe_jaccard(v.tokens, v.brand_id, v_tokens, v_outward_tok) >= 0.85
+      OR (v_name_brand_id IS NOT NULL AND v.brand_id = v_name_brand_id
+          AND v.postcode IS NOT NULL
+          AND public._gyms_postcode_compact(v.postcode) = public._gyms_postcode_compact(v_postcode))
+      OR (v_name_brand_id IS NOT NULL AND v.brand_id = v_name_brand_id
+          AND v.sector = v_sector AND v.coord_source <> 'postcode_sector'
+          AND v.lat IS NOT NULL AND v.lng IS NOT NULL
+          AND public._gyms_distance_m(v_lat, v_lng, v.lat, v.lng) <= 150)
     )
   ORDER BY public._gyms_dedupe_jaccard(v.tokens, v.brand_id, v_tokens, v_outward_tok) DESC
   LIMIT 1;
@@ -1031,6 +1113,19 @@ BEGIN
         AND public._gyms_postcode_compact(v.postcode) = public._gyms_postcode_compact(v_postcode)
         AND public._gyms_dedupe_jaccard(v.tokens, v.brand_id, v_tokens, v_outward_tok) >= 0.6)
       OR public._gyms_dedupe_jaccard(v.tokens, v.brand_id, v_tokens, v_outward_tok) >= 0.85
+      OR (v_name_brand_id IS NOT NULL AND v.brand_id = v_name_brand_id
+          AND v.postcode IS NOT NULL
+          AND public._gyms_postcode_compact(v.postcode) = public._gyms_postcode_compact(v_postcode))
+      -- The 150 m branch is never true here in practice: every 'pending'
+      -- row's own coordinate is a postcode-sector fallback too (gyms_
+      -- submit's own INSERT below always sets coord_source =
+      -- 'postcode_sector'), so `coord_source <> 'postcode_sector'` never
+      -- holds for a twin candidate. Included anyway so both scans share
+      -- one WHERE shape, exactly as they already did before this change.
+      OR (v_name_brand_id IS NOT NULL AND v.brand_id = v_name_brand_id
+          AND v.sector = v_sector AND v.coord_source <> 'postcode_sector'
+          AND v.lat IS NOT NULL AND v.lng IS NOT NULL
+          AND public._gyms_distance_m(v_lat, v_lng, v.lat, v.lng) <= 150)
     )
   ORDER BY public._gyms_dedupe_jaccard(v.tokens, v.brand_id, v_tokens, v_outward_tok) DESC
   LIMIT 1;
@@ -2154,7 +2249,109 @@ BEGIN
   RETURN jsonb_build_object('id', v_id);
 END $$;
 
--- ─── Part 17: privileges ─────────────────────────────────────────────────
+-- ─── Part 17: community_moderation_queue re-issued (message preview) ───
+--
+-- Lead follow-up (B): a report on a message (Part 16 above) previously
+-- fell into this CASE's ELSE branch and rendered a PROFILE preview (the
+-- reported message's id looked up as if it were a user id), which is
+-- either empty or wrong -- never the reported content. A moderator seeing
+-- no preview at all cannot act on the report. Body otherwise identical to
+-- migrate_160's original.
+
+CREATE OR REPLACE FUNCTION public.community_moderation_queue(
+  _status text DEFAULT 'open', _cursor text DEFAULT NULL, _limit int DEFAULT 20)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_uid  uuid := public._community_caller();
+  v_lim  int  := public._community_limit(_limit);
+  v_ts   timestamptz;
+  v_id   uuid;
+  v_rows jsonb;
+  v_lts  timestamptz;
+  v_lid  uuid;
+BEGIN
+  IF NOT public.community_is_moderator() THEN
+    RAISE EXCEPTION USING message = 'not_moderator';
+  END IF;
+  IF _status IS NOT NULL AND _status NOT IN ('open', 'actioned', 'dismissed') THEN
+    RAISE EXCEPTION USING message = 'invalid_input';
+  END IF;
+  SELECT c_ts, c_id INTO v_ts, v_id FROM public._community_cursor_parts(_cursor);
+
+  WITH page AS (
+    SELECT r.*
+    FROM public.community_reports r
+    WHERE (_status IS NULL OR r.status = _status)
+      AND (v_ts IS NULL OR (r.created_at, r.id) < (v_ts, v_id))
+    ORDER BY r.created_at DESC, r.id DESC
+    LIMIT v_lim
+  )
+  SELECT
+    coalesce(jsonb_agg(jsonb_build_object(
+        'id',          page.id,
+        'target_kind', page.target_kind,
+        'target_id',   page.target_id,
+        'target_owner_id', page.target_owner_id,
+        'reason',      page.reason,
+        'detail',      page.detail,
+        'status',      page.status,
+        'priority',    page.priority,
+        'created_at',  page.created_at,
+        'resolution',  page.resolution,
+        'resolved_at', page.resolved_at,
+        'report_count', (SELECT count(*) FROM public.community_reports rc
+                         WHERE rc.target_kind = page.target_kind
+                           AND rc.target_id = page.target_id),
+        'note',        (SELECT l.note FROM public.community_moderation_log l
+                        WHERE l.report_id = page.id
+                        ORDER BY l.created_at DESC LIMIT 1),
+        'moderator_handle', (SELECT mp.handle
+                             FROM public.community_moderation_log l
+                             LEFT JOIN public.community_profiles mp ON mp.user_id = l.moderator_id
+                             WHERE l.report_id = page.id
+                             ORDER BY l.created_at DESC LIMIT 1),
+        'content',     CASE
+          WHEN page.target_kind = 'post' THEN
+            (SELECT jsonb_build_object('kind', p.kind, 'caption', p.caption,
+                                       'status', p.status)
+             FROM public.community_posts p WHERE p.id = page.target_id)
+          WHEN page.target_kind = 'comment' THEN
+            (SELECT jsonb_build_object('body', c.body, 'status', c.status)
+             FROM public.community_comments c WHERE c.id = page.target_id)
+          WHEN page.target_kind = 'programme' THEN
+            (SELECT jsonb_build_object('title', g.title, 'description', g.description,
+                                       'status', g.status)
+             FROM public.community_programmes g WHERE g.id = page.target_id)
+          -- Lead follow-up (B): the reported message's own first 200
+          -- characters and its conversation id, so a moderator can read
+          -- what was actually reported. Messages carry no `status`
+          -- column (hard-deleted by community_delete_message, never
+          -- soft-hidden), so a deleted message's report simply has no
+          -- content here -- nothing to preview, not a wrong preview.
+          WHEN page.target_kind = 'message' THEN
+            (SELECT jsonb_build_object('body', left(m.body, 200), 'conversation_id', m.conversation_id)
+             FROM public.community_messages m WHERE m.id = page.target_id)
+          ELSE
+            (SELECT jsonb_build_object('handle', pr.handle, 'display_name', pr.display_name,
+                                       'bio', pr.bio, 'status', pr.status)
+             FROM public.community_profiles pr WHERE pr.user_id = page.target_id)
+        END)
+      ORDER BY page.priority DESC, page.created_at DESC, page.id DESC), '[]'::jsonb),
+    (array_agg(page.created_at ORDER BY page.created_at ASC, page.id ASC))[1],
+    (array_agg(page.id         ORDER BY page.created_at ASC, page.id ASC))[1]
+  INTO v_rows, v_lts, v_lid
+  FROM page;
+
+  RETURN jsonb_build_object(
+    'reports', coalesce(v_rows, '[]'::jsonb),
+    'cursor', public._community_cursor_of(v_lts, v_lid));
+END $$;
+
+-- ─── Part 18: privileges ─────────────────────────────────────────────────
 
 DO $$
 DECLARE
@@ -2165,6 +2362,7 @@ BEGIN
     '_gyms_brand_alias_tokens(uuid)',
     '_gyms_tokens_strip(text[], text[])',
     '_gyms_dedupe_jaccard(text[], uuid, text[], text)',
+    '_gyms_name_brand_id(text)',
     '_community_can_connect(uuid, uuid)',
     '_community_place_band_m(uuid, uuid)',
     '_community_populate_place_from_gym(uuid)',
@@ -2190,14 +2388,15 @@ BEGIN
     'community_upsert_profile(jsonb)',
     'community_find_people(text, text, int, jsonb)',
     'community_suggested_people(int)',
-    'community_report(text, uuid, text, text)'
+    'community_report(text, uuid, text, text)',
+    'community_moderation_queue(text, text, int)'
   ] LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION public.%s FROM PUBLIC, anon', sig);
     EXECUTE format('GRANT EXECUTE ON FUNCTION public.%s TO authenticated', sig);
   END LOOP;
 END $$;
 
--- ─── Part 18: acceptance check (read-only) ───────────────────────────────
+-- ─── Part 19: acceptance check (read-only) ───────────────────────────────
 --
 -- Run after the apply and read the output before declaring this migration
 -- landed. Expect: the five community_profiles columns present; every
