@@ -38,7 +38,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
-import SegmentedControl from '../components/SegmentedControl';
+import Chip from '../components/Chip';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
 import GymPicker from '../components/community/GymPicker';
@@ -239,17 +239,6 @@ export default function CommunityJoinScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title="Join Community" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Card style={styles.block}>
-          <Text style={[styles.blockTitle, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
-            Four rules
-          </Text>
-          {RULES.map((line) => (
-            <Text key={line} style={[styles.rule, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-              {line}
-            </Text>
-          ))}
-        </Card>
-
         <PrivacyReceipt />
 
         <View style={styles.field}>
@@ -259,6 +248,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
             onChangeText={(v) => setHandle(v.replace(/\s/g, '').toLowerCase())}
             autoCapitalize="none"
             autoCorrect={false}
+            size="sm"
             accessibilityLabel="Handle"
           />
           <Text style={[styles.hint, { ...t.type.caption, color: handleTone }]}>{handleLine}</Text>
@@ -268,6 +258,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
           label="Name"
           value={displayName}
           onChangeText={(v) => setDisplayName(v.slice(0, DISPLAY_NAME_MAX))}
+          size="sm"
           accessibilityLabel="Display name"
         />
 
@@ -285,7 +276,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
                 <ProfileAvatarMark
                   presetKey={p.key}
                   displayName={displayName || 'Athlete'}
-                  size={48}
+                  size={40}
                   selected={preset === p.key}
                 />
               </Pressable>
@@ -308,13 +299,14 @@ export default function CommunityJoinScreen({ navigation, route }) {
               >
                 {venueLine(primaryGym).primary}
               </Text>
-              <Pressable
+              <Button
+                variant="tertiary"
+                size="sm"
+                fullWidth={false}
+                title="Change"
                 onPress={() => setEditingGym(true)}
-                accessibilityRole="button"
                 accessibilityLabel="Change gym"
-              >
-                <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.primary }]}>Change</Text>
-              </Pressable>
+              />
             </Card>
           )}
           <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
@@ -328,15 +320,20 @@ export default function CommunityJoinScreen({ navigation, route }) {
               that cannot change anything is not offered: the note carries
               the reason instead (product review 2026-09-06). */}
           {isMinor ? null : (
-            <SegmentedControl
-              options={[
-                { label: 'Anyone', value: 'public' },
-                { label: 'People I approve', value: 'followers' },
-              ]}
-              value={visibility}
-              onChange={setVisibility}
-              accessibilityLabel="Who can follow you"
-            />
+            <View style={styles.chipRow} accessibilityLabel="Who can follow you">
+              <Chip
+                label="Anyone"
+                selected={visibility === 'public'}
+                onPress={() => setVisibility('public')}
+                accessibilityRole="radio"
+              />
+              <Chip
+                label="People I approve"
+                selected={visibility === 'followers'}
+                onPress={() => setVisibility('followers')}
+                accessibilityRole="radio"
+              />
+            </View>
           )}
           <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
             {visibility === 'public' && !isMinor
@@ -418,8 +415,21 @@ export default function CommunityJoinScreen({ navigation, route }) {
           accessibilityLabel="Create my Community profile"
         />
 
+        <Card surface="surface2" radius="md" padding="md" style={styles.block}>
+          <Text style={[styles.blockTitle, { ...t.type.captionStrong, color: t.colors.textPrimary }]}>
+            Four rules
+          </Text>
+          {RULES.map((line) => (
+            <Text key={line} style={[styles.rule, { ...t.type.caption, color: t.colors.textSecondary }]}>
+              {line}
+            </Text>
+          ))}
+        </Card>
+
         <Button
-          variant="tertiary"
+          variant="secondary"
+          size="sm"
+          fullWidth={false}
           title="Community rules and contact"
           onPress={() => navigation.navigate('CommunityRules')}
           accessibilityLabel="Read the Community rules and contact"
@@ -433,11 +443,12 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   block: { gap: spacing.xs },
-  blockTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  rule: { ...type.bodySm, color: colors.textSecondary },
+  blockTitle: { ...type.captionStrong, color: colors.textPrimary },
+  rule: { ...type.caption, color: colors.textSecondary },
   field: { gap: spacing.sm },
   hint: { ...type.caption, color: colors.textMuted },
-  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  presets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   gymRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   tpPreview: { gap: spacing.xxs },
   tpPreviewLabel: { ...type.caption, color: colors.textMuted },

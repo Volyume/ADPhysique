@@ -162,9 +162,11 @@ describe('state 1: no Community profile', () => {
 
     expect(text).toContain('Programmes you can make your own');
     expect(text).toContain('Nothing about your body, food or coaching is ever shared.');
-    // The receipt's two columns, verbatim from the blueprint.
-    expect(text).toContain('Others can see');
-    expect(text).toContain('Never shared');
+    // Lead visual review 2026-09-06, ruling V9: PrivacyReceipt is compact by
+    // default (the one-line promise plus "What is shared"); the two columns
+    // ("Others can see" / "Never shared") only render once that is tapped,
+    // so they are no longer part of the hero's own default text.
+    expect(text).toContain('What is shared');
     expect(text).toContain('Create my profile');
     expect(text).toContain('Browse first');
   });

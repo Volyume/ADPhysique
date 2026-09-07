@@ -6,6 +6,10 @@
  * it, never a room with its own feed or admin, so the row states the
  * label and the count and nothing more.
  *
+ * Lead visual review 2026-09-06, ruling V18: `Card padding="md"
+ * radius="md"`, glyph 36, one-line `body` title, one-line `caption` sub,
+ * trailing chevron.
+ *
  * Props:
  *   dimension  {kind: 'style'|'programme'|'gym'|'area', key, label, count}
  *   onPress    opens the dimension page
@@ -39,6 +43,8 @@ export default function DimensionRow({ dimension, onPress }) {
   return (
     <Card
       onPress={onPress}
+      padding="md"
+      radius="md"
       style={styles.row}
       accessibilityLabel={`${dimension.label}. ${sub}`}
     >
@@ -50,7 +56,7 @@ export default function DimensionRow({ dimension, onPress }) {
         />
       </View>
       <View style={styles.body}>
-        <Text style={[styles.label, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
+        <Text style={[styles.label, { ...t.type.body, color: t.colors.textPrimary }]} numberOfLines={1}>
           {dimension.label}
         </Text>
         <Text style={[styles.sub, { ...t.type.caption, color: t.colors.textSecondary }]} numberOfLines={1}>
@@ -72,6 +78,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   body: { flex: 1, gap: spacing.xxs },
-  label: { ...type.bodyStrong, color: colors.textPrimary },
+  label: { ...type.body, color: colors.textPrimary },
   sub: { ...type.caption, color: colors.textSecondary },
 });

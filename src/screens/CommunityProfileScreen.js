@@ -36,10 +36,10 @@ import { FlashList } from '@shopify/flash-list';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
+import ModalHeader from '../components/ModalHeader';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
-import SegmentedControl from '../components/SegmentedControl';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import PostCard from '../components/community/PostCard';
 import ProfileCard from '../components/community/ProfileCard';
@@ -56,7 +56,7 @@ import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, type, circle } from '../styles/theme';
 import {
-  getProfile, listFollows, profileUrl, reactToPost, unblockUser, relationships,
+  getProfile, listFollows, profileUrl, reactToPost, unblockUser, relationships, connectionState,
 } from '../lib/community';
 
 /**
@@ -215,13 +215,13 @@ export default function CommunityProfileScreen({ navigation, route }) {
         <ProfileAvatarMark
           presetKey={card.avatar_preset}
           displayName={card.display_name || card.handle}
-          size={64}
+          size={56}
         />
         <View style={styles.heroBody}>
-          <Text style={[styles.name, { ...t.type.h2, color: t.colors.textPrimary }]}>
+          <Text style={[styles.name, { ...t.type.h3, color: t.colors.textPrimary }]}>
             {card.display_name || card.handle}
           </Text>
-          <Text style={[styles.handle, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+          <Text style={[styles.handle, { ...t.type.caption, color: t.colors.textSecondary }]}>
             {`@${card.handle}`}
           </Text>
         </View>
@@ -232,9 +232,9 @@ export default function CommunityProfileScreen({ navigation, route }) {
       ) : null}
 
       {chipLabels.length ? (
-        <View style={styles.chips}>
-          {chipLabels.map((label) => <Chip key={label} label={label} accessibilityRole="text" />)}
-        </View>
+        <Text style={[styles.facts, { ...t.type.caption, color: t.colors.textSecondary }]}>
+          {chipLabels.join(' · ')}
+        </Text>
       ) : null}
 
       {place ? (
@@ -309,10 +309,15 @@ export default function CommunityProfileScreen({ navigation, route }) {
           />
         </View>
       ) : (
+        // V7a (docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md): once
+        // connected, Following collapses to icon-only and the row reads
+        // Following · Connected · Message on one line; ConnectButton renders
+        // Message after Connected from `onMessage`.
         <View style={styles.actions}>
           <FollowButton
             card={card}
             size="md"
+            iconOnly={connectionState(card) === 'connected'}
             onChange={(relationship) => patchCard({ relationship })}
           />
           <ConnectButton
@@ -328,12 +333,20 @@ export default function CommunityProfileScreen({ navigation, route }) {
       )}
 
       {viewable ? (
-        <SegmentedControl
-          options={[{ label: 'Stories', value: 'posts' }, { label: 'Programmes', value: 'programmes' }]}
-          value={segment}
-          onChange={setSegment}
-          accessibilityLabel="Profile view"
-        />
+        <View style={styles.tabRow} accessibilityLabel="Profile view">
+          <Chip
+            label="Stories"
+            selected={segment === 'posts'}
+            onPress={() => setSegment('posts')}
+            accessibilityRole="radio"
+          />
+          <Chip
+            label="Programmes"
+            selected={segment === 'programmes'}
+            onPress={() => setSegment('programmes')}
+            accessibilityRole="radio"
+          />
+        </View>
       ) : null}
     </View>
   ) : null;
@@ -481,10 +494,11 @@ export default function CommunityProfileScreen({ navigation, route }) {
         onClose={() => setFollowsKind(null)}
         accessibilityLabel={followsKind === 'following' ? 'Following' : 'Followers'}
       >
+        <ModalHeader
+          title={followsKind === 'following' ? 'Following' : 'Followers'}
+          onClose={() => setFollowsKind(null)}
+        />
         <View style={styles.sheet}>
-          <Text style={[styles.sheetTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
-            {followsKind === 'following' ? 'Following' : 'Followers'}
-          </Text>
           {follows.length ? follows.map((row) => (
             <ProfileCard
               key={(row.card ?? row).user_id}
@@ -524,14 +538,15 @@ const styles = StyleSheet.create({
   hero: { gap: spacing.md, marginBottom: spacing.lg },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   heroBody: { flex: 1, gap: spacing.xxs },
-  name: { ...type.h2, color: colors.textPrimary },
-  handle: { ...type.bodySm, color: colors.textSecondary },
+  name: { ...type.h3, color: colors.textPrimary },
+  handle: { ...type.caption, color: colors.textSecondary },
   bio: { ...type.body, color: colors.textPrimary },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
+  facts: { ...type.caption, color: colors.textSecondary },
   place: { ...type.bodySm, color: colors.textSecondary },
   counts: { flexDirection: 'row', gap: spacing.lg },
   count: { ...type.bodySm, color: colors.textSecondary },
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
+  tabRow: { flexDirection: 'row', gap: spacing.sm },
   headerBtn: {
     width: 34,
     height: 34,
@@ -542,5 +557,4 @@ const styles = StyleSheet.create({
   },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
   sheet: { gap: spacing.md, paddingBottom: spacing.md },
-  sheetTitle: { ...type.h3, color: colors.textPrimary },
 });

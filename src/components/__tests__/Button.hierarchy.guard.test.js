@@ -54,12 +54,15 @@ describe('the emphatic set is curated: committing actions only', () => {
       'screens/HowYouTrainAddScreen.js', 'screens/ManualBuilderScreen.js', 'screens/PlansScreen.js',
       'screens/ImportScreen.js', 'screens/GoalLockConsentScreen.js', 'screens/PlanDetailScreen.js',
       'components/PlanPreviewSheet.js', 'screens/BuildWorkoutScreen.js',
-      // Community (social-discovery blueprint sections 6 and 13, 2026-09-06).
-      // Each of these five is a committing step and the only emphatic action
-      // on its screen: create the profile, publish the programme, post the
-      // story, write the adapted plan. The programme screen deliberately has
-      // none (ruling 2: "Adapt for me" leads as the primary instead).
-      'screens/CommunityJoinScreen.js', 'screens/CommunityHubScreen.js',
+      // Community (social-discovery blueprint sections 6 and 13, 2026-09-06;
+      // visual rulings 2026-09-07, V1). Each of these is a committing step
+      // and the only emphatic action on its screen: create the profile
+      // (on Join, where the commitment happens), publish the programme,
+      // post the story, write the adapted plan. The Hub's own "Create my
+      // profile" moved to `primary` (V1) since Join carries the emphatic
+      // moment instead. The programme screen deliberately has none
+      // (ruling 2: "Adapt for me" leads as the primary instead).
+      'screens/CommunityJoinScreen.js',
       'screens/CommunityPublishProgrammeScreen.js', 'screens/CommunityComposeScreen.js',
       'screens/CommunityAdaptScreen.js',
       // Accept the rules: the one committing action on the rules screen.

@@ -6,10 +6,10 @@
  * `relationship` block, so a card fetched anywhere renders the same
  * state without a second read.
  *
- * `primary` while not following (the raised charcoal surface with the
- * amber glyph, not an amber fill), `secondary` once following, so the
- * settled state is the quieter one. Never `emphatic`: following someone
- * is a routine action, not a committing one (section 13, ruling 2).
+ * Lead visual review 2026-09-06, ruling V7: `secondary` throughout, so
+ * Follow reads as the same quiet tier as its own settled state (Following,
+ * Requested). Never `emphatic`: following someone is a routine action, not
+ * a committing one (section 13, ruling 2).
  *
  * A tap is optimistic: the button shows its next state immediately and
  * reverts with a calm toast if the server refuses. A refusal we expect
@@ -33,9 +33,9 @@ export function followState(relationship) {
     return { key: 'requested', title: 'Requested', variant: 'secondary', icon: 'time-outline' };
   }
   if (rel.followed_by) {
-    return { key: 'follow_back', title: 'Follow back', variant: 'primary', icon: 'person-add-outline' };
+    return { key: 'follow_back', title: 'Follow back', variant: 'secondary', icon: null };
   }
-  return { key: 'follow', title: 'Follow', variant: 'primary', icon: 'person-add-outline' };
+  return { key: 'follow', title: 'Follow', variant: 'secondary', icon: null };
 }
 
 const REFUSALS = {
@@ -52,6 +52,11 @@ export default function FollowButton({
   onChange,
   size = 'sm',
   fullWidth = false,
+  // V7a (docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md): once
+  // connected, the Profile row renders Following icon-only (checkmark, no
+  // label) so Following · Connected · Message fit on one line. Every other
+  // state and every other caller is unaffected.
+  iconOnly = false,
 }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -77,16 +82,21 @@ export default function FollowButton({
 
   if (state.key === 'blocked') return null;
 
+  const compact = iconOnly && state.key === 'following';
+  const handleLabel = card?.handle ? `Following @${card.handle}` : 'Following';
+
   return (
     <Button
       variant={state.variant}
       size={size}
       fullWidth={fullWidth}
-      title={state.title}
-      icon={state.icon}
+      title={compact ? undefined : state.title}
+      icon={compact ? 'checkmark' : state.icon}
       loading={busy}
       onPress={toggle}
-      accessibilityLabel={`${state.title} ${card?.display_name ?? card?.handle ?? ''}`.trim()}
+      accessibilityLabel={compact
+        ? handleLabel
+        : `${state.title} ${card?.display_name ?? card?.handle ?? ''}`.trim()}
     />
   );
 }

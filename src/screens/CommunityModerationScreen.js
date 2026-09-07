@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, RefreshControl, ActivityIndicator, TextInput,
+  View, Text, StyleSheet, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
@@ -28,15 +28,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
+import ModalHeader from '../components/ModalHeader';
 import Card from '../components/Card';
 import Chip from '../components/Chip';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
-import SegmentedControl from '../components/SegmentedControl';
+import ComposerInput from '../components/community/ComposerInput';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, radius, type } from '../styles/theme';
+import { colors, spacing, type } from '../styles/theme';
 import { calendarRelativeLabel } from '../lib/workoutDate';
 import {
   moderationQueue, moderate, MODERATION_ACTIONS, REPORT_REASONS,
@@ -149,17 +150,17 @@ export default function CommunityModerationScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title="Moderation" />
       <View style={styles.controls}>
-        <SegmentedControl
-          options={[
-            { label: 'Open', value: 'open' },
-            // This tab IS the audit view the blueprint asks for: it is
-            // what was done, by whom, with the note that was left.
-            { label: 'Actioned (audit log)', value: 'actioned' },
-          ]}
-          value={status}
-          onChange={setStatus}
-          accessibilityLabel="Queue"
-        />
+        <View style={styles.chipRow} accessibilityLabel="Queue">
+          <Chip label="Open" selected={status === 'open'} onPress={() => setStatus('open')} accessibilityRole="radio" />
+          {/* This tab IS the audit view the blueprint asks for: it is what
+              was done, by whom, with the note that was left. */}
+          <Chip
+            label="Actioned (audit log)"
+            selected={status === 'actioned'}
+            onPress={() => setStatus('actioned')}
+            accessibilityRole="radio"
+          />
+        </View>
       </View>
       <FlashList
         data={rows}
@@ -242,38 +243,36 @@ export default function CommunityModerationScreen() {
         onClose={() => { setActive(null); setNote(''); }}
         accessibilityLabel="Moderation actions"
       >
+        <ModalHeader
+          title={active ? (REPORT_REASONS[active.reason] ?? active.reason) : 'Actions'}
+          onClose={() => { setActive(null); setNote(''); }}
+        />
         <View style={styles.sheet}>
-          <Text style={[styles.sheetTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
-            {active ? (REPORT_REASONS[active.reason] ?? active.reason) : 'Actions'}
-          </Text>
           <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]}>
             Every action is recorded with who did it, when, and the note you leave here.
           </Text>
-          <TextInput
-            style={[styles.note, {
-              backgroundColor: t.colors.inputBg,
-              borderColor: t.colors.border,
-              color: t.colors.textPrimary,
-              ...t.type.bodySm,
-            }]}
+          <ComposerInput
             value={note}
             onChangeText={setNote}
             maxLength={MODERATION_NOTE_MAX}
-            multiline
+            minHeight={72}
             placeholder="Note for the record (optional)"
-            placeholderTextColor={t.colors.textDisabled}
             accessibilityLabel="Note for the record"
           />
-          {MODERATION_ACTIONS.map((action) => (
-            <Button
-              key={action}
-              variant={action === 'dismiss' ? 'primary' : 'secondary'}
-              title={ACTION_LABELS[action] ?? action}
-              disabled={busy}
-              onPress={() => act(action)}
-              accessibilityLabel={ACTION_LABELS[action] ?? action}
-            />
-          ))}
+          <View style={styles.actions}>
+            {MODERATION_ACTIONS.map((action) => (
+              <Button
+                key={action}
+                variant={action === 'dismiss' ? 'primary' : 'secondary'}
+                size="sm"
+                fullWidth={false}
+                title={ACTION_LABELS[action] ?? action}
+                disabled={busy}
+                onPress={() => act(action)}
+                accessibilityLabel={ACTION_LABELS[action] ?? action}
+              />
+            ))}
+          </View>
         </View>
       </BottomSheet>
     </SafeAreaView>
@@ -284,6 +283,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg },
   controls: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
   report: { gap: spacing.sm },
   reportTop: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
@@ -291,10 +291,6 @@ const styles = StyleSheet.create({
   detail: { ...type.caption, color: colors.textSecondary },
   meta: { ...type.caption, color: colors.textMuted },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  note: {
-    minHeight: 72, textAlignVertical: 'top', borderWidth: 1, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, ...type.bodySm,
-  },
   sheet: { gap: spacing.sm, paddingBottom: spacing.md },
-  sheetTitle: { ...type.h3, color: colors.textPrimary },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });

@@ -10,6 +10,10 @@
  * spam. Nothing about that is decided here; the reason list is simply
  * never edited down.
  *
+ * Lead visual review 2026-09-06, ruling V16: `BottomSheet` with the shared
+ * `ModalHeader` (title, close) in place of a bare title line; the one
+ * primary action stays full width, last.
+ *
  * Props:
  *   visible      controlled, like every sheet in the app
  *   onClose      close without reporting
@@ -21,6 +25,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import BottomSheet from '../BottomSheet';
+import ModalHeader from '../ModalHeader';
 import Button from '../Button';
 import Chip from '../Chip';
 import TextField from '../TextField';
@@ -67,8 +72,10 @@ export default function ReportSheet({ visible, onClose, targetKind, targetId, on
 
   return (
     <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Report">
+      <View style={styles.headerBleed}>
+        <ModalHeader title="Report this" onClose={onClose} />
+      </View>
       <View style={styles.body}>
-        <Text style={[styles.title, { ...t.type.h3, color: t.colors.textPrimary }]}>Report this</Text>
         <Text style={[styles.intro, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
           Pick the closest reason. Reports go straight to a moderator queue.
         </Text>
@@ -104,8 +111,8 @@ export default function ReportSheet({ visible, onClose, targetKind, targetId, on
 }
 
 const styles = StyleSheet.create({
+  headerBleed: { marginHorizontal: -spacing.lg, marginBottom: spacing.xs },
   body: { gap: spacing.md, paddingBottom: spacing.md },
-  title: { ...type.h3, color: colors.textPrimary },
   intro: { ...type.bodySm, color: colors.textSecondary },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
 });

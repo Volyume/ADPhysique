@@ -111,18 +111,24 @@ export default function CommunityGymAddScreen({ navigation, route }) {
             <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
               This looks like a gym already in the directory.
             </Text>
-            <Button
-              variant="primary"
-              title="Use this gym"
-              onPress={() => selectVenue(duplicate.id)}
-              accessibilityLabel={`Use ${duplicate.displayName}`}
-            />
-            <Button
-              variant="tertiary"
-              title="Add it anyway"
-              onPress={() => setDuplicate(null)}
-              accessibilityLabel="Add a new gym anyway"
-            />
+            <View style={styles.cardActions}>
+              <Button
+                variant="primary"
+                size="sm"
+                fullWidth={false}
+                title="Use this gym"
+                onPress={() => selectVenue(duplicate.id)}
+                accessibilityLabel={`Use ${duplicate.displayName}`}
+              />
+              <Button
+                variant="tertiary"
+                size="sm"
+                fullWidth={false}
+                title="Add it anyway"
+                onPress={() => setDuplicate(null)}
+                accessibilityLabel="Add a new gym anyway"
+              />
+            </View>
           </Card>
         ) : (
           <>
@@ -133,18 +139,21 @@ export default function CommunityGymAddScreen({ navigation, route }) {
 
             <TextField
               label="Gym name"
+              size="sm"
               value={name}
               onChangeText={(v) => setName(v.slice(0, NAME_MAX))}
               accessibilityLabel="Gym name"
             />
             <TextField
               label="Address line"
+              size="sm"
               value={addressLine}
               onChangeText={(v) => setAddressLine(v.slice(0, ADDRESS_MAX))}
               accessibilityLabel="Address line"
             />
             <TextField
               label="Town"
+              size="sm"
               value={town}
               onChangeText={(v) => setTown(v.slice(0, TOWN_MAX))}
               accessibilityLabel="Town"
@@ -152,6 +161,7 @@ export default function CommunityGymAddScreen({ navigation, route }) {
             <View style={styles.field}>
               <TextField
                 label="Postcode"
+                size="sm"
                 value={postcode}
                 onChangeText={(v) => setPostcode(v.toUpperCase())}
                 autoCapitalize="characters"
@@ -165,6 +175,7 @@ export default function CommunityGymAddScreen({ navigation, route }) {
             </View>
             <TextField
               label="Website (optional)"
+              size="sm"
               value={website}
               onChangeText={(v) => setWebsite(v.slice(0, WEBSITE_MAX))}
               autoCapitalize="none"
@@ -173,6 +184,7 @@ export default function CommunityGymAddScreen({ navigation, route }) {
             />
             <TextField
               label="Operator (optional)"
+              size="sm"
               value={operator}
               onChangeText={(v) => setOperator(v.slice(0, OPERATOR_MAX))}
               accessibilityLabel="Operator"
@@ -197,6 +209,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   block: { gap: spacing.sm },
+  cardActions: { flexDirection: 'row', gap: spacing.sm },
   blockTitle: { ...type.bodyStrong, color: colors.textPrimary },
   hint: { ...type.bodySm, color: colors.textSecondary },
   field: { gap: spacing.xs },

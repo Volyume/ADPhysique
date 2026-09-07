@@ -10,6 +10,10 @@
  * HomeScreen also never shows it to someone who already has a profile.
  * The gating lives in HomeScreen.js; this file renders only the content,
  * on the shared Card and Button, mirroring HomeHowYouTrainOfferCard.
+ *
+ * Lead visual review 2026-09-06, ruling V3: same shape as the Community
+ * hub hero — `type.h3` title, `type.bodySm` `textSecondary` body, both
+ * actions `sm`.
  */
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -19,7 +23,9 @@ import Card from './Card';
 import Button from './Button';
 
 export const COMMUNITY_INTRO_TITLE = 'Other lifters, their programmes, your stories';
-export const COMMUNITY_INTRO_BODY = 'Use a programme another lifter built, as-is or refitted to your kit, and share the training you actually did. Nothing about your body, food or coaching is ever shared.';
+// V3a (docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md): drops the
+// closing privacy sentence, matching the Community hub hero.
+export const COMMUNITY_INTRO_BODY = 'Use a programme another lifter built, as-is or refitted to your kit, and share the training you actually did.';
 
 export default function HomeCommunityIntroCard({ onOpen, onDismiss }) {
   const t = useTheme();
@@ -35,8 +41,8 @@ export default function HomeCommunityIntroCard({ onOpen, onDismiss }) {
         </View>
       </View>
       <View style={styles.actions}>
-        <Button title="Have a look" icon="people-outline" onPress={onOpen} fullWidth={false} style={styles.action} accessibilityLabel="Have a look at Community" />
-        <Button title="Not now" variant="secondary" onPress={onDismiss} fullWidth={false} style={styles.action} accessibilityLabel="Not now. Hides this introduction for good." />
+        <Button title="Have a look" icon="people-outline" size="sm" onPress={onOpen} fullWidth={false} accessibilityLabel="Have a look at Community" />
+        <Button title="Not now" variant="secondary" size="sm" onPress={onDismiss} fullWidth={false} accessibilityLabel="Not now. Hides this introduction for good." />
       </View>
     </Card>
   );
@@ -50,5 +56,4 @@ const styles = StyleSheet.create({
   title: { ...type.h3 },
   body: { ...type.bodySm },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  action: { flex: 1 },
 });

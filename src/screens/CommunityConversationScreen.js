@@ -36,8 +36,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import BackHeader from '../components/BackHeader';
-import BottomSheet from '../components/BottomSheet';
-import PressableCard from '../components/PressableCard';
 import EmptyState from '../components/EmptyState';
 import Button from '../components/Button';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
@@ -45,6 +43,7 @@ import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import MessageBubble from '../components/community/MessageBubble';
 import MessageComposer from '../components/community/MessageComposer';
+import MenuSheet from '../components/community/MenuSheet';
 import ReportSheet from '../components/community/ReportSheet';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
@@ -465,50 +464,35 @@ export default function CommunityConversationScreen({ navigation, route }) {
         ) : null}
       </KeyboardAvoidingView>
 
-      <BottomSheet
+      <MenuSheet
         visible={menuOpen}
         onClose={() => setMenuOpen(false)}
-        accessibilityLabel="Conversation options"
-      >
-        <View style={styles.menu}>
-          <Text style={[styles.menuTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
-            {handle || 'Options'}
-          </Text>
-          <PressableCard
-            onPress={() => {
+        title={handle || 'Options'}
+        rows={[
+          {
+            icon: 'flag-outline',
+            label: 'Report',
+            onPress: () => {
               setMenuOpen(false);
               setReportTarget({ targetKind: 'profile', targetId: other?.user_id ?? null });
-            }}
-            style={styles.menuRow}
-            accessibilityLabel="Report this person"
-          >
-            <Ionicons name="flag-outline" size={iconSize.md} color={t.colors.textSecondary} />
-            <Text style={[styles.menuLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
-              Report
-            </Text>
-          </PressableCard>
-          <PressableCard
-            onPress={confirmRemoveConnection}
-            style={styles.menuRow}
-            accessibilityLabel="Remove this connection"
-          >
-            <Ionicons name="person-remove-outline" size={iconSize.md} color={t.colors.textSecondary} />
-            <Text style={[styles.menuLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
-              Remove connection
-            </Text>
-          </PressableCard>
-          <PressableCard
-            onPress={confirmBlock}
-            style={styles.menuRow}
-            accessibilityLabel="Block this person"
-          >
-            <Ionicons name="ban-outline" size={iconSize.md} color={t.colors.error} />
-            <Text style={[styles.menuLabel, { ...t.type.body, color: t.colors.error }]}>
-              Block
-            </Text>
-          </PressableCard>
-        </View>
-      </BottomSheet>
+            },
+            accessibilityLabel: 'Report this person',
+          },
+          {
+            icon: 'person-remove-outline',
+            label: 'Remove connection',
+            onPress: confirmRemoveConnection,
+            accessibilityLabel: 'Remove this connection',
+          },
+          {
+            icon: 'ban-outline',
+            label: 'Block',
+            tone: 'destructive',
+            onPress: confirmBlock,
+            accessibilityLabel: 'Block this person',
+          },
+        ]}
+      />
 
       <ReportSheet
         visible={!!reportTarget}
@@ -558,13 +542,4 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     borderTopWidth: 1,
   },
-  menu: { gap: spacing.xs, paddingBottom: spacing.md },
-  menuTitle: { ...type.h3, color: colors.textPrimary, marginBottom: spacing.xs },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  menuLabel: { ...type.body, color: colors.textPrimary },
 });

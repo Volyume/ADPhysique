@@ -42,14 +42,16 @@ function pressTitled(tree, title) {
 }
 
 describe('HomeCommunityIntroCard', () => {
-  test('names the differentiator and the privacy line, with two actions', () => {
+  test('names the differentiator, with two actions', () => {
     const onOpen = jest.fn();
     const onDismiss = jest.fn();
     let tree;
     act(() => { tree = create(<HomeCommunityIntroCard onOpen={onOpen} onDismiss={onDismiss} />); });
     expect(textOf(tree)).toContain(COMMUNITY_INTRO_TITLE);
     expect(COMMUNITY_INTRO_BODY).toMatch(/refitted to your kit/);
-    expect(COMMUNITY_INTRO_BODY).toMatch(/Nothing about your body, food or coaching is ever shared\./);
+    // V3a (81-VISUAL-RULINGS.md): the closing privacy sentence is dropped
+    // from the body copy, matching the Community hub hero.
+    expect(COMMUNITY_INTRO_BODY).not.toMatch(/Nothing about your body, food or coaching is ever shared\./);
     pressTitled(tree, 'Have a look');
     pressTitled(tree, 'Not now');
     expect(onOpen).toHaveBeenCalledTimes(1);

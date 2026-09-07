@@ -14,19 +14,20 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
+import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
-import SegmentedControl from '../components/SegmentedControl';
+import ComposerInput from '../components/community/ComposerInput';
 import { useToast } from '../components/Toast';
 import PostCard from '../components/community/PostCard';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
-import { spacing, radius, type } from '../styles/theme';
+import { spacing, type } from '../styles/theme';
 import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
 import {
@@ -150,21 +151,17 @@ export default function CommunityComposeScreen({ navigation, route }) {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <SectionLabel>Preview</SectionLabel>
+          <SectionLabel tone="muted">Preview</SectionLabel>
           <PostCard post={previewPost} author={profile} myReaction={false} />
 
           <View style={styles.field}>
-            <SectionLabel>Caption</SectionLabel>
-            <TextInput
-              style={[styles.input, {
-                backgroundColor: t.colors.inputBg, borderColor: t.colors.border, color: t.colors.textPrimary,
-              }]}
+            <SectionLabel tone="muted">Caption</SectionLabel>
+            <ComposerInput
               value={caption}
               onChangeText={setCaption}
               maxLength={CAPTION_MAX}
-              multiline
+              minHeight={96}
               placeholder="Say something about the training, if you want to."
-              placeholderTextColor={t.colors.textDisabled}
               accessibilityLabel="Caption"
             />
             <Text style={[styles.counter, { color: t.colors.textMuted }]}>
@@ -173,8 +170,18 @@ export default function CommunityComposeScreen({ navigation, route }) {
           </View>
 
           <View style={styles.field}>
-            <SectionLabel>Who can see it</SectionLabel>
-            <SegmentedControl options={VISIBILITY_OPTIONS} value={visibility} onChange={setVisibility} />
+            <SectionLabel tone="muted">Who can see it</SectionLabel>
+            <View style={styles.chipRow}>
+              {VISIBILITY_OPTIONS.map((opt) => (
+                <Chip
+                  key={opt.value}
+                  label={opt.label}
+                  selected={visibility === opt.value}
+                  onPress={() => setVisibility(opt.value)}
+                  accessibilityRole="radio"
+                />
+              ))}
+            </View>
           </View>
 
           <Button
@@ -196,9 +203,6 @@ const styles = StyleSheet.create({
   centre: { flex: 1, justifyContent: 'center', padding: spacing.lg },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
   field: { gap: spacing.sm },
-  input: {
-    minHeight: 96, textAlignVertical: 'top', borderWidth: 1, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, ...type.body,
-  },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   counter: { ...type.caption, textAlign: 'right' },
 });

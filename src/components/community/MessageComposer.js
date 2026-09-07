@@ -18,10 +18,11 @@
  */
 
 import { useState } from 'react';
-import { View, Text, StyleSheet, TextInput } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Button from '../Button';
+import ComposerInput from './ComposerInput';
 import useTheme from '../../hooks/useTheme';
-import { spacing, radius, type } from '../../styles/theme';
+import { spacing, type } from '../../styles/theme';
 import { touchTarget } from '../../styles/layout';
 import { MESSAGE_MAX } from '../../lib/community';
 
@@ -55,18 +56,12 @@ export default function MessageComposer({
     }]}
     >
       <View style={styles.field}>
-        <TextInput
-          style={[styles.input, {
-            backgroundColor: t.colors.inputBg,
-            borderColor: t.colors.border,
-            color: t.colors.textPrimary,
-          }]}
+        <ComposerInput
           value={body}
           onChangeText={(v) => setBody(v.slice(0, MESSAGE_MAX))}
           placeholder={placeholder}
-          placeholderTextColor={t.colors.textDisabled}
           maxLength={MESSAGE_MAX}
-          multiline
+          minHeight={touchTarget.minimum}
           editable={!disabled}
           accessibilityLabel="Message"
         />
@@ -98,14 +93,5 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   field: { flex: 1, gap: spacing.xxs },
-  input: {
-    minHeight: touchTarget.minimum,
-    maxHeight: 120,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    ...type.bodySm,
-  },
   count: { ...type.caption, textAlign: 'right' },
 });

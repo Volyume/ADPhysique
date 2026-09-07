@@ -11,6 +11,11 @@
  * `secondary` once there is: the settled state is the quieter one, the
  * same way FollowButton reads. Never `emphatic` (section 13, ruling 2).
  *
+ * Lead visual review 2026-09-06, ruling V7: once connected, Message
+ * renders `primary` sm `chatbubble-outline` beside the `secondary`
+ * `people-outline` Connected button (Message leaves the menu); the menu
+ * itself, shared `MenuSheet` (V16), keeps only Remove connection.
+ *
  * Two taps are decisions rather than actions, so both are confirmed
  * through `appAlert`: withdrawing a request, and removing a connection
  * (which closes the conversation for both people and leaves the two
@@ -36,15 +41,12 @@
  */
 
 import { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { View, StyleSheet } from 'react-native';
 import Button from '../Button';
-import BottomSheet from '../BottomSheet';
-import PressableCard from '../PressableCard';
+import MenuSheet from './MenuSheet';
 import { appAlert } from '../AppAlert';
 import { useToast } from '../Toast';
-import { spacing, type, colors, iconSize } from '../../styles/theme';
-import useTheme from '../../hooks/useTheme';
+import { spacing } from '../../styles/theme';
 import {
   connectionState, connect, withdrawConnect, respondToConnect, removeConnection,
 } from '../../lib/community';
@@ -93,24 +95,11 @@ const STATES = {
   none: { title: 'Connect', variant: 'primary', icon: 'person-add-outline' },
   requested_by_me: { title: 'Requested', variant: 'secondary', icon: 'time-outline' },
   requested_by_them: { title: 'Respond', variant: 'primary', icon: 'mail-open-outline' },
-  connected: { title: 'Connected', variant: 'secondary', icon: 'checkmark-outline' },
+  // V7: `secondary` with `people-outline`, Message sits beside it as its own
+  // button now (see the render below), so this state no longer opens
+  // straight to a menu that offers messaging too.
+  connected: { title: 'Connected', variant: 'secondary', icon: 'people-outline' },
 };
-
-function MenuRow({ icon, label, tone, onPress, accessibilityLabel }) {
-  const t = useTheme();
-  return (
-    <PressableCard
-      onPress={onPress}
-      style={styles.menuRow}
-      accessibilityLabel={accessibilityLabel ?? label}
-    >
-      <Ionicons name={icon} size={iconSize.md} color={tone ?? t.colors.textSecondary} />
-      <Text style={[styles.menuLabel, { ...t.type.body, color: tone ?? t.colors.textPrimary }]}>
-        {label}
-      </Text>
-    </PressableCard>
-  );
-}
 
 export default function ConnectButton({
   card,
@@ -122,7 +111,6 @@ export default function ConnectButton({
   size = 'sm',
   fullWidth = false,
 }) {
-  const t = useTheme();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -216,54 +204,44 @@ export default function ConnectButton({
 
   return (
     <>
-      <Button
-        variant={shape.variant}
-        size={size}
-        fullWidth={fullWidth}
-        title={shape.title}
-        icon={shape.icon}
-        loading={busy}
-        onPress={press}
-        accessibilityLabel={`${shape.title} ${who}`.trim()}
-      />
+      <View style={styles.row}>
+        <Button
+          variant={shape.variant}
+          size={size}
+          fullWidth={fullWidth}
+          title={shape.title}
+          icon={shape.icon}
+          loading={busy}
+          onPress={press}
+          accessibilityLabel={`${shape.title} ${who}`.trim()}
+        />
+        {/* V7a: Message follows Connected so a profile row reads
+            Following · Connected · Message on one line. */}
+        {state === 'connected' && onMessage ? (
+          <Button
+            variant="primary"
+            size={size}
+            fullWidth={false}
+            title="Message"
+            icon="chatbubble-outline"
+            onPress={() => onMessage(card)}
+            accessibilityLabel={`Message @${card?.handle ?? ''}`.trim()}
+          />
+        ) : null}
+      </View>
 
-      <BottomSheet
+      <MenuSheet
         visible={menuOpen}
         onClose={() => setMenuOpen(false)}
-        accessibilityLabel="Connection options"
-      >
-        <View style={styles.menu}>
-          <Text style={[styles.menuTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
-            {card?.handle ? `@${card.handle}` : 'Connected'}
-          </Text>
-          {onMessage ? (
-            <MenuRow
-              icon="chatbubble-outline"
-              label="Message"
-              onPress={() => { setMenuOpen(false); onMessage(card); }}
-              accessibilityLabel={`Message @${card?.handle ?? ''}`.trim()}
-            />
-          ) : null}
-          <MenuRow
-            icon="person-remove-outline"
-            label="Remove connection"
-            tone={t.colors.error}
-            onPress={confirmRemove}
-          />
-        </View>
-      </BottomSheet>
+        title={card?.handle ? `@${card.handle}` : 'Connected'}
+        rows={[
+          { icon: 'person-remove-outline', label: 'Remove connection', tone: 'destructive', onPress: confirmRemove },
+        ]}
+      />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  menu: { gap: spacing.xs, paddingBottom: spacing.md },
-  menuTitle: { ...type.h3, color: colors.textPrimary, marginBottom: spacing.xs },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  menuLabel: { ...type.body, color: colors.textPrimary },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2 },
 });

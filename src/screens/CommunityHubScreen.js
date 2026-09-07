@@ -44,7 +44,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
-import SegmentedControl from '../components/SegmentedControl';
+import Chip from '../components/Chip';
 import PostCard from '../components/community/PostCard';
 import ProfileCard from '../components/community/ProfileCard';
 import ProgrammeTile from '../components/community/ProgrammeTile';
@@ -358,36 +358,59 @@ export default function CommunityHubScreen({ navigation, route }) {
       ) : null}
 
       {!joined && !browsing ? (
-        <Card elevated style={styles.block}>
-          <Text style={[styles.heroTitle, { ...t.type.h2, color: t.colors.textPrimary }]}>
-            Programmes you can make your own
-          </Text>
-          <Text style={[styles.heroBody, { ...t.type.body, color: t.colors.textSecondary }]}>
-            Use another lifter&apos;s programme as they built it, or let Volyume refit it to your kit and limits and show you every change. Share the training you actually did. Nothing about your body, food or coaching is ever shared.
-          </Text>
+        <>
+          {/* V3a: PrivacyReceipt lives directly under the hero, not nested
+              inside it, and the hero body drops its own privacy sentence
+              since the receipt beneath says exactly that
+              (docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md). */}
+          <Card style={styles.block}>
+            <Text style={[styles.heroTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
+              Programmes you can make your own
+            </Text>
+            <Text
+              style={[styles.heroBody, { ...t.type.bodySm, color: t.colors.textSecondary }]}
+            >
+              Use another lifter&apos;s programme as they built it, or let Volyume refit it to your kit and limits and show you every change. Share the training you actually did.
+            </Text>
+            <View style={styles.heroActions}>
+              <Button
+                variant="primary"
+                size="sm"
+                fullWidth={false}
+                icon="person-add-outline"
+                title="Create my profile"
+                onPress={() => navigation.navigate('CommunityJoin')}
+                accessibilityLabel="Create my Community profile"
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                title="Browse first"
+                onPress={() => setBrowsing(true)}
+                accessibilityLabel="Browse Community first"
+              />
+            </View>
+          </Card>
           <PrivacyReceipt />
-          <Button
-            variant="emphatic"
-            title="Create my profile"
-            onPress={() => navigation.navigate('CommunityJoin')}
-            accessibilityLabel="Create my Community profile"
-          />
-          <Button
-            variant="secondary"
-            title="Browse first"
-            onPress={() => setBrowsing(true)}
-            accessibilityLabel="Browse Community first"
-          />
-        </Card>
+        </>
       ) : null}
 
       {joined ? (
-        <SegmentedControl
-          options={[{ label: 'Following', value: 'following' }, { label: 'Discover', value: 'discover' }]}
-          value={shown}
-          onChange={setSegment}
-          accessibilityLabel="Community view"
-        />
+        <View style={styles.segmentRow} accessibilityLabel="Community view">
+          <Chip
+            label="Following"
+            selected={shown === 'following'}
+            onPress={() => setSegment('following')}
+            accessibilityRole="radio"
+          />
+          <Chip
+            label="Discover"
+            selected={shown === 'discover'}
+            onPress={() => setSegment('discover')}
+            accessibilityRole="radio"
+          />
+        </View>
       ) : null}
 
       {joined ? (
@@ -427,10 +450,10 @@ export default function CommunityHubScreen({ navigation, route }) {
               onLayout={(e) => { programmesY.current = e?.nativeEvent?.layout?.y ?? 0; }}
             >
               <View style={styles.sectionHead}>
-                <SectionLabel>Programmes</SectionLabel>
+                <SectionLabel tone="muted">Programmes</SectionLabel>
                 {programmes.length ? (
                   <Button
-                    variant="outline"
+                    variant="tertiary"
                     size="sm"
                     fullWidth={false}
                     icon="list-outline"
@@ -462,7 +485,7 @@ export default function CommunityHubScreen({ navigation, route }) {
 
           {likeMe.length ? (
             <View style={styles.section}>
-              <SectionLabel>Lifters like you</SectionLabel>
+              <SectionLabel tone="muted">Lifters like you</SectionLabel>
               {likeMe.map((row) => (
                 <ProfileCard
                   key={(row.card ?? row).user_id}
@@ -477,7 +500,7 @@ export default function CommunityHubScreen({ navigation, route }) {
 
           {dimensions.length ? (
             <View style={styles.section}>
-              <SectionLabel>Around you</SectionLabel>
+              <SectionLabel tone="muted">Around you</SectionLabel>
               {dimensions.map((d) => (
                 <DimensionRow
                   key={`${d.kind}:${d.key}`}
@@ -490,13 +513,13 @@ export default function CommunityHubScreen({ navigation, route }) {
             </View>
           ) : null}
 
-          {posts.length ? <SectionLabel>Recent training stories</SectionLabel> : null}
+          {posts.length ? <SectionLabel tone="muted">Recent training stories</SectionLabel> : null}
         </>
       ) : null}
 
       {shown === 'following' && likeMe.length ? (
         <View style={styles.section}>
-          <SectionLabel>Lifters like you</SectionLabel>
+          <SectionLabel tone="muted">Lifters like you</SectionLabel>
           {likeMe.map((row) => (
             <ProfileCard
               key={(row.card ?? row).user_id}
@@ -522,9 +545,9 @@ export default function CommunityHubScreen({ navigation, route }) {
       text={hub.error === 'offline'
         ? 'Community needs a connection. Your training is unaffected.'
         : 'Try that again in a moment.'}
-      actionLabel="Try again"
-      onAction={() => load()}
-      actionAccessibilityLabel="Try loading Community again"
+      secondaryLabel="Try again"
+      onSecondary={() => load()}
+      secondaryAccessibilityLabel="Try loading Community again"
     />
   ) : shown === 'following' ? (
     <EmptyState
@@ -611,8 +634,10 @@ const styles = StyleSheet.create({
   blockTitle: { ...type.bodyStrong, color: colors.textPrimary },
   blockBody: { ...type.bodySm, color: colors.textSecondary },
   blockActions: { flexDirection: 'row', gap: spacing.sm },
-  heroTitle: { ...type.h2, color: colors.textPrimary },
-  heroBody: { ...type.body, color: colors.textSecondary },
+  heroTitle: { ...type.h3, color: colors.textPrimary },
+  heroBody: { ...type.bodySm, color: colors.textSecondary },
+  heroActions: { flexDirection: 'row', gap: spacing.sm },
+  segmentRow: { flexDirection: 'row', gap: spacing.sm },
   findCard: { padding: spacing.md },
   findRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   findGlyph: {

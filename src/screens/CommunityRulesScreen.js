@@ -141,6 +141,9 @@ export const COMMUNITY_RULES_TEXT = {
   },
 };
 
+// Visual rulings 2026-09-07 (V1): the one emphatic action on this screen.
+// It renders only on the re-consent path (`mustAccept` after a rules
+// version bump; first acceptance happens on Join), so the label says so.
 export const ACCEPT_UPDATED_RULES_LABEL = 'Accept the updated rules';
 export const RULES_OUTDATED_LINE = 'The Community rules have changed. Accept them below to carry on.';
 
@@ -179,13 +182,17 @@ export default function CommunityRulesScreen({ navigation, route }) {
             <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
               {RULES_OUTDATED_LINE}
             </Text>
-            <Button
-              variant="emphatic"
-              title={ACCEPT_UPDATED_RULES_LABEL}
-              loading={busy}
-              onPress={accept}
-              accessibilityLabel={ACCEPT_UPDATED_RULES_LABEL}
-            />
+            <View style={styles.cardActions}>
+              <Button
+                variant="emphatic"
+                size="sm"
+                fullWidth={false}
+                title={ACCEPT_UPDATED_RULES_LABEL}
+                loading={busy}
+                onPress={accept}
+                accessibilityLabel={ACCEPT_UPDATED_RULES_LABEL}
+              />
+            </View>
           </Card>
         ) : null}
 
@@ -207,7 +214,7 @@ export default function CommunityRulesScreen({ navigation, route }) {
         </Card>
 
         <View style={styles.section}>
-          <SectionLabel>{text.privacy.heading}</SectionLabel>
+          <SectionLabel tone="muted">{text.privacy.heading}</SectionLabel>
           <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
             {text.privacy.intro}
           </Text>
@@ -225,26 +232,28 @@ export default function CommunityRulesScreen({ navigation, route }) {
         </View>
 
         <View style={styles.section}>
-          <SectionLabel>{text.reporting.heading}</SectionLabel>
+          <SectionLabel tone="muted">{text.reporting.heading}</SectionLabel>
           <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
             {text.reporting.body}
           </Text>
         </View>
 
         <View style={styles.section}>
-          <SectionLabel>{text.moderatorActions.heading}</SectionLabel>
+          <SectionLabel tone="muted">{text.moderatorActions.heading}</SectionLabel>
           <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
             {text.moderatorActions.body}
           </Text>
         </View>
 
         <View style={styles.section}>
-          <SectionLabel>{text.contact.heading}</SectionLabel>
+          <SectionLabel tone="muted">{text.contact.heading}</SectionLabel>
           <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
             {text.contact.body}
           </Text>
           <Button
             variant="secondary"
+            size="sm"
+            fullWidth={false}
             title={text.contact.email}
             onPress={() => Linking.openURL(`mailto:${text.contact.email}`).catch(() => {})}
             accessibilityLabel={`Email ${text.contact.email}`}
@@ -268,6 +277,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   block: { gap: spacing.md },
+  cardActions: { flexDirection: 'row' },
   rule: { gap: spacing.xxs },
   ruleHeading: { ...type.bodyStrong, color: colors.textPrimary },
   section: { gap: spacing.sm },
