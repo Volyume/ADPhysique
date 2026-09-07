@@ -84,6 +84,38 @@ functions.
 
 ---
 
+## COMMUNITY BOARD 100%-FAILURE DEFECT (2026-09-07, found immediately after 168) — FIX WRITTEN, NOT YET APPLIED
+
+Founder device report (screenshot): opening any consistency board ("My
+gym", 5 tabs total) shows "Could not load this board" every time.
+Sentry: VOLYUME-37 (same issue grouping as the earlier incident, by
+culprit, NOT the same bug) changed to Postgres 42P01 "missing FROM-clause
+entry for table \"x\"", first seen 2026-09-06 — the day `community_board`
+(migrate_165) shipped. This is a pure SQL syntax defect, unrelated to
+anything landed today (166-168): it has failed on EVERY call since
+deployment, for every user, every scope, every window. No JS unit test
+could have caught it — there is no local Postgres in CI for these
+SECURITY DEFINER functions.
+
+Root cause read directly off the live function: all three of
+`community_board`'s ranking CTEs wrote `SELECT x.*, row_number() OVER
+(...) FROM (SELECT unnest(v_items) AS x) u` — `x` is the column alias
+`unnest` was given, not a table alias (the derived table is `u`), so
+`x.*` asks Postgres to expand a table that doesn't exist, exactly the
+reported error. Grepped every `unnest(v_items) AS x` site in the repo:
+every OTHER Community function using this same keyset-paging idiom
+(migrate_160-164) correctly writes `SELECT u.x`/`SELECT t.x` — this was a
+one-off copy-paste slip isolated to `community_board`.
+
+FIX WRITTEN: `supabase/migrate_169_community_board_x_alias_fix.sql` —
+`SELECT x.*,` → `SELECT u.x,` in all three CTEs, no other change. Verified
+the corrected pattern runs and produces correct ranking against a
+fabricated `v_items` array before writing the migration. Lint clean (no
+JS changed). STATUS: WRITTEN, NOT YET APPLIED — awaiting the founder's
+exact phrase for this migration specifically.
+
+---
+
 ## GYM FINDER RELEVANCE + ORDERING DEFECTS (2026-09-07, found immediately after 167) — RESOLVED, migrate_168 APPLIED and VERIFIED
 
 Distinct from VOLYUME-37 above — pre-existing gym-finder quality defects,
