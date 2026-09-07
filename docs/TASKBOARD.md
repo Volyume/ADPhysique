@@ -33,6 +33,18 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## COMMUNITY PRODUCT AUDIT (2026-09-07, founder prompt 2) — IN PROGRESS on `claude/community-product-audit-m50z2y`
+
+Founder brief in chat: exhaustive implementation + competitive product
+audit of Community (not visual); missing vs underpowered; judge; then
+implement only justified improvements on the existing architecture.
+Folder `docs/community-product-audit-2026-09-07/` (README = map).
+Phase A: eight READ-ONLY inventory/evidence agents (Sonnet mechanism
+inventories 01-06 and 08, Opus competitor evidence 07), each writing
+only its own numbered file. Recovery path: re-dispatch the same brief;
+nothing on disk to reconcile. Phase B: lead judgement `20-JUDGEMENT.md`.
+Phase C: targeted implementation, `30-IMPLEMENTATION.md`, then merge.
+
 ## COMMUNITY VISUAL REFINEMENT (2026-09-07, founder prompt 1) — LANDED on `claude/volyume-social-discovery-h7dknu` (a5aab73, fac2451); MERGE PENDING the settled-tree run
 
 Founder brief in chat: visual only; bring every Community surface into
