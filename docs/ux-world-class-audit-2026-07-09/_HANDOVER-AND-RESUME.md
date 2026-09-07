@@ -1,6 +1,24 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-07 — COMMUNITY VISUAL REFINEMENT (founder prompt 1) ★
+
+Visual only. Evidence `docs/social-discovery-2026-09-06/80-VISUAL-
+INVENTORY.md` (no hex, no hand-rolled amber fills; the weight came from
+application, not tokens). Rulings V1..V20 plus V3a/V4a/V7a/V8a in
+`81-VISUAL-RULINGS.md` (the edit-gate spec). Landed a5aab73 + fac2451:
+one amber fill per journey; small trailing actions in cards, rows,
+heroes and sheets; Chip rows replace the amber segmented control in
+Community; neutral rings on unselected avatar presets (shared mark, so
+the Athlete profile follows); compact PrivacyReceipt with the full list
+one tap away; Privacy as SettingRows; shared MenuSheet and ComposerInput;
+people cards carry one trailing action; stories lead with training
+facts. Lead render review of seven surfaces in
+`render-visual-2026-09-07/`. Behaviour, privacy, data and navigation
+unchanged (product review 73 findings 6 to 10 still open for the
+separate audit the founder named). NEXT: merge to main after the
+settled-tree run; founder build go.
+===============================================================================
 ## ★ 2026-09-07 — COMMUNITY DISCOVERY (campaign 2) LANDED; UK GYM DATABASE BUILT; both on branch, merge pending ★
 
 Branch `claude/volyume-social-discovery-h7dknu`. Campaign 2 (discovery,
