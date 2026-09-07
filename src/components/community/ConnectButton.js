@@ -81,6 +81,12 @@ export function connectRefusalLine(code) {
  * Whether a Connect control belongs on this card at all (blueprint
  * section 1). Your own card, a blocked person and a minor viewer never
  * see one; everything else is the server's call, spoken as a refusal.
+ *
+ * Spec 1.1 C (migration 163): `can_connect === false` (the target's own
+ * `connect_from` refuses the caller) hides Connect too, exactly like the
+ * structural reasons above -- the card is never removed from a list for
+ * it, only this control. `ProfileCard` (V8a) shows Follow in its place;
+ * see `connectDeniedByPreference` for telling the two apart.
  */
 export function shouldOfferConnect(me, card) {
   if (!card?.user_id) return false;
@@ -88,7 +94,27 @@ export function shouldOfferConnect(me, card) {
   if (card.is_minor) return false;
   if (card.user_id === me?.profile?.user_id) return false;
   if (card.relationship?.blocked) return false;
+  if (card.can_connect === false) return false;
   return true;
+}
+
+/**
+ * Whether Connect is hidden specifically because the target's own
+ * `connect_from` preference refuses the caller, as opposed to the
+ * structural reasons in `shouldOfferConnect` (own card, blocked, minor)
+ * -- those never show a Follow-with-explanation line, this one does
+ * (`ProfileCard`, spec 1.3).
+ *
+ * @param {object|null} me
+ * @param {object|null} card
+ * @returns {boolean}
+ */
+export function connectDeniedByPreference(me, card) {
+  if (!card?.user_id) return false;
+  if (me?.is_minor || card.is_minor) return false;
+  if (card.user_id === me?.profile?.user_id) return false;
+  if (card.relationship?.blocked) return false;
+  return card.can_connect === false;
 }
 
 const STATES = {

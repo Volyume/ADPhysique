@@ -56,7 +56,10 @@ jest.mock('../../lib/community', () => ({
   },
   dayListLabel: (days) => (Array.isArray(days) && days.length ? days.join(', ') : ''),
   timeBandsLabel: (bands) => (Array.isArray(bands) && bands.length ? bands.join(', ') : ''),
-  previewLine: (shared) => Object.keys(shared ?? {}).filter((k) => shared[k]).join('|'),
+  previewLine: (shared, ageBand) => [
+    Object.keys(shared ?? {}).filter((k) => shared[k]).join('|'),
+    ageBand ? `age:${ageBand}` : null,
+  ].filter(Boolean).join('|'),
   shareablePayload: jest.fn((bands, share) => {
     const out = {};
     if (share?.days) out.tp_days = bands?.tp_days ?? null;
@@ -192,6 +195,51 @@ describe('toggling a band', () => {
     });
     const { tree } = await mount();
     expect(flattenText(tree.toJSON())).toContain(NOTHING_SHARED_LINE);
+  });
+
+  // Spec 1.3: the preview includes the age band exactly when the toggle
+  // is on and the person has one -- never for a minor, whose
+  // `tp_age_band` the server never populates in the first place.
+  test('the age band joins the preview when its toggle is on', async () => {
+    readShareSettings.mockResolvedValue({ ...TP_DEFAULT_SHARE, age_band: true });
+    useCommunityMe.mockReturnValue({
+      me: { ...ME, tp_age_band: '35_44' },
+      loading: false,
+      error: null,
+      refresh: jest.fn(() => Promise.resolve()),
+    });
+    const { tree } = await mount();
+    expect(flattenText(tree.toJSON())).toContain('age:35_44');
+  });
+
+  test('the toggle off: no age band in the preview, even with one on the record', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { ...ME, tp_age_band: '35_44' },
+      loading: false,
+      error: null,
+      refresh: jest.fn(() => Promise.resolve()),
+    });
+    const { tree } = await mount();
+    expect(flattenText(tree.toJSON())).not.toContain('age:35_44');
+  });
+});
+
+describe('a minor never sees the age band row (SD-32, exactly as Join filters it)', () => {
+  test('the row is absent entirely, not merely disabled', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { ...ME, is_minor: true, tp_age_band: null },
+      loading: false,
+      error: null,
+      refresh: jest.fn(() => Promise.resolve()),
+    });
+    const { tree } = await mount();
+    expect(flattenText(tree.toJSON())).not.toContain('Age band');
+    expect(switchFor(tree, 'Share age band')).toBeUndefined();
+  });
+
+  test('an adult still sees the row', async () => {
+    const { tree } = await mount();
+    expect(flattenText(tree.toJSON())).toContain('Age band');
   });
 });
 

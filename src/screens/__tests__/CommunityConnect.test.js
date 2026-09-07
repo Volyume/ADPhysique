@@ -73,7 +73,9 @@ import { appAlert } from '../../components/AppAlert';
 import {
   connect, withdrawConnect, respondToConnect,
 } from '../../lib/community';
-import ConnectButton, { shouldOfferConnect, connectRefusalLine } from '../../components/community/ConnectButton';
+import ConnectButton, {
+  shouldOfferConnect, connectRefusalLine, connectDeniedByPreference,
+} from '../../components/community/ConnectButton';
 import ConnectSheet from '../../components/community/ConnectSheet';
 
 function flattenText(node) {
@@ -120,6 +122,39 @@ describe('shouldOfferConnect: nobody who cannot connect ever gets the control (S
 
   test('otherwise, yes', () => {
     expect(shouldOfferConnect(ME, card())).toBe(true);
+  });
+
+  // Migration 163, spec 1.1 C / 1.3: `can_connect === false` (the target's
+  // own connect_from refuses the caller) hides Connect too, exactly like
+  // the structural reasons above; the card is never removed from a list
+  // for it, only this control.
+  test('can_connect === false hides Connect, just like the structural reasons', () => {
+    expect(shouldOfferConnect(ME, card({ can_connect: false }))).toBe(false);
+  });
+
+  test('can_connect === true (or absent, every pre-163 card) is unaffected', () => {
+    expect(shouldOfferConnect(ME, card({ can_connect: true }))).toBe(true);
+    expect(shouldOfferConnect(ME, card())).toBe(true);
+  });
+});
+
+describe('connectDeniedByPreference: telling a preference refusal apart from a structural one', () => {
+  test('true only when Connect would otherwise qualify but can_connect is false', () => {
+    expect(connectDeniedByPreference(ME, card({ can_connect: false }))).toBe(true);
+  });
+
+  test('false when Connect is allowed', () => {
+    expect(connectDeniedByPreference(ME, card({ can_connect: true }))).toBe(false);
+  });
+
+  test('false for every structural reason, even with can_connect false (never double-explained)', () => {
+    expect(connectDeniedByPreference({ is_minor: true }, card({ can_connect: false }))).toBe(false);
+    expect(connectDeniedByPreference(ME, card({ can_connect: false, is_minor: true }))).toBe(false);
+    expect(connectDeniedByPreference(ME, card({ can_connect: false, user_id: 'u1' }))).toBe(false);
+    expect(connectDeniedByPreference(
+      ME,
+      card({ can_connect: false, relationship: { blocked: true } }),
+    )).toBe(false);
   });
 });
 

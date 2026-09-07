@@ -148,7 +148,10 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
   }, [me, partnerReady]);
 
   const shared = shareablePayload(bands ?? {}, share);
-  const preview = previewLine(shared);
+  // Spec 1.3: the preview includes the age band exactly when the toggle
+  // is on (never for a minor: the server never populates `tp_age_band`
+  // for one, `community_update_training_profile`'s own rule).
+  const preview = previewLine(shared, share.age_band ? me?.tp_age_band : null);
 
   async function toggleBand(key, next) {
     const prevSettings = share;
@@ -244,7 +247,11 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
 
         <View style={styles.section}>
           <SectionLabel tone="muted">Your bands</SectionLabel>
-          {bandRows(bands, me).map((row) => (
+          {/* SD-32: the age band never appears for a minor, exactly as
+              Join filters the same row (CommunityJoinScreen.js). */}
+          {bandRows(bands, me)
+            .filter((row) => !(isMinor && row.key === 'age_band'))
+            .map((row) => (
             <View key={row.key} style={styles.bandRow}>
               <View style={styles.bandBody}>
                 <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>

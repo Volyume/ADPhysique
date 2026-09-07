@@ -30,6 +30,7 @@ const { callCommunity } = require('../transport');
 const {
   FIND_MODES, FIND_MODE_ORDER, doorsFor, doorLine, doorZeroState,
   findPeople, programmePeople, gymSummary, gymSuggest,
+  normaliseFilters, filterChips, removeFilterChip, peopleCountLine,
 } = require('../findPeople');
 
 const ME_FULL = {
@@ -199,6 +200,151 @@ describe('the scored list', () => {
       await findPeople(mode);
     }
     expect(callCommunity.mock.calls.map(([, p]) => p._mode)).toEqual(FIND_MODE_ORDER);
+  });
+});
+
+describe('combinable filters (spec 1.1 C / 1.3, migration 163)', () => {
+  test('a filters object is sent as _filters, alongside the mode/cursor/limit', async () => {
+    await findPeople('like_me', { filters: { scope: 'gym' } });
+    expect(callCommunity).toHaveBeenCalledWith('community_find_people', {
+      _mode: 'like_me', _cursor: null, _limit: 20, _filters: { scope: 'gym' },
+    });
+  });
+
+  test('no filters given: _filters is not sent at all (the exact old call, every existing door)', async () => {
+    await findPeople('like_me');
+    const [, params] = callCommunity.mock.calls[0];
+    expect('_filters' in params).toBe(false);
+  });
+
+  test('a fallback row (SD-28) is flagged, a scored row is not', async () => {
+    callCommunity.mockResolvedValue({
+      people: [
+        { card: { handle: 'jamie' }, reasons: ['Trains at PureGym Leeds'], score: 3 },
+        { card: { handle: 'sam' }, reasons: [], score: 0, fallback: true },
+      ],
+      count: 1,
+      count_truncated: false,
+    });
+    const page = await findPeople('gym');
+    expect(page.people[0].fallback).toBe(false);
+    expect(page.people[1].fallback).toBe(true);
+  });
+
+  test('count_truncated carries through, and defaults false', async () => {
+    callCommunity.mockResolvedValue({ people: [], count: 1000, count_truncated: true });
+    expect((await findPeople('like_me')).count_truncated).toBe(true);
+
+    callCommunity.mockResolvedValue({ people: [] });
+    expect((await findPeople('like_me')).count_truncated).toBe(false);
+  });
+});
+
+describe('normaliseFilters: only what is actually set, or null', () => {
+  test('an empty or missing draft answers null, never {}', () => {
+    expect(normaliseFilters(null)).toBeNull();
+    expect(normaliseFilters({})).toBeNull();
+    expect(normaliseFilters({ scope: null, days: [] })).toBeNull();
+  });
+
+  test('an unknown scope is dropped, not sent as invalid_input bait', () => {
+    expect(normaliseFilters({ scope: 'nearby_now' })).toBeNull();
+  });
+
+  test('place_band_miles only survives with scope place, and only a real band', () => {
+    expect(normaliseFilters({ scope: 'gym', place_band_miles: '5' })).toEqual({ scope: 'gym' });
+    expect(normaliseFilters({ scope: 'place', place_band_miles: '7' })).toEqual({ scope: 'place' });
+    expect(normaliseFilters({ scope: 'place', place_band_miles: '5' }))
+      .toEqual({ scope: 'place', place_band_miles: '5' });
+  });
+
+  test('every other field: arrays only survive non-empty, scalars only survive truthy', () => {
+    expect(normaliseFilters({
+      partner_only: true, days: ['mon', 'wed'], time_bands: [], styles: ['strength'],
+      goal: 'get_stronger', experience_band: '', age_band: '18_24',
+    })).toEqual({
+      partner_only: true, days: ['mon', 'wed'], styles: ['strength'], goal: 'get_stronger', age_band: '18_24',
+    });
+  });
+});
+
+describe('filterChips: the applied-filter row', () => {
+  const labels = {
+    days: { mon: 'Mon' },
+    timeBands: { evening: 'Evenings' },
+    styles: { strength: 'Strength' },
+    goals: { get_stronger: 'Get stronger' },
+    experience: { intermediate: 'Intermediate' },
+    ageBand: { '18_24': '18 to 24' },
+  };
+
+  test('no filters: no chips', () => {
+    expect(filterChips(null, labels)).toEqual([]);
+  });
+
+  test('scope gym reads "My gym"; scope place reads the band label; scope any reads "Anywhere"', () => {
+    expect(filterChips({ scope: 'gym' }, labels)).toEqual([{ key: 'scope', label: 'My gym' }]);
+    expect(filterChips({ scope: 'place', place_band_miles: '10' }, labels))
+      .toEqual([{ key: 'scope', label: 'Within 10 miles' }]);
+    expect(filterChips({ scope: 'place' }, labels)).toEqual([{ key: 'scope', label: 'Same place' }]);
+    expect(filterChips({ scope: 'any' }, labels)).toEqual([{ key: 'scope', label: 'Anywhere' }]);
+  });
+
+  test('every other field becomes its own chip, in order, keyed for removal', () => {
+    expect(filterChips({
+      partner_only: true, days: ['mon'], time_bands: ['evening'], styles: ['strength'],
+      goal: 'get_stronger', experience_band: 'intermediate', age_band: '18_24',
+    }, labels)).toEqual([
+      { key: 'partner_only', label: 'Open to training together' },
+      { key: 'days:mon', label: 'Mon' },
+      { key: 'time_bands:evening', label: 'Evenings' },
+      { key: 'styles:strength', label: 'Strength' },
+      { key: 'goal', label: 'Get stronger' },
+      { key: 'experience_band', label: 'Intermediate' },
+      { key: 'age_band', label: '18 to 24' },
+    ]);
+  });
+
+  test('a value with no known label is silently skipped, never a raw key on screen', () => {
+    expect(filterChips({ days: ['sun'] }, labels)).toEqual([]);
+  });
+});
+
+describe('removeFilterChip: clears exactly one applied choice', () => {
+  test('removing scope clears the band with it', () => {
+    expect(removeFilterChip({ scope: 'place', place_band_miles: '10', partner_only: true }, 'scope'))
+      .toEqual({ partner_only: true });
+  });
+
+  test('removing one day leaves the others', () => {
+    expect(removeFilterChip({ days: ['mon', 'wed'] }, 'days:mon')).toEqual({ days: ['wed'] });
+  });
+
+  test('removing the last day clears the field entirely', () => {
+    expect(removeFilterChip({ days: ['mon'] }, 'days:mon')).toBeNull();
+  });
+
+  test('clearing the only applied filter answers null, matching normaliseFilters', () => {
+    expect(removeFilterChip({ partner_only: true }, 'partner_only')).toBeNull();
+  });
+
+  test('an unknown key is a no-op', () => {
+    expect(removeFilterChip({ goal: 'get_stronger' }, 'nonsense')).toEqual({ goal: 'get_stronger' });
+  });
+});
+
+describe('peopleCountLine: "N people" / "N+ people" (spec 1.3)', () => {
+  test('an exact count', () => {
+    expect(peopleCountLine(6, false)).toBe('6 people');
+  });
+
+  test('a truncated count reads N+', () => {
+    expect(peopleCountLine(1000, true)).toBe('1000+ people');
+  });
+
+  test('a count not read yet (null) answers the empty string, never "null people"', () => {
+    expect(peopleCountLine(null)).toBe('');
+    expect(peopleCountLine(undefined)).toBe('');
   });
 });
 

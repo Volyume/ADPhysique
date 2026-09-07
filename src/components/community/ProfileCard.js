@@ -26,6 +26,16 @@
  * Follow+Connect pair itself and is unaffected; only what this card composes
  * changes.
  *
+ * Spec 1.1 C / 1.3 (migration 163): a card's `place_label` (falling back
+ * to `area_label`) and `age_band` join the handle line when present, and
+ * `reasons` runs through `reasonLines` so the four fixed-token reasons
+ * (`same_place`, `near_place`, `within_25_miles`, `same_age_band`) read as
+ * copy rather than a raw key. When Connect would otherwise be offered but
+ * the target's own `connect_from` refuses the caller
+ * (`connectDeniedByPreference`), Follow renders with one line explaining
+ * why ("Accepts requests from people who follow them" / "Not taking
+ * requests"): the card is never silently missing its action.
+ *
  * Props:
  *   card       the profile card (user_id, handle, display_name,
  *              avatar_preset, bio, styles, goal, setting, area_label,
@@ -53,11 +63,12 @@ import Card from '../Card';
 import Button from '../Button';
 import ProfileAvatarMark from '../ProfileAvatarMark';
 import FollowButton from './FollowButton';
-import ConnectButton, { shouldOfferConnect } from './ConnectButton';
+import ConnectButton, { shouldOfferConnect, connectDeniedByPreference } from './ConnectButton';
 import { spacing, type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import {
   COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS, COMMUNITY_SETTINGS, connectionState,
+  reasonLines, TP_AGE_BANDS,
 } from '../../lib/community';
 
 const AVATAR = 40;
@@ -73,12 +84,47 @@ export function factLabels(card) {
   return out;
 }
 
-/** "Trains at PureGym Leeds · Leeds", or just whichever half was typed. */
+/**
+ * "Trains at PureGym Leeds · In Motherwell", or just whichever half is
+ * set. `place_label` (the chosen postcode district or town, migration
+ * 163) is preferred; a profile saved before 163, or one that only ever
+ * set the free-text area, falls back to `area_label`.
+ */
 export function placeLine(card) {
   const parts = [];
   if (card?.gym_label) parts.push(`Trains at ${card.gym_label}`);
-  if (card?.area_label) parts.push(card.area_label);
+  const place = card?.place_label || card?.area_label;
+  if (place) parts.push(place);
   return parts.length ? parts.join(' · ') : null;
+}
+
+/**
+ * Whether Connect would be offered here at all but for the target's own
+ * `connect_from` preference (spec 1.3): the ProfileCard-only gate that
+ * decides whether Follow gets its explanatory line.
+ */
+function showConnectDenyLine(showConnect, me, card) {
+  return showConnect && connectDeniedByPreference(me, card);
+}
+
+/**
+ * The line under Follow when Connect is hidden by the target's own
+ * preference, never by a structural reason.
+ *
+ * The card never carries the target's `connect_from` value (their own
+ * setting is not exposed to a viewer), so this cannot always name which
+ * of the two closed settings it is. When the caller already follows the
+ * target and Connect is STILL refused, the setting can only be 'nobody'
+ * (a 'followers' setting would have opened it the moment the follow was
+ * accepted), which is the one case this can state as fact rather than
+ * invite. Every other case names the one thing that might open it.
+ *
+ * @param {object} card
+ * @returns {string}
+ */
+export function connectDenyLine(card) {
+  if (card?.relationship?.following === 'accepted') return 'Not taking requests';
+  return 'Accepts requests from people who follow them';
 }
 
 export default function ProfileCard({
@@ -99,9 +145,13 @@ export default function ProfileCard({
   if (!card) return null;
   const facts = compact ? [] : factLabels(card);
   const trainingLine = facts.length ? facts.join(' · ') : null;
-  const reasonLine = reasons.length ? reasons.join(' · ') : null;
+  // Fallback rows (SD-28) always carry an empty `reasons` array, so this
+  // is naturally null for them without any extra check here.
+  const reasonLine = reasons.length ? reasonLines(reasons, card).join(' · ') : null;
   const name = card.display_name || card.handle;
-  const handleAndPlace = [`@${card.handle}`, placeLine(card)].filter(Boolean).join(' · ');
+  const ageBandLabel = TP_AGE_BANDS[card.age_band] ?? null;
+  const handleAndPlace = [`@${card.handle}`, placeLine(card), ageBandLabel]
+    .filter(Boolean).join(' · ');
 
   // V8a: one trailing action, never the Follow+Connect pair. Connect (in
   // whichever of its own states) wins over Follow whenever it is offered at
@@ -110,6 +160,10 @@ export default function ProfileCard({
   const canConnect = showConnect && shouldOfferConnect(me, card);
   const connected = canConnect && connectionState(card) === 'connected';
   const showAction = showFollow || canConnect;
+  // Spec 1.3: Connect hidden by the target's OWN preference (not by a
+  // structural reason) shows Follow with a line saying why, so the card
+  // is never quietly missing its action.
+  const denyLine = showConnectDenyLine(showConnect, me, card) ? connectDenyLine(card) : null;
 
   return (
     <Card
@@ -142,6 +196,11 @@ export default function ProfileCard({
           {trainingLine ? (
             <Text style={[styles.training, { ...t.type.caption, color: t.colors.textSecondary }]} numberOfLines={1}>
               {trainingLine}
+            </Text>
+          ) : null}
+          {denyLine ? (
+            <Text style={[styles.deny, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
+              {denyLine}
             </Text>
           ) : null}
         </View>
@@ -186,5 +245,6 @@ const styles = StyleSheet.create({
   handle: { ...type.caption, color: colors.textMuted },
   reasons: { ...type.captionStrong, color: colors.textPrimary },
   training: { ...type.caption, color: colors.textSecondary },
+  deny: { ...type.caption, color: colors.textMuted },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2 },
 });

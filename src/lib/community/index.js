@@ -117,4 +117,8 @@ export {
 export {
   FIND_MODES, FIND_MODE_ORDER, doorsFor, doorLine, doorZeroState,
   findPeople, programmePeople, gymSummary, gymSuggest,
+  FILTER_SCOPES, PLACE_BAND_MILES, PLACE_BAND_LABELS,
+  normaliseFilters, filterChips, removeFilterChip, peopleCountLine,
 } from './findPeople';
+
+export { REASON_TOKENS, reasonCopy, reasonLines } from './reasons';
