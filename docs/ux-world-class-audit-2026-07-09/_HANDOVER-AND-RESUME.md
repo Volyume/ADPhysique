@@ -1,7 +1,17 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-09-07 — COMMUNITY PRODUCT AUDIT (founder prompt 2 + gym-onboarding addition) ★
+## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
+
+Latest: founder redirected Community to progress and consistency (sessions,
+weeks in a row; never weight), programme sharing removed, user groups
+added. Decisions `docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md`,
+design `60-DESIGN-PROGRESS-COMMUNITY.md`, research 50-52, recon 51.
+Production: 160-163 + gym seed applied (workflow `apply-named-sql.yml`
+over the Management API), functions deployed, 164 + 165 applied after
+the final merge. Settled tree lint/tsc clean, 1263 suites / 18925 tests.
+NEXT: founder build go; pipeline re-run with sportscotland; device walk.
+
 
 Branch `claude/community-product-audit-m50z2y`. Folder
 `docs/community-product-audit-2026-09-07/` (README = map). Ten

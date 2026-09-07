@@ -33,7 +33,9 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## COMMUNITY PRODUCT AUDIT (2026-09-07, founder prompt 2) — LANDED on `claude/community-product-audit-m50z2y`, MERGED to main; cloud 163 WRITTEN NOT APPLIED
+## COMMUNITY PRODUCT AUDIT + GAP CLOSURE + PROGRESS/GROUPS (2026-09-07) — LANDED and MERGED to main; cloud 160-163 + gym seed APPLIED (run 5), 164 + 165 applied after the final merge
+
+Final state and decisions: `docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` (§1 decisions, §2 removal, §3 build record, §4-5 founder redirection and groups) and `60-DESIGN-PROGRESS-COMMUNITY.md`. Copy QA pass: `docs/copy-qa-2026-09-07/02-corrections.md`. NEXT: founder build go; pipeline re-run with sportscotland; device walk.
 
 Founder brief in chat: exhaustive implementation + competitive product
 audit of Community (not visual); missing vs underpowered; judge; then

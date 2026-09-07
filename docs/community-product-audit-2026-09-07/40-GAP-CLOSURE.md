@@ -43,8 +43,13 @@ holding no rows (they went live today with no users). The personal
 training-plan system is untouched; the story kind "programme" (a person's
 own plan start) stays because it is personal activity, not sharing.
 
-## 3. Build record
-(filled as lanes land)
+## 3. Build record (all landed, settled tree green)
+- Removal: client layer (R1, 14 files deleted, By Volyume tiles gone) and cloud 164 (R2: programme RPCs revoked, signals removed, `p` link retired, community-public programme branch 404).
+- Cloud 164 also: substring people search, followers list, show gym and show place toggles, my status, session references, quiet hours projection.
+- Cloud 165: consistency counters by consent (eight-week history included), `community_board` over gym (any gym), following, group and everyone, the full group model, group reports and notifications, delete_user_data re-issued.
+- Client: consistency counters and Share my consistency (C1a); board screen, Hub This week and At my gym, gym page board, profile strip with eight-week bars (B2a, F1); groups create/edit/join/request/invite/approve/remove/promote/close/board/feed/search/deep link (B2b, G1); show gym and place toggles, followers and connections screens (G1); fuzzy people search with recent searches, moderated-person notice, session suggestions with accept, tappable https links, message badge, quiet hours (G2).
+- Settled tree: lint clean, tsc clean, 1263 suites / 18925 tests. Streak copy reads "weeks in a row" (the Today ruling on the run construct still holds: nothing on Today; boards are Community, opted in).
+- Production: 160-163 applied, gym seed complete (29 brands, 12,508 sectors, 46,817 venues, 101,673 sources, 631 history), both functions deployed; 164 and 165 applied through the same workflow after this merge.
 
 ## 4. Founder redirection (chat, 2026-09-07): progress and consistency, not programmes
 Community is for seeing each other's progress and consistency: who at my
