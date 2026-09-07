@@ -76,13 +76,17 @@
 --                      tp_days, tp_time_bands, tp_sessions_band,
 --                      tp_staple_lifts, tp_experience_band, tp_programme_key,
 --                      tp_age_band, tp_updated_at;
+--                    alter table public.community_activity
+--                      drop column if exists pushed_at (security review
+--                      2026-09-06 fix, finding 4);
 --                    drop function if exists every public.community_* and
 --                      public._community_* function created below (the
---                      privilege loops in Part 13 list them all by signature);
+--                      privilege loops in Part 15 list them all by signature);
 --                    re-apply migrate_160 to restore _community_profile_card,
 --                      community_get_me, community_upsert_profile,
---                      community_block, community_unfollow, community_leave
---                      and delete_user_data to their 160 bodies;
+--                      community_block, community_unfollow,
+--                      community_remove_follower, community_leave and
+--                      delete_user_data to their 160 bodies;
 --                    re-narrow the community_activity.kind,
 --                      community_reports.target_kind and
 --                      notification_preferences.category CHECKs to their
@@ -372,6 +376,17 @@ DO $$ BEGIN
       'community_message'
     ));
 END $$;
+
+-- Security review 2026-09-06 (finding 4): the anti-replay stamp for every
+-- ACTIVITY-BACKED push kind (follow, follow_request, follow_accepted,
+-- reaction, comment, programme_used, connect_request, connect_accepted).
+-- Mirrors what `a_last_push_at` / `b_last_push_at` already do for messages on
+-- community_conversations: community-notify (service role) sets this after a
+-- successful send, and a proof row that already carries one is never pushed
+-- again, closing the replay window review-1 finding 7 only half-closed
+-- (recency landed there; the per-actor rail did not).
+ALTER TABLE public.community_activity
+  ADD COLUMN IF NOT EXISTS pushed_at timestamptz;
 
 -- ─── Part 5: the closed sets, and the rules version ──────────────────────
 --
@@ -668,9 +683,15 @@ AS $$
   );
 $$;
 
--- Under-18, for the OTHER person: their stored boolean only. Their date of
--- birth is their own row and is never read from here (data minimisation);
--- `_community_minor` is used for the CALLER, whose record this is.
+-- Under-18, for the OTHER person: the stored boolean OR a fresh derivation
+-- from THEIR OWN date of birth, exactly the posture `_community_caller_is_minor`
+-- already has for the caller (security review 2026-09-06, finding 1; lead
+-- ruling on the one open judgement). The stored column is written only when
+-- that person last saved their profile, so relying on it alone lets a birthday,
+-- or a corrected date of birth entered after profile creation, go unenforced
+-- on receipt. The date of birth itself never leaves this SECURITY DEFINER
+-- function; only the boolean does, which is the same data-minimisation
+-- posture the caller-side check already has.
 CREATE OR REPLACE FUNCTION public._community_other_is_minor(_uid uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -679,7 +700,8 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
   SELECT coalesce((SELECT p.is_minor FROM public.community_profiles p
-                   WHERE p.user_id = _uid), false);
+                   WHERE p.user_id = _uid), false)
+      OR public._community_minor(_uid);
 $$;
 
 -- The caller's own minor status: the stored boolean OR a fresh derivation, so
@@ -882,7 +904,15 @@ BEGIN
         '-infinity'::timestamptz)
       AND NOT public._community_is_blocked(v_uid, m.sender_id);
 
-    UPDATE public.community_profiles SET last_active_at = now() WHERE user_id = v_uid;
+    -- Security review 2026-09-06 (finding 1): every hub open self-heals the
+    -- stored is_minor column from a fresh derivation, so a birthday or a
+    -- corrected date of birth is never more than one open away from being
+    -- enforced everywhere that column is read (find_people, gym summary,
+    -- the profile card).
+    UPDATE public.community_profiles
+       SET last_active_at = now(),
+           is_minor = public._community_minor(v_uid)
+     WHERE user_id = v_uid;
   END IF;
 
   RETURN jsonb_build_object(
@@ -1178,8 +1208,11 @@ BEGIN
   END IF;
 
   -- SD-32: an under-18 account never sends or receives a connection request,
-  -- in either direction, whichever side it is on.
-  IF public._community_caller_is_minor(v_uid) OR v_them.is_minor THEN
+  -- in either direction, whichever side it is on. The receiving side is
+  -- checked FRESH (security review 2026-09-06, finding 1) rather than off
+  -- v_them.is_minor alone, which is only as current as the target's last
+  -- profile save.
+  IF public._community_caller_is_minor(v_uid) OR public._community_other_is_minor(_target) THEN
     RAISE EXCEPTION USING message = 'minor_restricted';
   END IF;
 
@@ -1277,6 +1310,9 @@ BEGIN
   WHERE user_a = v_a AND user_b = v_b AND state = 'requested' AND requester_id = _requester;
   IF NOT FOUND THEN RAISE EXCEPTION USING message = 'not_found'; END IF;
 
+  -- Security review 2026-09-06 (finding 10): no rail existed on this RPC.
+  PERFORM public._community_rate_check(v_uid, 'respond_connect', 120, 120, interval '1 hour');
+
   IF NOT _accept THEN
     UPDATE public.community_connections
     SET state = 'declined', responded_at = now(), declined_at = now(), withdrawn_at = NULL
@@ -1287,6 +1323,15 @@ BEGIN
 
   IF public._community_is_blocked(v_uid, _requester) THEN
     RAISE EXCEPTION USING message = 'blocked';
+  END IF;
+
+  -- Security review 2026-09-06 (finding 1): the accept side never applied a
+  -- minor test at all, so a request that reached this table before either
+  -- side was a minor could still be accepted into a live connection and
+  -- messaging channel. Declining stays unguarded, deliberately: it creates no
+  -- tie and must remain available regardless of either person's age.
+  IF public._community_caller_is_minor(v_uid) OR public._community_other_is_minor(_requester) THEN
+    RAISE EXCEPTION USING message = 'minor_restricted';
   END IF;
 
   UPDATE public.community_connections
@@ -1397,6 +1442,8 @@ DECLARE
   v_lid      uuid;
 BEGIN
   PERFORM public._community_require_profile(v_uid, false);
+  -- Security review 2026-09-06 (finding 10): no rail existed on this RPC.
+  PERFORM public._community_rate_check(v_uid, 'list_connections', 120, 120, interval '1 hour');
   v_target := coalesce(_uid, v_uid);
 
   IF v_target <> v_uid AND NOT public._community_can_view(v_uid, v_target) THEN
@@ -1574,6 +1621,16 @@ BEGIN
             OR v_prog ~ '^style:[a-z0-9_]{1,64}$') THEN
       RAISE EXCEPTION USING message = 'invalid_input';
     END IF;
+    -- Security review 2026-09-06 (finding 8): the shape check alone let a
+    -- caller put themselves in the `programme` door for a programme they
+    -- have never used, followers-only to them, or owned by someone who has
+    -- blocked them, carrying the fixed claim "On the same programme". A uuid
+    -- must be a programme the caller may actually view, or their own, else
+    -- it is dropped rather than the whole save refused: a programme that has
+    -- since gone private should simply stop being shown.
+    IF v_prog !~ '^style:' AND NOT public._community_can_view_programme(v_uid, v_prog::uuid) THEN
+      v_prog := NULL;
+    END IF;
   END IF;
 
   -- The age band NEVER crosses the wire as a value: the payload carries a
@@ -1605,6 +1662,10 @@ BEGIN
       END;
     END IF;
   END IF;
+
+  -- Security review 2026-09-06 (finding 10): no rail existed on this RPC.
+  -- Runs last, after every validation, so a rejected save costs nothing.
+  PERFORM public._community_rate_check(v_uid, 'update_training_profile', 120, 120, interval '1 hour');
 
   UPDATE public.community_profiles SET
     tp_days            = v_days,
@@ -1679,6 +1740,9 @@ BEGIN
       'same_gym_only', v_same);
   END IF;
 
+  -- Security review 2026-09-06 (finding 10): no rail existed on this RPC.
+  PERFORM public._community_rate_check(v_uid, 'set_partner', 120, 120, interval '1 hour');
+
   UPDATE public.community_profiles
   SET open_to_partner = _open, partner_prefs = v_out
   WHERE user_id = v_uid;
@@ -1702,6 +1766,8 @@ BEGIN
     RAISE EXCEPTION USING message = 'invalid_input';
   END IF;
   PERFORM public._community_require_profile(v_uid, true);
+  -- Security review 2026-09-06 (finding 10): no rail existed on this RPC.
+  PERFORM public._community_rate_check(v_uid, 'set_connect_from', 120, 120, interval '1 hour');
 
   UPDATE public.community_profiles SET connect_from = _value WHERE user_id = v_uid;
   RETURN public._community_profile_card(v_uid, v_uid);
@@ -1720,6 +1786,8 @@ DECLARE
 BEGIN
   IF _value IS NULL THEN RAISE EXCEPTION USING message = 'invalid_input'; END IF;
   PERFORM public._community_require_profile(v_uid, true);
+  -- Security review 2026-09-06 (finding 10): no rail existed on this RPC.
+  PERFORM public._community_rate_check(v_uid, 'set_show_programmes', 120, 120, interval '1 hour');
 
   UPDATE public.community_profiles SET show_programmes = _value WHERE user_id = v_uid;
   RETURN public._community_profile_card(v_uid, v_uid);
@@ -1776,6 +1844,10 @@ BEGIN
     RAISE EXCEPTION USING message = 'invalid_input';
   END IF;
   v_me := public._community_require_profile(v_uid, false);
+  -- Security review 2026-09-06 (finding 10): the most expensive read in this
+  -- file, up to 300 profiles with four correlated subqueries each, had no
+  -- rail at all.
+  PERFORM public._community_rate_check(v_uid, 'find_people', 120, 120, interval '1 hour');
 
   IF _cursor IS NOT NULL AND btrim(_cursor) <> '' THEN
     IF btrim(_cursor) !~ '^[0-9]{1,6}$' THEN
@@ -1792,9 +1864,25 @@ BEGIN
     v_key := v_me.tp_programme_key;
     IF v_key LIKE 'style:%' THEN
       v_label := public._community_style_label(substring(v_key FROM 7));
-    ELSIF v_key IS NOT NULL THEN
+    -- Security review 2026-09-06 (finding 2): the label must re-ask the same
+    -- "may I see this programme" predicate community_dimension already gates
+    -- on, rather than reading the title with no visibility, owner-status or
+    -- block check at all. `tp_programme_key` is validated at write time now
+    -- (finding 8), so this is belt and braces against a value written before
+    -- that validation existed.
+    ELSIF v_key IS NOT NULL AND public._community_can_view_programme(v_uid, v_key::uuid) THEN
       SELECT g.title INTO v_label FROM public.community_programmes g
-      WHERE g.id = v_key::uuid AND g.status = 'visible';
+      WHERE g.id = v_key::uuid;
+    END IF;
+  ELSIF _mode = 'partners' THEN
+    -- Security review 2026-09-06 (finding 5): the label must say what the
+    -- scan and count actually restrict to, since the client renders this
+    -- string rather than composing its own claim.
+    IF coalesce((v_me.partner_prefs ->> 'same_gym_only')::boolean, false)
+       AND v_me.gym_key IS NOT NULL THEN
+      v_label := 'at your gym';
+    ELSE
+      v_label := 'in your area';
     END IF;
   END IF;
 
@@ -1818,8 +1906,14 @@ BEGIN
       AND NOT public._community_is_connected(v_uid, p.user_id)
       AND (_mode <> 'gym'       OR p.gym_key = v_key)
       AND (_mode <> 'area'      OR p.area_key = v_key)
-      AND (_mode <> 'programme' OR p.tp_programme_key = v_key)
+      AND (_mode <> 'programme' OR (p.tp_programme_key = v_key AND p.show_programmes = true))
       AND (_mode <> 'partners'  OR p.open_to_partner = true)
+      -- Security review 2026-09-06 (finding 5): "same gym only" is a stored
+      -- preference (SD-25), not an unread column. A person who switched it
+      -- on is listed only to callers who share their gym.
+      AND (_mode <> 'partners'
+           OR NOT coalesce((p.partner_prefs ->> 'same_gym_only')::boolean, false)
+           OR (v_me.gym_key IS NOT NULL AND p.gym_key = v_me.gym_key))
     ORDER BY p.last_active_at DESC
     LIMIT 300
   LOOP
@@ -1983,8 +2077,11 @@ BEGIN
     AND NOT public._community_is_connected(v_uid, p.user_id)
     AND (_mode <> 'gym'       OR p.gym_key = v_key)
     AND (_mode <> 'area'      OR p.area_key = v_key)
-    AND (_mode <> 'programme' OR p.tp_programme_key = v_key)
-    AND (_mode <> 'partners'  OR p.open_to_partner = true);
+    AND (_mode <> 'programme' OR (p.tp_programme_key = v_key AND p.show_programmes = true))
+    AND (_mode <> 'partners'  OR p.open_to_partner = true)
+    AND (_mode <> 'partners'
+         OR NOT coalesce((p.partner_prefs ->> 'same_gym_only')::boolean, false)
+         OR (v_me.gym_key IS NOT NULL AND p.gym_key = v_me.gym_key));
 
   RETURN jsonb_build_object(
     'mode',   _mode,
@@ -2089,6 +2186,11 @@ DECLARE
   v_posts   jsonb := '[]'::jsonb;
 BEGIN
   IF v_key IS NULL THEN RAISE EXCEPTION USING message = 'invalid_input'; END IF;
+  -- Security review 2026-09-06 (finding 7): any signed-in account could call
+  -- this for any gym key with no profile and no rail, walking the directory
+  -- gym by gym.
+  PERFORM public._community_require_profile(v_uid, false);
+  PERFORM public._community_rate_check(v_uid, 'gym_summary', 120, 120, interval '1 hour');
 
   SELECT gym_label INTO v_label FROM public.community_profiles
   WHERE gym_key = v_key AND status = 'active' AND visibility = 'public'
@@ -2219,13 +2321,25 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 DECLARE
-  v_uid  uuid := public._community_caller();
-  v_area text := nullif(btrim(coalesce(_area_key, '')), '');
-  v_pre  text := coalesce(public._community_fold(_prefix), '');
-  v_out  jsonb := '[]'::jsonb;
+  v_uid   uuid := public._community_caller();
+  v_me    public.community_profiles%ROWTYPE;
+  v_area  text := nullif(btrim(coalesce(_area_key, '')), '');
+  v_pre   text := coalesce(public._community_fold(_prefix), '');
+  v_out   jsonb := '[]'::jsonb;
 BEGIN
+  -- Security review 2026-09-06 (finding 7): any signed-in account could
+  -- typeahead every gym label in any town in the country by supplying an
+  -- arbitrary area key, chained with community_gym_summary into a walkable
+  -- public directory. A profile and a rail are required, and an explicit
+  -- area key must be the caller's own.
+  v_me := public._community_require_profile(v_uid, false);
+  PERFORM public._community_rate_check(v_uid, 'gym_suggest', 120, 120, interval '1 hour');
+
+  IF v_area IS NOT NULL AND v_area <> coalesce(v_me.area_key, '') THEN
+    RAISE EXCEPTION USING message = 'not_allowed';
+  END IF;
   IF v_area IS NULL THEN
-    SELECT area_key INTO v_area FROM public.community_profiles WHERE user_id = v_uid;
+    v_area := v_me.area_key;
   END IF;
   IF v_area IS NULL THEN
     RETURN jsonb_build_object('gyms', '[]'::jsonb);
@@ -2434,7 +2548,9 @@ BEGIN
   IF public._community_is_blocked(v_uid, _target) THEN
     RAISE EXCEPTION USING message = 'blocked';
   END IF;
-  IF public._community_caller_is_minor(v_uid) OR v_them.is_minor THEN
+  -- Security review 2026-09-06 (finding 1): the receiving side is checked
+  -- fresh, not off the target's stored is_minor column alone.
+  IF public._community_caller_is_minor(v_uid) OR public._community_other_is_minor(_target) THEN
     RAISE EXCEPTION USING message = 'minor_restricted';
   END IF;
   IF NOT public._community_is_connected(v_uid, _target) THEN
@@ -2584,9 +2700,13 @@ BEGIN
   WHERE (follower_id = v_uid AND followee_id = _target)
      OR (follower_id = _target AND followee_id = v_uid);
 
-  -- The connection goes with them, in whichever state it was: a pending
-  -- request from a blocked person must not survive the block.
-  DELETE FROM public.community_connections WHERE user_a = v_a AND user_b = v_b;
+  -- The connection goes with them, EXCEPT a declined row: a pending request
+  -- or a live tie must not survive the block, but a declined row is the
+  -- 30-day re-request bar (community_connect reads it from declined_at), and
+  -- deleting it here let a block-then-unblock erase that bar (security
+  -- review 2026-09-06, finding 3).
+  DELETE FROM public.community_connections
+  WHERE user_a = v_a AND user_b = v_b AND state IN ('requested', 'connected');
 
   -- The conversation closes for both. The messages are not deleted here
   -- (erasure is community_leave and delete_user_data), but neither person
@@ -2633,6 +2753,41 @@ BEGIN
   END IF;
 
   RETURN jsonb_build_object('state', 'none');
+END $$;
+
+-- Removing a follower. 160's body, plus community_unfollow's connection
+-- branch: security review 2026-09-06 (finding 9) found that removing a
+-- follower left a live CONNECTION standing (the card still said "Connected",
+-- messaging still worked), which contradicts blueprint section 1's
+-- "Connected implies following both ways". Re-issued here for the same
+-- reason Part 14's other re-issues are: the connection and conversation
+-- tables this needs to touch do not exist until this migration.
+CREATE OR REPLACE FUNCTION public.community_remove_follower(_follower uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_uid uuid := public._community_caller();
+  v_a   uuid;
+  v_b   uuid;
+BEGIN
+  IF _follower IS NULL THEN RAISE EXCEPTION USING message = 'invalid_input'; END IF;
+  DELETE FROM public.community_follows
+  WHERE follower_id = _follower AND followee_id = v_uid;
+
+  v_a := least(v_uid, _follower);
+  v_b := greatest(v_uid, _follower);
+  IF public._community_is_connected(v_uid, _follower) THEN
+    DELETE FROM public.community_connections
+    WHERE user_a = v_a AND user_b = v_b AND state = 'connected';
+
+    UPDATE public.community_conversations SET closed_at = now()
+    WHERE user_a = v_a AND user_b = v_b AND closed_at IS NULL;
+  END IF;
+
+  RETURN jsonb_build_object('ok', true);
 END $$;
 
 -- Leaving Community. 160's body, plus the three new tables two-sided: a
@@ -2751,6 +2906,7 @@ BEGIN
     'community_upsert_profile(jsonb)',
     'community_block(uuid)',
     'community_unfollow(uuid)',
+    'community_remove_follower(uuid)',
     'community_leave()'
   ] LOOP
     EXECUTE format('REVOKE ALL ON FUNCTION public.%s FROM PUBLIC, anon', sig);

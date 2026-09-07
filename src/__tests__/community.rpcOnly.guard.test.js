@@ -477,9 +477,51 @@ describe('161: the new refusals and the rules gate exist', () => {
     for (const fn of ['community_connect', 'community_send_message']) {
       const at = CODE_161.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);
       const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
-      expect(body).toMatch(/_community_caller_is_minor\(v_uid\) OR v_them\.is_minor/);
+      // Security review 2026-09-06 (finding 1): the receiving side must not
+      // trust the target's stored is_minor column alone (`v_them.is_minor`
+      // is only as current as their last profile save) - it is derived FRESH
+      // via _community_other_is_minor, which re-checks the target's own date
+      // of birth inside this SECURITY DEFINER function.
+      expect(body).toMatch(
+        /_community_caller_is_minor\(v_uid\) OR public\._community_other_is_minor\(_target\)/,
+      );
       expect(body).toContain("RAISE EXCEPTION USING message = 'minor_restricted'");
+      expect(body).not.toMatch(/OR v_them\.is_minor\b/);
     }
+  });
+
+  /**
+   * Security review 2026-09-06, finding 1 (P0): the other-side minor gate was
+   * a stale stored boolean nothing refreshed, so an adult could connect to
+   * and message a child whose profile predates their date of birth reaching
+   * the cloud. The lead ruling: the RECEIVING side of connect,
+   * respond_connect and send_message derives minor status FRESH from the
+   * target's own date of birth inside the SECURITY DEFINER function (the date
+   * itself never leaves the function); community_get_me additionally writes
+   * the fresh value back so every stored-column read elsewhere self-heals.
+   */
+  test('the receiving side of connect, respond_connect and send_message derives minor status fresh, not from a stale stored flag (security review finding 1)', () => {
+    const getMeAt = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_get_me()');
+    const getMeBody = CODE_161.slice(getMeAt, CODE_161.indexOf('END $$;', getMeAt));
+    expect(getMeBody).toMatch(/is_minor\s*=\s*public\._community_minor\(v_uid\)/);
+
+    const respondAt = CODE_161.indexOf(
+      'CREATE OR REPLACE FUNCTION public.community_respond_connect(',
+    );
+    const respondBody = CODE_161.slice(respondAt, CODE_161.indexOf('END $$;', respondAt));
+    expect(respondBody).toMatch(
+      /_community_caller_is_minor\(v_uid\) OR public\._community_other_is_minor\(_requester\)/,
+    );
+    expect(respondBody).toContain("RAISE EXCEPTION USING message = 'minor_restricted'");
+
+    // The helper itself must derive fresh (call _community_minor), not merely
+    // read the stored column - reading only the column is the exact bug the
+    // P0 finding names.
+    const helperAt = CODE_161.indexOf(
+      'CREATE OR REPLACE FUNCTION public._community_other_is_minor(',
+    );
+    const helperBody = CODE_161.slice(helperAt, CODE_161.indexOf('$$;', CODE_161.indexOf('AS $$', helperAt)));
+    expect(helperBody).toContain('public._community_minor(_uid)');
   });
 
   test('messaging is refused unless the two people are connected', () => {
@@ -525,5 +567,94 @@ describe('161: nothing in this campaign reads body, food or coaching data (SD-30
     );
     for (const table of forbidden) expect(beforeErasure).not.toContain(table);
     expect(beforeErasure).toContain('user_body_profile');
+  });
+});
+
+/**
+ * ── security review 2026-09-06, remaining P1/P2 fixes ─────────────────────
+ * `72-REVIEW-SECURITY-CONNECTIONS.md`. Finding 1 (P0) is pinned above,
+ * alongside the connect/send_message tests it extends.
+ */
+describe('161: security review 2026-09-06 - push replay, programme door, block', () => {
+  test('community_activity gains pushed_at (finding 4, additive)', () => {
+    expect(CODE_161).toMatch(
+      /ALTER TABLE public\.community_activity\s+ADD COLUMN IF NOT EXISTS pushed_at timestamptz/,
+    );
+  });
+
+  test('find_people programme mode gates the label the same way community_dimension does (finding 2)', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_find_people(');
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    expect(body).toMatch(
+      /ELSIF v_key IS NOT NULL AND public\._community_can_view_programme\(v_uid, v_key::uuid\) THEN/,
+    );
+  });
+
+  test('tp_programme_key is dropped to null unless the caller may view that programme (finding 8)', () => {
+    const at = CODE_161.indexOf(
+      'CREATE OR REPLACE FUNCTION public.community_update_training_profile(',
+    );
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    expect(body).toMatch(
+      /NOT public\._community_can_view_programme\(v_uid, v_prog::uuid\)/,
+    );
+  });
+
+  test('community_block does not delete a declined connection row (finding 3)', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_block(');
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    const del = body.match(/DELETE FROM public\.community_connections\s+WHERE[^;]*;/);
+    expect(del).not.toBeNull();
+    // The declined bar (community_connect reads it from declined_at) must
+    // survive: only requested and connected rows may be deleted, and a
+    // block-then-unblock must not be able to erase a decline.
+    expect(del[0]).toMatch(/state IN \('requested', 'connected'\)/);
+    expect(del[0]).not.toMatch(/^DELETE FROM public\.community_connections\s+WHERE user_a = v_a AND user_b = v_b;$/);
+  });
+
+  test('partners mode honours partner_prefs.same_gym_only (finding 5)', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_find_people(');
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    const clause = /partner_prefs ->> 'same_gym_only'\)::boolean, false\)\s*\n\s*OR \(v_me\.gym_key IS NOT NULL AND p\.gym_key = v_me\.gym_key\)/;
+    expect(body).toMatch(clause);
+  });
+
+  test('the programme door honours show_programmes (finding 6)', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_find_people(');
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    expect(body).toMatch(/p\.tp_programme_key = v_key AND p\.show_programmes = true/);
+  });
+
+  test('community_remove_follower also removes a live connection and closes the conversation (finding 9)', () => {
+    const at = CODE_161.indexOf('CREATE OR REPLACE FUNCTION public.community_remove_follower(');
+    expect(at).toBeGreaterThan(-1);
+    const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+    expect(body).toMatch(/_community_is_connected\(v_uid, _follower\)/);
+    expect(body).toMatch(
+      /DELETE FROM public\.community_connections\s+WHERE user_a = v_a AND user_b = v_b AND state = 'connected'/,
+    );
+    expect(body).toMatch(/UPDATE public\.community_conversations SET closed_at = now\(\)/);
+  });
+
+  test('the previously un-railed RPCs, and find_people, now call the rate check', () => {
+    for (const fn of [
+      'community_respond_connect', 'community_update_training_profile',
+      'community_set_partner', 'community_set_connect_from',
+      'community_set_show_programmes', 'community_list_connections',
+      'community_gym_summary', 'community_gym_suggest', 'community_find_people',
+    ]) {
+      const at = CODE_161.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);
+      expect(at).toBeGreaterThan(-1);
+      const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+      expect(body).toContain('_community_rate_check(');
+    }
+  });
+
+  test('gym_summary and gym_suggest require a Community profile', () => {
+    for (const fn of ['community_gym_summary', 'community_gym_suggest']) {
+      const at = CODE_161.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);
+      const body = CODE_161.slice(at, CODE_161.indexOf('END $$;', at));
+      expect(body).toContain('_community_require_profile(');
+    }
   });
 });

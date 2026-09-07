@@ -28,21 +28,21 @@ holes in the model.
 
 ## Findings
 
-| # | Sev | Site | Finding |
-|---|-----|------|---------|
-| 1 | **P0** | `migrate_161:1182, :2437, :674` | Minors can RECEIVE connection requests and messages: the other-side gate is a stale stored boolean nothing refreshes |
-| 2 | **P1** | `migrate_161:1791-1795` | `find_people('programme')` returns any programme's title past visibility, owner status and blocks |
-| 3 | **P1** | `migrate_161:2588` + `migrate_160:1958` | The 30-day re-request bar is erased by block then unblock |
-| 4 | **P1** | `community-notify:254-290` | `connect_request` / `connect_accepted` have no collapse and no rate rail: 10-minute push replay |
-| 5 | **P1** | `migrate_161:1818-1822, :1985` | `partners` mode ignores `partner_prefs.same_gym_only` and counts globally |
-| 6 | P2 | `migrate_161:1818` | `find_people('programme')` ignores `show_programmes` |
-| 7 | P2 | `migrate_161:2215-2262, :2071-2091` | Gym label and member enumeration: any area key, any gym key, no profile needed, no rail |
-| 8 | P2 | `migrate_161:1571-1577` | `tp_programme_key` accepts any uuid: unearned "On the same programme" |
-| 9 | P2 | `migrate_160:1840` | `community_remove_follower` leaves a live connection with one follow edge |
-| 10 | P2 | six RPCs | No rate rail on the expensive reads and the settings writes |
-| 11 | P3 | `migrate_161:674, :701, :431` | Three helpers declared, granted, never called (review-1 finding 3 pattern) |
-| 12 | P3 | `migrate_161:2361, :718-765` | Removal-closed conversation still readable by id; unviewable `ref_id` still returned |
-| 13 | P3 | `database.js:3888`, `trainingProfile.js:396` | `ws.*` selects weight into memory; share-settings keys unguarded on a null uid |
+| # | Sev | Site | Finding | Status |
+|---|-----|------|---------|--------|
+| 1 | **P0** | `migrate_161:1182, :2437, :674` | Minors can RECEIVE connection requests and messages: the other-side gate is a stale stored boolean nothing refreshes | **Fixed (commit pending)** — `_community_other_is_minor` now derives fresh (stored OR `_community_minor(_uid)`); `community_connect` and `community_send_message` call it on the target; `community_respond_connect` gates the accept path the same way; `community_get_me` writes the fresh `is_minor` back on every hub open |
+| 2 | **P1** | `migrate_161:1791-1795` | `find_people('programme')` returns any programme's title past visibility, owner status and blocks | **Fixed (commit pending)** — the label lookup is gated by `_community_can_view_programme`, exactly as `community_dimension` gates the same lookup |
+| 3 | **P1** | `migrate_161:2588` + `migrate_160:1958` | The 30-day re-request bar is erased by block then unblock | **Fixed (commit pending)** — `community_block` now deletes only `requested`/`connected` connection rows; a `declined` row (the 30-day bar) survives a block and an unblock |
+| 4 | **P1** | `community-notify:254-290` | `connect_request` / `connect_accepted` have no collapse and no rate rail: 10-minute push replay | **Fixed (commit pending)** — additive `community_activity.pushed_at` (migrate_161); community-notify skips when the matching activity row already carries `pushed_at` and stamps it after a successful send, for every activity-backed kind (follow, follow_request, follow_accepted, reaction, comment, programme_used, connect_request, connect_accepted) |
+| 5 | **P1** | `migrate_161:1818-1822, :1985` | `partners` mode ignores `partner_prefs.same_gym_only` and counts globally | **Fixed (commit pending)** — the scan and the count both add the `same_gym_only` restriction to the caller's own `gym_key`; the RPC's `label` field now says "at your gym" or "in your area" truthfully (client wiring of that label is unchanged, out of scope for this pass per the brief) |
+| 6 | P2 | `migrate_161:1818` | `find_people('programme')` ignores `show_programmes` | **Fixed (commit pending)** — folded into the same clause as the programme-key match, in both the scan and the count |
+| 7 | P2 | `migrate_161:2215-2262, :2071-2091` | Gym label and member enumeration: any area key, any gym key, no profile needed, no rail | **Fixed (commit pending)** — both RPCs now require a Community profile and sit on a 120/hour rail; `community_gym_suggest` refuses an explicit `_area_key` that is not the caller's own |
+| 8 | P2 | `migrate_161:1571-1577` | `tp_programme_key` accepts any uuid: unearned "On the same programme" | **Fixed (commit pending)** — a uuid-form value is dropped to null unless `_community_can_view_programme(v_uid, ...)` holds; `style:` values are unaffected |
+| 9 | P2 | `migrate_160:1840` | `community_remove_follower` leaves a live connection with one follow edge | **Fixed (commit pending)** — re-issued in migrate_161 with `community_unfollow`'s connection branch: a connection is removed and its conversation closed when the two were connected |
+| 10 | P2 | six RPCs | No rate rail on the expensive reads and the settings writes | **Fixed (commit pending)** — `community_respond_connect`, `community_update_training_profile`, `community_set_partner`, `community_set_connect_from`, `community_set_show_programmes`, `community_list_connections`, `community_gym_summary`, `community_gym_suggest` and `community_find_people` all now call `_community_rate_check`, at 120/hour where the review did not name a specific number (find_people, gym_summary and gym_suggest were named at 120/hour and use that figure) |
+| 11 | P3 | `migrate_161:674, :701, :431` | Three helpers declared, granted, never called (review-1 finding 3 pattern) | Partially addressed as a side effect — `_community_other_is_minor` is now called (finding 1's fix). `_community_conversation_id` and `_community_tp_age_bands_list` remain unused. Not otherwise fixed: out of scope (P3, this pass covers P0/P1/P2 only) |
+| 12 | P3 | `migrate_161:2361, :718-765` | Removal-closed conversation still readable by id; unviewable `ref_id` still returned | Not fixed: out of scope (P3, this pass covers P0/P1/P2 only) |
+| 13 | P3 | `database.js:3888`, `trainingProfile.js:396` | `ws.*` selects weight into memory; share-settings keys unguarded on a null uid | Not fixed: out of scope (P3, this pass covers P0/P1/P2 only; `database.js` and `src/lib/community` were also off-limits for this brief) |
 
 ---
 

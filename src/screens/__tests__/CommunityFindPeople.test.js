@@ -110,14 +110,22 @@ describe('lineFor: the three honest answers a door can give (SD-28)', () => {
   test('an available door with people behind it answers the plain count line', () => {
     const door = gymDoor();
     expect(lineFor(door, 6)).toBe('gym-line-6');
-    expect(doorLine).toHaveBeenCalledWith(door, 6);
+    // The third argument is the server's scope for the partners door; a
+    // plain count carries none.
+    expect(doorLine).toHaveBeenCalledWith(door, 6, null);
   });
 
   test('a count that has not been read yet (null) is not read as a zero', () => {
     const door = gymDoor();
     expect(lineFor(door, null)).toBe('gym-line-null');
-    expect(doorLine).toHaveBeenCalledWith(door, null);
+    expect(doorLine).toHaveBeenCalledWith(door, null, null);
     expect(doorZeroState).not.toHaveBeenCalled();
+  });
+
+  test('the partners door carries the server scope so the line never guesses where the count applies', () => {
+    const door = { ...gymDoor(), mode: 'partners', label: 'Open to training together', subtitle: 'Lifters open to training together' };
+    lineFor(door, { count: 3, scope: 'at your gym' });
+    expect(doorLine).toHaveBeenCalledWith(door, 3, 'at your gym');
   });
 });
 

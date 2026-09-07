@@ -128,7 +128,7 @@ export function doorsFor(me) {
  * @param {number|null} [count]
  * @returns {string}
  */
-export function doorLine(door, count = null) {
+export function doorLine(door, count = null, scope = null) {
   if (!door?.available) return door?.requirement ?? '';
   const n = Number.isFinite(Number(count)) && count !== null ? Number(count) : null;
   if (n === null) return door.subtitle;
@@ -140,7 +140,10 @@ export function doorLine(door, count = null) {
     case 'programme':
       return `On your programme · ${n}`;
     case 'partners':
-      return `${n} in your area`;
+      // The server says where the count applies ("at your gym" when the
+      // person set same gym only, else "in your area"); the client never
+      // guesses (security review 72, finding 5).
+      return `${n} ${scope || 'in your area'}`;
     default:
       return door.subtitle;
   }

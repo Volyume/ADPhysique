@@ -63,8 +63,10 @@ const REQUIREMENT_ROUTE = {
  */
 export function lineFor(door, count) {
   if (!door?.available) return door?.requirement ?? '';
-  if (count === 0) return doorZeroState(door);
-  return doorLine(door, count);
+  const n = count !== null && typeof count === 'object' ? count.count : count;
+  const scope = count !== null && typeof count === 'object' ? count.scope : null;
+  if (n === 0) return doorZeroState(door);
+  return doorLine(door, n, scope);
 }
 
 function DoorRow({ door, count, onPress }) {
@@ -121,7 +123,7 @@ export default function CommunityFindPeopleScreen({ navigation }) {
     const results = await Promise.all(open.map(async (door) => {
       try {
         const page = await findPeople(door.mode, { limit: 1 });
-        return [door.mode, page.count];
+        return [door.mode, { count: page.count, scope: page.label ?? null }];
       } catch (_e) {
         return [door.mode, null];
       }

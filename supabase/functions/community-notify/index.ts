@@ -32,6 +32,13 @@
 //   5. Checks the recipient's open ED/wellbeing flag EXACTLY as partner-cheer
 //      does and fails closed: any flag, or any read error, downgrades to
 //      in-app only. Pushing at a flagged user is the harm pattern.
+//   5b. Security review 2026-09-06 (finding 4): for every kind proved by a
+//      community_activity row (everything except `message`), refuses to push
+//      twice off the same proof. The row's `pushed_at` column (migrate_161) is
+//      read here and stamped after a successful send, the same shape as the
+//      message collapse in 4a; without this, connect_request and
+//      connect_accepted (and every older kind) could be replayed for as long
+//      as the ten-minute recency window in step 2 lasted.
 //   6. Otherwise invokes send-push (service role) with the Community payload.
 //
 // Request body:
@@ -104,6 +111,16 @@ const ALL_KINDS: Kind[] = [
 // their message pushes; it is not a block, so the conversation still works
 // and nothing else changes (discovery blueprint section 1).
 const MUTE_SILENCED_KINDS: Kind[] = [...CONNECT_KINDS, 'message']
+
+// Every kind that proves itself with a community_activity row rather than a
+// conversation (security review 2026-09-06, finding 4). `message` is excluded:
+// it already has its own per-conversation 15-minute collapse below, and never
+// writes a community_activity row.
+const ACTIVITY_BACKED_KINDS: Kind[] = [
+  'follow', 'follow_request', 'follow_accepted',
+  'reaction', 'comment', 'programme_used',
+  'connect_request', 'connect_accepted',
+]
 
 // Fifteen minutes: at most one push per conversation while the recipient has
 // not read it (blueprint section 2).
@@ -208,10 +225,17 @@ serve(async (req: Request) => {
   const sinceIso = new Date(sinceMs).toISOString()
 
   // Step 2: prove the action. Each branch asserts BOTH that the caller is the
-  // actor and that the recipient really is the other party.
+  // actor and that the recipient really is the other party. For every
+  // ACTIVITY_BACKED_KINDS member, the branch also names the community_activity
+  // row that same action wrote (`_community_add_activity` in migrate_160 /
+  // migrate_161), so the replay guard below can find and stamp it.
   let verified = false
+  let activityTargetKind: string | null = null
+  let activityTargetId: string | null = null
   try {
     if (kind === 'follow' || kind === 'follow_request') {
+      activityTargetKind = 'profile'
+      activityTargetId = actorId
       const { data } = await admin
         .from('community_follows')
         .select('follower_id')
@@ -222,6 +246,8 @@ serve(async (req: Request) => {
         .maybeSingle()
       verified = !!data
     } else if (kind === 'follow_accepted') {
+      activityTargetKind = 'profile'
+      activityTargetId = actorId
       // The actor accepted; the recipient is the person who had asked.
       const { data } = await admin
         .from('community_follows')
@@ -252,6 +278,8 @@ serve(async (req: Request) => {
       }
       verified = accepted
     } else if (kind === 'connect_request' || kind === 'connect_accepted') {
+      activityTargetKind = 'profile'
+      activityTargetId = actorId
       // The connection row is the proof, and it is ONE row for the pair
       // (user_a < user_b), so the pair is checked whichever way round the two
       // ids sort. For a request the caller must be the requester; for an
@@ -308,6 +336,8 @@ serve(async (req: Request) => {
         && ((conv.user_a === actorId && conv.user_b === targetUserId)
           || (conv.user_a === targetUserId && conv.user_b === actorId))
     } else if (kind === 'reaction') {
+      activityTargetKind = 'post'
+      activityTargetId = refId
       const { data } = await admin
         .from('community_reactions')
         .select('post_id, community_posts!inner(author_id)')
@@ -329,6 +359,11 @@ serve(async (req: Request) => {
         .maybeSingle()
       if (data) {
         const row = data as { target_kind: string; target_id: string }
+        // The activity row _community_add_activity wrote carries the
+        // comment's OWN target (the post or programme it is on), not the
+        // comment's id, which is what `refId` names here.
+        activityTargetKind = row.target_kind
+        activityTargetId = row.target_id
         if (row.target_kind === 'post') {
           const { data: post } = await admin
             .from('community_posts').select('author_id').eq('id', row.target_id).maybeSingle()
@@ -340,6 +375,8 @@ serve(async (req: Request) => {
         }
       }
     } else {
+      activityTargetKind = 'programme'
+      activityTargetId = refId
       const { data } = await admin
         .from('community_programme_uses')
         .select('programme_id, community_programmes!inner(owner_id)')
@@ -428,6 +465,48 @@ serve(async (req: Request) => {
     return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
   }
 
+  // Step 5b: the activity replay guard (security review 2026-09-06,
+  // finding 4). Every kind proved above by a community_activity row is
+  // guarded by the same row's `pushed_at` column: a caller re-POSTing this
+  // function against the same proof, inside the same ten-minute recency
+  // window, gets exactly one push out of it rather than one per call.
+  // connect_request and connect_accepted had no rail of any kind before this.
+  let activityRowId: string | null = null
+  if ((ACTIVITY_BACKED_KINDS as string[]).includes(kind)) {
+    if (!activityTargetKind || !activityTargetId) {
+      // The action was proved above, but nothing here can name the proof row
+      // to guard: fail closed rather than push with no replay protection.
+      return jsonResponse({ ok: false, error: 'not_verified' }, 403)
+    }
+    const { data: act, error: actErr } = await admin
+      .from('community_activity')
+      .select('id, pushed_at')
+      .eq('user_id', targetUserId)
+      .eq('actor_id', actorId)
+      .eq('kind', kind)
+      .eq('target_kind', activityTargetKind)
+      .eq('target_id', activityTargetId)
+      .gte('created_at', sinceIso)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (actErr) {
+      console.error('[community-notify] activity read failed, holding push', actErr)
+      return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
+    }
+    const activityRow = act as { id?: string; pushed_at?: string | null } | null
+    if (!activityRow) {
+      // The action is proved, but the activity row _community_add_activity
+      // should have written for it is missing: fail closed rather than push
+      // with nothing to stamp.
+      return jsonResponse({ ok: false, error: 'not_verified' }, 403)
+    }
+    if (activityRow.pushed_at) {
+      return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
+    }
+    activityRowId = activityRow.id ?? null
+  }
+
   // Step 5a: the fifteen-minute collapse, for a message only. One push per
   // conversation while the recipient has not read it: a second message inside
   // the window is a buzz they do not need, and the unread count is already
@@ -511,6 +590,17 @@ serve(async (req: Request) => {
         .eq('id', refId)
       if (stampErr) {
         console.error('[community-notify] push stamp failed', stampErr)
+      }
+    } else if (activityRowId) {
+      // Same principle, for every activity-backed kind (finding 4): stamp
+      // only after the push has actually gone, so a failed send does not
+      // silence the next attempt.
+      const { error: stampErr } = await admin
+        .from('community_activity')
+        .update({ pushed_at: new Date().toISOString() })
+        .eq('id', activityRowId)
+      if (stampErr) {
+        console.error('[community-notify] activity push stamp failed', stampErr)
       }
     }
   } catch (e) {
