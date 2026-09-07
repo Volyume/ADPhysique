@@ -72,9 +72,18 @@ with implementation on disk; relaunched as RESUME lanes against their
 own files (recovery path: lead review of on-disk work, finish tests,
 land). S3 and S4 resumed and landed. Settled tree: lint clean, tsc clean,
 1256 suites / 18676 tests. Closing record `30-IMPLEMENTATION.md`
-section 3. NEXT: founder phrase for 160-163 + seed; pipeline re-run
-with sportscotland (fresh raw acquisition), coverage report before
-re-seed; device walk from a green build. Report 09 findings folded into S1/S2 briefs:
+section 3. Founder phrase GIVEN 2026-09-07 ("For migrations: run against
+production"). Functions DEPLOYED: community-notify (run 14, JWT on)
+and community-public (run 15, anonymous). Migrations + seed: the new
+`apply-named-sql.yml` workflow (exact files, own transaction each,
+tracked; regenerates the git-ignored seed in the run) FAILED on run 1
+because the repo secret SUPABASE_DB_URL is EMPTY; nothing applied
+(production re-verified: 0 community tables, 0 gym tables). Founder
+action delivered in chat: add the secret, then Claude re-dispatches.
+Alternative on founder say-so: apply 160-163 through the MCP
+migration path (about 500k tokens of transcription; seed still needs
+the secret). NEXT after apply: read-only verification, README ledger,
+pipeline re-run with sportscotland, device walk from a green build. Report 09 findings folded into S1/S2 briefs:
 brand-query candidate cut (S1), submit-time duplicate tokenizer 53%
 miss (S1), null-distance ranker bug (S2). DATA ITEM for the next
 pipeline run (not this build): `data/gyms/postcode-sectors.v1.csv`
