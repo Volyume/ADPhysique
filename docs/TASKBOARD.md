@@ -42,7 +42,13 @@ Folder `docs/community-product-audit-2026-09-07/` (README = map).
 Phase A: eight READ-ONLY inventory/evidence agents (Sonnet for 01-07,
 Haiku for 08; founder reaffirmed lowest adequate tier in chat), each writing
 only its own numbered file. Recovery path: re-dispatch the same brief;
-nothing on disk to reconcile. Phase B: lead judgement `20-JUDGEMENT.md`.
+nothing on disk to reconcile. Founder addition (chat): gym onboarding journey is a required
+capability (Use my location optional, progressive radius, name/town/
+postcode search, branch identity, add gym, main + other gyms); evidence
+lanes 09 (Sonnet, dataset + ranker tests) and 10 (Sonnet, UX research).
+OPEN FOUNDER QUESTION: expo-location dependency + amending the pinned
+location guard in `community.privacy.guard.test.js` (asked in chat).
+Phase B: lead judgement `20-JUDGEMENT.md`.
 Phase C: targeted implementation, `30-IMPLEMENTATION.md`, then merge.
 
 ## COMMUNITY VISUAL REFINEMENT (2026-09-07, founder prompt 1) — LANDED on `claude/volyume-social-discovery-h7dknu` (a5aab73, fac2451); MERGE PENDING the settled-tree run
