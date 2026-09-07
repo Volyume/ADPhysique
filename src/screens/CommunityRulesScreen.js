@@ -1,27 +1,40 @@
 /**
- * CommunityRulesScreen (blueprint sections 6, 11; SD-11)
+ * CommunityRulesScreen (blueprint sections 6, 11; SD-11; discovery
+ * blueprint `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md`
+ * sections 2, 3, 12)
  *
  * The rules, what stays private, how reporting and blocking work, what
  * a moderator can do, the published contact address, and the version.
  *
  * The text below is the versioned rules text from
- * `docs/community-safety/COMMUNITY-RULES.md`, pasted here verbatim. It
- * is the notice recorded against `COMMUNITY_RULES_VERSION` when someone
- * joins, so it changes only with a version bump, and this screen and
- * that document move together.
+ * `docs/community-safety/COMMUNITY-RULES.md`, pasted here verbatim (the
+ * version 2 block: messages, meeting a training partner in person, and
+ * the training profile note under "what stays private"). It is the
+ * notice recorded against `COMMUNITY_RULES_VERSION` when someone joins,
+ * so it changes only with a version bump, and this screen and that
+ * document move together.
+ *
+ * `route.params.mustAccept`: a connect, message or training profile call
+ * refused `rules_outdated` because the profile last accepted version 1.
+ * The screen answers with the one emphatic action on it, "Accept the
+ * updated rules", which calls `acceptRules()` (sending
+ * `accept_rules_version` alone, so nothing else on the profile is
+ * touched) and returns the person to what they were doing to retry it.
  */
 
+import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
+import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import { colors, spacing, type } from '../styles/theme';
-import { COMMUNITY_RULES_VERSION } from '../lib/community';
+import { COMMUNITY_RULES_VERSION, acceptRules } from '../lib/community';
 
-// Community Rules v1, from docs/community-safety/COMMUNITY-RULES.md.
+// Community Rules v2, from docs/community-safety/COMMUNITY-RULES.md.
 // Keep this block in step with that document.
 export const COMMUNITY_RULES_TEXT = {
   title: 'Community rules',
@@ -50,6 +63,14 @@ export const COMMUNITY_RULES_TEXT = {
       heading: 'Report what breaks this.',
       body: 'If you see something that shouldn’t be here, report it. That is how we keep Community working for everyone.',
     },
+    {
+      heading: 'Messages.',
+      body: 'Messages are between people who both said yes. Keep them about training. Report anything that is not.',
+    },
+    {
+      heading: 'Meeting people.',
+      body: 'If you arrange to train with someone you met here, meet at the gym, tell someone, and keep the first sessions public.',
+    },
   ],
   privacy: {
     heading: 'What stays private',
@@ -73,6 +94,12 @@ export const COMMUNITY_RULES_TEXT = {
       + 'lift are shown because you chose to share that result. Programmes '
       + 'you publish share their structure (days, exercises, sets, reps, '
       + 'rest) and never a weight.',
+    trainingProfileNote:
+      'Your training profile works the same way. If you choose to share '
+      + 'it, only the bands you have switched on are ever shown, and never '
+      + 'anything more detailed: never a time of day more precise than '
+      + 'morning, midday, afternoon, evening or late, and never where you '
+      + 'are right now.',
   },
   reporting: {
     heading: 'Reporting and blocking',
@@ -107,21 +134,61 @@ export const COMMUNITY_RULES_TEXT = {
   version: {
     number: COMMUNITY_RULES_VERSION,
     publishedDate: '2026-09-06',
-    label: 'Community rules version 1, published 6 September 2026.',
+    label: 'Community rules version 2, published 6 September 2026.',
     changeNote:
       'Any future change to these rules is a new version, and you will '
       + 'be asked to accept it before you can keep using Community.',
   },
 };
 
-export default function CommunityRulesScreen() {
+export const ACCEPT_UPDATED_RULES_LABEL = 'Accept the updated rules';
+export const RULES_OUTDATED_LINE = 'The Community rules have changed. Accept them below to carry on.';
+
+export default function CommunityRulesScreen({ navigation, route }) {
   const t = useTheme();
+  const toast = useToast();
   const text = COMMUNITY_RULES_TEXT;
+  const mustAccept = !!route?.params?.mustAccept;
+  const [busy, setBusy] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+
+  async function accept() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await acceptRules();
+      setAccepted(true);
+      toast.show('Rules accepted');
+      navigation?.goBack?.();
+    } catch (_e) {
+      toast.show('Could not do that just now. Try again.', { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title={text.title} />
       <ScrollView contentContainerStyle={styles.content}>
+        {mustAccept && !accepted ? (
+          <Card style={styles.block}>
+            <Text style={[styles.ruleHeading, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
+              The rules have changed
+            </Text>
+            <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+              {RULES_OUTDATED_LINE}
+            </Text>
+            <Button
+              variant="emphatic"
+              title={ACCEPT_UPDATED_RULES_LABEL}
+              loading={busy}
+              onPress={accept}
+              accessibilityLabel={ACCEPT_UPDATED_RULES_LABEL}
+            />
+          </Card>
+        ) : null}
+
         <Text style={[styles.body, { ...t.type.body, color: t.colors.textSecondary }]}>
           {text.intro}
         </Text>
@@ -151,6 +218,9 @@ export default function CommunityRulesScreen() {
           ))}
           <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
             {text.privacy.note}
+          </Text>
+          <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+            {text.privacy.trainingProfileNote}
           </Text>
         </View>
 

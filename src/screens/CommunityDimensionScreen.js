@@ -1,10 +1,20 @@
 /**
- * CommunityDimensionScreen (blueprint section 6; SD-10)
+ * CommunityDimensionScreen (blueprint section 6; SD-10; discovery
+ * blueprint `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md`
+ * section 8; SD-27, SD-31)
  *
  * A dimension is a page, not a room: the people who chose the same
  * style, gym, area or programme, and the programmes published in it.
  * There is no feed of its own, no admin, no leaderboard and no join
  * button, because there is nothing to join.
+ *
+ * A gym dimension additionally carries a summary (`community_gym_summary`):
+ * member count, how many the reader follows, counts by style and by
+ * shared time band, and how many are open to training together. Read
+ * alongside `loadDimension` rather than instead of it, and best effort:
+ * the page still works as a plain dimension list if the summary read
+ * fails. Nothing here is live or precise (SD-31): the gym page is a
+ * noticeboard, never a room.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -20,9 +30,10 @@ import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import ProfileCard from '../components/community/ProfileCard';
 import ProgrammeTile from '../components/community/ProgrammeTile';
+import GymSummary from '../components/community/GymSummary';
 import useTheme from '../hooks/useTheme';
 import { colors, spacing, type } from '../styles/theme';
-import { loadDimension } from '../lib/community';
+import { loadDimension, gymSummary } from '../lib/community';
 import { peopleLine } from '../components/community/DimensionRow';
 
 const PAGE = 20;
@@ -32,8 +43,10 @@ export default function CommunityDimensionScreen({ navigation, route }) {
   const kind = route?.params?.kind ?? null;
   const key = route?.params?.key ?? null;
   const paramLabel = route?.params?.label ?? '';
+  const isGym = kind === 'gym';
 
   const [data, setData] = useState(null);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -49,7 +62,18 @@ export default function CommunityDimensionScreen({ navigation, route }) {
     } finally {
       setLoading(false);
     }
-  }, [kind, key]);
+    if (isGym && key) {
+      // Best effort: the gym summary is an addition on top of the plain
+      // dimension list, never the reason the page fails to load.
+      try {
+        setSummary(await gymSummary(key));
+      } catch (_e) {
+        setSummary(null);
+      }
+    } else {
+      setSummary(null);
+    }
+  }, [kind, key, isGym]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -59,10 +83,16 @@ export default function CommunityDimensionScreen({ navigation, route }) {
 
   const header = (
     <View style={styles.header}>
-      <Text style={[styles.title, { ...t.type.h2, color: t.colors.textPrimary }]}>{label}</Text>
-      <Text style={[styles.sub, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-        {peopleLine(data?.count ?? people.length)}
-      </Text>
+      {isGym && summary ? (
+        <GymSummary summary={summary} label={label} />
+      ) : (
+        <>
+          <Text style={[styles.title, { ...t.type.h2, color: t.colors.textPrimary }]}>{label}</Text>
+          <Text style={[styles.sub, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+            {peopleLine(data?.count ?? people.length)}
+          </Text>
+        </>
+      )}
       {people.length ? <SectionLabel>People</SectionLabel> : null}
     </View>
   );

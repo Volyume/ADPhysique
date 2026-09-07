@@ -13,6 +13,14 @@
  * Followers and following open in a sheet rather than a pushed screen:
  * the list is transient content about the profile you are already on,
  * which is what the app's sheets are for.
+ *
+ * The action row is the three tiers of the relationship, left to right
+ * (discovery blueprint `docs/social-discovery-2026-09-06/
+ * 70-DISCOVERY-BLUEPRINT.md` section 1): Follow is one way and instant on
+ * a public profile, Connect is mutual and accepted, and Message appears
+ * only once that tie exists. An under-18 account never sees Connect or
+ * Message at all (SD-32), and the training profile line shows only the
+ * bands this person chose to share (SD-22).
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -37,6 +45,9 @@ import PostCard from '../components/community/PostCard';
 import ProfileCard from '../components/community/ProfileCard';
 import ProgrammeTile from '../components/community/ProgrammeTile';
 import FollowButton from '../components/community/FollowButton';
+import ConnectButton from '../components/community/ConnectButton';
+import ConnectSheet from '../components/community/ConnectSheet';
+import TrainingProfileLine from '../components/community/TrainingProfileLine';
 import ProfileMenuSheet from '../components/community/ProfileMenuSheet';
 import ReportSheet from '../components/community/ReportSheet';
 import { factLabels, placeLine } from '../components/community/ProfileCard';
@@ -46,6 +57,7 @@ import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, type, circle } from '../styles/theme';
 import {
   getProfile, listFollows, profileUrl, reactToPost, unblockUser, relationships,
+  connectionState,
 } from '../lib/community';
 
 /**
@@ -100,6 +112,7 @@ export default function CommunityProfileScreen({ navigation, route }) {
   const [follows, setFollows] = useState([]);
   const [error, setError] = useState(null);
   const [blockedCard, setBlockedCard] = useState(null);
+  const [connectOpen, setConnectOpen] = useState(false);
 
   const card = data?.card ?? null;
   const isMe = !!card && card.user_id === me?.profile?.user_id;
@@ -168,7 +181,23 @@ export default function CommunityProfileScreen({ navigation, route }) {
   const posts = (data?.posts ?? []).map((r) => normalisePostRow(r, card)).filter(Boolean);
   const programmes = data?.programmes ?? [];
   const facts = card ? factLabels(card) : [];
+  const chipLabels = card?.open_to_partner
+    ? [...facts, 'Open to training together']
+    : facts;
   const place = card ? placeLine(card) : null;
+  const connection = connectionState(card);
+  // Null when the viewer may not see the profile: an absent count is not
+  // a zero, and "0 connections" about a private profile would be a claim
+  // the card never made.
+  const connectionCount = card?.connection_count == null ? null : Number(card.connection_count);
+
+  /** One card in, one card out: every control on this screen writes the
+   * card the server just answered with, so the row never guesses. */
+  function patchCard(next) {
+    setData((prev) => (prev
+      ? { ...prev, card: next?.user_id ? next : { ...prev.card, ...next } }
+      : prev));
+  }
 
   const headerRight = card && !isMe ? (
     <Pressable
@@ -204,15 +233,17 @@ export default function CommunityProfileScreen({ navigation, route }) {
         <Text style={[styles.bio, { ...t.type.body, color: t.colors.textPrimary }]}>{card.bio}</Text>
       ) : null}
 
-      {facts.length ? (
+      {chipLabels.length ? (
         <View style={styles.chips}>
-          {facts.map((label) => <Chip key={label} label={label} accessibilityRole="text" />)}
+          {chipLabels.map((label) => <Chip key={label} label={label} accessibilityRole="text" />)}
         </View>
       ) : null}
 
       {place ? (
         <Text style={[styles.place, { ...t.type.bodySm, color: t.colors.textSecondary }]}>{place}</Text>
       ) : null}
+
+      <TrainingProfileLine card={card} />
 
       <View style={styles.counts}>
         <Pressable
@@ -235,6 +266,14 @@ export default function CommunityProfileScreen({ navigation, route }) {
             {`${card.following_count ?? 0} following`}
           </Text>
         </Pressable>
+        {connectionCount !== null && Number.isFinite(connectionCount) ? (
+          <Text
+            style={[styles.count, { ...t.type.bodySm, color: t.colors.textSecondary }]}
+            accessibilityRole="text"
+          >
+            {connectionCount === 1 ? '1 connection' : `${connectionCount} connections`}
+          </Text>
+        ) : null}
       </View>
 
       {isMe ? (
@@ -276,10 +315,28 @@ export default function CommunityProfileScreen({ navigation, route }) {
           <FollowButton
             card={card}
             size="md"
-            onChange={(relationship) => setData((prev) => (prev
-              ? { ...prev, card: { ...prev.card, relationship } }
-              : prev))}
+            onChange={(relationship) => patchCard({ relationship })}
           />
+          <ConnectButton
+            card={card}
+            me={me}
+            size="md"
+            onConnect={() => setConnectOpen(true)}
+            onChange={patchCard}
+            onMessage={() => navigation.navigate('CommunityConversation', { userId: card.user_id })}
+            onRulesOutdated={() => navigation.navigate('CommunityRules', { mustAccept: true })}
+          />
+          {connection === 'connected' ? (
+            <Button
+              variant="secondary"
+              size="md"
+              fullWidth={false}
+              title="Message"
+              icon="chatbubble-outline"
+              onPress={() => navigation.navigate('CommunityConversation', { userId: card.user_id })}
+              accessibilityLabel={`Message @${card.handle}`}
+            />
+          ) : null}
         </View>
       )}
 
@@ -413,10 +470,17 @@ export default function CommunityProfileScreen({ navigation, route }) {
         visible={menuOpen}
         onClose={() => setMenuOpen(false)}
         card={card}
-        onChanged={(relationship) => setData((prev) => (prev
-          ? { ...prev, card: { ...prev.card, relationship } }
-          : prev))}
+        onChanged={(relationship) => patchCard({ relationship })}
+        onConnectionChanged={(state) => patchCard({ connection: state })}
         onReport={() => setReportOpen(true)}
+      />
+
+      <ConnectSheet
+        visible={connectOpen}
+        onClose={() => setConnectOpen(false)}
+        card={card}
+        onSent={patchCard}
+        onRulesOutdated={() => navigation.navigate('CommunityRules', { mustAccept: true })}
       />
 
       <ReportSheet
@@ -481,7 +545,7 @@ const styles = StyleSheet.create({
   place: { ...type.bodySm, color: colors.textSecondary },
   counts: { flexDirection: 'row', gap: spacing.lg },
   count: { ...type.bodySm, color: colors.textSecondary },
-  actions: { flexDirection: 'row', gap: spacing.sm },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
   headerBtn: {
     width: 34,
     height: 34,

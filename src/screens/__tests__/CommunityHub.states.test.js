@@ -43,6 +43,8 @@ jest.mock('../../lib/community', () => ({
   loadHub: jest.fn(),
   hasProfile: (me) => !!me?.profile?.handle,
   hasUnseen: () => false,
+  hasUnreadMessages: () => false,
+  findPeople: jest.fn(() => Promise.resolve({ people: [], cursor: null, count: null })),
   reactToPost: jest.fn(() => Promise.resolve()),
   COMMUNITY_DIMENSION_MIN_FOR_HUB: 3,
   COMMUNITY_STYLE_KEYS: { strength: 'Strength', kettlebell: 'Kettlebell' },
@@ -52,7 +54,7 @@ jest.mock('../../lib/community', () => ({
   unfollow: jest.fn(),
 }));
 
-import { loadHub } from '../../lib/community';
+import { loadHub, findPeople } from '../../lib/community';
 import { getLibraryPlans, getPlanWorkoutCounts } from '../../lib/database';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityHubScreen from '../CommunityHubScreen';
@@ -148,6 +150,7 @@ async function render(params = {}) {
 beforeEach(() => {
   jest.clearAllMocks();
   loadHub.mockResolvedValue(emptyHub());
+  findPeople.mockResolvedValue({ people: [], cursor: null, count: null });
   getLibraryPlans.mockResolvedValue([]);
   getPlanWorkoutCounts.mockResolvedValue({});
   useCommunityMe.mockReturnValue({ me: { profile: null }, loading: false, error: null, refresh: jest.fn() });
@@ -182,17 +185,21 @@ describe('state 2: Following with nothing followed yet', () => {
     useCommunityMe.mockReturnValue({
       me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
     });
-    loadHub.mockResolvedValue(emptyHub({
-      people: [{ card: card(), reasons: ['Also trains kettlebell', 'Lists Leeds'] }],
-    }));
+    loadHub.mockResolvedValue(emptyHub());
+    findPeople.mockResolvedValue({
+      people: [{ card: card(), reasons: ['Also trains kettlebell', 'Lists Leeds'], score: 4 }],
+      cursor: null,
+      count: 1,
+    });
 
     const { text } = await render();
 
     expect(text).toContain('Nothing here yet');
     expect(text).toContain('Follow a few people and their training stories will appear here.');
     expect(text).toContain('Find people');
-    expect(text).toContain('People you may want to follow');
+    expect(text).toContain('Lifters like you');
     expect(text).toContain('Also trains kettlebell · Lists Leeds');
+    expect(findPeople).toHaveBeenCalledWith('like_me', { limit: 5 });
   });
 });
 
@@ -270,10 +277,10 @@ describe('state 4: offline with a cached payload', () => {
       me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
     });
     loadHub.mockResolvedValue(emptyHub({
-      people: [{ card: card(), reasons: [] }],
       fromCache: true,
       error: 'offline',
     }));
+    findPeople.mockResolvedValue({ people: [{ card: card(), reasons: [] }], cursor: null, count: 1 });
 
     const { text } = await render();
 

@@ -1,14 +1,24 @@
 /**
- * CommunityEditProfileScreen (blueprint section 6; SD-05)
+ * CommunityEditProfileScreen (blueprint section 6; SD-05; discovery
+ * blueprint `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md`
+ * section 8; SD-27)
  *
  * Every fact on a Community profile is typed here. Nothing is read from
  * onboarding, the body profile or the engine: the styles, goal, setting,
  * area and gym are choices the user makes for Community and nowhere
  * else.
  *
- * The gym and area fields are honest labels, not places: "only the name
- * you type, never your location". There is no map, no radius and no
- * verification behind them (SD-10).
+ * The gym field is a typeahead over labels already used in the same area
+ * (SD-27), so "PureGym Leeds" is chosen once and chosen again rather than
+ * retyped into near misses that never join up into one gym page. Still
+ * an honest label, not a place: "only the name you type, never your
+ * location". There is no map, no radius and no verification behind it
+ * (SD-10).
+ *
+ * "Training profile" links out to its own screen (bands, toggles, the
+ * training partner section) rather than living here: it is a bigger
+ * decision than the rest of this form, and it is worth its own screen so
+ * the preview line has room to be read before anything is shared.
  *
  * Leaving Community is here too, as the destructive action it is: it
  * withdraws the consent and deletes everything the user authored.
@@ -17,18 +27,21 @@
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
+import Card from '../components/Card';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import SegmentedControl from '../components/SegmentedControl';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
+import GymTypeahead from '../components/community/GymTypeahead';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type } from '../styles/theme';
+import { colors, spacing, type, iconSize } from '../styles/theme';
 import { AVATAR_PRESETS } from '../lib/profileAvatarPresets';
 import {
   upsertProfile, leaveCommunity, COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS,
@@ -231,17 +244,28 @@ export default function CommunityEditProfileScreen({ navigation }) {
           accessibilityLabel="Area"
         />
 
-        <View style={styles.field}>
-          <TextField
-            label="Trains at"
-            value={gym}
-            onChangeText={(v) => setGym(v.slice(0, GYM_LABEL_MAX))}
-            accessibilityLabel="Gym you train at"
-          />
-          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-            Only the name you type. Never your location.
-          </Text>
-        </View>
+        <GymTypeahead
+          value={gym}
+          onChangeText={(v) => setGym(v.slice(0, GYM_LABEL_MAX))}
+          onSelect={(label) => setGym(label.slice(0, GYM_LABEL_MAX))}
+          maxLength={GYM_LABEL_MAX}
+        />
+
+        <Card
+          onPress={() => navigation.navigate('CommunityTrainingProfile')}
+          style={styles.linkRow}
+          accessibilityLabel="Training profile"
+        >
+          <View style={styles.linkBody}>
+            <Text style={[styles.linkLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
+              Training profile
+            </Text>
+            <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+              The bands worked out from your training, and what you share of them.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+        </Card>
 
         <View style={styles.field}>
           <SectionLabel>Who can follow you</SectionLabel>
@@ -282,4 +306,7 @@ const styles = StyleSheet.create({
   hint: { ...type.caption, color: colors.textMuted },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   presets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  linkBody: { flex: 1, gap: spacing.xxs },
+  linkLabel: { ...type.bodyStrong, color: colors.textPrimary },
 });

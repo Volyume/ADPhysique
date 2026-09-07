@@ -22,7 +22,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Share,
+  View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Pressable, Share,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -255,9 +255,21 @@ export default function CommunityProgrammeScreen({ navigation, route }) {
         <Text style={[styles.description, { color: t.colors.textSecondary }]}>{programme.description}</Text>
       ) : null}
       {Number(programme?.use_count) > 0 ? (
-        <Text style={[styles.useCount, { color: t.colors.textMuted }]}>
-          {`Used by ${Number(programme.use_count)}`}
-        </Text>
+        <Pressable
+          onPress={() => navigation.navigate('CommunityPeopleList', {
+            mode: 'programme',
+            programmeId: programme.id,
+            label: 'People on this programme',
+          })}
+          style={styles.useCountRow}
+          accessibilityRole="button"
+          accessibilityLabel={`People on this programme, ${Number(programme.use_count)}`}
+        >
+          <Text style={[styles.useCount, { color: t.colors.textMuted }]}>
+            {`People on this programme · ${Number(programme.use_count)}`}
+          </Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+        </Pressable>
       ) : null}
       <ProgrammeStructure snapshot={snapshot} />
       <SectionLabel style={styles.commentsLabel}>Comments</SectionLabel>
@@ -391,6 +403,7 @@ const styles = StyleSheet.create({
   title: { ...type.h2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   description: { ...type.bodySm },
+  useCountRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2 },
   useCount: { ...type.caption },
   myUse: { ...type.caption },
   commentsLabel: { marginTop: spacing.lg },

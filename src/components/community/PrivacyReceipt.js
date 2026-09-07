@@ -25,17 +25,23 @@ import useTheme from '../../hooks/useTheme';
 // Fixed copy (blueprint section 2 and docs/community-safety/
 // COMMUNITY-RULES.md). It is the notice recorded against
 // COMMUNITY_RULES_VERSION, so it changes only with a version bump.
+// The two discovery lines (blueprint 70 sections 3 and 12; SD-22, SD-31):
+// the training profile is on the "Others can see" side because it can be
+// shared, and the right-hand column answers the question a band invites
+// ("does this say where I am?") before anyone has to ask it.
 const SHOWN = [
   'Your handle and name',
   'Styles, goal, gym and area you type',
   'Programmes you publish',
   'Stories you post',
+  'Training profile: only the bands you choose',
 ];
 const NEVER = [
   'Bodyweight or body data',
   'Food and nutrition',
   'Progress Scan and photos',
   'Injuries, coaching, check-ins',
+  'Where you are now, or exact times',
 ];
 
 // Layout breakpoint (not a design token), same threshold and reason as

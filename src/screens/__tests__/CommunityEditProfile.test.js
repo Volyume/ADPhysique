@@ -52,9 +52,17 @@ jest.mock('../../lib/community', () => ({
   BIO_MAX: 160,
   AREA_LABEL_MAX: 60,
   GYM_LABEL_MAX: 60,
+  // GymTypeahead's own suggestion read (discovery blueprint section 8);
+  // no test here types a gym label, so this stub never fires, but a
+  // pre-filled value long enough to satisfy MIN_PREFIX must still find a
+  // real function on its debounce tick.
+  callCommunity: jest.fn(() => Promise.resolve({ gyms: [] })),
+  setConnectFrom: jest.fn(),
+  setShowProgrammes: jest.fn(),
+  CONNECT_FROM_VALUES: { anyone: 'Anyone', followers: 'People who follow me', nobody: 'Nobody' },
 }));
 
-import { upsertProfile, relationships } from '../../lib/community';
+import { upsertProfile, relationships, setConnectFrom } from '../../lib/community';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityEditProfileScreen from '../CommunityEditProfileScreen';
 import CommunityPrivacyScreen from '../CommunityPrivacyScreen';
@@ -82,6 +90,10 @@ function flattenText(node) {
 
 async function flush() {
   await act(async () => {
+    // GymTypeahead debounces its suggestion read (250ms), the same pattern
+    // the Join screen's handle check uses; fake timers keep that pending
+    // read from firing after a test has already finished.
+    jest.advanceTimersByTime(400);
     for (let i = 0; i < 12; i += 1) await Promise.resolve();
   });
 }
@@ -107,6 +119,7 @@ async function mount(Screen) {
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
   jest.clearAllMocks();
   upsertProfile.mockResolvedValue({ ...PROFILE });
   relationships.mockResolvedValue({ blocked: [], muted: [] });
@@ -117,6 +130,8 @@ beforeEach(() => {
     refresh: jest.fn(),
   });
 });
+
+afterEach(() => { jest.useRealTimers(); });
 
 describe('Edit profile saves the fields it owns', () => {
   test('the save carries no handle, and no handle field is on the screen', async () => {
@@ -216,5 +231,33 @@ describe('the privacy screen visibility control', () => {
     });
     const moderator = await mount(CommunityPrivacyScreen);
     expect(flattenText(moderator.tree.toJSON())).toContain('Moderation queue');
+  });
+});
+
+// ─── Discovery additions (`docs/social-discovery-2026-09-06/
+// 70-DISCOVERY-BLUEPRINT.md` sections 1, 3, 7; SD-20, SD-22, SD-26) ──────
+describe('who can send a connection request, and the two discovery links', () => {
+  function connectSegment(tree) {
+    return tree.root.findAll(
+      (n) => typeof n.type === 'function'
+        && n.props?.accessibilityLabel === 'Who can send you connection requests',
+    )[0];
+  }
+
+  test('changes connect_from through its own RPC, never through upsertProfile', async () => {
+    const { tree } = await mount(CommunityPrivacyScreen);
+
+    await act(async () => { connectSegment(tree).props.onChange('followers'); });
+    await flush();
+
+    expect(setConnectFrom).toHaveBeenCalledWith('followers');
+    expect(upsertProfile).not.toHaveBeenCalled();
+  });
+
+  test('"Training profile" opens its own screen', async () => {
+    const { tree, navigation } = await mount(CommunityPrivacyScreen);
+    await act(async () => { byLabel(tree, 'Training profile').props.onPress(); });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityTrainingProfile');
   });
 });

@@ -3038,3 +3038,111 @@ describe('Community navigation and profile screens mount', () => {
     }
   });
 });
+
+// ─── APPENDED 2026-09-06 (discovery blueprint, messaging lane) ───────────
+// `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md` section 10:
+// the two message screens take route params and are pushed into HomeStack,
+// so they are mounted here rather than added to SCREENS_TO_SWEEP. Every
+// Community read goes through the mocked Supabase client and therefore
+// FAILS, which is the point: each must render its calm not-available state
+// rather than throw.
+describe('Community message screens mount with their route params', () => {
+  const MESSAGE_CASES = [
+    ['CommunityConversationsScreen', {}],
+    ['CommunityConversationScreen', { id: 'conv-1' }],
+    ['CommunityConversationScreen', { userId: 'u2', ref: { kind: 'programme', id: 'prog-1' } }],
+  ];
+
+  for (const [screenName, params] of MESSAGE_CASES) {
+    test(`${screenName} mounts with ${JSON.stringify(params)} without throwing`, async () => {
+      useAppStore.setState(STATE_VARIANTS[0].state);
+      const Screen = require(`../screens/${screenName}`).default;
+      let tree = null;
+      try {
+        const { tree: t, errors } = await mountScreen(Screen, {
+          route: { params, name: screenName.replace('Screen', '') },
+        });
+        tree = t;
+        expect(tree).not.toBeNull();
+        expect(errors).toEqual([]);
+      } finally {
+        unmountTree(tree);
+      }
+    });
+  }
+
+  test('every message screen survives a tap on everything it renders', async () => {
+    for (const [screenName, params] of MESSAGE_CASES) {
+      useAppStore.setState(STATE_VARIANTS[0].state);
+      const Screen = require(`../screens/${screenName}`).default;
+      let tree = null;
+      try {
+        const { tree: t } = await mountScreen(Screen, {
+          route: { params, name: screenName.replace('Screen', '') },
+        });
+        tree = t;
+        // eslint-disable-next-line no-await-in-loop
+        const { failures } = await bashTappables(tree);
+        const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+        expect({ screenName, real }).toEqual({ screenName, real: [] });
+      } finally {
+        unmountTree(tree);
+      }
+    }
+  });
+});
+
+// ─── APPENDED 2026-09-07 (discovery blueprint, screens lane) ─────────────
+// `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md` sections 4,
+// 6, 10: the three discovery screens this lane owns take route params
+// (`CommunityPeopleListScreen` in particular is unusable without a
+// `mode`), so they are mounted here rather than added to SCREENS_TO_SWEEP.
+// Every Community read goes through the mocked Supabase client and
+// therefore answers empty/null, which is the point: each screen must
+// render its calm empty or not-joined state rather than throw.
+describe('Community discovery screens mount with their route params', () => {
+  const DISCOVERY_CASES = [
+    ['CommunityFindPeopleScreen', {}],
+    ['CommunityPeopleListScreen', { mode: 'like_me', label: 'Lifters like you' }],
+    ['CommunityPeopleListScreen', { mode: 'programme', programmeId: 'prog-1', label: 'People on this programme' }],
+    ['CommunityTrainingProfileScreen', {}],
+  ];
+
+  for (const [screenName, params] of DISCOVERY_CASES) {
+    test(`${screenName} mounts with ${JSON.stringify(params)} without throwing`, async () => {
+      useAppStore.setState(STATE_VARIANTS[0].state);
+      const Screen = require(`../screens/${screenName}`).default;
+      let tree = null;
+      try {
+        const { tree: t, errors } = await mountScreen(Screen, {
+          route: { params, name: screenName.replace('Screen', '') },
+        });
+        tree = t;
+        expect(tree).not.toBeNull();
+        expect(errors).toEqual([]);
+      } finally {
+        unmountTree(tree);
+      }
+    });
+  }
+
+  test('every discovery screen survives a tap on everything it renders', async () => {
+    for (const [screenName, params] of DISCOVERY_CASES) {
+      useAppStore.setState(STATE_VARIANTS[0].state);
+      const Screen = require(`../screens/${screenName}`).default;
+      let tree = null;
+      try {
+        const { tree: t } = await mountScreen(Screen, {
+          route: { params, name: screenName.replace('Screen', '') },
+        });
+        tree = t;
+        // eslint-disable-next-line no-await-in-loop
+        const { failures } = await bashTappables(tree);
+        const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));
+        expect({ screenName, params, real }).toEqual({ screenName, params, real: [] });
+      } finally {
+        unmountTree(tree);
+      }
+    }
+  });
+});

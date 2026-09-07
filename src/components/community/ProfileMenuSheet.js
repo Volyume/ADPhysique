@@ -9,11 +9,18 @@
  * this kind of decision). Muting is quiet and reversible, so it is a
  * single tap with a toast. The muted person is never told.
  *
+ * Removing a connection (discovery blueprint
+ * `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md` section 1)
+ * is confirmed the same way, and the confirm says what it actually does:
+ * the conversation closes for both people, and the two follows stay. It
+ * is not a block, and the wording never lets it be mistaken for one.
+ *
  * Props:
  *   visible    controlled
  *   onClose    close the sheet
  *   card       the profile card this menu is for
  *   onChanged  (relationship) after a mute/unmute/block/unblock
+ *   onConnectionChanged (state) after a connection is removed
  *   onReport   open the report sheet (the parent owns it, so the report
  *              sheet is not nested inside this one)
  */
@@ -29,6 +36,7 @@ import { spacing, type, colors, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import {
   profileUrl, blockUser, unblockUser, muteUser, unmuteUser,
+  connectionState, removeConnection,
 } from '../../lib/community';
 
 const REFUSALS = {
@@ -53,7 +61,9 @@ function MenuRow({ icon, label, tone, onPress, accessibilityLabel }) {
   );
 }
 
-export default function ProfileMenuSheet({ visible, onClose, card, onChanged, onReport }) {
+export default function ProfileMenuSheet({
+  visible, onClose, card, onChanged, onConnectionChanged, onReport,
+}) {
   const t = useTheme();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -72,6 +82,32 @@ export default function ProfileMenuSheet({ visible, onClose, card, onChanged, on
     } finally {
       setBusy(false);
     }
+  }
+
+  async function removeTie() {
+    if (busy || !card?.user_id) return;
+    setBusy(true);
+    try {
+      await removeConnection(card.user_id);
+      onConnectionChanged?.('none');
+      toast.show('Connection removed');
+      onClose?.();
+    } catch (e) {
+      toast.show(REFUSALS[e?.code] ?? 'Could not do that just now.', { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function confirmRemoveConnection() {
+    appAlert(
+      `Remove your connection with @${card?.handle ?? 'this person'}?`,
+      'Your conversation closes for both of you. You each stay following the other, and you can connect again later.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: removeTie },
+      ],
+    );
   }
 
   function confirmBlock() {
@@ -131,6 +167,13 @@ export default function ProfileMenuSheet({ visible, onClose, card, onChanged, on
             onPress={confirmBlock}
           />
         )}
+        {connectionState(card) === 'connected' ? (
+          <MenuRow
+            icon="person-remove-outline"
+            label="Remove connection"
+            onPress={confirmRemoveConnection}
+          />
+        ) : null}
         <MenuRow
           icon="flag-outline"
           label="Report"
