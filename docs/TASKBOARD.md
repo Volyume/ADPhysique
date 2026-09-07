@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07)
+## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
 Founder-reported (chat, screenshots): gym finder found no gyms within 50
 miles with location on, and a plain name search failed with no location at
@@ -71,12 +71,16 @@ five functions (bodies unchanged, pulled from the live database) with
 STABLE removed (now VOLATILE, the correct label for a function with side
 effects); reverts 166's exception guard back to a plain, unguarded DELETE,
 since the real cause is fixed and swallowing errors was never a cure.
-STATUS: WRITTEN, NOT YET APPLIED — awaiting the founder's exact phrase
-"run against production" for this migration specifically (166's earlier
-authorisation covered 166 only, and 166 turned out to be the wrong fix).
-Founder-side: say the phrase to apply 167; after apply, verify the
-five functions are VOLATILE in the live database and that Sentry VOLYUME-37
-stops recording new events.
+STATUS: APPLIED to production 2026-09-07 (`apply-named-sql.yml` run #8,
+commit `02b18bf`), founder phrase given for this migration specifically.
+VERIFIED, not assumed: `pg_proc.provolatile = 'v'` on all five functions;
+`_community_rate_check` carries no exception guard; Sentry `search_events`
+(errors dataset, 1h window) shows the last "read-only transaction" event
+at 16:52:47Z, before this deploy (17:12:57Z) — zero new occurrences since.
+Founder-side: none outstanding for this incident. If VOLYUME-37 ever
+recurs, it is a different cause — this exact mechanism (STABLE-declared
+function calling a writer) cannot reproduce it again on these five
+functions.
 
 ---
 
