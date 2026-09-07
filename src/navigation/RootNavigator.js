@@ -163,6 +163,11 @@ const CommunityAdaptScreen = lazyScreen(() => require('../screens/CommunityAdapt
 const CommunityPublishProgrammeScreen = lazyScreen(() => require('../screens/CommunityPublishProgrammeScreen').default);
 const CommunityComposeScreen = lazyScreen(() => require('../screens/CommunityComposeScreen').default);
 const CommunityPostScreen = lazyScreen(() => require('../screens/CommunityPostScreen').default);
+// Gym directory (gym database blueprint `docs/gym-database-2026-09-06/
+// 20-BLUEPRINT.md`, "## App"; GD-11). Reached from GymPicker's "Can't
+// find your gym? Add it" row on the profile editor, Join and any other
+// gym picker.
+const CommunityGymAddScreen = lazyScreen(() => require('../screens/CommunityGymAddScreen').default);
 // Discovery, connections and messaging (blueprint
 // `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md` section 10).
 // Same rules as the block above: lazy, pushed into HomeStack, each drawing
@@ -506,6 +511,8 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="CommunityPublishProgramme" component={CommunityPublishProgrammeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityCompose" component={CommunityComposeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityPost" component={CommunityPostScreen} options={{ headerShown: false }} />
+      {/* Gym directory (gym database blueprint 20-BLUEPRINT.md, "## App"). */}
+      <Stack.Screen name="CommunityGymAdd" component={CommunityGymAddScreen} options={{ headerShown: false }} />
       {/* Discovery, connections and messaging (discovery blueprint section
           10). Find people and the scored lists are reached from the hub and
           the profile; the two message screens are reached from the hub's

@@ -18,7 +18,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList. The props are the
@@ -31,25 +31,134 @@ import SectionLabel from '../components/SectionLabel';
 import ProfileCard from '../components/community/ProfileCard';
 import ProgrammeTile from '../components/community/ProgrammeTile';
 import GymSummary from '../components/community/GymSummary';
+import BottomSheet from '../components/BottomSheet';
+import Chip from '../components/Chip';
+import TextField from '../components/TextField';
+import Button from '../components/Button';
+import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import { colors, spacing, type } from '../styles/theme';
 import { loadDimension, gymSummary } from '../lib/community';
+import {
+  report as reportGym, get as getGymVenue, confirmSubmission, isPendingVenue, REPORT_KINDS,
+} from '../lib/gyms';
 import { peopleLine } from '../components/community/DimensionRow';
 
 const PAGE = 20;
+const REPORT_DETAIL_MAX = 500;
+
+const REPORT_REFUSALS = {
+  offline: 'You are offline. Try again when you have a connection.',
+  rate_limited: 'That is a lot of reports for one day. Try again tomorrow.',
+  not_found: 'This gym is no longer available.',
+};
+
+// GD-11 (gym database blueprint `docs/gym-database-2026-09-06/
+// 20-BLUEPRINT.md`; migrate_162): a pending submission needs a SECOND,
+// DISTINCT person to confirm it before it shows for anyone else.
+// `not_allowed` is the submitter's own account trying to confirm its own
+// submission; `already_confirmed` is a repeat from someone who already
+// has. Neither is detected client-side (there is no submitter identity on
+// the venue payload to check against) - the server is asked and its
+// refusal is simply spoken calmly.
+const CONFIRM_REFUSALS = {
+  offline: 'You are offline. Try again when you have a connection.',
+  rate_limited: 'That is a lot of confirmations for now. Try again shortly.',
+  not_found: 'This gym is no longer available.',
+  not_allowed: 'You added this gym, so someone else needs to confirm it.',
+  already_confirmed: 'You have already confirmed this gym.',
+};
+
+/**
+ * "Report a problem with this gym" (gym database blueprint
+ * `docs/gym-database-2026-09-06/20-BLUEPRINT.md`, GD-12). Only shown on a
+ * gym dimension whose key is a linked venue (`gym:<uuid>`, GD-14): a
+ * legacy free-text gym has no venue row in the directory to report.
+ */
+function GymReportSheet({ visible, onClose, venueId }) {
+  const t = useTheme();
+  const toast = useToast();
+  const [kind, setKind] = useState(null);
+  const [detail, setDetail] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (visible) { setKind(null); setDetail(''); setBusy(false); }
+  }, [visible]);
+
+  async function send() {
+    if (!kind || busy || !venueId) return;
+    setBusy(true);
+    try {
+      await reportGym(venueId, kind, detail.trim() || null);
+      toast.show('Thank you. A moderator will look at this.');
+      onClose?.();
+    } catch (e) {
+      toast.show(REPORT_REFUSALS[e?.code] ?? 'Could not send that report just now.', { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <BottomSheet visible={visible} onClose={onClose} accessibilityLabel="Report a problem with this gym">
+      <View style={styles.reportBody}>
+        <Text style={[styles.reportTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
+          Report a problem
+        </Text>
+        <Text style={[styles.sub, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+          Pick the closest reason. Two matching reports send this for a moderator to check.
+        </Text>
+        <View style={styles.reportChips}>
+          {Object.entries(REPORT_KINDS).map(([key, label]) => (
+            <Chip
+              key={key}
+              label={label}
+              selected={kind === key}
+              accessibilityRole="radio"
+              onPress={() => setKind(key)}
+            />
+          ))}
+        </View>
+        <TextField
+          label="Anything else we should know (optional)"
+          value={detail}
+          onChangeText={(v) => setDetail(v.slice(0, REPORT_DETAIL_MAX))}
+          multiline
+          accessibilityLabel="Report detail"
+        />
+        <Button
+          variant="primary"
+          title="Send report"
+          disabled={!kind}
+          loading={busy}
+          onPress={send}
+          accessibilityLabel="Send report"
+        />
+      </View>
+    </BottomSheet>
+  );
+}
 
 export default function CommunityDimensionScreen({ navigation, route }) {
   const t = useTheme();
+  const toast = useToast();
   const kind = route?.params?.kind ?? null;
   const key = route?.params?.key ?? null;
   const paramLabel = route?.params?.label ?? '';
   const isGym = kind === 'gym';
+  // GD-14: only a key linked to a real directory venue (`gym:<uuid>`) can
+  // be reported; a legacy free-text gym key has no venue row behind it.
+  const venueId = isGym && typeof key === 'string' && key.startsWith('gym:') ? key.slice(4) : null;
 
   const [data, setData] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [venue, setVenue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,9 +182,34 @@ export default function CommunityDimensionScreen({ navigation, route }) {
     } else {
       setSummary(null);
     }
-  }, [kind, key, isGym]);
+    if (venueId) {
+      // Best effort too: whether "Is this gym real? Confirm it" shows at
+      // all depends on this, never the reason the rest of the page fails.
+      try {
+        setVenue(await getGymVenue(venueId));
+      } catch (_e) {
+        setVenue(null);
+      }
+    } else {
+      setVenue(null);
+    }
+  }, [kind, key, isGym, venueId]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function confirmVenue() {
+    if (!venueId || confirmBusy) return;
+    setConfirmBusy(true);
+    try {
+      await confirmSubmission(venueId);
+      toast.show('Thanks. This gym is now listed.');
+      await load();
+    } catch (e) {
+      toast.show(CONFIRM_REFUSALS[e?.code] ?? 'Could not confirm this just now.', { variant: 'error' });
+    } finally {
+      setConfirmBusy(false);
+    }
+  }
 
   const label = data?.label || paramLabel;
   const people = data?.people ?? [];
@@ -93,6 +227,29 @@ export default function CommunityDimensionScreen({ navigation, route }) {
           </Text>
         </>
       )}
+      {venueId && isPendingVenue(venue) ? (
+        <Pressable
+          onPress={confirmVenue}
+          disabled={confirmBusy}
+          accessibilityRole="button"
+          accessibilityLabel="Is this gym real? Confirm it"
+        >
+          <Text style={[styles.confirmLink, { ...t.type.bodySm, color: t.colors.primary }]}>
+            Is this gym real? Confirm it
+          </Text>
+        </Pressable>
+      ) : null}
+      {venueId ? (
+        <Pressable
+          onPress={() => setReportOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Report a problem with this gym"
+        >
+          <Text style={[styles.reportLink, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+            Report a problem with this gym
+          </Text>
+        </Pressable>
+      ) : null}
       {people.length ? <SectionLabel>People</SectionLabel> : null}
     </View>
   );
@@ -166,6 +323,13 @@ export default function CommunityDimensionScreen({ navigation, route }) {
           />
         )}
       />
+      {venueId ? (
+        <GymReportSheet
+          visible={reportOpen}
+          onClose={() => setReportOpen(false)}
+          venueId={venueId}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -176,6 +340,11 @@ const styles = StyleSheet.create({
   header: { gap: spacing.xs, marginBottom: spacing.md },
   title: { ...type.h2, color: colors.textPrimary },
   sub: { ...type.bodySm, color: colors.textSecondary },
+  reportLink: { textDecorationLine: 'underline', marginTop: spacing.xxs },
+  confirmLink: { textDecorationLine: 'underline', marginBottom: spacing.xxs },
   footerBlock: { gap: spacing.md, marginTop: spacing.lg },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
+  reportBody: { gap: spacing.md, paddingBottom: spacing.md },
+  reportTitle: { ...type.h3, color: colors.textPrimary },
+  reportChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
 });

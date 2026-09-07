@@ -46,6 +46,13 @@ const COMPONENT_DIR = path.join(ROOT, 'src/components/community');
 const SCREEN_DIR = path.join(ROOT, 'src/screens');
 const HOOK = path.join(ROOT, 'src/hooks/useCommunityMe.js');
 const MIGRATION = path.join(ROOT, 'supabase/migrate_160_community.sql');
+// Gym database blueprint (`docs/gym-database-2026-09-06/20-BLUEPRINT.md`,
+// GD-13): the gym directory is infrastructure UNDER Community, and this
+// guard's walk is extended to cover it rather than left to a guard of its
+// own, so the one sentence at the top of this file ("nothing about a
+// person's body... may enter it") and the location rule below are both
+// enforced from the same place a future rename cannot quietly miss.
+const GYMS_DIR = path.join(ROOT, 'src/lib/gyms');
 
 const { SENSITIVE_COMMUNITY_KEYS, POST_PAYLOAD_KEYS } = require('../lib/community/validation');
 const { BLOCKED_TERMS } = require('../lib/community/keywordFilter');
@@ -93,6 +100,7 @@ function communityFiles() {
   return [
     ...walk(LIB_DIR),
     ...walk(COMPONENT_DIR),
+    ...walk(GYMS_DIR),
     ...screens,
     ...(fs.existsSync(HOOK) ? [HOOK] : []),
   ];
@@ -280,6 +288,59 @@ describe('no Community file reads personal data', () => {
       }
     }
   });
+});
+
+/**
+ * GD-13 (gym database blueprint `docs/gym-database-2026-09-06/
+ * 20-BLUEPRINT.md`): "A person's gym is a chosen fact... there is no
+ * inference from sessions, no check-ins, no live presence." The half of
+ * that rule a behavioural test cannot see is the one a future "nice
+ * touch" would add silently: a location permission read, a device
+ * coordinate cached to survive a restart, or any local-storage write at
+ * all from a module whose whole design is "ask the server, at the
+ * moment the user asks, and keep nothing back". `src/lib/gyms` is a
+ * transport-and-ranking layer with no cache of its own on purpose (the
+ * profile's own `gym_id`/`other_gym_ids` are the only place a choice
+ * persists, and those are Community's tables, not this module's).
+ */
+const LOCATION_FORBIDDEN = [
+  // The dependency the blueprint says never to add without a founder
+  // decision (CLAUDE.md: never add a dependency without asking); catches
+  // it whether it arrives as an import or a bare package reference.
+  /expo-location/i,
+  // The device location APIs that dependency would expose.
+  /watchPositionAsync/,
+  /getCurrentPositionAsync/,
+  /getLastKnownPositionAsync/,
+  /startLocationUpdatesAsync/,
+  /requestForegroundPermissionsAsync/,
+  /requestBackgroundPermissionsAsync/,
+  // Every local-storage route the rest of the app uses to persist
+  // something between sessions. None belongs in this module at all: a
+  // coordinate is used at the moment it is supplied to a search and never
+  // written anywhere.
+  /AsyncStorage/,
+  /SecureStore/,
+  /expo-sqlite/,
+];
+
+describe('GD-13: the gym directory never tracks or persists a coordinate', () => {
+  test('there is gyms source to guard', () => {
+    // Same self-check as the Community walk above: if this ever fails,
+    // the guard has quietly stopped guarding anything.
+    expect(walk(GYMS_DIR).length).toBeGreaterThan(0);
+  });
+
+  test.each(walk(GYMS_DIR).map((f) => [path.relative(ROOT, f), f]))(
+    '%s never reads a location API and never writes to local storage',
+    (rel, full) => {
+      const source = code(fs.readFileSync(full, 'utf8'));
+      for (const pattern of LOCATION_FORBIDDEN) {
+        expect({ rel, pattern: String(pattern), matched: pattern.test(source) })
+          .toEqual({ rel, pattern: String(pattern), matched: false });
+      }
+    },
+  );
 });
 
 describe('the client and the SQL agree', () => {

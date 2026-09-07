@@ -41,11 +41,13 @@ import SectionLabel from '../components/SectionLabel';
 import SegmentedControl from '../components/SegmentedControl';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
+import GymPicker from '../components/community/GymPicker';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
 import { AVATAR_PRESETS } from '../lib/profileAvatarPresets';
+import { setGyms, venueLine } from '../lib/gyms';
 import {
   isValidHandle, checkHandle, upsertProfile, DISPLAY_NAME_MAX,
   COMMUNITY_RULES_VERSION, currentUserId,
@@ -88,6 +90,13 @@ export default function CommunityJoinScreen({ navigation, route }) {
   const [displayName, setDisplayName] = useState('');
   const [preset, setPreset] = useState(AVATAR_PRESETS[0].key);
   const [visibility, setVisibility] = useState('public');
+  // The gym picker (gym database blueprint 20-BLUEPRINT.md, GD-14):
+  // optional here, never a blocker on creating the profile. `editingGym`
+  // starts true (there is nothing selected yet at join time) and flips
+  // to a summary row + "Change" once a venue is picked, same pattern as
+  // the profile editor.
+  const [primaryGym, setPrimaryGym] = useState(null);
+  const [editingGym, setEditingGym] = useState(true);
   // 'idle' | 'invalid' | 'checking' | 'available' | 'taken' | 'unknown'
   // 'unknown' is the check that could not RUN (offline, or a read that did
   // not answer). It is not a refusal: Create stays available so `create()`
@@ -206,6 +215,12 @@ export default function CommunityJoinScreen({ navigation, route }) {
       // waiting for tomorrow's throttle window.
       setShowProgrammes(showProgrammes).catch(() => { /* the default already matches */ });
       syncTrainingProfile(uid, { force: true }).catch(() => { /* best effort */ });
+      // Optional (GD-14), and best effort the same way: the profile itself
+      // is already created, and a gym can always be added later from the
+      // profile editor.
+      if (primaryGym?.id) {
+        setGyms(primaryGym.id, []).catch(() => { /* can be added later */ });
+      }
       await refresh(true);
       toast.show('Your profile is live');
       if (next?.screen) navigation.replace(next.screen, next.params ?? {});
@@ -217,7 +232,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
     }
   }, [
     canCreate, handle, displayName, preset, visibility, next, navigation, refresh, toast,
-    showProgrammes, uid,
+    showProgrammes, uid, primaryGym,
   ]);
 
   return (
@@ -276,6 +291,35 @@ export default function CommunityJoinScreen({ navigation, route }) {
               </Pressable>
             ))}
           </View>
+        </View>
+
+        <View style={styles.field}>
+          <SectionLabel>Trains at (optional)</SectionLabel>
+          {editingGym ? (
+            <GymPicker
+              navigation={navigation}
+              onSelect={(venue) => { setPrimaryGym(venue); setEditingGym(false); }}
+            />
+          ) : (
+            <Card style={styles.gymRow}>
+              <Text
+                style={[styles.tpLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary, flex: 1 }]}
+                numberOfLines={1}
+              >
+                {venueLine(primaryGym).primary}
+              </Text>
+              <Pressable
+                onPress={() => setEditingGym(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Change gym"
+              >
+                <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.primary }]}>Change</Text>
+              </Pressable>
+            </Card>
+          )}
+          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+            Only the gym you choose. Never your location. Can be added later from Edit profile.
+          </Text>
         </View>
 
         <View style={styles.field}>
@@ -394,6 +438,7 @@ const styles = StyleSheet.create({
   field: { gap: spacing.sm },
   hint: { ...type.caption, color: colors.textMuted },
   presets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  gymRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
   tpPreview: { gap: spacing.xxs },
   tpPreviewLabel: { ...type.caption, color: colors.textMuted },
   tpPreviewLine: { ...type.body, color: colors.textPrimary },

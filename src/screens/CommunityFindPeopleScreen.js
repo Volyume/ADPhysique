@@ -69,15 +69,32 @@ export function lineFor(door, count) {
   return doorLine(door, n, scope);
 }
 
+/**
+ * The gym door's own label (gym database blueprint
+ * `docs/gym-database-2026-09-06/20-BLUEPRINT.md`, GD-14). Every other
+ * door keeps its fixed name ("Near me", "Train like me"...); the gym door
+ * reads the venue's own display name once one is set (`door.key`, which
+ * `findPeople.js` already fills from the profile's `gym_label` -- a
+ * server-derived display name once GD-14 links a directory venue, or a
+ * legacy free-typed label for an older profile), so the row says
+ * "PureGym Motherwell" rather than a generic "At my gym" beside a
+ * subtitle repeating the same name.
+ */
+function doorTitle(door) {
+  if (door.mode === 'gym' && door.available && door.key) return door.key;
+  return door.label;
+}
+
 function DoorRow({ door, count, onPress }) {
   const t = useTheme();
   const line = lineFor(door, count);
+  const title = doorTitle(door);
 
   return (
     <Card
       onPress={onPress}
       style={styles.door}
-      accessibilityLabel={`${door.label}. ${line}`}
+      accessibilityLabel={`${title}. ${line}`}
     >
       <View style={[styles.glyph, { backgroundColor: t.colors.surface2 }]}>
         <Ionicons
@@ -87,8 +104,11 @@ function DoorRow({ door, count, onPress }) {
         />
       </View>
       <View style={styles.doorBody}>
-        <Text style={[styles.doorLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
-          {door.label}
+        <Text
+          style={[styles.doorLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}
+          numberOfLines={1}
+        >
+          {title}
         </Text>
         <Text style={[styles.doorLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
           {line}

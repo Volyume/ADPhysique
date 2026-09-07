@@ -62,6 +62,8 @@ describe('the emphatic set is curated: committing actions only', () => {
       'screens/CommunityJoinScreen.js', 'screens/CommunityHubScreen.js',
       'screens/CommunityPublishProgrammeScreen.js', 'screens/CommunityComposeScreen.js',
       'screens/CommunityAdaptScreen.js',
+      // Accept the rules: the one committing action on the rules screen.
+      'screens/CommunityRulesScreen.js',
     ]);
     for (const [file] of emphatic) expect(allowed.has(file)).toBe(true);
     expect(emphatic.length).toBeGreaterThan(10);
