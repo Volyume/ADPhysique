@@ -1,9 +1,9 @@
 /**
  * The Community activity inbox (blueprint sections 3, 5.7; SD-15).
  *
- * In-app first: every follow, reaction, comment and programme use lands
- * here whether or not a push was allowed to leave the server. A push is
- * an extra, never the record.
+ * In-app first: every follow, reaction and comment lands here whether or
+ * not a push was allowed to leave the server. A push is an extra, never
+ * the record.
  */
 
 import { callCommunity } from './transport';

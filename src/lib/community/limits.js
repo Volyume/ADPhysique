@@ -55,7 +55,6 @@ export const COMMENTS_PER_HOUR_NEW = 10;
 export const COMMENTS_PER_HOUR_ESTABLISHED = 30;
 
 export const REPORTS_PER_DAY = 20;
-export const PROGRAMMES_PER_DAY = 10;
 export const PROFILE_UPSERTS_PER_DAY = 5;
 
 /** A handle may change once every 30 days. Handles are how people find
@@ -67,13 +66,6 @@ export const HANDLE_CHANGE_DAYS = 30;
  * hides itself pending review. Automatic first line, never the last
  * word: a moderator can unhide. */
 export const AUTO_HIDE_REPORTS = 3;
-
-/** Programme snapshot ceilings (blueprint section 5.2). A snapshot is
- * structure only, so these are generous for any real training week and
- * tight enough that a snapshot can never become a data channel. */
-export const SNAPSHOT_MAX_BYTES = 65536;
-export const SNAPSHOT_MAX_DAYS = 8;
-export const SNAPSHOT_MAX_EXERCISES_PER_DAY = 20;
 
 /**
  * Is this profile still inside its new-account window?
@@ -107,7 +99,6 @@ export function limitsForAccount(createdAt, nowMs = Date.now()) {
     commentsPerHour: isNew ? COMMENTS_PER_HOUR_NEW : COMMENTS_PER_HOUR_ESTABLISHED,
     followingCap: FOLLOWING_CAP,
     reportsPerDay: REPORTS_PER_DAY,
-    programmesPerDay: PROGRAMMES_PER_DAY,
     profileUpsertsPerDay: PROFILE_UPSERTS_PER_DAY,
   };
 }

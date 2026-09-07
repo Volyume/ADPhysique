@@ -195,7 +195,6 @@ describe('linking config — Community share links (blueprint section 8)', () =>
 
   test.each([
     ['https://volyume.app/u/?h=rowan_lifts', 'CommunityProfile', { h: 'rowan_lifts' }],
-    ['https://volyume.app/p/?id=prog-1', 'CommunityProgramme', { id: 'prog-1' }],
     ['https://volyume.app/s/?id=post-1', 'CommunityPost', { id: 'post-1' }],
   ])('%s opens %s with its query param', (url, name, params) => {
     expect(routeFor(url)).toMatchObject({ tab: 'HomeTab', name, params });
@@ -274,11 +273,10 @@ describe('linking config — existing paths still resolve', () => {
 // form and the route it must reach can never drift apart again.
 describe('linking config — the exact app-scheme forms links.js builds', () => {
   const {
-    appProfileUrl, appProgrammeUrl, appStoryUrl,
+    appProfileUrl, appStoryUrl,
   } = require('../../lib/community/links');
 
   test.each([
-    [appProgrammeUrl('prog-1'), 'CommunityProgramme', { id: 'prog-1' }],
     [appProfileUrl('rowan_lifts'), 'CommunityProfile', { h: 'rowan_lifts' }],
     [appStoryUrl('post-1'), 'CommunityPost', { id: 'post-1' }],
   ])('%s resolves to %s with its param', (url, name, params) => {

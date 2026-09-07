@@ -33,7 +33,7 @@ jest.mock('../transport', () => {
 const { callCommunity } = require('../transport');
 const {
   connect, respondToConnect, withdrawConnect, removeConnection, listConnections,
-  setConnectFrom, setShowProgrammes, setPartner,
+  setConnectFrom, setPartner,
   connectionState, cleanReasons, cleanPartnerPrefs,
   CONNECT_REASONS, CONNECT_NOTE_MAX, CONNECT_FROM_VALUES, CONNECT_BUTTON_LABELS,
   MAX_CONNECT_REASONS,
@@ -198,11 +198,6 @@ describe('the three privacy controls', () => {
   test('anything else is refused before the network', async () => {
     await expect(setConnectFrom('everyone')).rejects.toMatchObject({ code: 'invalid_input' });
     expect(callCommunity).not.toHaveBeenCalled();
-  });
-
-  test('"Show which programmes I use" sends a boolean', async () => {
-    await setShowProgrammes(0);
-    expect(callCommunity).toHaveBeenCalledWith('community_set_show_programmes', { _value: false });
   });
 
   test('switching the partner flag off clears the preferences with it', async () => {

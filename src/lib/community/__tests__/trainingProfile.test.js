@@ -35,7 +35,6 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 
 jest.mock('../transport', () => ({ callCommunity: jest.fn(async () => ({})) }));
 jest.mock('../profile', () => ({ currentUserId: () => 'u1' }));
-jest.mock('../feed', () => ({ myProgrammes: jest.fn(async () => ({ programmes: [] })) }));
 jest.mock('../../database', () => ({
   getCompletedWorkoutStartTimestamps: jest.fn(async () => []),
   getWorkoutSetsSince: jest.fn(async () => []),
@@ -44,7 +43,6 @@ jest.mock('../../database', () => ({
 }));
 
 const { callCommunity } = require('../transport');
-const { myProgrammes } = require('../feed');
 const db = require('../../database');
 const {
   deriveTrainingProfile, previewLine, shareablePayload, sessionsBandFor,
@@ -75,7 +73,6 @@ beforeEach(() => {
   db.getWorkoutSetsSince.mockResolvedValue([]);
   db.getAllExercises.mockResolvedValue([]);
   db.getActivePlan.mockResolvedValue(null);
-  myProgrammes.mockResolvedValue({ programmes: [] });
   callCommunity.mockResolvedValue({});
 });
 
@@ -381,10 +378,15 @@ describe('only the opted-in bands are sent', () => {
   test('the defaults leave days, time bands and the age band behind', () => {
     const payload = shareablePayload(BANDS, TP_DEFAULT_SHARE);
     expect(Object.keys(payload).sort()).toEqual([
-      'share_age_band', 'tp_experience_band', 'tp_programme_key',
+      'share_age_band', 'share_consistency', 'tp_experience_band', 'tp_programme_key',
       'tp_sessions_band', 'tp_staple_lifts',
     ]);
     expect(payload.share_age_band).toBe(false);
+    // `share_consistency` always travels, the same as `share_age_band`
+    // (community product audit `60-DESIGN-PROGRESS-COMMUNITY.md` section
+    // 1); its counters are a separate module's concern, pinned in
+    // `trainingConsistency.test.js`.
+    expect(payload.share_consistency).toBe(false);
   });
 
   test('a band whose toggle is off is ABSENT, not sent as null', () => {
@@ -404,7 +406,7 @@ describe('only the opted-in bands are sent', () => {
       experience: true, programme: true, age_band: true,
     });
     expect(Object.keys(payload).sort()).toEqual([
-      'share_age_band', 'tp_days', 'tp_experience_band', 'tp_programme_key',
+      'share_age_band', 'share_consistency', 'tp_days', 'tp_experience_band', 'tp_programme_key',
       'tp_sessions_band', 'tp_staple_lifts', 'tp_time_bands',
     ]);
   });
@@ -431,7 +433,7 @@ describe('only the opted-in bands are sent', () => {
 });
 
 describe('the loader reads training structure and nothing else', () => {
-  test('four reads, and the programme key comes from the imported id', async () => {
+  test('four reads, and the programme key comes from the plan\'s training style', async () => {
     db.getCompletedWorkoutStartTimestamps.mockResolvedValue([NOW - DAY]);
     db.getAllExercises.mockResolvedValue([
       { id: 'squat', isCustom: 0 }, { id: 'mine', isCustom: 1 },
@@ -440,27 +442,14 @@ describe('the loader reads training structure and nothing else', () => {
       { exerciseId: 'squat', workoutId: 'w1', createdAt: NOW - DAY },
       { exerciseId: 'mine', workoutId: 'w1', createdAt: NOW - DAY },
     ]);
-    db.getActivePlan.mockResolvedValue({ id: 'plan-1', sourceProgrammeId: 'community:prog-9' });
+    db.getActivePlan.mockResolvedValue({ id: 'plan-1', tags: 'style:kettlebell_foundations' });
 
     const out = await loadTrainingProfile('u1', { nowMs: NOW });
 
-    expect(out.tp_programme_key).toBe('prog-9');
+    expect(out.tp_programme_key).toBe('style:kettlebell_foundations');
     expect(out.tp_staple_lifts).toEqual(['squat']);
     expect(db.getCompletedWorkoutStartTimestamps).toHaveBeenCalledWith('u1');
     expect(db.getWorkoutSetsSince).toHaveBeenCalledWith('u1', NOW - (12 * WEEK));
-  });
-
-  test('a plan the person published themselves resolves to their own id', async () => {
-    db.getActivePlan.mockResolvedValue({ id: 'plan-2', tags: 'style:kettlebell_foundations' });
-    myProgrammes.mockResolvedValue({ programmes: [{ id: 'pub-3', source_plan_id: 'plan-2' }] });
-    const out = await loadTrainingProfile('u1', { nowMs: NOW });
-    expect(out.tp_programme_key).toBe('pub-3');
-  });
-
-  test('an unpublished plan falls back to its training style', async () => {
-    db.getActivePlan.mockResolvedValue({ id: 'plan-3', tags: 'style:kettlebell_foundations' });
-    const out = await loadTrainingProfile('u1', { nowMs: NOW });
-    expect(out.tp_programme_key).toBe('style:kettlebell_foundations');
   });
 
   test('no plan at all is no key, never a guess', async () => {
@@ -468,9 +457,8 @@ describe('the loader reads training structure and nothing else', () => {
     expect(out.tp_programme_key).toBeNull();
   });
 
-  test('a Community read that fails never stops the bands being derived', async () => {
-    db.getActivePlan.mockResolvedValue({ id: 'plan-4', tags: null });
-    myProgrammes.mockRejectedValue(Object.assign(new Error('offline'), { code: 'offline' }));
+  test('a plan read that fails never stops the bands being derived', async () => {
+    db.getActivePlan.mockRejectedValue(Object.assign(new Error('offline'), { code: 'offline' }));
     db.getCompletedWorkoutStartTimestamps.mockResolvedValue([NOW - DAY, NOW - (2 * DAY)]);
     const out = await loadTrainingProfile('u1', { nowMs: NOW });
     expect(out.tp_programme_key).toBeNull();

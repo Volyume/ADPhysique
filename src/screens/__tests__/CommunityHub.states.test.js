@@ -9,16 +9,16 @@
  *      public content never requires a profile (SD-04).
  *   2. Following, nothing followed yet: the empty state that answers
  *      "what now" plus the suggestion strip with its reasons.
- *   3. Discover: community programmes AND the "By Volyume" tiles built
- *      from the local library plans, so an empty community still has
- *      something in it.
+ *   3. Discover: dimensions and recent training stories.
  *   4. Offline: the cached payload renders with the quiet line, never an
  *      error screen.
  *   5. A legacy partner link: the "Partner invites have moved" card.
  *
  * The client library is mocked because this suite is about what the
  * screen does with a payload, not about the transport (which has its own
- * suite under src/lib/community/__tests__).
+ * suite under src/lib/community/__tests__). Community carries no
+ * programme section of any kind
+ * (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2).
  */
 
 import { create, act } from 'react-test-renderer';
@@ -28,11 +28,6 @@ jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('../../components/BackHeader', () => ({ right }) => right ?? null);
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
-
-jest.mock('../../lib/database', () => ({
-  getLibraryPlans: jest.fn(() => Promise.resolve([])),
-  getPlanWorkoutCounts: jest.fn(() => Promise.resolve({})),
-}));
 
 jest.mock('../../hooks/useCommunityMe', () => ({
   __esModule: true,
@@ -57,10 +52,31 @@ jest.mock('../../lib/community', () => ({
   reasonLines: (reasons) => (Array.isArray(reasons) ? reasons : []),
   follow: jest.fn(),
   unfollow: jest.fn(),
+  // Design 60 §4, D1 ("This week" / "At [gym]" blocks): best-effort reads
+  // this suite does not exercise directly (covered in boards.test.js and
+  // the board screen's own suite); resolved to empty so they never affect
+  // the states this file is actually about.
+  loadBoard: jest.fn(() => Promise.resolve({
+    rows: [], you: null, count: 0, thresholdMet: true, cursor: null,
+  })),
+  daysLabel: () => '',
+  readShareSettings: jest.fn(() => Promise.resolve({ consistency: false })),
+  loadConsistency: jest.fn(() => Promise.resolve(null)),
+  publishConsistencyOnForeground: jest.fn(() => Promise.resolve({ sent: false, reason: null, payload: null })),
+  // "Your groups" chip row (design 60 §4, D1; lane B2b): best-effort,
+  // covered directly in groups.test.js and the group screens' own
+  // suites, resolved empty here so it never affects the states this
+  // file is about.
+  listMyGroups: jest.fn(() => Promise.resolve([])),
+  // Moderated-person notice (40-GAP-CLOSURE.md §1): best-effort, covered
+  // directly in profile.moderatedStatus.test.js; resolved to the neutral
+  // shape here so it never affects the states this file is about.
+  myStatus: jest.fn(() => Promise.resolve({ status: null, reason_class: null, since: null })),
+  isModeratedStatus: (status) => status === 'restricted' || status === 'suspended',
+  REPORT_REASONS: {},
 }));
 
 import { loadHub, findPeople } from '../../lib/community';
-import { getLibraryPlans, getPlanWorkoutCounts } from '../../lib/database';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityHubScreen from '../CommunityHubScreen';
 
@@ -75,7 +91,6 @@ function emptyHub(over = {}) {
   return {
     segment: 'following',
     posts: [],
-    programmes: [],
     people: [],
     dimensions: [],
     cursor: null,
@@ -156,8 +171,6 @@ beforeEach(() => {
   jest.clearAllMocks();
   loadHub.mockResolvedValue(emptyHub());
   findPeople.mockResolvedValue({ people: [], cursor: null, count: null });
-  getLibraryPlans.mockResolvedValue([]);
-  getPlanWorkoutCounts.mockResolvedValue({});
   useCommunityMe.mockReturnValue({ me: { profile: null }, loading: false, error: null, refresh: jest.fn() });
 });
 
@@ -165,7 +178,7 @@ describe('state 1: no Community profile', () => {
   test('shows the hero, the privacy receipt and the one committing action', async () => {
     const { text } = await render();
 
-    expect(text).toContain('Programmes you can make your own');
+    expect(text).toContain('Train alongside other lifters');
     expect(text).toContain('Nothing about your body, food or coaching is ever shared.');
     // Lead visual review 2026-09-06, ruling V9: PrivacyReceipt is compact by
     // default (the one-line promise plus "What is shared"); the two columns
@@ -210,26 +223,13 @@ describe('state 2: Following with nothing followed yet', () => {
   });
 });
 
-describe('state 3: Discover with Volyume tiles', () => {
-  test('community programmes and the By Volyume tiles both render', async () => {
+describe('state 3: Discover with dimensions', () => {
+  test('dimensions at or above the hub threshold render, below it never does', async () => {
     useCommunityMe.mockReturnValue({
       me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
     });
-    getLibraryPlans.mockResolvedValue([
-      { id: 'lib-1', name: 'Kettlebell Foundations', tags: 'style:kettlebell_foundations featured' },
-    ]);
-    getPlanWorkoutCounts.mockResolvedValue({ 'lib-1': 3 });
     loadHub.mockResolvedValue(emptyHub({
       segment: 'discover',
-      programmes: [{
-        id: 'p1',
-        title: 'Minimal Push Pull Legs',
-        style_key: 'strength',
-        days_per_week: 3,
-        exercise_count: 14,
-        has_circuits: false,
-        use_count: 4,
-      }],
       dimensions: [
         { kind: 'style', key: 'kettlebell', label: 'Kettlebell lifters', count: 6 },
         // Below COMMUNITY_DIMENSION_MIN_FOR_HUB: never surfaced on the hub.
@@ -239,42 +239,9 @@ describe('state 3: Discover with Volyume tiles', () => {
 
     const { text } = await render({ segment: 'discover' });
 
-    expect(text).toContain('Programmes');
-    expect(text).toContain('Minimal Push Pull Legs');
-    expect(text).toContain('Kettlebell Foundations');
-    expect(text).toContain('By Volyume');
-    expect(text).toContain('Volyume');
     expect(text).toContain('Around you');
     expect(text).toContain('Kettlebell lifters');
     expect(text).not.toContain('Lifters in Leeds');
-  });
-
-  test('a Volyume tile opens the existing library plan detail, cross-tab', async () => {
-    useCommunityMe.mockReturnValue({
-      me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
-    });
-    getLibraryPlans.mockResolvedValue([
-      { id: 'lib-1', name: 'Kettlebell Foundations', tags: 'style:kettlebell_foundations featured' },
-    ]);
-    getPlanWorkoutCounts.mockResolvedValue({ 'lib-1': 3 });
-    loadHub.mockResolvedValue(emptyHub({ segment: 'discover' }));
-
-    const { partTrees, parent } = await render({ segment: 'discover' });
-    const header = partTrees[0];
-    const tile = header.root.findAll(
-      (n) => n.props?.accessibilityLabel === 'Kettlebell Foundations, By Volyume',
-    )[0];
-    await act(async () => { tile.props.onPress(); });
-
-    // navigateCrossTab dispatches on the TAB navigator, so the library plan
-    // opens through the parent, exactly as PlanLibraryScreen's own rows do.
-    expect(parent.navigate).toHaveBeenCalledWith(
-      'PlansTab',
-      expect.objectContaining({
-        screen: 'PlanDetail',
-        params: { planId: 'lib-1', isLibrary: true },
-      }),
-    );
   });
 });
 
@@ -320,10 +287,10 @@ describe('the entry points that name a half of the hub', () => {
     });
   });
 
-  test('params that arrive at an ALREADY MOUNTED hub still land on Discover', async () => {
-    // The hub is a tab root, so Train's "Programmes from the community"
-    // usually navigates to a screen that is already mounted: initial state
-    // alone left the reader on whichever half they last looked at.
+  test('params that arrive at an ALREADY MOUNTED hub still land on the named segment', async () => {
+    // The hub is a tab root, so an entry point usually navigates to a
+    // screen that is already mounted: initial state alone left the reader
+    // on whichever half they last looked at.
     loadHub.mockResolvedValue(emptyHub());
     const navigation = { navigate: jest.fn(), push: jest.fn(), getParent: () => ({ navigate: jest.fn() }) };
     let tree;
@@ -339,46 +306,12 @@ describe('the entry points that name a half of the hub', () => {
       tree.update(
         <CommunityHubScreen
           navigation={navigation}
-          route={{ params: { segment: 'discover', focus: 'programmes' } }}
+          route={{ params: { segment: 'discover' } }}
         />,
       );
     });
     await flush();
 
     expect(loadHub).toHaveBeenLastCalledWith('discover', expect.any(Object));
-  });
-
-  test('"See all" opens the programmes half of search, which lists them all', async () => {
-    loadHub.mockResolvedValue(emptyHub({
-      segment: 'discover',
-      programmes: [{
-        id: 'p1', title: 'Minimal Push Pull Legs', style_key: 'strength',
-        days_per_week: 3, exercise_count: 14, has_circuits: false, use_count: 4,
-      }],
-    }));
-
-    const { partTrees, navigation, text } = await render({ segment: 'discover' });
-    expect(text).toContain('See all');
-
-    const header = partTrees[0];
-    const seeAll = header.root.findAll(
-      (n) => n.props?.accessibilityLabel === 'See all community programmes',
-    )[0];
-    await act(async () => { seeAll.props.onPress(); });
-
-    expect(navigation.navigate).toHaveBeenCalledWith('CommunitySearch', { tab: 'programmes' });
-  });
-
-  test('with no community programmes there is nothing to see all of', async () => {
-    getLibraryPlans.mockResolvedValue([
-      { id: 'lib-1', name: 'Kettlebell Foundations', tags: 'style:kettlebell_foundations featured' },
-    ]);
-    getPlanWorkoutCounts.mockResolvedValue({ 'lib-1': 3 });
-    loadHub.mockResolvedValue(emptyHub({ segment: 'discover' }));
-
-    const { text } = await render({ segment: 'discover' });
-
-    expect(text).toContain('Kettlebell Foundations');
-    expect(text).not.toContain('See all');
   });
 });

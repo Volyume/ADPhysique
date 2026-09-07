@@ -1,6 +1,9 @@
 /**
- * Feed, Discover, search and the programme surfaces (blueprint sections
- * 3, 5.7; SD-06, SD-09, SD-10).
+ * Feed, Discover and search (blueprint sections 3, 5.7; SD-06, SD-09,
+ * SD-10). Programme-sharing (publish/discover/search/adapt) was removed
+ * from Community entirely (`docs/community-product-audit-2026-09-07/
+ * 40-GAP-CLOSURE.md` §2) -- Volyume builds individualised programmes, and
+ * a shared/discoverable programme layer was the wrong model.
  *
  * Every list here is CHRONOLOGICAL. There is no engagement ranking
  * anywhere in Community, by decision (SD-06): an engagement-ranked feed
@@ -89,18 +92,17 @@ function listPage(data, key) {
  * @param {'following'|'discover'} segment
  * @param {{cursor?: string|null, limit?: number, userId?: string,
  *   joined?: boolean}} [opts]
- * @returns {Promise<{segment: string, posts: Array, programmes: Array,
+ * @returns {Promise<{segment: string, posts: Array,
  *   people: Array, dimensions: Array, cursor: (string|null),
- *   programmesCursor: (string|null), fromCache: boolean,
- *   error: (string|null)}>} never throws.
+ *   fromCache: boolean, error: (string|null)}>} never throws.
  */
 export async function loadHub(segment = 'following', {
   cursor = null, limit = DEFAULT_PAGE_SIZE, userId = null, joined = true,
 } = {}) {
   const uid = userId ?? currentUserId();
   const empty = {
-    segment, posts: [], programmes: [], people: [], dimensions: [], cursor: null,
-    programmesCursor: null, fromCache: false, error: null,
+    segment, posts: [], people: [], dimensions: [], cursor: null,
+    fromCache: false, error: null,
   };
   try {
     if (segment === 'discover') {
@@ -111,28 +113,18 @@ export async function loadHub(segment = 'following', {
         return { ...empty, posts: page.posts, cursor: page.cursor };
       }
       const settled = await Promise.allSettled([
-        discoverProgrammes({ limit }),
         loadDiscoverPosts({ limit }),
         joined ? myDimensions() : Promise.resolve({ dimensions: [] }),
       ]);
-      const [programmes, posts, dimensions] = settled;
-      // Discover IS the programmes and the stories. If neither read
-      // answered there is nothing to show, so fall through to the cache.
-      if (programmes.status === 'rejected' && posts.status === 'rejected') {
-        throw programmes.reason;
-      }
+      const [posts, dimensions] = settled;
+      // Discover IS the stories. If the read did not answer there is
+      // nothing to show, so fall through to the cache.
+      if (posts.status === 'rejected') throw posts.reason;
       const payload = {
         ...empty,
-        programmes: programmes.value?.programmes ?? [],
         posts: posts.value?.posts ?? [],
         dimensions: dimensions.value?.dimensions ?? [],
-        // `cursor` pages the training stories: they are the list. The
-        // programmes have a cursor of their own and it is kept apart from
-        // it, because paging the list with the programme cursor (or the
-        // other way round) silently reads the wrong page (product review
-        // 2026-09-06, item 14).
         cursor: posts.value?.cursor ?? null,
-        programmesCursor: programmes.value?.cursor ?? null,
       };
       await writeCachedHub(uid, payload);
       return payload;
@@ -166,13 +158,6 @@ export async function searchPeople(q, { limit = 20 } = {}) {
   );
 }
 
-/** @returns {Promise<{programmes: Array, cursor: (string|null)}>} */
-export async function searchProgrammes(q, { style = null, cursor = null, limit = DEFAULT_PAGE_SIZE } = {}) {
-  return listPage(await callCommunity('community_search_programmes', {
-    _q: String(q ?? '').trim(), _style: style, _cursor: cursor, _limit: limit,
-  }), 'programmes');
-}
-
 /** @returns {Promise<{people: Array, cursor: (string|null)}>} */
 export async function suggestedPeople({ limit = 10 } = {}) {
   return listPage(await callCommunity('community_suggested_people', { _limit: limit }), 'people');
@@ -184,11 +169,10 @@ export async function myDimensions() {
 }
 
 /**
- * One dimension page: its label and count, the people in it and the
- * programmes published in it.
+ * One dimension page: its label and count and the people in it.
  *
  * @returns {Promise<{label: (string|null), count: number, people: Array,
- *   programmes: Array, cursor: (string|null)}>}
+ *   cursor: (string|null)}>}
  */
 export async function loadDimension(kind, key, { cursor = null, limit = DEFAULT_PAGE_SIZE } = {}) {
   const data = await callCommunity('community_dimension', {
@@ -198,39 +182,7 @@ export async function loadDimension(kind, key, { cursor = null, limit = DEFAULT_
     label: data?.label ?? null,
     count: Number(data?.count ?? 0),
     ...listPage(data, 'people'),
-    programmes: Array.isArray(data?.programmes) ? data.programmes : [],
   };
-}
-
-// ─── Programmes ──────────────────────────────────────────────────────
-
-export async function publishProgramme(payload) {
-  return callCommunity('community_publish_programme', { _p: payload });
-}
-
-export async function unpublishProgramme(id) {
-  return callCommunity('community_unpublish_programme', { _id: id });
-}
-
-export async function getCommunityProgramme(id) {
-  return callCommunity('community_get_programme', { _id: id });
-}
-
-export async function recordProgrammeUse(id, mode) {
-  return callCommunity('community_record_programme_use', { _id: id, _mode: mode });
-}
-
-/** @returns {Promise<{programmes: Array, cursor: (string|null)}>} */
-export async function myProgrammes() {
-  return listPage(await callCommunity('community_my_programmes', {}), 'programmes');
-}
-
-/** @returns {Promise<{programmes: Array, cursor: (string|null)}>} */
-export async function discoverProgrammes({ style = null, cursor = null, limit = DEFAULT_PAGE_SIZE } = {}) {
-  return listPage(
-    await callCommunity('community_discover_programmes', { _style: style, _cursor: cursor, _limit: limit }),
-    'programmes',
-  );
 }
 
 // ─── Posts, reactions and comments ───────────────────────────────────

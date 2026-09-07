@@ -43,7 +43,7 @@
 //
 // Request body:
 //   { "kind": "follow" | "follow_request" | "follow_accepted" | "reaction"
-//             | "comment" | "programme_used" | "connect_request"
+//             | "comment" | "connect_request"
 //             | "connect_accepted" | "message",
 //     "target_user_id": "<uuid>",
 //     "ref_id": "<uuid>" }
@@ -91,20 +91,34 @@ interface NotifyBody {
   ref_id?: string
 }
 
+// migrate_164 (40-GAP-CLOSURE.md section 2): 'programme_used' retired with
+// the shared-programme layer's community_record_programme_use RPC, which no
+// longer writes an activity row for this kind to prove.
+// migrate_165 (design 60 §3): the three group notification kinds, proved by
+// the community_group_members/community_group_invites row `community_group_
+// join`/`_approve`/`_invite` just wrote, and riding the SAME community_follow
+// category budget the connection kinds already use -- no new category, no
+// push for an ordinary open-group join (community_group_join never calls
+// this function for that branch).
 type Kind =
   | 'follow' | 'follow_request' | 'follow_accepted'
-  | 'reaction' | 'comment' | 'programme_used'
+  | 'reaction' | 'comment'
   | 'connect_request' | 'connect_accepted' | 'message'
+  | 'group_request' | 'group_accepted' | 'group_invited'
 
 // A connection request and its acceptance are relationship events, so they
 // share the follow category and its budget; a message has its own category
-// and its own toggle (discovery blueprint section 2).
+// and its own toggle (discovery blueprint section 2). The three group kinds
+// share it too (design 60 §3: "ride the existing community_follow category
+// budget").
 const FOLLOW_KINDS: Kind[] = [
   'follow', 'follow_request', 'follow_accepted', 'connect_request', 'connect_accepted',
+  'group_request', 'group_accepted', 'group_invited',
 ]
 const CONNECT_KINDS: Kind[] = ['connect_request', 'connect_accepted']
+const GROUP_KINDS: Kind[] = ['group_request', 'group_accepted', 'group_invited']
 const ALL_KINDS: Kind[] = [
-  ...FOLLOW_KINDS, 'reaction', 'comment', 'programme_used', 'message',
+  ...FOLLOW_KINDS, 'reaction', 'comment', 'message',
 ]
 
 // The kinds a mute silences. A mute hides someone's stories and silences
@@ -115,11 +129,16 @@ const MUTE_SILENCED_KINDS: Kind[] = [...CONNECT_KINDS, 'message']
 // Every kind that proves itself with a community_activity row rather than a
 // conversation (security review 2026-09-06, finding 4). `message` is excluded:
 // it already has its own per-conversation 15-minute collapse below, and never
-// writes a community_activity row.
+// writes a community_activity row. The group kinds are added by migrate_165:
+// community_group_join/_approve/_invite each write both the membership/invite
+// row (the actual proof, checked below) AND a community_activity row (via
+// _community_add_activity), so they get the identical replay-guard shape
+// connect_request/connect_accepted already have.
 const ACTIVITY_BACKED_KINDS: Kind[] = [
   'follow', 'follow_request', 'follow_accepted',
-  'reaction', 'comment', 'programme_used',
+  'reaction', 'comment',
   'connect_request', 'connect_accepted',
+  ...GROUP_KINDS,
 ]
 
 // Fifteen minutes: at most one push per conversation while the recipient has
@@ -149,9 +168,16 @@ function pushCopy(kind: Kind, handle: string): { title: string; body: string } {
       // NEVER the content. A locked screen must not leak a conversation
       // (blueprint section 2, SD-31).
       return { title: 'Community', body: `New message from @${handle}` }
-    case 'programme_used':
+    case 'group_request':
+      return { title: 'Community', body: `@${handle} asked to join your group` }
+    case 'group_accepted':
+      return { title: 'Community', body: `@${handle} approved your group request` }
+    case 'group_invited':
+      return { title: 'Community', body: `@${handle} invited you to a group` }
     default:
-      return { title: 'Community', body: `@${handle} is using your programme` }
+      // Unreachable: ALL_KINDS is checked before this is ever called. Kept
+      // as a safe fallback rather than a non-null assertion.
+      return { title: 'Community', body: `@${handle} did something in Community` }
   }
 }
 
@@ -316,6 +342,50 @@ serve(async (req: Request) => {
             && Number.isFinite(respondedMs) && respondedMs >= sinceMs
         }
       }
+    } else if (kind === 'group_request' || kind === 'group_accepted' || kind === 'group_invited') {
+      // migrate_165 (design 60 §3): "proof = the membership/invite row".
+      // ref_id is the group id. `group_request` is proved by the caller's
+      // OWN 'requested' row (recipients are every admin, so the recipient
+      // itself is not on the membership row); `group_accepted` is proved by
+      // the TARGET's row having just become 'member' (the actor is the
+      // admin who approved it, checked via the activity row's actor below,
+      // since the membership row alone cannot say who approved it);
+      // `group_invited` is proved by the target's own 'invited' row.
+      activityTargetKind = 'group'
+      activityTargetId = refId
+      if (kind === 'group_request') {
+        const { data } = await admin
+          .from('community_group_members')
+          .select('user_id, state, joined_at')
+          .eq('group_id', refId)
+          .eq('user_id', actorId)
+          .eq('state', 'requested')
+          .gte('joined_at', sinceIso)
+          .limit(1)
+          .maybeSingle()
+        verified = !!data
+      } else if (kind === 'group_invited') {
+        const { data } = await admin
+          .from('community_group_members')
+          .select('user_id, state, joined_at')
+          .eq('group_id', refId)
+          .eq('user_id', targetUserId)
+          .eq('state', 'invited')
+          .gte('joined_at', sinceIso)
+          .limit(1)
+          .maybeSingle()
+        verified = !!data
+      } else {
+        const { data } = await admin
+          .from('community_group_members')
+          .select('user_id, state')
+          .eq('group_id', refId)
+          .eq('user_id', targetUserId)
+          .eq('state', 'member')
+          .limit(1)
+          .maybeSingle()
+        verified = !!data
+      }
     } else if (kind === 'message') {
       // A message the CALLER sent in the last ten minutes, in the
       // conversation named by ref_id, and that conversation must be this pair
@@ -368,26 +438,12 @@ serve(async (req: Request) => {
           const { data: post } = await admin
             .from('community_posts').select('author_id').eq('id', row.target_id).maybeSingle()
           verified = (post as { author_id?: string } | null)?.author_id === targetUserId
-        } else {
-          const { data: prog } = await admin
-            .from('community_programmes').select('owner_id').eq('id', row.target_id).maybeSingle()
-          verified = (prog as { owner_id?: string } | null)?.owner_id === targetUserId
         }
+        // migrate_164: community_comment no longer accepts target_kind =
+        // 'programme' (the shared-programme layer is retired), so any
+        // OTHER target_kind here is a row this function does not know how
+        // to prove and `verified` stays false rather than trusting it.
       }
-    } else {
-      activityTargetKind = 'programme'
-      activityTargetId = refId
-      const { data } = await admin
-        .from('community_programme_uses')
-        .select('programme_id, community_programmes!inner(owner_id)')
-        .eq('programme_id', refId)
-        .eq('user_id', actorId)
-        .gte('created_at', sinceIso)
-        .limit(1)
-        .maybeSingle()
-      const owner = (data as { community_programmes?: { owner_id?: string } } | null)
-        ?.community_programmes
-      verified = !!data && owner?.owner_id === targetUserId
     }
   } catch (e) {
     console.error('[community-notify] verification failed', e)
@@ -444,6 +500,45 @@ serve(async (req: Request) => {
   }
   if (pref && (pref as { enabled?: boolean }).enabled === false) {
     return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
+  }
+
+  // Step 4a: quiet hours (migrate_164 spec G). Held rather than blocked: a
+  // failed read or an unset window is absence, not a refusal, so it never
+  // stops a push that would otherwise go -- unlike the category toggle and
+  // the ED flag below, which fail CLOSED on a read error.
+  const { data: quiet } = await admin
+    .from('notification_preferences')
+    .select('quiet_start, quiet_end, tz')
+    .eq('user_id', targetUserId)
+    .eq('category', 'quiet_hours')
+    .maybeSingle()
+  const quietRow = quiet as { quiet_start?: number | null; quiet_end?: number | null; tz?: string | null } | null
+  if (quietRow?.quiet_start != null && quietRow?.quiet_end != null && quietRow?.tz) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: quietRow.tz, hour: '2-digit', minute: '2-digit', hour12: false,
+      }).formatToParts(new Date())
+      const hour = Number(parts.find((p) => p.type === 'hour')?.value ?? 'NaN')
+      const minute = Number(parts.find((p) => p.type === 'minute')?.value ?? 'NaN')
+      if (Number.isFinite(hour) && Number.isFinite(minute)) {
+        const nowMin = hour * 60 + minute
+        const start = quietRow.quiet_start
+        const end = quietRow.quiet_end
+        // An overnight window (start > end, e.g. 23:00-07:00) wraps past
+        // midnight; a same-day window (start <= end) does not.
+        const inWindow = start <= end
+          ? nowMin >= start && nowMin < end
+          : nowMin >= start || nowMin < end
+        if (inWindow) {
+          return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
+        }
+      }
+    } catch (e) {
+      // An invalid/unknown tz string should not have made it past
+      // community_set_quiet_hours, but if it did, that is absence of a
+      // usable window, not a reason to hold every push at this person.
+      console.error('[community-notify] quiet-hours projection failed', e)
+    }
   }
 
   // Step 5: the recipient's open ED/wellbeing flag. Copied from partner-cheer

@@ -3,9 +3,10 @@
  * SD-09, SD-10)
  *
  * The one Community destination. Two halves: Following (the people you
- * chose, newest first, never ranked) and Discover (programmes, people
- * you may want to follow, the dimensions you share with others, and
- * recent training stories).
+ * chose, newest first, never ranked) and Discover (people you may want
+ * to follow, the dimensions you share with others, and recent training
+ * stories). Community carries no programme section of any kind -- see
+ * `docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2.
  *
  * Nobody is in Community until they create a profile, but the value is
  * visible before that: with no profile the hero explains what this is,
@@ -21,16 +22,23 @@
  * Discovery additions (discovery blueprint `docs/social-discovery-
  * 2026-09-06/70-DISCOVERY-BLUEPRINT.md` section 4 and 10; SD-23): a "Find
  * people" card opens the six-door screen; a messages glyph beside
- * Activity carries its own unread dot (the hub sends people to two
+ * Activity carries its own unread count (the hub sends people to two
  * different places, so one dot cannot serve both); "People you may want
  * to follow" becomes "Lifters like you", the top five from
  * `findPeople('like_me')`, read separately from the rest of the hub
  * payload because it is a scored list, not a feed page.
+ *
+ * Moderated-person notice (community product audit `docs/community-
+ * product-audit-2026-09-07/40-GAP-CLOSURE.md` §1): on load, `myStatus()`
+ * reads the caller's own moderation state; a restricted or suspended
+ * profile sees one calm line at the top naming the reason class, with a
+ * link to Community rules. Additive only, per the concurrent build lane
+ * on this screen (menu rows): never reorders or reformats anything else.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, RefreshControl, ActivityIndicator, Pressable,
+  View, Text, StyleSheet, RefreshControl, ActivityIndicator, Pressable, AppState, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
@@ -47,27 +55,152 @@ import SectionLabel from '../components/SectionLabel';
 import Chip from '../components/Chip';
 import PostCard from '../components/community/PostCard';
 import ProfileCard from '../components/community/ProfileCard';
-import ProgrammeTile from '../components/community/ProgrammeTile';
 import DimensionRow from '../components/community/DimensionRow';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { navigateCrossTab } from '../navigation/navigateCrossTab';
-import { colors, spacing, type, circle } from '../styles/theme';
-import { logError } from '../lib/errorLog';
-import { getLibraryPlans, getPlanWorkoutCounts } from '../lib/database';
-import { styleKeyFromTags } from '../lib/exercise/stylePools';
+import { colors, spacing, type, circle, fontSize, fontWeight } from '../styles/theme';
 import {
   loadHub, hasProfile, hasUnseen, hasUnreadMessages, reactToPost,
   COMMUNITY_DIMENSION_MIN_FOR_HUB, findPeople,
+  loadBoard, daysLabel, readShareSettings, loadConsistency,
+  listMyGroups, myStatus, isModeratedStatus, REPORT_REASONS,
 } from '../lib/community';
 
 const PAGE = 20;
-// How many Volyume library plans the Discover "By Volyume" strip carries.
-// Enough to answer "there is something here" on an empty community, few
-// enough that it never buries what people published.
-const VOLYUME_TILES = 4;
+const GYM_HUB_ROWS = 3;
+
+/**
+ * "This week" one-line summary and "At [gym]" preview (design ruling 60
+ * §4, D1): device-computed and shown only when the person shares their
+ * consistency (SD-30 gate lives in `trainingConsistency.js`, not here --
+ * this reads the same toggle `readShareSettings` already exposes and asks
+ * for the counters only when it is on).
+ */
+function ThisWeekLine({ t, counters }) {
+  if (!counters) return null;
+  const streak = Number(counters.c_weeks_streak) || 0;
+  const sessions = Number(counters.c_sessions_week) || 0;
+  const streakLabel = streak > 0 ? (streak === 1 ? '1 week in a row' : `${streak} weeks in a row`) : 'Getting back into it';
+  return (
+    <View style={styles.section}>
+      <SectionLabel tone="muted">This week</SectionLabel>
+      <View style={[styles.weekLine, { backgroundColor: t.colors.surface2 }]}>
+        <View style={[styles.streakChip, { backgroundColor: t.colors.primaryBg }]}>
+          <Ionicons name="flame-outline" size={14} color={t.colors.primary} />
+          <Text style={[styles.streakLabel, { ...t.type.caption, color: t.colors.primary }]}>{streakLabel}</Text>
+        </View>
+        <Text style={[styles.weekFigure, t.type.num('bodyStrong'), { color: t.colors.textPrimary }]}>
+          {sessions === 1 ? '1 session' : `${sessions} sessions`}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function AtGymBlock({ t, navigation, gymLabel, rows }) {
+  if (!gymLabel) {
+    return (
+      <View style={styles.section}>
+        <SectionLabel tone="muted">At your gym</SectionLabel>
+        <Text style={[styles.gymEmptyLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+          Add your gym to see who else trains there this week.
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHead}>
+        <SectionLabel tone="muted">{`At ${gymLabel}`}</SectionLabel>
+        <Pressable
+          onPress={() => navigation.navigate('CommunityBoard', { scope: 'gym', window: 'week' })}
+          accessibilityRole="button"
+          accessibilityLabel="See all at your gym this week"
+        >
+          <Text style={[styles.seeAll, { ...t.type.caption, color: t.colors.primary }]}>See all</Text>
+        </Pressable>
+      </View>
+      {rows.length ? (
+        <View style={[styles.gymCard, { backgroundColor: t.colors.surface }]}>
+          {rows.map((row, i) => {
+            const card = row.card;
+            const name = card.display_name || card.handle || 'Athlete';
+            return (
+              <Pressable
+                key={card.user_id}
+                onPress={() => (card.handle
+                  ? navigation.navigate('CommunityProfile', { handle: card.handle })
+                  : null)}
+                style={[
+                  styles.gymRow,
+                  i < rows.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.colors.borderSubtle },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`${name}${row.trainedToday ? ', trained today' : ''}`}
+              >
+                <View style={styles.gymAvatarWrap}>
+                  <ProfileAvatarMark presetKey={card.avatar_preset} displayName={name} size={32} />
+                  {row.trainedToday ? (
+                    <View style={[styles.ringDot, { backgroundColor: t.colors.primary, borderColor: t.colors.surface }]} />
+                  ) : null}
+                </View>
+                <Text style={[styles.gymName, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
+                  {name}
+                </Text>
+                <Text style={[styles.gymCaption, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
+                  {row.trainedDays.length ? `Trained ${daysLabel(row.trainedDays)}` : (row.trainedToday ? 'Trained today' : '')}
+                </Text>
+                <Ionicons name="chevron-forward" size={14} color={t.colors.textMuted} />
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : (
+        <Text style={[styles.gymEmptyLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+          No one else at your gym is sharing yet.
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/**
+ * "Your groups" chip row (design 60 §4, D1): group names with "New
+ * group" trailing. Minors never see "New group" (server refuses
+ * `community_group_create` for a minor; this is the fail-closed
+ * client-side mirror on the cached `me.is_minor`) but still see the
+ * chip row itself if the server ever answered any groups -- it never
+ * does for a minor since they cannot join or be created into one, so
+ * this only ever renders empty for them in practice.
+ */
+function YourGroupsRow({ navigation, groups, isMinor }) {
+  if (!groups.length && isMinor) return null;
+  return (
+    <View style={styles.section}>
+      <SectionLabel tone="muted">Your groups</SectionLabel>
+      <View style={styles.chipRow}>
+        {groups.map((row) => (
+          <Chip
+            key={row.group.id}
+            label={row.group.name}
+            onPress={() => navigation.navigate('CommunityGroup', { id: row.group.id })}
+            accessibilityLabel={`Open ${row.group.name}`}
+          />
+        ))}
+        {!isMinor ? (
+          <Chip
+            icon="add"
+            label="New group"
+            onPress={() => navigation.navigate('CommunityGroupCreate')}
+            accessibilityLabel="Create a new group"
+          />
+        ) : null}
+      </View>
+    </View>
+  );
+}
 
 /**
  * The feed rows arrive as `{post, author, my_reaction}` from the RPCs.
@@ -85,23 +218,6 @@ export function normalisePostRow(row) {
   };
 }
 
-/** The Volyume library plans, in ProgrammeTile shape. Local reads only. */
-export async function loadVolyumeTiles() {
-  const [plans, counts] = await Promise.all([getLibraryPlans(), getPlanWorkoutCounts()]);
-  const rows = Array.isArray(plans) ? plans : [];
-  const featured = rows.filter((p) => String(p.tags ?? '').includes('featured'));
-  const pick = (featured.length ? featured : rows).slice(0, VOLYUME_TILES);
-  return pick.map((p) => ({
-    id: p.id,
-    title: p.name,
-    style_key: styleKeyFromTags(p.tags ?? null),
-    days_per_week: counts?.[p.id] ?? 0,
-    exercise_count: 0,
-    has_circuits: false,
-    use_count: 0,
-  }));
-}
-
 export default function CommunityHubScreen({ navigation, route }) {
   const t = useTheme();
   const { me, loading: meLoading, refresh: refreshMe } = useCommunityMe();
@@ -113,16 +229,69 @@ export default function CommunityHubScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [paging, setPaging] = useState(false);
-  const [volyume, setVolyume] = useState([]);
   const [legacyCardShown, setLegacyCardShown] = useState(!!legacyPartnerCode);
   const [browsing, setBrowsing] = useState(false);
-  const [focusProgrammes, setFocusProgrammes] = useState(route?.params?.focus === 'programmes');
   const [likeMe, setLikeMe] = useState([]);
+  const [weekCounters, setWeekCounters] = useState(null);
+  const [gymRows, setGymRows] = useState([]);
+  const [myGroups, setMyGroups] = useState([]);
+  const [status, setStatus] = useState(null);
   const listRef = useRef(null);
-  // Where the Programmes section sits inside the list header, measured on
-  // layout. 0 until it has been measured, which is the top of the list and
-  // still shows the section, so there is no race to lose.
-  const programmesY = useRef(0);
+
+  const uid = me?.profile?.user_id ?? null;
+  const gymLabel = me?.profile?.gym_label ?? null;
+  const isMinor = !!me?.is_minor;
+
+  // "This week" (design 60 §4, D1): device-computed, own counters, shown
+  // only when this person shares their consistency.
+  useEffect(() => {
+    if (!joined || !uid) { setWeekCounters(null); return undefined; }
+    let alive = true;
+    readShareSettings(uid).then(async (share) => {
+      if (!alive) return;
+      if (!share?.consistency) { setWeekCounters(null); return; }
+      try {
+        const counters = await loadConsistency(uid);
+        if (alive) setWeekCounters(counters);
+      } catch (_e) {
+        if (alive) setWeekCounters(null);
+      }
+    }).catch(() => { if (alive) setWeekCounters(null); });
+    return () => { alive = false; };
+  }, [joined, uid]);
+
+  // "At [gym]" (design 60 §4, D1): up to 3 rows from the gym-scope week
+  // board. Best effort -- a failed or empty read just leaves the block's
+  // own empty line, never the reason the rest of the hub fails to show.
+  useEffect(() => {
+    if (!joined || !gymLabel) { setGymRows([]); return undefined; }
+    let alive = true;
+    loadBoard({ scope: 'gym', window: 'week', limit: GYM_HUB_ROWS })
+      .then((page) => { if (alive) setGymRows(page.rows.slice(0, GYM_HUB_ROWS)); })
+      .catch(() => { if (alive) setGymRows([]); });
+    return () => { alive = false; };
+  }, [joined, gymLabel]);
+
+  // "Your groups" chip row (design 60 §4, D1). Best effort, same posture
+  // as the gym block: a failed read just leaves the row empty.
+  useEffect(() => {
+    if (!joined || !uid) { setMyGroups([]); return undefined; }
+    let alive = true;
+    listMyGroups()
+      .then((rows) => { if (alive) setMyGroups(rows.filter((r) => r.state === 'member')); })
+      .catch(() => { if (alive) setMyGroups([]); });
+    return () => { alive = false; };
+  }, [joined, uid]);
+
+  // Moderated-person notice (40-GAP-CLOSURE.md §1): best effort, own
+  // request, same posture as the rest of `me` -- a failed read is silent
+  // rather than blocking the rest of the Hub.
+  useEffect(() => {
+    if (!joined) { setStatus(null); return undefined; }
+    let alive = true;
+    myStatus().then((out) => { if (alive) setStatus(out); }).catch(() => { if (alive) setStatus(null); });
+    return () => { alive = false; };
+  }, [joined]);
 
   // Someone without a profile only ever sees Discover (SD-04), so the
   // segment follows the profile rather than the other way round.
@@ -140,36 +309,35 @@ export default function CommunityHubScreen({ navigation, route }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // Community product audit section 1: the app-foreground trigger for the
+  // consistency counters, alongside the workout-completion one in
+  // ActiveWorkoutScreen. `publishConsistencyOnForeground` itself compares
+  // the local week key and no-ops when it has not changed, so this can
+  // safely fire on every mount and every return-to-foreground.
+  const consistencyUid = me?.profile?.user_id ?? null;
+  useEffect(() => {
+    if (!consistencyUid) return undefined;
+    // eslint-disable-next-line global-require
+    const { publishConsistencyOnForeground } = require('../lib/community');
+    publishConsistencyOnForeground(consistencyUid).catch(() => {});
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') publishConsistencyOnForeground(consistencyUid).catch(() => {});
+    });
+    return () => sub.remove();
+  }, [consistencyUid]);
+
   // The hub is a tab root, so an entry point that names a segment usually
   // arrives at a screen that is ALREADY mounted: initial state alone would
-  // land Train's "Programmes from the community" on Following, whichever
-  // half the reader last looked at (product review 2026-09-06, item 13).
-  // The whole params object is the dependency because React Navigation
+  // land it on Following whichever half the reader last looked at (product
+  // review 2026-09-06, item 13). The whole params object is the dependency
+  // because React Navigation
   // mints a new one per navigate, so repeating the same entry point still
   // re-applies it.
   const routeParams = route?.params;
   const paramSegment = routeParams?.segment ?? null;
-  const paramFocus = routeParams?.focus ?? null;
   useEffect(() => {
     if (paramSegment === 'discover' || paramSegment === 'following') setSegment(paramSegment);
-    if (paramFocus === 'programmes') setFocusProgrammes(true);
-  }, [routeParams, paramSegment, paramFocus]);
-
-  // `focus: 'programmes'` brings the Programmes section into view once the
-  // payload it lists is on screen.
-  useEffect(() => {
-    if (!focusProgrammes || loading) return;
-    listRef.current?.scrollToOffset?.({ offset: Math.max(0, programmesY.current), animated: true });
-    setFocusProgrammes(false);
-  }, [focusProgrammes, loading]);
-
-  useEffect(() => {
-    let alive = true;
-    loadVolyumeTiles()
-      .then((tiles) => { if (alive) setVolyume(tiles); })
-      .catch((e) => logError('CommunityHub.loadVolyumeTiles', e, {}));
-    return () => { alive = false; };
-  }, []);
+  }, [routeParams, paramSegment]);
 
   // "Lifters like you" (discovery blueprint section 4): a scored list, so
   // it is read on its own rather than folded into `loadHub`'s feed page.
@@ -215,7 +383,6 @@ export default function CommunityHubScreen({ navigation, route }) {
   // `hub.people` (once `community_suggested_people`) was never rendered
   // here, so `loadHub` no longer reads it (feed.js, spec 1.3); nothing
   // reads it from the hub payload on this screen either.
-  const programmes = hub?.programmes ?? [];
   const dimensions = (hub?.dimensions ?? [])
     .filter((d) => Number(d?.count ?? 0) >= COMMUNITY_DIMENSION_MIN_FOR_HUB);
 
@@ -227,10 +394,6 @@ export default function CommunityHubScreen({ navigation, route }) {
 
   function openProfile(card) {
     if (card?.handle) navigation.navigate('CommunityProfile', { handle: card.handle });
-  }
-
-  function openLibraryPlan(id) {
-    navigateCrossTab(navigation, 'PlansTab', 'PlanDetail', { planId: id, isLibrary: true });
   }
 
   async function react(item) {
@@ -301,11 +464,17 @@ export default function CommunityHubScreen({ navigation, route }) {
           hitSlop={spacing.sm}
           style={[styles.headerBtn, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
           accessibilityRole="button"
-          accessibilityLabel={hasUnreadMessages(me) ? 'Messages, unread' : 'Messages'}
+          accessibilityLabel={hasUnreadMessages(me)
+            ? `Messages, ${Number(me?.unseen_messages ?? 0)} unread`
+            : 'Messages'}
         >
           <Ionicons name="chatbubbles-outline" size={18} color={t.colors.primary} />
           {hasUnreadMessages(me) ? (
-            <View style={[styles.dot, { backgroundColor: t.colors.primary, borderColor: t.colors.background }]} />
+            <View style={[styles.badge, { backgroundColor: t.colors.primary, borderColor: t.colors.background }]}>
+              <Text style={[styles.badgeText, { color: t.colors.onPrimary }]}>
+                {Number(me?.unseen_messages ?? 0) > 9 ? '9+' : String(me?.unseen_messages ?? 0)}
+              </Text>
+            </View>
           ) : null}
         </Pressable>
       ) : null}
@@ -314,6 +483,25 @@ export default function CommunityHubScreen({ navigation, route }) {
 
   const header = (
     <View style={styles.header}>
+      {isModeratedStatus(status?.status) ? (
+        <View style={[styles.statusNotice, { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle }]}>
+          <Text style={[styles.statusNoticeLine, { color: t.colors.textPrimary }]}>
+            {status.status === 'suspended'
+              ? 'Your Community access is suspended.'
+              : 'Some of your Community access is restricted.'}
+            {status.reason_class && REPORT_REASONS[status.reason_class]
+              ? ` Reason: ${REPORT_REASONS[status.reason_class]}.`
+              : ''}
+          </Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('CommunityRules')}
+            accessibilityRole="button"
+            accessibilityLabel="Read Community rules"
+          >
+            <Text style={[styles.statusNoticeLink, { color: t.colors.primary }]}>Community rules</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       {legacyCardShown ? (
         <Card style={styles.block}>
           <Text style={[styles.blockTitle, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
@@ -367,12 +555,12 @@ export default function CommunityHubScreen({ navigation, route }) {
               (docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md). */}
           <Card style={styles.block}>
             <Text style={[styles.heroTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
-              Programmes you can make your own
+              Train alongside other lifters
             </Text>
             <Text
               style={[styles.heroBody, { ...t.type.bodySm, color: t.colors.textSecondary }]}
             >
-              Use another lifter&apos;s programme as they built it, or let Volyume refit it to your kit and limits and show you every change. Share the training you actually did.
+              Follow people, find a training partner and share the training you actually did.
             </Text>
             <View style={styles.heroActions}>
               <Button
@@ -397,6 +585,10 @@ export default function CommunityHubScreen({ navigation, route }) {
           <PrivacyReceipt />
         </>
       ) : null}
+
+      {joined ? <ThisWeekLine t={t} counters={weekCounters} /> : null}
+      {joined ? <AtGymBlock t={t} navigation={navigation} gymLabel={gymLabel} rows={gymRows} /> : null}
+      {joined ? <YourGroupsRow navigation={navigation} groups={myGroups} isMinor={isMinor} /> : null}
 
       {joined ? (
         <View style={styles.segmentRow} accessibilityLabel="Community view">
@@ -446,45 +638,6 @@ export default function CommunityHubScreen({ navigation, route }) {
 
       {shown === 'discover' ? (
         <>
-          {programmes.length || volyume.length ? (
-            <View
-              style={styles.section}
-              onLayout={(e) => { programmesY.current = e?.nativeEvent?.layout?.y ?? 0; }}
-            >
-              <View style={styles.sectionHead}>
-                <SectionLabel tone="muted">Programmes</SectionLabel>
-                {programmes.length ? (
-                  <Button
-                    variant="tertiary"
-                    size="sm"
-                    fullWidth={false}
-                    icon="list-outline"
-                    title="See all"
-                    onPress={() => navigation.navigate('CommunitySearch', { tab: 'programmes' })}
-                    accessibilityLabel="See all community programmes"
-                  />
-                ) : null}
-              </View>
-              {programmes.map((row) => (
-                <ProgrammeTile
-                  key={row.id ?? row.programme?.id}
-                  programme={row.programme ?? row}
-                  creator={row.creator ?? null}
-                  onPress={() => navigation.navigate('CommunityProgramme', { id: (row.programme ?? row).id })}
-                />
-              ))}
-              {volyume.map((p) => (
-                <ProgrammeTile
-                  key={`volyume-${p.id}`}
-                  programme={p}
-                  creator={null}
-                  volyume
-                  onPress={() => openLibraryPlan(p.id)}
-                />
-              ))}
-            </View>
-          ) : null}
-
           {likeMe.length ? (
             <View style={styles.section}>
               <SectionLabel tone="muted">Lifters like you</SectionLabel>
@@ -560,11 +713,11 @@ export default function CommunityHubScreen({ navigation, route }) {
       onAction={() => navigation.navigate('CommunitySearch')}
       actionAccessibilityLabel="Find people to follow"
     />
-  ) : programmes.length || likeMe.length || dimensions.length ? null : (
+  ) : likeMe.length || dimensions.length ? null : (
     <EmptyState
       icon="sparkles-outline"
       title="You are early"
-      text="Be the first to publish a programme or post a training story. Volyume's own programmes are above."
+      text="Be the first to post a training story."
     />
   );
 
@@ -611,6 +764,11 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
   header: { gap: spacing.lg, marginBottom: spacing.md },
+  statusNotice: {
+    borderWidth: 1, borderRadius: 16, padding: spacing.md, gap: spacing.xs,
+  },
+  statusNoticeLine: { ...type.bodySm },
+  statusNoticeLink: { ...type.captionStrong },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   headerAvatar: { alignItems: 'center', justifyContent: 'center' },
   headerBtn: {
@@ -630,6 +788,19 @@ const styles = StyleSheet.create({
     borderRadius: circle(8),
     borderWidth: 1,
   },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: circle(16),
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, lineHeight: 12 },
   block: { gap: spacing.md },
   browsingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   browsingLine: { ...type.caption, color: colors.textMuted },
@@ -654,6 +825,25 @@ const styles = StyleSheet.create({
   findSub: { ...type.bodySm, color: colors.textSecondary },
   section: { gap: spacing.md },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
+  weekLine: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 12, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+  },
+  streakChip: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
+    borderRadius: 999, paddingVertical: 4, paddingHorizontal: spacing.sm,
+  },
+  streakLabel: { ...type.caption },
+  weekFigure: { color: colors.textPrimary },
+  seeAll: { ...type.caption, color: colors.primary },
+  gymEmptyLine: { ...type.bodySm, color: colors.textSecondary },
+  gymCard: { borderRadius: 12, overflow: 'hidden' },
+  gymRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  gymAvatarWrap: { position: 'relative' },
+  ringDot: { position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: 5, borderWidth: 1.5 },
+  gymName: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
+  gymCaption: { ...type.caption, color: colors.textMuted },
   offline: { ...type.caption, color: colors.textMuted },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
   footer: { paddingVertical: spacing.lg },

@@ -19,7 +19,7 @@
 import { invokeCommunityFunction } from './transport';
 
 export const COMMUNITY_NOTIFY_KINDS = Object.freeze([
-  'follow', 'follow_request', 'follow_accepted', 'reaction', 'comment', 'programme_used',
+  'follow', 'follow_request', 'follow_accepted', 'reaction', 'comment',
   // Discovery campaign (blueprint sections 1, 2; SD-20, SD-21). `message`
   // is the one kind the server collapses on a clock: at most one push per
   // conversation every 15 minutes while it is unread, read from

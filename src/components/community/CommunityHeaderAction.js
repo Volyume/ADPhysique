@@ -11,15 +11,23 @@
  * Lead visual review (section 13, ruling 1): the glyph and the dot are
  * the only amber on this control, and the Today header keeps ONLY this
  * action in its `right` slot.
+ *
+ * Message badge (community product audit `40-GAP-CLOSURE.md` §1, "Message
+ * badge" BUILD row): the unread MESSAGE count reads separately from the
+ * activity dot, exactly the split the Hub header carries. When there is
+ * at least one unread message the control carries a small numeric badge
+ * (capped "9+") instead of the plain dot, and the accessibility label
+ * names the count as "N messages" rather than just "new activity", so a
+ * screen reader hears the same distinction a sighted person sees.
  */
 
-import { Pressable, View, StyleSheet } from 'react-native';
+import { Pressable, Text, View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { spacing, circle } from '../../styles/theme';
+import { spacing, circle, fontSize, fontWeight } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import useCommunityMe from '../../hooks/useCommunityMe';
-import { hasUnseen } from '../../lib/community';
+import { hasUnseen, hasUnreadMessages } from '../../lib/community';
 
 // Matches ScreenHeader's BRAND_BOX so the control sits exactly where the
 // brand mark used to, at the same optical weight.
@@ -35,22 +43,39 @@ export default function CommunityHeaderAction({ onPress }) {
   try { navigation = useNavigation(); } catch (_) { navigation = null; }
   const { me } = useCommunityMe();
   const unseen = hasUnseen(me);
+  const unreadMessages = hasUnreadMessages(me);
+  const messageCount = Number(me?.unseen_messages ?? 0);
 
   const go = onPress ?? (() => navigation?.navigate?.('Community'));
+
+  const label = unreadMessages
+    ? `Community, ${messageCount} ${messageCount === 1 ? 'message' : 'messages'}${unseen ? ' and other activity' : ''}`
+    : unseen ? 'Community, new activity' : 'Community';
 
   return (
     <Pressable
       onPress={go}
       hitSlop={spacing.md}
       accessibilityRole="button"
-      accessibilityLabel={unseen ? 'Community, new activity' : 'Community'}
+      accessibilityLabel={label}
       style={[
         styles.box,
         { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
       ]}
     >
       <Ionicons name="people-outline" size={18} color={t.colors.primary} />
-      {unseen ? (
+      {unreadMessages ? (
+        <View
+          style={[
+            styles.badge,
+            { backgroundColor: t.colors.primary, borderColor: t.colors.background },
+          ]}
+        >
+          <Text style={[styles.badgeText, { color: t.colors.onPrimary }]}>
+            {messageCount > 9 ? '9+' : String(messageCount)}
+          </Text>
+        </View>
+      ) : unseen ? (
         <View
           style={[
             styles.dot,
@@ -80,4 +105,17 @@ const styles = StyleSheet.create({
     borderRadius: circle(DOT + 2),
     borderWidth: 1,
   },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: circle(16),
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+  badgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, lineHeight: 12 },
 });

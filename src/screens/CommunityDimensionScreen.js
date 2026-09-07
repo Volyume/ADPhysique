@@ -4,9 +4,8 @@
  * section 8; SD-27, SD-31)
  *
  * A dimension is a page, not a room: the people who chose the same
- * style, gym, area or programme, and the programmes published in it.
- * There is no feed of its own, no admin, no leaderboard and no join
- * button, because there is nothing to join.
+ * style, gym or area. There is no feed of its own, no admin, no
+ * leaderboard and no join button, because there is nothing to join.
  *
  * A gym dimension additionally carries a summary (`community_gym_summary`):
  * member count, how many the reader follows, counts by style and by
@@ -29,7 +28,6 @@ import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import ProfileCard from '../components/community/ProfileCard';
-import ProgrammeTile from '../components/community/ProgrammeTile';
 import GymSummary from '../components/community/GymSummary';
 import BottomSheet from '../components/BottomSheet';
 import ModalHeader from '../components/ModalHeader';
@@ -38,12 +36,14 @@ import ComposerInput from '../components/community/ComposerInput';
 import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
+import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, type } from '../styles/theme';
-import { loadDimension, gymSummary } from '../lib/community';
+import { loadDimension, gymSummary, loadBoard } from '../lib/community';
 import {
   report as reportGym, get as getGymVenue, confirmSubmission, isPendingVenue, REPORT_KINDS,
 } from '../lib/gyms';
 import { peopleLine } from '../components/community/DimensionRow';
+import GymWeekBoard from '../components/community/GymWeekBoard';
 
 const PAGE = 20;
 const REPORT_DETAIL_MAX = 500;
@@ -143,6 +143,7 @@ function GymReportSheet({ visible, onClose, venueId }) {
 export default function CommunityDimensionScreen({ navigation, route }) {
   const t = useTheme();
   const toast = useToast();
+  const { me } = useCommunityMe();
   const kind = route?.params?.kind ?? null;
   const key = route?.params?.key ?? null;
   const paramLabel = route?.params?.label ?? '';
@@ -150,10 +151,23 @@ export default function CommunityDimensionScreen({ navigation, route }) {
   // GD-14: only a key linked to a real directory venue (`gym:<uuid>`) can
   // be reported; a legacy free-text gym key has no venue row behind it.
   const venueId = isGym && typeof key === 'string' && key.startsWith('gym:') ? key.slice(4) : null;
+  // Lead ruling (community product audit): `community_board`'s 'gym' scope
+  // targets `_scope_key` as the gym id when supplied -- any gym's board,
+  // not only the caller's own -- falling back server-side to the caller's
+  // own gym when it is null. A linked directory venue (`gym:<uuid>`, GD-14)
+  // carries that id as `venueId`; a legacy free-text gym has no directory
+  // row to key a board by, so it keeps standing in for the caller's own
+  // board only when this IS the caller's own gym (the pre-ruling fallback),
+  // and keeps the plain summary otherwise.
+  const isOwnGym = isGym && !!me?.profile?.gym_label
+    && me.profile.gym_label === (route?.params?.label ?? paramLabel);
+  const boardGymId = venueId || (isOwnGym ? null : undefined);
+  const showBoard = isGym && (!!venueId || isOwnGym);
 
   const [data, setData] = useState(null);
   const [summary, setSummary] = useState(null);
   const [venue, setVenue] = useState(null);
+  const [board, setBoard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -182,6 +196,19 @@ export default function CommunityDimensionScreen({ navigation, route }) {
     } else {
       setSummary(null);
     }
+    if (showBoard) {
+      // Design 60 §4: the week board replaces the summary at the top, on
+      // EVERY gym dimension page (not only the viewer's own), keyed by
+      // this page's gym id (boardGymId: the linked venue id, or null to
+      // fall back server-side to the caller's own gym).
+      try {
+        setBoard(await loadBoard({ scope: 'gym', scopeKey: boardGymId, window: 'week', limit: 20 }));
+      } catch (_e) {
+        setBoard(null);
+      }
+    } else {
+      setBoard(null);
+    }
     if (venueId) {
       // Best effort too: whether "Is this gym real? Confirm it" shows at
       // all depends on this, never the reason the rest of the page fails.
@@ -193,7 +220,7 @@ export default function CommunityDimensionScreen({ navigation, route }) {
     } else {
       setVenue(null);
     }
-  }, [kind, key, isGym, venueId]);
+  }, [kind, key, isGym, venueId, showBoard, boardGymId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -213,11 +240,18 @@ export default function CommunityDimensionScreen({ navigation, route }) {
 
   const label = data?.label || paramLabel;
   const people = data?.people ?? [];
-  const programmes = data?.programmes ?? [];
 
   const header = (
     <View style={styles.header}>
-      {isGym && summary ? (
+      {showBoard && board ? (
+        <GymWeekBoard
+          board={board}
+          label={label}
+          onSeeAll={() => navigation.navigate('CommunityBoard', {
+            scope: 'gym', scopeKey: boardGymId, window: 'week', label,
+          })}
+        />
+      ) : isGym && summary ? (
         <GymSummary summary={summary} label={label} />
       ) : (
         <>
@@ -253,20 +287,6 @@ export default function CommunityDimensionScreen({ navigation, route }) {
     </View>
   );
 
-  const footer = programmes.length ? (
-    <View style={styles.footerBlock}>
-      <SectionLabel tone="muted">Programmes</SectionLabel>
-      {programmes.map((row) => (
-        <ProgrammeTile
-          key={(row.programme ?? row).id}
-          programme={row.programme ?? row}
-          creator={row.creator ?? null}
-          onPress={() => navigation.navigate('CommunityProgramme', { id: (row.programme ?? row).id })}
-        />
-      ))}
-    </View>
-  ) : null;
-
   const empty = loading ? (
     <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
   ) : error ? (
@@ -280,7 +300,7 @@ export default function CommunityDimensionScreen({ navigation, route }) {
       onAction={load}
       actionAccessibilityLabel="Try loading this again"
     />
-  ) : programmes.length ? null : (
+  ) : (
     <EmptyState
       icon="people-outline"
       title="Nobody here yet"
@@ -305,7 +325,6 @@ export default function CommunityDimensionScreen({ navigation, route }) {
         )}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
-        ListFooterComponent={footer}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.4}

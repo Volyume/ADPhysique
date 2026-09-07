@@ -1,7 +1,10 @@
 /**
  * Community share links (blueprint sections 5.6, 8; SD-16).
  *
- * PURE. Two forms of the same three addresses:
+ * PURE, save for `openMessageLink` (community product audit
+ * `40-GAP-CLOSURE.md` §1, "Messaging links"), the one function here that
+ * touches the OS browser -- everything else is address-shaping only.
+ * Two forms of the same three addresses:
  *   - the WEB form, a static page under `public/` that fetches the
  *     `community-public` edge function, so a link works for someone who
  *     does not have the app;
@@ -20,7 +23,60 @@
 export const WEB_ORIGIN = 'https://volyume.app';
 export const APP_SCHEME = 'volyume://';
 
-const PATHS = Object.freeze({ profile: 'u', programme: 'p', story: 's' });
+// ─── Messaging links (community product audit `40-GAP-CLOSURE.md` §1,
+//     "Messaging links" BUILD row) ─────────────────────────────────────
+
+/**
+ * Find every `https://` URL in a piece of message text, in order.
+ * `https` ONLY, never any other scheme (`javascript:`, `data:`, an app
+ * deep link) -- a message body is free text from another user, and the
+ * one thing this ever does with it is hand it to the OS browser. No
+ * preview fetch: the match is text only, nothing here ever requests the
+ * URL.
+ *
+ * @param {string} text
+ * @returns {{url: string, start: number, end: number}[]}
+ */
+export function findHttpsLinks(text) {
+  const s = String(text ?? '');
+  const re = /https:\/\/[^\s<>"']+/g;
+  const out = [];
+  let m = re.exec(s);
+  while (m) {
+    // Trailing punctuation that reads as sentence punctuation, not part
+    // of the link, is trimmed off the end (". )),!?" etc.) so "See
+    // https://volyume.app." does not swallow the full stop into the URL.
+    let url = m[0];
+    let end = m.index + url.length;
+    while (url.length > 0 && /[).,!?;:'"]$/.test(url)) {
+      url = url.slice(0, -1);
+      end -= 1;
+    }
+    if (url.length >= 'https://'.length) {
+      out.push({ url, start: m.index, end });
+    }
+    m = re.exec(s);
+  }
+  return out;
+}
+
+/**
+ * Open a link tapped in message text, through the OS browser. Refuses
+ * anything that is not exactly `https://` (belt and braces alongside
+ * `findHttpsLinks` only ever matching that scheme).
+ */
+export function openMessageLink(url) {
+  if (!/^https:\/\//i.test(String(url ?? ''))) return;
+  // eslint-disable-next-line global-require
+  const { Linking } = require('react-native');
+  Linking.openURL(url).catch(() => { /* best effort: nothing to recover */ });
+}
+
+// 'p' (programme) links are retired along with Community programme-sharing
+// (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2): the path
+// still parses below so an old link never dead-ends, but it now opens the
+// Community Hub, and no URL is minted for it any more.
+const PATHS = Object.freeze({ profile: 'u', programme: 'p', story: 's', group: 'g' });
 
 function encode(v) {
   return encodeURIComponent(String(v ?? ''));
@@ -29,11 +85,6 @@ function encode(v) {
 /** `https://volyume.app/u/?h=<handle>` */
 export function profileUrl(handle) {
   return `${WEB_ORIGIN}/${PATHS.profile}/?h=${encode(handle)}`;
-}
-
-/** `https://volyume.app/p/?id=<id>` */
-export function programmeUrl(id) {
-  return `${WEB_ORIGIN}/${PATHS.programme}/?id=${encode(id)}`;
 }
 
 /** `https://volyume.app/s/?id=<id>` */
@@ -46,14 +97,19 @@ export function appProfileUrl(handle) {
   return `${APP_SCHEME}${PATHS.profile}/?h=${encode(handle)}`;
 }
 
-/** `volyume://p/?id=<id>` */
-export function appProgrammeUrl(id) {
-  return `${APP_SCHEME}${PATHS.programme}/?id=${encode(id)}`;
-}
-
 /** `volyume://s/?id=<id>` */
 export function appStoryUrl(id) {
   return `${APP_SCHEME}${PATHS.story}/?id=${encode(id)}`;
+}
+
+/** `https://volyume.app/g/?id=<groupId>` (community product audit 60 §3) */
+export function groupUrl(id) {
+  return `${WEB_ORIGIN}/${PATHS.group}/?id=${encode(id)}`;
+}
+
+/** `volyume://g/?id=<groupId>` */
+export function appGroupUrl(id) {
+  return `${APP_SCHEME}${PATHS.group}/?id=${encode(id)}`;
 }
 
 function readQuery(blob) {
@@ -78,9 +134,9 @@ function readQuery(blob) {
  *
  * @param {string} url
  * @returns {{kind: 'profile', handle: string}
- *   | {kind: 'programme', id: string}
+ *   | {kind: 'hub'}
  *   | {kind: 'story', id: string}
- *   | null} null for anything that is not one of our three addresses.
+ *   | null} null for anything that is not one of our addresses.
  */
 export function parseCommunityLink(url) {
   const s = String(url ?? '').trim();
@@ -109,13 +165,16 @@ export function parseCommunityLink(url) {
     const handle = String(params.h ?? '').trim().toLowerCase();
     return handle ? { kind: 'profile', handle } : null;
   }
-  if (pathPart === PATHS.programme) {
-    const id = String(params.id ?? '').trim();
-    return id ? { kind: 'programme', id } : null;
-  }
+  // A 'p' (programme) link now opens the Community Hub rather than a
+  // programme page, which no longer exists.
+  if (pathPart === PATHS.programme) return { kind: 'hub' };
   if (pathPart === PATHS.story) {
     const id = String(params.id ?? '').trim();
     return id ? { kind: 'story', id } : null;
+  }
+  if (pathPart === PATHS.group) {
+    const id = String(params.id ?? '').trim();
+    return id ? { kind: 'group', id } : null;
   }
   return null;
 }

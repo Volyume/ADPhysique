@@ -10,7 +10,7 @@
  *
  * It can be reached three ways, so it resolves itself from either half
  * of the pair: a conversation `id` (the `m` deep link on a message push),
- * a `userId` (the Message button on a profile, a programme or a story),
+ * a `userId` (the Message button on a profile or a story),
  * and an optional `ref` that attaches ONE context reference to the first
  * message so a conversation starts about something rather than out of
  * nowhere.
@@ -45,6 +45,8 @@ import MessageBubble from '../components/community/MessageBubble';
 import MessageComposer from '../components/community/MessageComposer';
 import MenuSheet from '../components/community/MenuSheet';
 import ReportSheet from '../components/community/ReportSheet';
+import SessionSheet from '../components/community/SessionSheet';
+import Chip from '../components/Chip';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import { spacing, radius, type, colors, hitSlop, iconSize } from '../styles/theme';
@@ -53,7 +55,7 @@ import * as haptics from '../lib/haptics';
 import { postDayLabel } from '../components/community/PostCard';
 import {
   listConversations, listMessages, sendMessage, markRead, deleteMessage,
-  placeholderFor, getProfile, blockUser, removeConnection,
+  placeholderFor, getProfile, blockUser, removeConnection, respondSession,
 } from '../lib/community';
 
 const PAGE = 30;
@@ -125,7 +127,8 @@ function dayKeyOf(value) {
 export default function CommunityConversationScreen({ navigation, route }) {
   const t = useTheme();
   const toast = useToast();
-  const { refresh: refreshMe } = useCommunityMe();
+  const { me, refresh: refreshMe } = useCommunityMe();
+  const isMinor = !!me?.is_minor;
 
   const routeId = route?.params?.id ?? null;
   const routeUserId = route?.params?.userId ?? null;
@@ -141,6 +144,7 @@ export default function CommunityConversationScreen({ navigation, route }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [sessionSheetOpen, setSessionSheetOpen] = useState(false);
 
   // The live conversation id for the poll and for the send that creates
   // the thread, held in a ref so neither closes over a stale render.
@@ -273,6 +277,39 @@ export default function CommunityConversationScreen({ navigation, route }) {
         toast.show(sendErrorLine(code), { variant: 'error' });
       }
       return false;
+    }
+  }
+
+  /** "Suggest a session" (40-GAP-CLOSURE.md §1): sends with a fixed body
+   * (the server requires one) and the session ref payload; the tile
+   * itself is what carries the day/time/gym, so the text stays short. */
+  async function handleSendSession(payload) {
+    const targetId = other?.user_id ?? routeUserId ?? null;
+    if (!targetId) return false;
+    try {
+      await sendMessage(targetId, 'Suggested a training session.', { refKind: 'session', refPayload: payload });
+      await poll();
+      return true;
+    } catch (e) {
+      const code = e?.code ?? 'unavailable';
+      if (code === 'rules_outdated') {
+        navigation.navigate('CommunityRules', {
+          accept: true,
+          next: { screen: 'CommunityConversation', params: { id: idRef.current, userId: targetId } },
+        });
+        return false;
+      }
+      toast.show(sendErrorLine(code), { variant: 'error' });
+      return false;
+    }
+  }
+
+  async function handleRespondSession(message, accept) {
+    try {
+      await respondSession(message.id, accept);
+      await poll();
+    } catch (_e) {
+      toast.show('That did not send. Please try again.', { variant: 'error' });
     }
   }
 
@@ -447,11 +484,12 @@ export default function CommunityConversationScreen({ navigation, route }) {
                     if (item.mine) confirmDelete(item);
                     else setReportTarget({ targetKind: 'message', targetId: item.id });
                   }}
-                  onOpenRef={item.ref_kind === 'programme' && item.ref?.id
-                    ? () => navigation.navigate('CommunityProgramme', { id: item.ref.id })
-                    : item.ref_kind === 'post' && item.ref?.id
-                      ? () => navigation.navigate('CommunityPost', { id: item.ref.id })
-                      : undefined}
+                  onOpenRef={item.ref_kind === 'post' && item.ref?.id
+                    ? () => navigation.navigate('CommunityPost', { id: item.ref.id })
+                    : undefined}
+                  onRespondSession={item.ref_kind === 'session' && !item.mine
+                    ? (accept) => handleRespondSession(item, accept)
+                    : undefined}
                 />
               );
             }}
@@ -469,10 +507,29 @@ export default function CommunityConversationScreen({ navigation, route }) {
           </Text>
         ) : null}
 
+        {canCompose && !isMinor ? (
+          <View style={styles.sessionChipRow}>
+            <Chip
+              label="Suggest a session"
+              icon="calendar-outline"
+              onPress={() => setSessionSheetOpen(true)}
+              accessibilityLabel="Suggest a training session"
+            />
+          </View>
+        ) : null}
+
         {canCompose ? (
           <MessageComposer placeholder={placeholder} onSend={handleSend} />
         ) : null}
       </KeyboardAvoidingView>
+
+      <SessionSheet
+        visible={sessionSheetOpen}
+        onClose={() => setSessionSheetOpen(false)}
+        myGym={me?.profile?.gym_id ? { id: me.profile.gym_id, label: me.profile.gym_label } : null}
+        otherGym={other?.gym_id ? { id: other.gym_id, label: other.gym_label } : null}
+        onSend={handleSendSession}
+      />
 
       <MenuSheet
         visible={menuOpen}
@@ -519,6 +576,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   centre: { flex: 1, justifyContent: 'center', padding: spacing.lg },
   list: { padding: spacing.lg },
+  sessionChipRow: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   headerAction: {
     width: touchTarget.minimum,
     height: touchTarget.minimum,

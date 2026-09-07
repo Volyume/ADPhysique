@@ -73,10 +73,15 @@ describe('effective Supabase hostile-matrix harness', () => {
 
   test('every Community RPC is inventoried, because each is the sole ingress to its table', () => {
     const communityRpcs = inventory.clientRpcNames.filter((n) => n.startsWith('community_'));
-    expect(communityRpcs.length).toBeGreaterThanOrEqual(59);
+    // Floor was 59; nine programme RPCs were retired (community programme
+    // sharing removed per 40-GAP-CLOSURE.md §2), so the true current count
+    // in scripts/security/supabase-matrix.targets.json is 58.
+    expect(communityRpcs.length).toBeGreaterThanOrEqual(58);
     for (const name of [
       'community_get_me', 'community_upsert_profile', 'community_leave',
-      'community_follow', 'community_block', 'community_publish_programme',
+      // community_publish_programme retired with programme sharing
+      // (40-GAP-CLOSURE.md §2); no longer asserted here.
+      'community_follow', 'community_block',
       'community_create_post', 'community_report', 'community_moderate',
       // migrate_161.
       'community_connect', 'community_respond_connect', 'community_send_message',

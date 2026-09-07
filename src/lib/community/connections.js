@@ -196,13 +196,6 @@ export async function setConnectFrom(value) {
   return callCommunity('community_set_connect_from', { _value: value });
 }
 
-/** "Show which programmes I use" (SD-26). Default on for a public
- * profile; off removes the person from every "People on this programme"
- * list without changing anything else. */
-export async function setShowProgrammes(value) {
-  return callCommunity('community_set_show_programmes', { _value: !!value });
-}
-
 /**
  * "Open to training together" and its preferences (SD-25). Off means
  * nothing anywhere says the person was ever looking.

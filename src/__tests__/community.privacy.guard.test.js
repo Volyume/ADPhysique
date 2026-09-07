@@ -141,13 +141,10 @@ const FORBIDDEN_READS = [
   /\bgetCapabilityConstraints\b/,
 ];
 
-// The only Community file allowed to name the capability lane at all,
-// and the only two symbols it may take from it (blueprint section 5.4).
-const CAPABILITY_ALLOWED_FILE = path.join(LIB_DIR, 'adapt.js');
-const CAPABILITY_ALLOWED_IMPORTS = [
-  "import { bestEligibleSubstitute } from '../capability/effective';",
-  "import { blockingConflicts, capabilityKnown, loadCapabilityResolveState } from '../capability/resolve';",
-];
+// No Community file is allowed to name the capability lane at all: the
+// one file that used to (adapt.js, the programme-adaptation composition)
+// was removed entirely with Community programme-sharing
+// (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2).
 
 /**
  * The discovery campaign's files (discovery blueprint
@@ -165,6 +162,10 @@ const DISCOVERY_FILES = [
   'src/lib/community/connections.js',
   'src/lib/community/messages.js',
   'src/lib/community/findPeople.js',
+  // Community product audit `60-DESIGN-PROGRESS-COMMUNITY.md` section 1
+  // (consistency counters). A second training-history reader, held to
+  // the same stricter list for the same reason `trainingProfile.js` is.
+  'src/lib/community/trainingConsistency.js',
 ];
 
 const DISCOVERY_EXTRA_FORBIDDEN = [
@@ -195,6 +196,20 @@ const TRAINING_PROFILE_DB_READS = [
   'getActivePlan',
 ];
 
+/**
+ * The ONLY device reads `trainingConsistency.js` may make (community
+ * product audit section 1: "completed-workout timestamps... and the
+ * active plan's days per week"). `getRoutinesForPlan`'s row COUNT is
+ * the days-per-week figure; nothing about a routine's exercises is
+ * read from it here.
+ */
+const TRAINING_CONSISTENCY_FILE = path.join(LIB_DIR, 'trainingConsistency.js');
+const TRAINING_CONSISTENCY_DB_READS = [
+  'getCompletedWorkoutStartTimestamps',
+  'getActivePlan',
+  'getRoutinesForPlan',
+];
+
 describe('no Community file reads personal data', () => {
   test('there is Community source to guard', () => {
     // If this ever fails, the guard has quietly stopped guarding
@@ -220,28 +235,14 @@ describe('no Community file reads personal data', () => {
     },
   );
 
-  test('only adapt.js reaches the capability lane, and only for the two composed functions', () => {
+  test('no Community file reaches the capability lane', () => {
     for (const full of communityFiles()) {
       const source = code(fs.readFileSync(full, 'utf8'));
       const imports = (source.match(/^import [^\n]*capability[^\n]*$/gim) ?? []).map((l) => l.trim());
-      if (full === CAPABILITY_ALLOWED_FILE) {
-        expect(imports.sort()).toEqual([...CAPABILITY_ALLOWED_IMPORTS].sort());
-      } else {
-        expect({ file: path.relative(ROOT, full), imports }).toEqual({
-          file: path.relative(ROOT, full), imports: [],
-        });
-      }
+      expect({ file: path.relative(ROOT, full), imports }).toEqual({
+        file: path.relative(ROOT, full), imports: [],
+      });
     }
-  });
-
-  test('the adaptation lane cannot send anything to the server', () => {
-    // Capability answers are read on the device to choose a substitute
-    // and are written only to the recipient's own local rows. A route
-    // from this file to the transport is how a capability-derived fact
-    // would start leaving the device.
-    const source = code(fs.readFileSync(CAPABILITY_ALLOWED_FILE, 'utf8'));
-    expect(source).not.toMatch(/from '\.\/transport'/);
-    expect(source).not.toMatch(/callCommunity|invokeCommunityFunction/);
   });
 
   test('every discovery file is present and inside the walk', () => {
@@ -273,6 +274,19 @@ describe('no Community file reads personal data', () => {
     expect(named.sort()).toEqual([...TRAINING_PROFILE_DB_READS].sort());
     // And no second route to the device: a lazy require would sidestep
     // the import above entirely.
+    expect(source).not.toMatch(/require\(['"][^'"]*database['"]\)/);
+  });
+
+  test('trainingConsistency.js reads only the three device functions section 1 allows', () => {
+    const source = code(fs.readFileSync(TRAINING_CONSISTENCY_FILE, 'utf8'));
+    const imports = source.match(/import\s*\{[^}]*\}\s*from\s*'\.\.\/database';/g) ?? [];
+    expect(imports).toHaveLength(1);
+    const named = imports[0]
+      .replace(/^import\s*\{|\}\s*from\s*'\.\.\/database';$/g, '')
+      .split(',')
+      .map((s2) => s2.trim())
+      .filter(Boolean);
+    expect(named.sort()).toEqual([...TRAINING_CONSISTENCY_DB_READS].sort());
     expect(source).not.toMatch(/require\(['"][^'"]*database['"]\)/);
   });
 

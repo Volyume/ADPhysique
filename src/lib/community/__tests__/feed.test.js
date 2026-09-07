@@ -20,6 +20,11 @@
  *    never rendered `people`, so the read was removed rather than kept
  *    unrendered. The RPC and `suggestedPeople()` stay for compatibility;
  *    `hub.people` is simply always empty.
+ *
+ * Programme-sharing (publish/discover/search/adapt) was removed from
+ * Community entirely (`docs/community-product-audit-2026-09-07/
+ * 40-GAP-CLOSURE.md` §2): `loadHub`'s Discover half is now posts and
+ * dimensions only.
  */
 
 jest.mock('../transport', () => ({ callCommunity: jest.fn() }));
@@ -45,7 +50,6 @@ function server(map) {
 }
 
 const POST_PAGE = { posts: [{ post: { id: 'p1' } }], cursor: '2026-09-06T10:00:00.000000+00|p1' };
-const PROGRAMME_PAGE = { programmes: [{ id: 'g1' }], cursor: '2026-09-05T10:00:00.000000+00|g1' };
 
 beforeEach(async () => {
   jest.clearAllMocks();
@@ -94,7 +98,6 @@ describe('the wrapper objects are unwrapped', () => {
 describe('Discover without a Community profile (SD-04)', () => {
   test('the read that needs a profile is not made', async () => {
     server({
-      community_discover_programmes: PROGRAMME_PAGE,
       community_discover_posts: POST_PAGE,
     });
 
@@ -102,7 +105,6 @@ describe('Discover without a Community profile (SD-04)', () => {
 
     const called = callCommunity.mock.calls.map(([name]) => name);
     expect(called).not.toContain('community_dimensions_me');
-    expect(hub.programmes).toEqual(PROGRAMME_PAGE.programmes);
     expect(hub.posts).toEqual(POST_PAGE.posts);
     expect(hub.people).toEqual([]);
     expect(hub.dimensions).toEqual([]);
@@ -111,7 +113,6 @@ describe('Discover without a Community profile (SD-04)', () => {
 
   test('community_suggested_people is never called by loadHub, joined or not (spec 1.3)', async () => {
     server({
-      community_discover_programmes: PROGRAMME_PAGE,
       community_discover_posts: POST_PAGE,
       community_dimensions_me: { dimensions: [] },
     });
@@ -125,7 +126,6 @@ describe('Discover without a Community profile (SD-04)', () => {
 
   test('the paging cursor is the stories cursor the server minted', async () => {
     server({
-      community_discover_programmes: PROGRAMME_PAGE,
       community_discover_posts: POST_PAGE,
     });
     const hub = await loadHub('discover', { joined: false });
@@ -134,24 +134,21 @@ describe('Discover without a Community profile (SD-04)', () => {
 });
 
 describe('one failing section never empties Discover', () => {
-  test('a refused dimensions read leaves the programmes and stories standing', async () => {
+  test('a refused dimensions read leaves the stories standing', async () => {
     server({
-      community_discover_programmes: PROGRAMME_PAGE,
       community_discover_posts: POST_PAGE,
       community_dimensions_me: refusal('no_profile'),
     });
 
     const hub = await loadHub('discover', { joined: true });
 
-    expect(hub.programmes).toEqual(PROGRAMME_PAGE.programmes);
     expect(hub.posts).toEqual(POST_PAGE.posts);
     expect(hub.people).toEqual([]);
     expect(hub.dimensions).toEqual([]);
   });
 
-  test('only a Discover with neither programmes nor stories is a failure', async () => {
+  test('a refused stories read is a failure', async () => {
     server({
-      community_discover_programmes: refusal('offline'),
       community_discover_posts: refusal('offline'),
       community_dimensions_me: { dimensions: [] },
     });
@@ -165,14 +162,12 @@ describe('one failing section never empties Discover', () => {
 
   test('with something read earlier, offline shows that instead of nothing', async () => {
     server({
-      community_discover_programmes: PROGRAMME_PAGE,
       community_discover_posts: POST_PAGE,
       community_dimensions_me: { dimensions: [] },
     });
     await loadHub('discover', { joined: true });
 
     server({
-      community_discover_programmes: refusal('offline'),
       community_discover_posts: refusal('offline'),
       community_dimensions_me: refusal('offline'),
     });
@@ -193,23 +188,5 @@ describe('paging Discover', () => {
     expect(callCommunity.mock.calls.map(([name]) => name)).toEqual(['community_discover_posts']);
     expect(page.posts).toHaveLength(1);
     expect(page.cursor).toBe('next');
-  });
-
-  // Product review 2026-09-06, item 14: `cursor` used to be the only one,
-  // so the programmes were paged with the stories' cursor (and their own
-  // was dropped). The two are separate fields now, and the hub pages the
-  // stories with `cursor` while "See all" pages the programmes.
-  test('the programmes carry a cursor of their own, never the stories\' one', async () => {
-    server({
-      community_discover_programmes: PROGRAMME_PAGE,
-      community_discover_posts: POST_PAGE,
-      community_dimensions_me: { dimensions: [] },
-    });
-
-    const hub = await loadHub('discover', { joined: true });
-
-    expect(hub.cursor).toBe(POST_PAGE.cursor);
-    expect(hub.programmesCursor).toBe(PROGRAMME_PAGE.cursor);
-    expect(hub.programmesCursor).not.toBe(hub.cursor);
   });
 });

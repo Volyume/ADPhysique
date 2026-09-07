@@ -40,6 +40,7 @@ import {
   TP_DAYS, TP_TIME_BANDS, TP_SESSIONS_BANDS, TP_EXPERIENCE_BANDS, TP_AGE_BANDS,
   TP_DEFAULT_SHARE, dayListLabel, timeBandsLabel, previewLine, shareablePayload,
   loadTrainingProfile, readShareSettings, writeShareSettings, syncTrainingProfile,
+  publishConsistency,
   setPartner,
 } from '../lib/community';
 
@@ -92,6 +93,12 @@ export function bandRows(bands, me) {
       label: 'Age band',
       value: TP_AGE_BANDS[me?.tp_age_band] ?? '',
       empty: 'Worked out from your date of birth when this is on',
+    },
+    {
+      key: 'consistency',
+      label: 'Share my consistency',
+      value: '',
+      empty: 'Your sessions this week, this month and your weeks in a row. Never your weight or food.',
     },
   ];
 }
@@ -159,7 +166,13 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
     setShare(settings);
     await writeShareSettings(uid, settings);
     // `force`: the person has just changed a toggle and expects it to take.
-    const out = await syncTrainingProfile(uid, { force: true });
+    // Flipping `consistency` itself needs `publishConsistency`, the only
+    // path that actually computes and merges the counters into the call;
+    // `syncTrainingProfile` alone would send `share_consistency: true`
+    // with every counter null until the next natural refresh.
+    const out = key === 'consistency'
+      ? await publishConsistency(uid)
+      : await syncTrainingProfile(uid, { force: true });
     if (out?.reason === 'rules_outdated') {
       // The rules text moved with this campaign, not the connection: the
       // toggle reverts and the person reads and accepts before it is
@@ -250,7 +263,7 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
           {/* SD-32: the age band never appears for a minor, exactly as
               Join filters the same row (CommunityJoinScreen.js). */}
           {bandRows(bands, me)
-            .filter((row) => !(isMinor && row.key === 'age_band'))
+            .filter((row) => !(isMinor && (row.key === 'age_band' || row.key === 'consistency')))
             .map((row) => (
             <View key={row.key} style={styles.bandRow}>
               <View style={styles.bandBody}>

@@ -16,8 +16,9 @@
  *   4. The count line reads "N people" / "N+ people" once `count` and
  *      `count_truncated` land, and applied filters render as removable
  *      chips that narrow the query when tapped.
- *   5. A programme list (`programmeId` set) never shows the filter
- *      control at all -- filters are a `find_people` concept only.
+ *
+ * Programme-people lists were removed with Community programme-sharing
+ * (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2).
  *
  * The client library and the heavier sheets are mocked: this is about
  * what the screen does with a page and a filter change, not the RPC.
@@ -61,7 +62,6 @@ jest.mock('../../lib/community', () => {
     doorsFor: jest.fn(() => []),
     doorZeroState: jest.fn(() => 'Nobody here yet, honestly.'),
     findPeople: jest.fn(),
-    programmePeople: jest.fn(),
     profileUrl: (handle) => `https://volyume.app/u/${handle}`,
     filterChips: actual.filterChips,
     removeFilterChip: actual.removeFilterChip,
@@ -71,7 +71,7 @@ jest.mock('../../lib/community', () => {
   };
 });
 
-import { findPeople, programmePeople } from '../../lib/community';
+import { findPeople } from '../../lib/community';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityPeopleListScreen, { normaliseRow, withFallbackDivider } from '../CommunityPeopleListScreen';
 
@@ -127,7 +127,6 @@ beforeEach(() => {
   jest.clearAllMocks();
   useCommunityMe.mockReturnValue({ me: ME });
   findPeople.mockResolvedValue({ people: [], cursor: null, count: null, count_truncated: false });
-  programmePeople.mockResolvedValue({ people: [], cursor: null, count: null });
 });
 
 describe('normaliseRow: the fallback flag threads through', () => {
@@ -139,7 +138,7 @@ describe('normaliseRow: the fallback flag threads through', () => {
     expect(normaliseRow({ card: { user_id: 'u3' }, reasons: [], fallback: true }).fallback).toBe(true);
   });
 
-  test('a bare card (programme people\'s shape) is never fallback', () => {
+  test('a bare card is never fallback', () => {
     expect(normaliseRow({ user_id: 'u4' }).fallback).toBe(false);
   });
 });
@@ -174,12 +173,6 @@ describe('the filter control', () => {
   test('a door list shows the filter button', async () => {
     const { tree } = await mount({ mode: 'like_me', label: 'Train like me' });
     expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Filters')[0]).toBeTruthy();
-  });
-
-  test('a programme list never shows it: filters are a find_people concept only', async () => {
-    const { tree } = await mount({ programmeId: 'prog-9', label: 'People on this programme' });
-    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Filters')[0]).toBeUndefined();
-    expect(programmePeople).toHaveBeenCalled();
   });
 });
 

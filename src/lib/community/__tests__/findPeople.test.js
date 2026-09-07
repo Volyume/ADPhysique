@@ -29,7 +29,7 @@ jest.mock('../transport', () => {
 const { callCommunity } = require('../transport');
 const {
   FIND_MODES, FIND_MODE_ORDER, doorsFor, doorLine, doorZeroState,
-  findPeople, programmePeople, gymSummary, gymSuggest,
+  findPeople, gymSummary, gymSuggest,
   normaliseFilters, filterChips, removeFilterChip, peopleCountLine,
 } = require('../findPeople');
 
@@ -348,16 +348,7 @@ describe('peopleCountLine: "N people" / "N+ people" (spec 1.3)', () => {
   });
 });
 
-describe('the programme and gym surfaces', () => {
-  test('people on a programme come back with the server cursor', async () => {
-    callCommunity.mockResolvedValue({ people: [{ handle: 'jamie' }], cursor: 'ts|uuid', count: 4 });
-    const page = await programmePeople('prog-9', { limit: 10 });
-    expect(callCommunity).toHaveBeenCalledWith('community_programme_people', {
-      _id: 'prog-9', _cursor: null, _limit: 10,
-    });
-    expect(page.count).toBe(4);
-  });
-
+describe('the gym surfaces', () => {
   test('the gym summary counts and never says who is there now', async () => {
     callCommunity.mockResolvedValue({
       label: 'PureGym Leeds',
@@ -403,8 +394,7 @@ describe('the programme and gym surfaces', () => {
     expect(await gymSuggest('leeds', 'pure')).toEqual([{ label: 'PureGym Leeds', count: 0 }]);
   });
 
-  test('an empty programme or gym id is refused before the network', async () => {
-    await expect(programmePeople(null)).rejects.toMatchObject({ code: 'invalid_input' });
+  test('an empty gym id is refused before the network', async () => {
     await expect(gymSummary('')).rejects.toMatchObject({ code: 'invalid_input' });
   });
 });

@@ -88,14 +88,11 @@ describe('HomeScreen gating (source-level guard)', () => {
   });
 });
 
-describe('Plan library and programme screen (source-level guard)', () => {
-  test('the library offers other lifters\' programmes beside Volyume\'s', () => {
+describe('Plan library (source-level guard)', () => {
+  test('the library carries no Community programme-sharing entry point', () => {
+    // Community programme-sharing was removed entirely
+    // (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2).
     const lib = fs.readFileSync(path.join(__dirname, '../../screens/PlanLibraryScreen.js'), 'utf8');
-    expect(lib).toMatch(/Programmes from other lifters/);
-    expect(lib).toMatch(/navigateCrossTab\(navigation, 'HomeTab', 'Community', \{ segment: 'discover', focus: 'programmes' \}\)/);
-  });
-  test('the programme screen says what Adapt does at the moment of choice', () => {
-    const prog = fs.readFileSync(path.join(__dirname, '../../screens/CommunityProgrammeScreen.js'), 'utf8');
-    expect(prog).toMatch(/Adapt keeps the creator\\'s structure and swaps only what your kit, exclusions or limitations rule out\. Every change is shown before anything is saved\./);
+    expect(lib).not.toMatch(/Programmes from other lifters/);
   });
 });

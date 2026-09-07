@@ -254,10 +254,6 @@ export default function CommunityActivityScreen({ navigation }) {
       if (item.target_id) navigation.navigate('CommunityPost', { id: item.target_id });
       return;
     }
-    if (item.kind === 'programme_used' && item.target_id) {
-      navigation.navigate('CommunityProgramme', { id: item.target_id });
-      return;
-    }
     if (item.actor?.handle) navigation.navigate('CommunityProfile', { handle: item.actor.handle });
   }
 

@@ -49,6 +49,24 @@ export function derivePhotoSuppression({ mode, edFlag }) {
   return isPhotoSuppressed(isCalm(mode) || mode === 'read_failed', edFlag);
 }
 
+/**
+ * The same fail-closed raw reads the hook below performs, factored out as
+ * a plain async function for callers that are not React components (a
+ * background publish triggered on workout completion or app foreground,
+ * for instance) and so cannot use a hook. Suppressed when calm mode is
+ * on, an open ED-pattern flag exists, or either read fails.
+ *
+ * @param {string} userId
+ * @returns {Promise<boolean>}
+ */
+export async function readEdOrCalmSuppressed(userId) {
+  const [mode, edFlag] = await Promise.all([
+    AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
+    getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
+  ]);
+  return derivePhotoSuppression({ mode, edFlag });
+}
+
 export default function usePhotoSuppression(explicitUserId) {
   const storeUserId = useAppStore((s) => s.user?.id);
   const userId = explicitUserId ?? storeUserId;

@@ -83,7 +83,6 @@ describe('the other kinds are unchanged', () => {
     ['follow', 'followed you'],
     ['reaction', 'gave your post respect'],
     ['comment', 'commented on your post'],
-    ['programme_used', 'is using your programme'],
   ])('%s reads "%s"', (kind, line) => {
     expect(activityLine(item({ kind }))).toBe(`@priya_kb ${line}`);
   });

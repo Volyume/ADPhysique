@@ -48,9 +48,6 @@ export const DISPLAY_NAME_MAX = 40;
 export const BIO_MAX = 160;
 export const CAPTION_MAX = 280;
 export const COMMENT_MAX = 500;
-export const PROGRAMME_TITLE_MAX = 60;
-export const PROGRAMME_DESCRIPTION_MAX = 500;
-export const EXERCISE_NOTE_MAX = 200;
 export const AREA_LABEL_MAX = 40;
 export const GYM_LABEL_MAX = 60;
 export const REPORT_DETAIL_MAX = 500;
@@ -143,7 +140,6 @@ export const REPORT_REASONS = Object.freeze({
 });
 
 export const PROFILE_VISIBILITIES = Object.freeze(['public', 'followers']);
-export const PROGRAMME_VISIBILITIES = Object.freeze(['public', 'followers', 'link']);
 export const POST_VISIBILITIES = Object.freeze(['public', 'followers']);
 
 /**

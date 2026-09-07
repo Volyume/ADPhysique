@@ -28,6 +28,8 @@ import {
   setQuietHours,
   DEFAULT_QUIET_HOURS,
 } from '../lib/notifications/quietHours';
+import { getPreference } from '../lib/notifications/preferences';
+import { setCommunityQuietHours } from '../lib/community';
 import useAppStore from '../store/useAppStore';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
@@ -53,6 +55,20 @@ const DEFAULT_MEAL_REMINDERS = [
 // enforced by every scheduler helper via quietHours.js.
 const QUIET_START_PRESETS = ['20:00', '21:00', '21:30', '22:00', '22:30', '23:00', '00:00'];
 const QUIET_END_PRESETS = ['05:00', '06:00', '06:30', '07:00', '07:30', '08:00', '09:00'];
+
+// Community quiet hours (community product audit `40-GAP-CLOSURE.md` §1,
+// "Quiet hours" BUILD row): every 30-minute step across the day, unlike
+// the shorter evening/morning preset lists above -- a social push has no
+// natural bedtime window the way a training reminder does.
+const HALF_HOUR_STEPS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = i % 2 === 0 ? 0 : 30;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+});
+const COMMUNITY_QUIET_HOURS_CATEGORY = 'community_quiet_hours';
+const DEFAULT_COMMUNITY_QUIET_HOURS = Object.freeze({
+  enabled: false, startHour: 22, startMinute: 0, endHour: 7, endMinute: 0,
+});
 
 
 
@@ -520,6 +536,69 @@ export default function NotificationSettingsScreen({ navigation }) {
     getQuietHours().then(setQuietHoursState).catch(() => {});
   }, []);
 
+  // Community quiet hours (40-GAP-CLOSURE.md §1, "Quiet hours"): off by
+  // default, stored as a row in the existing local notification
+  // preferences store (same shape every other category here uses) and
+  // projected to the server via `community_set_quiet_hours` -- the
+  // device-local window Volyume already enforces is invisible to an Edge
+  // Function, and this is what lets a Community push see it (SD-15a).
+  const [communityQuietHours, setCommunityQuietHoursState] = useState(DEFAULT_COMMUNITY_QUIET_HOURS);
+  useEffect(() => {
+    const userId = useAppStore.getState().user?.id;
+    if (!userId) return;
+    getPreference(userId, COMMUNITY_QUIET_HOURS_CATEGORY).then((row) => {
+      if (!row) return;
+      try {
+        const parsed = row.time_pref ? JSON.parse(row.time_pref) : {};
+        setCommunityQuietHoursState({ ...DEFAULT_COMMUNITY_QUIET_HOURS, ...parsed, enabled: !!row.enabled });
+      } catch (_) { /* keep the default */ }
+    }).catch(() => {});
+  }, []);
+
+  async function persistCommunityQuietHours(patch) {
+    const next = { ...communityQuietHours, ...patch };
+    setCommunityQuietHoursState(next);
+    const userId = useAppStore.getState().user?.id;
+    if (!userId) return;
+    try {
+      await setPrefRow(userId, COMMUNITY_QUIET_HOURS_CATEGORY, {
+        enabled: next.enabled,
+        time_pref: JSON.stringify({
+          startHour: next.startHour, startMinute: next.startMinute,
+          endHour: next.endHour, endMinute: next.endMinute,
+        }),
+      });
+    } catch (_) { /* the toggle still applies on device */ }
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      await setCommunityQuietHours(
+        next.enabled ? next.startHour * 60 + next.startMinute : null,
+        next.enabled ? next.endHour * 60 + next.endMinute : null,
+        tz,
+      );
+    } catch (_) { /* best effort: a failed push is retried on the next change */ }
+  }
+
+  function pickCommunityQuietTime(edge) {
+    const isStart = edge === 'start';
+    const h = isStart ? communityQuietHours.startHour : communityQuietHours.endHour;
+    const m = isStart ? communityQuietHours.startMinute : communityQuietHours.endMinute;
+    const currentLabel = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    appAlert(
+      isStart ? 'Community quiet hours start' : 'Community quiet hours end',
+      `Current: ${currentLabel}`,
+      HALF_HOUR_STEPS.map((label) => ({
+        text: label,
+        onPress: () => {
+          const [nh, nm] = label.split(':').map(Number);
+          persistCommunityQuietHours(isStart
+            ? { startHour: nh, startMinute: nm }
+            : { endHour: nh, endMinute: nm });
+        },
+      })),
+    );
+  }
+
   // Persist the window, then re-lay everything already scheduled so existing
   // reminders are recomputed against the NEW window rather than the one they
   // were laid under. restoreNotifications covers the scheduler-owned prompts
@@ -823,6 +902,54 @@ export default function NotificationSettingsScreen({ navigation }) {
           <View style={[styles.helperRow, live.helperRow]}>
             <Text style={[styles.helperText, live.helperText]}>
               These arrive when something happens, and never while a wellbeing check is open.
+            </Text>
+          </View>
+          <View style={[styles.divider, live.divider]} />
+          <View style={styles.toggleRow}>
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="moon-outline" size={18} color={t.colors.primary} />
+            </View>
+            <Text style={[styles.toggleLabel, live.toggleLabel]}>Community quiet hours</Text>
+            <Switch
+              value={communityQuietHours.enabled}
+              onValueChange={(v) => persistCommunityQuietHours({ enabled: v })}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={t.colors.primary}
+              ios_backgroundColor={t.colors.surface2}
+              accessibilityLabel="Community quiet hours toggle"
+            />
+          </View>
+          {communityQuietHours.enabled ? (
+            <>
+              <TouchableOpacity
+                style={styles.timePickerRow}
+                onPress={() => pickCommunityQuietTime('start')}
+                accessibilityRole="button"
+                accessibilityLabel="Set Community quiet hours start time"
+              >
+                <Text style={[styles.timePickerLabel, live.timePickerLabel]}>Starts</Text>
+                <Text style={[styles.timePickerValue, live.timePickerValue]}>
+                  {`${String(communityQuietHours.startHour).padStart(2, '0')}:${String(communityQuietHours.startMinute).padStart(2, '0')}`}
+                </Text>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.timePickerRow}
+                onPress={() => pickCommunityQuietTime('end')}
+                accessibilityRole="button"
+                accessibilityLabel="Set Community quiet hours end time"
+              >
+                <Text style={[styles.timePickerLabel, live.timePickerLabel]}>Ends</Text>
+                <Text style={[styles.timePickerValue, live.timePickerValue]}>
+                  {`${String(communityQuietHours.endHour).padStart(2, '0')}:${String(communityQuietHours.endMinute).padStart(2, '0')}`}
+                </Text>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+              </TouchableOpacity>
+            </>
+          ) : null}
+          <View style={[styles.helperRow, live.helperRow]}>
+            <Text style={[styles.helperText, live.helperText]}>
+              A Community push that would land inside this window waits until it ends and shows in-app instead.
             </Text>
           </View>
         </Card>

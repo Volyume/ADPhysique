@@ -3745,6 +3745,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       if (activeWorkout?.reEntryEaseApplied && user?.id) {
         clearPendingReEntryEase(user.id).catch(() => {});
       }
+      // Community product audit section 1: refresh the consistency
+      // counters on workout completion. Best effort, and a no-op unless
+      // the person has switched "Share my consistency" on - the module
+      // itself gates on the toggle, calm mode/ED flag and minor status.
+      if (user?.id) {
+        // eslint-disable-next-line global-require
+        const { publishConsistency } = require('../lib/community');
+        publishConsistency(user.id).catch(() => {});
+      }
       // LB-8: the core value event. Counts + duration only, no
       // exercise names or loads.
       try {

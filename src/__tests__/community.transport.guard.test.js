@@ -131,13 +131,19 @@ describe('client RPC arguments match the migration signatures', () => {
   // rather than being reported as a phantom cross-lane drift.
   const MIGRATION_162 = path.join(ROOT, 'supabase/migrate_162_gym_directory.sql');
   const MIGRATION_163 = path.join(ROOT, 'supabase/migrate_163_community_place_and_finder.sql');
+  // migrate_164 (gap closure) and migrate_165 (boards and groups) carry the
+  // later signatures; the latest declaration of a name wins below.
+  const MIGRATION_164 = path.join(ROOT, 'supabase/migrate_164_community_gap_closure.sql');
+  const MIGRATION_165 = path.join(ROOT, 'supabase/migrate_165_community_boards_groups.sql');
   const sql160 = fs.existsSync(MIGRATION) ? fs.readFileSync(MIGRATION, 'utf8') : null;
   const sql161 = fs.existsSync(MIGRATION_161) ? fs.readFileSync(MIGRATION_161, 'utf8') : null;
   const sql162 = fs.existsSync(MIGRATION_162) ? fs.readFileSync(MIGRATION_162, 'utf8') : null;
   const sql163 = fs.existsSync(MIGRATION_163) ? fs.readFileSync(MIGRATION_163, 'utf8') : null;
-  const sql = [sql160, sql161, sql162, sql163].every((s2) => s2 === null)
+  const sql164 = fs.existsSync(MIGRATION_164) ? fs.readFileSync(MIGRATION_164, 'utf8') : null;
+  const sql165 = fs.existsSync(MIGRATION_165) ? fs.readFileSync(MIGRATION_165, 'utf8') : null;
+  const sql = [sql160, sql161, sql162, sql163, sql164, sql165].every((s2) => s2 === null)
     ? null
-    : `${sql160 ?? ''}\n${sql161 ?? ''}\n${sql162 ?? ''}\n${sql163 ?? ''}`;
+    : `${sql160 ?? ''}\n${sql161 ?? ''}\n${sql162 ?? ''}\n${sql163 ?? ''}\n${sql164 ?? ''}\n${sql165 ?? ''}`;
 
   /**
    * The RPCs migrate_161 must declare (blueprint section 11), listed here
@@ -156,6 +162,17 @@ describe('client RPC arguments match the migration signatures', () => {
     'community_set_partner',
     'community_set_connect_from',
     'community_set_show_programmes',
+    // Gap closure (40-GAP-CLOSURE.md §1) and progress/groups (60-DESIGN-PROGRESS-COMMUNITY.md §2-3), migrate_164/165.
+    'community_board',
+    'community_group_create', 'community_group_update', 'community_group_close',
+    'community_group_leave', 'community_group_join', 'community_group_approve',
+    'community_group_remove', 'community_group_promote', 'community_group_invite',
+    'community_group_invite_link', 'community_group_accept_invite',
+    'community_group_list_mine', 'community_group_get', 'community_group_members',
+    'community_group_search', 'community_group_feed',
+    'community_respond_session', 'community_list_followers',
+    'community_set_show_gym', 'community_set_show_place',
+    'community_my_status', 'community_set_quiet_hours',
     'community_find_people',
     'community_programme_people',
     'community_gym_summary',

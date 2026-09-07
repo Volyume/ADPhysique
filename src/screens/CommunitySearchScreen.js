@@ -1,22 +1,19 @@
 /**
  * CommunitySearchScreen (blueprint sections 1, 6; SD-09)
  *
- * Two searches behind one field: people by handle or display name, and
- * programmes by title. Both are plain matches over public content;
- * nothing here ranks by popularity, and blocked people are invisible in
- * both directions server-side.
+ * People search by handle or display name. A plain match over public
+ * content; nothing here ranks by popularity, and blocked people are
+ * invisible in both directions server-side.
  *
  * The query is debounced and request-id guarded, the same shape the food
  * search uses, so a slow earlier answer can never overwrite a newer one.
  *
- * The Programmes tab with an EMPTY query is the full Discover list, paged
- * on the server cursor: that is what "See all" beside the hub's Programmes
- * section opens, so browsing past the first twenty is possible at all
- * (product review 2026-09-06, item 14).
+ * Programme search was removed with Community programme-sharing
+ * (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2).
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList. The props are the
@@ -25,13 +22,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import SearchBar from '../components/SearchBar';
-import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
+import Chip from '../components/Chip';
 import ProfileCard from '../components/community/ProfileCard';
-import ProgrammeTile from '../components/community/ProgrammeTile';
 import useTheme from '../hooks/useTheme';
-import { colors, spacing } from '../styles/theme';
-import { searchPeople, searchProgrammes, discoverProgrammes } from '../lib/community';
+import { colors, spacing, type } from '../styles/theme';
+import {
+  searchPeople, searchGroups, GROUP_ACCESS,
+  rankPeople, loadRecentPeopleSearches, recordPeopleSearch, clearRecentPeopleSearches,
+} from '../lib/community';
 
 const DEBOUNCE_MS = 250;
 const PAGE = 20;
@@ -39,82 +38,93 @@ const PAGE = 20;
 export default function CommunitySearchScreen({ navigation, route }) {
   const t = useTheme();
   const [query, setQuery] = useState(route?.params?.q ?? '');
-  const [tab, setTab] = useState(route?.params?.tab === 'programmes' ? 'programmes' : 'people');
+  const [mode, setMode] = useState('people');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [paging, setPaging] = useState(false);
-  const [cursor, setCursor] = useState(null);
   const [error, setError] = useState(null);
+  const [recent, setRecent] = useState([]);
   const seqRef = useRef(0);
 
-  /** One page of programmes: the discover list when there is no query,
-   * the title search when there is. Both answer the same shape and the
-   * same server cursor. */
-  function programmePage(q, opts) {
-    return q ? searchProgrammes(q, opts) : discoverProgrammes(opts);
-  }
+  // Recent people searches (community product audit `40-GAP-CLOSURE.md`
+  // §1, "People search tolerance"): last 8, on-device only, reloaded
+  // whenever the box empties out so a search-then-clear shows the fresh
+  // entry straight away.
+  useEffect(() => {
+    if (query.trim() || mode !== 'people') return;
+    loadRecentPeopleSearches().then(setRecent).catch(() => {});
+  }, [query, mode]);
 
-  const run = useCallback(async (q, which) => {
+  // "Find a group" (community product audit 60 §3-4): open groups only,
+  // name prefix. Reuses this same search screen with a mode chip rather
+  // than a second screen, per the "reachable from the Hub search" brief.
+  const run = useCallback(async (q, m) => {
     const seq = seqRef.current + 1;
     seqRef.current = seq;
     const trimmed = q.trim();
-    // People need a name to look for. Programmes with an empty query are
-    // the Discover list, which is what "See all" on the hub opens
-    // (product review 2026-09-06, item 14).
-    if (!trimmed && which !== 'programmes') {
-      setResults([]); setCursor(null); setLoading(false); setError(null); return;
+    if (!trimmed) {
+      setResults([]); setLoading(false); setError(null); return;
     }
     setLoading(true);
     try {
-      const page = which === 'programmes'
-        ? await programmePage(trimmed, { limit: PAGE })
+      const page = m === 'groups'
+        ? await searchGroups(trimmed, { limit: PAGE })
         : await searchPeople(trimmed, { limit: PAGE });
       if (seqRef.current !== seq) return;
-      const rows = which === 'programmes' ? page.programmes : page.people;
-      setResults(rows);
-      // A cursor with nothing behind it pages forever, so it is dropped
-      // as soon as a page comes back short.
-      setCursor(which === 'programmes' && rows.length ? (page.cursor ?? null) : null);
+      // People search tolerance (40-GAP-CLOSURE.md §1): the server returns
+      // up to 40 substring candidates, unordered for a human; the client
+      // ranks them (exact handle, handle prefix, name token prefix, a
+      // small edit-distance allowance), the same shape gyms/rank.js uses.
+      setResults(m === 'groups' ? (page.groups ?? []) : rankPeople(page.people ?? [], trimmed));
       setError(null);
+      if (m !== 'groups') recordPeopleSearch(trimmed).then(() => {
+        loadRecentPeopleSearches().then(setRecent).catch(() => {});
+      }).catch(() => {});
     } catch (e) {
       if (seqRef.current !== seq) return;
       setResults([]);
-      setCursor(null);
       setError(e?.code ?? 'unavailable');
     } finally {
       if (seqRef.current === seq) setLoading(false);
     }
   }, []);
 
-  const loadMore = useCallback(async () => {
-    if (tab !== 'programmes' || !cursor || paging || loading) return;
-    const seq = seqRef.current;
-    setPaging(true);
-    try {
-      const page = await programmePage(query.trim(), { cursor, limit: PAGE });
-      if (seqRef.current !== seq) return;
-      const rows = page.programmes ?? [];
-      setResults((prev) => [...prev, ...rows]);
-      setCursor(rows.length ? (page.cursor ?? null) : null);
-    } catch (_e) {
-      // Best effort: the page the reader already has stays on screen.
-    } finally {
-      setPaging(false);
-    }
-  }, [tab, cursor, paging, loading, query]);
-
   useEffect(() => {
-    const timer = setTimeout(() => { run(query, tab); }, DEBOUNCE_MS);
+    const timer = setTimeout(() => { run(query, mode); }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [query, tab, run]);
+  }, [query, mode, run]);
 
-  const empty = loading ? null : !query.trim() && tab === 'people' ? (
-    <EmptyState
-      icon="search-outline"
-      title="Search by @handle or name"
-      text="Find someone you train with, or a programme by its title."
-    />
+  const empty = loading ? null : !query.trim() ? (
+    <View>
+      <EmptyState
+        icon="search-outline"
+        title={mode === 'groups' ? 'Search groups by name' : 'Search by @handle or name'}
+        text={mode === 'groups' ? 'Find an open group to join.' : 'Find someone you train with.'}
+      />
+      {mode === 'people' && recent.length > 0 ? (
+        <View style={styles.recentBlock}>
+          <View style={styles.recentHeader}>
+            <Text style={[styles.recentTitle, { ...t.type.captionStrong, color: t.colors.textSecondary }]}>
+              Recent searches
+            </Text>
+            <TouchableOpacity
+              onPress={() => { clearRecentPeopleSearches().then(() => setRecent([])).catch(() => {}); }}
+              accessibilityRole="button"
+              accessibilityLabel="Clear recent searches"
+            >
+              <Text style={[styles.recentClear, { ...t.type.captionStrong, color: t.colors.primary }]}>
+                Clear
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.recentRow}>
+            {recent.map((r) => (
+              <Chip key={r} label={r} onPress={() => setQuery(r)} accessibilityLabel={`Search for ${r} again`} />
+            ))}
+          </View>
+        </View>
+      ) : null}
+    </View>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -123,26 +133,20 @@ export default function CommunitySearchScreen({ navigation, route }) {
         ? 'Community needs a connection. Your training is unaffected.'
         : 'Try that again in a moment.'}
       actionLabel="Try again"
-      onAction={() => run(query, tab)}
+      onAction={() => run(query, mode)}
       actionAccessibilityLabel="Try the search again"
     />
-  ) : tab === 'people' ? (
+  ) : mode === 'groups' ? (
+    <EmptyState
+      icon="people-circle-outline"
+      title="No open groups by that name yet"
+      text="Try the start of the group's name."
+    />
+  ) : (
     <EmptyState
       icon="people-outline"
       title="No one by that name yet"
       text="Try the start of their handle, or their display name."
-    />
-  ) : !query.trim() ? (
-    <EmptyState
-      icon="list-outline"
-      title="No programmes yet"
-      text="Nobody has shared one yet. Publish one of your own plans and it appears here."
-    />
-  ) : (
-    <EmptyState
-      icon="list-outline"
-      title="Nothing with that title yet"
-      text="Try a shorter word from the programme name."
     />
   );
 
@@ -153,50 +157,51 @@ export default function CommunitySearchScreen({ navigation, route }) {
         <SearchBar
           value={query}
           onChangeText={setQuery}
-          placeholder="Search people and programmes"
+          placeholder={mode === 'groups' ? 'Search groups' : 'Search people'}
           autoFocus
           loading={loading}
           accessibilityLabel="Search Community"
         />
-        <View style={styles.chipRow} accessibilityLabel="Search in">
-          <Chip label="People" selected={tab === 'people'} onPress={() => setTab('people')} accessibilityRole="radio" />
-          <Chip label="Programmes" selected={tab === 'programmes'} onPress={() => setTab('programmes')} accessibilityRole="radio" />
+        <View style={styles.modeRow} accessibilityLabel="Search mode">
+          <Chip label="People" selected={mode === 'people'} accessibilityRole="radio" onPress={() => setMode('people')} />
+          <Chip label="Groups" selected={mode === 'groups'} accessibilityRole="radio" onPress={() => setMode('groups')} />
         </View>
       </View>
       <FlashList
         data={results}
-        keyExtractor={(item) => (tab === 'people'
-          ? (item.card ?? item).user_id
-          : (item.programme ?? item).id)}
-        renderItem={({ item }) => (tab === 'people' ? (
+        keyExtractor={(item) => (mode === 'groups' ? item.id : (item.card ?? item).user_id)}
+        renderItem={({ item }) => (mode === 'groups' ? (
+          <View style={[styles.groupRow, { backgroundColor: t.colors.surface }]}>
+            <View style={styles.groupInfo}>
+              <Text style={[styles.groupName, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text style={[styles.groupMeta, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
+                {`${GROUP_ACCESS[item.access] ?? 'Open'} · ${item.memberCount} ${item.memberCount === 1 ? 'member' : 'members'}`}
+              </Text>
+            </View>
+            <Chip
+              label="View"
+              onPress={() => navigation.navigate('CommunityGroup', { id: item.id })}
+              accessibilityLabel={`View ${item.name}`}
+            />
+          </View>
+        ) : (
           <ProfileCard
             card={item.card ?? item}
             onPress={() => navigation.navigate('CommunityProfile', { handle: (item.card ?? item).handle })}
           />
-        ) : (
-          <ProgrammeTile
-            programme={item.programme ?? item}
-            creator={item.creator ?? null}
-            onPress={() => navigation.navigate('CommunityProgramme', { id: (item.programme ?? item).id })}
-          />
         ))}
         ListEmptyComponent={empty}
-        ListFooterComponent={paging ? (
-          <ActivityIndicator color={t.colors.primary} style={styles.footer} />
-        ) : null}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
-        onEndReachedThreshold={0.4}
-        // People search answers one page; programmes page on the server
-        // cursor, which is what makes "See all" on the hub a real list.
-        onEndReached={loadMore}
         refreshControl={(
           <RefreshControl
             refreshing={refreshing}
             onRefresh={async () => {
               setRefreshing(true);
-              try { await run(query, tab); } finally { setRefreshing(false); }
+              try { await run(query); } finally { setRefreshing(false); }
             }}
             tintColor={t.colors.textMuted}
             colors={[t.colors.primary]}
@@ -210,7 +215,18 @@ export default function CommunitySearchScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   controls: { padding: spacing.lg, gap: spacing.md },
-  chipRow: { flexDirection: 'row', gap: spacing.sm },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
-  footer: { paddingVertical: spacing.lg },
+  modeRow: { flexDirection: 'row', gap: spacing.xs2 },
+  recentBlock: { paddingHorizontal: spacing.lg, marginTop: -spacing.md, gap: spacing.sm },
+  recentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  recentTitle: { ...type.captionStrong },
+  recentClear: { ...type.captionStrong },
+  recentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
+  groupRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 16, padding: spacing.md, marginBottom: spacing.md,
+  },
+  groupInfo: { flex: 1, gap: 2 },
+  groupName: { ...type.bodyStrong, color: colors.textPrimary },
+  groupMeta: { ...type.caption, color: colors.textMuted },
 });
