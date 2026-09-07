@@ -445,6 +445,36 @@ describe('GD-14: Community integration', () => {
   });
 });
 
+// Review 35 finding 2 / the re-review's "load-bearing pair" note
+// (community_upsert_profile, migrate_162:~1795): community_upsert_profile
+// copies gym_label/gym_key VERBATIM off the existing row once gym_id is
+// set, skipping both its own 60-character cap and its own
+// _community_clean_text call for that path. That skip is only safe because
+// the sync trigger is the SOLE writer of gym_label whenever gym_id is set
+// (it always re-derives and re-clamps on every INSERT/UPDATE of gym_id, so
+// community_upsert_profile's copy can never diverge from what the trigger
+// already wrote) AND gyms_submit is the only way a NEW display_name can
+// reach a gym_venues row (so the trigger's `v_display` input is always
+// pre-filtered). Losing either half re-opens finding 1 (a blocked term
+// reaching a profile card) or finding 2 (a >60-character label breaking the
+// profile save) through the copy path, even though neither half alone
+// looks broken.
+describe('review 35: the gym_label cap and the submit-time filter are load-bearing together', () => {
+  test('the sync trigger clamps the derived gym_label with left( ... 60)', () => {
+    const at = CODE.indexOf('CREATE OR REPLACE FUNCTION public._community_gym_key_sync()');
+    const body = CODE.slice(at, CODE.indexOf('END $$;', at));
+    expect(body).toMatch(/left\(\s*v_display\s*,\s*60\s*\)/);
+  });
+
+  test('gyms_submit passes name through _community_clean_text before it can ever reach gym_venues.display_name', () => {
+    const at = CODE.indexOf('CREATE OR REPLACE FUNCTION public.gyms_submit(');
+    const body = CODE.slice(at, CODE.indexOf('END $$;', at));
+    expect(body).toMatch(/v_name\s*:=\s*public\._community_clean_text\(v_name\)/);
+    // The filtered v_name is what gets stored, not a re-read of the raw input.
+    expect(body).toMatch(/INSERT INTO public\.gym_venues[\s\S]*?VALUES[\s\S]*?v_id,\s*v_name,\s*v_name,/);
+  });
+});
+
 describe('erasure covers the two personal-data columns this file introduces', () => {
   const DELETE_BODY = SQL.slice(
     SQL.indexOf('CREATE OR REPLACE FUNCTION public.delete_user_data()'),

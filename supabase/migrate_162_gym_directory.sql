@@ -702,21 +702,32 @@ CREATE TRIGGER community_profiles_gym_key_sync
 -- Review 35 finding 3 (measured 61 s on a 46k-row catalogue): `_q` is now
 -- capped at 80 characters and 8 tokens (truncated, never refused, so a
 -- long paste still searches on its first words) and `_limit` clamped to
--- 1..50; a shared read rail (`_community_rate_check`, key 'gyms_read', 120
--- calls a minute) covers this and the other four read RPCs, since
--- `gyms_suggest` delegates straight into this function below and so is
--- covered by the same call. The un-indexable prefix `LIKE` scan that made
--- the query 61 s no longer drives the row scan at all: the WHERE clause
--- below matches only via the GIN `tokens && v_toks` array-overlap, an
--- exact brand-alias fold or an exact `town_key`, all indexed or cheap; the
--- prefix fallback runs ONLY on the LAST query token (the "still typing"
--- token) and ONLY once the row set is already narrowed by a caller-
--- supplied bounding box or a recognised outward code, never over the
--- whole table. The brand_match/town_match columns below keep their
--- broader prefix check because they run on the SELECT list, over rows the
--- WHERE clause has already narrowed, not on the scan itself (finding 3's
--- own suggested fix: "restrict the prefix EXISTS to rows already selected
--- by the indexable predicates").
+-- 1..40 (GD-09; review 35 finding 24 -- it had drifted to 50); a shared
+-- read rail (`_community_rate_check`, key 'gyms_read', 120 calls a
+-- minute) covers this and the other four read RPCs, since `gyms_suggest`
+-- delegates straight into this function below and so is covered by the
+-- same call. Retention (review 35 finding 25, left as is): each read
+-- writes one `gyms_read` row to `community_rate_events`, pruned at the
+-- same 7-day window as every other rate key (migrate_160:869-877).
+-- The un-indexable prefix `LIKE` scan that made the query 61 s no longer
+-- drives the row scan at all: the WHERE clause below matches only via the
+-- GIN `tokens && v_toks` array-overlap, an exact brand-alias fold or an
+-- exact `town_key`, all indexed or cheap; the prefix fallback runs ONLY on
+-- the LAST query token (the "still typing" token), bounded by the 80-
+-- character / 8-token caps and by the outward/town restriction where the
+-- WHERE clause already applies one, never by a coordinate gate. Review 35
+-- finding 21: the fix lane had also required an indexed-narrowing
+-- predicate (a bounding box or a recognised outward code) before the
+-- prefix branch could run at all; the app never sends coordinates
+-- (src/lib/gyms/index.js), so that gate made "puregy"/"motherw" return
+-- nothing until the token was complete, and it was measured to buy
+-- nothing (148 ms ungated versus 168 ms gated on the same 46,004 rows,
+-- both against the 61 s baseline) -- so it is removed here; the caps are
+-- what carry the safety. The brand_match/town_match columns below keep
+-- their broader prefix check because they run on the SELECT list, over
+-- rows the WHERE clause has already narrowed, not on the scan itself
+-- (finding 3's own suggested fix: "restrict the prefix EXISTS to rows
+-- already selected by the indexable predicates").
 -- Finding 10: ORDER BY now runs INSIDE the subquery, before LIMIT, so the
 -- 40 candidates handed to the client's ranker are the best 40, not an
 -- arbitrary scan-order sample.
@@ -739,7 +750,7 @@ DECLARE
   v_toks      text[] := (array_remove(
                   string_to_array(public._community_fold(v_raw), ' '), ''))[1:8];
   v_last_tok  text;
-  v_limit     int := least(greatest(coalesce(_limit, 40), 1), 50);
+  v_limit     int := least(greatest(coalesce(_limit, 40), 1), 40);
   v_lat_delta double precision;
   v_lng_delta double precision;
   v_venues    jsonb;
@@ -788,17 +799,17 @@ BEGIN
                      WHERE public._community_fold(al) = ANY (v_toks))
           OR v.town_key = ANY (v_toks)
           OR (
-            -- Finding 3: the un-indexable prefix fallback, bounded to the
-            -- last token and to a row set already narrowed by an indexed
-            -- predicate (the bounding box, or a recognised outward code).
+            -- Review 35 finding 21: the prefix fallback runs on every call
+            -- now, not only once a bounding box or outward code has
+            -- already narrowed the row set -- that coordinate gate made
+            -- the picker match whole tokens only, since the app never
+            -- sends coordinates. The 80-character / 8-token caps above
+            -- (finding 3) and the outward/town restriction the WHERE
+            -- clause already applies where present are what carry the
+            -- safety (measured: 148 ms ungated vs 168 ms gated on 46,004
+            -- rows), so this branch is bounded by those, and by the last
+            -- token only, and nothing else.
             v_last_tok IS NOT NULL
-            AND (
-              (_lat IS NOT NULL AND _lng IS NOT NULL
-                AND v.lat IS NOT NULL AND v.lng IS NOT NULL
-                AND v.lat BETWEEN _lat - v_lat_delta AND _lat + v_lat_delta
-                AND v.lng BETWEEN _lng - v_lng_delta AND _lng + v_lng_delta)
-              OR (v_outward IS NOT NULL AND v.outward = v_outward)
-            )
             AND (
               EXISTS (SELECT 1 FROM unnest(v.tokens) t WHERE t LIKE v_last_tok || '%')
               OR v.town_key LIKE v_last_tok || '%'
@@ -999,6 +1010,10 @@ DECLARE
   v_id       uuid;
   v_dup_id   uuid;
   v_dup_name text;
+  v_twin_id     uuid;
+  v_twin_name   text;
+  v_twin_status text;
+  v_twin_distinct int;
 BEGIN
   IF _p IS NULL OR jsonb_typeof(_p) <> 'object' THEN
     RAISE EXCEPTION USING message = 'invalid';
@@ -1073,8 +1088,12 @@ BEGIN
   -- needs a near-identical name). Finding 15: bounded to the submission's
   -- own outward code first (`gym_venues_outward_idx`) rather than scanning
   -- every venue's tokens. Finding 4: only a row this caller may SEE is
-  -- ever offered back as a duplicate -- a stranger's invisible pending
-  -- venue inserts as normal and the moderator queue catches it.
+  -- ever offered back as a duplicate here -- an invisible venue never
+  -- appears in THIS scan's result or its 'duplicate_of' reply, which is
+  -- the privacy property finding 4 fixed and this scan keeps. Review 35
+  -- finding 22: a stranger's invisible PENDING venue is handled by the
+  -- separate twin check below instead of being allowed to insert as a
+  -- second, identical pending row.
   SELECT v.id, v.display_name INTO v_dup_id, v_dup_name
   FROM public.gym_venues v
   WHERE v.status IN ('open', 'pending')
@@ -1091,6 +1110,70 @@ BEGIN
 
   IF v_dup_id IS NOT NULL THEN
     RETURN jsonb_build_object('duplicate_of', v_dup_id, 'display_name', v_dup_name);
+  END IF;
+
+  -- Review 35 finding 22: the same text match, this time WITHOUT the
+  -- visibility restriction and narrowed to 'pending' only ('open' rows are
+  -- always visible and so are already caught by the scan above). A hit
+  -- here is a genuine twin -- another caller's pending submission this
+  -- caller cannot see. Rather than insert a second, identical pending
+  -- venue that the two submitters could then confirm into the catalogue
+  -- as two separate rows, this caller is recorded as a distinct confirmer
+  -- on the EXISTING venue, exactly as gyms_confirm_submission does below
+  -- (a 'confirm' history row, confirmations + 1, and the flip to open /
+  -- user_submitted_verified once two distinct confirmers exist). The
+  -- reply carries only the venue's own id/display_name/status -- never the
+  -- other submitter's identity.
+  SELECT v.id, v.display_name, v.status INTO v_twin_id, v_twin_name, v_twin_status
+  FROM public.gym_venues v
+  WHERE v.status = 'pending'
+    AND v.outward = public._gyms_outward_of(v_postcode)
+    AND (
+      (v.postcode IS NOT NULL
+        AND public._gyms_postcode_compact(v.postcode) = public._gyms_postcode_compact(v_postcode)
+        AND public._gyms_token_jaccard(v.tokens, v_tokens) >= 0.6)
+      OR public._gyms_token_jaccard(v.tokens, v_tokens) >= 0.85
+    )
+  ORDER BY public._gyms_token_jaccard(v.tokens, v_tokens) DESC
+  LIMIT 1;
+
+  IF v_twin_id IS NOT NULL THEN
+    -- v_twin_id was excluded from the visible scan above, so it is never
+    -- this caller's own submission and this caller can never already be a
+    -- confirmer on it; still guard both, defensively and idempotently.
+    IF NOT EXISTS (
+      SELECT 1 FROM public.gym_submissions s
+      WHERE s.id = v_twin_id AND s.submitter_id = v_uid
+    ) AND NOT EXISTS (
+      SELECT 1 FROM public.gym_venue_history h
+      WHERE h.venue_id = v_twin_id AND h.change = 'confirm' AND h.actor = v_uid::text
+    ) THEN
+      INSERT INTO public.gym_venue_history (id, venue_id, change, before, after, actor, created_at)
+      VALUES (gen_random_uuid(), v_twin_id, 'confirm', NULL,
+              jsonb_build_object('confirmer', v_uid), v_uid::text, now());
+
+      UPDATE public.gym_submissions SET confirmations = confirmations + 1 WHERE id = v_twin_id;
+
+      SELECT count(DISTINCT h.actor)::int INTO v_twin_distinct
+      FROM public.gym_venue_history h
+      WHERE h.venue_id = v_twin_id AND h.change = 'confirm';
+
+      IF v_twin_distinct >= 2 THEN
+        UPDATE public.gym_venues
+           SET status = 'open', verification_status = 'user_submitted_verified'
+         WHERE id = v_twin_id AND status = 'pending';
+        UPDATE public.gym_submissions
+           SET status = 'verified', reviewed_at = now()
+         WHERE id = v_twin_id AND status = 'pending';
+        INSERT INTO public.gym_venue_history (id, venue_id, change, before, after, actor, created_at)
+        VALUES (gen_random_uuid(), v_twin_id, 'verify',
+                jsonb_build_object('status', 'pending'), jsonb_build_object('status', 'open'),
+                v_uid::text, now());
+        v_twin_status := 'open';
+      END IF;
+    END IF;
+
+    RETURN jsonb_build_object('id', v_twin_id, 'display_name', v_twin_name, 'status', v_twin_status);
   END IF;
 
   -- Operator classification (GD-03, "operator brand type" outranks name
@@ -1150,7 +1233,13 @@ END $$;
 -- gym_venue_history's `actor` column (change = 'confirm') rather than a new
 -- table: the submitter's own implicit confirmation from gyms_submit is
 -- already an actor there, so a genuinely different second actor is what
--- reaches the count of two this function checks for.
+-- reaches the count of two this function checks for. Review 35 finding
+-- 22: this is not the only path to that second confirmer -- when
+-- gyms_submit's own duplicate scan finds a twin PENDING venue it cannot
+-- see (another caller's independent submission of the same gym), it
+-- performs this exact confirm-and-maybe-flip sequence inline rather than
+-- inserting a second identical pending row, so the two entry points must
+-- stay in step.
 CREATE OR REPLACE FUNCTION public.gyms_confirm_submission(_id uuid)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -1317,6 +1406,12 @@ BEGIN
             jsonb_build_object('status', 'open'), v_uid::text, now());
 
   ELSIF v_action = 'reject' THEN
+    -- Review 35 finding 23: reject had no status precondition, so it could
+    -- close an already-open, long-established venue with one call. Same
+    -- guard approve already has (finding 17).
+    IF v_venue.status <> 'pending' THEN
+      RAISE EXCEPTION USING message = 'not_allowed';
+    END IF;
     UPDATE public.gym_venues
        SET status = 'closed', verification_status = 'rejected', closed_at = now()
      WHERE id = _id;
