@@ -31,6 +31,7 @@ const { callCommunity } = require('../transport');
 const {
   listConversations, listMessages, sendMessage, markRead, deleteMessage,
   placeholderFor, MESSAGE_MAX, MESSAGE_REF_KINDS,
+  respondSession, sessionTileLine, sessionStateLine, buildSessionRefPayload,
 } = require('../messages');
 
 beforeEach(() => {
@@ -60,6 +61,7 @@ describe('sending', () => {
       _body: 'How are you finding week three?',
       _ref_kind: null,
       _ref_id: null,
+      _ref_payload: null,
     });
     expect(out).toEqual({ conversation_id: 'c1', message: { id: 'm1' } });
   });
@@ -77,7 +79,20 @@ describe('sending', () => {
   test('an unknown reference kind is dropped, id and all', async () => {
     await sendMessage('u2', 'Nice session.', { refKind: 'workout', refId: 'w1' });
     expect(callCommunity.mock.calls[0][1]).toMatchObject({ _ref_kind: null, _ref_id: null });
-    expect(MESSAGE_REF_KINDS).toEqual(['post']);
+    expect(MESSAGE_REF_KINDS).toEqual(['post', 'session']);
+  });
+
+  test('a session reference travels as a kind and its payload, never an id', async () => {
+    const payload = { day: 'thu', time_band: 'evening', gym_id: 'g1' };
+    await sendMessage('u2', 'Fancy training Thursday?', { refKind: 'session', refPayload: payload });
+    expect(callCommunity.mock.calls[0][1]).toMatchObject({
+      _ref_kind: 'session', _ref_id: null, _ref_payload: payload,
+    });
+  });
+
+  test('a session kind with no payload is dropped rather than sent empty', async () => {
+    await sendMessage('u2', 'Fancy training Thursday?', { refKind: 'session', refPayload: null });
+    expect(callCommunity.mock.calls[0][1]).toMatchObject({ _ref_kind: null, _ref_id: null, _ref_payload: null });
   });
 
   test('an empty body never leaves the device', async () => {
@@ -165,6 +180,45 @@ describe('reading and deleting', () => {
   test('both refuse an empty id', async () => {
     await expect(markRead('')).rejects.toMatchObject({ code: 'invalid_input' });
     await expect(deleteMessage(null)).rejects.toMatchObject({ code: 'invalid_input' });
+    expect(callCommunity).not.toHaveBeenCalled();
+  });
+});
+
+describe('session suggestion', () => {
+  test('buildSessionRefPayload shapes the three keys the server checks', () => {
+    expect(buildSessionRefPayload('thu', 'evening', 'g1'))
+      .toEqual({ day: 'thu', time_band: 'evening', gym_id: 'g1' });
+    expect(buildSessionRefPayload('thu', 'evening', null))
+      .toEqual({ day: 'thu', time_band: 'evening', gym_id: null });
+  });
+
+  test('sessionTileLine renders day, band and the named gym', () => {
+    expect(sessionTileLine({ day: 'thu', time_band: 'evening', gym_name: 'PureGym Motherwell' }))
+      .toBe('Thursday evening at PureGym Motherwell');
+  });
+
+  test('sessionTileLine falls back to Anywhere with no gym', () => {
+    expect(sessionTileLine({ day: 'thu', time_band: 'evening', gym_name: null }))
+      .toBe('Thursday evening at Anywhere');
+  });
+
+  test('sessionStateLine reads the response, or nothing before one exists', () => {
+    expect(sessionStateLine({ day: 'thu', time_band: 'evening' })).toBeNull();
+    expect(sessionStateLine({ accepted: true })).toBe('Accepted');
+    expect(sessionStateLine({ accepted: false })).toBe('Not this time');
+  });
+
+  test('respondSession takes the message id and the accept flag', async () => {
+    callCommunity.mockResolvedValue({ conversation_id: 'c1', message: { id: 'm1' } });
+    const out = await respondSession('m1', true);
+    expect(callCommunity).toHaveBeenCalledWith('community_respond_session', {
+      _message_id: 'm1', _accept: true,
+    });
+    expect(out).toEqual({ conversation_id: 'c1', message: { id: 'm1' } });
+  });
+
+  test('respondSession refuses an empty message id before the network', async () => {
+    await expect(respondSession(null, true)).rejects.toMatchObject({ code: 'invalid_input' });
     expect(callCommunity).not.toHaveBeenCalled();
   });
 });

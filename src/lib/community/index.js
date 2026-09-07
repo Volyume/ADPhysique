@@ -36,6 +36,7 @@ export {
 export {
   WEB_ORIGIN, APP_SCHEME, profileUrl, storyUrl, groupUrl,
   appProfileUrl, appStoryUrl, appGroupUrl, parseCommunityLink,
+  findHttpsLinks, openMessageLink,
 } from './links';
 
 export {
@@ -48,8 +49,10 @@ export {
   clearCachedMe, loadMe, refreshMe, hasProfile, hasUnseen, hasUnreadMessages,
   upsertProfile, acceptRules,
   checkHandle, leaveCommunity, getProfile, follow, unfollow,
-  respondToFollow, removeFollower, listFollows, blockUser, unblockUser,
+  respondToFollow, removeFollower, listFollows, listFollowers,
+  setShowGym, setShowPlace, blockUser, unblockUser,
   muteUser, unmuteUser, relationships, setPlace,
+  myStatus, isModeratedStatus, setCommunityQuietHours,
 } from './profile';
 
 export {
@@ -102,6 +105,8 @@ export {
 export {
   MESSAGE_MAX, MESSAGE_REF_KINDS, placeholderFor,
   listConversations, listMessages, sendMessage, markRead, deleteMessage,
+  SESSION_DAYS, SESSION_TIME_BANDS, sessionTileLine, sessionStateLine,
+  buildSessionRefPayload, respondSession,
 } from './messages';
 
 export {
@@ -112,6 +117,11 @@ export {
 } from './findPeople';
 
 export { REASON_TOKENS, reasonCopy, reasonLines } from './reasons';
+
+export {
+  rankPeople, loadRecentPeopleSearches, recordPeopleSearch,
+  clearRecentPeopleSearches, RECENT_SEARCHES_MAX,
+} from './rankPeople';
 
 export {
   DEFAULT_PAGE_SIZE as BOARD_PAGE_SIZE,

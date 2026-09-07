@@ -53,8 +53,10 @@ import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, type, circle } from '../styles/theme';
+import ProgressStrip from '../components/community/ProgressStrip';
 import {
   getProfile, listFollows, profileUrl, reactToPost, unblockUser, relationships, connectionState,
+  readShareSettings, loadConsistency,
 } from '../lib/community';
 
 /**
@@ -109,10 +111,33 @@ export default function CommunityProfileScreen({ navigation, route }) {
   const [error, setError] = useState(null);
   const [blockedCard, setBlockedCard] = useState(null);
   const [connectOpen, setConnectOpen] = useState(false);
+  const [progress, setProgress] = useState(null);
 
   const card = data?.card ?? null;
   const isMe = !!card && card.user_id === me?.profile?.user_id;
   const viewable = !!data?.viewable;
+
+  // Progress strip (design 60 §4, D4): own profile only, and only when
+  // sharing consistency. Device-computed -- there is no server read for a
+  // caller's own raw counters (`_community_profile_card` never carries
+  // them, blueprint 60 §1's counters are board inputs, not profile
+  // fields), so this reads the same local `trainingConsistency.js` the
+  // Hub's "This week" line uses.
+  useEffect(() => {
+    if (!isMe || !card?.user_id) { setProgress(null); return undefined; }
+    let alive = true;
+    readShareSettings(card.user_id).then(async (share) => {
+      if (!alive) return;
+      if (!share?.consistency) { setProgress(null); return; }
+      try {
+        const counters = await loadConsistency(card.user_id);
+        if (alive) setProgress(counters);
+      } catch (_e) {
+        if (alive) setProgress(null);
+      }
+    }).catch(() => { if (alive) setProgress(null); });
+    return () => { alive = false; };
+  }, [isMe, card?.user_id]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -237,12 +262,38 @@ export default function CommunityProfileScreen({ navigation, route }) {
         <Text style={[styles.place, { ...t.type.bodySm, color: t.colors.textSecondary }]}>{place}</Text>
       ) : null}
 
+      {/* Spec D (migrate_164 Part 8): the owner always sees their own gym
+          and place (the server never hides a fact from its own owner),
+          `show_gym`/`show_place` only travel to the owner's own card, so
+          this can never render for anyone else's profile. */}
+      {isMe && card.gym_label && card.show_gym === false ? (
+        <Text style={[styles.hiddenNote, { ...t.type.caption, color: t.colors.textMuted }]}>
+          Hidden from others
+        </Text>
+      ) : null}
+      {isMe && (card.place_label || card.area_label) && card.show_place === false ? (
+        <Text style={[styles.hiddenNote, { ...t.type.caption, color: t.colors.textMuted }]}>
+          Hidden from others
+        </Text>
+      ) : null}
+
       <TrainingProfileLine card={card} />
+
+      {isMe && progress ? (
+        <ProgressStrip
+          counters={progress}
+          onPress={() => navigation.navigate('CommunityBoard', { scope: 'following', window: 'week' })}
+        />
+      ) : null}
 
       <View style={styles.counts}>
         <Pressable
-          onPress={() => openFollows('followers')}
-          disabled={!viewable}
+          // Spec C (40-GAP-CLOSURE.md §1 "Follow management"): the owner's
+          // own count opens the full Followers screen (self-only,
+          // remove-capable); a viewer on someone else's profile keeps the
+          // existing transient sheet.
+          onPress={() => (isMe ? navigation.navigate('CommunityFollowers') : openFollows('followers'))}
+          disabled={!isMe && !viewable}
           accessibilityRole="button"
           accessibilityLabel={`${card.follower_count ?? 0} followers`}
         >
@@ -261,12 +312,24 @@ export default function CommunityProfileScreen({ navigation, route }) {
           </Text>
         </Pressable>
         {connectionCount !== null && Number.isFinite(connectionCount) ? (
-          <Text
-            style={[styles.count, { ...t.type.bodySm, color: t.colors.textSecondary }]}
-            accessibilityRole="text"
-          >
-            {connectionCount === 1 ? '1 connection' : `${connectionCount} connections`}
-          </Text>
+          isMe ? (
+            <Pressable
+              onPress={() => navigation.navigate('CommunityConnections')}
+              accessibilityRole="button"
+              accessibilityLabel={connectionCount === 1 ? '1 connection' : `${connectionCount} connections`}
+            >
+              <Text style={[styles.count, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+                {connectionCount === 1 ? '1 connection' : `${connectionCount} connections`}
+              </Text>
+            </Pressable>
+          ) : (
+            <Text
+              style={[styles.count, { ...t.type.bodySm, color: t.colors.textSecondary }]}
+              accessibilityRole="text"
+            >
+              {connectionCount === 1 ? '1 connection' : `${connectionCount} connections`}
+            </Text>
+          )
         ) : null}
       </View>
 
@@ -511,6 +574,7 @@ const styles = StyleSheet.create({
   bio: { ...type.body, color: colors.textPrimary },
   facts: { ...type.caption, color: colors.textSecondary },
   place: { ...type.bodySm, color: colors.textSecondary },
+  hiddenNote: { ...type.caption, color: colors.textMuted },
   counts: { flexDirection: 'row', gap: spacing.lg },
   count: { ...type.bodySm, color: colors.textSecondary },
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },

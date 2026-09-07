@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList. The props are the
@@ -27,7 +27,10 @@ import Chip from '../components/Chip';
 import ProfileCard from '../components/community/ProfileCard';
 import useTheme from '../hooks/useTheme';
 import { colors, spacing, type } from '../styles/theme';
-import { searchPeople, searchGroups, GROUP_ACCESS } from '../lib/community';
+import {
+  searchPeople, searchGroups, GROUP_ACCESS,
+  rankPeople, loadRecentPeopleSearches, recordPeopleSearch, clearRecentPeopleSearches,
+} from '../lib/community';
 
 const DEBOUNCE_MS = 250;
 const PAGE = 20;
@@ -40,7 +43,17 @@ export default function CommunitySearchScreen({ navigation, route }) {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [recent, setRecent] = useState([]);
   const seqRef = useRef(0);
+
+  // Recent people searches (community product audit `40-GAP-CLOSURE.md`
+  // §1, "People search tolerance"): last 8, on-device only, reloaded
+  // whenever the box empties out so a search-then-clear shows the fresh
+  // entry straight away.
+  useEffect(() => {
+    if (query.trim() || mode !== 'people') return;
+    loadRecentPeopleSearches().then(setRecent).catch(() => {});
+  }, [query, mode]);
 
   // "Find a group" (community product audit 60 §3-4): open groups only,
   // name prefix. Reuses this same search screen with a mode chip rather
@@ -58,8 +71,15 @@ export default function CommunitySearchScreen({ navigation, route }) {
         ? await searchGroups(trimmed, { limit: PAGE })
         : await searchPeople(trimmed, { limit: PAGE });
       if (seqRef.current !== seq) return;
-      setResults(m === 'groups' ? (page.groups ?? []) : (page.people ?? []));
+      // People search tolerance (40-GAP-CLOSURE.md §1): the server returns
+      // up to 40 substring candidates, unordered for a human; the client
+      // ranks them (exact handle, handle prefix, name token prefix, a
+      // small edit-distance allowance), the same shape gyms/rank.js uses.
+      setResults(m === 'groups' ? (page.groups ?? []) : rankPeople(page.people ?? [], trimmed));
       setError(null);
+      if (m !== 'groups') recordPeopleSearch(trimmed).then(() => {
+        loadRecentPeopleSearches().then(setRecent).catch(() => {});
+      }).catch(() => {});
     } catch (e) {
       if (seqRef.current !== seq) return;
       setResults([]);
@@ -75,11 +95,36 @@ export default function CommunitySearchScreen({ navigation, route }) {
   }, [query, mode, run]);
 
   const empty = loading ? null : !query.trim() ? (
-    <EmptyState
-      icon="search-outline"
-      title={mode === 'groups' ? 'Search groups by name' : 'Search by @handle or name'}
-      text={mode === 'groups' ? 'Find an open group to join.' : 'Find someone you train with.'}
-    />
+    <View>
+      <EmptyState
+        icon="search-outline"
+        title={mode === 'groups' ? 'Search groups by name' : 'Search by @handle or name'}
+        text={mode === 'groups' ? 'Find an open group to join.' : 'Find someone you train with.'}
+      />
+      {mode === 'people' && recent.length > 0 ? (
+        <View style={styles.recentBlock}>
+          <View style={styles.recentHeader}>
+            <Text style={[styles.recentTitle, { ...t.type.captionStrong, color: t.colors.textSecondary }]}>
+              Recent searches
+            </Text>
+            <TouchableOpacity
+              onPress={() => { clearRecentPeopleSearches().then(() => setRecent([])).catch(() => {}); }}
+              accessibilityRole="button"
+              accessibilityLabel="Clear recent searches"
+            >
+              <Text style={[styles.recentClear, { ...t.type.captionStrong, color: t.colors.primary }]}>
+                Clear
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.recentRow}>
+            {recent.map((r) => (
+              <Chip key={r} label={r} onPress={() => setQuery(r)} accessibilityLabel={`Search for ${r} again`} />
+            ))}
+          </View>
+        </View>
+      ) : null}
+    </View>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -172,6 +217,11 @@ const styles = StyleSheet.create({
   controls: { padding: spacing.lg, gap: spacing.md },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
   modeRow: { flexDirection: 'row', gap: spacing.xs2 },
+  recentBlock: { paddingHorizontal: spacing.lg, marginTop: -spacing.md, gap: spacing.sm },
+  recentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  recentTitle: { ...type.captionStrong },
+  recentClear: { ...type.captionStrong },
+  recentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   groupRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     borderRadius: 16, padding: spacing.md, marginBottom: spacing.md,

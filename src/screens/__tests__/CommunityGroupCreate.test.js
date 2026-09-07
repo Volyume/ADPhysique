@@ -8,6 +8,9 @@
  *  2. A successful create replaces to `CommunityGroup` with the new id.
  *  3. Create stays disabled with an empty name.
  *  4. `minor_restricted` is spoken calmly, never a generic failure.
+ *  5. Edit mode (`route.params.mode === 'edit'`, gap-closure §1 "Group
+ *     edit"): prefills name/blurb/access from `route.params.group`, Save
+ *     calls `updateGroup` with the group id and replaces back to it.
  */
 
 import { create, act } from 'react-test-renderer';
@@ -22,13 +25,14 @@ jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastS
 
 jest.mock('../../lib/community', () => ({
   createGroup: jest.fn(),
+  updateGroup: jest.fn(),
   GROUP_NAME_MAX: 40,
   GROUP_BLURB_MAX: 140,
   GROUP_ACCESS: { open: 'Open', invite: 'Invite only' },
   GROUP_ACCESS_ORDER: ['open', 'invite'],
 }));
 
-import { createGroup } from '../../lib/community';
+import { createGroup, updateGroup } from '../../lib/community';
 import CommunityGroupCreateScreen from '../CommunityGroupCreateScreen';
 
 function byLabel(tree, label) {
@@ -41,11 +45,11 @@ function field(tree, label) {
   return tree.root.findAll((n) => n.props?.accessibilityLabel === label && n.props?.onChangeText)[0];
 }
 
-async function mount() {
+async function mount(params = {}) {
   const navigation = { navigate: jest.fn(), replace: jest.fn(), goBack: jest.fn() };
   let tree;
   await act(async () => {
-    tree = create(<CommunityGroupCreateScreen navigation={navigation} route={{ params: {} }} />);
+    tree = create(<CommunityGroupCreateScreen navigation={navigation} route={{ params }} />);
   });
   return { tree, navigation };
 }
@@ -53,6 +57,7 @@ async function mount() {
 beforeEach(() => {
   jest.clearAllMocks();
   createGroup.mockResolvedValue({ id: 'g1', name: 'Iron Collective' });
+  updateGroup.mockResolvedValue({ id: 'g1', name: 'Iron Collective (updated)' });
 });
 
 test('Create is disabled with an empty name', async () => {
@@ -96,4 +101,26 @@ test('minor_restricted is spoken calmly and nothing navigates', async () => {
     expect.objectContaining({ variant: 'error' }),
   );
   expect(navigation.replace).not.toHaveBeenCalled();
+});
+
+const EDIT_GROUP = { id: 'g1', name: 'Iron Collective', blurb: 'Monday crew', access: 'invite' };
+
+test('edit mode prefills name, blurb and access from route.params.group', async () => {
+  const { tree } = await mount({ mode: 'edit', group: EDIT_GROUP });
+  expect(field(tree, 'Group name').props.value).toBe('Iron Collective');
+  expect(field(tree, 'Group blurb').props.value).toBe('Monday crew');
+  const inviteChip = tree.root.findAll((n) => n.props?.label === 'Invite only' && n.props?.selected !== undefined)[0];
+  expect(inviteChip.props.selected).toBe(true);
+});
+
+test('edit mode Save calls updateGroup with the group id and replaces back to it', async () => {
+  const { tree, navigation } = await mount({ mode: 'edit', group: EDIT_GROUP });
+  await act(async () => { field(tree, 'Group name').props.onChangeText('Iron Collective 2'); });
+  await act(async () => { byLabel(tree, 'Save group').props.onPress(); });
+
+  expect(updateGroup).toHaveBeenCalledWith('g1', {
+    name: 'Iron Collective 2', blurb: 'Monday crew', access: 'invite',
+  });
+  expect(createGroup).not.toHaveBeenCalled();
+  expect(navigation.replace).toHaveBeenCalledWith('CommunityGroup', { id: 'g1' });
 });

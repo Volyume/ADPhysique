@@ -14,9 +14,12 @@
  *    40-GAP-CLOSURE.md` §2).
  */
 
+jest.mock('react-native', () => ({ Linking: { openURL: jest.fn(async () => {}) } }));
+
 const {
   WEB_ORIGIN, profileUrl, storyUrl,
   appProfileUrl, appStoryUrl, parseCommunityLink,
+  findHttpsLinks, openMessageLink,
 } = require('../links');
 
 describe('building', () => {
@@ -107,5 +110,49 @@ describe('the static share pages emit exactly what links.js builds', () => {
     // half that used to be missing.
     expect(built.endsWith(`?${param}=`)).toBe(true);
     expect(page(dir)).toContain(`'${built}' + encodeURIComponent(`);
+  });
+});
+
+describe('findHttpsLinks: messaging links (40-GAP-CLOSURE.md §1)', () => {
+  test('finds one https URL in a sentence', () => {
+    const out = findHttpsLinks('Check this out: https://volyume.app/u/?h=sam it explains it');
+    expect(out).toHaveLength(1);
+    expect(out[0].url).toBe('https://volyume.app/u/?h=sam');
+  });
+
+  test('finds several URLs', () => {
+    const out = findHttpsLinks('https://a.example and also https://b.example');
+    expect(out.map((x) => x.url)).toEqual(['https://a.example', 'https://b.example']);
+  });
+
+  test('trims trailing sentence punctuation off the URL', () => {
+    const out = findHttpsLinks('See https://volyume.app.');
+    expect(out[0].url).toBe('https://volyume.app');
+  });
+
+  test('never matches a non-https scheme', () => {
+    expect(findHttpsLinks('call me on tel:+441234567890 or http://insecure.example')).toEqual([]);
+  });
+
+  test('plain text with no link finds nothing', () => {
+    expect(findHttpsLinks('just a normal message')).toEqual([]);
+  });
+});
+
+describe('openMessageLink: https only', () => {
+  const { Linking } = require('react-native');
+
+  beforeEach(() => { Linking.openURL.mockClear(); });
+
+  test('opens an https URL', () => {
+    openMessageLink('https://volyume.app');
+    expect(Linking.openURL).toHaveBeenCalledWith('https://volyume.app');
+  });
+
+  test('refuses any other scheme', () => {
+    openMessageLink('javascript:alert(1)');
+    openMessageLink('volyume://u/?h=sam');
+    openMessageLink('http://insecure.example');
+    expect(Linking.openURL).not.toHaveBeenCalled();
   });
 });

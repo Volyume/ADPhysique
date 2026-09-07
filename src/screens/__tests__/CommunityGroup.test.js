@@ -166,7 +166,19 @@ test('admin-only menu rows render only for an admin member', async () => {
   const { tree } = await mount();
   await act(async () => { byLabel(tree, 'Group menu').props.onPress(); });
   const labels = tree.root.findAll((n) => n.props?.rows).slice(-1)[0].props.rows.map((r) => r.label);
-  expect(labels).toEqual(expect.arrayContaining(['Invite by handle', 'Share invite link', 'Close group']));
+  expect(labels).toEqual(expect.arrayContaining(['Edit', 'Invite by handle', 'Share invite link', 'Close group']));
+});
+
+test('Edit opens CommunityGroupCreate in edit mode, prefilled', async () => {
+  getGroup.mockResolvedValue({ ...OPEN_GROUP, myRole: 'admin', myState: 'member' });
+  const { tree, navigation } = await mount();
+  await act(async () => { byLabel(tree, 'Group menu').props.onPress(); });
+  const editRow = tree.root.findAll((n) => n.props?.label === 'Edit' && n.props?.onPress)[0];
+  await act(async () => { editRow.props.onPress(); });
+  expect(navigation.navigate).toHaveBeenCalledWith('CommunityGroupCreate', {
+    mode: 'edit',
+    group: { id: 'g1', name: 'Iron Collective', blurb: 'Monday crew', access: 'open' },
+  });
 });
 
 test('a plain member sees no admin-only menu rows', async () => {

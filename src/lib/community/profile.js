@@ -263,6 +263,81 @@ export async function listFollows(userId, kind, { cursor = null, limit = 30 } = 
   };
 }
 
+/**
+ * One page of the caller's OWN followers (migrate_164 Part 7:
+ * `community_list_followers`, self-only). Distinct from `listFollows`
+ * (which reads a chosen user's followers/following and is used for
+ * viewing someone else's counts): this is the `CommunityFollowersScreen`
+ * source, so it can never be pointed at another person's list.
+ *
+ * @returns {Promise<{people: Array, cursor: (string|null)}>}
+ */
+export async function listFollowers({ cursor = null, limit = 20 } = {}) {
+  const data = await callCommunity('community_list_followers', { _cursor: cursor, _limit: limit });
+  const rows = data?.people;
+  return {
+    people: Array.isArray(rows) ? rows : [],
+    cursor: typeof data?.cursor === 'string' ? data.cursor : null,
+  };
+}
+
+/** "Show my gym" (migrate_164 Part 8, default on). Returns the caller's
+ * own profile card. */
+export async function setShowGym(on) {
+  return callCommunity('community_set_show_gym', { _on: !!on });
+}
+
+/** "Show my place" (migrate_164 Part 8, default on). Returns the
+ * caller's own profile card. */
+export async function setShowPlace(on) {
+  return callCommunity('community_set_show_place', { _on: !!on });
+}
+
+/**
+ * The caller's own moderation status (migrate_164 Part 13, "E - moderated-
+ * person notice"): `{status, reason_class, since}`. `status` is null for
+ * someone with no profile yet, `'active'` for an untouched profile, or
+ * `'restricted'`/`'suspended'`, in which case `reason_class` names the
+ * most recent report reason against them from `REPORT_REASONS` (or null
+ * when no report is on record). Never throws: the Hub notice is best
+ * effort, same posture as the rest of `me`.
+ *
+ * @returns {Promise<{status: (string|null), reason_class: (string|null), since: (string|null)}>}
+ */
+export async function myStatus() {
+  try {
+    const data = await callCommunity('community_my_status', {});
+    return {
+      status: data?.status ?? null,
+      reason_class: data?.reason_class ?? null,
+      since: data?.since ?? null,
+    };
+  } catch (_e) {
+    return { status: null, reason_class: null, since: null };
+  }
+}
+
+/** Is this status one the Hub should show a notice for? */
+export function isModeratedStatus(status) {
+  return status === 'restricted' || status === 'suspended';
+}
+
+/**
+ * Community quiet hours (migrate_164 Part 13, "G - quiet hours on social
+ * pushes"): a projection onto `notification_preferences` the server reads
+ * before sending a Community push (SD-15a: a device-local window is
+ * invisible to an Edge Function). `startMinutes`/`endMinutes` are
+ * minutes-from-midnight (0 to 1439, 30-minute steps in the UI); pass both
+ * null to clear the window. `tz` is the device's own IANA zone name.
+ *
+ * @returns {Promise<{quiet_start: (number|null), quiet_end: (number|null), tz: (string|null)}>}
+ */
+export async function setCommunityQuietHours(startMinutes, endMinutes, tz) {
+  return callCommunity('community_set_quiet_hours', {
+    _start: startMinutes, _end: endMinutes, _tz: tz,
+  });
+}
+
 export async function blockUser(targetUserId) {
   return callCommunity('community_block', { _target: targetUserId });
 }

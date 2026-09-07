@@ -33,7 +33,59 @@ export const DEFAULT_PAGE_SIZE = 30;
 export const MESSAGE_MAX = 1000;
 
 /** The thing a message may point at. */
-export const MESSAGE_REF_KINDS = Object.freeze(['post']);
+export const MESSAGE_REF_KINDS = Object.freeze(['post', 'session']);
+
+// ─── Session suggestion (community product audit 40-GAP-CLOSURE.md §1,
+//     "Session planning after connecting" BUILD row; server Part 14) ────
+
+/** Composer chip day chips, in list order, matching the server's
+ * `_ref_payload.day` values exactly. */
+export const SESSION_DAYS = Object.freeze([
+  { key: 'mon', label: 'Mon' }, { key: 'tue', label: 'Tue' }, { key: 'wed', label: 'Wed' },
+  { key: 'thu', label: 'Thu' }, { key: 'fri', label: 'Fri' }, { key: 'sat', label: 'Sat' },
+  { key: 'sun', label: 'Sun' },
+]);
+
+/** Time band chips, day-order, never a clock time (SD-31). */
+export const SESSION_TIME_BANDS = Object.freeze([
+  { key: 'early', label: 'Early' }, { key: 'morning', label: 'Morning' },
+  { key: 'midday', label: 'Midday' }, { key: 'afternoon', label: 'Afternoon' },
+  { key: 'evening', label: 'Evening' }, { key: 'late', label: 'Late' },
+]);
+
+const SESSION_DAY_FULL = Object.freeze({
+  mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday',
+  fri: 'Friday', sat: 'Saturday', sun: 'Sunday',
+});
+const SESSION_TIME_BAND_LABEL = Object.fromEntries(SESSION_TIME_BANDS.map((b) => [b.key, b.label]));
+
+/**
+ * The tile line for a session suggestion ("Thursday evening at PureGym
+ * Motherwell" / "Thursday evening" with no gym / "Anywhere" when the
+ * proposer picked no venue). `ref` is a session message's `.ref`
+ * (`{day, time_band, gym_id, gym_name, accepted, responded_at}`).
+ */
+export function sessionTileLine(ref) {
+  const day = SESSION_DAY_FULL[ref?.day] ?? '';
+  const band = SESSION_TIME_BAND_LABEL[ref?.time_band]?.toLowerCase() ?? '';
+  const when = [day, band].filter(Boolean).join(' ');
+  const where = ref?.gym_name || 'Anywhere';
+  return when ? `${when} at ${where}` : where;
+}
+
+/** The state line under a session tile once responded, else null (the
+ * screen shows Accept / "Can't make it" instead). */
+export function sessionStateLine(ref) {
+  if (!ref || !('accepted' in ref) || ref.accepted === null || ref.accepted === undefined) return null;
+  return ref.accepted ? 'Accepted' : 'Not this time';
+}
+
+/** @param {string} day one of `SESSION_DAYS` keys
+ *  @param {string} timeBand one of `SESSION_TIME_BANDS` keys
+ *  @param {string|null} [gymId] null/omitted means "Anywhere" */
+export function buildSessionRefPayload(day, timeBand, gymId = null) {
+  return { day, time_band: timeBand, gym_id: gymId || null };
+}
 
 /**
  * The composer's placeholder for the surface it was opened from. It is a
@@ -98,7 +150,7 @@ export async function listMessages(conversationId, { cursor = null, limit = DEFA
  *   body), 'content_not_allowed' (keyword filter), 'not_connected',
  *   'minor_restricted', 'blocked', 'rate_limited'.
  */
-export async function sendMessage(targetUserId, body, { refKind = null, refId = null } = {}) {
+export async function sendMessage(targetUserId, body, { refKind = null, refId = null, refPayload = null } = {}) {
   if (!targetUserId) throw new CommunityError('invalid_input');
   const cleaned = cleanText(body, MESSAGE_MAX);
   if (!cleaned.ok) {
@@ -106,12 +158,38 @@ export async function sendMessage(targetUserId, body, { refKind = null, refId = 
       cleaned.reason === 'content_not_allowed' ? 'content_not_allowed' : 'invalid_input',
     );
   }
-  const kind = MESSAGE_REF_KINDS.includes(refKind) && refId ? refKind : null;
+  // 'session' carries no ref_id (nothing to look up server-side): its
+  // whole reference is the validated payload, unlike 'post'/'programme'
+  // which point at an existing row and are dropped without an id.
+  const kind = MESSAGE_REF_KINDS.includes(refKind)
+    && (refKind === 'session' ? !!refPayload : !!refId)
+    ? refKind : null;
   const data = await callCommunity('community_send_message', {
     _target: targetUserId,
     _body: cleaned.value,
     _ref_kind: kind,
-    _ref_id: kind ? refId : null,
+    _ref_id: kind && kind !== 'session' ? refId : null,
+    _ref_payload: kind === 'session' ? refPayload : null,
+  });
+  return {
+    conversation_id: data?.conversation_id ?? null,
+    message: data?.message ?? null,
+  };
+}
+
+/**
+ * Respond to a proposed training session (migrate_164 Part 14). Once
+ * only, party-checked server-side: the proposer cannot respond to their
+ * own suggestion, and the response is final once made.
+ *
+ * @throws {CommunityError} 'invalid_input', 'not_found', 'not_allowed'
+ *   (wrong party, or the sender responding to themself), 'already_responded'
+ * @returns {Promise<{conversation_id: (string|null), message: (object|null)}>}
+ */
+export async function respondSession(messageId, accept) {
+  if (!messageId) throw new CommunityError('invalid_input');
+  const data = await callCommunity('community_respond_session', {
+    _message_id: messageId, _accept: !!accept,
   });
   return {
     conversation_id: data?.conversation_id ?? null,

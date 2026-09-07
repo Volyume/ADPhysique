@@ -155,6 +155,11 @@ const CommunityProfileScreen = lazyScreen(() => require('../screens/CommunityPro
 const CommunitySearchScreen = lazyScreen(() => require('../screens/CommunitySearchScreen').default);
 const CommunityActivityScreen = lazyScreen(() => require('../screens/CommunityActivityScreen').default);
 const CommunityDimensionScreen = lazyScreen(() => require('../screens/CommunityDimensionScreen').default);
+const CommunityBoardScreen = lazyScreen(() => require('../screens/CommunityBoardScreen').default);
+// Groups (community product audit 60 §3-4, lane B2b).
+const CommunityGroupScreen = lazyScreen(() => require('../screens/CommunityGroupScreen').default);
+const CommunityGroupCreateScreen = lazyScreen(() => require('../screens/CommunityGroupCreateScreen').default);
+const CommunityGroupMembersScreen = lazyScreen(() => require('../screens/CommunityGroupMembersScreen').default);
 const CommunityRulesScreen = lazyScreen(() => require('../screens/CommunityRulesScreen').default);
 const CommunityPrivacyScreen = lazyScreen(() => require('../screens/CommunityPrivacyScreen').default);
 const CommunityModerationScreen = lazyScreen(() => require('../screens/CommunityModerationScreen').default);
@@ -174,6 +179,8 @@ const CommunityPeopleListScreen = lazyScreen(() => require('../screens/Community
 const CommunityTrainingProfileScreen = lazyScreen(() => require('../screens/CommunityTrainingProfileScreen').default);
 const CommunityConversationsScreen = lazyScreen(() => require('../screens/CommunityConversationsScreen').default);
 const CommunityConversationScreen = lazyScreen(() => require('../screens/CommunityConversationScreen').default);
+const CommunityFollowersScreen = lazyScreen(() => require('../screens/CommunityFollowersScreen').default);
+const CommunityConnectionsScreen = lazyScreen(() => require('../screens/CommunityConnectionsScreen').default);
 // Dormant billing surfaces (founder decision: Volyume is fully free, no
 // Free/Pro split, no trial, no paywall). SubscriptionScreen, CascadeGateScreen,
 // ProUpgradeScreen and SubscriptionPolicyScreen remain on disk at
@@ -500,6 +507,10 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="CommunitySearch" component={CommunitySearchScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityActivity" component={CommunityActivityScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityDimension" component={CommunityDimensionScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityBoard" component={CommunityBoardScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityGroup" component={CommunityGroupScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityGroupCreate" component={CommunityGroupCreateScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityGroupMembers" component={CommunityGroupMembersScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityRules" component={CommunityRulesScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityPrivacy" component={CommunityPrivacyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityModeration" component={CommunityModerationScreen} options={{ headerShown: false }} />
@@ -517,6 +528,8 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="CommunityTrainingProfile" component={CommunityTrainingProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityConversations" component={CommunityConversationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityConversation" component={CommunityConversationScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityFollowers" component={CommunityFollowersScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityConnections" component={CommunityConnectionsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -951,6 +964,8 @@ const linking = {
           // share pages above, so the conversation id arrives as `id`, which
           // is the param CommunityConversationScreen reads.
           CommunityConversation: 'm',
+          // volyume://g/?id=<groupId> (community product audit 60 §3).
+          CommunityGroup: 'g',
         },
       },
       DiaryTab: {

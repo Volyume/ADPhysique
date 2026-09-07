@@ -1,7 +1,10 @@
 /**
  * Community share links (blueprint sections 5.6, 8; SD-16).
  *
- * PURE. Two forms of the same three addresses:
+ * PURE, save for `openMessageLink` (community product audit
+ * `40-GAP-CLOSURE.md` §1, "Messaging links"), the one function here that
+ * touches the OS browser -- everything else is address-shaping only.
+ * Two forms of the same three addresses:
  *   - the WEB form, a static page under `public/` that fetches the
  *     `community-public` edge function, so a link works for someone who
  *     does not have the app;
@@ -19,6 +22,55 @@
 
 export const WEB_ORIGIN = 'https://volyume.app';
 export const APP_SCHEME = 'volyume://';
+
+// ─── Messaging links (community product audit `40-GAP-CLOSURE.md` §1,
+//     "Messaging links" BUILD row) ─────────────────────────────────────
+
+/**
+ * Find every `https://` URL in a piece of message text, in order.
+ * `https` ONLY, never any other scheme (`javascript:`, `data:`, an app
+ * deep link) -- a message body is free text from another user, and the
+ * one thing this ever does with it is hand it to the OS browser. No
+ * preview fetch: the match is text only, nothing here ever requests the
+ * URL.
+ *
+ * @param {string} text
+ * @returns {{url: string, start: number, end: number}[]}
+ */
+export function findHttpsLinks(text) {
+  const s = String(text ?? '');
+  const re = /https:\/\/[^\s<>"']+/g;
+  const out = [];
+  let m = re.exec(s);
+  while (m) {
+    // Trailing punctuation that reads as sentence punctuation, not part
+    // of the link, is trimmed off the end (". )),!?" etc.) so "See
+    // https://volyume.app." does not swallow the full stop into the URL.
+    let url = m[0];
+    let end = m.index + url.length;
+    while (url.length > 0 && /[).,!?;:'"]$/.test(url)) {
+      url = url.slice(0, -1);
+      end -= 1;
+    }
+    if (url.length >= 'https://'.length) {
+      out.push({ url, start: m.index, end });
+    }
+    m = re.exec(s);
+  }
+  return out;
+}
+
+/**
+ * Open a link tapped in message text, through the OS browser. Refuses
+ * anything that is not exactly `https://` (belt and braces alongside
+ * `findHttpsLinks` only ever matching that scheme).
+ */
+export function openMessageLink(url) {
+  if (!/^https:\/\//i.test(String(url ?? ''))) return;
+  // eslint-disable-next-line global-require
+  const { Linking } = require('react-native');
+  Linking.openURL(url).catch(() => { /* best effort: nothing to recover */ });
+}
 
 // 'p' (programme) links are retired along with Community programme-sharing
 // (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2): the path

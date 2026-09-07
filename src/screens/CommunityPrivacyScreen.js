@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, ActivityIndicator, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
@@ -34,10 +34,10 @@ import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type } from '../styles/theme';
+import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
 import {
   relationships, unblockUser, unmuteUser, upsertProfile, leaveCommunity,
-  hasProfile, setConnectFrom, CONNECT_FROM_VALUES,
+  hasProfile, setConnectFrom, CONNECT_FROM_VALUES, setShowGym, setShowPlace,
 } from '../lib/community';
 
 const CONNECT_FROM_OPTIONS = Object.entries(CONNECT_FROM_VALUES)
@@ -53,6 +53,10 @@ export default function CommunityPrivacyScreen({ navigation }) {
 
   const [visibility, setVisibility] = useState('public');
   const [connectFrom, setConnectFromLocal] = useState('anyone');
+  // Spec D (migrate_164 Part 8), default on: both toggles start true so a
+  // profile read before the first `me` refresh never flashes "hidden".
+  const [showGym, setShowGymLocal] = useState(true);
+  const [showPlace, setShowPlaceLocal] = useState(true);
   const [lists, setLists] = useState({ blocked: [], muted: [] });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -64,6 +68,14 @@ export default function CommunityPrivacyScreen({ navigation }) {
   useEffect(() => {
     if (me?.connect_from) setConnectFromLocal(me.connect_from);
   }, [me?.connect_from]);
+
+  useEffect(() => {
+    if (profile?.show_gym != null) setShowGymLocal(!!profile.show_gym);
+  }, [profile?.show_gym]);
+
+  useEffect(() => {
+    if (profile?.show_place != null) setShowPlaceLocal(!!profile.show_place);
+  }, [profile?.show_place]);
 
   const load = useCallback(async () => {
     if (!joined) { setLoading(false); return; }
@@ -107,6 +119,38 @@ export default function CommunityPrivacyScreen({ navigation }) {
       // `rules_outdated` is the rules text moving, not a network problem
       // (product review 2026-09-06 finding 4): sent to the rules screen
       // rather than told, wrongly, to try again.
+      if (e?.code === 'rules_outdated') {
+        navigation.navigate('CommunityRules', { mustAccept: true });
+      } else {
+        toast.show('Could not change that just now.', { variant: 'error' });
+      }
+    }
+  }
+
+  async function changeShowGym(next) {
+    const previous = showGym;
+    setShowGymLocal(next);
+    try {
+      await setShowGym(next);
+      await refresh(true);
+    } catch (e) {
+      setShowGymLocal(previous);
+      if (e?.code === 'rules_outdated') {
+        navigation.navigate('CommunityRules', { mustAccept: true });
+      } else {
+        toast.show('Could not change that just now.', { variant: 'error' });
+      }
+    }
+  }
+
+  async function changeShowPlace(next) {
+    const previous = showPlace;
+    setShowPlaceLocal(next);
+    try {
+      await setShowPlace(next);
+      await refresh(true);
+    } catch (e) {
+      setShowPlaceLocal(previous);
       if (e?.code === 'rules_outdated') {
         navigation.navigate('CommunityRules', { mustAccept: true });
       } else {
@@ -216,6 +260,39 @@ export default function CommunityPrivacyScreen({ navigation }) {
 
             <View style={[settingsStyles.section, settings.section]}>
               <SettingRow
+                icon="business-outline"
+                label="Show my gym"
+                sub="Others can see the gym you train at. You always see it yourself."
+                rightElement={(
+                  <Switch
+                    value={showGym}
+                    onValueChange={changeShowGym}
+                    accessibilityLabel="Show my gym"
+                    trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+                    thumbColor={t.colors.primary}
+                    ios_backgroundColor={t.colors.surface2}
+                  />
+                )}
+              />
+              <SettingRow
+                icon="location-outline"
+                label="Show my place"
+                sub="Others can see your town or postcode district. You always see it yourself."
+                rightElement={(
+                  <Switch
+                    value={showPlace}
+                    onValueChange={changeShowPlace}
+                    accessibilityLabel="Show my place"
+                    trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+                    thumbColor={t.colors.primary}
+                    ios_backgroundColor={t.colors.surface2}
+                  />
+                )}
+              />
+            </View>
+
+            <View style={[settingsStyles.section, settings.section]}>
+              <SettingRow
                 icon="body-outline"
                 label="Training profile"
                 sub="The bands worked out from your training, and what you share of them."
@@ -280,6 +357,18 @@ export default function CommunityPrivacyScreen({ navigation }) {
                 label="Edit profile"
                 onPress={() => navigation.navigate('CommunityEditProfile')}
                 accessibilityLabel="Edit my Community profile"
+              />
+              <SettingRow
+                icon="people-outline"
+                label="Followers"
+                onPress={() => navigation.navigate('CommunityFollowers')}
+                accessibilityLabel="See and manage your followers"
+              />
+              <SettingRow
+                icon="link-outline"
+                label="Connections"
+                onPress={() => navigation.navigate('CommunityConnections')}
+                accessibilityLabel="See and manage your connections"
               />
               {me?.is_moderator ? (
                 <SettingRow

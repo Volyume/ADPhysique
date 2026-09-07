@@ -52,6 +52,28 @@ jest.mock('../../lib/community', () => ({
   reasonLines: (reasons) => (Array.isArray(reasons) ? reasons : []),
   follow: jest.fn(),
   unfollow: jest.fn(),
+  // Design 60 §4, D1 ("This week" / "At [gym]" blocks): best-effort reads
+  // this suite does not exercise directly (covered in boards.test.js and
+  // the board screen's own suite); resolved to empty so they never affect
+  // the states this file is actually about.
+  loadBoard: jest.fn(() => Promise.resolve({
+    rows: [], you: null, count: 0, thresholdMet: true, cursor: null,
+  })),
+  daysLabel: () => '',
+  readShareSettings: jest.fn(() => Promise.resolve({ consistency: false })),
+  loadConsistency: jest.fn(() => Promise.resolve(null)),
+  publishConsistencyOnForeground: jest.fn(() => Promise.resolve({ sent: false, reason: null, payload: null })),
+  // "Your groups" chip row (design 60 §4, D1; lane B2b): best-effort,
+  // covered directly in groups.test.js and the group screens' own
+  // suites, resolved empty here so it never affects the states this
+  // file is about.
+  listMyGroups: jest.fn(() => Promise.resolve([])),
+  // Moderated-person notice (40-GAP-CLOSURE.md §1): best-effort, covered
+  // directly in profile.moderatedStatus.test.js; resolved to the neutral
+  // shape here so it never affects the states this file is about.
+  myStatus: jest.fn(() => Promise.resolve({ status: null, reason_class: null, since: null })),
+  isModeratedStatus: (status) => status === 'restricted' || status === 'suspended',
+  REPORT_REASONS: {},
 }));
 
 import { loadHub, findPeople } from '../../lib/community';

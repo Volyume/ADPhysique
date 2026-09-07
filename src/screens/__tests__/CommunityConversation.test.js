@@ -65,6 +65,22 @@ jest.mock('../../lib/community', () => ({
   getProfile: jest.fn(() => Promise.resolve({ card: null })),
   blockUser: jest.fn(() => Promise.resolve({})),
   removeConnection: jest.fn(() => Promise.resolve({})),
+  respondSession: jest.fn(() => Promise.resolve({})),
+  SESSION_DAYS: [
+    { key: 'mon', label: 'Mon' }, { key: 'tue', label: 'Tue' }, { key: 'wed', label: 'Wed' },
+    { key: 'thu', label: 'Thu' }, { key: 'fri', label: 'Fri' }, { key: 'sat', label: 'Sat' },
+    { key: 'sun', label: 'Sun' },
+  ],
+  SESSION_TIME_BANDS: [
+    { key: 'early', label: 'Early' }, { key: 'morning', label: 'Morning' },
+    { key: 'midday', label: 'Midday' }, { key: 'afternoon', label: 'Afternoon' },
+    { key: 'evening', label: 'Evening' }, { key: 'late', label: 'Late' },
+  ],
+  buildSessionRefPayload: (day, timeBand, gymId = null) => ({ day, time_band: timeBand, gym_id: gymId || null }),
+  sessionTileLine: () => '',
+  sessionStateLine: () => null,
+  findHttpsLinks: () => [],
+  openMessageLink: jest.fn(),
   // The real placeholder rule (messages.js): a prompt for the surface the
   // composer was opened from, never a draft.
   placeholderFor: (ref) => {
