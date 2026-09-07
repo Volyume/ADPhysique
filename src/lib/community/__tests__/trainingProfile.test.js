@@ -378,10 +378,15 @@ describe('only the opted-in bands are sent', () => {
   test('the defaults leave days, time bands and the age band behind', () => {
     const payload = shareablePayload(BANDS, TP_DEFAULT_SHARE);
     expect(Object.keys(payload).sort()).toEqual([
-      'share_age_band', 'tp_experience_band', 'tp_programme_key',
+      'share_age_band', 'share_consistency', 'tp_experience_band', 'tp_programme_key',
       'tp_sessions_band', 'tp_staple_lifts',
     ]);
     expect(payload.share_age_band).toBe(false);
+    // `share_consistency` always travels, the same as `share_age_band`
+    // (community product audit `60-DESIGN-PROGRESS-COMMUNITY.md` section
+    // 1); its counters are a separate module's concern, pinned in
+    // `trainingConsistency.test.js`.
+    expect(payload.share_consistency).toBe(false);
   });
 
   test('a band whose toggle is off is ABSENT, not sent as null', () => {
@@ -401,7 +406,7 @@ describe('only the opted-in bands are sent', () => {
       experience: true, programme: true, age_band: true,
     });
     expect(Object.keys(payload).sort()).toEqual([
-      'share_age_band', 'tp_days', 'tp_experience_band', 'tp_programme_key',
+      'share_age_band', 'share_consistency', 'tp_days', 'tp_experience_band', 'tp_programme_key',
       'tp_sessions_band', 'tp_staple_lifts', 'tp_time_bands',
     ]);
   });

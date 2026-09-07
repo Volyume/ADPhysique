@@ -24,7 +24,7 @@ export const APP_SCHEME = 'volyume://';
 // (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2): the path
 // still parses below so an old link never dead-ends, but it now opens the
 // Community Hub, and no URL is minted for it any more.
-const PATHS = Object.freeze({ profile: 'u', programme: 'p', story: 's' });
+const PATHS = Object.freeze({ profile: 'u', programme: 'p', story: 's', group: 'g' });
 
 function encode(v) {
   return encodeURIComponent(String(v ?? ''));
@@ -48,6 +48,16 @@ export function appProfileUrl(handle) {
 /** `volyume://s/?id=<id>` */
 export function appStoryUrl(id) {
   return `${APP_SCHEME}${PATHS.story}/?id=${encode(id)}`;
+}
+
+/** `https://volyume.app/g/?id=<groupId>` (community product audit 60 §3) */
+export function groupUrl(id) {
+  return `${WEB_ORIGIN}/${PATHS.group}/?id=${encode(id)}`;
+}
+
+/** `volyume://g/?id=<groupId>` */
+export function appGroupUrl(id) {
+  return `${APP_SCHEME}${PATHS.group}/?id=${encode(id)}`;
 }
 
 function readQuery(blob) {
@@ -109,6 +119,10 @@ export function parseCommunityLink(url) {
   if (pathPart === PATHS.story) {
     const id = String(params.id ?? '').trim();
     return id ? { kind: 'story', id } : null;
+  }
+  if (pathPart === PATHS.group) {
+    const id = String(params.id ?? '').trim();
+    return id ? { kind: 'group', id } : null;
   }
   return null;
 }

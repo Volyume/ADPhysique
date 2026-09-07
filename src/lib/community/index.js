@@ -34,8 +34,8 @@ export {
 } from './limits';
 
 export {
-  WEB_ORIGIN, APP_SCHEME, profileUrl, storyUrl,
-  appProfileUrl, appStoryUrl, parseCommunityLink,
+  WEB_ORIGIN, APP_SCHEME, profileUrl, storyUrl, groupUrl,
+  appProfileUrl, appStoryUrl, appGroupUrl, parseCommunityLink,
 } from './links';
 
 export {
@@ -86,6 +86,12 @@ export {
 } from './trainingProfile';
 
 export {
+  NO_PLAN_CONSISTENT_THRESHOLD, PLANNED_WINDOW_WEEKS, CONSISTENT_WINDOW_WEEKS,
+  computeConsistency, loadConsistency, consistencyGateState, publishConsistency,
+  CONSISTENCY_WEEK_KEY_PREFIX, publishConsistencyOnForeground,
+} from './trainingConsistency';
+
+export {
   CONNECT_REASONS, CONNECT_REASON_KEYS, MAX_CONNECT_REASONS, CONNECT_NOTE_MAX,
   CONNECT_FROM_VALUES, CONNECTION_STATES, CONNECT_BUTTON_LABELS,
   connectionState, cleanReasons, cleanPartnerPrefs,
@@ -106,3 +112,19 @@ export {
 } from './findPeople';
 
 export { REASON_TOKENS, reasonCopy, reasonLines } from './reasons';
+
+export {
+  DEFAULT_PAGE_SIZE as BOARD_PAGE_SIZE,
+  BOARD_SCOPES, BOARD_SCOPE_ORDER, BOARD_WINDOWS, BOARD_WINDOW_ORDER,
+  loadBoard, metricLabel, daysLabel,
+} from './boards';
+
+// ─── Groups (community product audit 60 §3; lane B2b) ─────────────────
+
+export {
+  GROUP_NAME_MAX, GROUP_BLURB_MAX, GROUP_ACCESS, GROUP_ACCESS_ORDER,
+  createGroup, updateGroup, closeGroup, leaveGroup, joinGroup,
+  approveGroupRequest, removeGroupMember, promoteGroupMember,
+  inviteToGroup, createGroupInviteLink, acceptGroupInvite,
+  listMyGroups, getGroup, listGroupMembers, searchGroups, loadGroupFeed,
+} from './groups';

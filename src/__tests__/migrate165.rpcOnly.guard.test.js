@@ -327,3 +327,42 @@ describe('community_board never returns a minor, an unshared or a stale profile'
     expect(body).toContain("now() - interval '14 days'");
   });
 });
+
+describe('community_board gym scope targets any gym, falling back to the caller\'s own', () => {
+  const body = CODE.slice(
+    CODE.indexOf('CREATE OR REPLACE FUNCTION public.community_board('),
+    CODE.indexOf('CREATE OR REPLACE FUNCTION public._community_group_role('),
+  );
+
+  test('_scope_key is cast to the target gym id when supplied', () => {
+    expect(body).toContain('v_gym_id := _scope_key::uuid');
+  });
+
+  test('a null or blank _scope_key falls back to the caller\'s own gym_id', () => {
+    expect(body).toContain('v_gym_id := v_me.gym_id');
+  });
+
+  test('eligibility matches the target gym id, not only the caller\'s own', () => {
+    expect(body).toContain('p.gym_id = v_gym_id');
+    expect(body).toContain('v_gym_id = ANY (coalesce(p.other_gym_ids, ARRAY[]::uuid[]))');
+  });
+});
+
+describe('c_weeks_history is gated behind share_consistency exactly like every other counter', () => {
+  test('community_profiles gains the column additively', () => {
+    expect(CODE).toContain('ADD COLUMN IF NOT EXISTS c_weeks_history        smallint[]');
+  });
+
+  test('community_update_training_profile stores it only under v_share_consistency', () => {
+    const body = CODE.slice(
+      CODE.indexOf('CREATE OR REPLACE FUNCTION public.community_update_training_profile('),
+      CODE.indexOf('CREATE OR REPLACE FUNCTION public.community_board('),
+    );
+    expect(body).toContain("IF jsonb_typeof(_p -> 'c_weeks_history') = 'array' THEN");
+    expect(body).toContain('c_weeks_history         = v_c_weeks_history');
+  });
+
+  test('the acceptance check reads back the column', () => {
+    expect(SQL).toContain("'c_weeks_history'");
+  });
+});

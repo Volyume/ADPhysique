@@ -131,12 +131,22 @@ beforeEach(() => {
   useCommunityMe.mockReturnValue({ me: ME, loading: false, error: null, refresh: jest.fn(() => Promise.resolve()) });
 });
 
-describe('bandRows: the seven bands, in order, each with its own value (SD-22)', () => {
+describe('bandRows: the seven bands plus consistency, in order, each with its own value (SD-22)', () => {
   test('every row is present, in the blueprint order', () => {
     const rows = bandRows(BANDS, ME);
     expect(rows.map((r) => r.key)).toEqual([
       'days', 'time_bands', 'sessions', 'staple_lifts', 'experience', 'programme', 'age_band',
+      // Community product audit `60-DESIGN-PROGRESS-COMMUNITY.md` section 1.
+      'consistency',
     ]);
+  });
+
+  test('the consistency row always shows the fixed copy, never a computed value', () => {
+    const row = bandRows(BANDS, ME).find((r) => r.key === 'consistency');
+    expect(row.label).toBe('Share my consistency');
+    expect(row.value || row.empty).toBe(
+      'Your sessions this week, this month and your weeks in a row. Never your weight or food.',
+    );
   });
 
   test('staple lifts show a COUNT, never the exercise ids themselves', () => {

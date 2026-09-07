@@ -26,7 +26,10 @@ export const MODERATION_ACTIONS = Object.freeze([
  * section 2): a private conversation is exactly where harassment goes
  * when the public surfaces are moderated, so reporting one has to be
  * available from the moment messaging exists, not after it. */
-export const REPORT_TARGET_KINDS = Object.freeze(['profile', 'post', 'comment', 'programme', 'message']);
+// 'group' added by community product audit `60-DESIGN-PROGRESS-COMMUNITY.md`
+// section 3: `community_report` re-issued by migrate_165 to accept
+// `target_kind = 'group'`, owner = the group's `created_by`.
+export const REPORT_TARGET_KINDS = Object.freeze(['profile', 'post', 'comment', 'programme', 'message', 'group']);
 
 /**
  * File a report.

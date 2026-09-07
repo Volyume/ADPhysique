@@ -123,6 +123,13 @@ export const TP_DEFAULT_SHARE = Object.freeze({
   experience: true,
   programme: true,
   age_band: false,
+  // Community product audit `60-DESIGN-PROGRESS-COMMUNITY.md` section 1:
+  // "Share my consistency" - sessions this week/month, weeks streak. A
+  // moving weekly figure, not a static band, so it defaults OFF like the
+  // other revealing toggles and is handled separately in
+  // `shareablePayload` (its fields come from `trainingConsistency.js`,
+  // not from `deriveTrainingProfile`).
+  consistency: false,
 });
 
 export const TP_SHARE_KEYS = Object.freeze(Object.keys(TP_DEFAULT_SHARE));
@@ -498,11 +505,25 @@ export async function loadTrainingProfile(userId, { nowMs = Date.now(), windowWe
  * NULLS anything absent, which is what makes switching a toggle off an
  * erasure rather than a stale row left behind.
  *
+ * `consistency` is handled separately from the band fields above, and
+ * always stamps `share_consistency` (true or false), the same pattern
+ * `share_age_band` already uses: unlike a band, whose absence from the
+ * payload is enough to have the server null it, a person who turns
+ * consistency sharing OFF (or trips the ED gate) while the toggle was
+ * on needs the field EXPLICITLY flipped false, or the server would keep
+ * serving the counters from before this call.
+ *
  * @param {object} bands
  * @param {object} share
+ * @param {{consistencyCounters?: (object|null), consistencyGated?: boolean}} [opts]
+ *   `consistencyGated` is true when calm mode, an open ED-pattern flag,
+ *   or a minor's account means the counters must never be sent even if
+ *   the toggle itself is on (`trainingConsistency.js` computes this).
  * @returns {object} the `_p` payload
  */
-export function shareablePayload(bands = {}, share = TP_DEFAULT_SHARE) {
+export function shareablePayload(bands = {}, share = TP_DEFAULT_SHARE, {
+  consistencyCounters = null, consistencyGated = false,
+} = {}) {
   const settings = normaliseShare(share);
   const payload = {};
   for (const key of Object.keys(SHARE_KEY_TO_FIELD)) {
@@ -513,6 +534,25 @@ export function shareablePayload(bands = {}, share = TP_DEFAULT_SHARE) {
   // The age band never crosses as a value: the server derives it from the
   // person's own record when this says it may, and never for a minor.
   payload.share_age_band = !!settings.age_band;
+
+  const shareConsistency = !!settings.consistency && !consistencyGated;
+  payload.share_consistency = shareConsistency;
+  if (shareConsistency) {
+    payload.c_sessions_week = consistencyCounters?.c_sessions_week ?? null;
+    payload.c_sessions_month = consistencyCounters?.c_sessions_month ?? null;
+    payload.c_weeks_streak = consistencyCounters?.c_weeks_streak ?? null;
+    payload.c_planned_pct_4w = consistencyCounters?.c_planned_pct_4w ?? null;
+    payload.c_consistent_weeks_12w = consistencyCounters?.c_consistent_weeks_12w ?? null;
+    payload.c_trained_days_week = Array.isArray(consistencyCounters?.c_trained_days_week)
+      ? consistencyCounters.c_trained_days_week : [];
+    payload.c_last_trained_day = consistencyCounters?.c_last_trained_day ?? null;
+    // Design 60 §4, D4: the 8-week history behind the profile-strip mini
+    // bars, sent under the same share_consistency consent as every other
+    // counter above.
+    payload.c_weeks_history = Array.isArray(consistencyCounters?.c_weeks_history)
+      ? consistencyCounters.c_weeks_history : [];
+    payload.c_updated_at = consistencyCounters?.c_updated_at ?? null;
+  }
   return payload;
 }
 

@@ -13,7 +13,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList. The props are the
@@ -23,10 +23,11 @@ import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import SearchBar from '../components/SearchBar';
 import EmptyState from '../components/EmptyState';
+import Chip from '../components/Chip';
 import ProfileCard from '../components/community/ProfileCard';
 import useTheme from '../hooks/useTheme';
-import { colors, spacing } from '../styles/theme';
-import { searchPeople } from '../lib/community';
+import { colors, spacing, type } from '../styles/theme';
+import { searchPeople, searchGroups, GROUP_ACCESS } from '../lib/community';
 
 const DEBOUNCE_MS = 250;
 const PAGE = 20;
@@ -34,13 +35,17 @@ const PAGE = 20;
 export default function CommunitySearchScreen({ navigation, route }) {
   const t = useTheme();
   const [query, setQuery] = useState(route?.params?.q ?? '');
+  const [mode, setMode] = useState('people');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const seqRef = useRef(0);
 
-  const run = useCallback(async (q) => {
+  // "Find a group" (community product audit 60 §3-4): open groups only,
+  // name prefix. Reuses this same search screen with a mode chip rather
+  // than a second screen, per the "reachable from the Hub search" brief.
+  const run = useCallback(async (q, m) => {
     const seq = seqRef.current + 1;
     seqRef.current = seq;
     const trimmed = q.trim();
@@ -49,9 +54,11 @@ export default function CommunitySearchScreen({ navigation, route }) {
     }
     setLoading(true);
     try {
-      const page = await searchPeople(trimmed, { limit: PAGE });
+      const page = m === 'groups'
+        ? await searchGroups(trimmed, { limit: PAGE })
+        : await searchPeople(trimmed, { limit: PAGE });
       if (seqRef.current !== seq) return;
-      setResults(page.people ?? []);
+      setResults(m === 'groups' ? (page.groups ?? []) : (page.people ?? []));
       setError(null);
     } catch (e) {
       if (seqRef.current !== seq) return;
@@ -63,15 +70,15 @@ export default function CommunitySearchScreen({ navigation, route }) {
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => { run(query); }, DEBOUNCE_MS);
+    const timer = setTimeout(() => { run(query, mode); }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [query, run]);
+  }, [query, mode, run]);
 
   const empty = loading ? null : !query.trim() ? (
     <EmptyState
       icon="search-outline"
-      title="Search by @handle or name"
-      text="Find someone you train with."
+      title={mode === 'groups' ? 'Search groups by name' : 'Search by @handle or name'}
+      text={mode === 'groups' ? 'Find an open group to join.' : 'Find someone you train with.'}
     />
   ) : error ? (
     <EmptyState
@@ -81,8 +88,14 @@ export default function CommunitySearchScreen({ navigation, route }) {
         ? 'Community needs a connection. Your training is unaffected.'
         : 'Try that again in a moment.'}
       actionLabel="Try again"
-      onAction={() => run(query)}
+      onAction={() => run(query, mode)}
       actionAccessibilityLabel="Try the search again"
+    />
+  ) : mode === 'groups' ? (
+    <EmptyState
+      icon="people-circle-outline"
+      title="No open groups by that name yet"
+      text="Try the start of the group's name."
     />
   ) : (
     <EmptyState
@@ -99,21 +112,41 @@ export default function CommunitySearchScreen({ navigation, route }) {
         <SearchBar
           value={query}
           onChangeText={setQuery}
-          placeholder="Search people"
+          placeholder={mode === 'groups' ? 'Search groups' : 'Search people'}
           autoFocus
           loading={loading}
           accessibilityLabel="Search Community"
         />
+        <View style={styles.modeRow} accessibilityLabel="Search mode">
+          <Chip label="People" selected={mode === 'people'} accessibilityRole="radio" onPress={() => setMode('people')} />
+          <Chip label="Groups" selected={mode === 'groups'} accessibilityRole="radio" onPress={() => setMode('groups')} />
+        </View>
       </View>
       <FlashList
         data={results}
-        keyExtractor={(item) => (item.card ?? item).user_id}
-        renderItem={({ item }) => (
+        keyExtractor={(item) => (mode === 'groups' ? item.id : (item.card ?? item).user_id)}
+        renderItem={({ item }) => (mode === 'groups' ? (
+          <View style={[styles.groupRow, { backgroundColor: t.colors.surface }]}>
+            <View style={styles.groupInfo}>
+              <Text style={[styles.groupName, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text style={[styles.groupMeta, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
+                {`${GROUP_ACCESS[item.access] ?? 'Open'} · ${item.memberCount} ${item.memberCount === 1 ? 'member' : 'members'}`}
+              </Text>
+            </View>
+            <Chip
+              label="View"
+              onPress={() => navigation.navigate('CommunityGroup', { id: item.id })}
+              accessibilityLabel={`View ${item.name}`}
+            />
+          </View>
+        ) : (
           <ProfileCard
             card={item.card ?? item}
             onPress={() => navigation.navigate('CommunityProfile', { handle: (item.card ?? item).handle })}
           />
-        )}
+        ))}
         ListEmptyComponent={empty}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
@@ -138,4 +171,12 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   controls: { padding: spacing.lg, gap: spacing.md },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
+  modeRow: { flexDirection: 'row', gap: spacing.xs2 },
+  groupRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderRadius: 16, padding: spacing.md, marginBottom: spacing.md,
+  },
+  groupInfo: { flex: 1, gap: 2 },
+  groupName: { ...type.bodyStrong, color: colors.textPrimary },
+  groupMeta: { ...type.caption, color: colors.textMuted },
 });

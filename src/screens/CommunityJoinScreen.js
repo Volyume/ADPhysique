@@ -53,7 +53,7 @@ import {
   isValidHandle, checkHandle, upsertProfile, DISPLAY_NAME_MAX,
   COMMUNITY_RULES_VERSION, currentUserId,
   TP_DEFAULT_SHARE, loadTrainingProfile, readShareSettings, writeShareSettings,
-  syncTrainingProfile, shareablePayload, previewLine,
+  syncTrainingProfile, publishConsistency, shareablePayload, previewLine,
 } from '../lib/community';
 import { bandRows, NOT_ENOUGH_LINE, NOTHING_SHARED_LINE } from './CommunityTrainingProfileScreen';
 
@@ -217,11 +217,13 @@ export default function CommunityJoinScreen({ navigation, route }) {
         // stated at the call site rather than only inside the transport.
         accept_rules_version: COMMUNITY_RULES_VERSION,
       });
-      // Best effort: the training profile bands are sent through the same
-      // sync the Training profile screen uses, forced so the choices made
-      // on this step take immediately rather than waiting for tomorrow's
-      // throttle window.
+      // Best effort: the training profile bands (and, if switched on here,
+      // the consistency counters) are sent through the same publish paths
+      // the Training profile screen uses, forced/computed so the choices
+      // made on this step take immediately rather than waiting for
+      // tomorrow's throttle window or the next foreground trigger.
       syncTrainingProfile(uid, { force: true }).catch(() => { /* best effort */ });
+      if (tpShare.consistency) publishConsistency(uid).catch(() => { /* best effort */ });
       // Optional (GD-14), and best effort the same way: the profile itself
       // is already created, and a gym can always be added later from the
       // profile editor. The profile's place is populated server-side from
@@ -240,7 +242,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
     }
   }, [
     canCreate, handle, displayName, preset, visibility, next, navigation, refresh, toast,
-    uid, primaryGym, otherGyms,
+    uid, primaryGym, otherGyms, tpShare,
   ]);
 
   return (
@@ -441,7 +443,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
           </Card>
 
           {bandRows(tpBands, me)
-            .filter((row) => !(isMinor && row.key === 'age_band'))
+            .filter((row) => !(isMinor && (row.key === 'age_band' || row.key === 'consistency')))
             .map((row) => (
               <View key={row.key} style={styles.tpRow}>
                 <View style={styles.tpBody}>

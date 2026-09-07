@@ -7,20 +7,26 @@
 --                    `40-GAP-CLOSURE.md` sections 4-5). DEPENDS ON 160, 161,
 --                    162, 163 and 164; must never run before any of them.
 --
---                    1. `community_profiles` gains nine additive columns:
---                       eight device-computed consistency counters
+--                    1. `community_profiles` gains ten additive columns:
+--                       nine device-computed consistency counters
 --                       (`c_sessions_week`, `c_sessions_month`,
 --                       `c_weeks_streak`, `c_planned_pct_4w`,
 --                       `c_consistent_weeks_12w`, `c_trained_days_week`,
---                       `c_last_trained_day`, `c_updated_at`) plus the
---                       publish toggle `share_consistency` (default false).
---                       `community_update_training_profile` re-issued: the
---                       counters are accepted ONLY when `share_consistency`
---                       is sent true; sent false or absent nulls every
---                       counter and the toggle. A minor or a non-active
---                       profile never stores a counter (`_community_require_
---                       profile(v_uid, true)` already refuses a non-active
---                       write; the minor check is explicit alongside it).
+--                       `c_last_trained_day`, `c_updated_at`,
+--                       `c_weeks_history`) plus the publish toggle
+--                       `share_consistency` (default false).
+--                       `c_weeks_history` is sessions per week for the last
+--                       8 weeks, oldest first, Monday-start UK-local (design
+--                       60 section 4, D4's 8-week mini bar), gated behind
+--                       `share_consistency` exactly like every other
+--                       counter. `community_update_training_profile`
+--                       re-issued: the counters are accepted ONLY when
+--                       `share_consistency` is sent true; sent false or
+--                       absent nulls every counter and the toggle. A minor
+--                       or a non-active profile never stores a counter
+--                       (`_community_require_profile(v_uid, true)` already
+--                       refuses a non-active write; the minor check is
+--                       explicit alongside it).
 --                    2. `community_board(_scope, _scope_key, _window,
 --                       _cursor, _limit, _today)` added: one RPC, four
 --                       scopes (gym/following/group/everyone), three
@@ -28,8 +34,12 @@
 --                       active, not minor, `share_consistency`, counters
 --                       not null, `c_updated_at` within 14 days, not
 --                       blocked either way, group scope requires caller
---                       membership, gym scope matches `gym_id` or
---                       `other_gym_ids` on either side. Ranked over the
+--                       membership. Gym scope targets `_scope_key` as the
+--                       gym id when supplied (any gym's board, not only
+--                       the caller's own), falling back to the caller's
+--                       own `gym_id` when `_scope_key` is null; a member
+--                       is anyone whose `gym_id` or `other_gym_ids`
+--                       include that target gym. Ranked over the
 --                       WHOLE eligible set (not just the page) so an
 --                       off-page caller's own rank is correct; keyset
 --                       paged by (metric, tiebreak, handle, user_id), all
@@ -127,7 +137,7 @@
 --                      c_sessions_week, c_sessions_month, c_weeks_streak,
 --                      c_planned_pct_4w, c_consistent_weeks_12w,
 --                      c_trained_days_week, c_last_trained_day,
---                      c_updated_at, share_consistency;
+--                      c_updated_at, c_weeks_history, share_consistency;
 --                      re-narrow both CHECKs to their pre-165 lists (both
 --                      re-added by name above, so the previous list is a
 --                      one-line edit against 161/164's own headers). No
@@ -166,6 +176,10 @@ ALTER TABLE public.community_profiles
   ADD COLUMN IF NOT EXISTS c_trained_days_week    text[],
   ADD COLUMN IF NOT EXISTS c_last_trained_day     text,
   ADD COLUMN IF NOT EXISTS c_updated_at           timestamptz,
+  -- Design 60 section 4, D4: sessions per week for the last 8 weeks,
+  -- oldest first, Monday-start UK-local. Gated behind share_consistency
+  -- exactly like every other counter (Part 4 below).
+  ADD COLUMN IF NOT EXISTS c_weeks_history        smallint[],
   ADD COLUMN IF NOT EXISTS share_consistency      boolean NOT NULL DEFAULT false;
 
 CREATE INDEX IF NOT EXISTS community_profiles_share_consistency_idx
@@ -312,6 +326,7 @@ DECLARE
   v_c_consistent_12w   smallint;
   v_c_trained_days     text[];
   v_c_last_trained_day text;
+  v_c_weeks_history     smallint[];
 BEGIN
   IF _p IS NULL OR jsonb_typeof(_p) <> 'object' THEN
     RAISE EXCEPTION USING message = 'invalid_input';
@@ -454,6 +469,25 @@ BEGIN
     IF v_c_last_trained_day IS NOT NULL AND v_c_last_trained_day !~ '^\d{4}-\d{2}-\d{2}$' THEN
       v_c_last_trained_day := NULL;
     END IF;
+    -- Design 60 section 4, D4: the 8-week history for the mini bars.
+    -- Malformed input (wrong length, non-numeric elements) is dropped to
+    -- null rather than refusing the whole call, the same posture every
+    -- other counter here has.
+    IF jsonb_typeof(_p -> 'c_weeks_history') = 'array' THEN
+      BEGIN
+        SELECT array_agg(greatest(0, least(x.v, 21))::smallint ORDER BY x.ord)
+        INTO v_c_weeks_history
+        FROM (
+          SELECT (elem)::int AS v, ord
+          FROM jsonb_array_elements_text(_p -> 'c_weeks_history') WITH ORDINALITY AS e(elem, ord)
+        ) x;
+      EXCEPTION WHEN others THEN
+        v_c_weeks_history := NULL;
+      END;
+      IF v_c_weeks_history IS NOT NULL AND array_length(v_c_weeks_history, 1) <> 8 THEN
+        v_c_weeks_history := NULL;
+      END IF;
+    END IF;
   END IF;
 
   PERFORM public._community_rate_check(v_uid, 'update_training_profile', 120, 120, interval '1 hour');
@@ -475,6 +509,7 @@ BEGIN
     c_consistent_weeks_12w = v_c_consistent_12w,
     c_trained_days_week    = v_c_trained_days,
     c_last_trained_day     = v_c_last_trained_day,
+    c_weeks_history         = v_c_weeks_history,
     c_updated_at           = CASE WHEN v_share_consistency THEN now() ELSE NULL END
   WHERE user_id = v_uid;
 
@@ -514,6 +549,7 @@ DECLARE
   v_you_rank   int;
   v_you_metric int;
   v_you jsonb := NULL;
+  v_gym_id     uuid;
 BEGIN
   IF _scope NOT IN ('gym', 'following', 'group', 'everyone') THEN
     RAISE EXCEPTION USING message = 'invalid_input';
@@ -537,6 +573,22 @@ BEGIN
       WHERE m.group_id = _scope_key::uuid AND m.user_id = v_uid AND m.state = 'member'
     ) THEN
       RAISE EXCEPTION USING message = 'not_allowed';
+    END IF;
+  END IF;
+
+  -- Lead ruling (community product audit): gym scope targets `_scope_key`
+  -- as the gym id when supplied -- any gym's board, not only the caller's
+  -- own -- falling back to the caller's own gym_id when `_scope_key` is
+  -- null or blank.
+  IF _scope = 'gym' THEN
+    IF _scope_key IS NOT NULL AND btrim(_scope_key) <> '' THEN
+      BEGIN
+        v_gym_id := _scope_key::uuid;
+      EXCEPTION WHEN others THEN
+        RAISE EXCEPTION USING message = 'invalid_input';
+      END;
+    ELSE
+      v_gym_id := v_me.gym_id;
     END IF;
   END IF;
 
@@ -578,10 +630,9 @@ BEGIN
               p.user_id = v_uid
               OR EXISTS (SELECT 1 FROM public.community_follows f
                          WHERE f.follower_id = v_uid AND f.followee_id = p.user_id AND f.state = 'accepted')))
-        OR (_scope = 'gym' AND v_me.gym_id IS NOT NULL AND (
-              p.gym_id = v_me.gym_id
-              OR v_me.gym_id = ANY (coalesce(p.other_gym_ids, ARRAY[]::uuid[]))
-              OR p.gym_id = ANY (coalesce(v_me.other_gym_ids, ARRAY[]::uuid[]))))
+        OR (_scope = 'gym' AND v_gym_id IS NOT NULL AND (
+              p.gym_id = v_gym_id
+              OR v_gym_id = ANY (coalesce(p.other_gym_ids, ARRAY[]::uuid[]))))
         OR (_scope = 'group' AND EXISTS (
               SELECT 1 FROM public.community_group_members m
               WHERE m.group_id = _scope_key::uuid AND m.user_id = p.user_id AND m.state = 'member'))
@@ -1782,7 +1833,7 @@ END $$;
 -- ─── Part 13: acceptance check (read-only) ───────────────────────────────
 --
 -- Run after the apply and read the output before declaring this migration
--- landed. Expect: nine community_profiles columns present; the three group
+-- landed. Expect: ten community_profiles columns present; the three group
 -- tables present with RLS enabled and zero grants to anon/authenticated;
 -- every function below SECURITY DEFINER with the search_path pinned;
 -- `authenticated` executing exactly the client RPCs this file grants and
@@ -1794,7 +1845,7 @@ WHERE table_schema = 'public' AND table_name = 'community_profiles'
   AND column_name IN (
     'c_sessions_week', 'c_sessions_month', 'c_weeks_streak', 'c_planned_pct_4w',
     'c_consistent_weeks_12w', 'c_trained_days_week', 'c_last_trained_day',
-    'c_updated_at', 'share_consistency'
+    'c_updated_at', 'c_weeks_history', 'share_consistency'
   )
 ORDER BY column_name;
 

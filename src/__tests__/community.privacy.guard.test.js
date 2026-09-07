@@ -162,6 +162,10 @@ const DISCOVERY_FILES = [
   'src/lib/community/connections.js',
   'src/lib/community/messages.js',
   'src/lib/community/findPeople.js',
+  // Community product audit `60-DESIGN-PROGRESS-COMMUNITY.md` section 1
+  // (consistency counters). A second training-history reader, held to
+  // the same stricter list for the same reason `trainingProfile.js` is.
+  'src/lib/community/trainingConsistency.js',
 ];
 
 const DISCOVERY_EXTRA_FORBIDDEN = [
@@ -190,6 +194,20 @@ const TRAINING_PROFILE_DB_READS = [
   'getWorkoutSetsSince',
   'getAllExercises',
   'getActivePlan',
+];
+
+/**
+ * The ONLY device reads `trainingConsistency.js` may make (community
+ * product audit section 1: "completed-workout timestamps... and the
+ * active plan's days per week"). `getRoutinesForPlan`'s row COUNT is
+ * the days-per-week figure; nothing about a routine's exercises is
+ * read from it here.
+ */
+const TRAINING_CONSISTENCY_FILE = path.join(LIB_DIR, 'trainingConsistency.js');
+const TRAINING_CONSISTENCY_DB_READS = [
+  'getCompletedWorkoutStartTimestamps',
+  'getActivePlan',
+  'getRoutinesForPlan',
 ];
 
 describe('no Community file reads personal data', () => {
@@ -256,6 +274,19 @@ describe('no Community file reads personal data', () => {
     expect(named.sort()).toEqual([...TRAINING_PROFILE_DB_READS].sort());
     // And no second route to the device: a lazy require would sidestep
     // the import above entirely.
+    expect(source).not.toMatch(/require\(['"][^'"]*database['"]\)/);
+  });
+
+  test('trainingConsistency.js reads only the three device functions section 1 allows', () => {
+    const source = code(fs.readFileSync(TRAINING_CONSISTENCY_FILE, 'utf8'));
+    const imports = source.match(/import\s*\{[^}]*\}\s*from\s*'\.\.\/database';/g) ?? [];
+    expect(imports).toHaveLength(1);
+    const named = imports[0]
+      .replace(/^import\s*\{|\}\s*from\s*'\.\.\/database';$/g, '')
+      .split(',')
+      .map((s2) => s2.trim())
+      .filter(Boolean);
+    expect(named.sort()).toEqual([...TRAINING_CONSISTENCY_DB_READS].sort());
     expect(source).not.toMatch(/require\(['"][^'"]*database['"]\)/);
   });
 
