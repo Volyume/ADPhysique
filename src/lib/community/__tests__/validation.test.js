@@ -18,7 +18,6 @@
 const {
   HANDLE_REGEX, RESERVED_HANDLES, isValidHandle,
   DISPLAY_NAME_MAX, BIO_MAX, CAPTION_MAX, COMMENT_MAX,
-  PROGRAMME_TITLE_MAX, PROGRAMME_DESCRIPTION_MAX, EXERCISE_NOTE_MAX,
   SENSITIVE_COMMUNITY_KEYS, POST_PAYLOAD_KEYS,
   COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS, COMMUNITY_SETTINGS, REPORT_REASONS,
   hasForbiddenKeys, validatePostPayload, cleanText, cleanStyles,
@@ -75,9 +74,6 @@ describe('length caps', () => {
     expect(BIO_MAX).toBe(160);
     expect(CAPTION_MAX).toBe(280);
     expect(COMMENT_MAX).toBe(500);
-    expect(PROGRAMME_TITLE_MAX).toBe(60);
-    expect(PROGRAMME_DESCRIPTION_MAX).toBe(500);
-    expect(EXERCISE_NOTE_MAX).toBe(200);
   });
 });
 

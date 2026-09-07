@@ -14,11 +14,10 @@ export {
 export {
   HANDLE_REGEX, RESERVED_HANDLES, isValidHandle,
   DISPLAY_NAME_MAX, BIO_MAX, CAPTION_MAX, COMMENT_MAX,
-  PROGRAMME_TITLE_MAX, PROGRAMME_DESCRIPTION_MAX, EXERCISE_NOTE_MAX,
   AREA_LABEL_MAX, GYM_LABEL_MAX, REPORT_DETAIL_MAX, MAX_STYLES_PER_PROFILE,
   SENSITIVE_COMMUNITY_KEYS, POST_PAYLOAD_KEYS, POST_KINDS,
   COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS, COMMUNITY_SETTINGS, REPORT_REASONS,
-  PROFILE_VISIBILITIES, PROGRAMME_VISIBILITIES, POST_VISIBILITIES,
+  PROFILE_VISIBILITIES, POST_VISIBILITIES,
   hasForbiddenKeys, validatePostPayload, cleanText, cleanOptionalText, cleanStyles,
 } from './validation';
 
@@ -29,29 +28,15 @@ export {
   FOLLOWS_PER_DAY_NEW, FOLLOWS_PER_DAY_ESTABLISHED, FOLLOWING_CAP,
   POSTS_PER_DAY_NEW, POSTS_PER_DAY_ESTABLISHED,
   COMMENTS_PER_HOUR_NEW, COMMENTS_PER_HOUR_ESTABLISHED,
-  REPORTS_PER_DAY, PROGRAMMES_PER_DAY, PROFILE_UPSERTS_PER_DAY,
+  REPORTS_PER_DAY, PROFILE_UPSERTS_PER_DAY,
   HANDLE_CHANGE_DAYS, AUTO_HIDE_REPORTS,
-  SNAPSHOT_MAX_BYTES, SNAPSHOT_MAX_DAYS, SNAPSHOT_MAX_EXERCISES_PER_DAY,
   isNewAccount, limitsForAccount,
 } from './limits';
 
 export {
-  WEB_ORIGIN, APP_SCHEME, profileUrl, programmeUrl, storyUrl,
-  appProfileUrl, appProgrammeUrl, appStoryUrl, parseCommunityLink,
+  WEB_ORIGIN, APP_SCHEME, profileUrl, storyUrl,
+  appProfileUrl, appStoryUrl, parseCommunityLink,
 } from './links';
-
-export {
-  SNAPSHOT_VERSION, COMMUNITY_TAG,
-  buildProgrammeSnapshot, validateSnapshot, snapshotStats, snapshotTags,
-} from './snapshot';
-
-export {
-  importSnapshotAsPlan, buildSnapshotForPlan, communitySourceId,
-} from './importProgramme';
-
-export {
-  ADAPT_REASON, planAdaptation, loadAdaptationContext, applyAdaptation,
-} from './adapt';
 
 export {
   buildPrPayload, buildSessionPayload, buildBlockPayload,
@@ -69,10 +54,9 @@ export {
 
 export {
   HUB_CACHE_PREFIX, hubCacheKey, clearCachedHub, loadHub, loadFeed,
-  loadDiscoverPosts, searchPeople, searchProgrammes, suggestedPeople,
-  myDimensions, loadDimension, publishProgramme, unpublishProgramme,
-  getCommunityProgramme, recordProgrammeUse, myProgrammes,
-  discoverProgrammes, createPost, deletePost, getPost, reactToPost,
+  loadDiscoverPosts, searchPeople, suggestedPeople,
+  myDimensions, loadDimension,
+  createPost, deletePost, getPost, reactToPost,
   addComment, deleteComment, listComments,
 } from './feed';
 
@@ -106,7 +90,7 @@ export {
   CONNECT_FROM_VALUES, CONNECTION_STATES, CONNECT_BUTTON_LABELS,
   connectionState, cleanReasons, cleanPartnerPrefs,
   connect, respondToConnect, withdrawConnect, removeConnection,
-  listConnections, setConnectFrom, setShowProgrammes, setPartner,
+  listConnections, setConnectFrom, setPartner,
 } from './connections';
 
 export {
@@ -116,7 +100,7 @@ export {
 
 export {
   FIND_MODES, FIND_MODE_ORDER, doorsFor, doorLine, doorZeroState,
-  findPeople, programmePeople, gymSummary, gymSuggest,
+  findPeople, gymSummary, gymSuggest,
   FILTER_SCOPES, PLACE_BAND_MILES, PLACE_BAND_LABELS,
   normaliseFilters, filterChips, removeFilterChip, peopleCountLine,
 } from './findPeople';

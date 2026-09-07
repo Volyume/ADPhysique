@@ -10,7 +10,7 @@
  *
  * It can be reached three ways, so it resolves itself from either half
  * of the pair: a conversation `id` (the `m` deep link on a message push),
- * a `userId` (the Message button on a profile, a programme or a story),
+ * a `userId` (the Message button on a profile or a story),
  * and an optional `ref` that attaches ONE context reference to the first
  * message so a conversation starts about something rather than out of
  * nowhere.
@@ -447,11 +447,9 @@ export default function CommunityConversationScreen({ navigation, route }) {
                     if (item.mine) confirmDelete(item);
                     else setReportTarget({ targetKind: 'message', targetId: item.id });
                   }}
-                  onOpenRef={item.ref_kind === 'programme' && item.ref?.id
-                    ? () => navigation.navigate('CommunityProgramme', { id: item.ref.id })
-                    : item.ref_kind === 'post' && item.ref?.id
-                      ? () => navigation.navigate('CommunityPost', { id: item.ref.id })
-                      : undefined}
+                  onOpenRef={item.ref_kind === 'post' && item.ref?.id
+                    ? () => navigation.navigate('CommunityPost', { id: item.ref.id })
+                    : undefined}
                 />
               );
             }}

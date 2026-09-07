@@ -158,9 +158,6 @@ const CommunityDimensionScreen = lazyScreen(() => require('../screens/CommunityD
 const CommunityRulesScreen = lazyScreen(() => require('../screens/CommunityRulesScreen').default);
 const CommunityPrivacyScreen = lazyScreen(() => require('../screens/CommunityPrivacyScreen').default);
 const CommunityModerationScreen = lazyScreen(() => require('../screens/CommunityModerationScreen').default);
-const CommunityProgrammeScreen = lazyScreen(() => require('../screens/CommunityProgrammeScreen').default);
-const CommunityAdaptScreen = lazyScreen(() => require('../screens/CommunityAdaptScreen').default);
-const CommunityPublishProgrammeScreen = lazyScreen(() => require('../screens/CommunityPublishProgrammeScreen').default);
 const CommunityComposeScreen = lazyScreen(() => require('../screens/CommunityComposeScreen').default);
 const CommunityPostScreen = lazyScreen(() => require('../screens/CommunityPostScreen').default);
 // Gym directory (gym database blueprint `docs/gym-database-2026-09-06/
@@ -506,9 +503,6 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="CommunityRules" component={CommunityRulesScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityPrivacy" component={CommunityPrivacyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityModeration" component={CommunityModerationScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CommunityProgramme" component={CommunityProgrammeScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CommunityAdapt" component={CommunityAdaptScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CommunityPublishProgramme" component={CommunityPublishProgrammeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityCompose" component={CommunityComposeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityPost" component={CommunityPostScreen} options={{ headerShown: false }} />
       {/* Gym directory (gym database blueprint 20-BLUEPRINT.md, "## App"). */}
@@ -949,9 +943,8 @@ const linking = {
           // query params straight into route.params, so `h` and `id` arrive
           // as typed; CommunityProfileScreen reads `handle ?? h` for exactly
           // that reason.
-          Community: 'community',
+          Community: ['community', 'p'],
           CommunityProfile: 'u',
-          CommunityProgramme: 'p',
           CommunityPost: 's',
           // The message push hands the OS `volyume://m/?id=<conversation>`
           // (discovery blueprint section 10). Same query shape as the three

@@ -13,14 +13,8 @@
  * number. A percentage would claim a precision coarse bands cannot carry
  * and invite ranking people against each other.
  *
- * Two sources, one shape. A door opens `community_find_people` for the
- * mode; "People on this programme" opens `community_programme_people`
- * for that programme (SD-26), which is gated behind the person's own
- * "Show which programmes I use" toggle. Both answer profile cards and a
- * server cursor, so the list below does not care which it is reading --
- * except the combinable filters (spec 1.3): those are a `find_people`
- * concept only, so the filter button and its row never appear on a
- * programme list.
+ * One source: a door opens `community_find_people` for the mode. Answers
+ * profile cards and a server cursor.
  *
  * FILTERS ARE HARD (spec 1.1 C). Applying one narrows the scored query;
  * it never re-weights it. Applied filters render as removable chips
@@ -37,7 +31,7 @@
  * The zero state never pretends (SD-28): it says what is true and offers
  * the one thing that changes it, which at this size is the profile link.
  *
- * Route params: { mode, key?, label, programmeId? }
+ * Route params: { mode, key?, label }
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -61,7 +55,7 @@ import { colors, spacing, type, iconSize, hitSlop } from '../styles/theme';
 import { touchTarget } from '../styles/layout';
 import * as haptics from '../lib/haptics';
 import {
-  findPeople, programmePeople, doorsFor, doorZeroState, profileUrl,
+  findPeople, doorsFor, doorZeroState, profileUrl,
   filterChips, removeFilterChip, peopleCountLine,
   TP_DAYS, TP_TIME_BANDS, TP_EXPERIENCE_BANDS, TP_AGE_BANDS,
   COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS,
@@ -122,9 +116,7 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
   const mode = route?.params?.mode ?? 'like_me';
   const key = route?.params?.key ?? null;
   const label = route?.params?.label ?? 'People';
-  const programmeId = route?.params?.programmeId ?? null;
-  // Spec 1.3: filters are a `community_find_people` concept only.
-  const filterable = !programmeId;
+  const filterable = true;
 
   const [rows, setRows] = useState([]);
   const [cursor, setCursor] = useState(null);
@@ -138,9 +130,7 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
   const [count, setCount] = useState(null);
   const [countTruncated, setCountTruncated] = useState(false);
 
-  const read = useCallback((opts) => (programmeId
-    ? programmePeople(programmeId, opts)
-    : findPeople(mode, { ...opts, filters })), [programmeId, mode, filters]);
+  const read = useCallback((opts) => findPeople(mode, { ...opts, filters }), [mode, filters]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -251,9 +241,7 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
     <EmptyState
       icon="people-outline"
       title="Nobody here yet"
-      text={programmeId
-        ? 'Nobody else has this programme in their plans yet. Anyone who takes it and shares their programmes will appear here.'
-        : doorZeroState({ ...door, key: door.key ?? key })}
+      text={doorZeroState({ ...door, key: door.key ?? key })}
       actionLabel="Share your profile link"
       onAction={async () => {
         try { await Share.share({ message: profileUrl(me?.profile?.handle) }); }

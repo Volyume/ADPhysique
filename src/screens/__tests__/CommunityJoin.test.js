@@ -87,12 +87,11 @@ jest.mock('../../lib/community', () => ({
   })),
   writeShareSettings: jest.fn(() => Promise.resolve()),
   syncTrainingProfile: jest.fn(() => Promise.resolve({ sent: true, reason: null, payload: null })),
-  setShowProgrammes: jest.fn(() => Promise.resolve()),
   setPartner: jest.fn(() => Promise.resolve()),
 }));
 
 import {
-  checkHandle, upsertProfile, COMMUNITY_RULES_VERSION, syncTrainingProfile, setShowProgrammes,
+  checkHandle, upsertProfile, COMMUNITY_RULES_VERSION, syncTrainingProfile,
 } from '../../lib/community';
 import { search as searchGyms, setGyms } from '../../lib/gyms';
 import useCommunityMe from '../../hooks/useCommunityMe';
@@ -231,7 +230,6 @@ describe('creating the profile', () => {
     await flush();
 
     expect(syncTrainingProfile).toHaveBeenCalledWith('u1', { force: true });
-    expect(setShowProgrammes).toHaveBeenCalledWith(true);
   });
 
   test('a refusal is spoken calmly and nothing is claimed to have happened', async () => {
@@ -259,7 +257,6 @@ describe('the training profile step (SD-22)', () => {
     const text = flattenText(tree.toJSON());
 
     expect(text).toContain('Your training profile');
-    expect(text).toContain('Show which programmes I use');
     expect(text).toContain('Nothing from your training is shared just now.');
   });
 });

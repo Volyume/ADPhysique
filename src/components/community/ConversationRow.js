@@ -41,7 +41,6 @@ const AVATAR = 36;
 export function conversationLine(conversation) {
   const preview = typeof conversation?.preview === 'string' ? conversation.preview.trim() : '';
   if (preview) return preview.split('\n')[0].trim();
-  if (conversation?.ref_kind === 'programme') return 'Sent a programme';
   if (conversation?.ref_kind === 'post') return 'Sent a session';
   return 'No messages yet';
 }

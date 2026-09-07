@@ -39,11 +39,6 @@ beforeEach(() => {
 });
 
 describe('the composer placeholder is a prompt, never a draft', () => {
-  test('opened from a programme', () => {
-    expect(placeholderFor({ kind: 'programme' })).toBe('Ask about this programme');
-    expect(placeholderFor('programme')).toBe('Ask about this programme');
-  });
-
   test('opened from a training story', () => {
     expect(placeholderFor({ kind: 'post' })).toBe('Say something about this session');
     expect(placeholderFor({ ref_kind: 'post', ref_id: 'p1' })).toBe('Say something about this session');
@@ -70,8 +65,8 @@ describe('sending', () => {
   });
 
   test('a context reference travels as a kind and an id together', async () => {
-    await sendMessage('u2', 'Is this one four days a week?', { refKind: 'programme', refId: 'g1' });
-    expect(callCommunity.mock.calls[0][1]).toMatchObject({ _ref_kind: 'programme', _ref_id: 'g1' });
+    await sendMessage('u2', 'Nice session.', { refKind: 'post', refId: 'g1' });
+    expect(callCommunity.mock.calls[0][1]).toMatchObject({ _ref_kind: 'post', _ref_id: 'g1' });
   });
 
   test('a kind with no id is dropped rather than sent as half a tile', async () => {
@@ -82,7 +77,7 @@ describe('sending', () => {
   test('an unknown reference kind is dropped, id and all', async () => {
     await sendMessage('u2', 'Nice session.', { refKind: 'workout', refId: 'w1' });
     expect(callCommunity.mock.calls[0][1]).toMatchObject({ _ref_kind: null, _ref_id: null });
-    expect(MESSAGE_REF_KINDS).toEqual(['programme', 'post']);
+    expect(MESSAGE_REF_KINDS).toEqual(['post']);
   });
 
   test('an empty body never leaves the device', async () => {

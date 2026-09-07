@@ -35,8 +35,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { callCommunity } from './transport';
 import { currentUserId } from './profile';
-import { communitySourceId } from './importProgramme';
-import { myProgrammes } from './feed';
 import { styleKeyFromTags } from '../exercise/stylePools';
 import {
   getCompletedWorkoutStartTimestamps, getWorkoutSetsSince, getAllExercises, getActivePlan,
@@ -427,10 +425,10 @@ export async function writeShareSettings(uid, settings) {
 // ─── The I/O half ────────────────────────────────────────────────────
 
 /**
- * The active plan's programme key, in the order the blueprint sets out
- * (section 3): a plan imported from Community keeps that programme's id;
- * otherwise the person's own published programme for this plan; otherwise
- * the plan's training style; otherwise nothing.
+ * The active plan's programme key: the plan's training style, or nothing.
+ * (Community programme-sharing, and the two lookups this key used to try
+ * first, were removed entirely --
+ * `docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2.)
  *
  * Best effort throughout. A key is a nice-to-have on a discovery row, and
  * a failed read must never stop the rest of the bands from being derived.
@@ -443,19 +441,6 @@ async function programmeKeyFor(userId) {
     return null;
   }
   if (!plan?.id) return null;
-
-  const source = plan.sourceProgrammeId ?? plan.source_programme_id ?? null;
-  const prefix = communitySourceId('');
-  if (typeof source === 'string' && source.startsWith(prefix)) {
-    const id = source.slice(prefix.length).trim();
-    if (id) return id;
-  }
-
-  try {
-    const { programmes } = await myProgrammes();
-    const mine = (programmes ?? []).find((row) => row?.source_plan_id === plan.id);
-    if (mine?.id) return mine.id;
-  } catch (_e) { /* not published, or Community is unreachable: fall through */ }
 
   const style = styleKeyFromTags(plan.tags ?? null);
   return style ? `style:${style}` : null;

@@ -38,12 +38,10 @@ import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
 import ModalHeader from '../components/ModalHeader';
 import Button from '../components/Button';
-import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import PostCard from '../components/community/PostCard';
 import ProfileCard from '../components/community/ProfileCard';
-import ProgrammeTile from '../components/community/ProgrammeTile';
 import FollowButton from '../components/community/FollowButton';
 import ConnectButton from '../components/community/ConnectButton';
 import ConnectSheet from '../components/community/ConnectSheet';
@@ -104,7 +102,6 @@ export default function CommunityProfileScreen({ navigation, route }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [segment, setSegment] = useState('posts');
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [followsKind, setFollowsKind] = useState(null);
@@ -178,7 +175,6 @@ export default function CommunityProfileScreen({ navigation, route }) {
   }
 
   const posts = (data?.posts ?? []).map((r) => normalisePostRow(r, card)).filter(Boolean);
-  const programmes = data?.programmes ?? [];
   const facts = card ? factLabels(card) : [];
   const chipLabels = card?.open_to_partner
     ? [...facts, 'Open to training together']
@@ -332,26 +328,10 @@ export default function CommunityProfileScreen({ navigation, route }) {
         </View>
       )}
 
-      {viewable ? (
-        <View style={styles.tabRow} accessibilityLabel="Profile view">
-          <Chip
-            label="Stories"
-            selected={segment === 'posts'}
-            onPress={() => setSegment('posts')}
-            accessibilityRole="radio"
-          />
-          <Chip
-            label="Programmes"
-            selected={segment === 'programmes'}
-            onPress={() => setSegment('programmes')}
-            accessibilityRole="radio"
-          />
-        </View>
-      ) : null}
     </View>
   ) : null;
 
-  const listData = !card || !viewable ? [] : (segment === 'posts' ? posts : programmes);
+  const listData = !card || !viewable ? [] : posts;
 
   async function unblock(targetId) {
     try {
@@ -410,19 +390,13 @@ export default function CommunityProfileScreen({ navigation, route }) {
     <EmptyState
       icon="lock-closed-outline"
       title="This profile is private"
-      text="Follow to see their training stories and programmes."
+      text="Follow to see their training stories."
     />
-  ) : segment === 'posts' ? (
+  ) : (
     <EmptyState
       icon="chatbubble-outline"
       title="No training stories yet"
       text="When they post a session, a personal best or a finished block, it appears here."
-    />
-  ) : (
-    <EmptyState
-      icon="list-outline"
-      title="No programmes yet"
-      text="Programmes they publish appear here, structure only."
     />
   );
 
@@ -431,8 +405,8 @@ export default function CommunityProfileScreen({ navigation, route }) {
       <BackHeader title={card ? `@${card.handle}` : 'Profile'} right={headerRight} />
       <FlashList
         data={listData}
-        keyExtractor={(item) => (segment === 'posts' ? item.post.id : (item.programme?.id ?? item.id))}
-        renderItem={({ item }) => (segment === 'posts' ? (
+        keyExtractor={(item) => item.post.id}
+        renderItem={({ item }) => (
           <PostCard
             post={item.post}
             author={item.author}
@@ -440,13 +414,7 @@ export default function CommunityProfileScreen({ navigation, route }) {
             onPress={() => navigation.navigate('CommunityPost', { id: item.post.id })}
             onReact={() => react(item)}
           />
-        ) : (
-          <ProgrammeTile
-            programme={item.programme ?? item}
-            creator={card}
-            onPress={() => navigation.navigate('CommunityProgramme', { id: (item.programme ?? item).id })}
-          />
-        ))}
+        )}
         ListHeaderComponent={hero}
         ListEmptyComponent={empty}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}

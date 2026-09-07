@@ -69,7 +69,6 @@ jest.mock('../../lib/community', () => ({
   // composer was opened from, never a draft.
   placeholderFor: (ref) => {
     const kind = typeof ref === 'string' ? ref : (ref?.kind ?? null);
-    if (kind === 'programme') return 'Ask about this programme';
     if (kind === 'post') return 'Say something about this session';
     return 'Write a message';
   },
@@ -196,22 +195,18 @@ describe('opening a conversation', () => {
 
 describe('sending a message', () => {
   test('sends the body and the one context reference it was opened with', async () => {
-    const { tree } = await mount({ userId: 'u2', ref: { kind: 'programme', id: 'prog-1' } });
+    const { tree } = await mount({ userId: 'u2', ref: { kind: 'post', id: 'post-1' } });
 
     await type(tree, '  How are the pull days going?  ');
     await press(tree, 'Send message');
 
     expect(sendMessage).toHaveBeenCalledWith('u2', 'How are the pull days going?', {
-      refKind: 'programme', refId: 'prog-1',
+      refKind: 'post', refId: 'post-1',
     });
     act(() => { tree.unmount(); });
   });
 
   test('the placeholder is the prompt for the surface it was opened from', async () => {
-    const programme = await mount({ userId: 'u2', ref: { kind: 'programme', id: 'prog-1' } });
-    expect(field(programme.tree).props.placeholder).toBe('Ask about this programme');
-    act(() => { programme.tree.unmount(); });
-
     const post = await mount({ userId: 'u2', ref: { kind: 'post', id: 'post-1' } });
     expect(field(post.tree).props.placeholder).toBe('Say something about this session');
     act(() => { post.tree.unmount(); });
@@ -235,23 +230,23 @@ describe('sending a message', () => {
     });
     listMessages.mockResolvedValue({ messages: [MESSAGE], cursor: null });
 
-    const { tree } = await mount({ id: 'conv-1', userId: 'u2', ref: { kind: 'programme', id: 'prog-1' } });
+    const { tree } = await mount({ id: 'conv-1', userId: 'u2', ref: { kind: 'post', id: 'post-1' } });
 
     // The placeholder follows the same condition as the attach itself,
     // not the row count either.
-    expect(field(tree).props.placeholder).toBe('Ask about this programme');
+    expect(field(tree).props.placeholder).toBe('Say something about this session');
 
     await type(tree, 'How is week 3 going?');
     await press(tree, 'Send message');
 
     expect(sendMessage).toHaveBeenCalledWith('u2', 'How is week 3 going?', {
-      refKind: 'programme', refId: 'prog-1',
+      refKind: 'post', refId: 'post-1',
     });
     act(() => { tree.unmount(); });
   });
 
   test('a second send in the same opening does not re-attach the ref', async () => {
-    const { tree } = await mount({ userId: 'u2', ref: { kind: 'programme', id: 'prog-1' } });
+    const { tree } = await mount({ userId: 'u2', ref: { kind: 'post', id: 'post-1' } });
 
     await type(tree, 'First message');
     await press(tree, 'Send message');

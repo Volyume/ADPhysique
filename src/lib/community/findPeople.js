@@ -223,25 +223,6 @@ export async function findPeople(mode, {
 }
 
 /**
- * The people on one Community programme (SD-26). Public, active,
- * non-minor profiles who use or published it AND have "Show which
- * programmes I use" on; the toggle is the whole consent story here.
- *
- * @returns {Promise<{people: Array, cursor: (string|null), count: (number|null)}>}
- */
-export async function programmePeople(id, { cursor = null, limit = DEFAULT_PAGE_SIZE } = {}) {
-  if (!id) throw new CommunityError('invalid_input');
-  const data = await callCommunity('community_programme_people', {
-    _id: id, _cursor: cursor, _limit: limit,
-  });
-  return {
-    people: Array.isArray(data?.people) ? data.people : [],
-    cursor: typeof data?.cursor === 'string' ? data.cursor : null,
-    count: Number.isFinite(Number(data?.count)) ? Number(data.count) : null,
-  };
-}
-
-/**
  * The summary at the top of a gym page (SD-27). Counts by style, by
  * shared time band and by the partner flag, plus "N you follow".
  *

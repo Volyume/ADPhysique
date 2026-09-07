@@ -4,9 +4,8 @@
  * section 8; SD-27, SD-31)
  *
  * A dimension is a page, not a room: the people who chose the same
- * style, gym, area or programme, and the programmes published in it.
- * There is no feed of its own, no admin, no leaderboard and no join
- * button, because there is nothing to join.
+ * style, gym or area. There is no feed of its own, no admin, no
+ * leaderboard and no join button, because there is nothing to join.
  *
  * A gym dimension additionally carries a summary (`community_gym_summary`):
  * member count, how many the reader follows, counts by style and by
@@ -29,7 +28,6 @@ import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import ProfileCard from '../components/community/ProfileCard';
-import ProgrammeTile from '../components/community/ProgrammeTile';
 import GymSummary from '../components/community/GymSummary';
 import BottomSheet from '../components/BottomSheet';
 import ModalHeader from '../components/ModalHeader';
@@ -213,7 +211,6 @@ export default function CommunityDimensionScreen({ navigation, route }) {
 
   const label = data?.label || paramLabel;
   const people = data?.people ?? [];
-  const programmes = data?.programmes ?? [];
 
   const header = (
     <View style={styles.header}>
@@ -253,20 +250,6 @@ export default function CommunityDimensionScreen({ navigation, route }) {
     </View>
   );
 
-  const footer = programmes.length ? (
-    <View style={styles.footerBlock}>
-      <SectionLabel tone="muted">Programmes</SectionLabel>
-      {programmes.map((row) => (
-        <ProgrammeTile
-          key={(row.programme ?? row).id}
-          programme={row.programme ?? row}
-          creator={row.creator ?? null}
-          onPress={() => navigation.navigate('CommunityProgramme', { id: (row.programme ?? row).id })}
-        />
-      ))}
-    </View>
-  ) : null;
-
   const empty = loading ? (
     <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
   ) : error ? (
@@ -280,7 +263,7 @@ export default function CommunityDimensionScreen({ navigation, route }) {
       onAction={load}
       actionAccessibilityLabel="Try loading this again"
     />
-  ) : programmes.length ? null : (
+  ) : (
     <EmptyState
       icon="people-outline"
       title="Nobody here yet"
@@ -305,7 +288,6 @@ export default function CommunityDimensionScreen({ navigation, route }) {
         )}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
-        ListFooterComponent={footer}
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.4}

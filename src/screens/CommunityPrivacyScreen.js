@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator, Switch,
+  View, Text, StyleSheet, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
@@ -34,10 +34,10 @@ import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
+import { colors, spacing, type } from '../styles/theme';
 import {
   relationships, unblockUser, unmuteUser, upsertProfile, leaveCommunity,
-  hasProfile, setConnectFrom, setShowProgrammes, CONNECT_FROM_VALUES,
+  hasProfile, setConnectFrom, CONNECT_FROM_VALUES,
 } from '../lib/community';
 
 const CONNECT_FROM_OPTIONS = Object.entries(CONNECT_FROM_VALUES)
@@ -53,7 +53,6 @@ export default function CommunityPrivacyScreen({ navigation }) {
 
   const [visibility, setVisibility] = useState('public');
   const [connectFrom, setConnectFromLocal] = useState('anyone');
-  const [showProgrammes, setShowProgrammesLocal] = useState(true);
   const [lists, setLists] = useState({ blocked: [], muted: [] });
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -64,8 +63,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
 
   useEffect(() => {
     if (me?.connect_from) setConnectFromLocal(me.connect_from);
-    if (typeof me?.show_programmes === 'boolean') setShowProgrammesLocal(me.show_programmes);
-  }, [me?.connect_from, me?.show_programmes]);
+  }, [me?.connect_from]);
 
   const load = useCallback(async () => {
     if (!joined) { setLoading(false); return; }
@@ -117,22 +115,6 @@ export default function CommunityPrivacyScreen({ navigation }) {
     }
   }
 
-  async function toggleShowProgrammes(next) {
-    const previous = showProgrammes;
-    setShowProgrammesLocal(next);
-    try {
-      await setShowProgrammes(next);
-      await refresh(true);
-    } catch (e) {
-      setShowProgrammesLocal(previous);
-      if (e?.code === 'rules_outdated') {
-        navigation.navigate('CommunityRules', { mustAccept: true });
-      } else {
-        toast.show('Could not change that just now.', { variant: 'error' });
-      }
-    }
-  }
-
   async function undo(kind, card) {
     try {
       if (kind === 'blocked') await unblockUser(card.user_id);
@@ -147,7 +129,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
   function confirmLeave() {
     appAlert(
       'Leave Community?',
-      'Your profile, posts, published programmes and follows are deleted. Your training, plans and food diary are not touched.',
+      'Your profile, posts and follows are deleted. Your training, plans and food diary are not touched.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -233,21 +215,6 @@ export default function CommunityPrivacyScreen({ navigation }) {
             </View>
 
             <View style={[settingsStyles.section, settings.section]}>
-              <SettingRow
-                icon="megaphone-outline"
-                label="Show which programmes I use"
-                sub='Lets people find you on the "People on this programme" list for programmes you use or publish.'
-                showArrow={false}
-                rightElement={(
-                  <Switch
-                    value={showProgrammes}
-                    onValueChange={toggleShowProgrammes}
-                    trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                    thumbColor={t.colors.primary}
-                    ios_backgroundColor={t.colors.surface2}
-                  />
-                )}
-              />
               <SettingRow
                 icon="body-outline"
                 label="Training profile"

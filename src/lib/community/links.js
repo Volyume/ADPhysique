@@ -20,6 +20,10 @@
 export const WEB_ORIGIN = 'https://volyume.app';
 export const APP_SCHEME = 'volyume://';
 
+// 'p' (programme) links are retired along with Community programme-sharing
+// (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2): the path
+// still parses below so an old link never dead-ends, but it now opens the
+// Community Hub, and no URL is minted for it any more.
 const PATHS = Object.freeze({ profile: 'u', programme: 'p', story: 's' });
 
 function encode(v) {
@@ -31,11 +35,6 @@ export function profileUrl(handle) {
   return `${WEB_ORIGIN}/${PATHS.profile}/?h=${encode(handle)}`;
 }
 
-/** `https://volyume.app/p/?id=<id>` */
-export function programmeUrl(id) {
-  return `${WEB_ORIGIN}/${PATHS.programme}/?id=${encode(id)}`;
-}
-
 /** `https://volyume.app/s/?id=<id>` */
 export function storyUrl(id) {
   return `${WEB_ORIGIN}/${PATHS.story}/?id=${encode(id)}`;
@@ -44,11 +43,6 @@ export function storyUrl(id) {
 /** `volyume://u/?h=<handle>` */
 export function appProfileUrl(handle) {
   return `${APP_SCHEME}${PATHS.profile}/?h=${encode(handle)}`;
-}
-
-/** `volyume://p/?id=<id>` */
-export function appProgrammeUrl(id) {
-  return `${APP_SCHEME}${PATHS.programme}/?id=${encode(id)}`;
 }
 
 /** `volyume://s/?id=<id>` */
@@ -78,9 +72,9 @@ function readQuery(blob) {
  *
  * @param {string} url
  * @returns {{kind: 'profile', handle: string}
- *   | {kind: 'programme', id: string}
+ *   | {kind: 'hub'}
  *   | {kind: 'story', id: string}
- *   | null} null for anything that is not one of our three addresses.
+ *   | null} null for anything that is not one of our addresses.
  */
 export function parseCommunityLink(url) {
   const s = String(url ?? '').trim();
@@ -109,10 +103,9 @@ export function parseCommunityLink(url) {
     const handle = String(params.h ?? '').trim().toLowerCase();
     return handle ? { kind: 'profile', handle } : null;
   }
-  if (pathPart === PATHS.programme) {
-    const id = String(params.id ?? '').trim();
-    return id ? { kind: 'programme', id } : null;
-  }
+  // A 'p' (programme) link now opens the Community Hub rather than a
+  // programme page, which no longer exists.
+  if (pathPart === PATHS.programme) return { kind: 'hub' };
   if (pathPart === PATHS.story) {
     const id = String(params.id ?? '').trim();
     return id ? { kind: 'story', id } : null;

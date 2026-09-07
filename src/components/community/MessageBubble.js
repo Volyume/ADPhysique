@@ -15,19 +15,18 @@
  * handing `dayLabel` to the first message of that day.
  *
  * The context reference is rendered ABOVE the bubble as the existing
- * ProgrammeTile or PostCard, so a conversation that started from a
- * programme or a story shows the thing it started from. The tile sits
- * outside the bubble's own press target, so the two never nest.
+ * PostCard, so a conversation that started from a story shows the thing
+ * it started from. The tile sits outside the bubble's own press target,
+ * so the two never nest.
  *
  * Props:
  *   message      { id, mine, body, ref_kind, ref, created_at }
  *   dayLabel     optional day heading drawn above this message
  *   onLongPress  () => void, offered for your own messages (Delete)
- *   onOpenRef    () => void, opens the referenced programme or story
+ *   onOpenRef    () => void, opens the referenced story
  */
 
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import ProgrammeTile from './ProgrammeTile';
 import PostCard from './PostCard';
 import useTheme from '../../hooks/useTheme';
 import { spacing, radius, type } from '../../styles/theme';
@@ -46,9 +45,6 @@ export default function MessageBubble({ message, dayLabel = null, onLongPress, o
       ) : null}
       <View style={[styles.line, mine ? styles.lineMine : styles.lineTheirs]}>
         <View style={styles.column}>
-          {ref && kind === 'programme' ? (
-            <ProgrammeTile programme={ref} onPress={onOpenRef} />
-          ) : null}
           {ref && kind === 'post' ? (
             <PostCard post={ref} author={ref.author ?? null} onPress={onOpenRef} />
           ) : null}

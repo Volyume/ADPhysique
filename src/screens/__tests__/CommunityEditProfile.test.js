@@ -52,7 +52,6 @@ jest.mock('../../lib/community', () => ({
   BIO_MAX: 160,
   AREA_LABEL_MAX: 60,
   setConnectFrom: jest.fn(),
-  setShowProgrammes: jest.fn(),
   setPlace: jest.fn(() => Promise.resolve({ kind: 'none', label: null, lat: null, lng: null })),
   CONNECT_FROM_VALUES: { anyone: 'Anyone', followers: 'People who follow me', nobody: 'Nobody' },
 }));

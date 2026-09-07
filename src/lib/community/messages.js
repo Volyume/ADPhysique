@@ -5,9 +5,11 @@
  * One-to-one text, and nothing else. No groups, no media, no read
  * receipts beyond an unread count, and nothing is ever pre-written or
  * sent on a person's behalf. A message may carry ONE context reference,
- * a programme or a training story, which the screen renders as the
- * existing tile above the text: that is how a conversation starts about
- * something rather than out of nowhere.
+ * a training story, which the screen renders as the existing tile above
+ * the text: that is how a conversation starts about something rather
+ * than out of nowhere. (Programme references were removed with Community
+ * programme-sharing, `docs/community-product-audit-2026-09-07/
+ * 40-GAP-CLOSURE.md` §2.)
  *
  * This exists only because the connection graph now supplies the consent
  * gate the earlier ruling lacked (SD-21 reverses SD-12). So every send is
@@ -26,12 +28,12 @@ import { cleanText } from './validation';
 
 export const DEFAULT_PAGE_SIZE = 30;
 
-/** 1 to 1,000 characters. Long enough for a real answer about a
- * programme, short enough that a conversation stays a conversation. */
+/** 1 to 1,000 characters. Long enough for a real answer, short enough
+ * that a conversation stays a conversation. */
 export const MESSAGE_MAX = 1000;
 
-/** The two things a message may point at. */
-export const MESSAGE_REF_KINDS = Object.freeze(['programme', 'post']);
+/** The thing a message may point at. */
+export const MESSAGE_REF_KINDS = Object.freeze(['post']);
 
 /**
  * The composer's placeholder for the surface it was opened from. It is a
@@ -43,7 +45,6 @@ export const MESSAGE_REF_KINDS = Object.freeze(['programme', 'post']);
  */
 export function placeholderFor(ref) {
   const kind = typeof ref === 'string' ? ref : (ref?.kind ?? ref?.refKind ?? ref?.ref_kind ?? null);
-  if (kind === 'programme') return 'Ask about this programme';
   if (kind === 'post') return 'Say something about this session';
   return 'Write a message';
 }

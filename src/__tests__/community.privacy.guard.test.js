@@ -141,13 +141,10 @@ const FORBIDDEN_READS = [
   /\bgetCapabilityConstraints\b/,
 ];
 
-// The only Community file allowed to name the capability lane at all,
-// and the only two symbols it may take from it (blueprint section 5.4).
-const CAPABILITY_ALLOWED_FILE = path.join(LIB_DIR, 'adapt.js');
-const CAPABILITY_ALLOWED_IMPORTS = [
-  "import { bestEligibleSubstitute } from '../capability/effective';",
-  "import { blockingConflicts, capabilityKnown, loadCapabilityResolveState } from '../capability/resolve';",
-];
+// No Community file is allowed to name the capability lane at all: the
+// one file that used to (adapt.js, the programme-adaptation composition)
+// was removed entirely with Community programme-sharing
+// (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2).
 
 /**
  * The discovery campaign's files (discovery blueprint
@@ -220,28 +217,14 @@ describe('no Community file reads personal data', () => {
     },
   );
 
-  test('only adapt.js reaches the capability lane, and only for the two composed functions', () => {
+  test('no Community file reaches the capability lane', () => {
     for (const full of communityFiles()) {
       const source = code(fs.readFileSync(full, 'utf8'));
       const imports = (source.match(/^import [^\n]*capability[^\n]*$/gim) ?? []).map((l) => l.trim());
-      if (full === CAPABILITY_ALLOWED_FILE) {
-        expect(imports.sort()).toEqual([...CAPABILITY_ALLOWED_IMPORTS].sort());
-      } else {
-        expect({ file: path.relative(ROOT, full), imports }).toEqual({
-          file: path.relative(ROOT, full), imports: [],
-        });
-      }
+      expect({ file: path.relative(ROOT, full), imports }).toEqual({
+        file: path.relative(ROOT, full), imports: [],
+      });
     }
-  });
-
-  test('the adaptation lane cannot send anything to the server', () => {
-    // Capability answers are read on the device to choose a substitute
-    // and are written only to the recipient's own local rows. A route
-    // from this file to the transport is how a capability-derived fact
-    // would start leaving the device.
-    const source = code(fs.readFileSync(CAPABILITY_ALLOWED_FILE, 'utf8'));
-    expect(source).not.toMatch(/from '\.\/transport'/);
-    expect(source).not.toMatch(/callCommunity|invokeCommunityFunction/);
   });
 
   test('every discovery file is present and inside the walk', () => {

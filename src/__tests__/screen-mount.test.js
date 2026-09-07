@@ -2918,19 +2918,17 @@ describe('ProOnboarding resumes past Step 1 after the consent detour', () => {
   });
 });
 
-// ─── Community (social-discovery lane, screens 5-8 + programme surfaces) ──
+// ─── Community (social-discovery lane, screens 5-8) ──
 // `docs/social-discovery-2026-09-06/30-BLUEPRINT.md` section 10: screen-mount
-// covers every new Community screen. These five take route params and are
-// pushed into HomeStack, so they are mounted here rather than added to
+// covers every new Community screen. These take route params and are pushed
+// into HomeStack, so they are mounted here rather than added to
 // SCREENS_TO_SWEEP (which mounts param-less tab roots). Every Community read
 // goes through the mocked Supabase client and therefore FAILS, which is the
 // point: each screen must render its calm not-available state rather than
-// throw.
+// throw. Programme surfaces were removed entirely
+// (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2).
 describe('Community screens mount with their route params', () => {
   const CASES = [
-    ['CommunityProgrammeScreen', { id: 'prog-1' }],
-    ['CommunityAdaptScreen', { id: 'prog-1' }],
-    ['CommunityPublishProgrammeScreen', { planId: 'p1' }],
     ['CommunityComposeScreen', { kind: 'session', workoutId: 'w1' }],
     ['CommunityPostScreen', { id: 'post-1' }],
   ];

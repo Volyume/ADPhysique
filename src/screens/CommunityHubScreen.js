@@ -3,9 +3,10 @@
  * SD-09, SD-10)
  *
  * The one Community destination. Two halves: Following (the people you
- * chose, newest first, never ranked) and Discover (programmes, people
- * you may want to follow, the dimensions you share with others, and
- * recent training stories).
+ * chose, newest first, never ranked) and Discover (people you may want
+ * to follow, the dimensions you share with others, and recent training
+ * stories). Community carries no programme section of any kind -- see
+ * `docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2.
  *
  * Nobody is in Community until they create a profile, but the value is
  * visible before that: with no profile the hero explains what this is,
@@ -47,27 +48,18 @@ import SectionLabel from '../components/SectionLabel';
 import Chip from '../components/Chip';
 import PostCard from '../components/community/PostCard';
 import ProfileCard from '../components/community/ProfileCard';
-import ProgrammeTile from '../components/community/ProgrammeTile';
 import DimensionRow from '../components/community/DimensionRow';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { colors, spacing, type, circle } from '../styles/theme';
-import { logError } from '../lib/errorLog';
-import { getLibraryPlans, getPlanWorkoutCounts } from '../lib/database';
-import { styleKeyFromTags } from '../lib/exercise/stylePools';
 import {
   loadHub, hasProfile, hasUnseen, hasUnreadMessages, reactToPost,
   COMMUNITY_DIMENSION_MIN_FOR_HUB, findPeople,
 } from '../lib/community';
 
 const PAGE = 20;
-// How many Volyume library plans the Discover "By Volyume" strip carries.
-// Enough to answer "there is something here" on an empty community, few
-// enough that it never buries what people published.
-const VOLYUME_TILES = 4;
 
 /**
  * The feed rows arrive as `{post, author, my_reaction}` from the RPCs.
@@ -85,23 +77,6 @@ export function normalisePostRow(row) {
   };
 }
 
-/** The Volyume library plans, in ProgrammeTile shape. Local reads only. */
-export async function loadVolyumeTiles() {
-  const [plans, counts] = await Promise.all([getLibraryPlans(), getPlanWorkoutCounts()]);
-  const rows = Array.isArray(plans) ? plans : [];
-  const featured = rows.filter((p) => String(p.tags ?? '').includes('featured'));
-  const pick = (featured.length ? featured : rows).slice(0, VOLYUME_TILES);
-  return pick.map((p) => ({
-    id: p.id,
-    title: p.name,
-    style_key: styleKeyFromTags(p.tags ?? null),
-    days_per_week: counts?.[p.id] ?? 0,
-    exercise_count: 0,
-    has_circuits: false,
-    use_count: 0,
-  }));
-}
-
 export default function CommunityHubScreen({ navigation, route }) {
   const t = useTheme();
   const { me, loading: meLoading, refresh: refreshMe } = useCommunityMe();
@@ -113,16 +88,10 @@ export default function CommunityHubScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [paging, setPaging] = useState(false);
-  const [volyume, setVolyume] = useState([]);
   const [legacyCardShown, setLegacyCardShown] = useState(!!legacyPartnerCode);
   const [browsing, setBrowsing] = useState(false);
-  const [focusProgrammes, setFocusProgrammes] = useState(route?.params?.focus === 'programmes');
   const [likeMe, setLikeMe] = useState([]);
   const listRef = useRef(null);
-  // Where the Programmes section sits inside the list header, measured on
-  // layout. 0 until it has been measured, which is the top of the list and
-  // still shows the section, so there is no race to lose.
-  const programmesY = useRef(0);
 
   // Someone without a profile only ever sees Discover (SD-04), so the
   // segment follows the profile rather than the other way round.
@@ -142,34 +111,16 @@ export default function CommunityHubScreen({ navigation, route }) {
 
   // The hub is a tab root, so an entry point that names a segment usually
   // arrives at a screen that is ALREADY mounted: initial state alone would
-  // land Train's "Programmes from the community" on Following, whichever
-  // half the reader last looked at (product review 2026-09-06, item 13).
-  // The whole params object is the dependency because React Navigation
+  // land it on Following whichever half the reader last looked at (product
+  // review 2026-09-06, item 13). The whole params object is the dependency
+  // because React Navigation
   // mints a new one per navigate, so repeating the same entry point still
   // re-applies it.
   const routeParams = route?.params;
   const paramSegment = routeParams?.segment ?? null;
-  const paramFocus = routeParams?.focus ?? null;
   useEffect(() => {
     if (paramSegment === 'discover' || paramSegment === 'following') setSegment(paramSegment);
-    if (paramFocus === 'programmes') setFocusProgrammes(true);
-  }, [routeParams, paramSegment, paramFocus]);
-
-  // `focus: 'programmes'` brings the Programmes section into view once the
-  // payload it lists is on screen.
-  useEffect(() => {
-    if (!focusProgrammes || loading) return;
-    listRef.current?.scrollToOffset?.({ offset: Math.max(0, programmesY.current), animated: true });
-    setFocusProgrammes(false);
-  }, [focusProgrammes, loading]);
-
-  useEffect(() => {
-    let alive = true;
-    loadVolyumeTiles()
-      .then((tiles) => { if (alive) setVolyume(tiles); })
-      .catch((e) => logError('CommunityHub.loadVolyumeTiles', e, {}));
-    return () => { alive = false; };
-  }, []);
+  }, [routeParams, paramSegment]);
 
   // "Lifters like you" (discovery blueprint section 4): a scored list, so
   // it is read on its own rather than folded into `loadHub`'s feed page.
@@ -215,7 +166,6 @@ export default function CommunityHubScreen({ navigation, route }) {
   // `hub.people` (once `community_suggested_people`) was never rendered
   // here, so `loadHub` no longer reads it (feed.js, spec 1.3); nothing
   // reads it from the hub payload on this screen either.
-  const programmes = hub?.programmes ?? [];
   const dimensions = (hub?.dimensions ?? [])
     .filter((d) => Number(d?.count ?? 0) >= COMMUNITY_DIMENSION_MIN_FOR_HUB);
 
@@ -227,10 +177,6 @@ export default function CommunityHubScreen({ navigation, route }) {
 
   function openProfile(card) {
     if (card?.handle) navigation.navigate('CommunityProfile', { handle: card.handle });
-  }
-
-  function openLibraryPlan(id) {
-    navigateCrossTab(navigation, 'PlansTab', 'PlanDetail', { planId: id, isLibrary: true });
   }
 
   async function react(item) {
@@ -367,12 +313,12 @@ export default function CommunityHubScreen({ navigation, route }) {
               (docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md). */}
           <Card style={styles.block}>
             <Text style={[styles.heroTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
-              Programmes you can make your own
+              Train alongside other lifters
             </Text>
             <Text
               style={[styles.heroBody, { ...t.type.bodySm, color: t.colors.textSecondary }]}
             >
-              Use another lifter&apos;s programme as they built it, or let Volyume refit it to your kit and limits and show you every change. Share the training you actually did.
+              Follow people, find a training partner and share the training you actually did.
             </Text>
             <View style={styles.heroActions}>
               <Button
@@ -446,45 +392,6 @@ export default function CommunityHubScreen({ navigation, route }) {
 
       {shown === 'discover' ? (
         <>
-          {programmes.length || volyume.length ? (
-            <View
-              style={styles.section}
-              onLayout={(e) => { programmesY.current = e?.nativeEvent?.layout?.y ?? 0; }}
-            >
-              <View style={styles.sectionHead}>
-                <SectionLabel tone="muted">Programmes</SectionLabel>
-                {programmes.length ? (
-                  <Button
-                    variant="tertiary"
-                    size="sm"
-                    fullWidth={false}
-                    icon="list-outline"
-                    title="See all"
-                    onPress={() => navigation.navigate('CommunitySearch', { tab: 'programmes' })}
-                    accessibilityLabel="See all community programmes"
-                  />
-                ) : null}
-              </View>
-              {programmes.map((row) => (
-                <ProgrammeTile
-                  key={row.id ?? row.programme?.id}
-                  programme={row.programme ?? row}
-                  creator={row.creator ?? null}
-                  onPress={() => navigation.navigate('CommunityProgramme', { id: (row.programme ?? row).id })}
-                />
-              ))}
-              {volyume.map((p) => (
-                <ProgrammeTile
-                  key={`volyume-${p.id}`}
-                  programme={p}
-                  creator={null}
-                  volyume
-                  onPress={() => openLibraryPlan(p.id)}
-                />
-              ))}
-            </View>
-          ) : null}
-
           {likeMe.length ? (
             <View style={styles.section}>
               <SectionLabel tone="muted">Lifters like you</SectionLabel>
@@ -560,11 +467,11 @@ export default function CommunityHubScreen({ navigation, route }) {
       onAction={() => navigation.navigate('CommunitySearch')}
       actionAccessibilityLabel="Find people to follow"
     />
-  ) : programmes.length || likeMe.length || dimensions.length ? null : (
+  ) : likeMe.length || dimensions.length ? null : (
     <EmptyState
       icon="sparkles-outline"
       title="You are early"
-      text="Be the first to publish a programme or post a training story. Volyume's own programmes are above."
+      text="Be the first to post a training story."
     />
   );
 
