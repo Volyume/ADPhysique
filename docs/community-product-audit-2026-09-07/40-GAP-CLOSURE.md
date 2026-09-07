@@ -45,3 +45,16 @@ own plan start) stays because it is personal activity, not sharing.
 
 ## 3. Build record
 (filled as lanes land)
+
+## 4. Founder redirection (chat, 2026-09-07): progress and consistency, not programmes
+Community is for seeing each other's progress and consistency: who at my
+gym trained this week, who trained the most, the most consistent weeks.
+Rankings use sessions completed and consistency only (sessions this
+week and month, weeks hit in a row, planned sessions completed), NOT
+weight lifted or volume (founder narrowed this explicitly). This
+reverses the SD-12/SD-29 rejection of person-to-person ranking for
+these metrics only. Assumptions stated to the founder and standing:
+training data only, never bodyweight or food; a person appears on a
+board only by opt-in; boards are withheld under calm mode or an open ED
+flag; minors never appear. Research `50`, recon `51`, design and build
+follow in section 5.
