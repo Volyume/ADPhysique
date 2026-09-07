@@ -33,6 +33,22 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## COMMUNITY VISUAL REFINEMENT (2026-09-07, founder prompt 1) — IN FLIGHT on `claude/volyume-social-discovery-h7dknu`
+
+Founder brief in chat: visual only; bring every Community surface into
+the current Volyume language (D148 tiers, amber as accent); no product,
+privacy or IA change. Evidence `docs/social-discovery-2026-09-06/
+80-VISUAL-INVENTORY.md` (Sonnet recon); rulings V1..V20 in
+`81-VISUAL-RULINGS.md` (edit-gate spec). Two Sonnet lanes: components
+(`src/components/community/*`, intro card, avatar mark ring; new
+MenuSheet and ComposerInput) and screens (21 `Community*` screens, guard
+allowlist drops the Hub). Recovery: re-dispatch either lane from V1..V20
+over whatever the tree holds; agents never commit. Then a token-faithful
+render of Join, Hub, people card, programme page and Privacy for lead
+review (Chromium screenshots), fixes, lint + tsc + full tests, merge.
+
+---
+
 ## UK GYM MASTER DATABASE (2026-09-06, third workstream) — BUILT on `claude/volyume-social-discovery-h7dknu`; 162 RE-REVIEW + RECORDS 30/40/50 IN FLIGHT; NOT YET MERGED
 
 Founder brief in chat: a national canonical gym and fitness-venue
