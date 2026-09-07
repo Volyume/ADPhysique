@@ -65,6 +65,10 @@ Avatar 40. Name `bodyStrong`; handle and place on one `caption` line in
 `textMuted`; reasons `captionStrong` in `textPrimary`, at most two lines
 (section 13.1 holds); training line `caption`. Actions trailing per V7.
 `Card padding="md"`.
+V8a: a list card shows ONE trailing action, never the Follow plus
+Connect pair: ConnectButton alone where connect is offered (Connect,
+Requested, Respond); once connected, Message alone; otherwise
+FollowButton alone. The profile screen keeps the full pair (V7).
 
 ## V9 PrivacyReceipt
 Composes `Card surface="surface2" radius="md" padding="md"`. Compact by
