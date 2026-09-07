@@ -61,10 +61,10 @@ function resolveBlockComplete(facts) {
   if (!f?.eligible) return null;
   return {
     key: 'block_complete',
-    text: "Block complete. Choose what's next.",
+    text: "Block finished. Choose what comes next.",
     onPress: f.onPress,
     onDismiss: null,
-    accessibilityLabel: "Block complete. Choose what's next.",
+    accessibilityLabel: "Block finished. Choose what comes next.",
   };
 }
 

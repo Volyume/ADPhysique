@@ -64,10 +64,10 @@ describe('todayLineArbiter — each rank in isolation', () => {
     const result = resolveTodayLine({ blockComplete: { eligible: true, onPress } });
     expect(result).toEqual({
       key: 'block_complete',
-      text: "Block complete. Choose what's next.",
+      text: "Block finished. Choose what comes next.",
       onPress,
       onDismiss: null,
-      accessibilityLabel: "Block complete. Choose what's next.",
+      accessibilityLabel: "Block finished. Choose what comes next.",
     });
   });
 

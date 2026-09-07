@@ -289,7 +289,7 @@ export function reviewRecoveryLine(resolved) {
     return 'You are in your recovery week. Training is lighter before you move on from this block, and you will choose what comes next when it is done.';
   }
   if (resolved.state === RECOVERY_STATE.ADAPTIVE_RECOVERY_ADJUSTMENT) {
-    return 'Training is being held back at the moment while your recovery catches up. Your recovery week still comes at the end of the block as planned.';
+    return 'Training is being held back for now because your recent recovery has been harder. Your recovery week still comes at the end of the block as planned.';
   }
   if (resolved.weeksToRecovery === 1) {
     return 'Next is your recovery week. Training will be lighter before you move on from this block.';

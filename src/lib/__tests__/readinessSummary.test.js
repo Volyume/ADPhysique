@@ -73,7 +73,7 @@ describe('buildReadinessSummary', () => {
       fatigueHistory: [{ fatigueLevel: 5, startedAt: NOW - 2 * 86400000 }, { fatigueLevel: 5, startedAt: NOW - 4 * 86400000 }], nowMs: NOW, // D97-25 RB6-4 re-anchor + RE6-5 hermetic clock
       lastSession: { startedAt: NOW, soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
     });
-    expect(result).toEqual({ tone: 'recover', line: 'Recent training signals point towards easing off soon.' });
+    expect(result).toEqual({ tone: 'recover', line: 'Your recent sessions point to a recovery week soon.' });
     // Worded distinctly from the top banner's own copy.
     expect(result.line).not.toMatch(/Recovery week suggested/i);
   });
@@ -206,7 +206,7 @@ describe('buildReadinessSummary', () => {
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(result).toEqual({ tone: 'go', line: 'First session of your plan. Nothing to read yet.' });
+    expect(result).toEqual({ tone: 'go', line: 'First session of your plan. See how this block is shaped.' });
   });
 
   test('deterministic: identical inputs produce an identical result', () => {

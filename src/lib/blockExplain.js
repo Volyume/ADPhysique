@@ -78,7 +78,7 @@ export const ACTIVATION_MEANING_SENTENCE =
  */
 export const BLOCK_DEFINITION =
   'A training block is the multi-week shape of your training: your weekly sets climb for a few weeks, '
-  + 'then drop back for a lighter recovery week so your body can absorb the work.\n\n'
+  + 'then drop back for a lighter recovery week so fatigue can clear.\n\n'
   + `Your plan is the workouts and exercises. Making a plan active also starts a block of ${BLOCK_PLANNED_WEEKS} weeks, `
   + 'the last of them the recovery week. There is nothing to set up.\n\n'
   + 'When the block finishes:\n'
@@ -134,7 +134,7 @@ const SOURCE_CLAUSE = Object.freeze({
 // null, coach) proves nothing and stays silent.
 const RESEARCH_SOURCES = new Set(['template', 'seed_profile', 'seed_research']);
 const RESEARCH_START_LINE =
-  'Not enough personal history yet, so this block starts from research-based guidance. As blocks finish, each muscle\'s starting point comes from how it actually responded.';
+  'Your weekly sets for each muscle start from research-based guidance, because you have not finished a block yet. From your next block on, each muscle\'s starting sets come from how it went in the block before.';
 // C6 P9-06 (D97): the line above is FALSE for a mature user whose new
 // block is template-seeded after a plan switch or wizard rebuild - they
 // have plenty of personal history; this block simply did not use it
@@ -142,7 +142,7 @@ const RESEARCH_START_LINE =
 // template; D97-9 carries whether they should). The mature variant makes
 // the same honest research claim without denying the history exists.
 const RESEARCH_START_LINE_MATURE =
-  'This block starts from research-based guidance for this plan. Your block history picks up again as its blocks finish.';
+  'Your weekly sets for this block start from research-based guidance rather than from your earlier blocks. From the next block on, each muscle\'s starting sets come from how this one goes.';
 
 /**
  * Group written planned rows into { [muscle]: { week1, peak, peakWeek,
@@ -195,7 +195,7 @@ export function summariseSeededPlan(plannedRows = [], deloadWeekIndex = null) {
 // block went" lines read as "all of this is personalised". This names the
 // remainder without mislabelling it.
 const RESEARCH_REMAINDER_LINE =
-  'The rest still start from research-based guidance, until they have a block behind them.';
+  'The rest still start from research-based guidance, until they have a finished block behind them.';
 
 /**
  * FB-27/FB-28 (D96): how this muscle's numbers moved against the block

@@ -42,9 +42,9 @@ export default function BlockShapeCard({ weekIndex, plannedWeeks, isDeload = fal
 
   let line;
   if (finished) {
-    line = 'Block finished. Targets hold at recovery-week volume until you choose what comes next.';
+    line = 'Block finished. Sets stay at recovery-week level until you choose what comes next.';
   } else if (isDeload || current === n - 1) {
-    line = 'Recovery week. Lighter on purpose. This is where the work pays off, and you lose nothing by easing back.';
+    line = 'Recovery week. Lighter on purpose: fewer sets and easier effort, so fatigue clears before the next block.';
   } else if (current === n - 2) {
     line = `Week ${current + 1} of ${n} · Push. Your hardest week of the block. Recovery week next.`;
   } else {

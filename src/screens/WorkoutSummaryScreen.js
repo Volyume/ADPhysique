@@ -1511,7 +1511,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   if (sources.includes('profile')) {
                     return 'These ranges are matched to your training experience, recovery, phase and age. Once a plan programs a muscle they follow what it aims at, and you can set them by hand with Edit volume targets on the Volume screen.';
                   }
-                  return 'These ranges are research-based starting points. With enough logged sessions they adjust to your response, and you can set them by hand with Edit volume targets on the Volume screen.';
+                  return 'These ranges are research-based starting points. Once you have finished blocks behind you they adjust from how those went, and you can set them by hand with Edit volume targets on the Volume screen.';
                 })()
               } />
             </View>

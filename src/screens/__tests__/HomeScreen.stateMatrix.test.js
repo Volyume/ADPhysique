@@ -741,7 +741,7 @@ describe('State matrix — S9: block finished, awaiting decision', () => {
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    expect(REGION.todayLineText(tree)).toBe("Block complete. Choose what's next.");
+    expect(REGION.todayLineText(tree)).toBe("Block finished. Choose what comes next.");
     // RE-PINNED (F-18 / B-3): this state used to render the training hero
     // ("Start workout", eyebrow "Day 1 of N") directly beneath a Today line
     // saying the block was complete. The hero IS the decision now.
@@ -1010,7 +1010,7 @@ describe('Presentation guard — R2 single occupancy at the HomeScreen fact-feed
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
     expect(findByTestID(tree, 'today-line').length).toBe(1);
-    expect(REGION.todayLineText(tree)).toBe("Block complete. Choose what's next.");
+    expect(REGION.todayLineText(tree)).toBe("Block finished. Choose what comes next.");
     expect(flattenText(tree)).not.toContain('1999 kcal');
     expect(flattenText(tree)).not.toBe("Your weekly check-in is ready. It shapes this week's coaching decision.");
   });

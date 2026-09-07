@@ -113,14 +113,14 @@ export function buildReadinessSummary({
     // ADAPTIVE_RECOVERY_ADJUSTMENT: still inside accumulation, so this must
     // never be worded as "recovery week" (that would claim the hard part of
     // the block is over, which recoveryStateCard's own copy rule forbids).
-    return { tone: 'recover', line: 'Training is lighter for now while your recovery catches up.' };
+    return { tone: 'recover', line: 'Training is lighter for now because your recent recovery has been harder.' };
   }
 
   // Priority 2: the training-data-driven suggestion (shouldDeload). Worded
   // distinctly from the dismissible "Recovery week suggested" banner above
   // so the two never read as the exact same sentence twice.
   if (deloadSuggestion) {
-    return { tone: 'recover', line: 'Recent training signals point towards easing off soon.' };
+    return { tone: 'recover', line: 'Your recent sessions point to a recovery week soon.' };
   }
 
   // Priority 3: the soreness/sleep/energy facts captured on the pre-workout
@@ -165,7 +165,7 @@ export function buildReadinessSummary({
   // record that does not exist. No second "N of M" counter here either,
   // per the C22 single-counter law the Priority 5 note above documents.
   if (!lastSession) {
-    return { tone: 'go', line: 'First session of your plan. Nothing to read yet.' };
+    return { tone: 'go', line: 'First session of your plan. See how this block is shaped.' };
   }
 
   // Priority 5: default block-phase read.

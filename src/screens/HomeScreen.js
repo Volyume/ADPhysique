@@ -1939,9 +1939,9 @@ export default function HomeScreen({ navigation, route }) {
   // week-complete state gets its own honest line; the block-finished line
   // above is unchanged.
   const readinessSummary = currentMesoWeek?.awaitingDecision
-    ? { tone: 'go', line: 'Block finished. Targets hold at recovery-week volume until you choose what comes next.' }
+    ? { tone: 'go', line: 'Block finished. Sets stay at recovery-week level until you choose what comes next.' }
     : weekComplete
-    ? { tone: 'go', line: 'Nothing outstanding this week.' }
+    ? { tone: 'go', line: 'Every session done for this week.' }
     : buildReadinessSummary({
       currentMesoWeek,
       // Campaign 22 Phase 2 Stage 1 (spec §8, the measured copy

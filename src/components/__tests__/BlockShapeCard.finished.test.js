@@ -20,7 +20,7 @@ describe('finished rendering', () => {
   test('finished shows the honest line instead of a live-week or recovery-week claim', () => {
     const tree = create(<BlockShapeCard weekIndex={5} plannedWeeks={5} isDeload finished />);
     const all = texts(tree).join(' | ');
-    expect(all).toContain('Block finished. Targets hold at recovery-week volume until you choose what comes next.');
+    expect(all).toContain('Block finished. Sets stay at recovery-week level until you choose what comes next.');
     expect(all).not.toContain('Recovery week. Lighter on purpose');
     expect(all).not.toMatch(/Week \d+ of \d+/);
   });

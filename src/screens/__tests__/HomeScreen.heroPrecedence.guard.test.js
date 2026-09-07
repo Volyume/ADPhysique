@@ -7,7 +7,7 @@
  * `nextSession: null` fell back to `routines[0]`. So an athlete who had done
  * every required session this week was offered session 1 again under
  * "Day 1 of N"; a finished block showed "Start workout" directly beneath a
- * Today line reading "Block complete. Choose what's next."; and an active
+ * Today line reading "Block finished. Choose what comes next."; and an active
  * plan holding no sessions rendered "No active plan yet", whose own fix
  * would have replaced the plan.
  *
@@ -94,7 +94,7 @@ describe('B-1 — the week-complete state', () => {
   });
 
   test('the readiness chip does not claim a session is pending', () => {
-    expect(home).toMatch(/: weekComplete\s*\n?\s*\? \{ tone: 'go', line: 'Nothing outstanding this week\.' \}/);
+    expect(home).toMatch(/: weekComplete\s*\n?\s*\? \{ tone: 'go', line: 'Every session done for this week\.' \}/);
   });
 });
 
