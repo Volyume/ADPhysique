@@ -43,6 +43,7 @@ import Chip from '../components/Chip';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
 import GymPicker from '../components/community/GymPicker';
+import GymDetailSheet from '../components/community/GymDetailSheet';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
@@ -107,6 +108,13 @@ export default function CommunityJoinScreen({ navigation, route }) {
   const [gymStep, setGymStep] = useState('picking');
   const [otherGyms, setOtherGyms] = useState([]);
   const [addingOtherGym, setAddingOtherGym] = useState(false);
+  // Community product audit 2026-09-07 (gym finder brief): every tapped
+  // gym row opens GymDetailSheet before it is ever selected, whichever of
+  // the two pickers below it came from; `pendingGym.commit` is the ONE
+  // thing that differs between the two (set the primary gym vs. add to
+  // the other-gyms list), so one sheet instance serves both.
+  const [pendingGym, setPendingGym] = useState(null); // { venue, commit } | null
+  function requestGymConfirm(venue, commit) { setPendingGym({ venue, commit }); }
   // 'idle' | 'invalid' | 'checking' | 'available' | 'taken' | 'unknown'
   // 'unknown' is the check that could not RUN (offline, or a read that did
   // not answer). It is not a refusal: Create stays available so `create()`
@@ -300,7 +308,10 @@ export default function CommunityJoinScreen({ navigation, route }) {
               <GymPicker
                 navigation={navigation}
                 header
-                onSelect={(venue) => { setPrimaryGym(venue); setGymStep('picked'); }}
+                onSelect={(venue) => requestGymConfirm(
+                  venue,
+                  (v) => { setPrimaryGym(v); setGymStep('picked'); },
+                )}
               />
               <Button
                 variant="tertiary"
@@ -328,19 +339,32 @@ export default function CommunityJoinScreen({ navigation, route }) {
             </>
           ) : (
             <>
-              <SectionLabel>Where do you train?</SectionLabel>
+              {/* Founder brief (gym finder): "Your main gym", gym name, town
+                  and outward code, small "Change gym" - the user never
+                  wonders whether it saved. */}
+              <SectionLabel>Your main gym</SectionLabel>
               <Card style={styles.gymRow}>
-                <Text
-                  style={[styles.tpLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary, flex: 1 }]}
-                  numberOfLines={1}
-                >
-                  {venueLine(primaryGym).primary}
-                </Text>
+                <View style={styles.gymBody}>
+                  <Text
+                    style={[styles.tpLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}
+                    numberOfLines={1}
+                  >
+                    {venueLine(primaryGym).primary}
+                  </Text>
+                  {[primaryGym.town, primaryGym.outward].filter(Boolean).join(' · ') ? (
+                    <Text
+                      style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}
+                      numberOfLines={1}
+                    >
+                      {[primaryGym.town, primaryGym.outward].filter(Boolean).join(' · ')}
+                    </Text>
+                  ) : null}
+                </View>
                 <Button
                   variant="tertiary"
                   size="sm"
                   fullWidth={false}
-                  title="Change"
+                  title="Change gym"
                   onPress={() => setGymStep('picking')}
                   accessibilityLabel="Change gym"
                 />
@@ -374,10 +398,10 @@ export default function CommunityJoinScreen({ navigation, route }) {
                 addingOtherGym ? (
                   <GymPicker
                     navigation={navigation}
-                    onSelect={(venue) => {
-                      setOtherGyms((prev) => (prev.some((g) => g.id === venue.id) ? prev : [...prev, venue]));
+                    onSelect={(venue) => requestGymConfirm(venue, (v) => {
+                      setOtherGyms((prev) => (prev.some((g) => g.id === v.id) ? prev : [...prev, v]));
                       setAddingOtherGym(false);
-                    }}
+                    })}
                   />
                 ) : (
                   <Button
@@ -496,6 +520,13 @@ export default function CommunityJoinScreen({ navigation, route }) {
           accessibilityLabel="Read the Community rules and contact"
         />
       </ScrollView>
+
+      <GymDetailSheet
+        visible={!!pendingGym}
+        venue={pendingGym?.venue ?? null}
+        onClose={() => setPendingGym(null)}
+        onConfirm={(venue) => { pendingGym?.commit?.(venue); setPendingGym(null); }}
+      />
     </SafeAreaView>
   );
 }
@@ -511,6 +542,7 @@ const styles = StyleSheet.create({
   presets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   gymRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md },
+  gymBody: { flex: 1, gap: spacing.xxs },
   tpPreview: { gap: spacing.xxs },
   tpPreviewLabel: { ...type.caption, color: colors.textMuted },
   tpPreviewLine: { ...type.body, color: colors.textPrimary },

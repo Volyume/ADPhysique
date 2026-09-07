@@ -18,7 +18,13 @@
 
 import { create, act } from 'react-test-renderer';
 
-jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }) => children }));
+// GymDetailSheet's BottomSheet reads insets unconditionally on mount (not
+// only once visible), so this needs a stub even though this suite never
+// looks at the value itself.
+jest.mock('react-native-safe-area-context', () => ({
+  SafeAreaView: ({ children }) => children,
+  useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+}));
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('../../components/BackHeader', () => () => null);
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
@@ -28,10 +34,18 @@ jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() 
 // everything else (rankVenues, milesToMetres, isPostcodeLike,
 // recognisePostcode, setGyms) stays real/faked exactly as it already
 // was for the rest of this suite's unmocked gym field.
+// GymDetailSheet (community product audit 2026-09-07: every tapped row
+// opens the confirmation sheet before it is selected) calls `get(id)` to
+// enrich the row; faked here the same way search/near/setGyms already
+// are, resolving with whichever of the two fixtures below was tapped.
 jest.mock('../../lib/gyms', () => {
   const actual = jest.requireActual('../../lib/gyms');
   return {
-    ...actual, search: jest.fn(), near: jest.fn(() => Promise.resolve({ venues: [], truncated: false })), setGyms: jest.fn(() => Promise.resolve({})),
+    ...actual,
+    search: jest.fn(),
+    near: jest.fn(() => Promise.resolve({ venues: [], truncated: false })),
+    setGyms: jest.fn(() => Promise.resolve({})),
+    get: jest.fn(),
   };
 });
 jest.mock('../../lib/deviceLocation', () => ({
@@ -93,7 +107,7 @@ jest.mock('../../lib/community', () => ({
 import {
   checkHandle, upsertProfile, COMMUNITY_RULES_VERSION, syncTrainingProfile,
 } from '../../lib/community';
-import { search as searchGyms, setGyms } from '../../lib/gyms';
+import { search as searchGyms, setGyms, get as getGym } from '../../lib/gyms';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityJoinScreen from '../CommunityJoinScreen';
 
@@ -143,6 +157,7 @@ beforeEach(() => {
   upsertProfile.mockResolvedValue({ user_id: 'u1', handle: 'rowan_lifts' });
   searchGyms.mockResolvedValue({ venues: [], recognisedPostcode: null, centroid: null });
   setGyms.mockResolvedValue({});
+  getGym.mockResolvedValue(null);
   useCommunityMe.mockReturnValue({
     me: { profile: null, is_minor: false }, loading: false, error: null, refresh: jest.fn(),
   });
@@ -381,6 +396,16 @@ describe('the gym step', () => {
     await flush();
   }
 
+  // Community product audit 2026-09-07 (gym finder brief): tapping a row
+  // (selectFromList) only opens GymDetailSheet now; this presses the
+  // sheet's own "Select this gym" to actually commit the choice.
+  async function confirmGym(tree, venue) {
+    await flush(); // the sheet's own get(id) fetch
+    const btn = button(tree, `Select ${venue.display_name}`);
+    await act(async () => { btn.props.onPress(); });
+    await flush();
+  }
+
   test('"Not now" skips with no penalty: Create still works and setGyms is never called', async () => {
     const { tree } = await mount();
 
@@ -403,12 +428,14 @@ describe('the gym step', () => {
 
     await typeGymQuery(tree, 'PureGym');
     selectFromList(flatLists(tree)[0], MAIN);
+    await confirmGym(tree, MAIN);
     expect(flattenText(tree.toJSON())).toContain('PureGym Motherwell');
 
     await act(async () => { button(tree, 'Add another gym you train at').props.onPress(); });
     searchGyms.mockResolvedValue({ venues: [OTHER], recognisedPostcode: null, centroid: null });
     await typeGymQuery(tree, 'The Gym');
     selectFromList(flatLists(tree)[0], OTHER);
+    await confirmGym(tree, OTHER);
     expect(flattenText(tree.toJSON())).toContain('The Gym Leeds');
 
     await type(tree, 'Handle', 'rowan_lifts');

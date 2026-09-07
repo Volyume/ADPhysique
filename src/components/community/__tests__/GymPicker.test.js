@@ -182,7 +182,9 @@ describe('the header prop', () => {
   test('when true, shows the header and sub line', () => {
     const tree = render({ header: true });
     expect(texts(tree)).toContain('Where do you train?');
-    expect(texts(tree)).toContain('Your gym helps people at the same gym find you. You choose what is shown.');
+    expect(texts(tree)).toContain(
+      'Choose your main gym so you can find people who train there and discover relevant local connections.',
+    );
     act(() => { tree.unmount(); });
   });
 });
@@ -362,7 +364,7 @@ describe('no match yet', () => {
     expect(list.props.data).toEqual([]);
     const empty = renderSlot(list.props.ListEmptyComponent);
     expect(empty).not.toBeNull();
-    expect(texts(empty)).toContain('No gyms match yet');
+    expect(texts(empty)).toContain("Can't find your gym?");
 
     const addRow = empty.root.findAll(
       (n) => n.props?.accessibilityLabel === 'Add your gym' && typeof n.props.onPress === 'function',

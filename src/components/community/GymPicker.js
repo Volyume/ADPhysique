@@ -222,7 +222,8 @@ export default function GymPicker({
               as a field-group title, not a hero. */}
           <SectionLabel>Where do you train?</SectionLabel>
           <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-            Your gym helps people at the same gym find you. You choose what is shown.
+            Choose your main gym so you can find people who train there and discover relevant local
+            connections.
           </Text>
         </View>
       ) : null}
@@ -299,11 +300,11 @@ export default function GymPicker({
           ListEmptyComponent={showEmpty ? (
             <EmptyState
               icon="business-outline"
-              title="No gyms match yet"
+              title="Can't find your gym?"
               text={knownCentroid
                 ? `No gyms within ${radiusMiles} miles${centroid.label ? ` of ${centroid.label}` : ''} yet. Try a wider distance, or add yours.`
                 : 'It shows for everyone once a second person confirms it.'}
-              actionLabel="Can't find your gym? Add it"
+              actionLabel="Add your gym"
               onAction={addGym}
               actionAccessibilityLabel="Add your gym"
               compact

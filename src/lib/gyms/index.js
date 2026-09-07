@@ -63,9 +63,11 @@ function normaliseVenue(row) {
     name: row.name ?? row.display_name ?? '',
     brand: row.brand ?? null,
     venue_type: row.venue_type ?? null,
+    address_line: row.address_line ?? null,
     town: row.town ?? null,
     outward: row.outward ?? null,
     postcode: row.postcode ?? null,
+    website: row.website ?? null,
     lat: toNumberOrNull(row.lat),
     lng: toNumberOrNull(row.lng),
     distance_m: toNumberOrNull(row.distance_m),
@@ -308,10 +310,24 @@ export function distanceLabel(distanceM) {
   return `${miles.toFixed(1)} miles`;
 }
 
+/** Lower-case, alphanumeric-only fold, just for the "is the brand already
+ * named in the display name?" check below - not the ranking fold in
+ * `rank.js` (this one only ever answers a yes/no containment question). */
+function foldForContainment(s) {
+  return String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
 /**
  * The two lines every gym row renders: the display name, and
- * "town · outward · distance" (whichever parts are known; distance is
- * left out entirely when it is null, never shown as a blank or a dash).
+ * "town · outward · distance · brand" (whichever parts are known;
+ * distance is left out entirely when it is null, never shown as a blank
+ * or a dash). Brand is the LAST part and only ever appears when it is
+ * not already named in the display name itself (founder brief, gym
+ * finder: "brand only when not redundant with the name") - "PureGym
+ * Motherwell" never grows a trailing "· PureGym", but a franchise or
+ * independent-sounding name that does not carry its own chain's name
+ * (e.g. a venue named after its address, branded "Anytime Fitness")
+ * does.
  *
  * @param {object} venue
  * @returns {{primary: string, secondary: string}}
@@ -323,6 +339,9 @@ export function venueLine(venue) {
   if (venue?.outward) parts.push(venue.outward);
   const dist = distanceLabel(venue?.distance_m);
   if (dist) parts.push(dist);
+  if (venue?.brand && !foldForContainment(primary).includes(foldForContainment(venue.brand))) {
+    parts.push(venue.brand);
+  }
   return { primary, secondary: parts.join(' · ') };
 }
 
