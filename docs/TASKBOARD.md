@@ -2443,9 +2443,12 @@ conditional on the decision; recorded here so they are visible, not lost._
   add `expo-location` (MIT, Expo SDK module) so "gyms near me" can use
   the device position on an explicit tap only, never stored (GD-13)?
   Without it near-me runs from a typed postcode, which is what ships now.
-  (c) sportscotland: send the Fitness Suites download or WFS link when
-  the account is live; Scotland today rests on Overture plus operator
-  feeds (2,770 venues). Earlier unlocks, kept for the record:
+  (c) sportscotland: DELIVERED 2026-09-07 (WFS access key given in
+  chat; held outside the repo, used pipeline-only via env var, never
+  committed). All eleven layers pulled to scratch: fitness suites 629,
+  sports halls 3,129, pools 562. Gap analysis in
+  `docs/community-product-audit-2026-09-07/11-sportscotland-register.md`;
+  adapter + re-run follow after the P0 build lanes land. Earlier unlocks, kept for the record:
   three unlocks, none blocking the free stack.** Founder 2026-09-07: (1) registering the sportscotland account now
   (instructions delivered in chat; send the Fitness Suites download or the
   WFS link and token); (2) DuckDB APPROVED as a pipeline-only binary in the

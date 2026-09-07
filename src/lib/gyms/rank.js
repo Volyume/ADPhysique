@@ -12,6 +12,12 @@
  * same rule `findPeople.js` follows): a reason names WHY a row is near
  * the top ("Matches the brand", "In Motherwell", "Near ML1"), which is
  * something a person can read, unlike an internal ranking number.
+ *
+ * `reasons` is an internal ranking explanation ONLY: `GymRow` must never
+ * render it (lead addendum, 09-gym-journey-tests.md item 3, "the
+ * 'Matches The Gym Group' reason is internal and must not be rendered");
+ * a venue's brand shown to a person comes solely from its own `brand`
+ * field.
  */
 
 import { extractPostcode } from './postcode';
@@ -113,11 +119,24 @@ const WEIGHT = {
 /** Points for how close a venue is, closer scoring more; null distance
  * (no coordinates supplied) contributes nothing. Deliberately smaller
  * than brand/locality (GD-09: "brand match first, then locality, then
- * distance"). */
+ * distance").
+ *
+ * `distanceM` must be checked for null/undefined BEFORE `Number(...)`:
+ * `Number(null)` is `0`, a finite number, so a venue with no distance at
+ * all used to score as if it were sitting at 0 m and outrank a real
+ * nearby branch (lead addendum, 09-gym-journey-tests.md finding R1/R1b). */
 function distanceScore(distanceM) {
-  if (!Number.isFinite(Number(distanceM))) return 0;
-  return Math.max(0, 200 - Number(distanceM) / 100);
+  if (distanceM === null || distanceM === undefined || distanceM === '') return 0;
+  const n = Number(distanceM);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, 200 - n / 100);
 }
+
+/** A small deprioritisation, never a filter, for a venue whose operator
+ * has not confirmed it (30-IMPLEMENTATION.md section 1.2): it still
+ * shows, still matches on name/brand/town exactly as a confirmed venue
+ * does, it just settles below an otherwise-equal confirmed one. */
+const UNCONFIRMED_PENALTY = 40;
 
 /**
  * Score and explain one venue against a query.
@@ -171,6 +190,10 @@ function scoreVenue(venue, { queryCompact, queryTokens, postcodeOutward }) {
   if (dScore > 0) {
     score += dScore;
     reasons.push('Nearby');
+  }
+
+  if (venue.operator_unconfirmed) {
+    score -= UNCONFIRMED_PENALTY;
   }
 
   return { score, reasons };

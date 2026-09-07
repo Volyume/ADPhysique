@@ -64,7 +64,7 @@ export {
   upsertProfile, acceptRules,
   checkHandle, leaveCommunity, getProfile, follow, unfollow,
   respondToFollow, removeFollower, listFollows, blockUser, unblockUser,
-  muteUser, unmuteUser, relationships,
+  muteUser, unmuteUser, relationships, setPlace,
 } from './profile';
 
 export {

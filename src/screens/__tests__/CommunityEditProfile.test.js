@@ -53,6 +53,7 @@ jest.mock('../../lib/community', () => ({
   AREA_LABEL_MAX: 60,
   setConnectFrom: jest.fn(),
   setShowProgrammes: jest.fn(),
+  setPlace: jest.fn(() => Promise.resolve({ kind: 'none', label: null, lat: null, lng: null })),
   CONNECT_FROM_VALUES: { anyone: 'Anyone', followers: 'People who follow me', nobody: 'Nobody' },
 }));
 
@@ -63,15 +64,31 @@ jest.mock('../../lib/community', () => ({
 // fixture profile carries a LEGACY `gym_label` with no `gym_id`, which
 // renders read-only), so these stubs only need to exist for `save()`'s
 // unconditional `setGyms` call and for the module graph to resolve.
-jest.mock('../../lib/gyms', () => ({
-  __esModule: true,
-  get: jest.fn(() => Promise.resolve(null)),
-  setGyms: jest.fn(() => Promise.resolve({})),
-  search: jest.fn(() => Promise.resolve({ venues: [], recognisedPostcode: null })),
-  isPostcodeLike: jest.fn(() => false),
-  recognisePostcode: jest.fn(() => ({ kind: 'none', normalised: null, outward: null })),
-  venueLine: (v) => ({ primary: v?.display_name || v?.name || '', secondary: '' }),
-  isPendingVenue: jest.fn(() => false),
+jest.mock('../../lib/gyms', () => {
+  // 30-IMPLEMENTATION.md 1.2: GymPicker (rebuilt as the finder) also uses
+  // `near`, `rankVenues` and `milesToMetres` from this module. Only
+  // `search`/`get`/`setGyms`/`isPostcodeLike`/`recognisePostcode` need
+  // faking for this suite (nothing here types a gym or opens the
+  // picker); the rest stay the real, pure implementations so GymPicker
+  // renders exactly as it does in the app.
+  const actual = jest.requireActual('../../lib/gyms');
+  return {
+    __esModule: true,
+    ...actual,
+    get: jest.fn(() => Promise.resolve(null)),
+    setGyms: jest.fn(() => Promise.resolve({})),
+    search: jest.fn(() => Promise.resolve({ venues: [], recognisedPostcode: null, centroid: null })),
+    near: jest.fn(() => Promise.resolve({ venues: [], truncated: false })),
+    placeCentroid: jest.fn(() => Promise.resolve({ kind: 'none', label: null, lat: null, lng: null })),
+    isPostcodeLike: jest.fn(() => false),
+    recognisePostcode: jest.fn(() => ({ kind: 'none', normalised: null, outward: null })),
+    venueLine: (v) => ({ primary: v?.display_name || v?.name || '', secondary: '' }),
+    isPendingVenue: jest.fn(() => false),
+  };
+});
+jest.mock('../../lib/deviceLocation', () => ({
+  isAvailable: jest.fn(() => false),
+  getApproximatePosition: jest.fn(),
 }));
 
 import { upsertProfile, relationships, setConnectFrom } from '../../lib/community';
