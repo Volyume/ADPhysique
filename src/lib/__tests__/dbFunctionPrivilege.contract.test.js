@@ -143,6 +143,21 @@ const CLIENT_RPCS = [
   'community_set_show_programmes',
   'community_update_training_profile',
   'community_withdraw_connect',
+  // UK gym directory (migrate_162, GD-01 to GD-17). Same contract again:
+  // SECURITY DEFINER, `search_path = public, pg_temp`, user from
+  // auth.uid() via `_community_caller()`, granted to `authenticated` only,
+  // with the `_gyms_*` helpers beneath them granted to nobody.
+  'community_set_gyms',
+  'gyms_confirm_submission',
+  'gyms_get',
+  'gyms_in_place',
+  'gyms_near',
+  'gyms_report',
+  'gyms_review_report',
+  'gyms_review_submission',
+  'gyms_search',
+  'gyms_submit',
+  'gyms_suggest',
 ];
 
 /** Every RPC name the app actually calls, read from the real source. */

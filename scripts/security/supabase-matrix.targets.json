@@ -101,7 +101,14 @@
     { "table": "community_rate_events", "disposition": "rpc_only" },
     { "table": "community_connections", "disposition": "rpc_only" },
     { "table": "community_conversations", "disposition": "rpc_only" },
-    { "table": "community_messages", "disposition": "rpc_only" }
+    { "table": "community_messages", "disposition": "rpc_only" },
+    { "table": "gym_brands", "disposition": "global_read_only" },
+    { "table": "gym_venues", "disposition": "global_read_only" },
+    { "table": "gym_postcode_sectors", "disposition": "global_read_only" },
+    { "table": "gym_venue_sources", "disposition": "rpc_only" },
+    { "table": "gym_venue_history", "disposition": "rpc_only" },
+    { "table": "gym_submissions", "disposition": "rpc_only" },
+    { "table": "gym_reports", "disposition": "rpc_only" }
   ],
   "clientRpcNames": [
     "delete_user_data",
@@ -179,6 +186,17 @@
     "community_messages",
     "community_send_message",
     "community_mark_conversation_read",
-    "community_delete_message"
+    "community_delete_message",
+    "gyms_search",
+    "gyms_near",
+    "gyms_in_place",
+    "gyms_get",
+    "gyms_suggest",
+    "gyms_submit",
+    "gyms_confirm_submission",
+    "gyms_report",
+    "gyms_review_submission",
+    "gyms_review_report",
+    "community_set_gyms"
   ]
 }
