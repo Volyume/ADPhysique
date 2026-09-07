@@ -196,6 +196,23 @@
     "community_set_quiet_hours",
     "community_set_show_gym",
     "community_set_show_place",
-    "community_respond_session"
+    "community_respond_session",
+    "community_board",
+    "community_group_create",
+    "community_group_update",
+    "community_group_close",
+    "community_group_leave",
+    "community_group_join",
+    "community_group_approve",
+    "community_group_remove",
+    "community_group_promote",
+    "community_group_invite",
+    "community_group_invite_link",
+    "community_group_accept_invite",
+    "community_group_list_mine",
+    "community_group_get",
+    "community_group_members",
+    "community_group_search",
+    "community_group_feed"
   ]
 }

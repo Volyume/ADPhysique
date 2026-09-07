@@ -330,6 +330,44 @@ contract must not delegate its authority to a superseded audit.
   Supabase access from this build lane); verification after any future
   apply is the acceptance check at the end of the file plus the guard
   tests in `src/__tests__/migrate164.rpcOnly.guard.test.js`.
+- **165 WRITTEN, NOT APPLIED (Community boards, consistency counters and
+  groups; founder gate).** `migrate_165_community_boards_groups.sql`
+  (community product audit 2026-09-07, `docs/community-product-audit-
+  2026-09-07/60-DESIGN-PROGRESS-COMMUNITY.md` sections 1-3 and 6,
+  `40-GAP-CLOSURE.md` sections 4-5). Nine additive `community_profiles`
+  columns: eight device-computed consistency counters
+  (`c_sessions_week`, `c_sessions_month`, `c_weeks_streak`,
+  `c_planned_pct_4w`, `c_consistent_weeks_12w`, `c_trained_days_week`,
+  `c_last_trained_day`, `c_updated_at`) plus `share_consistency boolean
+  default false`. `community_update_training_profile` re-issued to
+  accept the counters only when `share_consistency` is sent true, nulling
+  every counter and the toggle otherwise; a minor never gets one stored.
+  `community_board(_scope, _scope_key, _window, _cursor, _limit, _today)`
+  added: four scopes (gym/following/group/everyone), three windows
+  (week/month/consistency), ranked over the whole eligible set so an
+  off-page caller's own rank is correct, keyset paged, rate rail 120 per
+  hour like `community_find_people`. Three new tables, `community_groups`,
+  `community_group_members`, `community_group_invites`, all RLS-enabled
+  with NO anon/authenticated policy and ALL privileges revoked from both
+  (SD-14); sixteen new RPCs (`community_group_create/_update/_close/_join/
+  _leave/_invite/_invite_link/_accept_invite/_approve/_remove/_promote/
+  _list_mine/_get/_members/_search`, `community_group_feed`); minors
+  refused everywhere a group is joined, created or administered; the last
+  admin cannot leave or be removed without promoting a successor. Widens
+  `community_activity.kind` (`group_request`, `group_accepted`,
+  `group_invited`, riding the existing `community_follow` notification
+  category) and `community_reports.target_kind` (`group`).
+  `community_report` and `community_moderation_queue` re-issued (group
+  owner = creator; preview = name + blurb). `delete_user_data()` re-issued
+  in full (latest body carried forward from migrate_162) with two-sided
+  group deletes and the promote-or-close rule.
+  `supabase/functions/community-notify/index.ts` updated to prove and
+  push the three group kinds from the membership/invite row. DEPENDS ON
+  160, 161, 162, 163 and 164. Rollback: see the file header. Not yet
+  verified against a live database in this lane (no Supabase access from
+  this build lane); verification after any future apply is the acceptance
+  check at the end of the file plus the guard tests in
+  `src/__tests__/migrate165.rpcOnly.guard.test.js`.
 - **132-136 APPLIED 2026-08-12** (founder order, Claude-run, project
   `sujrylzzxcqxxfygptns`, eu-west-1). Every object verified read-only
   after the apply:
@@ -679,6 +717,7 @@ themselves; add a row here whenever a migration is added.
 | 162 | `migrate_162_gym_directory.sql` | The UK gym master database (founder brief 2026-09-06, `docs/gym-database-2026-09-06/20-BLUEPRINT.md`, GD-01 to GD-17), schema only, no venue rows. Seven new tables: `gym_brands`/`gym_venues`/`gym_postcode_sectors` (`global_read_only`, RLS on, one SELECT policy for `authenticated`) and `gym_venue_sources`/`gym_venue_history`/`gym_submissions`/`gym_reports` (`rpc_only`, RLS on, no policy, all privileges revoked from anon/authenticated). Two additive `community_profiles` columns (`gym_id`, `other_gym_ids`, capped at 3) plus a trigger deriving `gym_key`/`gym_label` from `gym_id`. Eleven new SECURITY DEFINER RPCs pinned to `search_path = public, pg_temp`, granted to `authenticated` only: `gyms_search`, `gyms_near`, `gyms_in_place`, `gyms_get`, `gyms_suggest`, `gyms_submit`, `gyms_confirm_submission`, `gyms_report`, `gyms_review_submission`, `gyms_review_report`, `community_set_gyms`. Re-issues `community_gym_summary` (resolves `gym:<uuid>` keys from `gym_venues`, keeps the legacy free-text path), `community_gym_suggest` (delegates to `gyms_suggest`, same signature) and `delete_user_data()` in full (anonymises `gym_submissions.submitter_id`/`gym_reports.reporter_id`). DEPENDS ON 160 and 161. Rollback: drop the seven tables and the two columns, drop the `gyms_*`/`_gyms_*` functions and `_community_gym_key_sync`, re-apply migrate_161 to restore `community_gym_summary`/`community_gym_suggest`/`delete_user_data()` to their 161 bodies (see the file header). | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase.** |
 | 163 | `migrate_163_community_place_and_finder.sql` | Community place + finder (community product audit 2026-09-07, `docs/community-product-audit-2026-09-07/30-IMPLEMENTATION.md` section 1.1). Five additive `community_profiles` columns (`place_key`, `place_label`, `place_lat`, `place_lng`, `place_kind`, capped `('outward','town')`) plus an index. Two new SECURITY DEFINER RPCs granted to `authenticated` only: `gyms_place_centroid`, `community_set_place`. `gyms_search`/`community_find_people` DROPped-and-recreated with a new trailing parameter each (`_radius_m`, `_filters`); `gyms_search` also gains a postcode centroid + radius union, `operator_unconfirmed`, region/local-authority/country and a Finding-S1 fuzzy sort key; `gyms_near` gains `operator_unconfirmed`, an 80,468 m radius clamp and `truncated`; `gyms_get`/`gyms_in_place` gain region/local-authority/country; `gyms_submit` gets a stripped-Jaccard duplicate check (Finding D2) plus the GD-06 brand signal (same brand + same postcode unit, or same brand + same sector within 150 m of a real coordinate, is a merge regardless of Jaccard). `community_set_gyms`/`community_upsert_profile` re-issued to backfill place from the main gym's town; `_community_profile_card` re-issued (`place_label`, `age_band`, `can_connect`); `community_find_people` gains combinable `_filters`, keyset paging, a 1,000-row scan cap and the SD-28 fallback; `community_suggested_people` re-issued for the mute exclusion; `community_report` accepts `target_kind = 'message'`; `community_moderation_queue` re-issued with a message content preview (first 200 characters + conversation id). DEPENDS ON 160, 161 and 162. Rollback: drop the five columns and the new/re-issued functions, re-apply 160 (community_suggested_people/community_report/community_moderation_queue) and 162 (everything else) to restore their pre-163 bodies (see the file header). | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase.** |
 | 164 | `migrate_164_community_gap_closure.sql` | Final competitive gap closure (community product audit 2026-09-07, `docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md`). Retires the shared-programme layer's nine RPCs (EXECUTE revoked from everyone; tables stay, hold no rows); re-issues `community_find_people`/`community_suggested_people`/`community_dimension`/`community_comment`/`community_report` without the programme signal. Two additive `community_profiles` columns (`show_gym`, `show_place`) plus their setters, enforced in `_community_profile_card` and `community_find_people`. `community_search_people` re-issued (substring name match, 40-candidate cap). `community_list_followers` and `community_my_status` added. `community_messages` gains `ref_payload`; `community_send_message` DROPped-and-recreated with a session-suggestion payload; `community_respond_session` added. `notification_preferences` gains a quiet-hours sentinel row (`quiet_start`/`quiet_end`/`tz`) plus `community_set_quiet_hours`. DEPENDS ON 160, 161, 162 and 163. Rollback: see the file header. | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase.** |
+| 165 | `migrate_165_community_boards_groups.sql` | Community boards, consistency counters and groups (community product audit 2026-09-07, `docs/community-product-audit-2026-09-07/60-DESIGN-PROGRESS-COMMUNITY.md` sections 1-3 and 6, `40-GAP-CLOSURE.md` sections 4-5). Nine additive `community_profiles` columns (eight `c_*` consistency counters plus `share_consistency`); `community_update_training_profile` re-issued to accept the counters only when `share_consistency` is true. `community_board` added (four scopes, three windows, keyset paged, ranked over the whole eligible set). Three new tables (`community_groups`, `community_group_members`, `community_group_invites`), RLS on with no policy, all privileges revoked from anon/authenticated; sixteen new group RPCs plus `community_group_feed`; minors refused everywhere; last-admin-cannot-leave rule. Widens `community_activity.kind` (three group kinds, riding the `community_follow` category) and `community_reports.target_kind` (`group`); `community_report`/`community_moderation_queue` re-issued for group reports. `delete_user_data()` re-issued in full with two-sided group deletes and the promote-or-close rule. `supabase/functions/community-notify/index.ts` updated for the three group notification kinds. DEPENDS ON 160, 161, 162, 163 and 164. Rollback: see the file header. | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase.** |
 
 > Ledger gap noted 2026-08-20: `migrate_144_apple_review_password_reset.sql`
 > exists in this folder but has no row in this table (it predates CC26 and

@@ -94,18 +94,29 @@ interface NotifyBody {
 // migrate_164 (40-GAP-CLOSURE.md section 2): 'programme_used' retired with
 // the shared-programme layer's community_record_programme_use RPC, which no
 // longer writes an activity row for this kind to prove.
+// migrate_165 (design 60 §3): the three group notification kinds, proved by
+// the community_group_members/community_group_invites row `community_group_
+// join`/`_approve`/`_invite` just wrote, and riding the SAME community_follow
+// category budget the connection kinds already use -- no new category, no
+// push for an ordinary open-group join (community_group_join never calls
+// this function for that branch).
 type Kind =
   | 'follow' | 'follow_request' | 'follow_accepted'
   | 'reaction' | 'comment'
   | 'connect_request' | 'connect_accepted' | 'message'
+  | 'group_request' | 'group_accepted' | 'group_invited'
 
 // A connection request and its acceptance are relationship events, so they
 // share the follow category and its budget; a message has its own category
-// and its own toggle (discovery blueprint section 2).
+// and its own toggle (discovery blueprint section 2). The three group kinds
+// share it too (design 60 §3: "ride the existing community_follow category
+// budget").
 const FOLLOW_KINDS: Kind[] = [
   'follow', 'follow_request', 'follow_accepted', 'connect_request', 'connect_accepted',
+  'group_request', 'group_accepted', 'group_invited',
 ]
 const CONNECT_KINDS: Kind[] = ['connect_request', 'connect_accepted']
+const GROUP_KINDS: Kind[] = ['group_request', 'group_accepted', 'group_invited']
 const ALL_KINDS: Kind[] = [
   ...FOLLOW_KINDS, 'reaction', 'comment', 'message',
 ]
@@ -118,11 +129,16 @@ const MUTE_SILENCED_KINDS: Kind[] = [...CONNECT_KINDS, 'message']
 // Every kind that proves itself with a community_activity row rather than a
 // conversation (security review 2026-09-06, finding 4). `message` is excluded:
 // it already has its own per-conversation 15-minute collapse below, and never
-// writes a community_activity row.
+// writes a community_activity row. The group kinds are added by migrate_165:
+// community_group_join/_approve/_invite each write both the membership/invite
+// row (the actual proof, checked below) AND a community_activity row (via
+// _community_add_activity), so they get the identical replay-guard shape
+// connect_request/connect_accepted already have.
 const ACTIVITY_BACKED_KINDS: Kind[] = [
   'follow', 'follow_request', 'follow_accepted',
   'reaction', 'comment',
   'connect_request', 'connect_accepted',
+  ...GROUP_KINDS,
 ]
 
 // Fifteen minutes: at most one push per conversation while the recipient has
@@ -152,6 +168,12 @@ function pushCopy(kind: Kind, handle: string): { title: string; body: string } {
       // NEVER the content. A locked screen must not leak a conversation
       // (blueprint section 2, SD-31).
       return { title: 'Community', body: `New message from @${handle}` }
+    case 'group_request':
+      return { title: 'Community', body: `@${handle} asked to join your group` }
+    case 'group_accepted':
+      return { title: 'Community', body: `@${handle} approved your group request` }
+    case 'group_invited':
+      return { title: 'Community', body: `@${handle} invited you to a group` }
     default:
       // Unreachable: ALL_KINDS is checked before this is ever called. Kept
       // as a safe fallback rather than a non-null assertion.
@@ -319,6 +341,50 @@ serve(async (req: Request) => {
             && row.state === 'connected'
             && Number.isFinite(respondedMs) && respondedMs >= sinceMs
         }
+      }
+    } else if (kind === 'group_request' || kind === 'group_accepted' || kind === 'group_invited') {
+      // migrate_165 (design 60 §3): "proof = the membership/invite row".
+      // ref_id is the group id. `group_request` is proved by the caller's
+      // OWN 'requested' row (recipients are every admin, so the recipient
+      // itself is not on the membership row); `group_accepted` is proved by
+      // the TARGET's row having just become 'member' (the actor is the
+      // admin who approved it, checked via the activity row's actor below,
+      // since the membership row alone cannot say who approved it);
+      // `group_invited` is proved by the target's own 'invited' row.
+      activityTargetKind = 'group'
+      activityTargetId = refId
+      if (kind === 'group_request') {
+        const { data } = await admin
+          .from('community_group_members')
+          .select('user_id, state, joined_at')
+          .eq('group_id', refId)
+          .eq('user_id', actorId)
+          .eq('state', 'requested')
+          .gte('joined_at', sinceIso)
+          .limit(1)
+          .maybeSingle()
+        verified = !!data
+      } else if (kind === 'group_invited') {
+        const { data } = await admin
+          .from('community_group_members')
+          .select('user_id, state, joined_at')
+          .eq('group_id', refId)
+          .eq('user_id', targetUserId)
+          .eq('state', 'invited')
+          .gte('joined_at', sinceIso)
+          .limit(1)
+          .maybeSingle()
+        verified = !!data
+      } else {
+        const { data } = await admin
+          .from('community_group_members')
+          .select('user_id, state')
+          .eq('group_id', refId)
+          .eq('user_id', targetUserId)
+          .eq('state', 'member')
+          .limit(1)
+          .maybeSingle()
+        verified = !!data
       }
     } else if (kind === 'message') {
       // A message the CALLER sent in the last ten minutes, in the
