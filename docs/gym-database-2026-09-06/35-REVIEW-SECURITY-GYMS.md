@@ -600,3 +600,221 @@ one cap (1, 2), one cap plus one rail plus one `ORDER BY` (3, 10), and six
 missing predicates (4, 5, 6, 7, 11, 12) — plus the one-line erasure addition
 (8). None of them touches the schema, so the file can be corrected and
 re-reviewed without changing what it creates.
+
+---
+
+# Re-review 2026-09-07 (hostile, read-only)
+
+Against `supabase/migrate_162_gym_directory.sql` at `f09c612` (2,662 lines,
+up from 1,780), the twenty findings above, and the three `migrate_161`
+functions the fix lane additionally re-issued.
+
+**Method.** A NEW cluster, built from nothing: PostgreSQL 16.13,
+`/usr/lib/postgresql/16/bin`, `pgtest`, port 55432, the same stubs as the
+first pass (`auth.uid()`/`auth.jwt()`, the three Supabase roles,
+`users_profile`, `consent_log`, `partnerships`, `notification_preferences`,
+`user_body_profile`). 160, 161 and 162 applied in order with no error;
+**162 was then applied a SECOND time to the same cluster, also with no
+error**, which is the re-runnability claim tested rather than read. Every
+probe ran under `SET ROLE authenticated` with a fake `auth.uid()`. A
+46,004-row synthetic catalogue (plus 300 same-brand rows for the ranking
+test) reproduced the first pass's scale.
+
+## 1. The twenty findings, re-probed
+
+| # | Sev | Result |
+|---|-----|--------|
+| 1 | P0 | **CLOSED.** `_community_clean_text` now gates `name`, `address_line`, `town`, `operator`, `website` (`:1020-1024`) and the report `detail` (`:1239`). Probed: a blocked term refused in the name, in the address, in the operator and in the report detail, each with `content_not_allowed` raised from `_community_clean_text` line 10 |
+| 2 | P0 | **CLOSED.** `gyms_submit` caps `name` at 60 (`:1034`), the trigger clamps `left(v_display, 60)` (`:675`), and `community_upsert_profile` copies the existing pair verbatim when `gym_id` is set (`:1837-1840`). Probed on the real lockout case: a 69-character venue name is stored as a 60-character `gym_label`, and the privacy toggle AND `accept_rules_version` re-consent both now SUCCEED, with `gym_id`/`gym_key` unchanged across the save |
+| 3 | P0 | **CLOSED.** `_q` capped at 80 characters (`:735`), tokens capped at 8 (`:739-740`), `ORDER BY` moved inside the subquery before the `LIMIT` (`:874`), and a shared `gyms_read` rail of 120/minute on all four read RPCs (`:747, :843, :884, :925`). Measured on 46,004 rows: the 4,000-token input that cost **61,224 ms** now costs **159 ms**; the worst case a caller can still construct (8 distinct tokens filling the 80-character budget) costs **168 ms**. `gyms_near` 11.6 ms, `gyms_in_place` 1.6 ms |
+| 4 | P1 | **CLOSED.** `_gyms_visible` added to the `gym:` branch (`:1516`) and to the duplicate scan (`:1082`). Probed: a non-submitter gets `venue: null` AND `label: null` from `community_gym_summary`, `null` from `gyms_get`, and 0 rows from `gyms_search`; the submitter still sees their own pending venue on all three |
+| 5 | P1 | **CLOSED.** The trigger gained an `ELSIF TG_OP = 'UPDATE' AND coalesce(OLD.gym_key,'') LIKE 'gym:%'` branch (`:676-684`). Probed: `community_set_gyms(NULL, '{}')` now leaves `gym_id`, `gym_key` and `gym_label` all NULL, and a legacy free-text `motherwell:legacy gym` key on another profile is correctly untouched by the same call |
+| 6 | P1 | **CLOSED.** All four predicates restored verbatim (`:1673-1676`). Probed with a real 15-year-old (160 forces `visibility='followers'`) sharing a gym with one public adult: a caller in `london` sees `count: 0`, a caller in `motherwell` sees `count: 1` — the minor is excluded and the count is area-scoped again |
+| 7 | P1 | **CLOSED.** Pending preconditions on BOTH the submission and the venue (`:1172-1179`). Probed: confirming a moderator-rejected submission raises `not_allowed`; confirming an already-verified one raises `not_allowed`; a genuine second confirmer on a pending submission still flips it to `open` / `user_submitted_verified` |
+| 8 | P1 | **CLOSED.** `UPDATE gym_submissions SET reviewed_by = NULL` added. Probed: after the moderator's `delete_user_data()`, `reviewed_by` is NULL on every row (it survived before); after the submitter's, `submitter_id` is NULL, `source_record_id` is `deleted`, and zero uuid actors remain in `gym_venue_history` |
+| 9 | P1 | **CLOSED.** The distance signal is gone; the test is same postcode UNIT with Jaccard ≥ 0.6, or same OUTWARD with Jaccard ≥ 0.85, bounded to the submission's own outward code first (`:1077-1088`). Probed: `Volt Gym, L40 8TG` and `Iron Barn Strength, L40 8QR` both insert; a genuine duplicate of a VISIBLE open venue is still offered back |
+| 10 | P1 | **CLOSED.** Probed with 300 competing same-brand matches of which 5 are in the target town: all 5 town matches appear inside the 40, and inside `gyms_suggest`'s 8. Under the old code they were an arbitrary sample |
+| 11 | P2 | **CLOSED.** `_gyms_visible` on the report target (`:1249-1253`). Probed: a closed venue, a merged venue and a stranger's invisible pending venue all now raise `not_found`; a report on a visible open venue still succeeds |
+| 12 | P2 | **CLOSED.** The recount drops the `kind` restriction (`:1399-1401`). Probed: with two `closed` and two `wrong_name` reports each at two distinct reporters, dismissing BOTH `closed` reports leaves `needs_review = true` |
+| 13 | P2 | **CLOSED.** `website` ≤ 200 characters and `^https?://`, `operator` ≤ 80 (`:1039-1045`). Probed: a 200,000-character URL, `javascript:alert(1)` and a 5,000-character operator are each refused `invalid`; a real `https://voltgym.co.uk` passes |
+| 14 | P2 | **NOT CLOSED — see below.** The rail was correctly moved above the existence check, but it cannot bite on a path that raises |
+| 16 | P3 | **CLOSED.** De-duplicated and the primary excluded before the cap (`:1437-1442`). Probed: `[primary, X, X]` stores as `{X}` |
+| 18 | P3 | **CLOSED.** The acceptance check now carries a `role_table_grants` query and names all eight re-issued/declared community functions. Its own live output: policy counts 1/1/1 and 0/0/0/0; grants exactly `SELECT`/`authenticated` on the three catalogues and **no row at all** for the four rpc_only tables; 31 functions all SECURITY DEFINER with the search_path pinned. Finding 19 verified with it: `delete_user_data` now shows `anon_can_execute = f` on a genuinely fresh cluster, where the first pass showed `t` |
+
+### 14 — still open, re-rated P3, and not a 162 defect
+
+`gyms_report` now runs `_community_rate_check` before the existence check
+(`:1244`), which is the right structural change. It does not achieve what
+the fix claims, because `_community_rate_check` (`migrate_160:869`) records
+its rate row by INSERT and every refusal path then RAISEs, which rolls the
+INSERT back with the rest of the statement.
+
+**Measured.** Twelve `gyms_report` calls, eleven of them refused, left
+exactly **one** `gyms_report` row in `community_rate_events` — the single
+successful one. The rail never advanced.
+
+This is a property of the shared rail inherited from 160, so it is true of
+every railed RPC in 160, 161 and 162: refused submissions do not count
+against `gyms_submit`'s 3/day, refused confirms do not count against
+`gyms_confirm`'s 20/hour, and refused connects did not count in 161 either.
+Re-rated **P3 for this file** because finding 11's fix removed what the
+oracle was worth: `gyms_report` now answers only "is there a venue here you
+may see", which `gyms_search` and `gyms_get` answer for free. The rail
+property itself deserves its own item on the board against `migrate_160`,
+where the fix is to record the attempt in a way a rollback cannot undo.
+
+## 2. The three re-issued Community functions, against their 161 bodies
+
+Diffed body-for-body. **No privacy predicate, cap or refusal was dropped or
+weakened in any of the three.** The changes are exactly the three hunks
+described, and nothing else moved.
+
+- **`_community_profile_card`.** `gym_id` is added under `CASE WHEN
+  v_viewable`, the identical gate `gym_label` already had; `other_gym_ids`
+  under the strictly tighter `CASE WHEN _viewer = _uid`. Every existing
+  `v_viewable` gate, the `tp_*` band gating and the relationship block are
+  byte-identical. One consequence worth stating: a viewer of a card whose
+  owner picked their OWN pending submission now learns that venue's uuid.
+  It is inert — probed above, both `gyms_get` and `community_gym_summary`
+  refuse that id to a non-submitter — but it is a uuid that finding 4's fix
+  is now the only thing keeping useless.
+- **`community_find_people`.** The containment clause sits inside
+  `(_mode <> 'gym' OR ...)` in BOTH the candidate scan and the count, so no
+  other mode widens. `visibility = 'public'`, `is_minor = false`, the block
+  predicate and the connected predicate are untouched. The new reason is an
+  `ELSIF` under the primary-gym match, so the primary still scores 3, the
+  secondary 2, and no row can earn both. `v_me.gym_id` can only be an open
+  venue or the caller's own pending one, and `community_set_gyms` validates
+  every `other_gym_ids` entry with `_gyms_selectable`, so no other person
+  can be holding the caller's pending id — the clause cannot surface a
+  pending venue's membership. The disclosure it does make ("Also trains at
+  your gym") is over `visibility = 'public'` profiles only, which is where
+  GD-13 puts it.
+- **`community_upsert_profile`.** Only the gym block changed. When
+  `v_existing.gym_id IS NOT NULL` it copies `gym_label`/`gym_key` from the
+  row and skips both the 60-character cap and `_community_clean_text`.
+  That is safe **only because** the trigger is now the sole writer and
+  clamps to 60, and `gyms_submit` now filters — the two are load-bearing
+  for each other and should be pinned together by a test. The INSERT path
+  is unaffected (`v_existing` is empty, so the `ELSE` branch runs and the
+  free-text contract is unchanged for a legacy profile). The
+  `profile_upsert` rail, the handle rules and 30-day change bar, the
+  display-name/bio filters, the styles/goal/setting validation, the
+  visibility set, the minor derivation and the rules-version gate are all
+  byte-identical to 161.
+
+## 3. The 120-per-minute shared read rail cannot lock a normal user out
+
+Probed exactly: 120 `gyms_suggest` calls in one minute all pass, the 121st
+raises `rate_limited`. `gyms_suggest` delegates to `gyms_search` and costs
+**one** slot, not two (the boundary landed at 121, not 61). `_limit_new`
+and `_limit_established` are both 120, so a day-one account is not
+penalised, and none of the reads calls `_community_require_profile` —
+probed: a signed-in uid with no Community profile searches successfully,
+which GD-14's "core onboarding is untouched" requires.
+
+Against real use: the picker debounces at 250 ms and fires one suggest per
+typing pause, so a 12-character gym name costs at most ~12 reads; Edit
+profile costs up to 4 `gyms_get` (the primary plus three others). A session
+that sets a primary gym and three others, retyping each, is ~40 reads in a
+minute. The margin is three times over. No lockout.
+
+## 4. New findings from this pass
+
+| # | Sev | Site | Finding |
+|---|-----|------|---------|
+| 21 | **P2** | `migrate_162:826-843` | Prefix typeahead is dead on the only path the app uses, and the gate that killed it buys nothing measurable |
+| 22 | P3 | `migrate_162:1082` | Two identical pending venues can now co-exist, and each submitter can confirm the other's into the catalogue |
+| 23 | P3 | `migrate_162:1318` | `reject` still has no status precondition, though `approve` and `merge` both gained one |
+| 24 | P3 | `migrate_162:742` | `gyms_search`'s `_limit` clamp was widened from 40 to 50, above GD-09's stated 40 candidates |
+| 25 | P3 | `migrate_162:747` etc. | The read rail writes one `community_rate_events` row per read, pruned only at 7 days |
+
+### 21. P2 — the picker now matches whole tokens only
+
+Finding 3's fix bounds the un-indexable prefix branch to "a row set already
+narrowed by an indexed predicate (the bounding box, or a recognised outward
+code)" (`:836-843`). `src/lib/gyms/index.js:85-89` sends `lat = null,
+lng = null` on every call and its own header records why (`expo-location` is
+not a dependency, `near()` is unused, GD-10's "Use my location" was not
+taken). So for every call the app actually makes, the branch is unreachable.
+
+**Measured**, as the app calls it (no coordinates, no postcode):
+
+```
+ p / pu / pur / pure / purege / puregy  -> 0 hits
+ puregym                                -> 1
+ motherw                                -> 0
+ motherwell                             -> 5
+```
+
+The same prefixes WITH a coordinate return the right rows (`pure` → 1,
+`motherw` → 5), which proves the branch works and is simply out of reach.
+GD-09 says "matched by prefix on tokens"; the blueprint's own acceptance
+inputs include "Puregym", "Pure Gym" and misspellings, and a typeahead that
+returns nothing until the token is complete is not the feature.
+
+**The narrowing gate is not what made it safe.** Measured on the same
+46,004 rows: the PRE-fix shape — all 8 tokens as prefixes, no narrowing at
+all, full scan — costs **148 ms** under the new 8-token cap, against the
+current gated form's 168 ms. The 80-character and 8-token caps are what
+took 61 s down to 159 ms; the indexed-narrowing requirement contributes
+nothing measurable and costs the picker its prefix search.
+
+**Fix.** Drop the narrowing requirement from the prefix branch and keep the
+caps and the rail, which is where the safety actually is. This is a
+product fork the fix lane took silently (CLAUDE.md §4) and it should be
+ruled on rather than left: option A, relax the gate as above; option B,
+keep it and accept whole-token search until a location dependency is added.
+
+### 22-25. P3
+
+- **22.** Because the duplicate scan now applies `_gyms_visible` (correctly
+  — it is finding 4's fix), a stranger's invisible pending row no longer
+  blocks a submission. Probed: two accounts each created a pending
+  `Volt Gym, L40 8TG`. Each can confirm the other's, putting two identical
+  rows into the catalogue as `user_submitted_verified`. The code comment
+  names the moderator queue as the backstop; that is the right privacy
+  trade, but GD-06's "duplicates checked at submission" is now true only
+  within what the caller can see, and the merge queue should expect it.
+- **23.** `approve` gained `IF v_venue.status <> 'pending'` and `merge`
+  gained a self-merge refusal, but `reject` (`:1318-1328`) still runs on any
+  status, so a moderator can "reject" an already-open, long-established
+  venue and close it with one call. Add the same precondition.
+- **24.** `least(greatest(coalesce(_limit, 40), 1), 50)` — the ceiling moved
+  from 40 to 50 while GD-09 says 40. The client asks for 40, so nothing
+  reaches it today; either raise it in the blueprint or lower it here.
+- **25.** Every read now writes a rate row. At the 120/minute ceiling and a
+  7-day prune (`migrate_160:875-877`) that is a materially larger
+  `community_rate_events` table than before — bounded, covered by
+  `delete_user_data:1625`, and worth a shorter prune for the `gyms_read`
+  key specifically.
+
+## Verdict
+
+**SAFE TO APPLY on the founder's phrase, on security and privacy grounds.**
+
+All three P0s are closed and each was re-probed rather than re-read: the ED
+blocked-terms filter now gates every free-text field `gyms_submit` and
+`gyms_report` accept; the profile-edit and re-consent lockout is gone, with
+the trigger clamping to the same 60 characters the profile field enforces;
+and the 61-second query is a 159-millisecond one behind a 120-per-minute
+rail. Every P1 and P2 is closed with a live probe, the two moderator RPCs
+and the erasure path behave as specified, and the migration applies twice
+over a fresh cluster with no error and an acceptance check that now proves
+its own grant claims.
+
+One item does not close. Finding 14's rail cannot rate a refused call,
+because the refusal rolls back its own rate row — measured, eleven refusals
+left no trace. That is a `migrate_160` property, it is true of every railed
+RPC in this campaign, and finding 11's fix has already removed what the
+oracle was worth here, so it is re-rated P3 and belongs on the board
+against 160 rather than blocking this file.
+
+The one thing that should be settled BEFORE the apply is finding 21, and it
+is a product ruling, not a security one: as landed, the picker matches whole
+tokens only — "puregy" returns nothing — because the prefix branch is gated
+on a coordinate the app never sends. The measurement says the gate is not
+carrying the safety (148 ms ungated versus 168 ms gated, at the same token
+cap), so relaxing it costs nothing and restores GD-09. Applying the
+migration as it stands is safe; it just ships a weaker picker than the
+blueprint specifies.
