@@ -198,3 +198,66 @@ HTTPS with row-group pruning. Foursquare's own download is now gated
 behind an account and its rows already sit inside Overture, so it is not
 pursued separately. Attribution for both licences is carried in
 `data/gyms/ATTRIBUTION.md`. Volt Gym, Burscough (L40 8TG) is present.
+
+## GD-18 to GD-24 Lead rulings on the first full pipeline run (2026-09-07)
+
+Evidence: the first canonical build (46,754 venues) was lead-audited by
+sampling. Observed: Active Places names arrive all-caps with "(CLOSED)"
+and "(TOWN)" baked in and HTML entities undecoded (115 rows with
+`&amp;`, 1,983 with "CLOSED" in the display name); Companies House
+"corroboration" attached on postcode unit alone (a golf club
+"corroborating" a yoga studio), inflating `multi_source`; 4,424 open
+venues carry no nation and 4,323 no postcode (Overture rows with
+coordinates only); the dedup name signal gave full marks to a
+single-token operator branch name ("Moorgate" vs "THIRD SPACE
+(MOORGATE)"); the review queue held 12,966 proximity-only pairs that are
+mostly different businesses in one building; the operator adapters ran
+over 6 of 18 folders because acquisition was still in flight.
+
+- **GD-18 Display names.** Decode HTML entities. Strip status suffixes
+  ("(CLOSED)", "- CLOSED", "(TEMPORARILY CLOSED)" and case variants);
+  closure is `status`, never a name. Convert an all-caps name to title
+  case with an exceptions list (brand casing from `brands.v1.json`,
+  YMCA, JD, DW, LA, F45, UK, PT, roman numerals, "&"). A trailing
+  bracketed qualifier becomes a plain suffix ("Third Space Moorgate").
+  For a merged cluster the display name prefers the freshest mixed-case
+  source (operator feed, then Overture, then Active Places); a branded
+  venue is composed as brand plus branch ("PureGym Motherwell") when the
+  source name is bare.
+- **GD-19 Brand attribution.** The freshest brand-bearing source wins:
+  operator feed, then Overture, then Active Places `operatorname`. A
+  venue whose only brand signal is Active Places `operatorname` and
+  whose fresher source name carries a different known brand or no brand
+  drops the stale brand (the TruGym case). Two records carrying
+  different known brands never merge (hard veto). Operator counts in the
+  audit are reported twice: venues from the operator's own feed, and
+  venues carrying the brand from any source.
+- **GD-20 Companies House corroboration.** Attach a company only when
+  the postcode unit matches AND the folded company name (legal suffixes
+  and generic tokens gym, fitness, health, club, limited, ltd, uk
+  removed) shares at least two tokens or reaches Jaccard 0.5 with the
+  venue name. Otherwise nothing is attached and the row stays
+  `single_source`.
+- **GD-21 Hierarchy without a postcode.** A row with coordinates but no
+  postcode takes sector, outward, country, region and local authority
+  from the nearest ONSPD sector centroid within 3 km, with
+  `area_source = 'nearest_sector'`; `postcode` stays null. A row with
+  neither coordinates nor postcode is dropped unless multi-source, in
+  which case it is kept `low_confidence`.
+- **GD-22 Name matching.** Brand tokens are stripped only when both
+  sides carry the same brand; the town token is excluded from the name
+  Jaccard; a single-token name never earns name points on its own.
+  Operator branch names are composed brand plus branch at normalisation.
+- **GD-23 Review queue tiers.** `likely` needs a name, phone or website
+  signal and is the moderator queue; proximity-only pairs are `weak`
+  and go to a separate file that no person is asked to work.
+- **GD-24 Repository hygiene and seeds.** `data/gyms/_work/` is
+  gitignored. The canonical file, merge decisions and both review
+  files are committed gzipped (`*.jsonl.gz`, read and written through
+  zlib). `postcode-sectors.v1.csv` is built from ONSPD (sector, lat,
+  lng, count, country, region_code, local_authority_code).
+  `seed-sql.mjs` writes `supabase/seed_gyms_v1/` as chunked files of at
+  most 1,000 rows each (`000-brands.sql`, `001-sectors-NNN.sql`,
+  `1NN-venues-NNN.sql`, `2NN-sources-NNN.sql`), every chunk carrying the
+  house header and `INSERT ... ON CONFLICT (id) DO UPDATE`, applied only
+  on the founder's phrase, never by the app.
