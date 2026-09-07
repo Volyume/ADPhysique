@@ -147,17 +147,25 @@ area text box; same finder component in place mode), new
   4. Typed postcode or town: `gyms.search(q)` (server returns the
      centroid) merged with `gyms.near(centroid, 5 miles)`; de-duplicated by
      id; ranked by `rankVenues`.
-  5. Below the list, when a centroid exists: "Can't see your gym? Search
-     further" stepping 5 → 10 → 25 → 50 miles, the row reading "Within 10
-     miles" after each step; disabled with "That is as far as it goes" at
-     50.
+  5. Distance band (founder order in chat 2026-09-07: "my gym is 15
+     miles away", wider ranges must be obvious): whenever a centroid is
+     known (device position, postcode or town), a Chip row "Within 5 · 10
+     · 25 · 50 miles" sits directly under the search field, default 5,
+     always visible, one tap to widen; the list re-queries `gyms.near`
+     at the chosen band. Text matches by name, brand or branch from
+     `gyms.search` are NEVER filtered by the band (a typed "PureGym
+     Motherwell" appears whatever the band), so a person who knows the
+     name is never blocked by distance. When the near list is truncated
+     at the candidate limit the footer reads "Showing the nearest 40.
+     Type the gym's name to narrow it down." The band resets to 5 when
+     the centroid changes.
   6. Every row: display name; second line `town · outward · 3.8 miles`
      (distance only when known, one decimal, miles); pending venues carry
      the existing pending mark.
   7. Bottom of every list and every empty state: "Can't find your gym?
      Add it" → `CommunityGymAdd`, returning the pending venue selected.
   8. Empty state copy for a postcode with nothing within the band: "No
-     gyms within 5 miles of ML1 yet. Search further, or add yours."
+     gyms within 5 miles of ML1 yet. Try a wider distance, or add yours."
 - Join step: inserted after the identity step and before privacy; main
   gym via the finder; "Add another gym you train at" (up to three, same
   finder); "Not now" skips with no penalty. Selection persists via the
