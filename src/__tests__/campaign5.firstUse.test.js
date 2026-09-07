@@ -489,7 +489,7 @@ describe('HOME: zero history has one clear next action and claims no history (C5
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(summary.line).toBe('First session of your plan. Nothing to read yet.');
+    expect(summary.line).toBe('First session of your plan. See how this block is shaped.');
     expect(summary.line).not.toMatch(/\d+ of \d+/);
 
     // The default block-phase read still holds, counter-free, once a
@@ -542,7 +542,7 @@ describe('HOME: zero history has one clear next action and claims no history (C5
       summary: { chest: { week1: 8, peak: 14, peakWeek: 4, deload: 8, source: 'template' } },
     });
     expect(rest).toEqual([]);
-    expect(line).toContain('Not enough personal history yet');
+    expect(line).toContain('because you have not finished a block yet');
     expect(line).not.toMatch(/last block|past blocks|learned/);
   });
 });
@@ -615,7 +615,7 @@ describe('WORKOUT: the first session completes honestly with no history (C5-P13-
 describe('BLOCK: the first block explains itself and never advances on its own (C5-P11-*, FB-*, D96)', () => {
   test('block start explains build then recovery, and that nothing rolls over', () => {
     const sheet = read('components/HomeBlockShapeSheet.js');
-    expect(sheet).toMatch(/When the block finishes, you choose what comes next; nothing starts on its own/);
+    expect(sheet).toMatch(/When the block finishes, you choose what comes next\. Nothing starts on its own/);
     // C5-P11-06: the definition is read before the provenance lines.
     expect(sheet.indexOf('GLOSSARY.mesocycle')).toBeLessThan(sheet.indexOf('seedLines.map'));
     // C5-P11-07: the countdown carries its unit noun.

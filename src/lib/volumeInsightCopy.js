@@ -59,7 +59,7 @@ export function getVolumeWhy(muscle, sets, status, table = null, source = null) 
   // more sources exist and each needs its own true sentence: the closing
   // clause must never describe a band the reader is not looking at.
   const closing = source === 'adapted'
-    ? ' Targets adjust over time as your body responds to training.'
+    ? ' These targets have been adjusted from how your earlier blocks went.'
     : source === 'manual'
       ? ' These are your own volume targets, exactly as you set them.'
       : source === 'plan'

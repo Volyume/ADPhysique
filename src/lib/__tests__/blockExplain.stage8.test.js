@@ -85,7 +85,7 @@ describe('block-start lines (§3.6): personalised sources only', () => {
   // otherwise unchanged.
   const muscleLines = (lines) => lines.filter((l) => !l.startsWith('Plus ')
     && !l.startsWith('The rest still start')
-    && !l.startsWith('Not enough personal history'));
+    && !l.startsWith('Your weekly sets for each muscle start from research-based guidance'));
 
   const summary = {
     chest: { week1: 11, peak: 17, peakWeek: 4, deload: 10, source: 'seed_ledger' },
@@ -149,7 +149,7 @@ describe('block-start lines (§3.6): personalised sources only', () => {
   test('a fully research/profile-seeded block states the honest research start, claiming no learning', () => {
     const [line, ...rest] = buildBlockStartLines({ summary: { quads: summary.quads } });
     expect(rest).toEqual([]);
-    expect(line).toContain('Not enough personal history yet');
+    expect(line).toContain('because you have not finished a block yet');
     expect(line).toContain('research-based guidance');
     expect(line).not.toMatch(/last block|past blocks|your own setting/);
   });
@@ -157,7 +157,7 @@ describe('block-start lines (§3.6): personalised sources only', () => {
   test('the research line never renders beside personalised lines, and unknown sources stay silent', () => {
     // Mixed summary: personalised lines only, no research line.
     const mixed = buildBlockStartLines({ summary, limit: 5 }).join(' | ');
-    expect(mixed).not.toContain('Not enough personal history');
+    expect(mixed).not.toContain('because you have not finished a block yet');
     // A legacy null source proves nothing and earns nothing.
     const unknown = { chest: { week1: 10, peak: 14, peakWeek: 4, deload: 6, source: null } };
     expect(buildBlockStartLines({ summary: unknown })).toEqual([]);

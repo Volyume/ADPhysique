@@ -13,7 +13,7 @@ export const GLOSSARY = {
   volume:
     'The total work for a muscle: the working sets you do for it in a week.',
   deload:
-    'A lighter planned week so you recover: lighter loads, full recovery, no PRs.',
+    'Recovery week: a planned lighter week at the end of the block. Fewer sets, lighter loads and easier effort targets so fatigue clears. Not a week for chasing PRs, and any set here does not count towards the block\'s progress.',
   maintenanceCalories:
     'The daily calories that keep your weight steady: the starting point a change is measured from.',
   // C5-P14-03 (D96): the basis clause used to read "worked out from your

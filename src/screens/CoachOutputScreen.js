@@ -462,7 +462,7 @@ function TrainingNextWeekCard({
                 // next-week one so the copy names the week the user is
                 // actually in. Inside the scheduled recovery week there is
                 // no next week in this block at all, so the note used to
-                // fall through to "This is next week's starting point"
+                // fall through to "These are next week's planned sets"
                 // beside a row reading "Add 2 sets to each muscle group".
                 // Copy gate only: weeklyCoach's numbers are unchanged and
                 // the Apply button was already absent (canApply is false).
@@ -476,10 +476,10 @@ function TrainingNextWeekCard({
                   : upwardBlocked
                     ? 'Next week is your recovery week, so the coach will not add sets to it. Recovery weeks stay light on purpose.'
                     : recoveryReviewLine
-                      ? `${recoveryReviewLine} ${rampLine ? `${rampLine} ` : ''}This is next week's starting point; each session still fine-tunes as you train.`
+                      ? `${recoveryReviewLine} ${rampLine ? `${rampLine} ` : ''}These are next week's planned sets. Each session can still adjust them on the day.`
                       : rampLine
-                        ? `${rampLine} This is next week's starting point; each session still fine-tunes as you train.`
-                        : "This is next week's starting point. Each session still fine-tunes as you train."}
+                        ? `${rampLine} These are next week's planned sets. Each session can still adjust them on the day.`
+                        : "These are next week's planned sets. Each session can still adjust them on the day."}
             </Text>
           </View>
           {/* CO-2: this card said what changed ("N updated") but never linked
@@ -1004,7 +1004,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // week. In week 6 of 6 there is no next row, so nextWeekIsDeload is false
   // and blockAwaitingDecision is false too (the block is in 'recovery', not
   // 'completed_awaiting_decision'), which left the card's note falling
-  // through to the generic "This is next week's starting point" beside a
+  // through to the generic "These are next week's planned sets" beside a
   // row reading "Add 2 sets to each muscle group". There is no next week.
   const [currentWeekIsDeload, setCurrentWeekIsDeload] = useState(false);
   const [currentRecoveryState, setCurrentRecoveryState] = useState(null);

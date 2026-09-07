@@ -29,8 +29,8 @@ describe('TRAINING comprehension', () => {
   test('the block sheet teaches the mental model: definition, climb why, next-block learning', () => {
     const src = read('components/HomeBlockShapeSheet.js');
     expect(src).toContain('GLOSSARY.mesocycle');
-    expect(src).toMatch(/Effort builds a little each week so your body keeps adapting/);
-    expect(src).toMatch(/How each muscle responds can shape where your next block starts/);
+    expect(src).toMatch(/Each week the effort target moves a step closer to failure/);
+    expect(src).toMatch(/How each muscle goes this block shapes where its sets start in the next one/);
   });
 
   test('peak week explains expected fatigue without pretending recovery is excellent', () => {
@@ -40,7 +40,7 @@ describe('TRAINING comprehension', () => {
 
   test('the recovery week says it is lighter ON PURPOSE and the gloss carries the why', () => {
     expect(read('components/BlockShapeCard.js')).toMatch(/Lighter on purpose/);
-    expect(GLOSSARY.deload).toMatch(/lighter planned week so you recover/i);
+    expect(GLOSSARY.deload).toMatch(/planned lighter week at the end of the block/i);
   });
 
   test('Repeat and Continue with adjustments are unmistakably different, and neither is framed as the wrong one', () => {
@@ -86,7 +86,7 @@ describe('TRAINING comprehension', () => {
     const [line] = buildBlockStartLines({
       summary: { chest: { week1: 10, peak: 14, peakWeek: 4, deload: 6, source: 'template' } },
     });
-    expect(line).toContain('Not enough personal history yet');
+    expect(line).toContain('because you have not finished a block yet');
     expect(line).not.toMatch(/last block|past blocks|learned/);
   });
 

@@ -151,6 +151,6 @@ describe('block awaiting its decision (B-3) is a separate, higher-ranked fact', 
     // offering "Start workout" on session 1 beneath it.
     const line = resolveTodayLine({ blockComplete: { eligible: true, onPress: () => {} } });
     expect(line.key).toBe('block_complete');
-    expect(line.text).toBe("Block complete. Choose what's next.");
+    expect(line.text).toBe("Block finished. Choose what comes next.");
   });
 });

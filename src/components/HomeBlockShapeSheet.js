@@ -68,7 +68,7 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext, 
             correctly manual (PlansScreen requires an explicit confirm), but
             the user was not told until they arrived there in week 7. */}
         <Text style={[styles.sheetDefn, live.sheetDefn]}>
-          Effort builds a little each week so your body keeps adapting, then the recovery week lets it catch up. When the block finishes, you choose what comes next; nothing starts on its own. How each muscle responds can shape where your next block starts.
+          Each week the effort target moves a step closer to failure, so the same sets keep asking more of you. The recovery week eases both sets and effort so fatigue clears. When the block finishes, you choose what comes next. Nothing starts on its own. How each muscle goes this block shapes where its sets start in the next one.
         </Text>
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.deload}</Text>
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.rir}</Text>

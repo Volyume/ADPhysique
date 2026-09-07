@@ -98,7 +98,7 @@ describe('C6 RD6-1 (D97-25): the copy quotes the band the verdict used', () => {
   });
 
   test('the closing clause is true per provenance: adapted claims adaptation, manual claims ownership, research claims research', () => {
-    expect(getVolumeWhy('chest', 10, 'optimal', resolved, 'adapted')).toMatch(/Targets adjust over time as your body responds to training\.$/);
+    expect(getVolumeWhy('chest', 10, 'optimal', resolved, 'adapted')).toMatch(/adjusted from how your earlier blocks went\.$/);
     expect(getVolumeWhy('chest', 10, 'optimal', resolved, 'manual')).toMatch(/your own volume targets, exactly as you set them\.$/);
     expect(getVolumeWhy('chest', 10, 'optimal', resolved, 'research')).toMatch(/research-based starting points\.$/);
     // Unknown provenance may never claim adaptation.

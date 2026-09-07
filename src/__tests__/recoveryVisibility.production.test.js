@@ -175,7 +175,7 @@ describe('CHAIN A + B: THE REVIEW', () => {
     // The forbidden pair the amendment names: Home saying one thing while
     // another surface says "Week 4, hard progression" or "your recovery week".
     expect(reviewRecoveryLine(ADAPTIVE))
-      .toBe('Training is being held back at the moment while your recovery catches up. Your recovery week still comes at the end of the block as planned.');
+      .toBe('Training is being held back for now because your recent recovery has been harder. Your recovery week still comes at the end of the block as planned.');
     expect(reviewRecoveryLine(ADAPTIVE)).not.toMatch(/you are in your recovery week/i);
     expect(reviewRecoveryLine(PLANNED)).toMatch(/You are in your recovery week/);
   });
