@@ -39,6 +39,7 @@ import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import GymPicker from '../components/community/GymPicker';
+import PlacePicker from '../components/community/PlacePicker';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
@@ -49,7 +50,7 @@ import { get as getGym, setGyms, venueLine } from '../lib/gyms';
 import {
   upsertProfile, leaveCommunity, COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS,
   COMMUNITY_SETTINGS, MAX_STYLES_PER_PROFILE, DISPLAY_NAME_MAX, BIO_MAX,
-  AREA_LABEL_MAX,
+  setPlace,
 } from '../lib/community';
 
 const MAX_OTHER_GYMS = 3;
@@ -75,7 +76,16 @@ export default function CommunityEditProfileScreen({ navigation }) {
   const [styleKeys, setStyleKeys] = useState([]);
   const [goal, setGoal] = useState(null);
   const [setting, setSetting] = useState(null);
-  const [area, setArea] = useState('');
+  // 30-IMPLEMENTATION.md 1.1 B / 1.2: the old "Area" free-text box is
+  // replaced by a place PICKER, resolved server-side from text (never a
+  // device coordinate). `placeLabel` is what PlacePicker shows;
+  // `placeDirty`/`placeQuery` track whether the person changed it THIS
+  // session, so Save only calls `setPlace` when there is actually a
+  // change to make (its own RPC, same shape as `setGyms` below rather
+  // than a field on `upsertProfile`).
+  const [placeLabel, setPlaceLabel] = useState(null);
+  const [placeDirty, setPlaceDirty] = useState(false);
+  const [placeQuery, setPlaceQuery] = useState('');
   // GD-14: the free-text gym label is replaced by a picker over the
   // directory. `primaryGym`/`otherGyms` hold the venue objects the picker
   // returns (at least {id, display_name}); a LEGACY profile (gym_key not
@@ -101,7 +111,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
     setStyleKeys(Array.isArray(profile.styles) ? profile.styles : []);
     setGoal(profile.goal ?? null);
     setSetting(profile.setting ?? null);
-    setArea(profile.area_label ?? '');
+    setPlaceLabel(profile.place_label ?? profile.area_label ?? null);
     if (profile.gym_id) {
       setPrimaryGym({ id: profile.gym_id, display_name: profile.gym_label ?? '' });
       setLegacyGymLabel(null);
@@ -128,6 +138,25 @@ export default function CommunityEditProfileScreen({ navigation }) {
     return () => { alive = false; };
   }, [ready, profile]);
 
+  // The prefill above only carries `{id, display_name}` for the PRIMARY
+  // gym (the profile's own stored shape has no town); PlacePicker's "Use
+  // my gym's town" shortcut (30-IMPLEMENTATION.md 1.2) needs one. A
+  // freshly picked gym (GymPicker's own `onSelect`) already carries the
+  // full venue with a `town` key (string or null, never absent), so the
+  // guard below only ever runs once, for a gym that came from the
+  // profile itself, and best effort: a failed read simply leaves the
+  // shortcut absent rather than failing the whole screen.
+  useEffect(() => {
+    if (!ready || !primaryGym?.id || primaryGym.town !== undefined) return undefined;
+    let alive = true;
+    getGym(primaryGym.id).then((full) => {
+      if (alive && full) {
+        setPrimaryGym((prev) => (prev?.id === full.id ? { ...prev, town: full.town } : prev));
+      }
+    }).catch(() => { /* the shortcut simply stays absent */ });
+    return () => { alive = false; };
+  }, [ready, primaryGym]);
+
   function removeOtherGym(id) {
     setOtherGyms((prev) => prev.filter((g) => g.id !== id));
   }
@@ -151,12 +180,18 @@ export default function CommunityEditProfileScreen({ navigation }) {
         styles: styleKeys,
         goal,
         setting,
-        area_label: area.trim() || null,
         visibility,
       });
       // GD-14: the gym is saved through community_set_gyms, not the old
       // area/label gym field above.
       await setGyms(primaryGym?.id ?? null, otherGyms.map((g) => g.id));
+      // 30-IMPLEMENTATION.md 1.1 B: the place is its own RPC too, and it
+      // already mirrors onto area_label/area_key server-side, so
+      // upsertProfile above never carries area_label any more. Only
+      // called when the person actually changed it this session.
+      if (placeDirty) {
+        await setPlace(placeQuery);
+      }
       await refresh(true);
       toast.show('Profile saved');
       navigation.goBack();
@@ -166,8 +201,8 @@ export default function CommunityEditProfileScreen({ navigation }) {
       setBusy(false);
     }
   }, [
-    busy, displayName, bio, preset, styleKeys, goal, setting, area, visibility,
-    primaryGym, otherGyms, refresh, toast, navigation,
+    busy, displayName, bio, preset, styleKeys, goal, setting, visibility,
+    primaryGym, otherGyms, placeDirty, placeQuery, refresh, toast, navigation,
   ]);
 
   function confirmLeave() {
@@ -284,13 +319,18 @@ export default function CommunityEditProfileScreen({ navigation }) {
           </View>
         </View>
 
-        <TextField
-          label="Area"
-          value={area}
-          onChangeText={(v) => setArea(v.slice(0, AREA_LABEL_MAX))}
-          size="sm"
-          accessibilityLabel="Area"
-        />
+        <View style={styles.field}>
+          <SectionLabel>Place</SectionLabel>
+          <PlacePicker
+            label={placeLabel}
+            gymTown={primaryGym?.town ?? null}
+            onChange={(place) => {
+              setPlaceLabel(place?.label ?? null);
+              setPlaceQuery(place ? place.label : '');
+              setPlaceDirty(true);
+            }}
+          />
+        </View>
 
         <View style={styles.field}>
           <SectionLabel>Trains at</SectionLabel>

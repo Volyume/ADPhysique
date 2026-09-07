@@ -170,6 +170,21 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
+describe('the header prop', () => {
+  test('off by default: no "Where do you train?" text', () => {
+    const tree = render({});
+    expect(texts(tree)).not.toContain('Where do you train?');
+    act(() => { tree.unmount(); });
+  });
+
+  test('when true, shows the header and sub line', () => {
+    const tree = render({ header: true });
+    expect(texts(tree)).toContain('Where do you train?');
+    expect(texts(tree)).toContain('Your gym helps people at the same gym find you. You choose what is shown.');
+    act(() => { tree.unmount(); });
+  });
+});
+
 describe('the debounce', () => {
   test('a query under two characters never reaches the network', async () => {
     const tree = render({});

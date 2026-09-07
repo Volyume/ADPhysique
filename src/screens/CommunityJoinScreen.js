@@ -33,6 +33,7 @@ import {
   View, Text, StyleSheet, ScrollView, Pressable, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -45,7 +46,7 @@ import GymPicker from '../components/community/GymPicker';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
+import { colors, spacing, type, iconSize, withAlpha, alpha } from '../styles/theme';
 import { AVATAR_PRESETS } from '../lib/profileAvatarPresets';
 import { setGyms, venueLine } from '../lib/gyms';
 import {
@@ -59,6 +60,11 @@ import { bandRows, NOT_ENOUGH_LINE, NOTHING_SHARED_LINE } from './CommunityTrain
 // Same debounce the food search uses, for the same reason: a live check
 // per keystroke is a request per keystroke.
 const HANDLE_DEBOUNCE_MS = 250;
+
+// 30-IMPLEMENTATION.md 1.2: "Add another gym you train at" (up to three,
+// same finder as the main gym), the same cap CommunityEditProfileScreen
+// uses for the identical field.
+const MAX_OTHER_GYMS = 3;
 
 const RULES = [
   'Training talk only.',
@@ -90,13 +96,17 @@ export default function CommunityJoinScreen({ navigation, route }) {
   const [displayName, setDisplayName] = useState('');
   const [preset, setPreset] = useState(AVATAR_PRESETS[0].key);
   const [visibility, setVisibility] = useState('public');
-  // The gym picker (gym database blueprint 20-BLUEPRINT.md, GD-14):
-  // optional here, never a blocker on creating the profile. `editingGym`
-  // starts true (there is nothing selected yet at join time) and flips
-  // to a summary row + "Change" once a venue is picked, same pattern as
-  // the profile editor.
+  // The gym finder (gym database blueprint 20-BLUEPRINT.md, GD-14;
+  // 30-IMPLEMENTATION.md 1.2): optional here, never a blocker on creating
+  // the profile. `gymStep` starts 'picking' (nothing chosen yet at join
+  // time) and moves to 'picked' (summary row + Change) once a venue is
+  // selected, or 'skipped' on an explicit "Not now" - distinct from
+  // simply never having opened the finder, so the copy can say so rather
+  // than looking like an unfinished step.
   const [primaryGym, setPrimaryGym] = useState(null);
-  const [editingGym, setEditingGym] = useState(true);
+  const [gymStep, setGymStep] = useState('picking');
+  const [otherGyms, setOtherGyms] = useState([]);
+  const [addingOtherGym, setAddingOtherGym] = useState(false);
   // 'idle' | 'invalid' | 'checking' | 'available' | 'taken' | 'unknown'
   // 'unknown' is the check that could not RUN (offline, or a read that did
   // not answer). It is not a refusal: Create stays available so `create()`
@@ -217,9 +227,10 @@ export default function CommunityJoinScreen({ navigation, route }) {
       syncTrainingProfile(uid, { force: true }).catch(() => { /* best effort */ });
       // Optional (GD-14), and best effort the same way: the profile itself
       // is already created, and a gym can always be added later from the
-      // profile editor.
+      // profile editor. The profile's place is populated server-side from
+      // the main gym's town the moment community_set_gyms lands (1.1 B).
       if (primaryGym?.id) {
-        setGyms(primaryGym.id, []).catch(() => { /* can be added later */ });
+        setGyms(primaryGym.id, otherGyms.map((g) => g.id)).catch(() => { /* can be added later */ });
       }
       await refresh(true);
       toast.show('Your profile is live');
@@ -232,7 +243,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
     }
   }, [
     canCreate, handle, displayName, preset, visibility, next, navigation, refresh, toast,
-    showProgrammes, uid, primaryGym,
+    showProgrammes, uid, primaryGym, otherGyms,
   ]);
 
   return (
@@ -285,33 +296,103 @@ export default function CommunityJoinScreen({ navigation, route }) {
         </View>
 
         <View style={styles.field}>
-          <SectionLabel>Trains at (optional)</SectionLabel>
-          {editingGym ? (
-            <GymPicker
-              navigation={navigation}
-              onSelect={(venue) => { setPrimaryGym(venue); setEditingGym(false); }}
-            />
-          ) : (
-            <Card style={styles.gymRow}>
-              <Text
-                style={[styles.tpLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary, flex: 1 }]}
-                numberOfLines={1}
-              >
-                {venueLine(primaryGym).primary}
+          {gymStep === 'picking' ? (
+            <>
+              <GymPicker
+                navigation={navigation}
+                header
+                onSelect={(venue) => { setPrimaryGym(venue); setGymStep('picked'); }}
+              />
+              <Button
+                variant="tertiary"
+                size="sm"
+                fullWidth={false}
+                title="Not now"
+                onPress={() => setGymStep('skipped')}
+                accessibilityLabel="Skip choosing a gym for now"
+              />
+            </>
+          ) : gymStep === 'skipped' ? (
+            <>
+              <SectionLabel>Where do you train?</SectionLabel>
+              <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+                Not chosen yet. You can add this any time from Edit profile.
               </Text>
               <Button
                 variant="tertiary"
                 size="sm"
                 fullWidth={false}
-                title="Change"
-                onPress={() => setEditingGym(true)}
-                accessibilityLabel="Change gym"
+                title="Choose a gym"
+                onPress={() => setGymStep('picking')}
+                accessibilityLabel="Choose a gym"
               />
-            </Card>
+            </>
+          ) : (
+            <>
+              <SectionLabel>Where do you train?</SectionLabel>
+              <Card style={styles.gymRow}>
+                <Text
+                  style={[styles.tpLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary, flex: 1 }]}
+                  numberOfLines={1}
+                >
+                  {venueLine(primaryGym).primary}
+                </Text>
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  fullWidth={false}
+                  title="Change"
+                  onPress={() => setGymStep('picking')}
+                  accessibilityLabel="Change gym"
+                />
+              </Card>
+              <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+                Only the gym you choose. Never your location. Can be added later from Edit profile.
+              </Text>
+
+              <SectionLabel>Other gyms</SectionLabel>
+              <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+                {`Up to ${MAX_OTHER_GYMS} more gyms you train at.`}
+              </Text>
+              {otherGyms.map((venue) => (
+                <Card key={venue.id} style={styles.gymRow}>
+                  <Text
+                    style={[styles.tpLabel, { ...t.type.body, color: t.colors.textPrimary, flex: 1 }]}
+                    numberOfLines={1}
+                  >
+                    {venueLine(venue).primary}
+                  </Text>
+                  <Pressable
+                    onPress={() => setOtherGyms((prev) => prev.filter((g) => g.id !== venue.id))}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${venueLine(venue).primary}`}
+                  >
+                    <Ionicons name="close" size={iconSize.sm} color={t.colors.textMuted} />
+                  </Pressable>
+                </Card>
+              ))}
+              {otherGyms.length < MAX_OTHER_GYMS ? (
+                addingOtherGym ? (
+                  <GymPicker
+                    navigation={navigation}
+                    onSelect={(venue) => {
+                      setOtherGyms((prev) => (prev.some((g) => g.id === venue.id) ? prev : [...prev, venue]));
+                      setAddingOtherGym(false);
+                    }}
+                  />
+                ) : (
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    fullWidth={false}
+                    title="Add another gym you train at"
+                    onPress={() => setAddingOtherGym(true)}
+                    accessibilityLabel="Add another gym you train at"
+                  />
+                )
+              ) : null}
+            </>
           )}
-          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
-            Only the gym you choose. Never your location. Can be added later from Edit profile.
-          </Text>
         </View>
 
         <View style={styles.field}>

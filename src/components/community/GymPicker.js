@@ -47,6 +47,7 @@ import SearchBar from '../SearchBar';
 import Chip from '../Chip';
 import Button from '../Button';
 import EmptyState from '../EmptyState';
+import SectionLabel from '../SectionLabel';
 import GymRow from './GymRow';
 import useTheme from '../../hooks/useTheme';
 import { spacing, type } from '../../styles/theme';
@@ -207,9 +208,10 @@ export default function GymPicker({
     <View style={styles.wrap}>
       {header ? (
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
-            Where do you train?
-          </Text>
+          {/* V19: section titles inside Community content stay
+              SectionLabel, never h1/h2/h3 - "Where do you train?" reads
+              as a field-group title, not a hero. */}
+          <SectionLabel>Where do you train?</SectionLabel>
           <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
             Your gym helps people at the same gym find you. You choose what is shown.
           </Text>
@@ -321,7 +323,6 @@ export default function GymPicker({
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm },
   header: { gap: spacing.xxs },
-  headerTitle: { ...type.h3 },
   list: { minHeight: 1 },
   error: { ...type.bodySm },
   hint: { ...type.caption },

@@ -23,6 +23,22 @@ jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('../../components/BackHeader', () => () => null);
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 
+// 30-IMPLEMENTATION.md 1.2: GymPicker (rebuilt as the finder) needs a
+// controllable `search` to exercise the main + other gyms flow below;
+// everything else (rankVenues, milesToMetres, isPostcodeLike,
+// recognisePostcode, setGyms) stays real/faked exactly as it already
+// was for the rest of this suite's unmocked gym field.
+jest.mock('../../lib/gyms', () => {
+  const actual = jest.requireActual('../../lib/gyms');
+  return {
+    ...actual, search: jest.fn(), near: jest.fn(() => Promise.resolve({ venues: [], truncated: false })), setGyms: jest.fn(() => Promise.resolve({})),
+  };
+});
+jest.mock('../../lib/deviceLocation', () => ({
+  isAvailable: jest.fn(() => false),
+  getApproximatePosition: jest.fn(),
+}));
+
 const mockToastShow = jest.fn();
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 
@@ -78,6 +94,7 @@ jest.mock('../../lib/community', () => ({
 import {
   checkHandle, upsertProfile, COMMUNITY_RULES_VERSION, syncTrainingProfile, setShowProgrammes,
 } from '../../lib/community';
+import { search as searchGyms, setGyms } from '../../lib/gyms';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityJoinScreen from '../CommunityJoinScreen';
 
@@ -125,6 +142,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   checkHandle.mockResolvedValue(true);
   upsertProfile.mockResolvedValue({ user_id: 'u1', handle: 'rowan_lifts' });
+  searchGyms.mockResolvedValue({ venues: [], recognisedPostcode: null, centroid: null });
+  setGyms.mockResolvedValue({});
   useCommunityMe.mockReturnValue({
     me: { profile: null, is_minor: false }, loading: false, error: null, refresh: jest.fn(),
   });
@@ -327,5 +346,89 @@ describe('when the handle check cannot run', () => {
 
     expect(flattenText(tree.toJSON())).toContain('Available');
     expect(flattenText(tree.toJSON())).not.toContain('Could not check that handle');
+  });
+});
+
+// ─── 30-IMPLEMENTATION.md 1.2: the gym step (after identity, before
+// privacy) - main gym via the finder, up to three others, "Not now"
+// skips with no penalty. ─────────────────────────────────────────────
+describe('the gym step', () => {
+  const MAIN = {
+    id: 'g1', display_name: 'PureGym Motherwell', name: 'PureGym Motherwell',
+    brand: 'PureGym', town: 'Motherwell', outward: 'ML1', distance_m: null,
+    status: 'open', verification_status: 'verified',
+  };
+  const OTHER = {
+    id: 'g2', display_name: 'The Gym Leeds', name: 'The Gym Leeds',
+    brand: 'The Gym Group', town: 'Leeds', outward: 'LS1', distance_m: null,
+    status: 'open', verification_status: 'verified',
+  };
+
+  function flatLists(tree) {
+    return tree.root.findAll((n) => n.type === 'FlatList');
+  }
+
+  function selectFromList(list, venue) {
+    let row = null;
+    act(() => { row = create(list.props.renderItem({ item: venue })); });
+    const card = row.root.findAll(
+      (n) => n.props?.accessibilityLabel === venue.display_name && typeof n.props.onPress === 'function',
+    )[0];
+    act(() => { card.props.onPress(); });
+    act(() => { row.unmount(); });
+  }
+
+  async function typeGymQuery(tree, value) {
+    const input = tree.root.findByProps({ accessibilityLabel: 'Gym, town or postcode' });
+    await act(async () => { input.props.onChangeText(value); });
+    await flush();
+  }
+
+  test('"Not now" skips with no penalty: Create still works and setGyms is never called', async () => {
+    const { tree } = await mount();
+
+    await act(async () => { button(tree, 'Skip choosing a gym for now').props.onPress(); });
+    expect(flattenText(tree.toJSON()))
+      .toContain('Not chosen yet. You can add this any time from Edit profile.');
+
+    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledTimes(1);
+    expect(setGyms).not.toHaveBeenCalled();
+  });
+
+  test('a main gym plus one other gym both send on Create', async () => {
+    searchGyms.mockResolvedValue({ venues: [MAIN], recognisedPostcode: null, centroid: null });
+    const { tree } = await mount();
+
+    await typeGymQuery(tree, 'PureGym');
+    selectFromList(flatLists(tree)[0], MAIN);
+    expect(flattenText(tree.toJSON())).toContain('PureGym Motherwell');
+
+    await act(async () => { button(tree, 'Add another gym you train at').props.onPress(); });
+    searchGyms.mockResolvedValue({ venues: [OTHER], recognisedPostcode: null, centroid: null });
+    await typeGymQuery(tree, 'The Gym');
+    selectFromList(flatLists(tree)[0], OTHER);
+    expect(flattenText(tree.toJSON())).toContain('The Gym Leeds');
+
+    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(setGyms).toHaveBeenCalledWith('g1', ['g2']);
+  });
+
+  test('a minor sees the identical gym step (no special-casing)', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: null, is_minor: true }, loading: false, error: null, refresh: jest.fn(),
+    });
+    const { tree } = await mount();
+
+    expect(button(tree, 'Skip choosing a gym for now')).toBeDefined();
+    expect(tree.root.findByProps({ accessibilityLabel: 'Gym, town or postcode' })).toBeDefined();
   });
 });

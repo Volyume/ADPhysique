@@ -298,3 +298,35 @@ alone and not matched to any feed row keeps `status` but gets
 reason `not_in_operator_feed`; search ranks it below feed-confirmed
 branches of the same brand and the gym page shows no "confirmed by the
 operator" line. The audit reports the count per operator.
+
+## GD-27 sportscotland register: layers, school sites, corroboration (lead ruling, 2026-09-07)
+
+Evidence: `docs/community-product-audit-2026-09-07/11-sportscotland-register.md`
+(573 fitness-suite sites after GD-04 collapse; 414 absent from the
+catalogue, 171 of them school-housed; halls and pools carry no
+ownership or access field; `sh_date_uploaded` is one constant).
+
+- **Layers.** Fitness suites are canonical gym-type sites (GD-02's
+  reserved Scottish slot). Sports halls and pools are corroboration for
+  a leisure-centre site only; they never create a venue on their own.
+- **School-housed fitness suites.** The register carries no access flag,
+  so GD-03's "school-only is excluded" cannot be applied by evidence.
+  Ruling on the one criterion (best for the person searching): a
+  school-housed fitness suite enters as `other_fitness`, `verification_status`
+  unconfirmed, so it never appears in core results, never pollutes a
+  town's list, and is still selectable under "Other fitness venues" by
+  someone who genuinely trains there (community-use schools are common
+  in Scotland) and can be confirmed by them under GD-11. A school site
+  whose name carries a public token ("Community", "Leisure", "Sports
+  Centre") or that is corroborated by a second public source is
+  `leisure_centre`.
+- **Hotels** map to `hotel_gym` (GD-03). The visible test record
+  ("TESTING") and any site with no postcode and no coordinates are
+  dropped at normalisation.
+- **Register-only sites** (no other source) are `open` with
+  `operator_unconfirmed` semantics unchanged: sportscotland is a public
+  register and counts as a canonical source, so they are core venues,
+  not pending.
+- **Access.** The Spatial Hub key is a credential: read from the
+  environment (`SPF_AUTHKEY`) by the adapter at run time, never written
+  to the repo, never logged.

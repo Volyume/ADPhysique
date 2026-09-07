@@ -218,6 +218,60 @@ contract must not delegate its authority to a superseded audit.
   future apply: the acceptance check at the end of the file (7 tables,
   `rls_enabled = t` with the disposition-exact `policy_count`; the 2
   columns; the function privilege table).
+- **163 WRITTEN, NOT APPLIED (Community place + finder; founder gate).**
+  `migrate_163_community_place_and_finder.sql` (community product audit
+  2026-09-07, `docs/community-product-audit-2026-09-07/
+  30-IMPLEMENTATION.md` section 1.1, `20-JUDGEMENT.md` section 7). Five
+  additive `community_profiles` columns (`place_key`, `place_label`,
+  `place_lat`, `place_lng`, `place_kind`, capped to `('outward','town')`)
+  plus an index. Two new SECURITY DEFINER RPCs granted to `authenticated`
+  only: `gyms_place_centroid` (resolves a postcode or town to its public
+  centroid without searching) and `community_set_place` (stores a chosen
+  place, always at outward/town coarseness, never a device coordinate).
+  `gyms_search` and `community_find_people` are DROPped and re-created
+  with a new trailing parameter each (`_radius_m`, `_filters`) -- a
+  different argument count is a different signature to Postgres, so the
+  DROP-by-name pattern already used in `migrate_114_food_entry_weight_
+  state.sql`/`migrate_116_food_library_pull_micros.sql` is reused rather
+  than risking a stale duplicate overload. `gyms_search` also gains a
+  server-resolved postcode centroid + radius union, an
+  `operator_unconfirmed` field/tie-break, region/local-authority/country
+  fields, and (`09-gym-journey-tests.md` Finding S1) a leftover-token
+  fuzzy sort key so a brand+town typo is not silently excluded by the
+  40-candidate cap. `gyms_near` gains the same `operator_unconfirmed`
+  tie-break, an 80,468 m (50 mile) radius clamp and a `truncated` flag.
+  `gyms_get`/`gyms_in_place` gain region/local-authority/country.
+  `gyms_submit` is re-issued with a stripped-Jaccard duplicate check
+  (Finding D2, measured 53.0%/94.7% miss rates on the real catalogue for
+  the two thresholds) that strips the candidate's own brand-alias words,
+  the outward code and the literal "uk" from both sides before comparing,
+  closing the tokenizer asymmetry between the pipeline's `tokens` column
+  and a fresh submission's tokens. `community_set_gyms` and
+  `community_upsert_profile` are re-issued to backfill a missing place
+  from the caller's main gym's town (never overwriting an explicit
+  choice). `_community_profile_card` is re-issued (adds `place_label`,
+  `age_band`, `can_connect`). `community_find_people` gains combinable
+  hard filters (scope, place band, partner-only, days, time bands,
+  styles, goal, experience band, age band), a keyset cursor over
+  (score, last_active_at, user_id), a 1,000-row scan cap with
+  `count`/`count_truncated`, muted/connect-from exclusions and the SD-28
+  fallback for a thin first page. `community_suggested_people` gains the
+  same muted exclusion. `community_report` accepts
+  `target_kind = 'message'` (the sender is the owner; either party to the
+  conversation may report; a closed conversation's messages stay
+  reportable). `delete_user_data()` needs no re-issue -- every new column
+  lives on `community_profiles`, already deleted whole-row, and no new
+  table is created. DEPENDS ON 160, 161 and 162. Rollback: drop the five
+  columns and the new/re-issued functions this file names (see the file
+  header), then re-apply 161 and 162 to restore their pre-163 function
+  bodies (CREATE OR REPLACE means the LATEST definition wins until a
+  later file replaces it again -- there is no automatic revert). Not yet
+  verified against a live database in this lane (no Supabase access from
+  this build lane); verification after any future apply is the acceptance
+  check at the end of the file (the 5 columns; the function privilege
+  table for every `gyms_*`/`_gyms_*` name and the re-issued
+  `community_*`/`_community_*` names) plus the guard tests in
+  `src/__tests__/migrate163.rpcOnly.guard.test.js`.
 - **132-136 APPLIED 2026-08-12** (founder order, Claude-run, project
   `sujrylzzxcqxxfygptns`, eu-west-1). Every object verified read-only
   after the apply:
@@ -565,6 +619,7 @@ themselves; add a row here whenever a migration is added.
 | 160 | `migrate_160_community.sql` | Community (Social / Community / Discovery campaign, `docs/social-discovery-2026-09-06/30-BLUEPRINT.md` section 3). Fourteen `community_*` tables (profiles, follows, blocks, mutes, programmes + uses, posts, reactions, comments, reports, moderators, moderation log, activity, rate events), all RLS-enabled with NO anon/authenticated policy and ALL privileges revoked from both; 41 SECURITY DEFINER RPCs pinned to `search_path = public, pg_temp` as the only ingress and egress (SD-14). Widens the `consent_log` CHECK (`community_visibility`) and the `notification_preferences` category CHECK (`community_follow`, `community_activity`); seeds `community_moderators`; re-issues `delete_user_data()` in full with two-sided Community deletes. Rollback: drop the fourteen tables and the `community_*` / `_community_*` functions, re-apply migrate_154, re-narrow both CHECKs (see the file header). | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase.** |
 | 161 | `migrate_161_community_connections.sql` | Community connections, messaging, the shared training profile and the discovery surfaces (Discovery campaign, `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md` section 11; SD-20 to SD-32). Thirteen additive `community_profiles` columns (`connect_from`, `open_to_partner`, `partner_prefs`, `show_programmes`, `connection_count`, eight `tp_*` bands); three new tables (`community_connections`, `community_conversations`, `community_messages`), all RLS-enabled with NO anon/authenticated policy and ALL privileges revoked from both; 23 SECURITY DEFINER RPCs pinned to `search_path = public, pg_temp` as the only ingress and egress (SD-14). Widens the `community_activity.kind` CHECK (`connect_request`, `connect_accepted`), the `community_reports.target_kind` CHECK (`message`) and the `notification_preferences.category` CHECK (`community_message`). Moves the Community rules to version 2 with a re-consent path and the new `rules_outdated` refusal. Re-issues `_community_profile_card`, `community_get_me`, `community_upsert_profile`, `community_block`, `community_unfollow`, `community_leave` and `delete_user_data()` in full, the last with two-sided deletes for the three new tables. DEPENDS ON 160. Rollback: drop the three tables and the thirteen columns, drop the `community_*` / `_community_*` functions this file creates, re-apply migrate_160, re-narrow the three CHECKs (see the file header). | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase.** |
 | 162 | `migrate_162_gym_directory.sql` | The UK gym master database (founder brief 2026-09-06, `docs/gym-database-2026-09-06/20-BLUEPRINT.md`, GD-01 to GD-17), schema only, no venue rows. Seven new tables: `gym_brands`/`gym_venues`/`gym_postcode_sectors` (`global_read_only`, RLS on, one SELECT policy for `authenticated`) and `gym_venue_sources`/`gym_venue_history`/`gym_submissions`/`gym_reports` (`rpc_only`, RLS on, no policy, all privileges revoked from anon/authenticated). Two additive `community_profiles` columns (`gym_id`, `other_gym_ids`, capped at 3) plus a trigger deriving `gym_key`/`gym_label` from `gym_id`. Eleven new SECURITY DEFINER RPCs pinned to `search_path = public, pg_temp`, granted to `authenticated` only: `gyms_search`, `gyms_near`, `gyms_in_place`, `gyms_get`, `gyms_suggest`, `gyms_submit`, `gyms_confirm_submission`, `gyms_report`, `gyms_review_submission`, `gyms_review_report`, `community_set_gyms`. Re-issues `community_gym_summary` (resolves `gym:<uuid>` keys from `gym_venues`, keeps the legacy free-text path), `community_gym_suggest` (delegates to `gyms_suggest`, same signature) and `delete_user_data()` in full (anonymises `gym_submissions.submitter_id`/`gym_reports.reporter_id`). DEPENDS ON 160 and 161. Rollback: drop the seven tables and the two columns, drop the `gyms_*`/`_gyms_*` functions and `_community_gym_key_sync`, re-apply migrate_161 to restore `community_gym_summary`/`community_gym_suggest`/`delete_user_data()` to their 161 bodies (see the file header). | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase.** |
+| 163 | `migrate_163_community_place_and_finder.sql` | Community place + finder (community product audit 2026-09-07, `docs/community-product-audit-2026-09-07/30-IMPLEMENTATION.md` section 1.1). Five additive `community_profiles` columns (`place_key`, `place_label`, `place_lat`, `place_lng`, `place_kind`, capped `('outward','town')`) plus an index. Two new SECURITY DEFINER RPCs granted to `authenticated` only: `gyms_place_centroid`, `community_set_place`. `gyms_search`/`community_find_people` DROPped-and-recreated with a new trailing parameter each (`_radius_m`, `_filters`); `gyms_search` also gains a postcode centroid + radius union, `operator_unconfirmed`, region/local-authority/country and a Finding-S1 fuzzy sort key; `gyms_near` gains `operator_unconfirmed`, an 80,468 m radius clamp and `truncated`; `gyms_get`/`gyms_in_place` gain region/local-authority/country; `gyms_submit` gets a stripped-Jaccard duplicate check (Finding D2). `community_set_gyms`/`community_upsert_profile` re-issued to backfill place from the main gym's town; `_community_profile_card` re-issued (`place_label`, `age_band`, `can_connect`); `community_find_people` gains combinable `_filters`, keyset paging, a 1,000-row scan cap and the SD-28 fallback; `community_suggested_people` re-issued for the mute exclusion; `community_report` accepts `target_kind = 'message'`. DEPENDS ON 160, 161 and 162. Rollback: drop the five columns and the new/re-issued functions, re-apply 161 and 162 to restore their pre-163 bodies (see the file header). | **WRITTEN, NOT APPLIED - awaiting the founder's exact phrase.** |
 
 > Ledger gap noted 2026-08-20: `migrate_144_apple_review_password_reset.sql`
 > exists in this folder but has no row in this table (it predates CC26 and
