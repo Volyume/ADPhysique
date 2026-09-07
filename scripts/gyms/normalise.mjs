@@ -68,7 +68,15 @@ const OUT_FILE = path.join(OUT_DIR, 'normalised.v1.jsonl');
 // scratch file, same as OUT_FILE).
 const NAME_REJECTIONS_FILE = path.join(OUT_DIR, 'name-rejections.v1.json');
 
-const PRIMARY_SOURCES = ['active-places', 'active-places-ni', 'datamap-wales', 'operators', 'overture', 'voa'];
+const PRIMARY_SOURCES = [
+  'active-places',
+  'active-places-ni',
+  'datamap-wales',
+  'sportscotland',
+  'operators',
+  'overture',
+  'voa',
+];
 
 function log(msg) {
   console.log(`[normalise] ${msg}`);

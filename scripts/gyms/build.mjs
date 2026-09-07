@@ -538,6 +538,14 @@ Licence: Open Government Licence v3.0.
 Attribution: Welsh Government / DataMapWales, under the OGL
 (https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/).
 
+## sportscotland — Sports Facilities (Spatial Hub)
+Licence: Open Government Licence v3.0.
+Attribution: sportscotland, via Spatial Hub (data.spatialhub.scot), under
+the OGL (https://www.nationalarchives.gov.uk/doc/open-government-licence/
+version/3/). Access requires a free Spatial Hub account/authkey
+(\`SPF_AUTHKEY\`, read from the environment only — never written to the
+repo, a fixture or a log).
+
 ## ONS Postcode Directory (ONSPD)
 Licence: Open Government Licence.
 Attribution: Contains OS data © Crown copyright and database right;
