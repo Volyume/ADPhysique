@@ -2354,7 +2354,10 @@ conditional on the decision; recorded here so they are visible, not lost._
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
 - **GYM DIRECTORY (2026-09-06) - three unlocks, none blocking the free
-  stack.** (1) Register a free sportscotland Spatial Hub account
+  stack.** Founder 2026-09-07: (1) registering the sportscotland account now
+  (instructions delivered in chat; send the Fitness Suites download or the
+  WFS link and token); (2) DuckDB APPROVED as a pipeline-only binary in the
+  scratch space (never the app or package.json); (3) not raised. (1) Register a free sportscotland Spatial Hub account
   (data.spatialhub.scot) so Scotland's Sports Facilities register can be
   pulled. (2) Say yes to a pipeline-only DuckDB command-line binary (never
   in the app) so Foursquare Open Source Places and Overture Places, both
