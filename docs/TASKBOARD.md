@@ -84,7 +84,7 @@ functions.
 
 ---
 
-## COMMUNITY BOARD 100%-FAILURE DEFECT (2026-09-07, found immediately after 168) — FIX WRITTEN, NOT YET APPLIED
+## COMMUNITY BOARD 100%-FAILURE DEFECT (2026-09-07, found immediately after 168) — RESOLVED, migrate_169 APPLIED and VERIFIED
 
 Founder device report (screenshot): opening any consistency board ("My
 gym", 5 tabs total) shows "Could not load this board" every time.
@@ -107,12 +107,20 @@ every OTHER Community function using this same keyset-paging idiom
 (migrate_160-164) correctly writes `SELECT u.x`/`SELECT t.x` — this was a
 one-off copy-paste slip isolated to `community_board`.
 
-FIX WRITTEN: `supabase/migrate_169_community_board_x_alias_fix.sql` —
+FIX: `supabase/migrate_169_community_board_x_alias_fix.sql` —
 `SELECT x.*,` → `SELECT u.x,` in all three CTEs, no other change. Verified
 the corrected pattern runs and produces correct ranking against a
 fabricated `v_items` array before writing the migration. Lint clean (no
-JS changed). STATUS: WRITTEN, NOT YET APPLIED — awaiting the founder's
-exact phrase for this migration specifically.
+JS changed). Merged to main (`1b0fd84`).
+STATUS: APPLIED to production 2026-09-07 (`apply-named-sql.yml` run #10),
+founder phrase given for this migration specifically. VERIFIED, not
+assumed: the live function definition no longer contains `SELECT x.*,`
+and now contains `SELECT u.x,`; Sentry shows the 3 "missing FROM-clause"
+events in the last hour are all from 17:42Z, before this deploy
+(18:03:43Z) — zero new occurrences since. Founder-side: worth a device
+check that "My gym"/"Following"/"Everyone" boards actually load now (I
+can verify the query runs correctly but not the rendered screen from
+here).
 
 ---
 
