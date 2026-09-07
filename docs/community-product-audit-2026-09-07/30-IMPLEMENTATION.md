@@ -270,9 +270,75 @@ CommunityHubScreen.js`, `src/lib/community/feed.js`,
   and four list-header tests that the flash-list mock cannot render.
   Lane scope 31 suites / 1327 green; full repo 1256 suites / 18676
   green at that point; lint clean.
+- **S4 sportscotland adapter (Sonnet; died on the rate limit at its
+  test file, resumed) — landed after lead review (no key anywhere in
+  the tree, grep-verified).** `scripts/gyms/sources/sportscotland.mjs`
+  (three layers, EPSG:4326, provenance manifest, refuses without
+  `SPF_AUTHKEY`), `lib/sportscotlandAuth.js`, `lib/transforms.js`
+  (`transformSportscotlandSite`: GD-04 collapse, GD-27 rules),
+  `normalise.mjs` registration, `build.mjs` attribution template,
+  tests (14 suites / 205 green in `scripts/gyms`). Dry run over the
+  full layers: 2,463 sites, 573 with a fitness suite, 572 emitted (one
+  TESTING record dropped): 158 other_fitness (school-housed), 22
+  leisure_centre by public token, 392 to the classifier (39
+  hotel-named). The pipeline re-run itself is NOT done in this session
+  (raw sources are not in the container; see section 3.4).
 - **Lead slip, corrected:** earlier board commits used `git add -A`
   and swept in-flight lane files into intermediate commits. From here
   files are staged explicitly after review.
 
 ## 3. Verification
 (lint, tests, guards, device checklist; filled at landing)
+
+
+## 3. Closing record (lead, 2026-09-07)
+
+### 3.1 What was implemented
+P0-A place model and Find people filters (163 + S3), P0-B gym finder
+with Use my location, visible bands, Join step and place picker (S2 +
+dependency), P0-C nearby-gym search fixes and add-gym duplicate check
+(163), P0-D message reports with moderator preview (163), P0-E
+mute/connect-from at discovery time (163 + S3), P0-F inert age band
+made real (163 + S3), P0-G reference into an existing conversation
+(S3), P0-H sportscotland as Scotland's canonical source (S4 +
+GD-27), plus the three defects report 09 found (brand-query candidate
+cut, duplicate tokenizer, null-distance ranking). See section 2 for
+files and tests per lane.
+
+### 3.2 What was deliberately rejected
+Recorded in `20-JUDGEMENT.md` section 8: match percentages, live
+presence, precise distance between people, contacts import, groups,
+challenges, leaderboards, media upload (founder decision pending on
+the processor dependency, model in `71-MEDIA-MODEL.md`), Strava and
+wearable integrations, threaded replies, mentions, saves and reposts
+at this density.
+
+### 3.3 Verification
+Settled tree after all four lanes:
+- `npm run lint`: clean (eslint, max-warnings 0, no output).
+- `npx tsc --noEmit`: clean, no output.
+- `npx jest --silent`: Test Suites 1 skipped, 1256 passed, 1256 of
+  1257 total; Tests 16 skipped, 18676 passed, 18692 total.
+- Privacy guard: the location adapter is the only file naming the
+  dependency; forward-only; every discovery file passes the stricter
+  list. Transport guard: every client RPC name exists in 160-163.
+- Security: `community_set_place` stores a place centroid from text
+  only; no device coordinate is ever sent as anything but a search
+  argument; every 163 branch keeps `is_minor = false`; message reports
+  are party-checked. Migration 163 is WRITTEN, NOT APPLIED (founder
+  phrase gate, batch 160 + 161 + 162 + 163 + seed).
+
+### 3.4 What remains genuinely outstanding
+1. Cloud apply: the founder's exact phrase for the batch 160-163 and
+   the gym seed. Until then every Community read fails calm.
+2. Gym pipeline re-run with the sportscotland source and the data
+   items on the board (CA13 3 centroid, Ravenscraig duplicate, pony
+   stud misclass, Fitness First stale rows), reported as a coverage
+   change BEFORE any seed is regenerated; raw sources must be
+   re-acquired in a fresh run (not in this container).
+3. Live authenticated WFS call from the adapter (the lead verified the
+   `authkey` parameter with a live call this session; the adapter's
+   own fetch has not been exercised end to end).
+4. Device walk of the finder and Find people journeys (checklist in
+   chat) from a green build; founder go required for any build.
+5. Founder decision on media (unchanged from SD-29).

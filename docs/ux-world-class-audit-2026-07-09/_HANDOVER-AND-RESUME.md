@@ -16,9 +16,15 @@ filters + fixes). Founder orders in chat: lowest adequate agent tier;
 distance band always visible 5/10/25/50 miles. Founder "yes to all" on
 expo-location (~19.0.8, approximate, explicit tap, never stored) and
 the guard amendment; both applied by the lead. sportscotland WFS access
-delivered (key outside the repo); register analysis `11`, ruling GD-27. NEXT:
-lead-review S1/S2 diffs, dispatch S3, settled-tree run, record section
-2/3 of `30`, merge to main, device checklist in chat.
+delivered (key outside the repo); register analysis `11`, ruling GD-27. All four
+lanes landed after lead review (S3/S4 resumed after the 11:00 UTC rate
+limit). Settled tree: lint clean, tsc clean, 1256 suites / 18676 tests.
+Closing record `30-IMPLEMENTATION.md` section 3. MERGED to main. Founder
+said "run against production" for the migrations (batch 160-163 + gym
+seed + the two Community functions); apply record in `supabase/README`.
+NEXT: pipeline re-run with sportscotland (fresh raw acquisition, ids
+stable by construction), coverage report before any re-seed; device walk
+from a green build.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY VISUAL REFINEMENT (founder prompt 1) ★
 
