@@ -42,7 +42,7 @@ import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
 import {
   getPost, reactToPost, deletePost, listComments, addComment, deleteComment,
-  notifyCommunityEvent, hasProfile,
+  notifyCommunityEvent, hasProfile, connectionState,
 } from '../lib/community';
 
 export const POST_OFFLINE_LINE = 'Volyume could not reach Community just now. Check your connection and try again.';
@@ -122,6 +122,12 @@ export default function CommunityPostScreen({ navigation, route }) {
   const post = data?.post ?? null;
   const author = data?.author ?? null;
   const mine = !!post && post.author_id === user?.id;
+  // "Message @handle" is offered only between connected people (discovery
+  // blueprint section 2: messaging is a consequence of connection, and the
+  // server refuses `not_connected` otherwise). The card carries the
+  // connection state, so the action is never shown to someone it would be
+  // refused for, and never on your own story.
+  const canMessage = !mine && !!author?.user_id && connectionState(author) === 'connected';
 
   async function handleReact(next) {
     if (!post) return;
@@ -228,6 +234,10 @@ export default function CommunityPostScreen({ navigation, route }) {
         myReaction={myReaction}
         onReact={joined ? handleReact : undefined}
         onOpenAuthor={openAuthor}
+        onMessageAuthor={canMessage ? () => navigation.navigate('CommunityConversation', {
+          userId: author.user_id,
+          ref: { kind: 'post', id },
+        }) : undefined}
       />
       <SectionLabel style={styles.commentsLabel}>Comments</SectionLabel>
       {comments.length === 0 ? (

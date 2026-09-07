@@ -163,6 +163,15 @@ const CommunityAdaptScreen = lazyScreen(() => require('../screens/CommunityAdapt
 const CommunityPublishProgrammeScreen = lazyScreen(() => require('../screens/CommunityPublishProgrammeScreen').default);
 const CommunityComposeScreen = lazyScreen(() => require('../screens/CommunityComposeScreen').default);
 const CommunityPostScreen = lazyScreen(() => require('../screens/CommunityPostScreen').default);
+// Discovery, connections and messaging (blueprint
+// `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md` section 10).
+// Same rules as the block above: lazy, pushed into HomeStack, each drawing
+// its own BackHeader.
+const CommunityFindPeopleScreen = lazyScreen(() => require('../screens/CommunityFindPeopleScreen').default);
+const CommunityPeopleListScreen = lazyScreen(() => require('../screens/CommunityPeopleListScreen').default);
+const CommunityTrainingProfileScreen = lazyScreen(() => require('../screens/CommunityTrainingProfileScreen').default);
+const CommunityConversationsScreen = lazyScreen(() => require('../screens/CommunityConversationsScreen').default);
+const CommunityConversationScreen = lazyScreen(() => require('../screens/CommunityConversationScreen').default);
 // Dormant billing surfaces (founder decision: Volyume is fully free, no
 // Free/Pro split, no trial, no paywall). SubscriptionScreen, CascadeGateScreen,
 // ProUpgradeScreen and SubscriptionPolicyScreen remain on disk at
@@ -497,6 +506,16 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="CommunityPublishProgramme" component={CommunityPublishProgrammeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityCompose" component={CommunityComposeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CommunityPost" component={CommunityPostScreen} options={{ headerShown: false }} />
+      {/* Discovery, connections and messaging (discovery blueprint section
+          10). Find people and the scored lists are reached from the hub and
+          the profile; the two message screens are reached from the hub's
+          messages glyph, from a profile or story, and from the `m` deep link
+          on a message push. */}
+      <Stack.Screen name="CommunityFindPeople" component={CommunityFindPeopleScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityPeopleList" component={CommunityPeopleListScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityTrainingProfile" component={CommunityTrainingProfileScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityConversations" component={CommunityConversationsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityConversation" component={CommunityConversationScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -927,6 +946,11 @@ const linking = {
           CommunityProfile: 'u',
           CommunityProgramme: 'p',
           CommunityPost: 's',
+          // The message push hands the OS `volyume://m/?id=<conversation>`
+          // (discovery blueprint section 10). Same query shape as the three
+          // share pages above, so the conversation id arrives as `id`, which
+          // is the param CommunityConversationScreen reads.
+          CommunityConversation: 'm',
         },
       },
       DiaryTab: {

@@ -23,6 +23,12 @@
  *   onPress     open the post
  *   onReact     (next: boolean) => void
  *   onOpenAuthor  open the author's profile
+ *   onMessageAuthor  optional; when given, a quiet "Message" action sits
+ *               beside the comment count. It is offered ONLY to a viewer
+ *               who is already connected to the author (discovery
+ *               blueprint section 2: messaging is a consequence of
+ *               connection), so the card never advertises a route the
+ *               server would refuse.
  */
 
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
@@ -102,7 +108,9 @@ export function bodyForKind(post) {
   }
 }
 
-export default function PostCard({ post, author, myReaction = false, onPress, onReact, onOpenAuthor }) {
+export default function PostCard({
+  post, author, myReaction = false, onPress, onReact, onOpenAuthor, onMessageAuthor,
+}) {
   const t = useTheme();
   const { eyebrow, hero, line } = bodyForKind(post);
   const handle = author?.handle ? `@${author.handle}` : '';
@@ -178,6 +186,18 @@ export default function PostCard({ post, author, myReaction = false, onPress, on
             {String(number(post?.comment_count))}
           </Text>
         </TouchableOpacity>
+        {onMessageAuthor ? (
+          <TouchableOpacity
+            style={styles.action}
+            onPress={onMessageAuthor}
+            hitSlop={hitSlop}
+            accessibilityRole="button"
+            accessibilityLabel={author?.handle ? `Message @${author.handle}` : 'Message this lifter'}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={iconSize.sm} color={t.colors.textSecondary} />
+            <Text style={[styles.actionText, { color: t.colors.textSecondary }]}>Message</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
     </Card>
   );
