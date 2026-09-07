@@ -251,6 +251,25 @@ CommunityHubScreen.js`, `src/lib/community/feed.js`,
   to be a party and names the sender as owner. Weights +2/+1/+1 for
   place reasons confirmed. Lane tests 6 suites / 289 green; full
   `src/__tests__` scope 108 suites green.
+- **S3 Find people filters and fixes (Sonnet; died on the 11:00 UTC
+  rate limit at its last tests, resumed by a second Sonnet lane against
+  the on-disk work) — landed after lead review.** `PeopleFiltersSheet.js`
+  (draft-then-apply; age band section renders only when the caller's
+  own `tp_age_band` is present, which the server nulls for minors and
+  non-sharers), `reasons.js` (four tokens, fixed copy, `same_place`
+  reads the row's own `place_label`), `findPeople.js` (`_filters`
+  passthrough, keyset cursor, fallback rows), `ProfileCard.js` (place
+  and age band chips; `can_connect === false` shows Follow with the
+  refusal line), `TrainingProfileLine.js` + `trainingProfile.js`
+  (shared `previewLine` includes the band), `CommunityTrainingProfileScreen.js`
+  (minor filter matches Join), `CommunityConversationScreen.js`
+  (`refSent` is per mount, never derived from row count),
+  `CommunityHubScreen.js`/`feed.js` (unrendered suggestion fetch
+  removed). The resume lane also fixed a privacy-guard hit (the bare
+  word `age` in two discovery files, renamed to `ageLabel`/`ageBand`)
+  and four list-header tests that the flash-list mock cannot render.
+  Lane scope 31 suites / 1327 green; full repo 1256 suites / 18676
+  green at that point; lint clean.
 - **Lead slip, corrected:** earlier board commits used `git add -A`
   and swept in-flight lane files into intermediate commits. From here
   files are staged explicitly after review.
