@@ -26,6 +26,7 @@ const { sectorCode } = require('./lib/postcode.js');
 const { gridCellKey } = require('./lib/geo.js');
 const { composeBrandBranch } = require('./lib/names.js');
 const { companyNameMatchesVenue } = require('./lib/chMatch.js');
+const { isCompleteAcquisition, markOperatorUnconfirmed } = require('./lib/operatorCoverage.js');
 
 const DEFAULT_RAW_DIR =
   '/tmp/claude-0/-home-user-ADPhysique/8a1da388-bf6f-50f3-8ac9-99853301c7d5/scratchpad/gyms/raw';
@@ -227,8 +228,13 @@ function buildVenueFromCluster(memberKeys, recordsByKey) {
   )[0];
   const nameSourceName = nameSourceMember ? nameSourceMember.name : null;
   const brandAliasTokenSets = brand ? aliasTokenSetsFor(brand.key) : [];
+  // GD-26: a BARE brand name (nameSourceName folds exactly equal to the
+  // brand or one of its aliases, e.g. Active Places/Overture naming a
+  // venue just "Fitness First") is composed as brand + town, not left
+  // bare — composeBrandBranch's own bare-name check does this; `town` is
+  // passed through for that case only.
   const displayName = brand
-    ? composeBrandBranch(nameSourceName || town, brand.name, brandAliasTokenSets)
+    ? composeBrandBranch(nameSourceName || town, brand.name, brandAliasTokenSets, town)
     : nameSourceName || best.name;
 
   const nameTokens = tokenize(displayName);
@@ -273,6 +279,10 @@ function buildVenueFromCluster(memberKeys, recordsByKey) {
     parent_venue_id: null,
     succeeded_by: null,
     verification_status: distinctSources.size > 1 ? 'multi_source' : 'single_source',
+    // GD-26: overwritten to 'operator_unconfirmed' below, after the
+    // Companies House pass, for a venue whose brand's operator feed was
+    // acquired complete but which has no member from that feed.
+    needs_review_reason: null,
     source_count: distinctSources.size,
     low_confidence: members.some((m) => m.low_confidence === true),
     tokens,
@@ -355,6 +365,43 @@ function corroborateWithCompaniesHouse(venues, chRecords) {
   return { corroborated, reviewAdded, dropped, rejectedNameMismatch, reviewEntries };
 }
 
+// GD-26 point 3: read every operators/<slug>/manifest.json under the raw
+// dir (each records found/fetched/failures — docs/gym-database-2026-09-06/
+// 08-acquisition-operators.md) and resolve the complete ones (found > 0,
+// at most 3 failures) to a seed brand key, the same slug->brand resolution
+// transforms.js's transformOperatorBranch and audit.mjs's operator
+// comparison already use. The pure completeness/marking logic lives in
+// lib/operatorCoverage.js; this is the one piece of I/O it needs.
+function loadCompleteOperatorSlugByBrand(rawDir, log) {
+  const map = new Map();
+  const opsDir = path.join(rawDir, 'operators');
+  if (!fs.existsSync(opsDir)) return map;
+  const slugs = fs
+    .readdirSync(opsDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
+    .sort();
+  for (const slug of slugs) {
+    const manifestPath = path.join(opsDir, slug, 'manifest.json');
+    if (!fs.existsSync(manifestPath)) continue;
+    let manifest;
+    try {
+      manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    } catch (e) {
+      log(`GD-26: could not parse ${manifestPath} (${e.message}) - skipped for operator-feed coverage`);
+      continue;
+    }
+    if (!isCompleteAcquisition(manifest)) continue;
+    const resolvedBrand = matchBrand(slug.replace(/-/g, ' '));
+    if (!resolvedBrand) {
+      log(`GD-26: operator manifest ${slug} has no matching seed brand - skipped for operator-feed coverage`);
+      continue;
+    }
+    map.set(resolvedBrand.key, slug);
+  }
+  return map;
+}
+
 async function loadCompaniesHouseRecords() {
   const mod = await import('./sources/companies-house.mjs');
   const out = [];
@@ -404,6 +451,22 @@ async function run() {
       `${reviewAdded} premises-like added to review queue, ${dropped} dropped (registered-office-only, no match)`,
   );
   log(`GD-20 multi_source count: ${multiSourceBefore} before corroboration -> ${multiSourceAfter} after`);
+
+  // GD-26 point 3: a venue carrying a brand whose operator feed was
+  // acquired complete but which has no member from that operator's own
+  // feed is marked operator_unconfirmed (overwriting multi_source/
+  // single_source) with needs_review_reason = 'not_in_operator_feed'.
+  // Runs against `venues` (still carries member_keys) before the GD-21
+  // filter below, which only ever drops rows, not mutates them.
+  const completeOperatorSlugByBrand = loadCompleteOperatorSlugByBrand(RAW_DIR, log);
+  const { total: operatorUnconfirmedTotal, bySlug: operatorUnconfirmedBySlug } = markOperatorUnconfirmed(
+    venues,
+    completeOperatorSlugByBrand,
+  );
+  log(
+    `GD-26: ${completeOperatorSlugByBrand.size} operator(s) with a complete feed acquisition; ` +
+      `${operatorUnconfirmedTotal} venue(s) marked operator_unconfirmed (not in operator feed) -> ${JSON.stringify(operatorUnconfirmedBySlug)}`,
+  );
 
   // Idempotent: this pass fully regenerates its own review-queue entries
   // each run, so drop any it previously added before appending fresh ones

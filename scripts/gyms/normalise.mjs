@@ -17,6 +17,11 @@
 // in the same cluster over a fallback one. Counts of rejected names by
 // source are written to data/gyms/_work/name-rejections.v1.json for
 // audit.mjs.
+//
+// GD-26: the same GD-18 all-caps -> title-case casing (titleCaseAllCaps,
+// lib/names.js) is applied here to every source's `town` and
+// `address_line` too, not only `name` — a mixed-case source is left
+// untouched.
 
 import path from 'node:path';
 import fs from 'node:fs';
@@ -38,6 +43,7 @@ const {
   saneName,
   stripTrailingOutward,
   boundName,
+  titleCaseAllCaps,
 } = require('./lib/names.js');
 
 // GD-18: decode HTML entities, strip a baked-in status suffix ("(CLOSED)",
@@ -148,6 +154,8 @@ async function run() {
   let statusSuffixStripped = 0;
   let nameCleaned = 0;
   let nameRejected = 0;
+  let townCased = 0;
+  let addressLineCased = 0;
   const nameRejectionsBySource = {};
   // GD-25: a rejected name whose source carried no address town at all
   // needs an ONSPD lookup before its brand+town fallback can be composed
@@ -168,6 +176,13 @@ async function run() {
       if (statusHint) statusSuffixStripped += 1;
       const cleanedName = stripTrailingOutward(cleanedName0, pc ? pc.outward : null);
       if (cleanedName !== rec.name) nameCleaned += 1;
+
+      // GD-26: town/address_line get the same GD-18 casing as the name
+      // (mixed-case sources pass through titleCaseAllCaps untouched).
+      const cleanedTown = rec.town ? titleCaseAllCaps(rec.town, NAME_EXCEPTIONS_MAP) : rec.town;
+      const cleanedAddressLine = rec.address_line ? titleCaseAllCaps(rec.address_line, NAME_EXCEPTIONS_MAP) : rec.address_line;
+      if (cleanedTown !== rec.town) townCased += 1;
+      if (cleanedAddressLine !== rec.address_line) addressLineCased += 1;
 
       // GD-25: a source name over 80 characters or 8 tokens is rejected
       // rather than shown as a venue name (the Third Space/Better GLL
@@ -197,6 +212,8 @@ async function run() {
         postcode: pc ? pc.normalised : null,
         postcode_raw: pc ? undefined : rec.postcode || null,
         tokens: finalName !== null ? tokenize(finalName || '') : undefined,
+        town: cleanedTown,
+        address_line: cleanedAddressLine,
       };
       out.push(outRec);
 
@@ -232,7 +249,8 @@ async function run() {
   log(
     `wrote ${out.length} normalised records to ${OUT_FILE} (${invalidPostcodeButKept} had an unrecognised postcode, ` +
       `kept with postcode=null; GD-18: ${nameCleaned} names cleaned, ${statusSuffixStripped} had a status suffix stripped; ` +
-      `GD-25: ${nameRejected} name(s) rejected as insane and given a brand+town fallback name)`,
+      `GD-25: ${nameRejected} name(s) rejected as insane and given a brand+town fallback name; ` +
+      `GD-26: ${townCased} town(s) and ${addressLineCased} address_line(s) cased from all-caps)`,
   );
 }
 

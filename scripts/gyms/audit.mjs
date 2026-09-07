@@ -163,11 +163,19 @@ function run() {
     const brandKeyForSlug = resolvedBrand ? resolvedBrand.key : slug;
     const ownFeedCount = venues.filter((v) => (v.source_records || []).some((sr) => sr.source === `operator:${slug}`)).length;
     const anySourceCount = venues.filter((v) => v.brand_key === brandKeyForSlug).length;
+    // GD-26 point 3: of the brand's venues, how many are
+    // operator_unconfirmed (that operator's feed was acquired complete but
+    // this venue has no member from it) — 0 for an operator whose feed
+    // was NOT acquired complete, since build.mjs never flags those.
+    const operatorUnconfirmedCount = venues.filter(
+      (v) => v.brand_key === brandKeyForSlug && v.verification_status === 'operator_unconfirmed',
+    ).length;
     operatorComparison[slug] = {
       researched: Object.prototype.hasOwnProperty.call(OPERATOR_RESEARCH_COUNTS, slug) ? OPERATOR_RESEARCH_COUNTS[slug] : null,
       brand_key: brandKeyForSlug,
       own_feed_count: ownFeedCount,
       any_source_count: anySourceCount,
+      operator_unconfirmed_count: operatorUnconfirmedCount,
       // Kept for backward-compat callers that read pipeline_count.
       pipeline_count: anySourceCount,
     };
@@ -183,6 +191,7 @@ function run() {
       brand_key: brandKey,
       own_feed_count: 0,
       any_source_count: venues.filter((v) => v.brand_key === brandKey).length,
+      operator_unconfirmed_count: venues.filter((v) => v.brand_key === brandKey && v.verification_status === 'operator_unconfirmed').length,
       pipeline_count: venues.filter((v) => v.brand_key === brandKey).length,
     };
   }
@@ -207,6 +216,10 @@ function run() {
     }
   }
   const displayNamesOver80 = venues.filter((v) => (v.display_name || '').length > 80);
+
+  // GD-26 point 3: total venues marked operator_unconfirmed across every
+  // operator (per-operator counts live on operatorComparison above).
+  const operatorUnconfirmedTotal = venues.filter((v) => v.verification_status === 'operator_unconfirmed').length;
 
   const coverage = {
     generated_at: new Date().toISOString(),
@@ -238,6 +251,7 @@ function run() {
       pipeline_name_fallbacks: pipelineNameRejections,
       display_names_over_80_chars: displayNamesOver80.length,
     },
+    operator_unconfirmed_gd26_total: operatorUnconfirmedTotal,
     named_lookups: {
       volt_gym_burscough: {
         present: voltGym.length > 0 || voltGymBroad.some((v) => foldText(v.town || '').includes('burscough')),
@@ -301,9 +315,19 @@ Bottom: ${areaTopBottom.bottom.map(([k, v]) => `${k} (${v})`).join(', ')}
 ${Object.entries(operatorComparison)
   .map(
     ([slug, c]) =>
-      `- ${slug}${c.brand_key && c.brand_key !== slug ? ` (brand: ${c.brand_key})` : ''}: own feed ${c.own_feed_count}, any source ${c.any_source_count}, researched ${c.researched ?? 'not established'}`,
+      `- ${slug}${c.brand_key && c.brand_key !== slug ? ` (brand: ${c.brand_key})` : ''}: own feed ${c.own_feed_count}, any source ${c.any_source_count}, researched ${c.researched ?? 'not established'}, operator_unconfirmed ${c.operator_unconfirmed_count}`,
   )
   .join('\n')}
+
+## Operator feed absence (GD-26 point 3)
+A venue carrying a brand whose operator feed was acquired complete
+(manifest \`found > 0\`, at most 3 failures) but with no member from that
+operator's own feed gets \`verification_status = 'operator_unconfirmed'\`
+and \`needs_review_reason = 'not_in_operator_feed'\`. Total: **${operatorUnconfirmedTotal}**.
+${Object.entries(operatorComparison)
+  .filter(([, c]) => c.operator_unconfirmed_count > 0)
+  .map(([slug, c]) => `- ${slug}: ${c.operator_unconfirmed_count}`)
+  .join('\n') || '(none)'}
 
 ## Name sanity (GD-25)
 Raw operator feed rejections — raw \`branch.name\` over 80 characters or 8 tokens, before any pipeline fix (a persistent signal of which operator's feed still carries bad source data; the pipeline fixes the display name from these regardless, via the URL slug):

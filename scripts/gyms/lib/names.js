@@ -1,5 +1,5 @@
-// GD-18/GD-25 display-name cleanup, pure, no I/O. Fixes the defects the
-// first full pipeline run turned up: HTML entities left undecoded (115
+// GD-18/GD-25/GD-26 display-name cleanup, pure, no I/O. Fixes the defects
+// the first full pipeline run turned up: HTML entities left undecoded (115
 // rows with &amp;), status baked into the name ("(CLOSED)", "- CLOSED",
 // "(TEMPORARILY CLOSED)" and case variants — 1,983 rows), all-caps source
 // names, and a trailing bracketed qualifier that should read as a plain
@@ -11,13 +11,19 @@
 // name" defect), the outward-code trailing-token strip
 // (stripTrailingOutward — "Third Space Tower Bridge Se1" -> "Third Space
 // Tower Bridge"), and widens composeBrandBranch's "already carries the
-// brand" check to the brand's aliases, not just its canonical name.
+// brand" check to the brand's aliases, not just its canonical name. GD-26
+// adds titleCaseAllCaps (the same GD-18 casing, applied by normalise.mjs to
+// `town`/`address_line` as well as names) and widens composeBrandBranch to
+// detect a BARE brand name (the whole cleaned name folds equal to the
+// brand's own name or one of its aliases, not merely containing it) and
+// compose brand + town for that case, rather than leaving the bare brand
+// name on its own ("Fitness First", Dundee -> "Fitness First Dundee").
 //
 // Wired from: normalise.mjs (per-record cleanup on every source, the
-// GD-25 sanity rejection + brand/town fallback, plus the GD-22 operator
-// brand+branch composition via lib/transforms.js) and build.mjs (cluster-
-// level display_name, source preference order operator
-// feed > Overture > Active Places per GD-18).
+// GD-25 sanity rejection + brand/town fallback, the GD-26 town/address
+// casing, plus the GD-22 operator brand+branch composition via
+// lib/transforms.js) and build.mjs (cluster-level display_name, source
+// preference order operator feed > Overture > Active Places per GD-18).
 
 const { foldText, tokenize } = require('./fold');
 
@@ -159,6 +165,24 @@ function toTitleCase(input, exceptionsMap = {}) {
 }
 
 /**
+ * GD-26: "GD-18 casing applies to `town` and `address_line` as well as
+ * names." An all-caps string ("WOLVERHAMPTON", "LETCHWORTH GARDEN CITY")
+ * is converted to title case with the same exceptions map names use; a
+ * source that already arrives mixed-case is left completely untouched
+ * (this is a narrower operation than cleanDisplayName — no entity
+ * decoding, no status-suffix stripping, no bracket-to-suffix conversion,
+ * none of which apply to a town or address line).
+ * @param {string} input
+ * @param {Record<string,string>} [exceptionsMap]
+ * @returns {string}
+ */
+function titleCaseAllCaps(input, exceptionsMap = {}) {
+  if (!input) return input || '';
+  const text = String(input);
+  return isAllCaps(text) ? toTitleCase(text, exceptionsMap) : text;
+}
+
+/**
  * A trailing bracketed qualifier becomes a plain suffix: "Third Space
  * (Moorgate)" -> "Third Space Moorgate". Only the FINAL bracketed group is
  * touched (an earlier bracket in the middle of a name is left alone).
@@ -260,23 +284,59 @@ function containsTokenSubsequence(haystack, needle) {
 }
 
 /**
- * GD-18/GD-22/GD-25 brand + branch composition: when the (already-cleaned)
- * source name doesn't itself mention the brand, compose brand + branch
- * ("PureGym Motherwell"); when it already does ("JD Gyms York"), leave it
- * as-is rather than prefixing a second time. GD-25 widens "already
- * mentions the brand" from the brand's own name to any of the brand's
- * known aliases, so a branch name built from an alias ("The Gym Health
- * And Fitness St Helens College", alias "the gym") is not double-branded
- * into "The Gym Group The Gym Health And Fitness St Helens College".
+ * GD-26: true when `name`, folded and tokenised, is EQUAL to the brand's
+ * own name or one of its aliases — a bare brand name, not merely a name
+ * that mentions the brand alongside a real branch ("Fitness First" is
+ * bare; "Fitness First Dundee" is not). Exact token-sequence equality,
+ * not containment — containment is what `composeBrandBranch`'s existing
+ * "already carries the brand" check below already handles.
+ * @param {string} name
+ * @param {string} brandName
+ * @param {string[][]} aliasTokenSets
+ * @returns {boolean}
+ */
+function isBareBrandName(name, brandName, aliasTokenSets) {
+  const nameTokens = tokenize(name);
+  if (nameTokens.length === 0) return false;
+  const candidateTokenSets = [tokenize(brandName), ...(aliasTokenSets || [])];
+  return candidateTokenSets.some(
+    (tokens) =>
+      tokens.length > 0 &&
+      tokens.length === nameTokens.length &&
+      tokens.every((t, i) => t === nameTokens[i]),
+  );
+}
+
+/**
+ * GD-18/GD-22/GD-25/GD-26 brand + branch composition: when the
+ * (already-cleaned) source name doesn't itself mention the brand, compose
+ * brand + branch ("PureGym Motherwell"); when it already does ("JD Gyms
+ * York"), leave it as-is rather than prefixing a second time. GD-25 widens
+ * "already mentions the brand" from the brand's own name to any of the
+ * brand's known aliases, so a branch name built from an alias ("The Gym
+ * Health And Fitness St Helens College", alias "the gym") is not
+ * double-branded into "The Gym Group The Gym Health And Fitness St Helens
+ * College". GD-26: a BARE brand name (the whole name equals the brand or
+ * an alias, e.g. a venue known only to Active Places and named just
+ * "Fitness First") is displayed as brand + town instead of being left
+ * bare — checked FIRST, ahead of the "already carries the brand"
+ * containment check below, since a bare name always also "contains" the
+ * brand.
  * @param {string} cleanedName
  * @param {string|null} brandName
  * @param {string[][]} [aliasTokenSets] - folded token arrays, one per
  *   known alias of the brand (see brands.js's aliasTokenSetsFor)
+ * @param {string|null} [town] - GD-26: the venue's town, used only when
+ *   `cleanedName` turns out to be a bare brand name
  * @returns {string}
  */
-function composeBrandBranch(cleanedName, brandName, aliasTokenSets = []) {
+function composeBrandBranch(cleanedName, brandName, aliasTokenSets = [], town = null) {
   if (!brandName) return cleanedName;
-  if (!cleanedName) return brandName;
+  if (!cleanedName) return town ? `${brandName} ${town}` : brandName;
+
+  if (isBareBrandName(cleanedName, brandName, aliasTokenSets)) {
+    return town ? `${brandName} ${town}` : brandName;
+  }
 
   const brandTokens = tokenize(brandName);
   const nameTokens = tokenize(cleanedName);
@@ -315,6 +375,7 @@ module.exports = {
   isAllCaps,
   isRomanNumeral,
   toTitleCase,
+  titleCaseAllCaps,
   bracketQualifierToSuffix,
   composeBrandBranch,
   cleanDisplayName,

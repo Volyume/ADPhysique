@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-07T02:33:16.366Z",
+  "generated_at": "2026-09-07T02:45:15.998Z",
   "total_canonical_venues": 46817,
   "ukactive_reference_total": 5842,
   "pct_of_ukactive_reference": 801.4,
@@ -242,6 +242,7 @@
       "brand_key": "jd-gyms",
       "own_feed_count": 103,
       "any_source_count": 134,
+      "operator_unconfirmed_count": 31,
       "pipeline_count": 134
     },
     "the-gym-group": {
@@ -249,6 +250,7 @@
       "brand_key": "the-gym-group",
       "own_feed_count": 267,
       "any_source_count": 379,
+      "operator_unconfirmed_count": 112,
       "pipeline_count": 379
     },
     "total-fitness": {
@@ -256,6 +258,7 @@
       "brand_key": "total-fitness",
       "own_feed_count": 2,
       "any_source_count": 56,
+      "operator_unconfirmed_count": 54,
       "pipeline_count": 56
     },
     "third-space": {
@@ -263,6 +266,7 @@
       "brand_key": "third-space",
       "own_feed_count": 15,
       "any_source_count": 15,
+      "operator_unconfirmed_count": 1,
       "pipeline_count": 15
     },
     "fitness-first": {
@@ -270,6 +274,7 @@
       "brand_key": "fitness-first",
       "own_feed_count": 21,
       "any_source_count": 194,
+      "operator_unconfirmed_count": 173,
       "pipeline_count": 194
     },
     "247-fitness": {
@@ -277,6 +282,7 @@
       "brand_key": "247-fitness",
       "own_feed_count": 1,
       "any_source_count": 12,
+      "operator_unconfirmed_count": 11,
       "pipeline_count": 12
     },
     "nuffield-health": {
@@ -284,6 +290,7 @@
       "brand_key": "nuffield-health",
       "own_feed_count": 108,
       "any_source_count": 130,
+      "operator_unconfirmed_count": 22,
       "pipeline_count": 130
     },
     "puregym": {
@@ -291,6 +298,7 @@
       "brand_key": "puregym",
       "own_feed_count": 480,
       "any_source_count": 501,
+      "operator_unconfirmed_count": 22,
       "pipeline_count": 501
     },
     "david-lloyd": {
@@ -298,6 +306,7 @@
       "brand_key": "david-lloyd",
       "own_feed_count": 107,
       "any_source_count": 128,
+      "operator_unconfirmed_count": 21,
       "pipeline_count": 128
     },
     "freedom-leisure": {
@@ -305,6 +314,7 @@
       "brand_key": "freedom-leisure",
       "own_feed_count": 115,
       "any_source_count": 123,
+      "operator_unconfirmed_count": 8,
       "pipeline_count": 123
     },
     "snap-fitness": {
@@ -312,6 +322,7 @@
       "brand_key": "snap-fitness",
       "own_feed_count": 107,
       "any_source_count": 120,
+      "operator_unconfirmed_count": 13,
       "pipeline_count": 120
     },
     "better-gll": {
@@ -319,6 +330,7 @@
       "brand_key": "better",
       "own_feed_count": 164,
       "any_source_count": 252,
+      "operator_unconfirmed_count": 89,
       "pipeline_count": 252
     },
     "village-gym": {
@@ -326,6 +338,7 @@
       "brand_key": "village-gym",
       "own_feed_count": 34,
       "any_source_count": 40,
+      "operator_unconfirmed_count": 6,
       "pipeline_count": 40
     },
     "places-leisure": {
@@ -333,6 +346,7 @@
       "brand_key": "places-leisure",
       "own_feed_count": 86,
       "any_source_count": 96,
+      "operator_unconfirmed_count": 10,
       "pipeline_count": 96
     },
     "bannatyne": {
@@ -340,6 +354,7 @@
       "brand_key": "bannatyne",
       "own_feed_count": 65,
       "any_source_count": 76,
+      "operator_unconfirmed_count": 11,
       "pipeline_count": 76
     },
     "virgin-active": {
@@ -347,6 +362,7 @@
       "brand_key": "virgin-active",
       "own_feed_count": 27,
       "any_source_count": 74,
+      "operator_unconfirmed_count": 47,
       "pipeline_count": 74
     },
     "ultimate-fitness": {
@@ -354,6 +370,7 @@
       "brand_key": "ultimate-fitness",
       "own_feed_count": 0,
       "any_source_count": 16,
+      "operator_unconfirmed_count": 0,
       "pipeline_count": 16
     },
     "anytime-fitness": {
@@ -361,6 +378,7 @@
       "brand_key": "anytime-fitness",
       "own_feed_count": 0,
       "any_source_count": 243,
+      "operator_unconfirmed_count": 0,
       "pipeline_count": 243
     },
     "everyone-active": {
@@ -368,6 +386,7 @@
       "brand_key": "everyone-active",
       "own_feed_count": 0,
       "any_source_count": 166,
+      "operator_unconfirmed_count": 0,
       "pipeline_count": 166
     },
     "energie": {
@@ -375,6 +394,7 @@
       "brand_key": "energie",
       "own_feed_count": 0,
       "any_source_count": 127,
+      "operator_unconfirmed_count": 0,
       "pipeline_count": 127
     },
     "everlast": {
@@ -382,6 +402,7 @@
       "brand_key": "everlast",
       "own_feed_count": 0,
       "any_source_count": 77,
+      "operator_unconfirmed_count": 0,
       "pipeline_count": 77
     },
     "parkwood-leisure": {
@@ -389,6 +410,7 @@
       "brand_key": "parkwood-leisure",
       "own_feed_count": 0,
       "any_source_count": 13,
+      "operator_unconfirmed_count": 0,
       "pipeline_count": 13
     },
     "simply-gym": {
@@ -396,6 +418,7 @@
       "brand_key": "simply-gym",
       "own_feed_count": 0,
       "any_source_count": 21,
+      "operator_unconfirmed_count": 0,
       "pipeline_count": 21
     },
     "crossfit": {
@@ -403,6 +426,7 @@
       "brand_key": "crossfit",
       "own_feed_count": 0,
       "any_source_count": 474,
+      "operator_unconfirmed_count": 0,
       "pipeline_count": 474
     },
     "gymbox": {
@@ -410,6 +434,7 @@
       "brand_key": "gymbox",
       "own_feed_count": 0,
       "any_source_count": 12,
+      "operator_unconfirmed_count": 0,
       "pipeline_count": 12
     },
     "serco-leisure": {
@@ -417,6 +442,7 @@
       "brand_key": "serco-leisure",
       "own_feed_count": 0,
       "any_source_count": 4,
+      "operator_unconfirmed_count": 0,
       "pipeline_count": 4
     },
     "f45": {
@@ -424,6 +450,7 @@
       "brand_key": "f45",
       "own_feed_count": 0,
       "any_source_count": 62,
+      "operator_unconfirmed_count": 0,
       "pipeline_count": 62
     },
     "1rebel": {
@@ -431,6 +458,7 @@
       "brand_key": "1rebel",
       "own_feed_count": 0,
       "any_source_count": 11,
+      "operator_unconfirmed_count": 0,
       "pipeline_count": 11
     }
   },
@@ -551,6 +579,7 @@
     },
     "display_names_over_80_chars": 0
   },
+  "operator_unconfirmed_gd26_total": 631,
   "named_lookups": {
     "volt_gym_burscough": {
       "present": true,
@@ -566,7 +595,7 @@
       "all_volt_matches_any_town": [
         {
           "display_name": "Voltz Fitness",
-          "town": "ROCHDALE",
+          "town": "Rochdale",
           "postcode": "OL11 2UF"
         },
         {

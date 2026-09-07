@@ -3,12 +3,15 @@
 // qualifiers) plus the GD-18/GD-22 brand+branch composition. GD-25 name
 // sanity bounds (saneName/boundName/stripTrailingOutward, and the widened
 // alias-aware composition rule) against the defects the second full
-// pipeline run turned up.
+// pipeline run turned up. GD-26 fixtures (titleCaseAllCaps for
+// town/address_line, and composeBrandBranch's bare-brand-name -> brand +
+// town case) against the defects the third full pipeline run turned up.
 const {
   decodeEntities,
   stripStatusSuffix,
   isAllCaps,
   toTitleCase,
+  titleCaseAllCaps,
   bracketQualifierToSuffix,
   composeBrandBranch,
   cleanDisplayName,
@@ -158,6 +161,57 @@ describe('composeBrandBranch', () => {
   it('GD-25: still composes brand + branch when no alias is present in the name', () => {
     const aliasTokenSets = aliasTokenSetsFor('the-gym-group');
     expect(composeBrandBranch('York', 'The Gym Group', aliasTokenSets)).toBe('The Gym Group York');
+  });
+
+  // GD-26: a BARE brand name (the whole cleaned name folds equal to the
+  // brand or an alias) composes as brand + town, not left bare — the
+  // Fitness First/Dundee defect (a venue known only to Active Places/
+  // Overture, named just "Fitness First").
+  it('GD-26: composes brand + town when the name is exactly the brand (bare)', () => {
+    expect(composeBrandBranch('Fitness First', 'Fitness First', [], 'Dundee')).toBe('Fitness First Dundee');
+  });
+
+  it('GD-26: a bare ALIAS also composes as brand + town', () => {
+    const aliasTokenSets = aliasTokenSetsFor('the-gym-group');
+    expect(composeBrandBranch('The Gym', 'The Gym Group', aliasTokenSets, 'York')).toBe('The Gym Group York');
+  });
+
+  it('GD-26: with no town, a bare brand name falls back to the brand name alone', () => {
+    expect(composeBrandBranch('Fitness First', 'Fitness First', [], null)).toBe('Fitness First');
+  });
+
+  it('GD-26: a non-bare name (brand + real branch already) is untouched by the bare-name rule even with a town supplied', () => {
+    expect(composeBrandBranch('JD Gyms York', 'JD Gyms', [], 'Somewhere Else')).toBe('JD Gyms York');
+  });
+
+  it('GD-26: a genuinely bare town-only name (no brand mention at all) still composes brand + branch as before, ignoring the town param', () => {
+    expect(composeBrandBranch('Motherwell', 'PureGym', [], 'Motherwell')).toBe('PureGym Motherwell');
+  });
+});
+
+describe('titleCaseAllCaps (GD-26)', () => {
+  it('title-cases an all-caps town', () => {
+    expect(titleCaseAllCaps('WOLVERHAMPTON')).toBe('Wolverhampton');
+    expect(titleCaseAllCaps('LETCHWORTH GARDEN CITY')).toBe('Letchworth Garden City');
+  });
+
+  it('leaves an already mixed-case town untouched', () => {
+    expect(titleCaseAllCaps('Wolverhampton')).toBe('Wolverhampton');
+    expect(titleCaseAllCaps('Letchworth Garden City')).toBe('Letchworth Garden City');
+  });
+
+  it('honours the exceptions map (e.g. YMCA in an address line)', () => {
+    const map = buildExceptionsMap();
+    expect(titleCaseAllCaps('YMCA HOUSE, HIGH STREET', map)).toBe('YMCA House, High Street');
+  });
+
+  it('handles empty/null input', () => {
+    expect(titleCaseAllCaps('')).toBe('');
+    expect(titleCaseAllCaps(null)).toBe('');
+  });
+
+  it('does not corrupt an all-caps single-word town', () => {
+    expect(titleCaseAllCaps('DUNDEE')).toBe('Dundee');
   });
 });
 

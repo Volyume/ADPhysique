@@ -11,6 +11,19 @@
 // payload, only {source_status, source_dataset, licence} (task GD-24
 // instruction). WRITTEN, NOT APPLIED: this script only writes .sql files;
 // nothing here ever connects to Supabase or runs anything against it.
+//
+// GD-26 point 4: build.mjs's operator-feed coverage pass
+// (verification_status = 'operator_unconfirmed', needs_review_reason =
+// 'not_in_operator_feed') is carried through to `gym_venues` ONLY if that
+// table already has matching columns for both — checked at generation
+// time against supabase/migrate_162_gym_directory.sql's own text
+// (lib/gymVenuesSchema.js), never by editing the migration.
+// `verification_status` already exists there; `needs_review_reason` does
+// not, so the fallback applies: the existing `needs_review` boolean column
+// is set true for a flagged venue, and the reason is written instead to a
+// new `4NN-history-NNN.sql` chunk as a `gym_venue_history` row
+// (change = 'flag', after = {reason}, actor left NULL — this chunk is
+// deliberately user-free, no id of any person).
 
 import path from 'node:path';
 import fs from 'node:fs';
@@ -21,6 +34,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 const { readJsonlGz } = require('./lib/jsonl.js');
 const { parseCsvHeader, csvLineToRecord } = require('./lib/csv.js');
+const { gymVenuesHasAllColumns } = require('./lib/gymVenuesSchema.js');
 const { uuidv5 } = require('./lib/uuid.js');
 
 const DATA_DIR = path.join(__dirname, '../../data/gyms');
@@ -28,10 +42,14 @@ const BRANDS_FILE = path.join(DATA_DIR, 'brands.v1.json');
 const SECTORS_FILE = path.join(DATA_DIR, 'postcode-sectors.v1.csv');
 const VENUES_FILE = path.join(DATA_DIR, 'uk-gyms.v1.jsonl.gz');
 const OUT_DIR = path.join(__dirname, '../../supabase/seed_gyms_v1');
+// GD-26 point 4: read, never edited, to decide the needs_review_reason
+// column fallback (see the module header note above).
+const MIGRATION_FILE = path.join(__dirname, '../../supabase/migrate_162_gym_directory.sql');
 
 const CHUNK_SIZE = 1000;
 const BRAND_ID_NAMESPACE_PREFIX = 'gym_brand:';
 const VENUE_SOURCE_ID_NAMESPACE_PREFIX = 'gym_venue_source:';
+const VENUE_HISTORY_ID_NAMESPACE_PREFIX = 'gym_venue_history:';
 
 function log(msg) {
   console.log(`[seed-sql] ${msg}`);
@@ -81,6 +99,10 @@ function sqlNow() {
 function sqlJsonb(obj) {
   if (obj === null || obj === undefined) return sqlNull();
   return `${sqlString(JSON.stringify(obj))}::jsonb`;
+}
+
+function sqlBoolean(v) {
+  return v ? 'true' : 'false';
 }
 
 function pad3(n) {
@@ -234,7 +256,7 @@ function venueSourceRows(venue) {
   });
 }
 
-function writeVenuesAndSourcesChunks(venues) {
+function writeVenuesAndSourcesChunks(venues, carryNeedsReviewReason) {
   if (venues.length === 0) {
     log('venues: no data/gyms/uk-gyms.v1.jsonl.gz found - skipped');
     return { venueCount: 0, sourceCount: 0 };
@@ -268,6 +290,13 @@ function writeVenuesAndSourcesChunks(venues) {
     'parent_venue_id',
     'succeeded_by',
     'verification_status',
+    // GD-26 point 4: `needs_review` (existing column) always carried;
+    // `needs_review_reason` only when gym_venues actually has that column
+    // (checked once in run() against migrate_162's own text) — otherwise
+    // the reason goes to a gym_venue_history 'flag' row instead, see
+    // writeVenueHistoryChunk below.
+    'needs_review',
+    ...(carryNeedsReviewReason ? ['needs_review_reason'] : []),
     'source_count',
     'tokens',
     'first_seen',
@@ -280,6 +309,7 @@ function writeVenuesAndSourcesChunks(venues) {
   const venueChunks = chunkArray(venues, CHUNK_SIZE);
   venueChunks.forEach((chunk, i) => {
     const rows = chunk.map((v) => {
+      const needsReview = Boolean(v.needs_review_reason);
       const values = [
         sqlUuid(v.id),
         sqlString(v.display_name),
@@ -308,6 +338,8 @@ function writeVenuesAndSourcesChunks(venues) {
         v.parent_venue_id ? sqlUuid(v.parent_venue_id) : sqlNull(),
         v.succeeded_by ? sqlUuid(v.succeeded_by) : sqlNull(),
         sqlString(v.verification_status),
+        sqlBoolean(needsReview),
+        ...(carryNeedsReviewReason ? [sqlString(v.needs_review_reason)] : []),
         sqlInt(v.source_count),
         sqlTextArray(v.tokens),
         sqlTimestamptz(v.first_seen),
@@ -385,6 +417,55 @@ function writeVenuesAndSourcesChunks(venues) {
   return { venueCount: venues.length, sourceCount: allSourceRows.length };
 }
 
+// --- gym_venue_history (GD-26 point 4 fallback) ---------------------------
+// Only called when gym_venues has no `needs_review_reason` column: the
+// reason goes here instead, as a 'flag' history row. `actor` is left NULL
+// deliberately — this chunk is user-free, it never carries a person's id
+// (the task's own instruction), unlike the app's own gym_venue_history
+// writes (migrate_162's community/moderator RPCs), which record the
+// acting user.
+function writeVenueHistoryChunks(venues) {
+  const flagged = venues.filter((v) => v.needs_review_reason);
+  if (flagged.length === 0) {
+    log('gym_venue_history: no operator_unconfirmed rows to flag - skipped');
+    return 0;
+  }
+
+  const columns = ['id', 'venue_id', 'change', 'before', 'after', 'actor', 'created_at'];
+  const chunks = chunkArray(flagged, CHUNK_SIZE);
+  chunks.forEach((chunk, i) => {
+    const rows = chunk.map((v) => {
+      const id = uuidv5(`${VENUE_HISTORY_ID_NAMESPACE_PREFIX}${v.id}|${v.needs_review_reason}`);
+      const values = [
+        sqlUuid(id),
+        sqlUuid(v.id),
+        sqlString('flag'),
+        sqlNull(),
+        sqlJsonb({ reason: v.needs_review_reason }),
+        sqlNull(),
+        sqlNow(),
+      ];
+      return `  (${values.join(', ')})`;
+    });
+    const updateSet = columns
+      .filter((c) => c !== 'id')
+      .map((c) => `${c} = excluded.${c}`)
+      .join(', ');
+    const statement = `INSERT INTO public.gym_venue_history (${columns.join(', ')}) VALUES\n${rows.join(',\n')}\nON CONFLICT (id) DO UPDATE SET ${updateSet};`;
+
+    const filename = `${pad3(300 + i)}-history-${pad3(i)}.sql`;
+    const header = houseHeader({
+      filename,
+      purpose: `Seeds chunk ${i + 1}/${chunks.length} (${chunk.length} rows) of \`gym_venue_history\` 'flag' entries (GD-26 point 4 fallback: gym_venues has no needs_review_reason column, so the reason is recorded here instead; needs_review is still set true on the venue row). actor is NULL - user-free.`,
+      dependsOn: 'migrate_162 (gym directory schema) and the venues chunks (venue_id foreign keys)',
+      rollback: `delete from public.gym_venue_history where id in (${chunk.map((v) => `'${uuidv5(`${VENUE_HISTORY_ID_NAMESPACE_PREFIX}${v.id}|${v.needs_review_reason}`)}'`).join(', ')});`,
+    });
+    writeChunk(path.join(OUT_DIR, filename), header, [statement]);
+  });
+  log(`gym_venue_history: wrote ${chunks.length} chunk(s) (${flagged.length} rows, GD-26 not_in_operator_feed flags)`);
+  return flagged.length;
+}
+
 function run() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   // Idempotent: clear any previously generated chunk files first, so a
@@ -398,13 +479,24 @@ function run() {
   const sectors = loadSectors();
   const venues = readJsonlGz(VENUES_FILE);
 
+  // GD-26 point 4: decide once, from migrate_162's own text, whether
+  // gym_venues already has BOTH verification_status and
+  // needs_review_reason columns.
+  const migrationSql = fs.existsSync(MIGRATION_FILE) ? fs.readFileSync(MIGRATION_FILE, 'utf8') : '';
+  const carryNeedsReviewReason = gymVenuesHasAllColumns(migrationSql, ['verification_status', 'needs_review_reason']);
+  log(
+    `GD-26: gym_venues needs_review_reason column ${carryNeedsReviewReason ? 'present' : 'ABSENT'} in migrate_162 - ` +
+      `${carryNeedsReviewReason ? 'carrying it through directly' : 'falling back to needs_review + gym_venue_history flag rows'}`,
+  );
+
   const brandCount = writeBrandsChunk(brands);
   const sectorCount = writeSectorsChunks(sectors);
-  const { venueCount, sourceCount } = writeVenuesAndSourcesChunks(venues);
+  const { venueCount, sourceCount } = writeVenuesAndSourcesChunks(venues, carryNeedsReviewReason);
+  const historyCount = carryNeedsReviewReason ? 0 : writeVenueHistoryChunks(venues);
 
   log(
-    `done: ${brandCount} brands, ${sectorCount} sectors, ${venueCount} venues, ${sourceCount} source rows -> ${OUT_DIR} ` +
-      `(WRITTEN, NOT APPLIED — nothing here runs against Supabase)`,
+    `done: ${brandCount} brands, ${sectorCount} sectors, ${venueCount} venues, ${sourceCount} source rows, ` +
+      `${historyCount} history flag row(s) -> ${OUT_DIR} (WRITTEN, NOT APPLIED — nothing here runs against Supabase)`,
   );
 }
 
