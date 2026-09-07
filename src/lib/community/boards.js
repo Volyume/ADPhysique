@@ -106,7 +106,7 @@ export async function loadBoard({
 
 /**
  * The right-aligned figure for a board row, calm and window-specific
- * (design 60 §4, §5: "trained 3 times this week", "6 weeks running").
+ * (design 60 §4, §5: "trained 3 times this week", "6 weeks in a row").
  *
  * @param {'week'|'month'|'consistency'} window
  * @param {number} value the row's `metric`
@@ -118,7 +118,7 @@ export function metricLabel(window, value) {
     case 'month':
       return n === 1 ? '1 session' : `${n} sessions`;
     case 'consistency':
-      return n === 1 ? '1 week running' : `${n} weeks running`;
+      return n === 1 ? '1 week in a row' : `${n} weeks in a row`;
     case 'week':
     default:
       return n === 1 ? '1 session' : `${n} sessions`;

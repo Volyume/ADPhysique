@@ -138,9 +138,9 @@ describe('metricLabel', () => {
     expect(metricLabel('month', 0)).toBe('0 sessions');
   });
 
-  test('consistency reads as "weeks running", calm and never shame-toned', () => {
-    expect(metricLabel('consistency', 1)).toBe('1 week running');
-    expect(metricLabel('consistency', 6)).toBe('6 weeks running');
+  test('consistency reads as "weeks in a row", calm and never shame-toned', () => {
+    expect(metricLabel('consistency', 1)).toBe('1 week in a row');
+    expect(metricLabel('consistency', 6)).toBe('6 weeks in a row');
   });
 
   test('a non-finite value answers the zero form rather than "NaN"', () => {

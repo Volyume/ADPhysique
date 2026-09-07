@@ -956,7 +956,7 @@ const linking = {
           // query params straight into route.params, so `h` and `id` arrive
           // as typed; CommunityProfileScreen reads `handle ?? h` for exactly
           // that reason.
-          Community: ['community', 'p'],
+          Community: 'community',
           CommunityProfile: 'u',
           CommunityPost: 's',
           // The message push hands the OS `volyume://m/?id=<conversation>`

@@ -82,7 +82,7 @@ function ThisWeekLine({ t, counters }) {
   if (!counters) return null;
   const streak = Number(counters.c_weeks_streak) || 0;
   const sessions = Number(counters.c_sessions_week) || 0;
-  const streakLabel = streak > 0 ? (streak === 1 ? '1 week running' : `${streak} weeks running`) : 'Getting back into it';
+  const streakLabel = streak > 0 ? (streak === 1 ? '1 week in a row' : `${streak} weeks in a row`) : 'Getting back into it';
   return (
     <View style={styles.section}>
       <SectionLabel tone="muted">This week</SectionLabel>
