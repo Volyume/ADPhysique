@@ -84,7 +84,7 @@ functions.
 
 ---
 
-## GYM FINDER RELEVANCE + ORDERING DEFECTS (2026-09-07, found immediately after 167) — FIXES WRITTEN, NOT YET APPLIED
+## GYM FINDER RELEVANCE + ORDERING DEFECTS (2026-09-07, found immediately after 167) — RESOLVED, migrate_168 APPLIED and VERIFIED
 
 Distinct from VOLYUME-37 above — pre-existing gym-finder quality defects,
 invisible while the finder was hard-failing, surfaced the moment 167 made
@@ -131,10 +131,17 @@ gathered directly against production before writing any fix.
 FIXES: `supabase/migrate_168_gym_finder_relevance_and_order_fix.sql`
 (items 1-2, server-side, verified against production before writing) and
 `src/components/community/GymPicker.js` (item 3, client-side, JS — not a
-migration). Lint clean; GymPicker suite green (22/22, two new); full suite
-pending. STATUS: WRITTEN, NOT YET APPLIED to production — awaiting the
-founder's exact phrase for migrate_168 specifically (this is new work,
-not covered by any earlier "run against production").
+migration). Lint clean; full suite green (1265/1266 suites, 18976/18992
+tests, two new regression tests). Merged to main (`f7cc5fb`).
+STATUS: APPLIED to production 2026-09-07 (`apply-named-sql.yml` run #9),
+founder phrase given for this migration specifically. VERIFIED, not
+assumed: `gyms_near`'s function definition carries the distance-first
+ORDER BY; `gyms_search`'s carries the generic-word list; re-ran the match
+count directly against live `gym_venues` for "volt" with the generic word
+stripped — 4 matches (the real Volt venues), down from the pre-fix 4,075
+for "volt gym". Founder-side: worth a device check that the finder now
+reads sensibly end to end (I can verify the data/logic but not the
+rendered UI from here).
 
 ---
 
