@@ -721,13 +721,13 @@ minute. The margin is three times over. No lockout.
 
 ## 4. New findings from this pass
 
-| # | Sev | Site | Finding |
-|---|-----|------|---------|
-| 21 | **P2** | `migrate_162:826-843` | Prefix typeahead is dead on the only path the app uses, and the gate that killed it buys nothing measurable |
-| 22 | P3 | `migrate_162:1082` | Two identical pending venues can now co-exist, and each submitter can confirm the other's into the catalogue |
-| 23 | P3 | `migrate_162:1318` | `reject` still has no status precondition, though `approve` and `merge` both gained one |
-| 24 | P3 | `migrate_162:742` | `gyms_search`'s `_limit` clamp was widened from 40 to 50, above GD-09's stated 40 candidates |
-| 25 | P3 | `migrate_162:747` etc. | The read rail writes one `community_rate_events` row per read, pruned only at 7 days |
+| # | Sev | Site | Finding | Status |
+|---|-----|------|---------|--------|
+| 21 | **P2** | `migrate_162:826-843` | Prefix typeahead is dead on the only path the app uses, and the gate that killed it buys nothing measurable | Status: fixed migrate_162:802-819 -- the coordinate/outward narrowing gate is removed from the prefix branch; it is bounded only by the 80-character/8-token caps (finding 3) and the outward/town restriction the WHERE clause already applies where present. Probed live, no coordinates: `gyms_search('puregy')` returns 1 hit, `gyms_search('motherw')` returns 2, and both delegate correctly through `gyms_suggest`. |
+| 22 | P3 | `migrate_162:1082` | Two identical pending venues can now co-exist, and each submitter can confirm the other's into the catalogue | Status: fixed migrate_162:1115-1176 -- `gyms_submit` now runs a second, non-visibility-restricted scan for a matching `pending` venue; a hit records the caller as a distinct confirmer via the same sequence `gyms_confirm_submission` uses (history row, `confirmations + 1`, flip to `open`/`user_submitted_verified` at two distinct confirmers) instead of inserting a twin, and returns only `{id, display_name, status}`. Probed live: two different callers submitting identical `Volt Gym, L40 8TG` data leave exactly one `gym_venues` row, the second caller's reply carries no submitter identity, and the row is `open`/`user_submitted_verified` with two distinct `confirm` actors on record. |
+| 23 | P3 | `migrate_162:1318` | `reject` still has no status precondition, though `approve` and `merge` both gained one | Status: fixed migrate_162:1409-1414 -- `reject` now requires `v_venue.status = 'pending'`, the same guard `approve` already had. Probed live: rejecting an already-open, verified venue raises `not_allowed` and leaves its status untouched; rejecting a genuinely pending submission still succeeds. |
+| 24 | P3 | `migrate_162:742` | `gyms_search`'s `_limit` clamp was widened from 40 to 50, above GD-09's stated 40 candidates | Status: fixed migrate_162:753 -- the ceiling is back to 40 (`gyms_in_place` unchanged at 80). Probed live on 45 matching rows: `_limit = 41` and `_limit = 999` both return exactly 40. |
+| 25 | P3 | `migrate_162:747` etc. | The read rail writes one `community_rate_events` row per read, pruned only at 7 days | Status: left as is, per lead ruling -- stated in one sentence in `gyms_search`'s header (migrate_162:709-711): each read writes one `gyms_read` row, pruned at the same 7-day window as every other rate key (`migrate_160:869-877`). |
 
 ### 21. P2 — the picker now matches whole tokens only
 

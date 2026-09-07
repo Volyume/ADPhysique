@@ -19,10 +19,11 @@ Document map (filled as the workstream runs):
 - `09-acquisition-voa-companies-house.md`  VOA examined and EXCLUDED on licence (GD-16); Companies House SIC 93130/93110 pulled
 - `11-acquisition-open-places.md`          Overture places pulled through DuckDB (52,371 UK rows); Foursquare direct not pursued (GD-17)
 - `10-SYNTHESIS.md`                        lead synthesis: which sources are usable, under which licence, for what
-- `20-BLUEPRINT.md`                        canonical model, classification rule, pipeline, search, submissions, corrections, privacy, Community integration (edit-gate spec)
-- `30-COVERAGE-REPORT.md`                  measured coverage by nation, operator, geography; dedup and unresolved counts
-- `40-VERIFICATION.md`                     tests and device checklist
-- `50-FINAL-REPORT.md`
+- `20-BLUEPRINT.md`                        canonical model, classification rule, pipeline, search, submissions, corrections, privacy, Community integration (edit-gate spec); rulings GD-01 to GD-26
+- `35-REVIEW-SECURITY-GYMS.md`             hostile security review of migration 162 (20 findings, all fixed) plus a 2026-09-07 re-review (findings 21-25; verdict SAFE TO APPLY with one open product ruling, finding 21)
+- `30-COVERAGE-REPORT.md`                  measured coverage by nation, venue type, source, coordinate/area source, local authority and postcode area extremes, operator coverage (own feed/any source/researched, operator_unconfirmed), dedup outcomes, named lookups, known gaps and source freshness
+- `40-VERIFICATION.md`                     pipeline and client test results, migration/privacy guards, the full-tree result, security review 35 status, the device checklist and the ED-safety case
+- `50-FINAL-REPORT.md`                     what was built end to end, the founder's standard measured against it, founder-gated items, GD-15 to GD-26 in one line each, and open items
 Recovery: Phase 1 agents are read-only; re-dispatch from the briefs
 recorded in `docs/TASKBOARD.md`.
 
