@@ -1,6 +1,23 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-07 — COMMUNITY PRODUCT AUDIT (founder prompt 2 + gym-onboarding addition) ★
+
+Branch `claude/community-product-audit-m50z2y`. Folder
+`docs/community-product-audit-2026-09-07/` (README = map). Ten
+read-only evidence lanes (01-10) landed; lead judgement `20-JUDGEMENT.md`
+rules: cloud 160-162 unapplied is the governing fact; place is a
+string and doors do not combine (the real discovery gaps); the gym
+directory is the unmatched asset once selection is universal and the
+finder can widen by distance; P0-A..F, P1, P2, Future, Reject listed.
+Spec `30-IMPLEMENTATION.md` section 1 is the edit gate for lanes S1
+(migration 163), S2 (finder + Join step + place picker), S3 (Find people
+filters + fixes). Founder orders in chat: lowest adequate agent tier;
+distance band always visible 5/10/25/50 miles. OPEN founder question:
+expo-location dependency + amending the location guard test. NEXT:
+lead-review S1/S2 diffs, dispatch S3, settled-tree run, record section
+2/3 of `30`, merge to main, device checklist in chat.
+===============================================================================
 ## ★ 2026-09-07 — COMMUNITY VISUAL REFINEMENT (founder prompt 1) ★
 
 Visual only. Evidence `docs/social-discovery-2026-09-06/80-VISUAL-

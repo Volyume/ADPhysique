@@ -48,8 +48,19 @@ postcode search, branch identity, add gym, main + other gyms); evidence
 lanes 09 (Sonnet, dataset + ranker tests) and 10 (Sonnet, UX research).
 OPEN FOUNDER QUESTION: expo-location dependency + amending the pinned
 location guard in `community.privacy.guard.test.js` (asked in chat).
-Phase B: lead judgement `20-JUDGEMENT.md`.
-Phase C: targeted implementation, `30-IMPLEMENTATION.md`, then merge.
+Phase A DONE: reports 01-08 and 10 landed (09 gym journey tests in
+flight). Phase B DONE: `20-JUDGEMENT.md` (capability map, missing vs
+underpowered, cold start, location model LJ-01, priorities P0-A..F,
+P1, P2, Future, Reject). Phase C IN FLIGHT: spec `30-IMPLEMENTATION.md`
+section 1 is the edit gate. Lanes: S1 (Sonnet) migration 163 + guard
+tests; S2 (Sonnet) gym finder, deviceLocation stub, Join step, place
+picker; S3 (Sonnet, after S1 or S2) Find people filters and fixes.
+Recovery path for any lane: `git status`, lead-review the on-disk diff
+against the spec section named in the brief, land or relaunch the same
+brief; agents never commit. Founder order (chat): distance band is an
+always-visible 5/10/25/50 mile selector, text matches never cut by the
+band. OPEN: expo-location yes/no (P0-B "Use my location" waits on it;
+everything else ships).
 
 ## COMMUNITY VISUAL REFINEMENT (2026-09-07, founder prompt 1) — LANDED on `claude/volyume-social-discovery-h7dknu` (a5aab73, fac2451); MERGE PENDING the settled-tree run
 
