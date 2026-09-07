@@ -60,7 +60,12 @@ against the spec section named in the brief, land or relaunch the same
 brief; agents never commit. Founder order (chat): distance band is an
 always-visible 5/10/25/50 mile selector, text matches never cut by the
 band. OPEN: expo-location yes/no (P0-B "Use my location" waits on it;
-everything else ships).
+everything else ships). Report 09 findings folded into S1/S2 briefs:
+brand-query candidate cut (S1), submit-time duplicate tokenizer 53%
+miss (S1), null-distance ranker bug (S2). DATA ITEM for the next
+pipeline run (not this build): `data/gyms/postcode-sectors.v1.csv`
+row `CA13 3` has a corrupt centroid (North Sea, not Cumbria); Ravenscraig
+duplicate pair and the Shetland pony stud misclass (report 06 §4).
 
 ## COMMUNITY VISUAL REFINEMENT (2026-09-07, founder prompt 1) — LANDED on `claude/volyume-social-discovery-h7dknu` (a5aab73, fac2451); MERGE PENDING the settled-tree run
 
