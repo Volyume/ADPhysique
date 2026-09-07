@@ -64,7 +64,11 @@ jobs:
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             -H "Content-Type: application/json" --data-binary @/tmp/payload.json)
           if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
-            echo "::error::Management API returned HTTP $code for $f"; head -c 2000 /tmp/resp.json; echo; exit 1
+            # To stderr: callers redirect stdout to /dev/null, and the
+            # error body is the one thing that must reach the run log.
+            echo "::error::Management API returned HTTP $code for $f" >&2
+            head -c 3000 /tmp/resp.json >&2; echo >&2
+            exit 1
           fi
           cat /tmp/resp.json
           EOF
