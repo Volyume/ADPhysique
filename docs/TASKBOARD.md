@@ -50,6 +50,17 @@ container (2026-09-06): activeplacespower.com, opendatani.gov.uk,
 geoportal.statistics.gov.uk, api.os.uk, puregym.com, thegymgroup.com
 reachable; spatialdata.gov.scot returns 403 to a bare request;
 overpass-api.de unreachable through the proxy (to re-test).
+Phase 3 lanes (2026-09-07; recovery = re-dispatch the lane from
+`20-BLUEPRINT.md` sections named, over whatever the tree holds; agents
+never commit): pipeline (Sonnet: `scripts/gyms/*`, `data/gyms/*`,
+acquisition docs 05-11, blueprint "Pipeline"); operators acquisition
+(Sonnet: `08-acquisition-operators.md`, blueprint GD-04, doc 03);
+migration 162 + targets + README + rpc-only guard (Sonnet: blueprint
+"Data model", GD-09..GD-14); app side (Sonnet: `src/lib/gyms/`,
+`GymPicker`, `CommunityGymAddScreen`, profile and Join wiring, gym
+dimension report sheet, blueprint "App" + "Tests and records"). Then:
+Opus security review of 162, coverage report `30`, verification `40`,
+final report `50`, device checklist, merge.
 
 ---
 
@@ -69,6 +80,12 @@ sheet, profile/activity/hub changes (§10); C2 screens: conversations and
 conversation, message entry points (§2, §10); D (Sonnet) message
 notification category; E (Sonnet) safety records; then reviews (security
 and product), fixes, full regression, merge to main.
+Status 2026-09-07: A-E landed; security review `72` fixed and landed
+(`6fe42da`); product review `73-REVIEW-PRODUCT-DISCOVERY.md` written,
+five P0/P1 findings lead-verified against source, fix lane (Sonnet) in
+flight (recovery: re-dispatch from the 73 findings 1-5, marking each
+finding's status line). Remaining: settled-tree lint/tsc/tests, update
+`50`/`60`, handover, merge to main.
 
 ---
 
