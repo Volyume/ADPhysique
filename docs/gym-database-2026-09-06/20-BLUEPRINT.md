@@ -188,3 +188,13 @@ deleted the same day and no VOA field enters the pipeline. Independents
 are reached instead through Companies House (OGL; it found Volt Fitness
 UK Limited at Swordfish Business Park, Burscough), Foursquare and Overture
 places, operator feeds, Active Places where registered, and submissions.
+
+## GD-17 Overture is a canonical source; Foursquare direct is not pursued (2026-09-07)
+Overture Places release 2026-08-19.0 yielded 52,371 UK fitness-family
+rows with per-row licences observed in the data (CDLA-Permissive-2.0 for
+Overture, Meta and Microsoft rows; Apache 2.0 for the 5,944 Foursquare-
+sourced rows), pulled with the founder-approved pipeline-only DuckDB over
+HTTPS with row-group pruning. Foursquare's own download is now gated
+behind an account and its rows already sit inside Overture, so it is not
+pursued separately. Attribution for both licences is carried in
+`data/gyms/ATTRIBUTION.md`. Volt Gym, Burscough (L40 8TG) is present.
