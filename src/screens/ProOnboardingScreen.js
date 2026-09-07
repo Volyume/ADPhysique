@@ -2769,9 +2769,16 @@ export default function ProOnboardingScreen({ navigation }) {
                     <Text style={[styles.seqEyebrow, live.seqEyebrow]}>Plan ready</Text>
                   </View>
                   <Text style={[styles.seqHeading, live.seqHeading]} accessibilityRole="header">Your plan is ready</Text>
+                  {/* Founder device report 2026-09-07: planLine1 joins
+                      the competition status and the goal+phase label
+                      ("Not competing · Build muscle (lean gain)"), which
+                      ellipsised mid-word at 1 line on longer combinations.
+                      Raised to 2; the card's height is measured after
+                      layout (onLayout above), so a taller line costs
+                      nothing. */}
                   <View style={styles.seqPlanLines}>
-                    {planLine1 ? <Text style={[styles.seqPlanLine, live.seqPlanLine]} numberOfLines={1}>{planLine1}</Text> : null}
-                    {planLine2 ? <Text style={[styles.seqPlanLine, live.seqPlanLine]} numberOfLines={1}>{planLine2}</Text> : null}
+                    {planLine1 ? <Text style={[styles.seqPlanLine, live.seqPlanLine]} numberOfLines={2}>{planLine1}</Text> : null}
+                    {planLine2 ? <Text style={[styles.seqPlanLine, live.seqPlanLine]} numberOfLines={2}>{planLine2}</Text> : null}
                     {planLine3 ? <Text style={[styles.seqPlanLine, live.seqPlanLine]} numberOfLines={1}>{planLine3}</Text> : null}
                   </View>
                   <Text style={[styles.seqSub, live.seqSub]}>Your targets and weekly check-in are ready too.</Text>
