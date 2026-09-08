@@ -10,7 +10,7 @@ import Button from '../Button';
 import { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, resetPassword } from '../../lib/supabase';
 import { audit } from '../../lib/observability';
 import { useToast } from '../Toast';
-import { authErrorMessage, isDuplicateSignup, AUTH_COPY } from '../../lib/authErrorCopy';
+import { authErrorMessage, isDuplicateSignup, isNetworkFailure, AUTH_COPY } from '../../lib/authErrorCopy';
 import { touchTarget } from '../../styles/layout';
 
 
@@ -178,6 +178,13 @@ export default function AuthSheet({ visible, initialMode = 'signup', onClose, na
     // what the user sees is unchanged either way.
     const isBadCredentials = (err) => err?.status === 400
       && /invalid login credentials/i.test(String(err?.message ?? ''));
+    // Re-triage 2026-09-08: the SAME "not a defect" reasoning applies to two
+    // more provider errors this scope still logged as ERRORS, both reusing
+    // the SAME issue bucket VOLYUME-2Z once the credentials case was fixed.
+    // Narrow match on purpose (not authErrorCopy's broader /confirm/i,
+    // which also matches unrelated text) - only the exact Supabase string
+    // for an unconfirmed email downgrades here.
+    const isUnconfirmedEmail = (err) => /email not confirmed/i.test(String(err?.message ?? ''));
     setEmailSubmitting(true);
     setNotice(null);
     try {
@@ -186,6 +193,16 @@ export default function AuthSheet({ visible, initialMode = 'signup', onClose, na
       if (error) {
         if (isBadCredentials(error)) {
           logInfo('LoginScreen.email.providerError', 'invalid login credentials', { mode: emailMode });
+        } else if (isUnconfirmedEmail(error)) {
+          // Sentry VOLYUME-2Z (regrouped): the person has not clicked their
+          // confirmation link yet - a real, expected account state, not a
+          // bug. authErrorMessage already shows them AUTH_COPY.unconfirmed
+          // below either way.
+          logInfo('LoginScreen.email.providerError', 'email not confirmed', { mode: emailMode });
+        } else if (isNetworkFailure(error)) {
+          // Sentry VOLYUME-31: the device's connection, not the app.
+          // authErrorMessage already shows AUTH_COPY.network below either way.
+          logInfo('LoginScreen.email.providerError', 'network failure', { mode: emailMode });
         } else {
           logError('LoginScreen.email.providerError', error, { mode: emailMode });
         }

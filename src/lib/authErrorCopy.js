@@ -34,6 +34,21 @@ export const AUTH_COPY = Object.freeze({
 });
 
 /**
+ * Is this provider error connection-shaped (device offline, DNS failure,
+ * request timeout)? Exported so a caller can classify the SAME condition
+ * `authErrorMessage` already maps to calm copy for - e.g. AuthSheet.js
+ * logs it at info rather than error, since a network failure during
+ * sign-in is the user's connection, never an application defect (Sentry
+ * VOLYUME-31). One regex, never two copies to drift apart.
+ * @param {unknown} error an Error, a Supabase error object, or a string.
+ * @returns {boolean}
+ */
+export function isNetworkFailure(error) {
+  const raw = String((error && typeof error === 'object' ? error.message : error) || '');
+  return NETWORK_RE.test(raw);
+}
+
+/**
  * Map a provider error (or its message) onto one calm sentence.
  * @param {unknown} error an Error, a Supabase error object, or a string.
  * @returns {string} user-facing copy, never the raw provider text.

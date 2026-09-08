@@ -11,7 +11,7 @@
  *     confirmation email Supabase does not send.
  * The raw provider string must never appear in anything returned here.
  */
-import { authErrorMessage, isDuplicateSignup, AUTH_COPY } from '../authErrorCopy';
+import { authErrorMessage, isDuplicateSignup, isNetworkFailure, AUTH_COPY } from '../authErrorCopy';
 
 describe('authErrorMessage: a connection failure is not a wrong password', () => {
   const networkShapes = [
@@ -43,6 +43,34 @@ describe('authErrorMessage: a connection failure is not a wrong password', () =>
 
   test('a network failure never reads as bad credentials', () => {
     expect(authErrorMessage(new Error('Network request failed'))).not.toBe(AUTH_COPY.badCredentials);
+  });
+});
+
+// Sentry VOLYUME-31: AuthSheet.js reuses this exact classification to log a
+// network failure at info rather than error - the device's connection, not
+// an application defect. One regex behind both the copy and the log level,
+// so they can never disagree about what counts as "network-shaped".
+describe('isNetworkFailure: the same classification the copy mapping uses', () => {
+  test('every network shape the copy mapping recognises, this recognises too', () => {
+    const shapes = [
+      'Network request failed', 'Failed to fetch', 'request timed out',
+      'connect ECONNREFUSED 127.0.0.1:443', 'The connection was lost.',
+    ];
+    for (const raw of shapes) {
+      expect(isNetworkFailure(new Error(raw))).toBe(true);
+      expect(authErrorMessage(new Error(raw))).toBe(AUTH_COPY.network);
+    }
+  });
+
+  test('a non-network error is not misclassified', () => {
+    expect(isNetworkFailure({ message: 'Invalid login credentials' })).toBe(false);
+    expect(isNetworkFailure({ message: 'Email not confirmed' })).toBe(false);
+  });
+
+  test('handles null/undefined/plain strings without throwing', () => {
+    expect(isNetworkFailure(null)).toBe(false);
+    expect(isNetworkFailure(undefined)).toBe(false);
+    expect(isNetworkFailure('Network request failed')).toBe(true);
   });
 });
 

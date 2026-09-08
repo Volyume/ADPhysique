@@ -121,10 +121,37 @@ describe('a mistyped password is ordinary use, not an error (VOLYUME-2Z)', () =>
     expect(LOGIN).toMatch(/logError\('LoginScreen\.email\.providerError'/);
   });
 
-  test('what the user sees is unchanged: the copy mapping still runs for both', () => {
+  test('what the user sees is unchanged: the copy mapping still runs for every branch', () => {
     // The classification is a logging decision only. authErrorMessage must be
-    // reached after the branch, not inside one arm of it.
-    const body = LOGIN.split('LoginScreen.email.providerError')[2] ?? '';
+    // reached after the WHOLE if/else chain (however many branches it has),
+    // not inside any one arm of it - .pop() always lands after the last
+    // occurrence, so this stays correct as branches are added.
+    const body = LOGIN.split('LoginScreen.email.providerError').pop() ?? '';
     expect(body).toContain('authErrorMessage(error)');
+  });
+});
+
+// Re-triage 2026-09-08: VOLYUME-2Z's issue bucket kept collecting new
+// events after the credentials fix above landed - "Email not confirmed"
+// hit the untouched `else logError` arm, same as "Network request failed"
+// (VOLYUME-31). Both are provider states the user is already told about
+// calmly (AUTH_COPY.unconfirmed / AUTH_COPY.network); logging them as
+// application errors was the same VOLYUME-2Z pattern recurring, not fixed.
+describe('an unconfirmed email and a network failure are ALSO ordinary use, not errors (VOLYUME-2Z regrouped, VOLYUME-31)', () => {
+  test('both get their own info branch, narrowly matched, error branch untouched', () => {
+    expect(LOGIN).toMatch(/isUnconfirmedEmail[\s\S]{0,40}email not confirmed/i);
+    expect(LOGIN).toMatch(/isNetworkFailure\(error\)/);
+    // Three distinct logInfo calls for this one scope now: bad credentials,
+    // unconfirmed email, network failure. The error branch must still be
+    // the untouched final else, reachable for anything not classified.
+    const hits = LOGIN.match(/logInfo\('LoginScreen\.email\.providerError'/g) || [];
+    expect(hits.length).toBeGreaterThanOrEqual(3);
+    expect(LOGIN).toMatch(/logError\('LoginScreen\.email\.providerError'/);
+  });
+
+  test('the network classifier is imported from authErrorCopy, not reinvented locally', () => {
+    // One regex behind both the calm copy and the log-level decision, so a
+    // future edit to the network pattern cannot make them disagree.
+    expect(LOGIN).toMatch(/import \{[^}]*isNetworkFailure[^}]*\} from '\.\.\/\.\.\/lib\/authErrorCopy'/);
   });
 });
