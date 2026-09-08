@@ -361,13 +361,17 @@ export default function YouScreen({ navigation }) {
   const profileFocus = profileFocusLine(userProfile);
   const pendingCoachCopy = buildPendingCoachCopy(coachReadiness);
 
-  // Community (blueprint section 1, entry point 2): opens Community, where
-  // consistency boards, groups and finding people (including by gym) live.
-  // Partners was retired on 2026-09-06 (SD-03); the row's own sub line was
-  // corrected 2026-09-08 - it still said "Programmes, training stories and
-  // people", which described the shared-programme layer retired by the
-  // 2026-09-07 community product audit (migrate_164) and was never updated
-  // to match.
+  // Community (blueprint section 1, entry point 2): opens Community. It
+  // covers several things together - following and connecting with other
+  // people who train, messaging them, matching with a training partner,
+  // seeing how people you know are getting on with their own training, and
+  // groups - and no one of those is "the point" on its own. Founder
+  // correction 2026-09-08, twice over: this row's sub line was rewritten
+  // twice and both times picked one of those and presented it as the
+  // headline (first the consistency feature, then training-partner
+  // matching). The row now carries no sub line at all rather than risk a
+  // third wrong compression - Community explains itself once opened.
+  // Partners itself was retired on 2026-09-06 (SD-03).
   const openCommunity = useCallback(() => {
     navigateCrossTab(navigation, 'HomeTab', 'Community');
   }, [navigation]);
@@ -565,7 +569,6 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="people-outline"
             label="Community"
-            sub="Boards, groups and people near you"
             onPress={openCommunity}
           />
           </NavGroup>
