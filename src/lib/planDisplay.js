@@ -113,6 +113,32 @@ export function weekCompleteLine(nextSessionName, nowMs = Date.now()) {
 // Upper-Lower". Every other surface (Plans, Workout Complete, notifications,
 // share cards) keeps the full canonical name via activePlanLine/
 // planHeadingName above; this never touches the stored name itself.
+// Founder order 2026-09-08 ("needs to be the case for all plans, library
+// generated and user created"): a coach-generated plan's goal segment is
+// dropped below. A library plan (seedRoutines.js, e.g. "Beginner Full
+// Body", "Aesthetic Upper Rotation") carries no goal/phase prefix to drop
+// in the first place - already short by design, nothing to do there. A
+// CUSTOM plan (typed by the user in "Create your own") is the one case
+// with no length bound at all: nothing stops it running as long as
+// "My Personalised Summer Shred Programme 2026 Edition", which would hit
+// the exact mid-word ellipsis this whole pass exists to fix. This caps
+// the FINAL label - whichever of the three paths produced it - at a word
+// boundary, so nothing this function returns can overflow into a
+// mid-word cut regardless of where the plan came from.
+const HERO_LABEL_MAX_CHARS = 40;
+
+function capAtWordBoundary(text, maxChars) {
+  if (text.length <= maxChars) return text;
+  const words = text.split(' ');
+  let out = '';
+  for (const w of words) {
+    const next = out ? `${out} ${w}` : w;
+    if (next.length > maxChars) break;
+    out = next;
+  }
+  return `${out || text.slice(0, maxChars)}…`;
+}
+
 export function heroPlanLabel(planName) {
   const heading = planHeadingName(planName);
   const parts = heading.split(' · ').map((p) => p.trim()).filter(Boolean);
@@ -120,7 +146,8 @@ export function heroPlanLabel(planName) {
   // nutrition phase exists) -> drop goal, keep phase · split. Anything else
   // (no phase means no middot separators at all) is left as is: there is no
   // reliable way to tell the goal and split apart without one.
-  return parts.length >= 3 ? parts.slice(1).join(' · ') : heading;
+  const stripped = parts.length >= 3 ? parts.slice(1).join(' · ') : heading;
+  return capAtWordBoundary(stripped, HERO_LABEL_MAX_CHARS);
 }
 
 // The one-line active-plan reference: plan name first, then the day

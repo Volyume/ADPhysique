@@ -117,6 +117,30 @@ describe('heroPlanLabel (Home hero eyebrow only, founder device order 2026-09-08
     expect(heroPlanLabel(null)).toBe('');
     expect(heroPlanLabel('   ')).toBe('');
   });
+
+  // Founder order 2026-09-08: "needs to be the case for all plans, library
+  // generated and user created" - a library plan's name (seedRoutines.js)
+  // carries no goal/phase prefix to drop, so it passes through untouched;
+  // a custom name has no length bound at all and is the one path that
+  // needs an explicit cap.
+  test('library plan names (no goal/phase prefix at all) pass through untouched, already short', () => {
+    expect(heroPlanLabel('Aesthetic Upper Rotation')).toBe('Aesthetic Upper Rotation');
+    expect(heroPlanLabel('Push Pull Legs 6×/Week')).toBe('Push Pull Legs');
+  });
+
+  test('a long custom (user-typed) name is capped at a word boundary, never mid-word', () => {
+    const custom = 'My Personalised Summer Shred Programme 2026 Edition';
+    const out = heroPlanLabel(custom);
+    expect(out.length).toBeLessThanOrEqual(41); // 40 chars + the ellipsis
+    expect(out.endsWith('…')).toBe(true);
+    // Every word before the ellipsis is intact - the cut never lands
+    // inside a word.
+    expect(custom.startsWith(out.slice(0, -1))).toBe(true);
+  });
+
+  test('a short custom name is left exactly as typed', () => {
+    expect(heroPlanLabel('Summer Cut')).toBe('Summer Cut');
+  });
 });
 
 describe('Home hero uses the canonical formatters (source guard)', () => {
