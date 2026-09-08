@@ -27,11 +27,23 @@ describe('YouScreen coach hub load state', () => {
     expect(source).toContain('subtitle="Weekly coaching from your logs."');
     expect(source).toMatch(/<SectionLabel>This week<\/SectionLabel>/);
     expect(source).toMatch(/<SectionLabel>Setup<\/SectionLabel>/);
-    expect(source).toMatch(/<SectionLabel>Support<\/SectionLabel>/);
     expect(source).toMatch(/<SectionLabel>Safety checks<\/SectionLabel>/);
     expect(source).not.toMatch(/<SectionLabel>Coach actions<\/SectionLabel>/);
     expect(source).not.toMatch(/<SectionLabel>Safety<\/SectionLabel>/);
     expect(source).not.toMatch(/<SectionLabel>Settings<\/SectionLabel>/);
+  });
+
+  // Founder device order 2026-09-08: Community is the social feature, not
+  // account "Support" - it never belonged under that heading, and it now
+  // sits above Setup (a bare row group, no heading of its own) rather than
+  // below it.
+  test('Community has no "Support" heading and sits above Setup', () => {
+    expect(source).not.toMatch(/<SectionLabel>Support<\/SectionLabel>/);
+    const communityIdx = source.indexOf("label=\"Community\"");
+    const setupIdx = source.indexOf('<SectionLabel>Setup</SectionLabel>');
+    expect(communityIdx).toBeGreaterThan(-1);
+    expect(setupIdx).toBeGreaterThan(-1);
+    expect(communityIdx).toBeLessThan(setupIdx);
   });
 });
 

@@ -361,10 +361,13 @@ export default function YouScreen({ navigation }) {
   const profileFocus = profileFocusLine(userProfile);
   const pendingCoachCopy = buildPendingCoachCopy(coachReadiness);
 
-  // Community (blueprint section 1, entry point 2): the Support row that
-  // used to open Partners now opens Community, which is where following
-  // people, sharing programmes and training stories live. Partners itself
-  // was retired on 2026-09-06 (SD-03).
+  // Community (blueprint section 1, entry point 2): opens Community, where
+  // consistency boards, groups and finding people (including by gym) live.
+  // Partners was retired on 2026-09-06 (SD-03); the row's own sub line was
+  // corrected 2026-09-08 - it still said "Programmes, training stories and
+  // people", which described the shared-programme layer retired by the
+  // 2026-09-07 community product audit (migrate_164) and was never updated
+  // to match.
   const openCommunity = useCallback(() => {
     navigateCrossTab(navigation, 'HomeTab', 'Community');
   }, [navigation]);
@@ -554,6 +557,20 @@ export default function YouScreen({ navigation }) {
           </NavGroup>
         </View>
 
+        {/* Founder device order 2026-09-08: Community is the social feature,
+            not account "Support" - it never belonged under that heading,
+            and it sits above Setup now rather than below it. */}
+        <View style={styles.section}>
+          <NavGroup>
+          <NavRow
+            icon="people-outline"
+            label="Community"
+            sub="Boards, groups and people near you"
+            onPress={openCommunity}
+          />
+          </NavGroup>
+        </View>
+
         {/* FOUNDER DECISION (fully free, no tier split): Setup renders for
             everyone now. */}
         <View style={styles.section}>
@@ -589,18 +606,6 @@ export default function YouScreen({ navigation }) {
             // Review A finding 3: VolumeHeatmap lives in the Home and Progress
             // stacks, not ProfileTab; cross-tab helper or the tap is dead.
             onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'VolumeHeatmap')}
-          />
-          </NavGroup>
-        </View>
-
-        <View style={styles.section}>
-          <SectionLabel>Support</SectionLabel>
-          <NavGroup>
-          <NavRow
-            icon="people-outline"
-            label="Community"
-            sub="Programmes, training stories and people"
-            onPress={openCommunity}
           />
           </NavGroup>
         </View>
