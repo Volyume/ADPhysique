@@ -165,7 +165,10 @@ export function buildReadinessSummary({
   // record that does not exist. No second "N of M" counter here either,
   // per the C22 single-counter law the Priority 5 note above documents.
   if (!lastSession) {
-    return { tone: 'go', line: 'First session of your plan. See how this block is shaped.' };
+    // Founder device order 2026-09-08: the row is a fixed-width chip and the
+    // original line ("First session of your plan. See how this block is
+    // shaped.") overran it. Kept short enough to always fit.
+    return { tone: 'go', line: 'See how this block works.' };
   }
 
   // Priority 5: default block-phase read.

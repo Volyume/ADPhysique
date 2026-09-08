@@ -489,7 +489,7 @@ describe('HOME: zero history has one clear next action and claims no history (C5
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(summary.line).toBe('First session of your plan. See how this block is shaped.');
+    expect(summary.line).toBe('See how this block works.');
     expect(summary.line).not.toMatch(/\d+ of \d+/);
 
     // The default block-phase read still holds, counter-free, once a
@@ -1795,7 +1795,7 @@ describe('WEIGH-IN: day 0 never claims a weigh-in the user did not take (C5-P22-
   test('the weigh-in strip says why, on the empty state only, with no count', () => {
     const src = stripComments(read('components/TodayStrip.js'));
     const empty = src.slice(src.indexOf('function WeightEmpty'), src.indexOf('if (editing)'));
-    expect(empty).toMatch(/not any one morning/);
+    expect(empty).toMatch(/each reading is comparable/);
     expect(empty).not.toMatch(/streak|days in a row|of 3/i);
     const logged = src.slice(src.indexOf('function WeightLogged'), src.indexOf('function WeightEmpty'));
     expect(logged).not.toMatch(/several mornings/);

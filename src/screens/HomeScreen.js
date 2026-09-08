@@ -68,7 +68,7 @@ import {
   MIN_WEIGH_INS,
 } from '../lib/trialActivation';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
-import { activePlanLine, planHeadingName, weekCompleteLine } from '../lib/planDisplay';
+import { heroPlanLabel, weekCompleteLine } from '../lib/planDisplay';
 import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE, NUDGE_WINDOW_GRACE_MS } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { localWeekStartMs, localWeekEndMs, localDayKey } from '../lib/dayKey';
@@ -1704,15 +1704,20 @@ export default function HomeScreen({ navigation, route }) {
   const blockAwaitingDecision = !!currentMesoWeek?.awaitingDecision && !selectedWorkoutOverride;
   const weekComplete = !blockAwaitingDecision
     && isWeekComplete(programmePosition) && !selectedWorkoutOverride;
-  // Canonical plan reference (issue 4): plan name + day descriptor from the
-  // shared formatter, so this card can never drift from the Train tab again.
-  // Must-fix 3 (2026-07-11): the hero eyebrow is a heading, so it drops the
-  // "N×/Week" frequency baked into plan.name via planHeadingName() - the
-  // raw name (with frequency) is kept everywhere else that reads
-  // activePlan.name.
-  const planProgress = displayWorkout
-    ? activePlanLine(planHeadingName(activePlan?.name), displayWorkout?.idx ?? 0, nextWorkout?.total ?? 1)
-    : null;
+  // Founder device order 2026-09-08: the eyebrow overflowed even at two
+  // lines with a generated name's full goal/phase/split plus a day
+  // descriptor, when the session card title just below already names the
+  // specific workout ("Upper A" already says "Upper"). heroPlanLabel is
+  // Home-hero-only (see planDisplay.js) - every other surface still reads
+  // the raw stored name or activePlanLine's full plan + day reference.
+  const planProgress = displayWorkout ? heroPlanLabel(activePlan?.name) : null;
+  // C18 ONE-TIME SKIP gate, unchanged: shown only when there is genuinely an
+  // outstanding required session to skip, never on a resolved week or when
+  // the user is browsing another workout. Founder device order 2026-09-08:
+  // moved from a standalone text link under the hero's buttons into the
+  // Options sheet (HomeChangeWorkoutSheet) as one more workout option.
+  const canSkipThisWorkout = !!(programmePosition?.nextSession
+    && programmePosition.nextSession.routineId === displayWorkout?.routine?.id);
   // C18 recovery visibility: the NEXT-WORKOUT surface names the state too, so
   // the session the athlete is about to start says what it is before they open
   // it. Straight from the block's resolved state - never re-derived here, and
@@ -2577,24 +2582,10 @@ export default function HomeScreen({ navigation, route }) {
                 textStyle={[styles.workoutOptionsText, live.workoutOptionsText]}
               />
             </View>
-            {/* ── C18 ONE-TIME SKIP. A quiet SECONDARY action, deliberately not
-                a primary CTA: skipping is a legitimate choice, not the
-                expected one. Shown only when there is genuinely an
-                outstanding required session to skip, so it never appears on a
-                resolved week or when the user is browsing another workout. ── */}
-            {programmePosition?.nextSession
-              && programmePosition.nextSession.routineId === displayWorkout?.routine?.id ? (
-                <TouchableOpacity
-                  onPress={() => { haptics.selection(); handleSkipThisWorkout(); }}
-                  style={styles.skipSessionRow}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Skip ${sessionDisplayName(programmePosition.nextSession, programmePosition.sessions)} this time`}
-                >
-                  <Text style={[styles.skipSessionText, live.skipSessionText]}>
-                    Skip this workout this time
-                  </Text>
-                </TouchableOpacity>
-              ) : null}
+            {/* C18 ONE-TIME SKIP moved into the Options sheet (Founder device
+                order 2026-09-08: the standalone text link read badly on its
+                own) - see canSkipThisWorkout and the HomeChangeWorkoutSheet
+                call site below. */}
             {/* Founder ruling (Today truth repair): the S2 consistency echo
                 ("N weeks running" / "Your run carries on") is REMOVED. The
                 weekly run/streak construct is rejected product-wide - it was
@@ -2963,6 +2954,12 @@ export default function HomeScreen({ navigation, route }) {
         selectedWorkoutOverride={selectedWorkoutOverride}
         onSelectOverride={setSelectedWorkoutOverride}
         navigation={navigation}
+        onSkip={canSkipThisWorkout ? () => { haptics.selection(); handleSkipThisWorkout(); } : null}
+        skipAccessibilityLabel={
+          canSkipThisWorkout
+            ? `Skip ${sessionDisplayName(programmePosition.nextSession, programmePosition.sessions)} this time`
+            : undefined
+        }
       />
 
       {/* ── C18 RECOVERY STATE detail (recovery-visibility amendment),

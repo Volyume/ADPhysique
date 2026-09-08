@@ -185,12 +185,12 @@ describe('Campaign 25: free/pro tier logic is retired (FOUNDER DECISION: fully f
     expect(code).not.toContain('ACTION_CARDS_DEFAULT');
   });
 
-  test('the "check-ins keep working" subtitle sentence still renders, now inside Plan tools, gated on having a plan (not tier)', () => {
-    const planToolsIdx = idx('{/* Plan tools. Campaign 25');
-    const previousIdx = idx('{/* Previous plans. Campaign 25');
-    const block = source.slice(planToolsIdx, previousIdx);
-    expect(block).toMatch(/\{isProWithPlan && \(/);
-    expect(block).toContain('Your check-ins, PRs, and coach output keep working whichever plan you choose. Activating a new plan starts a fresh training block.');
+  // RETIRED (founder device order 2026-09-08: "unnecessary, looks ugly, get
+  // rid"). The sentence and its isProWithPlan gate are both gone; pin the
+  // removal so neither drifts back in.
+  test('the "check-ins keep working" subtitle sentence is retired', () => {
+    expect(source).not.toContain('Your check-ins, PRs, and coach output keep working whichever plan you choose.');
+    expect(source).not.toContain('isProWithPlan');
   });
 
   test('FreeStarter/quiz is retired; the coach-built no-plan entry is the only one', () => {

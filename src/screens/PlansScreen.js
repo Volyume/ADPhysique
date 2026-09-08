@@ -1201,7 +1201,6 @@ export default function PlansScreen({ navigation }) {
     return 'secondary';
   }
 
-  const isProWithPlan = !!activePlan;
   // FOUNDER DECISION (fully free, no tier split): every account gets the
   // coached-builder card set now (it used to be Pro-only); the Free default
   // order (library first, manual second) is retired.
@@ -1769,17 +1768,6 @@ export default function PlansScreen({ navigation }) {
               </View>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </Card>
-          )}
-          {/* C5-P10-01 (D96): this sentence was the only place in the
-              product that said activation starts a block, and it was gated
-              on already BEING Pro with an active plan, so no first-time
-              user could ever read it. The gate stays (it is the switching
-              audience's note), and the first-use paths now carry the same
-              fact at their own activation decision points. */}
-          {isProWithPlan && (
-            <Text style={[styles.sectionSubtitle, live.sectionSubtitle]}>
-              Your check-ins, PRs, and coach output keep working whichever plan you choose. Activating a new plan starts a fresh training block.
-            </Text>
           )}
           {actionCards.map(card => {
             const featured = card.featured !== undefined ? card.featured : Boolean(card.badge);

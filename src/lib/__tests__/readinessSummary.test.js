@@ -206,7 +206,7 @@ describe('buildReadinessSummary', () => {
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(result).toEqual({ tone: 'go', line: 'First session of your plan. See how this block is shaped.' });
+    expect(result).toEqual({ tone: 'go', line: 'See how this block works.' });
   });
 
   test('deterministic: identical inputs produce an identical result', () => {

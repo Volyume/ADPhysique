@@ -574,7 +574,7 @@ export default function HowYouTrainAddScreen() {
         </Text>
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {draft.from && step === planSteps(draft, ctx)[0] ? (
           <View style={[styles.fromRow, { backgroundColor: t.colors.primaryBg }]}>
             <Ionicons name="information-circle-outline" size={iconSize.sm} color={t.colors.primary} />
@@ -919,6 +919,13 @@ function footerFor({ step, draft, plan, busy, showLines, t, onNext, onSave, onAg
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  // Founder device report 2026-09-08: with no flex on the ScrollView itself,
+  // it sized to its content instead of filling the space between the
+  // progress bar and the footer, so on a short step (few options) the
+  // Continue footer sat right under the content instead of pinned at the
+  // bottom - unlike ActiveWorkoutScreen's Log set bar, which this now
+  // matches: a flexed scroll body with the primary action fixed below it.
+  scroll: { flex: 1 },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.xs },
   cancelBtn: { minHeight: touchTarget.minimum, justifyContent: 'center', paddingHorizontal: spacing.sm },
   cancelText: { ...type.label },

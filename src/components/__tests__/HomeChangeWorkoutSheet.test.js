@@ -86,3 +86,26 @@ describe('HomeChangeWorkoutSheet', () => {
     expect(props.onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+// Founder device order 2026-09-08: the standalone "Skip this workout this
+// time" text link under the Home hero's buttons read badly on its own; it
+// now lives here as one more workout option, gated exactly the way the old
+// standalone link was (HomeScreen.js passes onSkip only when there is a
+// genuinely outstanding required session to skip).
+describe('the skip option (moved here from a standalone Home hero link)', () => {
+  test('absent when onSkip is not supplied (no outstanding session to skip)', () => {
+    const { tree } = render();
+    const text = flattenText(tree.toJSON());
+    expect(text).not.toContain('Skip this workout');
+  });
+
+  test('present when onSkip is supplied, and calls it then onClose', () => {
+    const onSkip = jest.fn();
+    const { tree, props } = render({ onSkip, skipAccessibilityLabel: 'Skip Upper A this time' });
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Skip this workout');
+    pressByLabel(tree, 'Skip Upper A this time');
+    expect(onSkip).toHaveBeenCalledTimes(1);
+    expect(props.onClose).toHaveBeenCalledTimes(1);
+  });
+});

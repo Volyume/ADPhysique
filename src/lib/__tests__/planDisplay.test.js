@@ -14,7 +14,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { dayDescriptor, activePlanLine, planHeadingName, weekCompleteLine } from '../planDisplay';
+import { dayDescriptor, activePlanLine, planHeadingName, heroPlanLabel, weekCompleteLine } from '../planDisplay';
 import { localWeekEndMs } from '../dayKey';
 
 describe('planDisplay formatters', () => {
@@ -103,13 +103,29 @@ describe('weekCompleteLine names the next session and the Monday', () => {
   });
 });
 
-describe('Home hero uses the canonical formatter (source guard)', () => {
+describe('heroPlanLabel (Home hero eyebrow only, founder device order 2026-09-08)', () => {
+  test('drops the goal segment and keeps phase · split', () => {
+    expect(heroPlanLabel("Build Muscle · Lean Gain · Upper-Lower 4×/week")).toBe('Lean Gain · Upper-Lower');
+    expect(heroPlanLabel("Men's Physique · Cut · V-Taper 4×/week, 9 Jul")).toBe('Cut · V-Taper');
+  });
+
+  test('no phase means no middot separators at all - left as is, nothing safe to drop', () => {
+    expect(heroPlanLabel('Beginner Full Body 3×/Week')).toBe('Beginner Full Body');
+  });
+
+  test('a missing plan name degrades to an empty string, never "undefined"', () => {
+    expect(heroPlanLabel(null)).toBe('');
+    expect(heroPlanLabel('   ')).toBe('');
+  });
+});
+
+describe('Home hero uses the canonical formatters (source guard)', () => {
   const src = fs.readFileSync(
     path.resolve(__dirname, '..', '..', 'screens', 'HomeScreen.js'), 'utf8'
   );
 
-  test('planProgress is built by activePlanLine, not a hand-written template', () => {
-    expect(src).toMatch(/planProgress = displayWorkout\s*\?\s*activePlanLine\(/);
+  test('planProgress is built by heroPlanLabel, not a hand-written template', () => {
+    expect(src).toMatch(/planProgress = displayWorkout \? heroPlanLabel\(/);
     // The old inline template must not come back on the hero.
     expect(src).not.toMatch(/`Day \$\{\(displayWorkout/);
   });

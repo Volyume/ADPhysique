@@ -103,6 +103,26 @@ export function weekCompleteLine(nextSessionName, nowMs = Date.now()) {
     : `Your new week starts on Monday ${monday}.`;
 }
 
+// Founder device order 2026-09-08: the Home hero eyebrow overflowed even at
+// two lines with a generated name like "Build Muscle · Lean Gain ·
+// Upper-Lower" plus a day descriptor - four facts stacked on one small chip,
+// when the card title just below it already names the specific session
+// ("Upper A" already says "Upper"). HOME HERO ONLY: drops the goal segment
+// (goalShort in planEngine.js, always the first of three) and the day
+// descriptor entirely, keeping just phase and split - "Lean Gain ·
+// Upper-Lower". Every other surface (Plans, Workout Complete, notifications,
+// share cards) keeps the full canonical name via activePlanLine/
+// planHeadingName above; this never touches the stored name itself.
+export function heroPlanLabel(planName) {
+  const heading = planHeadingName(planName);
+  const parts = heading.split(' · ').map((p) => p.trim()).filter(Boolean);
+  // goal · phase · split (3 parts, planEngine.js's own convention when a
+  // nutrition phase exists) -> drop goal, keep phase · split. Anything else
+  // (no phase means no middot separators at all) is left as is: there is no
+  // reliable way to tell the goal and split apart without one.
+  return parts.length >= 3 ? parts.slice(1).join(' · ') : heading;
+}
+
 // The one-line active-plan reference: plan name first, then the day
 // descriptor. Tolerates a missing plan name (falls back to the day alone)
 // so a mid-migration or freshly-seeded plan never renders "undefined".

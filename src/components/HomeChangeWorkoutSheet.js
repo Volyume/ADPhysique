@@ -21,6 +21,13 @@ import BottomSheet from './BottomSheet';
 function HomeChangeWorkoutSheet({
   visible, onClose, activePlan, displayWorkout, planAllWorkouts, nextWorkout,
   exerciseCounts, selectedWorkoutOverride, onSelectOverride, navigation,
+  // Founder device order 2026-09-08: the standalone "Skip this workout
+  // this time" text link under the hero's buttons read badly on its own;
+  // it now lives here as one more workout option, beside "View workout"
+  // and "Blank workout". `onSkip` is omitted entirely (row does not
+  // render) when there is no outstanding required session to skip - same
+  // gating HomeScreen.js applied to the old standalone link.
+  onSkip, skipAccessibilityLabel,
 }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
@@ -97,6 +104,23 @@ function HomeChangeWorkoutSheet({
             </View>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </TouchableOpacity>
+          {onSkip ? (
+            <TouchableOpacity
+              style={styles.sheetActionRow}
+              onPress={() => { onSkip(); onClose(); }}
+              accessibilityRole="button"
+              accessibilityLabel={skipAccessibilityLabel || 'Skip this workout this time'}
+            >
+              <View style={[styles.sheetActionIcon, live.sheetActionIcon]}>
+                <Ionicons name="play-skip-forward-outline" size={18} color={t.colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.sheetActionTitle, live.sheetActionTitle]}>Skip this workout</Text>
+                <Text style={[styles.sheetActionSub, live.sheetActionSub]}>Just this once, not the whole plan.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+            </TouchableOpacity>
+          ) : null}
           {planAllWorkouts.length > 0 ? (
             <SectionLabel tone="muted" style={styles.sheetSectionLabel}>Choose a different workout</SectionLabel>
           ) : null}
