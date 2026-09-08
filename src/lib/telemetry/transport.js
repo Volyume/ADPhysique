@@ -22,7 +22,8 @@ import {
   getUnpushedEngineTelemetry,
   markEngineTelemetryPushed,
 } from '../database';
-import { logWarn } from '../errorLog';
+import { logWarn, logInfo } from '../errorLog';
+import { isDeletedAccountFkError } from '../sync/telemetry';
 import { ALLOWED_EVENTS } from './events';
 
 const FLUSH_DEBOUNCE_MS = 5000;
@@ -115,7 +116,15 @@ export async function flushPending() {
       _occurred_at: new Date(row.occurred_at).toISOString(),
     });
     if (error) {
-      logWarn('telemetry.transport.rpc', error.message ?? 'unknown', { event: row.event });
+      // Same benign classification sync/telemetry.js's logSyncError already
+      // applies: a deleted account whose device still holds a live JWT fails
+      // this FK on every flush until the token expires - the correct server
+      // response, not an app fault (Sentry VOLYUME-39).
+      if (isDeletedAccountFkError(error)) {
+        logInfo('telemetry.transport.rpc.deletedAccountResidual', 'benign user_id FK rejection from a deleted-account device; session will clear', { event: row.event });
+      } else {
+        logWarn('telemetry.transport.rpc', error.message ?? 'unknown', { event: row.event });
+      }
       // Skip this row; we'll retry on the next flush. Don't break
       // the loop -- a single bad row shouldn't block the rest.
       continue;

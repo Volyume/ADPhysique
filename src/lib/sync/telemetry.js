@@ -86,7 +86,7 @@ export async function trackSyncConflictResolved(userId, payload) {
 // raise a Sentry error/issue. We match it narrowly (FK violation on a
 // *_user_id_fkey constraint) and demote it to an info breadcrumb; the sync
 // runner's auth-gone check then clears the session so it stops entirely.
-function isDeletedAccountFkError(err) {
+export function isDeletedAccountFkError(err) {
   const code = err?.code ?? err?.cause?.code ?? null;
   const text = `${err?.message ?? ''} ${err?.details ?? ''} ${err?.hint ?? ''}`.toLowerCase();
   return code === '23503' && /_user_id_fkey/.test(text);

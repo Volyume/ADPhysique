@@ -10776,13 +10776,29 @@ export async function insertOrUpdateUserBodyProfileFromCloud(userId, p) {
     );
     return;
   }
+  // ON CONFLICT rather than a plain INSERT: the SELECT above only proves no
+  // row existed at that moment, and a concurrent pull for the same user
+  // (e.g. two overlapping sync triggers on cold start) can insert its own
+  // row in the gap before this statement runs, which a bare INSERT would
+  // then lose to the UNIQUE constraint on user_id (Sentry VOLYUME-38, "UNIQUE
+  // constraint failed: user_body_profile.user_id"). Matches the same
+  // race-proof pattern insertEffectiveMaintenanceMemoFromCloud already uses.
   await d.runAsync(
     `INSERT INTO user_body_profile
       (id, user_id, sex, date_of_birth, height_cm, experience_level,
        training_age_years, primary_goal, scoff_score, gdpr_consented,
        goal_lock_advanced, goal_lock_set_at,
        created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET
+       sex=excluded.sex, date_of_birth=excluded.date_of_birth,
+       height_cm=excluded.height_cm, experience_level=excluded.experience_level,
+       training_age_years=excluded.training_age_years,
+       primary_goal=excluded.primary_goal, scoff_score=excluded.scoff_score,
+       gdpr_consented=excluded.gdpr_consented,
+       goal_lock_advanced=COALESCE(excluded.goal_lock_advanced, user_body_profile.goal_lock_advanced),
+       goal_lock_set_at=COALESCE(excluded.goal_lock_set_at, user_body_profile.goal_lock_set_at),
+       updated_at=excluded.updated_at`,
     [
       uid(), userId,
       p.sex ?? null, p.date_of_birth ?? null, p.height_cm ?? null,

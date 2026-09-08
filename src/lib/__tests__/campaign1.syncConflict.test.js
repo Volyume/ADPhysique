@@ -416,6 +416,23 @@ describe('D14 user_body_profile: a stale device cannot overwrite ED-screening da
     // COALESCE(NULL, goal_lock_advanced) keeps whatever the device holds.
     expect(conn.runAsync.mock.calls[0][1][8]).toBeNull();
   });
+
+  // Sentry VOLYUME-38: "UNIQUE constraint failed: user_body_profile.user_id".
+  // The SELECT above only proves no row existed at that instant; a
+  // concurrent pull for the same user (two overlapping sync triggers on
+  // cold start) can insert its own row in the gap before this statement
+  // runs. A bare INSERT would then lose to the UNIQUE constraint and throw;
+  // ON CONFLICT DO UPDATE absorbs the race instead.
+  test('the first-time insert is race-proof: ON CONFLICT(user_id) DO UPDATE, not a bare INSERT', async () => {
+    conn.getFirstAsync.mockResolvedValue(null); // no existing row found
+
+    await insertOrUpdateUserBodyProfileFromCloud('u1', cloudProfile(T_NEW));
+
+    expect(conn.runAsync).toHaveBeenCalledTimes(1);
+    const [sql] = conn.runAsync.mock.calls[0];
+    expect(sql).toMatch(/INSERT INTO user_body_profile/);
+    expect(sql).toMatch(/ON CONFLICT\(user_id\) DO UPDATE SET/);
+  });
 });
 
 // ─── D13 push side ───────────────────────────────────────────────────────

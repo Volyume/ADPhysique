@@ -16,7 +16,7 @@
  *       equal-or-newer local row and keeps the one-active-plan invariant.
  */
 
-import { logSyncError } from '../telemetry';
+import { logSyncError, isDeletedAccountFkError } from '../telemetry';
 import { isMissingTableError } from './_missingTable';
 
 // meal_plans is a cloud migration (086). If a client is ever ahead of the
@@ -66,6 +66,16 @@ export async function pushMealPlans(sb, { userId, localUserId } = {}) {
         return { count: 0, errors: 0, skipped: 'cloud_table_missing' };
       }
       logSyncError('sync.tables.mealPlans.pushUpsert', error);
+      // Same benign classification logSyncError just applied internally: a
+      // deleted account whose device still holds a live JWT fails this push
+      // on every attempt until the token expires - the correct server
+      // response, not a real sync failure. Counting it as errors:1 here (as
+      // any other failure would be) made the runner's own "table pushed
+      // with N errors" breadcrumb fire a SECOND time on top of the one
+      // logSyncError already downgraded to info (Sentry VOLYUME-2J).
+      if (isDeletedAccountFkError(error)) {
+        return { count: 0, errors: 0, skipped: 'deleted_account_residual' };
+      }
       return { count: 0, errors: 1 };
     }
     return { count: 1, errors: 0 };

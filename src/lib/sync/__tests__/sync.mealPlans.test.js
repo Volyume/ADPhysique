@@ -7,7 +7,13 @@
  * plan_json back for the local TEXT column.
  */
 
-jest.mock('../telemetry', () => ({ logSyncError: jest.fn() }));
+jest.mock('../telemetry', () => ({
+  logSyncError: jest.fn(),
+  // Real implementation (not a stub): the deleted-account-residual test
+  // below needs the actual FK-error classification, and stubbing it to
+  // always return false/true would test the mock, not the code.
+  isDeletedAccountFkError: jest.requireActual('../telemetry').isDeletedAccountFkError,
+}));
 jest.mock('../../food/db', () => ({
   getLatestMealPlanRowForSync: jest.fn(),
   applyMealPlanRowFromCloud: jest.fn(),
@@ -15,6 +21,7 @@ jest.mock('../../food/db', () => ({
 
 import { pushMealPlans, pullMealPlans } from '../tables/mealPlans';
 import { getLatestMealPlanRowForSync, applyMealPlanRowFromCloud } from '../../food/db';
+import { logSyncError } from '../telemetry';
 
 const PLAN = { kind: 'week', days: [], schedule: [] };
 
@@ -74,6 +81,32 @@ describe('pushMealPlans', () => {
     const upsert = jest.fn(async () => ({ error: { code: 'PGRST205', message: "Could not find the table 'public.meal_plans' in the schema cache" } }));
     const sb = { from: jest.fn(() => ({ upsert })) };
     expect(await pushMealPlans(sb, { userId: 'u', localUserId: 'l' })).toEqual({ count: 0, errors: 0, skipped: 'cloud_table_missing' });
+  });
+
+  // Sentry VOLYUME-2J: a deleted account whose device still holds a live
+  // JWT fails this push with 23503 (*_user_id_fkey) on every attempt until
+  // the token expires - the correct server response, not a sync failure.
+  // logSyncError already downgrades this to an info breadcrumb internally;
+  // this must ALSO count as errors:0, or the runner's own "table pushed
+  // with N errors" breadcrumb fires a second, redundant warning on top.
+  test('deleted-account FK residual → benign skip, not an error', async () => {
+    getLatestMealPlanRowForSync.mockResolvedValue({
+      id: 'p1', plan_json: JSON.stringify(PLAN), is_active: 1, deleted_at: null, created_at: 1, updated_at: 2,
+    });
+    const fkError = { code: '23503', message: 'insert or update on table "meal_plans" violates foreign key constraint "meal_plans_user_id_fkey"', details: 'Key is not present in table "users".' };
+    const upsert = jest.fn(async () => ({ error: fkError }));
+    const sb = { from: jest.fn(() => ({ upsert })) };
+    expect(await pushMealPlans(sb, { userId: 'u', localUserId: 'l' })).toEqual({ count: 0, errors: 0, skipped: 'deleted_account_residual' });
+    expect(logSyncError).toHaveBeenCalledWith('sync.tables.mealPlans.pushUpsert', fkError);
+  });
+
+  test('a genuine FK violation unrelated to a deleted account still counts as an error', async () => {
+    getLatestMealPlanRowForSync.mockResolvedValue({
+      id: 'p1', plan_json: JSON.stringify(PLAN), is_active: 1, deleted_at: null, created_at: 1, updated_at: 2,
+    });
+    const upsert = jest.fn(async () => ({ error: { code: '23503', message: 'violates foreign key constraint "meal_plans_pkey_fkey"' } }));
+    const sb = { from: jest.fn(() => ({ upsert })) };
+    expect(await pushMealPlans(sb, { userId: 'u', localUserId: 'l' })).toEqual({ count: 0, errors: 1 });
   });
 });
 

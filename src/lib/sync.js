@@ -63,6 +63,7 @@ import {
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getPullWatermark, setPullWatermark, nextWatermark, isoFromMs, getPushWatermark, setPushWatermark } from './sync/watermark';
+import { isDeletedAccountFkError } from './sync/telemetry';
 import { logError, logWarn, logInfo } from './errorLog';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -136,6 +137,19 @@ function _bulkPushCause() {
 
 function logPgErr(scope, err) {
   if (!err) return;
+  // A deleted account whose device still holds a live (unexpired) JWT fails
+  // every *_user_id_fkey push with Postgres 23503 until the token expires -
+  // the correct server response to a user that no longer exists, not an app
+  // fault (same classification sync/telemetry.js's logSyncError already
+  // applies for the registry-driven tables; this was the gap that let
+  // syncUserPref/_pullUserBodyProfile and every other logPgErr caller raise
+  // a Sentry warning for the same benign condition, Sentry VOLYUME-3A/3C).
+  if (isDeletedAccountFkError(err)) {
+    logInfo(`${scope}.deletedAccountResidual`, 'benign user_id FK rejection from a deleted-account device; session will clear', {
+      code: err.code ?? null,
+    });
+    return;
+  }
   if (_bulkPushTracking) _bulkPushErrorCount += 1;
   _noteBulkError(err.message || String(err));
   logWarn(scope, err.message || String(err), {
