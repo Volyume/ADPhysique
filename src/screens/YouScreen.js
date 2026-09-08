@@ -361,16 +361,10 @@ export default function YouScreen({ navigation }) {
   const profileFocus = profileFocusLine(userProfile);
   const pendingCoachCopy = buildPendingCoachCopy(coachReadiness);
 
-  // Community (blueprint section 1, entry point 2): opens Community. It
-  // covers several things together - following and connecting with other
-  // people who train, messaging them, matching with a training partner,
-  // seeing how people you know are getting on with their own training, and
-  // groups - and no one of those is "the point" on its own. Founder
-  // correction 2026-09-08, twice over: this row's sub line was rewritten
-  // twice and both times picked one of those and presented it as the
-  // headline (first the consistency feature, then training-partner
-  // matching). The row now carries no sub line at all rather than risk a
-  // third wrong compression - Community explains itself once opened.
+  // Community (blueprint section 1, entry point 2): opens Community.
+  // Founder-authored sub line, 2026-09-08, after two attempts of my own at
+  // a one-liner each wrongly picked a single mechanism (following/
+  // messaging/matching/boards/groups) and presented it as the headline.
   // Partners itself was retired on 2026-09-06 (SD-03).
   const openCommunity = useCallback(() => {
     navigateCrossTab(navigation, 'HomeTab', 'Community');
@@ -569,6 +563,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="people-outline"
             label="Community"
+            sub="Connect with other lifters and share your training progress."
             onPress={openCommunity}
           />
           </NavGroup>

@@ -1688,26 +1688,13 @@ export default function PlansScreen({ navigation }) {
           </Card>
         )}
 
-        {/* Community (blueprint section 1, entry point 3): programmes other
-            lifters have published, under the user's own plans. Same row
-            shape as Plan tools below, so it reads as one more place plans
-            come from rather than a promotion. */}
-        <View style={styles.section}>
-          <Card
-            style={styles.trainingBlocksRow}
-            onPress={() => navigateCrossTab(navigation, 'HomeTab', 'Community', { segment: 'discover', focus: 'programmes' })}
-            accessibilityLabel="Programmes from the community"
-          >
-            <View style={[styles.trainingBlocksIcon, live.trainingBlocksIcon]}>
-              <Ionicons name="people-outline" size={20} color={t.colors.textSecondary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>Programmes from the community</Text>
-              <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>Use or adapt what other lifters have built</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-          </Card>
-        </View>
+        {/* Founder correction 2026-09-08: this card ("Programmes from the
+            community", linking to Community's discover segment focused on
+            "programmes") was removed. The shared-programme layer it pointed
+            at was retired by the 2026-09-07 community product audit
+            (migrate_164 gap closure) - Community was rebuilt around
+            connecting with other people who train, not sharing programmes,
+            so the destination this card promised no longer exists. */}
 
         {/* Plan tools. Campaign 25 (PLANS-SCREEN-SPEC.md §2 item 3): MOVED UP
             from the page bottom, one SectionLabel over the training-blocks
