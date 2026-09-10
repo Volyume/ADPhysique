@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## COMMUNITIES REVAMP (2026-09-10, founder prompt) — PHASES 0, 1 and 2 LANDED and MERGED to main; MIGRATION 170 (A, A2, B) WRITTEN and HOSTILE-REVIEWED, NOT APPLIED; PHASE 3 AMBIENT CLIENT IN FLIGHT on `claude/communities-feature-overhaul-68l923`
+## COMMUNITIES REVAMP (2026-09-10, founder prompt) — PHASES 0 to 3 LANDED and MERGED to main; MIGRATION 170 (A, A2, B) REVIEWED, APPLY BLOCKED ON A CREDENTIAL (founder phrase given); PHASE 4 WIDGET QUEUED
 
 Founder brief in chat (2026-09-10): Community was spec'd on plan sharing,
 which is the wrong foundation; the purpose is connecting (gym, age group,
@@ -150,6 +150,24 @@ client to `23-PHASE3-SPEC.md`. Recovery: re-dispatch over
 merge); THEN the founder's phrase for migration 170 (one file, A + A2 +
 B), THEN one Android build from main, THEN the device walks (phase 2 and
 3 checklists delivered in chat). Phase 4 (widget) after the walks.
+PHASE 3 LANDED and MERGED to main (clean-worktree run: lint exit 0;
+`Test Suites: 1 skipped, 1284 passed, 1284 of 1285`, `Tests: 16 skipped,
+19650 passed, 19666`). Lead rulings on the lane's forks: the once-only
+offer switches on consistency sharing only (the higher level needs its
+full wording at the toggle, R3); the group page gains "Share a workout
+with the group"; foreground-only flush of pending items accepted and
+recorded (a reconnect listener threw inside the library under test).
+CLOUD: founder said "Run against production" 17:58 UTC; `apply-named-sql`
+run #11 failed HTTP 401 before any statement (repo secret
+`SUPABASE_ACCESS_TOKEN` no longer accepted); nothing applied. The lead
+declined to hand-transcribe 213 KB of SQL through the MCP route and the
+classifier blocked delegating a production write. FOUNDER ACTION: new
+Supabase personal access token into the repo secret, then say "token
+updated"; the lead re-dispatches run #12 and `deploy-functions.yml`
+(community-notify), verifies read-only, records the apply. THEN one
+Android build from main (phases 0 to 3), THEN the device walks (phase 0
+to 3 checklists in chat). Phase 4 (widget "a friend trained today",
+CR-13) after the walks.
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 

@@ -41,6 +41,11 @@ and B, all hostile-reviewed (Opus), still NOT APPLIED. Phase 3 client in
 flight to `23-PHASE3-SPEC.md`. Order of founder actions after phase 3
 lands: "run against production" for 170, then one Android build from
 main, then the phase 2 and 3 device walks from chat.
+PHASE 3 LANDED and MERGED to main (lint clean, 1284 suites / 19650 tests
+on a clean worktree). Migration 170 apply: founder phrase given, run #11
+failed HTTP 401 on the repo's Supabase token before any statement;
+nothing applied; waiting on the founder's new token, then re-dispatch.
+All four build phases are on main; the widget phase follows the walks.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 
