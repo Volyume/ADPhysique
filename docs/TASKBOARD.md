@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## COMMUNITIES REVAMP (2026-09-10, founder prompt) — RESEARCH LANDED; FORKS RULED (CR-13); PHASE 0 TRUTH IN FLIGHT on `claude/communities-feature-overhaul-68l923`
+## COMMUNITIES REVAMP (2026-09-10, founder prompt) — PHASE 0 TRUTH LANDED and MERGED to main; PHASE 1 ARRANGEMENT + MIGRATION 170 PART A IN FLIGHT on `claude/communities-feature-overhaul-68l923`
 
 Founder brief in chat (2026-09-10): Community was spec'd on plan sharing,
 which is the wrong foundation; the purpose is connecting (gym, age group,
@@ -84,6 +84,21 @@ the profile RPC does not return counters; then it moves to phase 2).
 Recovery path: re-dispatch the same brief over `git checkout -- <lane
 files>`; agents never commit. Landing: lead diff review, `npm run lint &&
 npm test`, per-feature commits, merge to main, device checklist in chat.
+PHASE 0 LANDED (two commits, lead-reviewed): lint `eslint . --max-warnings
+0` exit 0; `Test Suites: 1 skipped, 1266 passed, 1266 of 1267 total`,
+`Tests: 16 skipped, 19056 passed, 19072 total`. Lane B STOP carried to
+phase 2: the profile RPC returns no counters to viewers
+(`migrate_164:374-450`), so the strip on others' profiles needs migration
+170. Device checklist delivered in chat.
+PHASE 1 ARRANGEMENT: edit gate `21-PHASE1-SPEC.md`. Lane P1-A (Sonnet):
+the seven row components + tests + presentation guard. Then lane P1-B
+(Sonnet, after P1-A lands): Hub, cohort page, group page, profile, board
+to the spec. In parallel with P1-A, lane P2-SQL (Sonnet):
+`migrate_170_community_connection.sql` part A (discipline keys, cohort
+dimension kinds and board scopes, hub summary RPC, viewer counters on the
+profile card, connect reasons), written only, never applied; hostile SQL
+review (Opus) before any "run against production". Recovery path for
+each: re-dispatch the same brief over `git checkout -- <lane files>`.
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 

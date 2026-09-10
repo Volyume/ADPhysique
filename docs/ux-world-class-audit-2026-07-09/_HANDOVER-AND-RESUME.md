@@ -19,6 +19,14 @@ three committing actions; the Hub stacks 7-9 blocks before the feed;
 profile but your own. NEXT: founder answers Q1-Q8 (blueprint section
 12); phase 0 Truth, then 1 Arrangement, 2 Cohorts (migration 170 part
 A), 3 Ambient (part B); each green, merged to main, device-walked.
+UPDATE (same day): founder delegated the eight forks ("best product for
+all variety of users"); ruled in blueprint section 12 (CR-13). PHASE 0
+LANDED and MERGED to main: copy and residue retired everywhere, a copy
+guard, skeleton first loads on nineteen screens, group notification copy,
+a touch-target fix. Settled tree: lint clean, 1266 suites / 19056 tests.
+Phase 1 edit gate `21-PHASE1-SPEC.md`; lanes P1-A (components) and
+P2-SQL (migration 170 part A, written not applied) dispatched; P1-B
+(screens) follows P1-A. STOP carried: others' profile counters need 170.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 
