@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, RefreshControl, ActivityIndicator,
+  View, Text, StyleSheet, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
@@ -33,6 +33,7 @@ import Card from '../components/Card';
 import Chip from '../components/Chip';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
+import { SkeletonCard } from '../components/Skeleton';
 import ComposerInput from '../components/community/ComposerInput';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
@@ -70,7 +71,8 @@ const TARGET_LABELS = {
   profile: 'Profile',
   post: 'Story',
   comment: 'Comment',
-  programme: 'Programme',
+  message: 'Message',
+  group: 'Group',
 };
 
 /** "1 report" / "4 reports". */
@@ -211,7 +213,11 @@ export default function CommunityModerationScreen() {
           </Card>
         )}
         ListEmptyComponent={loading ? (
-          <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
+          <View style={styles.skeleton}>
+            <SkeletonCard height={116} />
+            <SkeletonCard height={116} />
+            <SkeletonCard height={116} />
+          </View>
         ) : (
           <EmptyState
             icon="checkmark-circle-outline"
@@ -291,6 +297,7 @@ const styles = StyleSheet.create({
   detail: { ...type.caption, color: colors.textSecondary },
   meta: { ...type.caption, color: colors.textMuted },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
+  skeleton: { gap: spacing.md },
   sheet: { gap: spacing.sm, paddingBottom: spacing.md },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
 });

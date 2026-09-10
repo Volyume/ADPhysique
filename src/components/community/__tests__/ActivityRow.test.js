@@ -92,3 +92,32 @@ describe('the other kinds are unchanged', () => {
       .toBe('@priya_kb did something in Community');
   });
 });
+
+describe('group activity gets calm copy', () => {
+  // migrate_165_community_boards_groups.sql:974,1007,1113: the row
+  // `_community_add_activity` writes for these three kinds never carries a
+  // group name (`community_activity`, migrate_160:3376-3431, only fills
+  // `preview` for `target_kind: 'post'`), so the copy never presumes one.
+  test.each([
+    ['group_request', 'asked to join your group'],
+    ['group_accepted', 'accepted you into the group'],
+    ['group_invited', 'invited you to a group'],
+  ])('%s reads "%s"', (kind, line) => {
+    expect(activityLine(item({ kind, target_kind: 'group', target_id: 'g1' })))
+      .toBe(`@priya_kb ${line}`);
+  });
+
+  test('a group row is pressable like every other kind', () => {
+    const onPress = jest.fn();
+    const tree = render({
+      item: item({ kind: 'group_accepted', target_kind: 'group', target_id: 'g1' }),
+      onPress,
+    });
+
+    const card = tree.root.findAll((n) => n.props?.onPress && n.props?.accessibilityLabel)[0];
+    act(() => { card.props.onPress(); });
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+    act(() => { tree.unmount(); });
+  });
+});

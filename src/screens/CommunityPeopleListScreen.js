@@ -45,6 +45,7 @@ import { FlashList } from '@shopify/flash-list';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
+import { SkeletonRow } from '../components/Skeleton';
 import Chip from '../components/Chip';
 import ProfileCard from '../components/community/ProfileCard';
 import ConnectSheet from '../components/community/ConnectSheet';
@@ -216,7 +217,12 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
   ) : null;
 
   const empty = loading ? (
-    <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
+    <View style={styles.skeleton}>
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+    </View>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -346,6 +352,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
+  skeleton: { gap: spacing.sm },
   footer: { paddingVertical: spacing.lg },
   headerAction: {
     width: touchTarget.minimum,

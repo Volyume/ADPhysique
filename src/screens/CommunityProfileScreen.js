@@ -25,7 +25,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, RefreshControl, ActivityIndicator, Pressable, Share,
+  View, Text, StyleSheet, RefreshControl, Pressable, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
@@ -39,6 +39,7 @@ import BottomSheet from '../components/BottomSheet';
 import ModalHeader from '../components/ModalHeader';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
+import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import PostCard from '../components/community/PostCard';
 import ProfileCard from '../components/community/ProfileCard';
@@ -407,7 +408,17 @@ export default function CommunityProfileScreen({ navigation, route }) {
   }
 
   const empty = loading ? (
-    <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
+    <View style={styles.skeleton}>
+      <View style={styles.skeletonHero}>
+        <Skeleton width={56} height={56} radius={circle(56)} />
+        <View style={styles.skeletonHeroLines}>
+          <Skeleton width="55%" height={18} />
+          <Skeleton width="35%" height={13} style={styles.skeletonHandle} />
+        </View>
+      </View>
+      <SkeletonCard height={110} />
+      <SkeletonCard height={110} />
+    </View>
   ) : blockedCard ? (
     <EmptyState
       icon="ban-outline"
@@ -588,5 +599,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
+  skeleton: { gap: spacing.lg },
+  skeletonHero: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  skeletonHeroLines: { flex: 1, gap: spacing.xxs },
+  skeletonHandle: { marginTop: spacing.xs },
   sheet: { gap: spacing.md, paddingBottom: spacing.md },
 });

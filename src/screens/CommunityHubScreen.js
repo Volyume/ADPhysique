@@ -52,6 +52,7 @@ import Card from '../components/Card';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
+import { SkeletonCard } from '../components/Skeleton';
 import Chip from '../components/Chip';
 import PostCard from '../components/community/PostCard';
 import ProfileCard from '../components/community/ProfileCard';
@@ -611,7 +612,7 @@ export default function CommunityHubScreen({ navigation, route }) {
         <Card
           onPress={() => navigation.navigate('CommunityFindPeople')}
           style={styles.findCard}
-          accessibilityLabel="Find people. At your gym, near you, on your programme and more."
+          accessibilityLabel="Find people. At your gym, near you, training like you and more."
         >
           <View style={styles.findRow}>
             <View style={[styles.findGlyph, { backgroundColor: t.colors.surface2 }]}>
@@ -622,7 +623,7 @@ export default function CommunityHubScreen({ navigation, route }) {
                 Find people
               </Text>
               <Text style={[styles.findSub, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                At your gym, near you, on your programme and more
+                At your gym, near you, training like you and more
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={t.colors.textMuted} />
@@ -689,8 +690,10 @@ export default function CommunityHubScreen({ navigation, route }) {
   );
 
   const empty = loading || meLoading ? (
-    <View style={styles.loading}>
-      <ActivityIndicator color={t.colors.primary} />
+    <View style={styles.skeleton}>
+      <SkeletonCard height={132} />
+      <SkeletonCard height={132} />
+      <SkeletonCard height={132} />
     </View>
   ) : failed ? (
     // A read that did not answer is never reported as an empty community.
@@ -846,5 +849,6 @@ const styles = StyleSheet.create({
   gymCaption: { ...type.caption, color: colors.textMuted },
   offline: { ...type.caption, color: colors.textMuted },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
+  skeleton: { gap: spacing.md },
   footer: { paddingVertical: spacing.lg },
 });

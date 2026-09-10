@@ -28,7 +28,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, ActivityIndicator, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -38,6 +38,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import Button from '../components/Button';
+import { Skeleton } from '../components/Skeleton';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
@@ -444,7 +445,15 @@ export default function CommunityConversationScreen({ navigation, route }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {loading ? (
-          <View style={styles.centre}><ActivityIndicator color={t.colors.primary} /></View>
+          // Bubble-shaped placeholders in the real slot messages occupy
+          // (the thread is inverted, newest at the bottom), rather than a
+          // bare spinner (styling.md "Loading states").
+          <View style={styles.skeletonThread}>
+            <Skeleton width="52%" height={40} radius={radius.lg} style={styles.bubbleLeft} />
+            <Skeleton width={96} height={28} radius={radius.lg} style={styles.bubbleRight} />
+            <Skeleton width="60%" height={52} radius={radius.lg} style={styles.bubbleLeft} />
+            <Skeleton width="38%" height={28} radius={radius.lg} style={styles.bubbleRight} />
+          </View>
         ) : errorCode ? (
           <View style={styles.centre}>
             <EmptyState
@@ -575,6 +584,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   flex: { flex: 1 },
   centre: { flex: 1, justifyContent: 'center', padding: spacing.lg },
+  skeletonThread: { flex: 1, justifyContent: 'flex-end', padding: spacing.lg, gap: spacing.sm },
+  bubbleLeft: { alignSelf: 'flex-start' },
+  bubbleRight: { alignSelf: 'flex-end' },
   list: { padding: spacing.lg },
   sessionChipRow: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   headerAction: {

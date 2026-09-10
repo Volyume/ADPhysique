@@ -19,6 +19,7 @@ import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
+import { SkeletonRow } from '../components/Skeleton';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import Button from '../components/Button';
 import MenuSheet from '../components/community/MenuSheet';
@@ -187,7 +188,12 @@ export default function CommunityGroupMembersScreen({ route }) {
   ] : [];
 
   const empty = loading ? (
-    <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
+    <View style={styles.skeleton}>
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+    </View>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -255,6 +261,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
+  skeleton: { gap: spacing.sm },
   footer: { paddingVertical: spacing.lg },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,

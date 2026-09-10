@@ -25,6 +25,7 @@ import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
+import { SkeletonRow } from '../components/Skeleton';
 import Chip from '../components/Chip';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import useTheme from '../hooks/useTheme';
@@ -209,7 +210,13 @@ export default function CommunityBoardScreen({ navigation, route }) {
   );
 
   const empty = loading ? (
-    <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
+    <View style={styles.skeleton}>
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+    </View>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -278,6 +285,7 @@ const styles = StyleSheet.create({
   headerBlock: { gap: spacing.md, marginBottom: spacing.md },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
+  skeleton: { gap: spacing.sm },
   footer: { paddingVertical: spacing.lg },
   row: {
     flexDirection: 'row',

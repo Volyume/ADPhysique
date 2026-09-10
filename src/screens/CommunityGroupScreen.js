@@ -27,6 +27,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
+import { SkeletonCard } from '../components/Skeleton';
 import Button from '../components/Button';
 import PostCard from '../components/community/PostCard';
 import MenuSheet from '../components/community/MenuSheet';
@@ -35,7 +36,8 @@ import GroupInviteSheet from '../components/community/GroupInviteSheet';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type } from '../styles/theme';
+import { colors, spacing, type, hitSlop } from '../styles/theme';
+import { touchTarget } from '../styles/layout';
 import {
   getGroup, joinGroup, leaveGroup, closeGroup, loadGroupFeed, reactToPost,
   loadBoard, daysLabel, GROUP_ACCESS,
@@ -225,7 +227,8 @@ export default function CommunityGroupScreen({ navigation, route }) {
   const headerAction = isMember ? (
     <Pressable
       onPress={() => setMenuOpen(true)}
-      hitSlop={spacing.sm}
+      hitSlop={hitSlop}
+      style={styles.headerAction}
       accessibilityRole="button"
       accessibilityLabel="Group menu"
     >
@@ -281,7 +284,10 @@ export default function CommunityGroupScreen({ navigation, route }) {
   ];
 
   const empty = loading ? (
-    <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
+    <View style={styles.skeleton}>
+      <SkeletonCard height={108} />
+      <SkeletonCard height={108} />
+    </View>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -301,7 +307,11 @@ export default function CommunityGroupScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title={group?.name || 'Group'} right={headerAction} />
       {loading && !group ? (
-        <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
+        <View style={styles.skeletonScreen}>
+          <SkeletonCard height={140} />
+          <SkeletonCard height={108} />
+          <SkeletonCard height={108} />
+        </View>
       ) : error && !group ? empty : (
         <FlashList
           data={isMember ? feedRows : []}
@@ -391,7 +401,18 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
+  skeleton: { gap: spacing.md },
+  skeletonScreen: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
   footer: { paddingVertical: spacing.lg },
+  // Matches CommunityConversationScreen's header kebab: a fixed 48dp box so
+  // the glyph clears the platform touch-target floor regardless of its own
+  // visual size (Community accessibility pass, CLAUDE.md styling.md).
+  headerAction: {
+    width: touchTarget.minimum,
+    height: touchTarget.minimum,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   header: { gap: spacing.md, marginBottom: spacing.sm },
   headerCard: { borderRadius: 16, padding: spacing.lg, gap: spacing.xs },
   name: { ...type.h2, color: colors.textPrimary },

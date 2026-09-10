@@ -25,6 +25,7 @@ import { FlashList } from '@shopify/flash-list';
 import { useFocusEffect } from '@react-navigation/native';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
+import { SkeletonRow } from '../components/Skeleton';
 import ConversationRow from '../components/community/ConversationRow';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
@@ -101,7 +102,12 @@ export default function CommunityConversationsScreen({ navigation }) {
   }, [navigation, refreshMe]);
 
   const empty = loading ? (
-    <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
+    <View style={styles.skeleton}>
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+    </View>
   ) : errorCode ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -161,5 +167,6 @@ const styles = StyleSheet.create({
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
   separator: { height: spacing.md },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
+  skeleton: { gap: spacing.sm },
   footer: { paddingVertical: spacing.lg },
 });

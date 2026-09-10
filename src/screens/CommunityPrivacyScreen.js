@@ -19,13 +19,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, ActivityIndicator, Switch,
+  View, Text, StyleSheet, ScrollView, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
 import SectionLabel from '../components/SectionLabel';
+import { SkeletonRow } from '../components/Skeleton';
 import { SettingRow, settingsStyles, useSettingsStyles } from '../components/SettingsPrimitives';
 import EmptyState from '../components/EmptyState';
 import ProfileCard from '../components/community/ProfileCard';
@@ -302,7 +303,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
 
             <View style={styles.section}>
               <SectionLabel tone="muted">Blocked</SectionLabel>
-              {loading ? <ActivityIndicator color={t.colors.primary} /> : null}
+              {loading ? <SkeletonRow /> : null}
               {!loading && !lists.blocked.length ? (
                 <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
                   You have not blocked anyone.
@@ -328,6 +329,7 @@ export default function CommunityPrivacyScreen({ navigation }) {
 
             <View style={styles.section}>
               <SectionLabel tone="muted">Muted</SectionLabel>
+              {loading ? <SkeletonRow /> : null}
               {!loading && !lists.muted.length ? (
                 <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
                   You have not muted anyone.

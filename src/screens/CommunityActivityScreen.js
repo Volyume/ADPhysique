@@ -29,6 +29,7 @@ import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
+import { SkeletonRow } from '../components/Skeleton';
 import ActivityRow from '../components/community/ActivityRow';
 import ProfileCard from '../components/community/ProfileCard';
 import ConnectRequestRow from '../components/community/ConnectRequestRow';
@@ -226,7 +227,12 @@ export default function CommunityActivityScreen({ navigation }) {
   ) : null;
 
   const empty = loading ? (
-    <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
+    <View style={styles.skeleton}>
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+    </View>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -252,6 +258,13 @@ export default function CommunityActivityScreen({ navigation }) {
   function open(item) {
     if (item.kind === 'comment' || item.kind === 'reaction') {
       if (item.target_id) navigation.navigate('CommunityPost', { id: item.target_id });
+      return;
+    }
+    // Group notifications (recon 01 section 4): the row's target is the
+    // group, not the actor, so a tap opens CommunityGroup with the id
+    // rather than falling through to the actor's profile below.
+    if (item.kind === 'group_request' || item.kind === 'group_accepted' || item.kind === 'group_invited') {
+      if (item.target_id) navigation.navigate('CommunityGroup', { id: item.target_id });
       return;
     }
     if (item.actor?.handle) navigation.navigate('CommunityProfile', { handle: item.actor.handle });
@@ -298,5 +311,6 @@ const styles = StyleSheet.create({
   request: { gap: spacing.sm },
   requestActions: { flexDirection: 'row', gap: spacing.sm },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
+  skeleton: { gap: spacing.sm },
   footer: { paddingVertical: spacing.lg },
 });

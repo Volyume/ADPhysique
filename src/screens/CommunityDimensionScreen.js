@@ -17,7 +17,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList. The props are the
@@ -27,6 +27,7 @@ import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
+import { SkeletonRow } from '../components/Skeleton';
 import ProfileCard from '../components/community/ProfileCard';
 import GymSummary from '../components/community/GymSummary';
 import BottomSheet from '../components/BottomSheet';
@@ -288,7 +289,12 @@ export default function CommunityDimensionScreen({ navigation, route }) {
   );
 
   const empty = loading ? (
-    <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
+    <View style={styles.skeleton}>
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+    </View>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -361,6 +367,7 @@ const styles = StyleSheet.create({
   reportLink: { textDecorationLine: 'underline', marginTop: spacing.xxs },
   footerBlock: { gap: spacing.md, marginTop: spacing.lg },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
+  skeleton: { gap: spacing.sm },
   reportBody: { gap: spacing.md, paddingBottom: spacing.md },
   reportChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
 });

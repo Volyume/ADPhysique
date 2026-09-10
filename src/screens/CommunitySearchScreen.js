@@ -23,6 +23,7 @@ import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import SearchBar from '../components/SearchBar';
 import EmptyState from '../components/EmptyState';
+import { SkeletonRow } from '../components/Skeleton';
 import Chip from '../components/Chip';
 import ProfileCard from '../components/community/ProfileCard';
 import useTheme from '../hooks/useTheme';
@@ -94,7 +95,16 @@ export default function CommunitySearchScreen({ navigation, route }) {
     return () => clearTimeout(timer);
   }, [query, mode, run]);
 
-  const empty = loading ? null : !query.trim() ? (
+  const empty = loading ? (
+    // Content-shaped placeholder for the results the query is about to
+    // return, rather than a blank list (styling.md "Loading states"; the
+    // same pattern FoodSearchScreen's own results loading uses).
+    <View style={styles.skeleton}>
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+    </View>
+  ) : !query.trim() ? (
     <View>
       <EmptyState
         icon="search-outline"
@@ -216,6 +226,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   controls: { padding: spacing.lg, gap: spacing.md },
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
+  skeleton: { gap: spacing.sm },
   modeRow: { flexDirection: 'row', gap: spacing.xs2 },
   recentBlock: { paddingHorizontal: spacing.lg, marginTop: -spacing.md, gap: spacing.sm },
   recentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

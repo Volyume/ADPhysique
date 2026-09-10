@@ -43,6 +43,16 @@ const LINES = {
   // screen, exactly as a follow request is; the row here is the record.
   connect_request: 'wants to connect',
   connect_accepted: 'is now connected with you',
+  // Groups (recon 01 section 4; community_activity payload,
+  // migrate_165_community_boards_groups.sql:974,1007,1113 via
+  // `_community_add_activity`): the row carries only `target_kind: 'group'`
+  // and `target_id` (the group's id) for these three kinds, never a name --
+  // `community_activity` (migrate_160:3376-3431) only ever fills `preview`
+  // for `target_kind = 'post'`. So the copy names the relationship, not a
+  // group name the row cannot supply.
+  group_request: 'asked to join your group',
+  group_accepted: 'accepted you into the group',
+  group_invited: 'invited you to a group',
 };
 
 /** The sentence for one activity row, actor first. */

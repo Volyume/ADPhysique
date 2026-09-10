@@ -20,6 +20,7 @@ import { FlashList } from '@shopify/flash-list';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
+import { SkeletonRow } from '../components/Skeleton';
 import ProfileCard from '../components/community/ProfileCard';
 import MenuSheet from '../components/community/MenuSheet';
 import { appAlert } from '../components/AppAlert';
@@ -133,7 +134,12 @@ export default function CommunityConnectionsScreen({ navigation }) {
   ] : [];
 
   const empty = loading ? (
-    <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
+    <View style={styles.skeleton}>
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
+    </View>
   ) : error ? (
     <EmptyState
       icon="cloud-offline-outline"
@@ -206,6 +212,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.sm },
   loading: { paddingTop: spacing.xxl, alignItems: 'center' },
+  skeleton: { gap: spacing.sm },
   footer: { paddingVertical: spacing.lg, alignItems: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
   cardWrap: { flex: 1 },

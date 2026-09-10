@@ -18,7 +18,7 @@
 
 import { useCallback, useState } from 'react';
 import {
-  View, Text, StyleSheet, ActivityIndicator, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,6 +27,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
+import { SkeletonCard, SkeletonRow } from '../components/Skeleton';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import PostCard from '../components/community/PostCard';
@@ -269,7 +270,11 @@ export default function CommunityPostScreen({ navigation, route }) {
         ) : null}
       />
       {loading ? (
-        <View style={styles.centre}><ActivityIndicator color={t.colors.primary} /></View>
+        <View style={styles.skeleton}>
+          <SkeletonCard height={130} />
+          <SkeletonRow />
+          <SkeletonRow />
+        </View>
       ) : !post ? (
         <View style={styles.centre}>
           <EmptyState
@@ -327,6 +332,7 @@ export default function CommunityPostScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   centre: { flex: 1, justifyContent: 'center', padding: spacing.lg },
+  skeleton: { padding: spacing.lg, gap: spacing.md },
   content: { padding: spacing.lg, paddingBottom: spacing.xl },
   header: { gap: spacing.md, marginBottom: spacing.md },
   commentsLabel: { marginTop: spacing.lg },
