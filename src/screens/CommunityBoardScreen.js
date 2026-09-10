@@ -2,13 +2,24 @@
  * CommunityBoardScreen (community product audit
  * `docs/community-product-audit-2026-09-07/60-DESIGN-PROGRESS-COMMUNITY.md`
  * section 2, 4; presentation law `52-research-community-presentation.md`
- * Part B/C D3, `docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md`)
+ * Part B/C D3, `docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md`;
+ * communities revamp 2026-09-10, `docs/communities-revamp-2026-09-10/
+ * 21-PHASE1-SPEC.md` section 4: "rows become PersonRow with DayDots and
+ * the metric; hairlines; nothing else changes").
  *
  * One flat ranked list: rank number (hidden under the small-group
- * threshold), avatar, name, a "trained Tue, Thu" caption, right-aligned
- * metric. The caller's own row gets a `surface2` tint and is pinned at
- * the bottom when it is off the loaded page. No medals, no all-time
- * window, calm copy throughout.
+ * threshold), avatar, name, trained-day dots, right-aligned metric. The
+ * caller's own row gets a `surface2` tint (`PersonRow`'s own formula) and
+ * is pinned at the bottom when it is off the loaded page. No medals, no
+ * all-time window, calm copy throughout.
+ *
+ * Decision the spec left open, flagged for the lead: `PersonRow` is
+ * always a pressable row (its `accessibilityRole="button"` is not
+ * conditional on `onPress` being set), and every other PersonRow usage
+ * this campaign adds opens the person's profile, so a row here opens
+ * `CommunityProfile` on tap too -- the plain hand-rolled row this
+ * replaces had no tap target at all, and leaving one that announces as a
+ * button but does nothing felt like the worse regression of the two.
  *
  * Route params: { scope ('gym'|'following'|'everyone'|'group'),
  *   scopeKey?, window? ('week'|'month'|'consistency'), label? }
@@ -17,7 +28,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList.
@@ -27,68 +38,31 @@ import EmptyState from '../components/EmptyState';
 import SectionLabel from '../components/SectionLabel';
 import { SkeletonRow } from '../components/Skeleton';
 import Chip from '../components/Chip';
-import ProfileAvatarMark from '../components/ProfileAvatarMark';
+import PersonRow from '../components/community/PersonRow';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, radius as radiusTokens } from '../styles/theme';
+import { colors, spacing } from '../styles/theme';
 import {
-  loadBoard, metricLabel, daysLabel,
+  loadBoard, metricLabel,
   BOARD_SCOPES, BOARD_SCOPE_ORDER, BOARD_WINDOWS, BOARD_WINDOW_ORDER,
   readShareSettings,
 } from '../lib/community';
 
 const PAGE = 20;
 
-/** One row's card, shared between the ranked and roster (small-group)
- * forms so the only visual difference is whether `rank` renders. */
-function BoardRow({ row, window, isFirst, isLast }) {
-  const t = useTheme();
-  const card = row.card;
-  const name = card.display_name || card.handle || 'Athlete';
-  const caption = window === 'week' && row.trainedDays.length
-    ? `Trained ${daysLabel(row.trainedDays)}`
-    : window === 'consistency'
-      ? 'Consistent training'
-      : (card.handle ? `@${card.handle}` : '');
-
+/** One row: `PersonRow` with `DayDots` and the right-aligned metric
+ * (spec section 4). `onPress` opens the person's profile (see the
+ * header comment); a card with no handle simply has nothing to open. */
+function BoardRow({ row, window, onOpenPerson }) {
   return (
-    <View
-      style={[
-        styles.row,
-        { backgroundColor: t.colors.surface },
-        isFirst && { borderTopLeftRadius: radiusTokens.lg, borderTopRightRadius: radiusTokens.lg },
-        isLast && { borderBottomLeftRadius: radiusTokens.lg, borderBottomRightRadius: radiusTokens.lg },
-        !isLast && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.colors.borderSubtle },
-        row.isYou && { backgroundColor: t.colors.surface2 },
-      ]}
-      accessibilityRole="text"
-      accessibilityLabel={`${row.rank ? `Rank ${row.rank}, ` : ''}${name}, ${metricLabel(window, row.metric)}`}
-    >
-      {row.rank != null ? (
-        <Text style={[styles.rank, { ...t.type.label, color: t.colors.textMuted }]}>{row.rank}</Text>
-      ) : (
-        <View style={styles.rankSpacer} />
-      )}
-      <View style={styles.avatarWrap}>
-        <ProfileAvatarMark presetKey={card.avatar_preset} displayName={name} size={32} />
-        {row.trainedToday ? (
-          <View style={[styles.ringDot, { backgroundColor: t.colors.primary, borderColor: t.colors.background }]} />
-        ) : null}
-      </View>
-      <View style={styles.nameCol}>
-        <Text style={[styles.name, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
-          {name}
-        </Text>
-        {caption ? (
-          <Text style={[styles.caption, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
-            {caption}
-          </Text>
-        ) : null}
-      </View>
-      <Text style={[styles.metric, t.type.num('bodyStrong'), { color: t.colors.textPrimary }]}>
-        {metricLabel(window, row.metric)}
-      </Text>
-    </View>
+    <PersonRow
+      person={{ ...row.card, isYou: row.isYou }}
+      metric={metricLabel(window, row.metric)}
+      days={row.trainedDays}
+      trainedToday={row.trainedToday}
+      rank={row.rank}
+      onPress={row.card?.handle ? () => onOpenPerson(row.card) : undefined}
+    />
   );
 }
 
@@ -177,6 +151,10 @@ export default function CommunityBoardScreen({ navigation, route }) {
   const scopeChips = BOARD_SCOPE_ORDER;
   const boardLabel = label || BOARD_SCOPES[scope] || 'Board';
 
+  function openProfile(card) {
+    if (card?.handle) navigation.navigate('CommunityProfile', { handle: card.handle });
+  }
+
   const listHeader = (
     <View style={styles.headerBlock}>
       <SectionLabel tone="muted">{boardLabel}</SectionLabel>
@@ -247,13 +225,8 @@ export default function CommunityBoardScreen({ navigation, route }) {
       <FlashList
         data={displayRows}
         keyExtractor={(item) => item.card.user_id}
-        renderItem={({ item, index }) => (
-          <BoardRow
-            row={item}
-            window={window}
-            isFirst={index === 0}
-            isLast={index === displayRows.length - 1}
-          />
+        renderItem={({ item }) => (
+          <BoardRow row={item} window={window} onOpenPerson={openProfile} />
         )}
         ListHeaderComponent={listHeader}
         ListEmptyComponent={empty}
@@ -287,22 +260,4 @@ const styles = StyleSheet.create({
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
   skeleton: { gap: spacing.sm },
   footer: { paddingVertical: spacing.lg },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  rank: { ...type.label, color: colors.textMuted, width: 20, textAlign: 'center' },
-  rankSpacer: { width: 20 },
-  avatarWrap: { position: 'relative' },
-  ringDot: {
-    position: 'absolute', bottom: -1, right: -1,
-    width: 10, height: 10, borderRadius: 5, borderWidth: 1.5,
-  },
-  nameCol: { flex: 1, gap: 2 },
-  name: { ...type.bodyStrong, color: colors.textPrimary },
-  caption: { ...type.caption, color: colors.textMuted },
-  metric: { color: colors.textPrimary },
 });

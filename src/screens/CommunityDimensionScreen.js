@@ -1,22 +1,33 @@
 /**
- * CommunityDimensionScreen (blueprint section 6; SD-10; discovery
- * blueprint `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md`
- * section 8; SD-27, SD-31)
+ * CommunityDimensionScreen (communities revamp 2026-09-10: `docs/
+ * communities-revamp-2026-09-10/21-PHASE1-SPEC.md` section 3;
+ * `20-BLUEPRINT.md` section 9's cohort page). A dimension is a page, not
+ * a room: the people who chose the same style, gym or area. `BackHeader`
+ * carries the dimension's name; the body is one `label` `textSecondary`
+ * count line, then either the gym week roster (`PersonRow`s from
+ * `loadBoard`, own row pinned, rank only from eight) or the plain PEOPLE
+ * list (`PersonRow`s with a caption, no dots) for every other scope.
+ * "Respect everyone who trained today" is phase 3 and renders nothing in
+ * phase 1.
  *
- * A dimension is a page, not a room: the people who chose the same
- * style, gym or area. There is no feed of its own, no admin, no
- * leaderboard and no join button, because there is nothing to join.
+ * KNOWN GAP, flagged for the lead (see the lane report): the spec calls
+ * for an "Eyebrow RECENT" of the dimension's own recent stories, "the RPC
+ * already returns them" -- read against `community_dimension` in every
+ * migration that defines it (160, 164, the in-progress 170) and against
+ * `loadDimension` in `src/lib/community/feed.js`, none of them carry a
+ * stories/posts field; the RPC answers `{label, count, people,
+ * programmes, cursor}` only. There is no existing call this lane is
+ * allowed to reuse to build that section (the brief forbids new server
+ * calls and touching `src/lib/`), so it is NOT rendered here rather than
+ * built from data that does not exist.
  *
- * A gym dimension additionally carries a summary (`community_gym_summary`):
- * member count, how many the reader follows, counts by style and by
- * shared time band, and how many are open to training together. Read
- * alongside `loadDimension` rather than instead of it, and best effort:
- * the page still works as a plain dimension list if the summary read
- * fails. Nothing here is live or precise (SD-31): the gym page is a
- * noticeboard, never a room.
+ * A gym dimension additionally carries a summary (`community_gym_summary`)
+ * as a fallback when no board is available (a legacy free-text gym that
+ * is not the viewer's own), read alongside `loadDimension` and best
+ * effort: the page still works as a plain list if the summary read fails.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, Pressable, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
@@ -26,9 +37,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
-import SectionLabel from '../components/SectionLabel';
 import { SkeletonRow } from '../components/Skeleton';
-import ProfileCard from '../components/community/ProfileCard';
+import Eyebrow from '../components/community/Eyebrow';
+import PersonRow from '../components/community/PersonRow';
 import GymSummary from '../components/community/GymSummary';
 import BottomSheet from '../components/BottomSheet';
 import ModalHeader from '../components/ModalHeader';
@@ -38,13 +49,15 @@ import Button from '../components/Button';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type } from '../styles/theme';
-import { loadDimension, gymSummary, loadBoard } from '../lib/community';
+import {
+  colors, spacing, type,
+} from '../styles/theme';
+import {
+  loadDimension, gymSummary, loadBoard, metricLabel, COMMUNITY_STYLE_KEYS,
+} from '../lib/community';
 import {
   report as reportGym, get as getGymVenue, confirmSubmission, isPendingVenue, REPORT_KINDS,
 } from '../lib/gyms';
-import { peopleLine } from '../components/community/DimensionRow';
-import GymWeekBoard from '../components/community/GymWeekBoard';
 
 const PAGE = 20;
 const REPORT_DETAIL_MAX = 500;
@@ -70,6 +83,16 @@ const CONFIRM_REFUSALS = {
   not_allowed: 'You added this gym, so someone else needs to confirm it.',
   already_confirmed: 'You have already confirmed this gym.',
 };
+
+/** "Trains at PureGym Leeds" or a style label: PersonRow's caption slot
+ * on a non-board dimension row (spec: "the caption line (gym or
+ * style)"). Never repeats plain member-count text; a gym label wins when
+ * present, else the person's first style. */
+function personCaption(card) {
+  if (card?.gym_label) return card.gym_label;
+  const first = (card?.styles ?? []).find((k) => COMMUNITY_STYLE_KEYS[k]);
+  return first ? COMMUNITY_STYLE_KEYS[first] : null;
+}
 
 /**
  * "Report a problem with this gym" (gym database blueprint
@@ -198,12 +221,12 @@ export default function CommunityDimensionScreen({ navigation, route }) {
       setSummary(null);
     }
     if (showBoard) {
-      // Design 60 §4: the week board replaces the summary at the top, on
-      // EVERY gym dimension page (not only the viewer's own), keyed by
-      // this page's gym id (boardGymId: the linked venue id, or null to
-      // fall back server-side to the caller's own gym).
+      // The week roster replaces the summary at the top, on EVERY gym
+      // dimension page (not only the viewer's own), keyed by this page's
+      // gym id (boardGymId: the linked venue id, or null to fall back
+      // server-side to the caller's own gym).
       try {
-        setBoard(await loadBoard({ scope: 'gym', scopeKey: boardGymId, window: 'week', limit: 20 }));
+        setBoard(await loadBoard({ scope: 'gym', scopeKey: boardGymId, window: 'week', limit: PAGE }));
       } catch (_e) {
         setBoard(null);
       }
@@ -241,26 +264,46 @@ export default function CommunityDimensionScreen({ navigation, route }) {
 
   const label = data?.label || paramLabel;
   const people = data?.people ?? [];
+  const memberCount = data?.count ?? people.length;
+
+  // Roster mode: gym scope with a board available (spec section 3's first
+  // branch). Own row pinned at the bottom when off-page, exactly the
+  // pattern `CommunityBoardScreen` already uses.
+  const rosterMode = showBoard && !!board;
+  const youOffPage = rosterMode && board.you && !board.rows.some((r) => r.isYou);
+  const displayRows = useMemo(() => {
+    if (!rosterMode) return [];
+    if (!youOffPage || !me?.profile) return board.rows;
+    return [...board.rows, {
+      card: me.profile,
+      metric: board.you.metric,
+      trainedDays: [],
+      trainedToday: false,
+      isYou: true,
+      rank: board.thresholdMet ? board.you.rank : null,
+    }];
+  }, [rosterMode, board, youOffPage, me]);
+  // Cold start (section 3): with nobody else on the roster, show whatever
+  // row exists (0 or 1: just the viewer) plus the honest line, rather
+  // than an empty roster with no explanation.
+  const rosterThin = rosterMode && displayRows.length <= 1;
+
+  const listData = rosterMode ? displayRows : people;
+
+  function openProfile(card) {
+    if (card?.handle) navigation.navigate('CommunityProfile', { handle: card.handle });
+  }
 
   const header = (
     <View style={styles.header}>
-      {showBoard && board ? (
-        <GymWeekBoard
-          board={board}
-          label={label}
-          onSeeAll={() => navigation.navigate('CommunityBoard', {
-            scope: 'gym', scopeKey: boardGymId, window: 'week', label,
-          })}
-        />
-      ) : isGym && summary ? (
+      {isGym && summary && !rosterMode ? (
         <GymSummary summary={summary} label={label} />
       ) : (
-        <>
-          <Text style={[styles.title, { ...t.type.h3, color: t.colors.textPrimary }]}>{label}</Text>
-          <Text style={[styles.sub, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-            {peopleLine(data?.count ?? people.length)}
-          </Text>
-        </>
+        <Text style={[styles.label, { ...t.type.label, color: t.colors.textSecondary }]}>
+          {rosterMode
+            ? `${memberCount} ${memberCount === 1 ? 'member' : 'members'} · ${displayRows.filter((r) => r.trainedToday).length} trained today`
+            : `${memberCount} ${memberCount === 1 ? 'member' : 'members'}`}
+        </Text>
       )}
       {venueId && isPendingVenue(venue) ? (
         <Button
@@ -284,12 +327,35 @@ export default function CommunityDimensionScreen({ navigation, route }) {
           </Text>
         </Pressable>
       ) : null}
-      {people.length ? <SectionLabel tone="muted">People</SectionLabel> : null}
+      <Eyebrow>{rosterMode ? 'TRAINED THIS WEEK' : 'PEOPLE'}</Eyebrow>
     </View>
   );
 
+  const footer = rosterMode ? (
+    <View style={styles.footerBlock}>
+      {rosterThin ? (
+        <Text style={[styles.coldStart, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+          No one else here is sharing yet.
+        </Text>
+      ) : null}
+      <Pressable
+        onPress={() => navigation.navigate('CommunityBoard', {
+          scope: 'gym', scopeKey: boardGymId, window: 'month', label,
+        })}
+        style={styles.tertiaryRow}
+        accessibilityRole="button"
+        accessibilityLabel="This month and consistency"
+      >
+        <Text style={[styles.tertiaryLabel, { ...t.type.label, color: t.colors.textSecondary }]}>
+          This month and consistency
+        </Text>
+      </Pressable>
+    </View>
+  ) : null;
+
   const empty = loading ? (
     <View style={styles.skeleton}>
+      <SkeletonRow />
       <SkeletonRow />
       <SkeletonRow />
       <SkeletonRow />
@@ -306,13 +372,13 @@ export default function CommunityDimensionScreen({ navigation, route }) {
       onAction={load}
       actionAccessibilityLabel="Try loading this again"
     />
-  ) : (
+  ) : rosterMode ? null : (
     <EmptyState
       icon="people-outline"
       title="Nobody here yet"
       text="When other people choose this, they appear here."
       actionLabel="Find people"
-      onAction={() => navigation.navigate('CommunitySearch')}
+      onAction={() => navigation.navigate('CommunityFindPeople')}
       actionAccessibilityLabel="Find people to follow"
     />
   );
@@ -321,17 +387,26 @@ export default function CommunityDimensionScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title={label || 'Community'} />
       <FlashList
-        data={people}
+        data={listData}
         keyExtractor={(item) => (item.card ?? item).user_id}
-        renderItem={({ item }) => (
-          <ProfileCard
-            card={item.card ?? item}
-            onPress={() => navigation.navigate('CommunityProfile', { handle: (item.card ?? item).handle })}
+        renderItem={({ item }) => (rosterMode ? (
+          <PersonRow
+            person={{ ...item.card, isYou: item.isYou }}
+            metric={metricLabel('week', item.metric)}
+            days={item.trainedDays}
+            trainedToday={item.trainedToday}
+            rank={board.thresholdMet ? item.rank : null}
+            onPress={() => openProfile(item.card)}
           />
-        )}
+        ) : (
+          <PersonRow
+            person={{ ...(item.card ?? item), caption: personCaption(item.card ?? item) }}
+            onPress={() => openProfile(item.card ?? item)}
+          />
+        ))}
         ListHeaderComponent={header}
+        ListFooterComponent={footer}
         ListEmptyComponent={empty}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.4}
         onEndReached={() => { /* one page per dimension; the list is small by design */ }}
@@ -361,11 +436,13 @@ export default function CommunityDimensionScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  header: { gap: spacing.xs, marginBottom: spacing.md },
-  title: { ...type.h3, color: colors.textPrimary },
-  sub: { ...type.bodySm, color: colors.textSecondary },
+  header: { gap: spacing.xs, marginBottom: spacing.sm },
+  label: { ...type.label, color: colors.textSecondary },
   reportLink: { textDecorationLine: 'underline', marginTop: spacing.xxs },
-  footerBlock: { gap: spacing.md, marginTop: spacing.lg },
+  footerBlock: { gap: spacing.sm, marginTop: spacing.md },
+  coldStart: { ...type.bodySm, color: colors.textSecondary, paddingVertical: spacing.sm },
+  tertiaryRow: { minHeight: 48, justifyContent: 'center', paddingVertical: spacing.sm },
+  tertiaryLabel: { ...type.label, color: colors.textSecondary },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
   skeleton: { gap: spacing.sm },
   reportBody: { gap: spacing.md, paddingBottom: spacing.md },

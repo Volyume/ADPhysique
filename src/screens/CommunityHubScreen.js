@@ -1,39 +1,38 @@
 /**
- * CommunityHubScreen (blueprint sections 1, 6; SD-01, SD-04, SD-06,
- * SD-09, SD-10)
+ * CommunityHubScreen (communities revamp 2026-09-10: `docs/communities-
+ * revamp-2026-09-10/21-PHASE1-SPEC.md` section 2; `20-BLUEPRINT.md`
+ * section 9, "The Hub, top to bottom"). Rebuilt to the presentation law:
+ * flat rows under uppercase `Eyebrow` labels, no Chip segment, no Find
+ * people card, no "Lifters like you" on the Hub itself (it moved to Find
+ * people), no `SectionLabel`, no `Card` except the not-joined hero and
+ * the moderated-person notice (the notice is a plain styled `View`, so
+ * the only literal `<Card` in this file is the hero and the legacy
+ * partner card -- pinned by `community.presentation.guard.test.js`).
  *
- * The one Community destination. Two halves: Following (the people you
- * chose, newest first, never ranked) and Discover (people you may want
- * to follow, the dimensions you share with others, and recent training
- * stories). Community carries no programme section of any kind -- see
- * `docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2.
+ * One `FlashList`. Joined: a You line (`PersonRow`), PEOPLE (`CohortRow`
+ * per cohort you belong to, from `community_dimensions_me`), GROUPS
+ * (`GroupRow` per group from `community_group_list_mine`), ACTIVITY (the
+ * Following feed, `community_feed`, as `ActivityItemRow`s). Not joined:
+ * the hero and the compact `PrivacyReceipt`, then RECENT -- the existing
+ * Discover stories (`community_discover_posts`, via the same `loadHub`
+ * this screen always used for that state), still as `ActivityItemRow`s,
+ * with Respect routed through the existing join-to-interact pattern
+ * (`JoinToInteractRow` on the post detail screen already owns the
+ * comment side of this; here it is one tap on the heart, which would
+ * otherwise raise `no_profile`, routed to Join instead).
  *
- * Nobody is in Community until they create a profile, but the value is
- * visible before that: with no profile the hero explains what this is,
- * carries the privacy receipt, and Discover renders read-only beneath
- * it (SD-04). "Browse first" collapses that hero to one slim line so
- * Discover is what the screen shows, and the same line offers the way
- * back to joining; the reads that need a profile are not made at all.
- *
- * Offline is a first-class state, not an error: the hub payload is
- * cached per user, so an offline open shows the last thing the user saw
- * with one quiet line.
- *
- * Discovery additions (discovery blueprint `docs/social-discovery-
- * 2026-09-06/70-DISCOVERY-BLUEPRINT.md` section 4 and 10; SD-23): a "Find
- * people" card opens the six-door screen; a messages glyph beside
- * Activity carries its own unread count (the hub sends people to two
- * different places, so one dot cannot serve both); "People you may want
- * to follow" becomes "Lifters like you", the top five from
- * `findPeople('like_me')`, read separately from the rest of the hub
- * payload because it is a scored list, not a feed page.
- *
- * Moderated-person notice (community product audit `docs/community-
- * product-audit-2026-09-07/40-GAP-CLOSURE.md` §1): on load, `myStatus()`
- * reads the caller's own moderation state; a restricted or suspended
- * profile sees one calm line at the top naming the reason class, with a
- * link to Community rules. Additive only, per the concurrent build lane
- * on this screen (menu rows): never reorders or reformats anything else.
+ * Every state this screen already had keeps its place: the offline
+ * caption (above the feed), the failed-read Try again, the moderated-
+ * person notice and the legacy partner card (both above the hero/You
+ * line), deep-link handling, the header glyphs and their badges, the
+ * unseen-dot logic. No new server calls: PEOPLE and GROUPS are built
+ * from `community_dimensions_me` and `community_group_list_mine`, both
+ * already read elsewhere; the gym board call is the same single call the
+ * Hub already made (the limit widened from a 3-row preview to a real
+ * page, since the row it now feeds needs a trained-today count, not
+ * three inline names) and is only made at all once the gym cohort
+ * clears the same `COMMUNITY_DIMENSION_MIN_FOR_HUB` threshold every
+ * other cohort row is filtered by.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -51,156 +50,50 @@ import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
-import SectionLabel from '../components/SectionLabel';
-import { SkeletonCard } from '../components/Skeleton';
-import Chip from '../components/Chip';
-import PostCard from '../components/community/PostCard';
-import ProfileCard from '../components/community/ProfileCard';
-import DimensionRow from '../components/community/DimensionRow';
+import { SkeletonRow } from '../components/Skeleton';
+import AnimatedEntrance from '../components/AnimatedEntrance';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
+import Eyebrow from '../components/community/Eyebrow';
+import PersonRow from '../components/community/PersonRow';
+import CohortRow from '../components/community/CohortRow';
+import GroupRow from '../components/community/GroupRow';
+import ActivityItemRow from '../components/community/ActivityItemRow';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, circle, fontSize, fontWeight } from '../styles/theme';
+import {
+  colors, spacing, type, circle, fontSize, fontWeight, hitSlop,
+} from '../styles/theme';
 import {
   loadHub, hasProfile, hasUnseen, hasUnreadMessages, reactToPost,
-  COMMUNITY_DIMENSION_MIN_FOR_HUB, findPeople,
-  loadBoard, daysLabel, readShareSettings, loadConsistency,
+  COMMUNITY_DIMENSION_MIN_FOR_HUB, myDimensions,
+  loadBoard, metricLabel, loadConsistency, readShareSettings,
   listMyGroups, myStatus, isModeratedStatus, REPORT_REASONS,
 } from '../lib/community';
+import { todayLocalKey } from '../lib/dayKey';
 
 const PAGE = 20;
-const GYM_HUB_ROWS = 3;
 
-/**
- * "This week" one-line summary and "At [gym]" preview (design ruling 60
- * §4, D1): device-computed and shown only when the person shares their
- * consistency (SD-30 gate lives in `trainingConsistency.js`, not here --
- * this reads the same toggle `readShareSettings` already exposes and asks
- * for the counters only when it is on).
- */
-function ThisWeekLine({ t, counters }) {
-  if (!counters) return null;
-  const streak = Number(counters.c_weeks_streak) || 0;
-  const sessions = Number(counters.c_sessions_week) || 0;
-  const streakLabel = streak > 0 ? (streak === 1 ? '1 week in a row' : `${streak} weeks in a row`) : 'Getting back into it';
-  return (
-    <View style={styles.section}>
-      <SectionLabel tone="muted">This week</SectionLabel>
-      <View style={[styles.weekLine, { backgroundColor: t.colors.surface2 }]}>
-        <View style={[styles.streakChip, { backgroundColor: t.colors.primaryBg }]}>
-          <Ionicons name="flame-outline" size={14} color={t.colors.primary} />
-          <Text style={[styles.streakLabel, { ...t.type.caption, color: t.colors.primary }]}>{streakLabel}</Text>
-        </View>
-        <Text style={[styles.weekFigure, t.type.num('bodyStrong'), { color: t.colors.textPrimary }]}>
-          {sessions === 1 ? '1 session' : `${sessions} sessions`}
-        </Text>
-      </View>
-    </View>
-  );
+/** "8 members . invite only" (spec section 2 item 4 and section 4's group
+ * page, the same wording twice): member count first, access lower-case,
+ * matching neither `GROUP_ACCESS`'s capitalised label nor the old
+ * access-first order. Kept local rather than exported from `lib/`
+ * (screens compose their own small copy helpers here, same precedent as
+ * `normalisePostRow`). */
+function groupLine(group) {
+  const n = Number(group?.memberCount ?? 0);
+  const access = group?.access === 'invite' ? 'invite only' : 'open';
+  return `${n} ${n === 1 ? 'member' : 'members'} · ${access}`;
 }
 
-function AtGymBlock({ t, navigation, gymLabel, rows }) {
-  if (!gymLabel) {
-    return (
-      <View style={styles.section}>
-        <SectionLabel tone="muted">At your gym</SectionLabel>
-        <Text style={[styles.gymEmptyLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-          Add your gym to see who else trains there this week.
-        </Text>
-      </View>
-    );
-  }
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHead}>
-        <SectionLabel tone="muted">{`At ${gymLabel}`}</SectionLabel>
-        <Pressable
-          onPress={() => navigation.navigate('CommunityBoard', { scope: 'gym', window: 'week' })}
-          accessibilityRole="button"
-          accessibilityLabel="See all at your gym this week"
-        >
-          <Text style={[styles.seeAll, { ...t.type.caption, color: t.colors.primary }]}>See all</Text>
-        </Pressable>
-      </View>
-      {rows.length ? (
-        <View style={[styles.gymCard, { backgroundColor: t.colors.surface }]}>
-          {rows.map((row, i) => {
-            const card = row.card;
-            const name = card.display_name || card.handle || 'Athlete';
-            return (
-              <Pressable
-                key={card.user_id}
-                onPress={() => (card.handle
-                  ? navigation.navigate('CommunityProfile', { handle: card.handle })
-                  : null)}
-                style={[
-                  styles.gymRow,
-                  i < rows.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.colors.borderSubtle },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`${name}${row.trainedToday ? ', trained today' : ''}`}
-              >
-                <View style={styles.gymAvatarWrap}>
-                  <ProfileAvatarMark presetKey={card.avatar_preset} displayName={name} size={32} />
-                  {row.trainedToday ? (
-                    <View style={[styles.ringDot, { backgroundColor: t.colors.primary, borderColor: t.colors.surface }]} />
-                  ) : null}
-                </View>
-                <Text style={[styles.gymName, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
-                  {name}
-                </Text>
-                <Text style={[styles.gymCaption, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
-                  {row.trainedDays.length ? `Trained ${daysLabel(row.trainedDays)}` : (row.trainedToday ? 'Trained today' : '')}
-                </Text>
-                <Ionicons name="chevron-forward" size={14} color={t.colors.textMuted} />
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : (
-        <Text style={[styles.gymEmptyLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-          No one else at your gym is sharing yet.
-        </Text>
-      )}
-    </View>
-  );
-}
-
-/**
- * "Your groups" chip row (design 60 §4, D1): group names with "New
- * group" trailing. Minors never see "New group" (server refuses
- * `community_group_create` for a minor; this is the fail-closed
- * client-side mirror on the cached `me.is_minor`) but still see the
- * chip row itself if the server ever answered any groups -- it never
- * does for a minor since they cannot join or be created into one, so
- * this only ever renders empty for them in practice.
- */
-function YourGroupsRow({ navigation, groups, isMinor }) {
-  if (!groups.length && isMinor) return null;
-  return (
-    <View style={styles.section}>
-      <SectionLabel tone="muted">Your groups</SectionLabel>
-      <View style={styles.chipRow}>
-        {groups.map((row) => (
-          <Chip
-            key={row.group.id}
-            label={row.group.name}
-            onPress={() => navigation.navigate('CommunityGroup', { id: row.group.id })}
-            accessibilityLabel={`Open ${row.group.name}`}
-          />
-        ))}
-        {!isMinor ? (
-          <Chip
-            icon="add"
-            label="New group"
-            onPress={() => navigation.navigate('CommunityGroupCreate')}
-            accessibilityLabel="Create a new group"
-          />
-        ) : null}
-      </View>
-    </View>
-  );
+/** "6 weeks in a row" / "Getting back into it": the You row's second-line
+ * fallback when there are no trained days yet to draw as `DayDots` this
+ * week -- the exact wording the old "This week" streak chip used, so a
+ * returning reader sees the same phrase in the new spot. */
+function streakCaption(streak) {
+  const n = Number(streak) || 0;
+  if (n <= 0) return 'Getting back into it';
+  return n === 1 ? '1 week in a row' : `${n} weeks in a row`;
 }
 
 /**
@@ -225,26 +118,36 @@ export default function CommunityHubScreen({ navigation, route }) {
   const joined = hasProfile(me);
   const legacyPartnerCode = route?.params?.legacyPartnerCode ?? null;
 
-  const [segment, setSegment] = useState(route?.params?.segment === 'discover' ? 'discover' : 'following');
   const [hub, setHub] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [paging, setPaging] = useState(false);
   const [legacyCardShown, setLegacyCardShown] = useState(!!legacyPartnerCode);
   const [browsing, setBrowsing] = useState(false);
-  const [likeMe, setLikeMe] = useState([]);
   const [weekCounters, setWeekCounters] = useState(null);
-  const [gymRows, setGymRows] = useState([]);
+  const [dimensions, setDimensions] = useState([]);
+  const [dimensionsLoading, setDimensionsLoading] = useState(true);
+  const [gymBoard, setGymBoard] = useState(null);
   const [myGroups, setMyGroups] = useState([]);
+  const [groupsLoading, setGroupsLoading] = useState(true);
   const [status, setStatus] = useState(null);
   const listRef = useRef(null);
 
   const uid = me?.profile?.user_id ?? null;
-  const gymLabel = me?.profile?.gym_label ?? null;
   const isMinor = !!me?.is_minor;
 
-  // "This week" (design 60 §4, D1): device-computed, own counters, shown
-  // only when this person shares their consistency.
+  // The You line's own device counters (spec: "DayDots from your own
+  // device counters"). STOP flagged for the lead (lane report): kept
+  // gated on the existing "Share my consistency" toggle, byte-identical
+  // to the pre-revamp "This week" card's own gate, rather than reading
+  // `loadConsistency` unconditionally. `loadConsistency` itself has no
+  // calm-mode/ED-flag check of its own (only `publishConsistency`'s
+  // `consistencyGateState` does, and that gates SENDING, not local
+  // display) -- section 2 inviolables bar changing ED-safety-adjacent
+  // behaviour without asking first, and this counter is exactly the kind
+  // of figure `edPatternDetector.js`/calm mode exist to keep quiet, so
+  // the safe default is the one already shipped, not a new one this lane
+  // decided alone.
   useEffect(() => {
     if (!joined || !uid) { setWeekCounters(null); return undefined; }
     let alive = true;
@@ -261,26 +164,57 @@ export default function CommunityHubScreen({ navigation, route }) {
     return () => { alive = false; };
   }, [joined, uid]);
 
-  // "At [gym]" (design 60 §4, D1): up to 3 rows from the gym-scope week
-  // board. Best effort -- a failed or empty read just leaves the block's
-  // own empty line, never the reason the rest of the hub fails to show.
+  // PEOPLE (spec section 2 item 3): the cohorts from `community_dimensions_
+  // me`, filtered to the same threshold Discover always used, gym kept
+  // separate from area/style. The gym board read only happens once the gym
+  // cohort itself clears the threshold -- no board call for a gym with too
+  // few other people sharing, and never more than this one board call.
   useEffect(() => {
-    if (!joined || !gymLabel) { setGymRows([]); return undefined; }
+    if (!joined || !uid) {
+      setDimensions([]); setGymBoard(null); setDimensionsLoading(false);
+      return undefined;
+    }
     let alive = true;
-    loadBoard({ scope: 'gym', window: 'week', limit: GYM_HUB_ROWS })
-      .then((page) => { if (alive) setGymRows(page.rows.slice(0, GYM_HUB_ROWS)); })
-      .catch(() => { if (alive) setGymRows([]); });
+    setDimensionsLoading(true);
+    (async () => {
+      let dims = [];
+      try {
+        const out = await myDimensions();
+        dims = (out.dimensions ?? []).filter(
+          (d) => ['gym', 'area', 'style'].includes(d?.kind)
+            && Number(d?.count ?? 0) >= COMMUNITY_DIMENSION_MIN_FOR_HUB,
+        );
+      } catch (_e) {
+        dims = [];
+      }
+      if (!alive) return;
+      setDimensions(dims);
+      const gymEntry = dims.find((d) => d.kind === 'gym');
+      if (gymEntry) {
+        try {
+          const board = await loadBoard({ scope: 'gym', window: 'week', limit: PAGE });
+          if (alive) setGymBoard(board);
+        } catch (_e) {
+          if (alive) setGymBoard(null);
+        }
+      } else {
+        setGymBoard(null);
+      }
+      if (alive) setDimensionsLoading(false);
+    })();
     return () => { alive = false; };
-  }, [joined, gymLabel]);
+  }, [joined, uid]);
 
-  // "Your groups" chip row (design 60 §4, D1). Best effort, same posture
-  // as the gym block: a failed read just leaves the row empty.
+  // GROUPS (spec section 2 item 4). Best effort, same posture as before: a
+  // failed read just leaves the row empty.
   useEffect(() => {
-    if (!joined || !uid) { setMyGroups([]); return undefined; }
+    if (!joined || !uid) { setMyGroups([]); setGroupsLoading(false); return undefined; }
     let alive = true;
+    setGroupsLoading(true);
     listMyGroups()
       .then((rows) => { if (alive) setMyGroups(rows.filter((r) => r.state === 'member')); })
-      .catch(() => { if (alive) setMyGroups([]); });
+      .catch(() => { if (alive) setMyGroups([]); })
+      .finally(() => { if (alive) setGroupsLoading(false); });
     return () => { alive = false; };
   }, [joined, uid]);
 
@@ -294,19 +228,15 @@ export default function CommunityHubScreen({ navigation, route }) {
     return () => { alive = false; };
   }, [joined]);
 
-  // Someone without a profile only ever sees Discover (SD-04), so the
-  // segment follows the profile rather than the other way round.
-  const shown = joined ? segment : 'discover';
-
+  // No Chip segment any more (blueprint 9: "discovery happens on the
+  // cohort pages"), so the feed is always Following once joined, and
+  // always Discover before -- reading is never gated on a profile (SD-04).
   const load = useCallback(async (opts = {}) => {
     if (!opts.quiet) setLoading(true);
-    // `joined` is passed through: the suggestions and dimensions reads are
-    // about the reader's own profile and raise `no_profile` without one,
-    // which is exactly the state Discover has to render for (SD-04).
-    const out = await loadHub(shown, { limit: PAGE, joined });
+    const out = await loadHub(joined ? 'following' : 'discover', { limit: PAGE, joined });
     setHub(out);
     setLoading(false);
-  }, [shown, joined]);
+  }, [joined]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -327,32 +257,6 @@ export default function CommunityHubScreen({ navigation, route }) {
     return () => sub.remove();
   }, [consistencyUid]);
 
-  // The hub is a tab root, so an entry point that names a segment usually
-  // arrives at a screen that is ALREADY mounted: initial state alone would
-  // land it on Following whichever half the reader last looked at (product
-  // review 2026-09-06, item 13). The whole params object is the dependency
-  // because React Navigation
-  // mints a new one per navigate, so repeating the same entry point still
-  // re-applies it.
-  const routeParams = route?.params;
-  const paramSegment = routeParams?.segment ?? null;
-  useEffect(() => {
-    if (paramSegment === 'discover' || paramSegment === 'following') setSegment(paramSegment);
-  }, [routeParams, paramSegment]);
-
-  // "Lifters like you" (discovery blueprint section 4): a scored list, so
-  // it is read on its own rather than folded into `loadHub`'s feed page.
-  // Without a profile there is no caller to score against, and the RPC
-  // would only answer `no_profile`.
-  useEffect(() => {
-    if (!joined) { setLikeMe([]); return undefined; }
-    let alive = true;
-    findPeople('like_me', { limit: 5 })
-      .then((page) => { if (alive) setLikeMe(page.people ?? []); })
-      .catch(() => { if (alive) setLikeMe([]); });
-    return () => { alive = false; };
-  }, [joined, me?.profile?.user_id]);
-
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -366,7 +270,7 @@ export default function CommunityHubScreen({ navigation, route }) {
     if (paging || !hub?.cursor) return;
     setPaging(true);
     try {
-      const next = await loadHub(shown, { cursor: hub.cursor, limit: PAGE, joined });
+      const next = await loadHub(joined ? 'following' : 'discover', { cursor: hub.cursor, limit: PAGE, joined });
       setHub((prev) => (prev ? {
         ...prev,
         posts: [...(prev.posts ?? []), ...(next.posts ?? [])],
@@ -375,23 +279,43 @@ export default function CommunityHubScreen({ navigation, route }) {
     } finally {
       setPaging(false);
     }
-  }, [hub, paging, shown, joined]);
+  }, [hub, paging, joined]);
 
   const posts = useMemo(
     () => (hub?.posts ?? []).map(normalisePostRow).filter(Boolean),
     [hub],
   );
-  // `hub.people` (once `community_suggested_people`) was never rendered
-  // here, so `loadHub` no longer reads it (feed.js, spec 1.3); nothing
-  // reads it from the hub payload on this screen either.
-  const dimensions = (hub?.dimensions ?? [])
-    .filter((d) => Number(d?.count ?? 0) >= COMMUNITY_DIMENSION_MIN_FOR_HUB);
 
   // The quiet line is about CACHED content: it is only true when there is
   // something on screen that was read earlier. A failure with no cache is
   // an empty state, not a caption.
   const offline = !!hub?.fromCache && !!hub?.error;
   const failed = !!hub?.error && !hub?.fromCache;
+
+  const gymEntry = dimensions.find((d) => d.kind === 'gym') ?? null;
+  const otherDimensions = dimensions.filter((d) => d.kind !== 'gym');
+  const gymTrainedToday = gymBoard ? gymBoard.rows.filter((r) => r.trainedToday) : [];
+  // Section 5: "Phase 1 rows show member counts where trained-today is
+  // unknown, never a placeholder or a dash." A gym that cleared the
+  // threshold but whose board read failed still shows a plain member
+  // count, from the dimension entry itself, rather than nothing.
+  const gymLine = gymEntry
+    ? (gymBoard
+      ? `${gymTrainedToday.length} trained today · ${gymBoard.count} ${gymBoard.count === 1 ? 'member' : 'members'}`
+      : `${gymEntry.count} ${gymEntry.count === 1 ? 'member' : 'members'}`)
+    : null;
+
+  const youPerson = joined ? {
+    user_id: uid,
+    avatar_preset: me?.profile?.avatar_preset ?? null,
+    handle: me?.profile?.handle ?? null,
+    display_name: 'You',
+    isYou: true,
+    caption: weekCounters ? streakCaption(weekCounters.c_weeks_streak) : null,
+  } : null;
+  const youDays = weekCounters?.c_trained_days_week;
+  const youMetric = weekCounters ? metricLabel('week', weekCounters.c_sessions_week) : null;
+  const youTrainedToday = !!weekCounters && weekCounters.c_last_trained_day === todayLocalKey();
 
   function openProfile(card) {
     if (card?.handle) navigation.navigate('CommunityProfile', { handle: card.handle });
@@ -483,7 +407,7 @@ export default function CommunityHubScreen({ navigation, route }) {
   );
 
   const header = (
-    <View style={styles.header}>
+    <AnimatedEntrance style={styles.header}>
       {isModeratedStatus(status?.status) ? (
         <View style={[styles.statusNotice, { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle }]}>
           <Text style={[styles.statusNoticeLine, { color: t.colors.textPrimary }]}>
@@ -503,6 +427,7 @@ export default function CommunityHubScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
       ) : null}
+
       {legacyCardShown ? (
         <Card style={styles.block}>
           <Text style={[styles.blockTitle, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
@@ -550,18 +475,12 @@ export default function CommunityHubScreen({ navigation, route }) {
 
       {!joined && !browsing ? (
         <>
-          {/* V3a: PrivacyReceipt lives directly under the hero, not nested
-              inside it, and the hero body drops its own privacy sentence
-              since the receipt beneath says exactly that
-              (docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md). */}
           <Card style={styles.block}>
             <Text style={[styles.heroTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
-              Train alongside other lifters
+              Your gym, your people
             </Text>
-            <Text
-              style={[styles.heroBody, { ...t.type.bodySm, color: t.colors.textSecondary }]}
-            >
-              Follow people, find a training partner and share the training you actually did.
+            <Text style={[styles.heroBody, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+              See who is training around you, keep up with friends, give respect.
             </Text>
             <View style={styles.heroActions}>
               <Button
@@ -574,7 +493,7 @@ export default function CommunityHubScreen({ navigation, route }) {
                 accessibilityLabel="Create my Community profile"
               />
               <Button
-                variant="secondary"
+                variant="tertiary"
                 size="sm"
                 fullWidth={false}
                 title="Browse first"
@@ -587,48 +506,86 @@ export default function CommunityHubScreen({ navigation, route }) {
         </>
       ) : null}
 
-      {joined ? <ThisWeekLine t={t} counters={weekCounters} /> : null}
-      {joined ? <AtGymBlock t={t} navigation={navigation} gymLabel={gymLabel} rows={gymRows} /> : null}
-      {joined ? <YourGroupsRow navigation={navigation} groups={myGroups} isMinor={isMinor} /> : null}
-
       {joined ? (
-        <View style={styles.segmentRow} accessibilityLabel="Community view">
-          <Chip
-            label="Following"
-            selected={shown === 'following'}
-            onPress={() => setSegment('following')}
-            accessibilityRole="radio"
-          />
-          <Chip
-            label="Discover"
-            selected={shown === 'discover'}
-            onPress={() => setSegment('discover')}
-            accessibilityRole="radio"
-          />
-        </View>
+        <PersonRow
+          person={youPerson}
+          metric={youMetric}
+          days={youDays}
+          trainedToday={youTrainedToday}
+          onPress={() => navigation.navigate('CommunityProfile', { userId: uid })}
+        />
       ) : null}
 
       {joined ? (
-        <Card
-          onPress={() => navigation.navigate('CommunityFindPeople')}
-          style={styles.findCard}
-          accessibilityLabel="Find people. At your gym, near you, training like you and more."
-        >
-          <View style={styles.findRow}>
-            <View style={[styles.findGlyph, { backgroundColor: t.colors.surface2 }]}>
-              <Ionicons name="compass-outline" size={20} color={t.colors.textSecondary} />
-            </View>
-            <View style={styles.findBody}>
-              <Text style={[styles.findTitle, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
-                Find people
-              </Text>
-              <Text style={[styles.findSub, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                At your gym, near you, training like you and more
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={t.colors.textMuted} />
-          </View>
-        </Card>
+        <>
+          <Eyebrow>PEOPLE</Eyebrow>
+          {dimensionsLoading ? (
+            <>
+              <SkeletonRow />
+              <SkeletonRow />
+            </>
+          ) : (
+            <>
+              {gymEntry ? (
+                <CohortRow
+                  title={gymEntry.label}
+                  line={gymLine}
+                  people={gymTrainedToday.map((r) => r.card)}
+                  onPress={() => navigation.navigate('CommunityDimension', {
+                    kind: 'gym', key: gymEntry.key, label: gymEntry.label,
+                  })}
+                />
+              ) : null}
+              {otherDimensions.map((d) => (
+                <CohortRow
+                  key={`${d.kind}:${d.key}`}
+                  title={d.label}
+                  line={`${d.count} ${d.count === 1 ? 'member' : 'members'}`}
+                  people={Array.isArray(d.people) ? d.people : []}
+                  onPress={() => navigation.navigate('CommunityDimension', {
+                    kind: d.kind, key: d.key, label: d.label,
+                  })}
+                />
+              ))}
+            </>
+          )}
+          <Pressable
+            onPress={() => navigation.navigate('CommunityFindPeople')}
+            hitSlop={hitSlop}
+            style={styles.findPeopleRow}
+            accessibilityRole="button"
+            accessibilityLabel="Find people"
+          >
+            <Text style={[styles.findPeopleLabel, { ...t.type.label, color: t.colors.textSecondary }]}>
+              Find people
+            </Text>
+          </Pressable>
+        </>
+      ) : null}
+
+      {joined && !(myGroups.length === 0 && isMinor) ? (
+        <>
+          <Eyebrow trailing={!isMinor ? { label: 'New group', onPress: () => navigation.navigate('CommunityGroupCreate') } : undefined}>
+            GROUPS
+          </Eyebrow>
+          {groupsLoading ? (
+            <SkeletonRow />
+          ) : myGroups.length ? (
+            myGroups.map((row) => (
+              <GroupRow
+                key={row.group.id}
+                group={row.group}
+                line={groupLine(row.group)}
+                people={[]}
+                onPress={() => navigation.navigate('CommunityGroup', { id: row.group.id })}
+              />
+            ))
+          ) : (
+            <Text style={[styles.groupsEmptyLine, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+              Make a group with friends to see each other&apos;s training weeks.
+            </Text>
+          )}
+        </>
       ) : null}
 
       {offline ? (
@@ -637,63 +594,15 @@ export default function CommunityHubScreen({ navigation, route }) {
         </Text>
       ) : null}
 
-      {shown === 'discover' ? (
-        <>
-          {likeMe.length ? (
-            <View style={styles.section}>
-              <SectionLabel tone="muted">Lifters like you</SectionLabel>
-              {likeMe.map((row) => (
-                <ProfileCard
-                  key={(row.card ?? row).user_id}
-                  card={row.card ?? row}
-                  reasons={row.reasons ?? []}
-                  onPress={() => openProfile(row.card ?? row)}
-                  showFollow={joined}
-                />
-              ))}
-            </View>
-          ) : null}
-
-          {dimensions.length ? (
-            <View style={styles.section}>
-              <SectionLabel tone="muted">Around you</SectionLabel>
-              {dimensions.map((d) => (
-                <DimensionRow
-                  key={`${d.kind}:${d.key}`}
-                  dimension={d}
-                  onPress={() => navigation.navigate('CommunityDimension', {
-                    kind: d.kind, key: d.key, label: d.label,
-                  })}
-                />
-              ))}
-            </View>
-          ) : null}
-
-          {posts.length ? <SectionLabel tone="muted">Recent training stories</SectionLabel> : null}
-        </>
-      ) : null}
-
-      {shown === 'following' && likeMe.length ? (
-        <View style={styles.section}>
-          <SectionLabel tone="muted">Lifters like you</SectionLabel>
-          {likeMe.map((row) => (
-            <ProfileCard
-              key={(row.card ?? row).user_id}
-              card={row.card ?? row}
-              reasons={row.reasons ?? []}
-              onPress={() => openProfile(row.card ?? row)}
-            />
-          ))}
-        </View>
-      ) : null}
-    </View>
+      <Eyebrow>{joined ? 'ACTIVITY' : 'RECENT'}</Eyebrow>
+    </AnimatedEntrance>
   );
 
-  const empty = loading || meLoading ? (
-    <View style={styles.skeleton}>
-      <SkeletonCard height={132} />
-      <SkeletonCard height={132} />
-      <SkeletonCard height={132} />
+  const empty = (loading || meLoading) ? (
+    <View style={styles.skeletonList}>
+      <SkeletonRow />
+      <SkeletonRow />
+      <SkeletonRow />
     </View>
   ) : failed ? (
     // A read that did not answer is never reported as an empty community.
@@ -707,16 +616,16 @@ export default function CommunityHubScreen({ navigation, route }) {
       onSecondary={() => load()}
       secondaryAccessibilityLabel="Try loading Community again"
     />
-  ) : shown === 'following' ? (
+  ) : joined ? (
     <EmptyState
       icon="people-outline"
       title="Nothing here yet"
-      text="Follow a few people and their training stories will appear here."
+      text="Follow people to see their training here."
       actionLabel="Find people"
-      onAction={() => navigation.navigate('CommunitySearch')}
+      onAction={() => navigation.navigate('CommunityFindPeople')}
       actionAccessibilityLabel="Find people to follow"
     />
-  ) : likeMe.length || dimensions.length ? null : (
+  ) : (
     <EmptyState
       icon="sparkles-outline"
       title="You are early"
@@ -732,13 +641,11 @@ export default function CommunityHubScreen({ navigation, route }) {
         data={posts}
         keyExtractor={(item) => item.post.id}
         renderItem={({ item }) => (
-          <PostCard
-            post={item.post}
-            author={item.author}
-            myReaction={item.myReaction}
+          <ActivityItemRow
+            item={item}
             onPress={() => navigation.navigate('CommunityPost', { id: item.post.id })}
-            onReact={() => react(item)}
-            onOpenAuthor={() => openProfile(item.author)}
+            onRespect={joined ? () => react(item) : () => navigation.navigate('CommunityJoin')}
+            onOpenPerson={(author) => openProfile(author)}
           />
         )}
         ListHeaderComponent={header}
@@ -746,7 +653,6 @@ export default function CommunityHubScreen({ navigation, route }) {
         ListFooterComponent={paging ? (
           <ActivityIndicator color={t.colors.primary} style={styles.footer} />
         ) : null}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.4}
         onEndReached={onEndReached}
@@ -765,10 +671,10 @@ export default function CommunityHubScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
-  header: { gap: spacing.lg, marginBottom: spacing.md },
+  list: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  header: { marginBottom: spacing.md },
   statusNotice: {
-    borderWidth: 1, borderRadius: 16, padding: spacing.md, gap: spacing.xs,
+    borderWidth: 1, borderRadius: 16, padding: spacing.md, gap: spacing.xs, marginBottom: spacing.lg,
   },
   statusNoticeLine: { ...type.bodySm },
   statusNoticeLink: { ...type.captionStrong },
@@ -804,8 +710,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 3,
   },
   badgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, lineHeight: 12 },
-  block: { gap: spacing.md },
-  browsingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  block: { gap: spacing.md, marginBottom: spacing.lg },
+  browsingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
   browsingLine: { ...type.caption, color: colors.textMuted },
   blockTitle: { ...type.bodyStrong, color: colors.textPrimary },
   blockBody: { ...type.bodySm, color: colors.textSecondary },
@@ -813,42 +719,10 @@ const styles = StyleSheet.create({
   heroTitle: { ...type.h3, color: colors.textPrimary },
   heroBody: { ...type.bodySm, color: colors.textSecondary },
   heroActions: { flexDirection: 'row', gap: spacing.sm },
-  segmentRow: { flexDirection: 'row', gap: spacing.sm },
-  findCard: { padding: spacing.md },
-  findRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  findGlyph: {
-    width: 36,
-    height: 36,
-    borderRadius: circle(36),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  findBody: { flex: 1, gap: spacing.xxs },
-  findTitle: { ...type.bodyStrong, color: colors.textPrimary },
-  findSub: { ...type.bodySm, color: colors.textSecondary },
-  section: { gap: spacing.md },
-  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
-  weekLine: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderRadius: 12, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-  },
-  streakChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
-    borderRadius: 999, paddingVertical: 4, paddingHorizontal: spacing.sm,
-  },
-  streakLabel: { ...type.caption },
-  weekFigure: { color: colors.textPrimary },
-  seeAll: { ...type.caption, color: colors.primary },
-  gymEmptyLine: { ...type.bodySm, color: colors.textSecondary },
-  gymCard: { borderRadius: 12, overflow: 'hidden' },
-  gymRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  gymAvatarWrap: { position: 'relative' },
-  ringDot: { position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: 5, borderWidth: 1.5 },
-  gymName: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
-  gymCaption: { ...type.caption, color: colors.textMuted },
-  offline: { ...type.caption, color: colors.textMuted },
-  loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.md },
+  findPeopleRow: { minHeight: 48, justifyContent: 'center', paddingVertical: spacing.sm },
+  findPeopleLabel: { ...type.label, color: colors.textSecondary },
+  groupsEmptyLine: { ...type.bodySm, color: colors.textMuted, paddingVertical: spacing.sm },
+  offline: { ...type.caption, color: colors.textMuted, marginBottom: spacing.sm },
+  skeletonList: { gap: spacing.md },
   footer: { paddingVertical: spacing.lg },
 });

@@ -1,8 +1,28 @@
 /**
- * CommunityProfileScreen (blueprint sections 2, 6; SD-05)
+ * CommunityProfileScreen (communities revamp 2026-09-10: `docs/
+ * communities-revamp-2026-09-10/21-PHASE1-SPEC.md` section 4;
+ * `20-BLUEPRINT.md` section 9's profile). One person as a lifter: avatar
+ * 56, name `bodyStrong`, handle `bodySm` `textMuted`, one `bodySm` line
+ * of shared facts (gym, place, styles -- only what the card carries and
+ * the person shows), the own progress strip exactly as today (others'
+ * strips are phase 2), the existing Follow / Connect / Message row,
+ * `Eyebrow` ACTIVITY with `ActivityItemRow`s. No cards.
  *
- * One person as a lifter: the facts they chose, what they have posted
- * and what they have published. Nothing else about them exists here.
+ * DECISIONS the spec's own enumeration left implicit, flagged for the
+ * lead (lane report): the bio text and the old separate facts/place
+ * lines are DROPPED (bio rendered at `type.body`, which rule 1 does not
+ * allow outside the header title and row names; the facts/place lines
+ * are explicitly merged into the one new line by the spec's own
+ * wording). The followers/following/connections counts row, the
+ * "Hidden from others" notes and `TrainingProfileLine` are KEPT
+ * unchanged: none of the three is named in the spec's enumeration, but
+ * none violates any of the ten presentation rules either (all render at
+ * `bodySm`/`caption`, never a prominent size), none is superseded by the
+ * new merged facts line (which is scoped to gym/place/styles only, not
+ * training bands or relationship counts), and removing a working,
+ * privacy-relevant or navigational affordance the spec never asked to
+ * remove would be exactly the corner-cutting CLAUDE.md section 4 rules
+ * out.
  *
  * The three states that are not "a profile with content" are all real
  * destinations, not errors: a followers-only profile you do not follow
@@ -13,14 +33,6 @@
  * Followers and following open in a sheet rather than a pushed screen:
  * the list is transient content about the profile you are already on,
  * which is what the app's sheets are for.
- *
- * The action row is the three tiers of the relationship, left to right
- * (discovery blueprint `docs/social-discovery-2026-09-06/
- * 70-DISCOVERY-BLUEPRINT.md` section 1): Follow is one way and instant on
- * a public profile, Connect is mutual and accepted, and Message appears
- * only once that tie exists. An under-18 account never sees Connect or
- * Message at all (SD-32), and the training profile line shows only the
- * bands this person chose to share (SD-22).
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -39,9 +51,8 @@ import BottomSheet from '../components/BottomSheet';
 import ModalHeader from '../components/ModalHeader';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
-import { Skeleton, SkeletonCard } from '../components/Skeleton';
+import { Skeleton, SkeletonRow } from '../components/Skeleton';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
-import PostCard from '../components/community/PostCard';
 import ProfileCard from '../components/community/ProfileCard';
 import FollowButton from '../components/community/FollowButton';
 import ConnectButton from '../components/community/ConnectButton';
@@ -49,6 +60,8 @@ import ConnectSheet from '../components/community/ConnectSheet';
 import TrainingProfileLine from '../components/community/TrainingProfileLine';
 import ProfileMenuSheet from '../components/community/ProfileMenuSheet';
 import ReportSheet from '../components/community/ReportSheet';
+import Eyebrow from '../components/community/Eyebrow';
+import ActivityItemRow from '../components/community/ActivityItemRow';
 import { factLabels, placeLine } from '../components/community/ProfileCard';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
@@ -123,7 +136,7 @@ export default function CommunityProfileScreen({ navigation, route }) {
   // caller's own raw counters (`_community_profile_card` never carries
   // them, blueprint 60 §1's counters are board inputs, not profile
   // fields), so this reads the same local `trainingConsistency.js` the
-  // Hub's "This week" line uses.
+  // Hub's You line uses.
   useEffect(() => {
     if (!isMe || !card?.user_id) { setProgress(null); return undefined; }
     let alive = true;
@@ -206,6 +219,10 @@ export default function CommunityProfileScreen({ navigation, route }) {
     ? [...facts, 'Open to training together']
     : facts;
   const place = card ? placeLine(card) : null;
+  // Spec section 4: one shared-facts line, place first then the chosen
+  // facts, only what the card actually carries.
+  const sharedFactsLine = [place, chipLabels.length ? chipLabels.join(' · ') : null]
+    .filter(Boolean).join(' · ');
   // Null when the viewer may not see the profile: an absent count is not
   // a zero, and "0 connections" about a private profile would be a claim
   // the card never made.
@@ -240,27 +257,19 @@ export default function CommunityProfileScreen({ navigation, route }) {
           size={56}
         />
         <View style={styles.heroBody}>
-          <Text style={[styles.name, { ...t.type.h3, color: t.colors.textPrimary }]}>
+          <Text style={[styles.name, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
             {card.display_name || card.handle}
           </Text>
-          <Text style={[styles.handle, { ...t.type.caption, color: t.colors.textSecondary }]}>
+          <Text style={[styles.handle, { ...t.type.bodySm, color: t.colors.textMuted }]}>
             {`@${card.handle}`}
           </Text>
         </View>
       </View>
 
-      {card.bio ? (
-        <Text style={[styles.bio, { ...t.type.body, color: t.colors.textPrimary }]}>{card.bio}</Text>
-      ) : null}
-
-      {chipLabels.length ? (
-        <Text style={[styles.facts, { ...t.type.caption, color: t.colors.textSecondary }]}>
-          {chipLabels.join(' · ')}
+      {sharedFactsLine ? (
+        <Text style={[styles.facts, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+          {sharedFactsLine}
         </Text>
-      ) : null}
-
-      {place ? (
-        <Text style={[styles.place, { ...t.type.bodySm, color: t.colors.textSecondary }]}>{place}</Text>
       ) : null}
 
       {/* Spec D (migrate_164 Part 8): the owner always sees their own gym
@@ -392,6 +401,7 @@ export default function CommunityProfileScreen({ navigation, route }) {
         </View>
       )}
 
+      <Eyebrow>ACTIVITY</Eyebrow>
     </View>
   ) : null;
 
@@ -416,8 +426,8 @@ export default function CommunityProfileScreen({ navigation, route }) {
           <Skeleton width="35%" height={13} style={styles.skeletonHandle} />
         </View>
       </View>
-      <SkeletonCard height={110} />
-      <SkeletonCard height={110} />
+      <SkeletonRow />
+      <SkeletonRow />
     </View>
   ) : blockedCard ? (
     <EmptyState
@@ -481,17 +491,14 @@ export default function CommunityProfileScreen({ navigation, route }) {
         data={listData}
         keyExtractor={(item) => item.post.id}
         renderItem={({ item }) => (
-          <PostCard
-            post={item.post}
-            author={item.author}
-            myReaction={item.myReaction}
+          <ActivityItemRow
+            item={item}
             onPress={() => navigation.navigate('CommunityPost', { id: item.post.id })}
-            onReact={() => react(item)}
+            onRespect={() => react(item)}
           />
         )}
         ListHeaderComponent={hero}
         ListEmptyComponent={empty}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.4}
         onEndReached={() => { /* the profile read returns the latest 20; there is no deeper page */ }}
@@ -577,19 +584,16 @@ export default function CommunityProfileScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  hero: { gap: spacing.md, marginBottom: spacing.lg },
+  hero: { gap: spacing.md, marginBottom: spacing.sm },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   heroBody: { flex: 1, gap: spacing.xxs },
-  name: { ...type.h3, color: colors.textPrimary },
-  handle: { ...type.caption, color: colors.textSecondary },
-  bio: { ...type.body, color: colors.textPrimary },
-  facts: { ...type.caption, color: colors.textSecondary },
-  place: { ...type.bodySm, color: colors.textSecondary },
+  name: { ...type.bodyStrong, color: colors.textPrimary },
+  handle: { ...type.bodySm, color: colors.textMuted },
+  facts: { ...type.bodySm, color: colors.textSecondary },
   hiddenNote: { ...type.caption, color: colors.textMuted },
   counts: { flexDirection: 'row', gap: spacing.lg },
   count: { ...type.bodySm, color: colors.textSecondary },
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },
-  tabRow: { flexDirection: 'row', gap: spacing.sm },
   headerBtn: {
     width: 34,
     height: 34,
@@ -599,7 +603,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.lg },
+  skeleton: { gap: spacing.md },
   skeletonHero: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   skeletonHeroLines: { flex: 1, gap: spacing.xxs },
   skeletonHandle: { marginTop: spacing.xs },

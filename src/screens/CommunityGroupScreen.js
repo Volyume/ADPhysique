@@ -1,35 +1,35 @@
 /**
- * CommunityGroupScreen (community product audit `docs/community-product-
- * audit-2026-09-07/60-DESIGN-PROGRESS-COMMUNITY.md` section 3-4;
- * presentation law `52-research-community-presentation.md` Part B/C,
- * `docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md`; server
- * contract `supabase/migrate_165_community_boards_groups.sql`
- * `community_group_get`).
+ * CommunityGroupScreen (communities revamp 2026-09-10: `docs/communities-
+ * revamp-2026-09-10/21-PHASE1-SPEC.md` section 4; `20-BLUEPRINT.md`
+ * section 9's group page; server contract `supabase/migrate_165_
+ * community_boards_groups.sql` `community_group_get`).
  *
- * Header: name, access, member count. MenuSheet: Leave, Report, and for
- * admins Edit (routes to `CommunityGroupCreateScreen` in edit mode --
- * prefilled name/blurb/access, Save calls `community_group_update`),
- * Invite by handle, Share invite link and Close group. Body: the group board
- * (`community_board` scope group, week window, top rows, "See all" to
- * `CommunityBoard`), then the members' stories feed
- * (`community_group_feed`). Join / Request to join / Requested / Member
- * states drive the header action.
+ * `BackHeader` carries the group's name and the 48 dp menu glyph, so the
+ * body no longer repeats the name (no `h2`, no `Card`): one `label` line
+ * ("8 members . invite only"; the Together line is phase 3), `Eyebrow`
+ * MEMBERS with `PersonRow`s from the group's week board and a trailing
+ * "See all" to `CommunityGroupMembers`, `Eyebrow` ACTIVITY with the
+ * members' stories as `ActivityItemRow`s. A non-member sees the Join or
+ * Request `Button` in place of both (the board and feed reads are member-
+ * only, unchanged from before). Admin actions (Edit, Invite, Share link,
+ * Close group), Leave and Report stay exactly in the existing `MenuSheet`.
  *
  * Route params: { id: groupId } (also reached via the `g/?id=` deep link,
  * RootNavigator's linking config).
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
-import SectionLabel from '../components/SectionLabel';
-import { SkeletonCard } from '../components/Skeleton';
+import { SkeletonRow } from '../components/Skeleton';
 import Button from '../components/Button';
-import PostCard from '../components/community/PostCard';
+import Eyebrow from '../components/community/Eyebrow';
+import PersonRow from '../components/community/PersonRow';
+import ActivityItemRow from '../components/community/ActivityItemRow';
 import MenuSheet from '../components/community/MenuSheet';
 import ReportSheet from '../components/community/ReportSheet';
 import GroupInviteSheet from '../components/community/GroupInviteSheet';
@@ -40,10 +40,9 @@ import { colors, spacing, type, hitSlop } from '../styles/theme';
 import { touchTarget } from '../styles/layout';
 import {
   getGroup, joinGroup, leaveGroup, closeGroup, loadGroupFeed, reactToPost,
-  loadBoard, daysLabel, GROUP_ACCESS,
+  loadBoard, metricLabel,
 } from '../lib/community';
 
-const PREVIEW_ROWS = 3;
 const PAGE = 20;
 
 const REFUSALS = {
@@ -55,51 +54,14 @@ const REFUSALS = {
   not_found: 'This group is no longer available.',
 };
 
-function BoardPreview({ t, navigation, group, rows }) {
-  return (
-    <View style={styles.section}>
-      <View style={styles.sectionHead}>
-        <SectionLabel tone="muted">This week</SectionLabel>
-        <Pressable
-          onPress={() => navigation.navigate('CommunityBoard', {
-            scope: 'group', scopeKey: group.id, window: 'week', label: group.name,
-          })}
-          accessibilityRole="button"
-          accessibilityLabel="See the full group board"
-        >
-          <Text style={[styles.seeAll, { ...t.type.caption, color: t.colors.primary }]}>See all</Text>
-        </Pressable>
-      </View>
-      {rows.length ? (
-        <View style={[styles.boardCard, { backgroundColor: t.colors.surface }]}>
-          {rows.map((row, i) => {
-            const card = row.card;
-            const name = card.display_name || card.handle || 'Athlete';
-            return (
-              <View
-                key={card.user_id}
-                style={[
-                  styles.boardRow,
-                  i < rows.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: t.colors.borderSubtle },
-                ]}
-              >
-                <Text style={[styles.boardName, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
-                  {name}
-                </Text>
-                <Text style={[styles.boardCaption, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
-                  {row.trainedDays.length ? `Trained ${daysLabel(row.trainedDays)}` : ''}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      ) : (
-        <Text style={[styles.emptyLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-          No one here is sharing their consistency yet.
-        </Text>
-      )}
-    </View>
-  );
+/** "8 members . invite only" (spec section 4, and the same wording the
+ * Hub's GroupRow line uses): member count first, access lower-case. Kept
+ * local rather than exported from `lib/`, same precedent as the Hub's
+ * own copy of this helper. */
+function groupLine(group) {
+  const n = Number(group?.memberCount ?? 0);
+  const access = group?.access === 'invite' ? 'invite only' : 'open';
+  return `${n} ${n === 1 ? 'member' : 'members'} · ${access}`;
 }
 
 export default function CommunityGroupScreen({ navigation, route }) {
@@ -110,7 +72,7 @@ export default function CommunityGroupScreen({ navigation, route }) {
   const isMinor = !!me?.is_minor;
 
   const [group, setGroup] = useState(null);
-  const [boardRows, setBoardRows] = useState([]);
+  const [board, setBoard] = useState(null);
   const [feedRows, setFeedRows] = useState([]);
   const [cursor, setCursor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -130,15 +92,15 @@ export default function CommunityGroupScreen({ navigation, route }) {
       setGroup(g);
       setError(null);
       if (g?.myState === 'member') {
-        const [board, feed] = await Promise.all([
-          loadBoard({ scope: 'group', scopeKey: groupId, window: 'week', limit: PREVIEW_ROWS }),
+        const [b, feed] = await Promise.all([
+          loadBoard({ scope: 'group', scopeKey: groupId, window: 'week', limit: PAGE }),
           loadGroupFeed(groupId, { limit: PAGE }),
         ]);
-        setBoardRows(board.rows.slice(0, PREVIEW_ROWS));
+        setBoard(b);
         setFeedRows(feed.rows);
         setCursor(feed.cursor);
       } else {
-        setBoardRows([]);
+        setBoard(null);
         setFeedRows([]);
         setCursor(null);
       }
@@ -168,6 +130,10 @@ export default function CommunityGroupScreen({ navigation, route }) {
       setPaging(false);
     }
   }, [cursor, feedRows.length, group?.myState, groupId, paging]);
+
+  function openProfile(card) {
+    if (card?.handle) navigation.navigate('CommunityProfile', { handle: card.handle });
+  }
 
   async function react(item) {
     const on = !item.myReaction;
@@ -218,10 +184,30 @@ export default function CommunityGroupScreen({ navigation, route }) {
     }
   }
 
+  const isMember = group?.myState === 'member';
+
+  // Own row pinned at the bottom when off-page, the same pattern
+  // `CommunityDimensionScreen` and `CommunityBoardScreen` already use.
+  // Computed above the `!groupId` early return (rules of hooks: every
+  // hook this component calls must run on every render, including the
+  // one render where there is no groupId at all).
+  const youOffPage = isMember && board?.you && !board.rows.some((r) => r.isYou);
+  const displayMembers = useMemo(() => {
+    if (!board) return [];
+    if (!youOffPage || !me?.profile) return board.rows;
+    return [...board.rows, {
+      card: me.profile,
+      metric: board.you.metric,
+      trainedDays: [],
+      trainedToday: false,
+      isYou: true,
+      rank: board.thresholdMet ? board.you.rank : null,
+    }];
+  }, [board, youOffPage, me]);
+
   if (!groupId) return null;
 
   const isAdmin = group?.myRole === 'admin';
-  const isMember = group?.myState === 'member';
   const isRequested = group?.myState === 'requested';
 
   const headerAction = isMember ? (
@@ -285,8 +271,8 @@ export default function CommunityGroupScreen({ navigation, route }) {
 
   const empty = loading ? (
     <View style={styles.skeleton}>
-      <SkeletonCard height={108} />
-      <SkeletonCard height={108} />
+      <SkeletonRow />
+      <SkeletonRow />
     </View>
   ) : error ? (
     <EmptyState
@@ -308,62 +294,71 @@ export default function CommunityGroupScreen({ navigation, route }) {
       <BackHeader title={group?.name || 'Group'} right={headerAction} />
       {loading && !group ? (
         <View style={styles.skeletonScreen}>
-          <SkeletonCard height={140} />
-          <SkeletonCard height={108} />
-          <SkeletonCard height={108} />
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
+          <SkeletonRow />
         </View>
       ) : error && !group ? empty : (
         <FlashList
           data={isMember ? feedRows : []}
           keyExtractor={(item) => item.post.id}
           renderItem={({ item }) => (
-            <PostCard
-              post={item.post}
-              author={item.author}
-              myReaction={item.myReaction}
+            <ActivityItemRow
+              item={item}
               onPress={() => navigation.navigate('CommunityPost', { id: item.post.id })}
-              onReact={() => react(item)}
-              onOpenAuthor={() => (item.author?.handle
-                ? navigation.navigate('CommunityProfile', { handle: item.author.handle })
-                : null)}
+              onRespect={() => react(item)}
+              onOpenPerson={(author) => openProfile(author)}
             />
           )}
           ListHeaderComponent={(
             <View style={styles.header}>
-              <View style={[styles.headerCard, { backgroundColor: t.colors.surface }]}>
-                <Text style={[styles.name, { ...t.type.h2, color: t.colors.textPrimary }]}>{group?.name}</Text>
-                {group?.blurb ? (
-                  <Text style={[styles.blurb, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                    {group.blurb}
-                  </Text>
-                ) : null}
-                <Text style={[styles.meta, { ...t.type.caption, color: t.colors.textMuted }]}>
-                  {[GROUP_ACCESS[group?.access] ?? 'Open', group?.memberCount != null
-                    ? `${group.memberCount} ${group.memberCount === 1 ? 'member' : 'members'}` : null]
-                    .filter(Boolean).join(' · ')}
-                </Text>
-                {!isMember && !isMinor ? (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    fullWidth={false}
-                    title={isRequested ? 'Requested' : 'Join'}
-                    disabled={isRequested}
-                    loading={joining}
-                    onPress={doJoin}
-                    accessibilityLabel={isRequested ? 'Join requested' : 'Join group'}
-                  />
-                ) : null}
-              </View>
-              {isMember ? <BoardPreview t={t} navigation={navigation} group={group} rows={boardRows} /> : null}
-              {isMember ? <SectionLabel tone="muted">Stories</SectionLabel> : null}
+              <Text style={[styles.label, { ...t.type.label, color: t.colors.textSecondary }]}>
+                {groupLine(group)}
+              </Text>
+              {!isMember && !isMinor ? (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  fullWidth={false}
+                  title={isRequested ? 'Requested' : 'Join'}
+                  disabled={isRequested}
+                  loading={joining}
+                  onPress={doJoin}
+                  accessibilityLabel={isRequested ? 'Join requested' : 'Join group'}
+                  style={styles.joinBtn}
+                />
+              ) : null}
+              {isMember ? (
+                <>
+                  <Eyebrow trailing={{
+                    label: 'See all',
+                    onPress: () => navigation.navigate('CommunityGroupMembers', { id: groupId, name: group?.name, myRole: group?.myRole }),
+                  }}
+                  >
+                    MEMBERS
+                  </Eyebrow>
+                  {displayMembers.map((row) => (
+                    <PersonRow
+                      key={row.card.user_id}
+                      person={{ ...row.card, isYou: row.isYou }}
+                      metric={metricLabel('week', row.metric)}
+                      days={row.trainedDays}
+                      trainedToday={row.trainedToday}
+                      rank={board?.thresholdMet ? row.rank : null}
+                      onPress={() => openProfile(row.card)}
+                    />
+                  ))}
+                  <Eyebrow>ACTIVITY</Eyebrow>
+                </>
+              ) : null}
             </View>
           )}
           ListEmptyComponent={empty}
           ListFooterComponent={paging ? (
             <ActivityIndicator color={t.colors.primary} style={styles.footer} />
           ) : null}
-          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
           contentContainerStyle={styles.list}
           onEndReachedThreshold={0.4}
           onEndReached={onEndReached}
@@ -401,8 +396,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
-  skeleton: { gap: spacing.md },
-  skeletonScreen: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
+  skeleton: { gap: spacing.sm },
+  skeletonScreen: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.sm },
   footer: { paddingVertical: spacing.lg },
   // Matches CommunityConversationScreen's header kebab: a fixed 48dp box so
   // the glyph clears the platform touch-target floor regardless of its own
@@ -413,17 +408,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  header: { gap: spacing.md, marginBottom: spacing.sm },
-  headerCard: { borderRadius: 16, padding: spacing.lg, gap: spacing.xs },
-  name: { ...type.h2, color: colors.textPrimary },
-  blurb: { ...type.bodySm, color: colors.textSecondary },
-  meta: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xs },
-  section: { gap: spacing.sm },
-  sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  seeAll: { ...type.caption, color: colors.primary },
-  boardCard: { borderRadius: 16 },
-  boardRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  boardName: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
-  boardCaption: { ...type.caption, color: colors.textMuted },
-  emptyLine: { ...type.bodySm, color: colors.textSecondary },
+  header: { gap: spacing.xs, marginBottom: spacing.sm },
+  label: { ...type.label, color: colors.textSecondary },
+  joinBtn: { marginTop: spacing.sm, alignSelf: 'flex-start' },
 });
