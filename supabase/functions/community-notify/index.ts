@@ -39,6 +39,18 @@
 //      message collapse in 4a; without this, connect_request and
 //      connect_accepted (and every older kind) could be replayed for as long
 //      as the ten-minute recency window in step 2 lasted.
+//   5c. Communities revamp phase 3 (docs/communities-revamp-2026-09-10/
+//      23-PHASE3-SPEC.md section 6): for `reaction` specifically, collapses
+//      to at most ONE push per recipient per UK-local day, the same shape as
+//      the message collapse in 4a but keyed by day rather than by a rolling
+//      window - `community_notify_daily(recipient, day, count)`
+//      (migrate_170 part B). The first Respect of the day sends; every later
+//      one this same day increments the row's count and sends nothing. This
+//      runs AFTER 5b, so a retried call against the exact same proof is
+//      already stopped there and never reaches this table at all.
+//      community_respect_all writes activity rows of the identical
+//      `reaction` kind community_react does, so whichever call path
+//      notifies for them collapses through this exact same mechanism.
 //   6. Otherwise invokes send-push (service role) with the Community payload.
 //
 // Request body:
@@ -145,6 +157,23 @@ const ACTIVITY_BACKED_KINDS: Kind[] = [
 // not read it (blueprint section 2).
 const MESSAGE_PUSH_COLLAPSE_MS = 15 * 60 * 1000
 
+// Communities revamp phase 3 section 6: the UK-local day key, byte-for-byte
+// the same zero-padded YYYY-MM-DD format src/lib/dayKey.js's localDayKey()
+// and this file's own SQL siblings (`to_char(timezone('Europe/London',
+// now()), 'YYYY-MM-DD')`) produce, so a push collapses against the exact
+// same day a client or an RPC would compute. Intl.DateTimeFormat with an
+// explicit IANA zone, the same technique the quiet-hours projection below
+// already uses in this file, rather than a manual UTC-offset calculation.
+function ukLocalDayKey(): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date())
+  const y = parts.find((p) => p.type === 'year')?.value ?? '0000'
+  const mo = parts.find((p) => p.type === 'month')?.value ?? '00'
+  const d = parts.find((p) => p.type === 'day')?.value ?? '00'
+  return `${y}-${mo}-${d}`
+}
+
 // British English, calm voice, no clipped commands, no em dash (CLAUDE.md
 // section 3). The handle is the only identity in a Community push: never a
 // first name, never a display name pulled from anywhere else.
@@ -157,7 +186,11 @@ function pushCopy(kind: Kind, handle: string): { title: string; body: string } {
     case 'follow_accepted':
       return { title: 'Community', body: `@${handle} accepted your follow` }
     case 'reaction':
-      return { title: 'Community', body: `@${handle} reacted to your post` }
+      // Communities revamp phase 3 section 6: collapsed to one push per
+      // recipient per UK-local day (5c below), so a reaction push always
+      // now represents "at least one Respect today", possibly several from
+      // different people - it never names a single handle.
+      return { title: 'Community', body: 'Someone gave your training respect' }
     case 'comment':
       return { title: 'Community', body: `@${handle} commented on your post` }
     case 'connect_request':
@@ -640,6 +673,49 @@ serve(async (req: Request) => {
     }
   }
 
+  // Step 5c: the daily Respect collapse, for a reaction only (Communities
+  // revamp phase 3, docs/communities-revamp-2026-09-10/23-PHASE3-SPEC.md
+  // section 6). Runs after 5b above, so a retried call against the exact
+  // same proof is already stopped there and never reaches this table.
+  // community_notify_daily(recipient, day, count) (migrate_170 part B) is
+  // the per-recipient tally: a row already there means a push already went
+  // out today, so this increments it and stays silent; no row means this
+  // IS the first Respect of the day, and the send proceeds below. The row
+  // is only written AFTER the send succeeds (the same "stamp only on
+  // success" principle 4a/5b already use), so a failed send never silences
+  // tomorrow - or a retried today.
+  let notifyDailyIsFirstOfDay = false
+  let notifyDailyDay: string | null = null
+  if (kind === 'reaction') {
+    notifyDailyDay = ukLocalDayKey()
+    const { data: daily, error: dailyErr } = await admin
+      .from('community_notify_daily')
+      .select('count')
+      .eq('recipient', targetUserId)
+      .eq('day', notifyDailyDay)
+      .maybeSingle()
+    if (dailyErr) {
+      console.error('[community-notify] daily-collapse read failed, holding push', dailyErr)
+      return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
+    }
+    if (daily) {
+      const row = daily as { count?: number }
+      const { error: incErr } = await admin
+        .from('community_notify_daily')
+        .update({ count: (row.count ?? 0) + 1 })
+        .eq('recipient', targetUserId)
+        .eq('day', notifyDailyDay)
+      if (incErr) {
+        console.error('[community-notify] daily-collapse increment failed', incErr)
+      }
+      // The in-app Activity inbox already shows every Respect immediately
+      // (the community_activity row this call is proving was written
+      // before this function was ever invoked) - only the PUSH collapses.
+      return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
+    }
+    notifyDailyIsFirstOfDay = true
+  }
+
   // The actor's handle. No Community push ever carries a real name.
   const { data: actorProfile } = await admin
     .from('community_profiles')
@@ -696,6 +772,18 @@ serve(async (req: Request) => {
         .eq('id', activityRowId)
       if (stampErr) {
         console.error('[community-notify] activity push stamp failed', stampErr)
+      }
+    }
+    // Step 5c continued: independent of the activityRowId stamp above (a
+    // reaction push does both - the activity row's pushed_at guards a
+    // retry of THIS proof; this table guards the NEXT different Respect
+    // the same day), and only ever runs for the first push of the day.
+    if (kind === 'reaction' && notifyDailyIsFirstOfDay && notifyDailyDay) {
+      const { error: dailyStampErr } = await admin
+        .from('community_notify_daily')
+        .insert({ recipient: targetUserId, day: notifyDailyDay, count: 1 })
+      if (dailyStampErr) {
+        console.error('[community-notify] daily-collapse stamp failed', dailyStampErr)
       }
     }
   } catch (e) {

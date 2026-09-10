@@ -369,7 +369,7 @@ contract must not delegate its authority to a superseded audit.
   check at the end of the file plus the guard tests in
   `src/__tests__/migrate165.rpcOnly.guard.test.js`.
 - **170 WRITTEN, NOT APPLIED (Community connection, part A; founder gate).**
-  `migrate_170_community_connection.sql` (communities revamp 2026-09-10,
+  `migrate_170_community_connection.sql` (communities revamp 2026-09-10, Part B (ambient session items with consent and audiences, group audiences, Together figures, Respect everyone, the daily Respect digest table, connect reasons) is in the SAME file, also WRITTEN, NOT APPLIED; hostile review pending.
   `docs/communities-revamp-2026-09-10/20-BLUEPRINT.md` sections 3, 4, 7, 8;
   `21-PHASE1-SPEC.md` section 5; contract at
   `docs/communities-revamp-2026-09-10/22-MIGRATION-170A-CONTRACT.md`).

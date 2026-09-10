@@ -201,3 +201,202 @@ The blueprint's calm-mode / open-ED-flag withholding of a person's OWN physique-
 Q1b) is a **client** decision — the viewer's own app simply does not open/render that cohort page for themselves.
 The server has no reason to know a viewer's calm-mode state to serve a `discipline` cohort to everyone else, so it
 is not encoded here.
+
+# PART B — ambient sharing, groups, Together, Respect, the digest
+
+For the client lanes: build against this, not the SQL. Source: `supabase/migrate_170_community_connection.sql`,
+Part B (below Part A2). WRITTEN, NOT APPLIED — do not call any of this against production until the founder's
+"run against production" lands and the file is actually applied. Authority:
+`docs/communities-revamp-2026-09-10/23-PHASE3-SPEC.md` sections 1-7, `20-BLUEPRINT.md` sections 4-8.
+
+## community_upsert_profile(_p jsonb, _remove_shared boolean DEFAULT false) — SIGNATURE CHANGED
+
+Was `community_upsert_profile(_p jsonb)`; the old 1-arg overload is DROPped (a genuinely new parameter changes
+the function's identity, the same reason `community_dimensions_me`/`community_find_people` were DROPped in
+Part A). `_remove_shared` is a real trailing SQL parameter, not a key inside `_p` — omit it and it defaults to
+`false`, so an old client calling with only `{_p: {...}}` keeps working unchanged.
+
+New keys in `_p`, same "omit the key to leave it unchanged" contract `discipline_keys`/`styles` already have:
+- `share_sessions` (boolean). Minors may set it; nothing in it is age-restricted.
+- `sessions_audience` (`followers` | `groups` | `everyone`, default `followers`). **Minors**: `everyone` is
+  refused (`invalid_input`) if sent; any other value is silently forced to `followers` server-side (mirrors the
+  existing `visibility` force-to-followers for a minor a few lines above it in the same function).
+- `c_planned_per_week` (integer 0-21, or `null` to clear). Out-of-range or malformed is dropped to `null`, never
+  a hard refusal — the same posture `community_update_training_profile` already uses for its own counters.
+
+`_remove_shared = true`, combined with a resulting `share_sessions = false` (either just turned off, or already
+off), deletes every `auto = true` post this account has, plus that post's own comments and activity rows (the
+same cleanup `community_delete_post` does for one post, run in bulk here). `community_reactions` and
+`community_post_groups` rows on those posts cascade away via their `post_id` foreign key. A call with
+`_remove_shared = true` while `share_sessions` is (or becomes) `true` is a no-op — nothing is deleted.
+
+Return shape unchanged: the profile card, `_community_profile_card(v_uid, v_uid)`.
+
+## community_create_post(...) — SIGNATURE CHANGED, three new trailing parameters
+
+Was `(_kind, _payload, _caption, _programme_id, _visibility)`; now also `_auto boolean DEFAULT false,
+_client_ref text DEFAULT NULL, _group_ids uuid[] DEFAULT NULL`. The old 5-arg overload is DROPped (same
+DROP-first reasoning as above). Existing behaviour and validation (payload allow-list per `kind`, forbidden-key
+scan, caption clean-text + 280 chars, the 3-per-day/10-established rate rail) is unchanged.
+
+- `_visibility` gains `'groups'`. A `'groups'` post **must** carry at least one `_group_ids` entry
+  (`invalid_input` otherwise — a groups post naming no group would be visible to nobody but its own author); a
+  non-empty `_group_ids` with any other `_visibility` value is also `invalid_input`.
+- `_group_ids`: the caller must currently be a `state = 'member'` of every group named (`not_allowed` otherwise),
+  deduplicated, capped at 20; a minor is refused outright (`minor_restricted`) rather than silently stripped —
+  belt and braces, since a minor can never actually be a group member (`community_group_join`/`_create` already
+  refuse them).
+- `_client_ref`: an idempotency key, trimmed, max 120 chars. **Idempotent upsert**: a partial unique index on
+  `(author_id, client_ref) WHERE client_ref IS NOT NULL` means a second call with the SAME `_client_ref` from
+  the SAME author returns the EXISTING post's id rather than creating a duplicate row — safe to retry an
+  offline-queued flush any number of times. An ordinary manual post that never sends `_client_ref` is never
+  constrained by this at all. `_group_ids` is written ONLY on the genuinely first (inserting) call; a
+  conflict-hit call leaves the post's existing group audience untouched.
+- `_auto`: stored as-is on the row (`community_posts.auto`).
+
+Return shape unchanged: `{ id }`.
+
+## community_post_set_note(_post_id uuid, _text text) — NEW
+
+Author-only (`not_found` for anyone else, including a viewer who could otherwise see the post). Sets the post's
+`caption` (the existing "note"/text field `community_get_post`/`community_feed` etc. already return under the
+`post` object's `caption` key) through the identical content check `community_create_post` applies to its own
+caption: `_community_clean_text` (the keyword filter) then a 280-character cap. `null`/empty text clears the
+note. VOLATILE, rate-railed 10 per hour (action `post_set_note`). Returns the updated post:
+`_community_post_json(row)` — the same shape the `post` key carries everywhere else.
+
+## Post visibility 'groups' — every reader gains the branch
+
+`community_posts.visibility` CHECK now allows `'groups'`, alongside a new join table
+`community_post_groups(post_id, group_id)` (RLS on, no grants, RPC-only, cascades on either FK). A `'groups'`
+post is visible to: its own author always, and any caller who is a **current `state = 'member'`** of at least
+one group the post names. Every RPC that decides "may this caller see this post" gained that exact branch,
+re-issued with unchanged signatures:
+- `_community_can_view_post(_viewer, _post_id)` — the shared gate `community_react`, `community_comment`,
+  `community_report` and the connect/share preview paths all already call; re-issuing it alone makes every one
+  of those groups-aware without touching them.
+- `community_get_post(_id)` — duplicates the check inline (pre-existing shape); same new branch written out.
+- `community_feed(_cursor, _limit)` — the Following tab never checked `visibility` at all before (being a
+  follower already qualified for `public`/`followers`); it now ALSO requires group membership for a `'groups'`
+  post, as an extra `AND`, never a replacement of the existing author-or-follows test.
+- `community_group_feed(_group_id, _cursor, _limit)` — gains a second inclusion arm, ORed with the existing
+  "author is a current member of `_group_id`" one: **posts whose audience names `_group_id`** (via
+  `community_post_groups`), regardless of the author's CURRENT membership. Both arms still go through
+  `_community_can_view_post` before being returned.
+- `community_get_profile(_handle, _uid)` — the profile's own posts list gains the same branch in its inline
+  visibility OR-chain (`v_target = v_uid` already covers "the author viewing their own profile").
+`community_discover_posts` and `community_dimension_recent` are UNCHANGED: both hard-filter to
+`visibility = 'public'` already, so a `'groups'` post is automatically excluded from public discovery and from
+a cohort's RECENT rail — the correct behaviour, not an oversight.
+
+`delete_user_data()` — **DOES change now** (superseding the Part A "What did not change" note above, which was
+true only of Part A): re-issued to explicitly name `community_post_groups` (deleted for the caller's own posts,
+alongside the FK cascade — belt and braces, matching this function's own established style of naming every
+table explicitly) and `community_notify_daily` (deleted by `recipient`, item 6 below).
+
+## community_group_get(_group_id) — signature unchanged, Together this week added
+
+Three new always-computed keys, stripped alongside `member_count`/`blurb` for a non-member of an invite-only
+group (the same "count-shaped fact an invite-only group withholds" rule):
+- `together_sessions_week` (int): `sum(c_sessions_week)`.
+- `together_planned_week` (int): `sum(c_planned_per_week)`, counting only members who HAVE a plan
+  (`c_planned_per_week IS NOT NULL`) — a member with no plan contributes nothing, not zero, so a group where
+  nobody plans never reads as "0 of 0 planned".
+- `sharing_members` (int): the count of members the two sums above are computed over — the "6" in "6 of 8
+  sharing", where the existing `member_count` is the "8".
+
+All three are computed over the SAME member set: `state = 'member'`, `status = 'active'`, `is_minor = false`,
+`share_consistency = true`, and — unlike `member_count`, which is never reduced by a personal block list because
+the card is shown to every member and to a non-member browsing an open group — **NOT** visible to a member the
+caller has blocked (this figure is the caller's own sense of "us", not the group's stated size).
+
+## community_respect_all(_scope text, _scope_key text DEFAULT NULL, _today text DEFAULT NULL) — NEW
+
+VOLATILE, SECURITY DEFINER, pinned search_path, rate-railed **10 per hour** (action `respect_all`), REVOKEd from
+PUBLIC/anon, GRANTed to authenticated. `_today` follows the same lead-ruling-1 shape as `community_dimensions_
+me`/`community_hub_summary`: NULL/absent falls back to the UK-local day key
+(`to_char(timezone('Europe/London', now()), 'YYYY-MM-DD')`); a supplied value is still validated
+(`^\d{4}-\d{2}-\d{2}$`, else `invalid_input`).
+
+**Scopes** — `community_board`'s set minus `'everyone'` (encouragement is always a named roster, never a global
+blast): `gym`, `area`, `style`, `discipline`, `age_band`, `group`, `following`. `_scope_key` requirements mirror
+`community_board` exactly: required for `style`/`discipline`/`group`; optional for `gym`/`area` (falls back to
+the caller's own `gym_id`/`area_key`); none for `age_band` (always the caller's own band; `not_allowed` if the
+caller does not share one) or `following`. `discipline`'s key is validated against the taxonomy
+(`_community_discipline_key_ok`); `group`'s key requires the caller to already be a `state = 'member'`
+(`not_allowed` otherwise).
+
+**Target selection**, per eligible scope member: their single LATEST `auto = true, kind = 'session'` post.
+Eligible means, ALL of: `status = 'active'`, `is_minor = false`, not the caller, `share_sessions = true`
+(**not** `share_consistency` — the two toggles are independent per phase3 spec section 1, and `share_sessions`
+is the one that actually produces a post to Respect), not blocked from the caller in EITHER direction, not
+muted by the caller, and matches the scope's own membership test. That latest post is then included only if
+its own `created_at`, converted to the UK-local day (`to_char(timezone('Europe/London', created_at),
+'YYYY-MM-DD')`), equals `_today`, AND `_community_can_view_post(caller, post)` is true — the single shared
+post-visibility gate, applied uniformly across every scope rather than a per-scope profile-level check, because
+the unit Respect acts on is a post, not a roster row.
+
+**Effect**: for each qualifying post, `INSERT INTO community_reactions (post_id, user_id) VALUES (post, caller)
+ON CONFLICT DO NOTHING` — the exact row `community_react` writes — followed by the SAME `_community_add_
+activity(author, caller, 'reaction', 'post', post)` call `community_react` makes, but ONLY when the insert was
+genuinely new (idempotent per post: a second call the same day against the same roster gives nothing new and
+notifies nobody again).
+
+**Envelope**: `{ given: n }` — a count only, no per-post or per-recipient detail. A client that wants to show
+"who" received Respect must derive that from whatever roster it already rendered (the same rows the button sits
+under), not from this RPC's return value.
+
+## Connect reasons — same_programme retired, same_discipline added
+
+The SQL helper `_community_connect_reasons_list()` is re-issued (signature unchanged, still `IMMUTABLE`):
+
+```
+OLD: ['same_gym', 'same_programme', 'train_like_me', 'train_together']
+NEW: ['same_gym', 'same_discipline', 'train_like_me', 'train_together']
+```
+
+Same position, same order otherwise — only the second element changes. The client lane moves
+`CONNECT_REASONS` in `src/lib/community/connections.js` in the same landing:
+
+```
+OLD: { same_gym: 'Same gym', same_programme: 'Same programme', train_like_me: 'You train like me', train_together: 'Want to train together?' }
+NEW: { same_gym: 'Same gym', same_discipline: 'Same discipline', train_like_me: 'You train like me', train_together: 'Want to train together?' }
+```
+
+`ConnectSheet` shows "Same discipline" when both people share a discipline key (phase3 spec section 7). This is
+the equality `community.privacy.guard.test.js`'s "the closed sets are the same on both sides" suite checks
+against `migrate_161_community_connections.sql`'s own (unchanged) text — that specific case FAILS until this
+client-side move lands, by design (it reads `migrate_161`, not this file's Part B re-issue).
+
+## Digest: one Respect push per recipient per UK-local day
+
+New table `community_notify_daily(recipient uuid, day text, count int, PRIMARY KEY (recipient, day))` — RLS on,
+no grants; written only by the `community-notify` edge function's service-role client (which bypasses RLS and
+grants entirely), never by an RPC.
+
+`supabase/functions/community-notify/index.ts` (separate file, not SQL): for `kind = 'reaction'` only, after the
+existing per-proof replay guard (step 5b) and before the send, the function now checks `community_notify_daily`
+for a row `(recipient = target_user_id, day = <UK-local today>)`:
+- **No row** (first Respect of the day): sends the push as normal, with a new fixed body — **"Someone gave your
+  training respect"** (no handle; a collapsed digest represents at least one Respect, possibly several, so it
+  never names a single person) — inside the existing `COMMUNITY_ACTIVITY` category and quiet hours. After a
+  successful send, inserts `(recipient, day, count: 1)`.
+- **Row exists** (a later Respect the same day): the row's `count` is incremented and **no push is sent**.
+`community_respect_all`'s reactions write the identical `reaction`-kind activity rows `community_react` does, so
+whichever client-side call path notifies for them collapses through this exact same mechanism — no separate
+digest logic for bulk Respect. The in-app Activity inbox is unaffected: every Respect still appears there
+immediately, collapsed or not. No push is ever sent for an auto item's own creation (no `kind` exists for that
+in `community-notify` at all, unchanged). No other change to the function or to
+`docs/NOTIFICATIONS_LOCKED.md` budgets.
+
+## What did not change (Part B)
+
+No change to `community_discover_posts`, `community_dimension_recent`, `community_board`, `community_hub_
+summary`, `community_dimensions_me`, `community_dimension`, `community_find_people`, `_community_profile_card`,
+or the discipline taxonomy (Part A, untouched). No new consent TYPE (both new toggles ride the existing
+`community_visibility` record). No change to `TP_AGE_BANDS`/`CONNECT_FROM_VALUES`. Membership removal
+(`community_group_remove`/`community_group_leave`) does **not** delete that member's `community_post_groups`
+pair rows for the group they left — a deliberate choice, not an oversight: the post's own `visibility = 'groups'`
+gate already requires a VIEWER to be a current member to see it, so a stale pairing for a now-departed author is
+inert for every current member (the same posture a message left in a chat after someone leaves already has
+elsewhere in this product).

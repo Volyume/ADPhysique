@@ -20,6 +20,17 @@
  * counted per function body so that DELETING one fails a case rather than
  * quietly shipping.
  *
+ * PART B (phase 3: ambient sharing, groups, Together, Respect, the daily
+ * digest) is additive at the end of the same file, same "run against
+ * production" gate. It pins: the two new tables (community_post_groups,
+ * community_notify_daily) have RLS on and no grants; delete_user_data now
+ * DOES name both (the "no new table" invariant above was true only of
+ * Part A); community_respect_all excludes blocked pairs (both directions)
+ * and muted people by the same regex-counted predicates the rest of this
+ * suite already pins, is VOLATILE and rate-railed; every reader of post
+ * visibility this part touches carries the new 'groups' branch; and the
+ * connect-reasons list moves same_programme -> same_discipline in place.
+ *
  * Contract for the client lanes:
  * docs/communities-revamp-2026-09-10/22-MIGRATION-170A-CONTRACT.md.
  */
@@ -34,7 +45,18 @@ const SQL = fs.readFileSync(MIGRATION, 'utf8');
 const CODE_LINES = SQL.split('\n').filter((l) => !l.trim().startsWith('--'));
 const CODE = CODE_LINES.join('\n');
 const HEADER = SQL.slice(0, SQL.indexOf('-- ─── Part 1'));
-const ACCEPTANCE = SQL.slice(SQL.indexOf('-- ─── Acceptance check'));
+// The three acceptance DO blocks ONLY, concatenated - not a blind slice from
+// Part A's marker to end of file. Part B added real function/table code
+// (including delete_user_data's own DELETE/UPDATE statements) between Part
+// A2's acceptance block and Part B's own, so an unbounded slice would sweep
+// genuine DML into what this suite treats as "the read-only acceptance
+// text" and fail the read-only check below for reasons that have nothing to
+// do with the acceptance blocks themselves.
+const ACCEPTANCE = [
+  SQL.slice(SQL.indexOf('-- ─── Acceptance check'), SQL.indexOf('-- ─── PART A2')),
+  SQL.slice(SQL.indexOf('-- ─── Part A2 acceptance check'), SQL.indexOf('-- ─── PART B: ambient sharing')),
+  SQL.slice(SQL.indexOf('-- ─── Part B acceptance check')),
+].join('\n');
 
 /** Every function this file declares, mapped to its comment-stripped body. */
 function functionBodies() {
@@ -64,13 +86,21 @@ const BODIES = functionBodies();
 const HEADERS = functionHeaders();
 const DECLARED = Object.keys(BODIES);
 
-// The eight the client may call, with the exact signature each REVOKE/GRANT
-// pair names. A helper must never appear here. community_dimension_recent
-// and community_group_get are part A2 additions (community_group_get was
-// already a client RPC before migrate_170 touched it; it is re-issued here
-// only to align its member_count, on the same unchanged signature).
+// The current/effective signature for every public RPC this file declares,
+// keyed by name (so a function re-issued more than once - community_
+// upsert_profile and community_group_get, both re-issued again in Part B -
+// appears once here, at its LATEST signature; functionBodies()/
+// functionHeaders() below already resolve to each name's LAST occurrence in
+// the file for the same reason CREATE OR REPLACE itself resolves that way).
+// A helper must never appear here. community_dimension_recent and
+// community_group_get were part A2 additions; community_create_post,
+// community_post_set_note, community_get_post, community_feed,
+// community_group_feed, community_get_profile and community_respect_all are
+// part B (the first five pre-existed migrate_170 and are re-issued here for
+// the 'groups' visibility branch; community_upsert_profile also gains
+// _remove_shared, a real signature change).
 const PUBLIC_RPCS = {
-  community_upsert_profile: 'community_upsert_profile(jsonb)',
+  community_upsert_profile: 'community_upsert_profile(jsonb, boolean)',
   community_dimension: 'community_dimension(text, text, text, int)',
   community_dimensions_me: 'community_dimensions_me(text)',
   community_board: 'community_board(text, text, text, text, integer, text)',
@@ -78,13 +108,62 @@ const PUBLIC_RPCS = {
   community_find_people: 'community_find_people(text, text, int, jsonb, text)',
   community_dimension_recent: 'community_dimension_recent(text, text, text, int)',
   community_group_get: 'community_group_get(uuid)',
+  community_create_post: 'community_create_post(text, jsonb, text, uuid, text, boolean, text, uuid[])',
+  community_post_set_note: 'community_post_set_note(uuid, text)',
+  community_get_post: 'community_get_post(uuid)',
+  community_feed: 'community_feed(text, int)',
+  community_group_feed: 'community_group_feed(uuid, text, int)',
+  community_get_profile: 'community_get_profile(text, uuid)',
+  community_respect_all: 'community_respect_all(text, text, text)',
 };
 const HELPERS = {
   _community_discipline_key_ok: '_community_discipline_key_ok(text[])',
   _community_discipline_label: '_community_discipline_label(text)',
   _community_profile_card: '_community_profile_card(uuid, uuid)',
   _community_cohort_stats: '_community_cohort_stats(uuid, text, text, text)',
+  _community_can_view_post: '_community_can_view_post(uuid, uuid)',
+  _community_connect_reasons_list: '_community_connect_reasons_list()',
 };
+
+// delete_user_data is neither a community_* RPC nor a _community_* helper -
+// it is the general account-erasure entry point that happens to touch
+// community tables. Part A left it untouched (no new table); Part B
+// re-issues it (two new tables). Tracked separately from PUBLIC_RPCS/
+// HELPERS rather than forced into either bucket, and given its own REVOKE/
+// GRANT + "every declared function" exemption below.
+const DELETE_USER_DATA_SIG = 'delete_user_data()';
+
+// Every (name, signature) EXECUTE grant that actually appears in the file,
+// in file order, INCLUDING a name granted more than once: community_
+// upsert_profile's Part A 1-arg grant line is still textually present even
+// though that overload was DROPped before Part B's 2-arg CREATE OR REPLACE
+// (so it no longer resolves to anything installable - the text is dead,
+// not the privilege); community_group_get is granted again in Part B on
+// its UNCHANGED uuid signature, the same "re-state REVOKE/GRANT after every
+// CREATE OR REPLACE" pattern Part A2 already set for that exact function.
+// This is the file's actual grant-line count; PUBLIC_RPCS above is a
+// per-NAME map and can no longer stand in for it once a name is granted
+// twice.
+const GRANT_SIGS = [
+  'community_upsert_profile(jsonb)',
+  'community_dimension(text, text, text, int)',
+  'community_dimensions_me(text)',
+  'community_board(text, text, text, text, integer, text)',
+  'community_hub_summary(text)',
+  'community_find_people(text, text, int, jsonb, text)',
+  'community_dimension_recent(text, text, text, int)',
+  'community_group_get(uuid)',
+  'community_upsert_profile(jsonb, boolean)',
+  'community_create_post(text, jsonb, text, uuid, text, boolean, text, uuid[])',
+  'community_post_set_note(uuid, text)',
+  'community_get_post(uuid)',
+  'community_feed(text, int)',
+  'community_group_feed(uuid, text, int)',
+  'community_get_profile(text, uuid)',
+  'community_group_get(uuid)',
+  'community_respect_all(text, text, text)',
+  DELETE_USER_DATA_SIG,
+];
 
 // 20-BLUEPRINT.md section 12 (Q1, ruled): fifteen keys, "Getting back into
 // training" out, "Women's physique" in, no adaptive/para tag.
@@ -139,14 +218,18 @@ describe('the mandatory header is present and honest', () => {
     },
   );
 
-  test('the GDPR note claims no new consent type and no new table', () => {
+  test('the GDPR note claims no new consent type (Part A) and states Part B honestly', () => {
     const gdpr = HEADER.slice(HEADER.indexOf('-- GDPR note:'));
     expect(gdpr).toContain('community_visibility');
     expect(gdpr).toContain('not a');
     expect(HEADER).toContain('delete_user_data');
-    // No new table means delete_user_data genuinely needs no branch: the file
-    // must not silently redefine it either.
-    expect(CODE).not.toContain('FUNCTION public.delete_user_data');
+    // Part A truly added no table, so nothing there needed delete_user_data
+    // touched; Part B DOES add two, so the note must say so honestly rather
+    // than repeat Part A's "no new table" claim as if it still covered the
+    // whole file.
+    expect(gdpr).toContain('PART B');
+    expect(gdpr).toContain('community_post_groups');
+    expect(gdpr).toContain('community_notify_daily');
   });
 
   test('British English, no em dash anywhere in the file', () => {
@@ -189,13 +272,31 @@ describe('every statement is re-runnable', () => {
     },
   );
 
-  test('nothing destructive touches an existing table, and no new table is created', () => {
+  test('nothing destructive touches an existing table (Part A/A2, before Part B introduces its own two tables)', () => {
+    // CODE strips comment-only lines, so the Part B comment header itself is
+    // gone from it; anchor on Part B's first real statement instead.
+    const prePartB = CODE.slice(0, CODE.indexOf('ADD COLUMN IF NOT EXISTS share_sessions'));
+    expect(prePartB.length).toBeGreaterThan(0);
+    expect(prePartB).not.toMatch(/DROP TABLE/i);
+    expect(prePartB).not.toMatch(/DROP COLUMN/i);
+    expect(prePartB).not.toMatch(/\bTRUNCATE\b/i);
+    expect(prePartB).not.toMatch(/CREATE TABLE/i);
+    expect(prePartB).not.toMatch(/ENABLE ROW LEVEL SECURITY/i);
+    expect(prePartB).not.toMatch(/CREATE POLICY/i);
+  });
+
+  test('nothing anywhere in the whole file (Part B included) is destructive, drops a column, or creates a policy', () => {
+    // Part B legitimately adds two CREATE TABLE / ENABLE ROW LEVEL SECURITY
+    // statements (community_post_groups, community_notify_daily - its own
+    // dedicated describe block asserts there are exactly those two and
+    // nothing else); DROP TABLE, DROP COLUMN, TRUNCATE and CREATE POLICY
+    // stay forbidden everywhere, including Part B.
     expect(CODE).not.toMatch(/DROP TABLE/i);
     expect(CODE).not.toMatch(/DROP COLUMN/i);
     expect(CODE).not.toMatch(/\bTRUNCATE\b/i);
-    expect(CODE).not.toMatch(/CREATE TABLE/i);
-    expect(CODE).not.toMatch(/ENABLE ROW LEVEL SECURITY/i);
     expect(CODE).not.toMatch(/CREATE POLICY/i);
+    expect((CODE.match(/CREATE TABLE IF NOT EXISTS/g) || [])).toHaveLength(2);
+    expect((CODE.match(/ENABLE ROW LEVEL SECURITY/g) || [])).toHaveLength(2);
   });
 
   test('no table is granted to anyone: the tables stay RPC-only (SD-14)', () => {
@@ -219,13 +320,25 @@ describe('every function is a pinned SECURITY DEFINER', () => {
     expect(HEADERS[name]).toMatch(/SECURITY DEFINER/);
   });
 
-  test.each(Object.keys(HEADERS))('%s pins search_path to public, pg_temp', (name) => {
-    // Both spellings are the same stored proconfig value
-    // (`search_path=public, pg_temp`); community_board carries the
-    // pg_get_functiondef form because migrate_169's body was pulled live.
-    expect(HEADERS[name]).toMatch(
-      /SET search_path (= public, pg_temp|TO 'public', 'pg_temp')/,
-    );
+  // delete_user_data pins search_path to `public` alone (migrate_165's own,
+  // unchanged shape - it never calls a bare-named helper the way every
+  // community_* RPC does, so it has no pg_temp shadowing risk to guard
+  // against); it is asserted on its own further down, not forced into this
+  // community_*-function pattern.
+  test.each(Object.keys(HEADERS).filter((n) => n !== 'delete_user_data'))(
+    '%s pins search_path to public, pg_temp',
+    (name) => {
+      // Both spellings are the same stored proconfig value
+      // (`search_path=public, pg_temp`); community_board carries the
+      // pg_get_functiondef form because migrate_169's body was pulled live.
+      expect(HEADERS[name]).toMatch(
+        /SET search_path (= public, pg_temp|TO 'public', 'pg_temp')/,
+      );
+    },
+  );
+
+  test('delete_user_data pins search_path to public alone, unchanged from migrate_165', () => {
+    expect(HEADERS.delete_user_data).toMatch(/SET search_path = public$/m);
   });
 
   test('the acceptance check re-asserts both facts against pg_proc', () => {
@@ -235,9 +348,9 @@ describe('every function is a pinned SECURITY DEFINER', () => {
 });
 
 describe('EXECUTE is granted deliberately, never by default', () => {
-  test.each(Object.entries(PUBLIC_RPCS))(
+  test.each(GRANT_SIGS)(
     '%s is revoked from PUBLIC and anon, then granted to authenticated only',
-    (_name, sig) => {
+    (sig) => {
       expect(CODE).toContain(`REVOKE ALL ON FUNCTION public.${sig} FROM PUBLIC, anon;`);
       expect(CODE).toContain(`GRANT EXECUTE ON FUNCTION public.${sig} TO authenticated;`);
     },
@@ -256,7 +369,12 @@ describe('EXECUTE is granted deliberately, never by default', () => {
 
   test('no _community_* helper is granted to anybody, anywhere in the file', () => {
     const grantLines = CODE_LINES.filter((l) => /GRANT EXECUTE ON FUNCTION/i.test(l));
-    expect(grantLines).toHaveLength(Object.keys(PUBLIC_RPCS).length);
+    // GRANT_SIGS, not Object.keys(PUBLIC_RPCS): community_upsert_profile and
+    // community_group_get are each granted twice (an old-then-superseded
+    // signature and a same-signature re-statement, respectively - see
+    // GRANT_SIGS' own comment), so the file's real grant-line count exceeds
+    // its distinct-name count.
+    expect(grantLines).toHaveLength(GRANT_SIGS.length);
     for (const line of grantLines) {
       expect(line).not.toMatch(/public\._community_/);
       expect(line).toMatch(/TO authenticated;$/);
@@ -267,12 +385,19 @@ describe('EXECUTE is granted deliberately, never by default', () => {
     expect(CODE).not.toMatch(/GRANT[^\n]*TO (anon|PUBLIC)/i);
   });
 
-  test('every declared function is either a public RPC or a revoked helper', () => {
+  test('every declared function is a public RPC, a revoked helper, or delete_user_data', () => {
     for (const name of DECLARED) {
       expect(
-        Object.keys(PUBLIC_RPCS).includes(name) || Object.keys(HELPERS).includes(name),
+        Object.keys(PUBLIC_RPCS).includes(name)
+          || Object.keys(HELPERS).includes(name)
+          || name === 'delete_user_data',
       ).toBe(true);
     }
+  });
+
+  test('delete_user_data is revoked from PUBLIC/anon and granted to authenticated, like a public RPC', () => {
+    expect(CODE).toContain(`REVOKE ALL ON FUNCTION public.${DELETE_USER_DATA_SIG} FROM PUBLIC, anon;`);
+    expect(CODE).toContain(`GRANT EXECUTE ON FUNCTION public.${DELETE_USER_DATA_SIG} TO authenticated;`);
   });
 
   test('the acceptance check proves the helper ACLs at apply time', () => {
@@ -286,15 +411,17 @@ describe('migrate_167 lesson: anything that calls _community_rate_check is VOLAT
     .filter(([, b]) => b.includes('_community_rate_check'))
     .map(([n]) => n);
 
-  test('the rate-railed set is exactly the six writers/reads plus the part A2 recent-stories read', () => {
+  test('the rate-railed set is the part A/A2 six plus part B\'s three writers', () => {
     expect(RAILED.sort()).toEqual([
-      'community_board', 'community_dimension_recent', 'community_dimensions_me',
-      'community_find_people', 'community_hub_summary', 'community_upsert_profile',
+      'community_board', 'community_create_post', 'community_dimension_recent',
+      'community_dimensions_me', 'community_find_people', 'community_hub_summary',
+      'community_post_set_note', 'community_respect_all', 'community_upsert_profile',
     ]);
   });
 
-  test.each(['community_board', 'community_dimension_recent', 'community_dimensions_me',
-    'community_find_people', 'community_hub_summary', 'community_upsert_profile'])(
+  test.each(['community_board', 'community_create_post', 'community_dimension_recent',
+    'community_dimensions_me', 'community_find_people', 'community_hub_summary',
+    'community_post_set_note', 'community_respect_all', 'community_upsert_profile'])(
     '%s carries no STABLE/IMMUTABLE keyword (PostgREST would force a read-only txn)',
     (name) => {
       expect(HEADERS[name]).not.toMatch(/\n\s*(STABLE|IMMUTABLE)\s*\n/);
@@ -318,13 +445,16 @@ describe('migrate_167 lesson: anything that calls _community_rate_check is VOLAT
 
   test('the acceptance check re-asserts provolatile against pg_proc', () => {
     for (const name of ['community_hub_summary', 'community_board',
-      'community_find_people', 'community_dimensions_me', 'community_dimension_recent']) {
+      'community_find_people', 'community_dimensions_me', 'community_dimension_recent',
+      'community_upsert_profile', 'community_create_post', 'community_post_set_note',
+      'community_respect_all']) {
       expect(ACCEPTANCE).toContain(`${name} is not VOLATILE`);
     }
   });
 
   test('the STABLE helpers really are read-only', () => {
-    for (const name of ['_community_profile_card', '_community_cohort_stats']) {
+    for (const name of ['_community_profile_card', '_community_cohort_stats',
+      '_community_can_view_post']) {
       expect(HEADERS[name]).toMatch(/\nSTABLE\n/);
       expect(BODIES[name]).not.toContain('_community_rate_check');
       expect(BODIES[name]).not.toMatch(/\b(INSERT|UPDATE|DELETE)\s+(INTO|FROM|public\.)/i);
@@ -408,7 +538,13 @@ describe('minors are excluded from every count, sample, roster and board row', (
     ['community_hub_summary', 3],
     ['community_find_people', 2],
     ['community_dimension_recent', 1],
-    ['community_group_get', 1],
+    // migrate_170 part B: member_count's own predicate (part A2, unchanged)
+    // plus the Together sums' own (a second, independent p2.is_minor =
+    // false on the same member set sharing_members counts).
+    ['community_group_get', 2],
+    // migrate_170 part B (phase3 spec section 8, safety verdict R4): the
+    // scope_members CTE.
+    ['community_respect_all', 1],
   ])('%s carries is_minor = false on all %i of its query paths', (name, n) => {
     expect((BODIES[name].match(/is_minor = false/g) || [])).toHaveLength(n);
   });
@@ -486,12 +622,14 @@ describe('consent: consistency data travels only while its owner shares it', () 
 
   test('a supplied _today is always validated, and is never the server date', () => {
     // community_board refuses a missing _today outright (unchanged since
-    // migrate_165); the two new/changed RPCs validate a SUPPLIED value and
-    // fall back for an absent one (lead ruling 1). Either way a malformed
-    // value is refused, and no function ever substitutes the server's date.
-    expect((CODE.match(/(_today|v_today) !~ /g) || [])).toHaveLength(3);
+    // migrate_165); community_dimensions_me/community_hub_summary and part
+    // B's community_respect_all validate a SUPPLIED value and fall back for
+    // an absent one (lead ruling 1). Either way a malformed value is
+    // refused, and no function ever substitutes the server's date.
+    expect((CODE.match(/(_today|v_today) !~ /g) || [])).toHaveLength(4);
     expect(CODE).not.toContain('now()::date');
     expect(BODIES.community_board).toContain('IF _today IS NULL OR _today !~ ');
+    expect(BODIES.community_respect_all).toContain("ELSIF v_today !~ '^\\d{4}-\\d{2}-\\d{2}$' THEN");
   });
 
   test('lead ruling 1: an absent _today falls back to the UK-local day key, never a refusal', () => {
@@ -527,8 +665,28 @@ describe('blocks and visibility are checked on every new query path', () => {
     ['community_hub_summary', 3],
     ['community_find_people', 2],
     ['community_dimension_recent', 1],
+    // migrate_170 part B (safety verdict R4): excludes a blocked pair in
+    // EITHER direction, the same _community_is_blocked call every other
+    // scoped query in this file uses (it is itself symmetrical - see its
+    // own definition, migrate_160).
+    ['community_respect_all', 1],
   ])('%s calls _community_is_blocked on all %i of its query paths', (name, n) => {
     expect((BODIES[name].match(/_community_is_blocked/g) || [])).toHaveLength(n);
+  });
+
+  test('community_respect_all also excludes people the caller has muted, by the same predicate shape _community_cohort_stats uses for its sample', () => {
+    const body = BODIES.community_respect_all;
+    expect(body).toContain(
+      'AND NOT EXISTS (\n'
+      + '          SELECT 1 FROM public.community_mutes mu\n'
+      + '          WHERE mu.muter_id = v_uid AND mu.muted_id = p.user_id)',
+    );
+  });
+
+  test('community_respect_all is VOLATILE and rate-railed at 10/hour (safety verdict R4, phase3 spec section 5)', () => {
+    const body = BODIES.community_respect_all;
+    expect(HEADERS.community_respect_all).not.toMatch(/\n\s*(STABLE|IMMUTABLE)\s*\n/);
+    expect(body).toContain("_community_rate_check(v_uid, 'respect_all', 10, 10, interval '1 hour')");
   });
 
   test('lead ruling 5: cohort samples exclude muted people, counts do not', () => {
@@ -699,12 +857,20 @@ describe('PART A2: community_dimension_recent (RECENT stories) and the community
     // non-member of an invite-only group still loses the key exactly as
     // before - the override never re-adds what the strip removes.
     expect(groupGet.indexOf('v_member_count')).toBeLessThan(
-      groupGet.indexOf("v_out := v_out - 'member_count' - 'blurb';"),
+      groupGet.indexOf("v_out := v_out - 'member_count' - 'blurb'"),
     );
-    // Deliberately NOT block-aware, unlike community_hub_summary's figure
-    // (this card is shown to every member, and to a non-member browsing an
-    // open group, not only the caller - see the contract doc).
-    expect(groupGet).not.toContain('_community_is_blocked');
+    // member_count itself is deliberately NOT block-aware, unlike community_
+    // hub_summary's figure (this card is shown to every member, and to a
+    // non-member browsing an open group, not only the caller - see the
+    // contract doc). Part B's Together figures (its own describe block
+    // below) ARE block-aware - the SAME body now legitimately contains
+    // _community_is_blocked for that reason, so this checks member_count's
+    // OWN query specifically rather than the whole function.
+    const memberCountQuery = groupGet.slice(
+      groupGet.indexOf('SELECT count(*) INTO v_member_count'),
+      groupGet.indexOf("v_out := v_out || jsonb_build_object('member_count', v_member_count);"),
+    );
+    expect(memberCountQuery).not.toContain('_community_is_blocked');
     // Signature is unchanged: CREATE OR REPLACE only, never the DROP-first
     // dance part 7/10 use for a real (parameter-list) signature change.
     expect(SQL).toContain('CREATE OR REPLACE FUNCTION public.community_group_get(_group_id uuid)');
@@ -757,5 +923,316 @@ describe('the file is registered in the tracker', () => {
     ), 'utf8');
     for (const [key] of TAXONOMY) expect(contract).toContain(key);
     expect(contract).toContain('community_hub_summary(_today)');
+  });
+
+  test('the contract carries a PART B section naming community_respect_all', () => {
+    const contract = fs.readFileSync(path.join(
+      ROOT, 'docs', 'communities-revamp-2026-09-10', '22-MIGRATION-170A-CONTRACT.md',
+    ), 'utf8');
+    expect(contract).toContain('PART B');
+    expect(contract).toContain('community_respect_all');
+    expect(contract).toContain('community_post_set_note');
+  });
+
+  test('community_post_set_note and community_respect_all are inventoried in the security matrix (the genuinely new names)', () => {
+    const inventory = JSON.parse(fs.readFileSync(path.join(
+      ROOT, 'scripts', 'security', 'supabase-matrix.targets.json',
+    ), 'utf8'));
+    expect(inventory.clientRpcNames).toContain('community_post_set_note');
+    expect(inventory.clientRpcNames).toContain('community_respect_all');
+  });
+});
+
+describe('PART B: the two new tables are RLS-on, no-grants, RPC-only (SD-14)', () => {
+  const PART_B = SQL.slice(SQL.indexOf('-- ─── PART B: ambient sharing'));
+
+  test('the part B section exists and is additive to Part A/A2', () => {
+    expect(PART_B.length).toBeGreaterThan(0);
+    expect(PART_B).toContain('Additive to Part A and Part A2 above');
+  });
+
+  test.each(['community_post_groups', 'community_notify_daily'])(
+    '%s: CREATE TABLE IF NOT EXISTS, RLS enabled, revoked from anon and authenticated',
+    (table) => {
+      expect(PART_B).toContain(`CREATE TABLE IF NOT EXISTS public.${table}`);
+      // Both tables are revoked/RLS'd through the FOREACH..EXECUTE format()
+      // idiom migrate_160 Part 2 uses, not a literal per-table statement -
+      // assert the array literal names the table, and that the format()
+      // template itself does both things.
+      const at = PART_B.indexOf(`ARRAY['${table}']`);
+      expect(at).toBeGreaterThan(-1);
+      const block = PART_B.slice(Math.max(0, at - 400), at + 200);
+      expect(block).toContain("EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t)");
+      expect(block).toContain("EXECUTE format('REVOKE ALL ON public.%I FROM anon, authenticated', t)");
+    },
+  );
+
+  test('no GRANT ever reaches either new table directly (RPC-only, not table access)', () => {
+    expect(PART_B).not.toMatch(/GRANT[^\n]*ON (TABLE )?public\.community_post_groups/i);
+    expect(PART_B).not.toMatch(/GRANT[^\n]*ON (TABLE )?public\.community_notify_daily/i);
+  });
+
+  test('the acceptance check proves RLS and no-grant at apply time for both', () => {
+    expect(ACCEPTANCE).toContain('relrowsecurity');
+    expect(ACCEPTANCE).toContain("has_table_privilege('authenticated', 'public.community_post_groups'");
+    expect(ACCEPTANCE).toContain("has_table_privilege('authenticated', 'public.community_notify_daily'");
+  });
+});
+
+describe("PART B: delete_user_data names both new tables (GDPR erasure completeness)", () => {
+  const dud = BODIES.delete_user_data;
+
+  test('community_post_groups is deleted for the caller\'s own posts', () => {
+    expect(dud).toContain('DELETE FROM community_post_groups');
+    expect(dud).toContain(
+      'WHERE post_id IN (SELECT id FROM community_posts WHERE author_id = uid)',
+    );
+  });
+
+  test('community_notify_daily is deleted by recipient', () => {
+    expect(dud).toContain('DELETE FROM community_notify_daily WHERE recipient = uid;');
+  });
+
+  test('both deletes are wrapped in the same undefined_table-tolerant BEGIN block every other line in this function uses', () => {
+    for (const needle of ['DELETE FROM community_post_groups', 'DELETE FROM community_notify_daily WHERE recipient = uid;']) {
+      const at = dud.indexOf(needle);
+      expect(at).toBeGreaterThan(-1);
+      expect(dud.slice(at, at + 200)).toContain('EXCEPTION WHEN undefined_table THEN NULL; END;');
+    }
+  });
+
+  test('the acceptance check re-asserts both table names against the installed function definition', () => {
+    expect(ACCEPTANCE).toContain('does not name community_post_groups');
+    expect(ACCEPTANCE).toContain('does not name community_notify_daily');
+  });
+});
+
+describe("PART B: every reader of post visibility gains the 'groups' branch", () => {
+  // _community_can_view_post is the shared gate react/comment/report/group
+  // feed all already call; re-issuing it alone is what makes every one of
+  // them groups-aware. The other four duplicate or run their own inline
+  // visibility check and each needed the branch written out.
+  test.each([
+    '_community_can_view_post', 'community_get_post', 'community_feed',
+    'community_group_feed', 'community_get_profile',
+  ])("%s's body mentions community_post_groups and community_group_members", (name) => {
+    const body = BODIES[name];
+    expect(body).toContain('community_post_groups');
+    expect(body).toContain('community_group_members');
+  });
+
+  // The three that decide "may I see this post" by an inclusive visibility
+  // OR-chain spell the test as `visibility = 'groups'`. community_feed's
+  // is an exception-style guard on the author-or-follows result it already
+  // had (`visibility <> 'groups' OR ...`), and community_group_feed adds a
+  // membership-based inclusion arm that never re-states the visibility
+  // value at all (relying on _community_can_view_post, already covered
+  // above, for the actual visibility check) - so those two are asserted on
+  // their own shape rather than forced into the other three's pattern.
+  test.each(['_community_can_view_post', 'community_get_post', 'community_get_profile'])(
+    "%s's body checks visibility = 'groups' directly",
+    (name) => {
+      expect(BODIES[name]).toContain("visibility = 'groups'");
+    },
+  );
+
+  test("community_feed excepts a 'groups' post unless the caller is the author or a named group's member", () => {
+    expect(BODIES.community_feed).toContain("r.visibility <> 'groups'");
+    expect(BODIES.community_feed).toContain('r.author_id = v_uid');
+  });
+
+  test('community_group_feed adds an audience-based inclusion arm and still gates every row through _community_can_view_post', () => {
+    const body = BODIES.community_group_feed;
+    expect(body).toContain('pg.group_id = _group_id');
+    expect(body).toContain('public._community_can_view_post(v_uid, r.id)');
+  });
+
+  test('the author always sees their own post in every one of the five (never gated behind group membership)', () => {
+    // _community_can_view_post and community_get_post: r.author_id = v_uid/
+    // _viewer is checked BEFORE the visibility branch is ever reached.
+    expect(BODIES._community_can_view_post).toContain('r.author_id = _viewer');
+    expect(BODIES.community_get_post).toContain('v_r.author_id <> v_uid');
+    // community_feed: the groups AND-clause explicitly excepts the author.
+    expect(BODIES.community_feed).toContain('r.author_id = v_uid');
+    // community_group_feed: _community_can_view_post (already author-safe)
+    // gates every row regardless of which inclusion arm found it.
+    expect(BODIES.community_group_feed).toContain('public._community_can_view_post(v_uid, r.id)');
+    // community_get_profile: v_target = v_uid IS the "viewing your own
+    // profile" case.
+    expect(BODIES.community_get_profile).toContain('v_target = v_uid');
+  });
+
+  test('community_group_feed also includes posts whose audience names the group, not only current members\' posts', () => {
+    const body = BODIES.community_group_feed;
+    expect(body).toContain(
+      'OR EXISTS (\n'
+      + '          SELECT 1 FROM public.community_post_groups pg\n'
+      + '          WHERE pg.post_id = r.id AND pg.group_id = _group_id)',
+    );
+  });
+
+  test('community_discover_posts and community_dimension_recent are UNCHANGED (their hard public-only filter already excludes groups posts)', () => {
+    expect(BODIES.community_discover_posts).toBeUndefined();
+    expect(BODIES.community_dimension_recent).not.toContain('community_post_groups');
+  });
+});
+
+describe('PART B: community_posts.auto/client_ref and the visibility CHECK', () => {
+  const PART_B = SQL.slice(SQL.indexOf('-- ─── PART B: ambient sharing'));
+
+  test('auto and client_ref are added with ADD COLUMN IF NOT EXISTS', () => {
+    expect(PART_B).toContain(
+      'ALTER TABLE public.community_posts ADD COLUMN IF NOT EXISTS auto boolean NOT NULL DEFAULT false;',
+    );
+    expect(PART_B).toContain(
+      'ALTER TABLE public.community_posts ADD COLUMN IF NOT EXISTS client_ref text;',
+    );
+  });
+
+  test('the (author_id, client_ref) unique index is partial on client_ref IS NOT NULL', () => {
+    expect(PART_B).toContain('CREATE UNIQUE INDEX IF NOT EXISTS community_posts_author_client_ref_idx');
+    expect(PART_B).toContain('ON public.community_posts (author_id, client_ref) WHERE client_ref IS NOT NULL;');
+  });
+
+  test("the visibility CHECK is widened idempotently via pg_constraint introspection, not the duplicate_object-tolerant DO block", () => {
+    const at = PART_B.indexOf("conname = 'community_posts_visibility_check'");
+    expect(at).toBeGreaterThan(-1);
+    const block = PART_B.slice(Math.max(0, at - 300), at + 500);
+    expect(block).toContain('FROM pg_constraint');
+    expect(block).toContain('DROP CONSTRAINT community_posts_visibility_check');
+    expect(block).toContain("CHECK (visibility IN ('public', 'followers', 'groups'));");
+  });
+
+  test('community_create_post upserts on (author_id, client_ref) and reports fresh-vs-conflict via xmax = 0', () => {
+    const body = BODIES.community_create_post;
+    expect(body).toContain('ON CONFLICT (author_id, client_ref) WHERE client_ref IS NOT NULL');
+    expect(body).toContain('DO UPDATE SET id = community_posts.id');
+    expect(body).toContain('RETURNING id, (xmax = 0) INTO v_id, v_inserted;');
+  });
+
+  test('community_create_post refuses a _group_ids caller who is a minor, with minor_restricted specifically', () => {
+    const body = BODIES.community_create_post;
+    const at = body.indexOf('_community_caller_is_minor(v_uid)');
+    expect(at).toBeGreaterThan(-1);
+    expect(body.slice(at, at + 110)).toContain("RAISE EXCEPTION USING message = 'minor_restricted'");
+  });
+
+  test("community_create_post requires every named group to have the caller as a current member", () => {
+    const body = BODIES.community_create_post;
+    expect(body).toContain("m.state = 'member'");
+    expect(body).toContain("RAISE EXCEPTION USING message = 'not_allowed'");
+  });
+
+  test("a 'groups' post with zero group_ids, and a non-empty group_ids on a non-'groups' post, are both invalid_input", () => {
+    const body = BODIES.community_create_post;
+    expect(body).toContain("ELSIF v_vis = 'groups' THEN\n    RAISE EXCEPTION USING message = 'invalid_input';");
+    const at = body.indexOf('IF _group_ids IS NOT NULL AND array_length(_group_ids, 1) > 0 THEN');
+    expect(at).toBeGreaterThan(-1);
+    expect(body.slice(at, at + 150)).toContain("IF v_vis <> 'groups' THEN");
+  });
+});
+
+describe('PART B: community_profiles sharing columns and community_upsert_profile', () => {
+  test('share_sessions, sessions_audience and c_planned_per_week are added additively', () => {
+    expect(CODE).toContain(
+      'ALTER TABLE public.community_profiles\n  ADD COLUMN IF NOT EXISTS share_sessions boolean NOT NULL DEFAULT false;',
+    );
+    expect(CODE).toContain(
+      "ADD COLUMN IF NOT EXISTS sessions_audience text NOT NULL DEFAULT 'followers';",
+    );
+    expect(CODE).toContain('ADD COLUMN IF NOT EXISTS c_planned_per_week int;');
+  });
+
+  test('sessions_audience carries a named, idempotent CHECK for exactly the three values', () => {
+    expect(CODE).toContain('ADD CONSTRAINT community_profiles_sessions_audience_check');
+    expect(CODE).toContain("CHECK (sessions_audience IN ('followers', 'groups', 'everyone'));");
+  });
+
+  test('community_upsert_profile is DROPped and recreated for _remove_shared, the same pattern as the two Part A signature changes', () => {
+    expect(CODE).toContain("WHERE p.proname = 'community_upsert_profile' AND n.nspname = 'public'");
+    expect(CODE).toContain(
+      'CREATE OR REPLACE FUNCTION public.community_upsert_profile(_p jsonb, _remove_shared boolean DEFAULT false)',
+    );
+  });
+
+  test('a minor is refused everyone outright and forced to followers otherwise, never left at groups or everyone', () => {
+    const body = BODIES.community_upsert_profile;
+    const at = body.indexOf("v_sessions_audience := coalesce(nullif(btrim(coalesce(_p ->> 'sessions_audience'");
+    expect(at).toBeGreaterThan(-1);
+    const gate = body.slice(body.indexOf('IF v_minor THEN', at));
+    expect(gate.slice(0, 200)).toContain("IF v_sessions_audience = 'everyone' THEN");
+    expect(gate.slice(0, 200)).toContain("RAISE EXCEPTION USING message = 'invalid_input'");
+    expect(gate.slice(0, 250)).toContain("v_sessions_audience := 'followers';");
+  });
+
+  test('_remove_shared deletes only when share_sessions actually resolves to off, and cleans comments/activity like community_delete_post does', () => {
+    const body = BODIES.community_upsert_profile;
+    expect(body).toContain('IF _remove_shared AND NOT v_share_sessions THEN');
+    expect(body).toContain("DELETE FROM public.community_comments\n    WHERE target_kind = 'post'");
+    expect(body).toContain("DELETE FROM public.community_activity\n    WHERE target_kind = 'post'");
+    expect(body).toContain('DELETE FROM public.community_posts WHERE author_id = v_uid AND auto = true;');
+  });
+
+  test('the omit-key-to-keep-unchanged contract covers all three new fields, the same shape discipline_keys already has', () => {
+    const body = BODIES.community_upsert_profile;
+    const at = body.indexOf("'discipline_keys', to_jsonb(coalesce(v_existing.discipline_keys");
+    expect(at).toBeGreaterThan(-1);
+    const mergeBlock = body.slice(at, at + 400);
+    expect(mergeBlock).toContain("'share_sessions',    coalesce(v_existing.share_sessions, false)");
+    expect(mergeBlock).toContain("'sessions_audience', coalesce(v_existing.sessions_audience, 'followers')");
+    expect(mergeBlock).toContain("'c_planned_per_week', v_existing.c_planned_per_week");
+  });
+});
+
+describe('PART B: community_group_get returns Together this week', () => {
+  const groupGetB = BODIES.community_group_get;
+
+  test('together_sessions_week, together_planned_week and sharing_members are all present', () => {
+    for (const key of ['together_sessions_week', 'together_planned_week', 'sharing_members']) {
+      expect(groupGetB).toContain(`'${key}'`);
+    }
+  });
+
+  test('together_planned_week only counts members who actually have a plan', () => {
+    expect(groupGetB).toContain('FILTER (WHERE p2.c_planned_per_week IS NOT NULL)');
+  });
+
+  test('Together IS reduced by the caller\'s own blocks, unlike member_count', () => {
+    const at = groupGetB.indexOf('together_sessions_week');
+    const sumBlock = groupGetB.slice(groupGetB.lastIndexOf('SELECT', at), at + 600);
+    expect(sumBlock).toContain('_community_is_blocked(v_uid, p2.user_id)');
+  });
+
+  test('all three Together keys are stripped alongside member_count/blurb for a non-member of an invite-only group', () => {
+    expect(groupGetB).toContain(
+      "v_out := v_out - 'member_count' - 'blurb'\n"
+      + "      - 'together_sessions_week' - 'together_planned_week' - 'sharing_members';",
+    );
+  });
+});
+
+describe('PART B: connect reasons - same_programme out, same_discipline in', () => {
+  test('_community_connect_reasons_list is re-issued with same_discipline in the same position', () => {
+    expect(BODIES._community_connect_reasons_list).toContain(
+      "ARRAY['same_gym', 'same_discipline', 'train_like_me', 'train_together']::text[];",
+    );
+    expect(BODIES._community_connect_reasons_list).not.toContain('same_programme');
+  });
+
+  test('the contract states both the old and the new list for the client lane', () => {
+    const contract = fs.readFileSync(path.join(
+      ROOT, 'docs', 'communities-revamp-2026-09-10', '22-MIGRATION-170A-CONTRACT.md',
+    ), 'utf8');
+    expect(contract).toContain("['same_gym', 'same_programme', 'train_like_me', 'train_together']");
+    expect(contract).toContain("['same_gym', 'same_discipline', 'train_like_me', 'train_together']");
+  });
+});
+
+describe('PART B acceptance block exists and is read-only', () => {
+  test('it ends with a read-only acceptance check naming its own tag', () => {
+    expect(ACCEPTANCE).toContain('migrate_170 part B acceptance: OK');
+    const acceptanceCode = ACCEPTANCE.split('\n')
+      .filter((l) => !l.trim().startsWith('--')).join('\n');
+    expect(acceptanceCode).not.toMatch(/^\s*(INSERT|UPDATE|DELETE|ALTER|DROP)\s/im);
   });
 });

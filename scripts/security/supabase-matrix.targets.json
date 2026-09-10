@@ -215,6 +215,8 @@
     "community_group_get",
     "community_group_members",
     "community_group_search",
-    "community_group_feed"
+    "community_group_feed",
+    "community_post_set_note",
+    "community_respect_all"
   ]
 }
