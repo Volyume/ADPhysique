@@ -67,7 +67,7 @@ import {
 import {
   loadHub, hasProfile, hasUnseen, hasUnreadMessages, reactToPost,
   COMMUNITY_DIMENSION_MIN_FOR_HUB, myDimensions,
-  loadBoard, metricLabel, loadConsistency, readShareSettings,
+  loadBoard, metricLabel, loadConsistency, consistencyGateState,
   listMyGroups, myStatus, isModeratedStatus, REPORT_REASONS,
 } from '../lib/community';
 import { todayLocalKey } from '../lib/dayKey';
@@ -125,6 +125,9 @@ export default function CommunityHubScreen({ navigation, route }) {
   const [legacyCardShown, setLegacyCardShown] = useState(!!legacyPartnerCode);
   const [browsing, setBrowsing] = useState(false);
   const [weekCounters, setWeekCounters] = useState(null);
+  // Fails CLOSED: no You row renders until the gate explicitly clears it
+  // (mirrors `consistencyGateState`'s own "fail closed" posture).
+  const [consistencyGated, setConsistencyGated] = useState(true);
   const [dimensions, setDimensions] = useState([]);
   const [dimensionsLoading, setDimensionsLoading] = useState(true);
   const [gymBoard, setGymBoard] = useState(null);
@@ -137,30 +140,30 @@ export default function CommunityHubScreen({ navigation, route }) {
   const isMinor = !!me?.is_minor;
 
   // The You line's own device counters (spec: "DayDots from your own
-  // device counters"). STOP flagged for the lead (lane report): kept
-  // gated on the existing "Share my consistency" toggle, byte-identical
-  // to the pre-revamp "This week" card's own gate, rather than reading
-  // `loadConsistency` unconditionally. `loadConsistency` itself has no
-  // calm-mode/ED-flag check of its own (only `publishConsistency`'s
-  // `consistencyGateState` does, and that gates SENDING, not local
-  // display) -- section 2 inviolables bar changing ED-safety-adjacent
-  // behaviour without asking first, and this counter is exactly the kind
-  // of figure `edPatternDetector.js`/calm mode exist to keep quiet, so
-  // the safe default is the one already shipped, not a new one this lane
-  // decided alone.
+  // device counters"; lead ruling 2026-09-10, communities revamp: shown
+  // whenever the ED gate allows, independent of the "Share my
+  // consistency" toggle -- it is the reader's own data on their own
+  // screen, and sharing governs what OTHER people see, not this).
+  // Gated ONLY on `consistencyGateState` (`trainingConsistency.js`): its
+  // `gated` field is `readEdOrCalmSuppressed(uid)` alone, calm mode or an
+  // open ED flag, never the toggle. When it withholds, no You row renders
+  // at all -- no empty row, no caption (lead ruling) -- so the row itself
+  // is gated on `consistencyGated`, not merely its contents on
+  // `weekCounters`.
   useEffect(() => {
-    if (!joined || !uid) { setWeekCounters(null); return undefined; }
+    if (!joined || !uid) { setWeekCounters(null); setConsistencyGated(true); return undefined; }
     let alive = true;
-    readShareSettings(uid).then(async (share) => {
+    consistencyGateState(uid, true).then(async ({ gated }) => {
       if (!alive) return;
-      if (!share?.consistency) { setWeekCounters(null); return; }
+      setConsistencyGated(gated);
+      if (gated) { setWeekCounters(null); return; }
       try {
         const counters = await loadConsistency(uid);
         if (alive) setWeekCounters(counters);
       } catch (_e) {
         if (alive) setWeekCounters(null);
       }
-    }).catch(() => { if (alive) setWeekCounters(null); });
+    }).catch(() => { if (alive) { setConsistencyGated(true); setWeekCounters(null); } });
     return () => { alive = false; };
   }, [joined, uid]);
 
@@ -506,7 +509,7 @@ export default function CommunityHubScreen({ navigation, route }) {
         </>
       ) : null}
 
-      {joined ? (
+      {joined && !consistencyGated ? (
         <PersonRow
           person={youPerson}
           metric={youMetric}

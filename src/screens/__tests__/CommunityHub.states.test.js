@@ -65,12 +65,13 @@ jest.mock('../../lib/community', () => ({
     rows: [], you: null, count: 0, thresholdMet: true, cursor: null,
   })),
   metricLabel: (window, n) => (Number(n) === 1 ? '1 session' : `${Number(n) || 0} sessions`),
-  // The You line's own device counters, gated on the same "Share my
-  // consistency" toggle the pre-revamp "This week" card used (kept on
-  // purpose -- see the screen's own header comment): resolved off/null
-  // here so neither ever affects the states this file is about (covered
-  // directly in trainingConsistency.test.js).
-  readShareSettings: jest.fn(() => Promise.resolve({ consistency: false })),
+  daysLabel: (keys) => (Array.isArray(keys) ? keys.join(', ') : ''),
+  // The You line's own device counters (lead ruling 2026-09-10: gated
+  // ONLY on `consistencyGateState`'s `gated` field -- calm mode or an
+  // open ED flag -- never on the "Share my consistency" toggle). Default
+  // here is "not gated", so this file's other states see the row exactly
+  // as before; the two tests that care about this gate override it.
+  consistencyGateState: jest.fn(() => Promise.resolve({ allowed: false, gated: false, isMinor: false })),
   loadConsistency: jest.fn(() => Promise.resolve(null)),
   publishConsistencyOnForeground: jest.fn(() => Promise.resolve({ sent: false, reason: null, payload: null })),
   // GROUPS (spec section 2 item 4).
@@ -84,7 +85,7 @@ jest.mock('../../lib/community', () => ({
 }));
 
 import {
-  loadHub, myDimensions, listMyGroups, reactToPost,
+  loadHub, myDimensions, listMyGroups, reactToPost, consistencyGateState, loadConsistency,
 } from '../../lib/community';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityHubScreen from '../CommunityHubScreen';
@@ -210,6 +211,8 @@ beforeEach(() => {
   loadHub.mockResolvedValue(emptyHub());
   myDimensions.mockResolvedValue({ dimensions: [] });
   listMyGroups.mockResolvedValue([]);
+  consistencyGateState.mockResolvedValue({ allowed: false, gated: false, isMinor: false });
+  loadConsistency.mockResolvedValue(null);
   useCommunityMe.mockReturnValue({ me: { profile: null }, loading: false, error: null, refresh: jest.fn() });
 });
 
@@ -300,6 +303,48 @@ describe('state 2: joined, nothing followed yet', () => {
     expect(youRow).toBeTruthy();
     await act(async () => { youRow.props.onPress(); });
     expect(navigation.navigate).toHaveBeenCalledWith('CommunityProfile', { userId: 'u1' });
+  });
+});
+
+// Lead ruling 2026-09-10 (communities revamp): the You row shows the
+// reader's own device counters whenever `consistencyGateState` allows it
+// (calm mode or an open ED flag withholds), independent of the "Share my
+// consistency" toggle -- it is their own data on their own screen, and
+// sharing governs what OTHER people see, never this. When the gate
+// withholds, no You row renders at all: no empty row, no caption.
+describe('the You row\'s ED gate: independent of the sharing toggle, gated only on consistencyGateState', () => {
+  beforeEach(() => {
+    useCommunityMe.mockReturnValue({
+      me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
+    });
+    loadHub.mockResolvedValue(emptyHub());
+  });
+
+  test('a joined person still sees the You row with their own counters (no sharing toggle is read any more)', async () => {
+    consistencyGateState.mockResolvedValue({ allowed: false, gated: false, isMinor: false });
+    loadConsistency.mockResolvedValue({
+      c_sessions_week: 3, c_weeks_streak: 2, c_trained_days_week: ['mon', 'wed'], c_last_trained_day: null,
+    });
+    const { partTrees } = await render();
+    const youRow = partTrees[0].root.findAll(
+      (n) => typeof n.props?.accessibilityLabel === 'string'
+        && n.props.accessibilityLabel.startsWith('You') && typeof n.props.onPress === 'function',
+    )[0];
+    expect(youRow).toBeTruthy();
+    expect(youRow.props.accessibilityLabel).toContain('3 sessions');
+  });
+
+  test('a calm-mode (or open ED flag) person sees no You row at all -- no empty row, no caption', async () => {
+    consistencyGateState.mockResolvedValue({ allowed: false, gated: true, isMinor: false });
+    loadConsistency.mockResolvedValue({
+      c_sessions_week: 5, c_weeks_streak: 4, c_trained_days_week: ['mon'], c_last_trained_day: null,
+    });
+    const { text, partTrees } = await render();
+    expect(text).not.toContain('5 sessions');
+    const youRow = partTrees[0].root.findAll(
+      (n) => typeof n.props?.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('You'),
+    )[0];
+    expect(youRow).toBeUndefined();
   });
 });
 

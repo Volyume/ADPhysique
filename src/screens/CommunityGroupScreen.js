@@ -6,13 +6,16 @@
  *
  * `BackHeader` carries the group's name and the 48 dp menu glyph, so the
  * body no longer repeats the name (no `h2`, no `Card`): one `label` line
- * ("8 members . invite only"; the Together line is phase 3), `Eyebrow`
- * MEMBERS with `PersonRow`s from the group's week board and a trailing
- * "See all" to `CommunityGroupMembers`, `Eyebrow` ACTIVITY with the
- * members' stories as `ActivityItemRow`s. A non-member sees the Join or
- * Request `Button` in place of both (the board and feed reads are member-
- * only, unchanged from before). Admin actions (Edit, Invite, Share link,
- * Close group), Leave and Report stay exactly in the existing `MenuSheet`.
+ * ("8 members . invite only"; the Together line is phase 3), the blurb
+ * when present (`bodySm`, up to two lines -- restored by lead ruling
+ * 2026-09-10, running text was never banned by presentation rule 1),
+ * `Eyebrow` MEMBERS with `PersonRow`s from the group's week board and a
+ * trailing "See all" to `CommunityGroupMembers`, `Eyebrow` ACTIVITY with
+ * the members' stories as `ActivityItemRow`s. A non-member sees the Join
+ * or Request `Button` in place of both (the board and feed reads are
+ * member-only, unchanged from before). Admin actions (Edit, Invite, Share
+ * link, Close group), Leave and Report stay exactly in the existing
+ * `MenuSheet`.
  *
  * Route params: { id: groupId } (also reached via the `g/?id=` deep link,
  * RootNavigator's linking config).
@@ -317,6 +320,13 @@ export default function CommunityGroupScreen({ navigation, route }) {
               <Text style={[styles.label, { ...t.type.label, color: t.colors.textSecondary }]}>
                 {groupLine(group)}
               </Text>
+              {/* Lead ruling 2026-09-10 (communities revamp): restored,
+                  bodySm, capped to two lines, under the label line. */}
+              {group?.blurb ? (
+                <Text style={[styles.blurb, { ...t.type.bodySm, color: t.colors.textSecondary }]} numberOfLines={2}>
+                  {group.blurb}
+                </Text>
+              ) : null}
               {!isMember && !isMinor ? (
                 <Button
                   variant="primary"
@@ -410,5 +420,6 @@ const styles = StyleSheet.create({
   },
   header: { gap: spacing.xs, marginBottom: spacing.sm },
   label: { ...type.label, color: colors.textSecondary },
+  blurb: { ...type.bodySm, color: colors.textSecondary },
   joinBtn: { marginTop: spacing.sm, alignSelf: 'flex-start' },
 });

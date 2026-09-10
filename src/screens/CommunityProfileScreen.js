@@ -2,19 +2,24 @@
  * CommunityProfileScreen (communities revamp 2026-09-10: `docs/
  * communities-revamp-2026-09-10/21-PHASE1-SPEC.md` section 4;
  * `20-BLUEPRINT.md` section 9's profile). One person as a lifter: avatar
- * 56, name `bodyStrong`, handle `bodySm` `textMuted`, one `bodySm` line
- * of shared facts (gym, place, styles -- only what the card carries and
- * the person shows), the own progress strip exactly as today (others'
- * strips are phase 2), the existing Follow / Connect / Message row,
- * `Eyebrow` ACTIVITY with `ActivityItemRow`s. No cards.
+ * 56, name `bodyStrong`, handle `bodySm` `textMuted`, the bio (`bodySm`,
+ * up to three lines, when present -- restored by lead ruling 2026-09-10,
+ * see below), one `bodySm` line of shared facts (gym, place, styles --
+ * only what the card carries and the person shows), the own progress
+ * strip exactly as today (others' strips are phase 2), the existing
+ * Follow / Connect / Message row, `Eyebrow` ACTIVITY with
+ * `ActivityItemRow`s. No cards.
+ *
+ * Lead ruling 2026-09-10: the bio is running text, and presentation rule
+ * 1 restricts prominent TYPE SIZES (no `h1`/`h2`/`h3` outside the one
+ * exception), never the presence of a paragraph at an allowed size -- an
+ * earlier pass on this lane read the rule as banning it outright and
+ * dropped it; corrected here, `bodySm` `textSecondary`, capped to three
+ * lines.
  *
  * DECISIONS the spec's own enumeration left implicit, flagged for the
- * lead (lane report): the bio text and the old separate facts/place
- * lines are DROPPED (bio rendered at `type.body`, which rule 1 does not
- * allow outside the header title and row names; the facts/place lines
- * are explicitly merged into the one new line by the spec's own
- * wording). The followers/following/connections counts row, the
- * "Hidden from others" notes and `TrainingProfileLine` are KEPT
+ * lead (lane report): the followers/following/connections counts row,
+ * the "Hidden from others" notes and `TrainingProfileLine` are KEPT
  * unchanged: none of the three is named in the spec's enumeration, but
  * none violates any of the ten presentation rules either (all render at
  * `bodySm`/`caption`, never a prominent size), none is superseded by the
@@ -265,6 +270,17 @@ export default function CommunityProfileScreen({ navigation, route }) {
           </Text>
         </View>
       </View>
+
+      {/* Lead ruling 2026-09-10 (communities revamp): running text was
+          never banned by presentation rule 1 (it restricts prominent
+          TYPE SIZES, not the presence of a paragraph at an allowed
+          size), so the bio is restored at `bodySm`, capped to three
+          lines, under the handle and above the facts line. */}
+      {card.bio ? (
+        <Text style={[styles.bio, { ...t.type.bodySm, color: t.colors.textSecondary }]} numberOfLines={3}>
+          {card.bio}
+        </Text>
+      ) : null}
 
       {sharedFactsLine ? (
         <Text style={[styles.facts, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
@@ -589,6 +605,7 @@ const styles = StyleSheet.create({
   heroBody: { flex: 1, gap: spacing.xxs },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   handle: { ...type.bodySm, color: colors.textMuted },
+  bio: { ...type.bodySm, color: colors.textSecondary },
   facts: { ...type.bodySm, color: colors.textSecondary },
   hiddenNote: { ...type.caption, color: colors.textMuted },
   counts: { flexDirection: 'row', gap: spacing.lg },
