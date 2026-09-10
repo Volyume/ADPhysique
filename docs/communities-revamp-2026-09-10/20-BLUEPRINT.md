@@ -292,7 +292,9 @@ surface.
 
 **Ten rules, all Community screens:**
 1. Two prominent type sizes per screen: the header title and row names
-   (`bodyStrong`). Everything else is `bodySm`, `label` or `caption`.
+   (`bodyStrong`). Running text (a bio, a group blurb, a note) is `body`
+   or `bodySm`; figures and metadata are `label` or `caption` (clarified
+   2026-09-10: this rule never banned `body`).
    No `h1`, `h2` or `h3` on any list screen; the one `h3` allowed in
    Community is the not-joined hero on the Hub.
 2. No `Card` for people, groups, cohorts or activity. Rosters, group
