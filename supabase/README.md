@@ -368,7 +368,7 @@ contract must not delegate its authority to a superseded audit.
   this build lane); verification after any future apply is the acceptance
   check at the end of the file plus the guard tests in
   `src/__tests__/migrate165.rpcOnly.guard.test.js`.
-- **170 WRITTEN, NOT APPLIED (Community connection, part A; founder gate).**
+- **170 WRITTEN, NOT APPLIED (Community connection, parts A, A2 and B in one file; founder gate GIVEN 2026-09-10, apply BLOCKED on a credential).** Founder said "Run against production" at 17:58 UTC; `apply-named-sql.yml` run #11 (main `ec4d241`) FAILED at 17:59:18Z with HTTP 401 Unauthorized from the Supabase Management API on the bootstrap `CREATE TABLE IF NOT EXISTS claude_schema_migrations` statement, before the migration file was read: NOTHING was applied, the database is unchanged. Observed: the repo secret `SUPABASE_ACCESS_TOKEN` is no longer accepted (runs #5 to #10 on 2026-09-07 used it successfully). Founder action: generate a new Supabase personal access token and update the repo secret, then the lead re-dispatches run #12 for `migrate_170_community_connection.sql` and `deploy-functions.yml` for `community-notify`. The lead declined to hand-transcribe 213 KB of production SQL through the MCP path.
   `migrate_170_community_connection.sql` (communities revamp 2026-09-10, Part B (ambient session items with consent and audiences, group audiences, Together figures, Respect everyone, the daily Respect digest table, connect reasons) is in the SAME file, also WRITTEN, NOT APPLIED; hostile review pending.
   `docs/communities-revamp-2026-09-10/20-BLUEPRINT.md` sections 3, 4, 7, 8;
   `21-PHASE1-SPEC.md` section 5; contract at
