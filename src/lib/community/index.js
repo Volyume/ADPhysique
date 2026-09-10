@@ -18,7 +18,10 @@ export {
   SENSITIVE_COMMUNITY_KEYS, POST_PAYLOAD_KEYS, POST_KINDS,
   COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS, COMMUNITY_SETTINGS, REPORT_REASONS,
   PROFILE_VISIBILITIES, POST_VISIBILITIES,
+  COMMUNITY_DISCIPLINE_KEYS, COMMUNITY_DISCIPLINE_LABELS, PHYSIQUE_DISCIPLINE_KEYS,
+  MAX_DISCIPLINES_PER_PROFILE,
   hasForbiddenKeys, validatePostPayload, cleanText, cleanOptionalText, cleanStyles,
+  cleanDisciplines,
 } from './validation';
 
 export { BLOCKED_TERMS, foldText, containsBlockedTerm, blockedTermsIn } from './keywordFilter';
@@ -58,7 +61,7 @@ export {
 export {
   HUB_CACHE_PREFIX, hubCacheKey, clearCachedHub, loadHub, loadFeed,
   loadDiscoverPosts, searchPeople, suggestedPeople,
-  myDimensions, loadDimension,
+  myDimensions, loadDimension, loadHubSummary, loadDimensionRecent,
   createPost, deletePost, getPost, reactToPost,
   addComment, deleteComment, listComments,
 } from './feed';

@@ -77,6 +77,14 @@ jest.mock('../../lib/community', () => ({
   DISPLAY_NAME_MAX: 40,
   COMMUNITY_RULES_VERSION: 1,
   currentUserId: () => 'u1',
+  // Communities revamp 2026-09-10: the discipline picker (task 2). Four
+  // keys (one more than the cap) so the "at most three" behaviour has
+  // something to refuse.
+  COMMUNITY_DISCIPLINE_KEYS: ['bodybuilding', 'powerlifting', 'wellness', 'hybrid'],
+  COMMUNITY_DISCIPLINE_LABELS: {
+    bodybuilding: 'Bodybuilding', powerlifting: 'Powerlifting', wellness: 'Wellness', hybrid: 'Hybrid',
+  },
+  MAX_DISCIPLINES_PER_PROFILE: 3,
   TP_DAYS: { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' },
   TP_TIME_BANDS: {
     morning: 'mornings', midday: 'at midday', afternoon: 'in the afternoon', evening: 'evenings', late: 'late',
@@ -454,5 +462,76 @@ describe('the gym step', () => {
 
     expect(button(tree, 'Skip choosing a gym for now')).toBeDefined();
     expect(tree.root.findByProps({ accessibilityLabel: 'Gym, town or postcode' })).toBeDefined();
+  });
+});
+
+// ─── Communities revamp 2026-09-10 (task 2): the discipline picker, after
+// the gym step, optional, up to three, saved through upsertProfile. ─────
+describe('the discipline picker', () => {
+  function chipGroup(tree, groupLabel) {
+    return tree.root.findAll((n) => n.props?.accessibilityLabel === groupLabel)[0];
+  }
+  function chip(tree, chipLabel) {
+    return chipGroup(tree, 'What do you train for?').findAll(
+      (n) => typeof n.type === 'function' && n.props?.label === chipLabel && n.props?.accessibilityRole === 'checkbox',
+    )[0];
+  }
+
+  test('is optional: Create works with none chosen', async () => {
+    const { tree } = await mount();
+    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({ discipline_keys: [] }));
+  });
+
+  test('the helper line says what it is for', async () => {
+    const { tree } = await mount();
+    expect(flattenText(tree.toJSON())).toContain('Optional. Helps people like you find you.');
+  });
+
+  test('choosing disciplines sends exactly those keys, in the order tapped', async () => {
+    const { tree } = await mount();
+    await act(async () => { chip(tree, 'Bodybuilding').props.onPress(); });
+    await act(async () => { chip(tree, 'Wellness').props.onPress(); });
+    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ discipline_keys: ['bodybuilding', 'wellness'] }),
+    );
+  });
+
+  test('a fourth pick is refused: at most three travel', async () => {
+    const { tree } = await mount();
+    await act(async () => { chip(tree, 'Bodybuilding').props.onPress(); });
+    await act(async () => { chip(tree, 'Powerlifting').props.onPress(); });
+    await act(async () => { chip(tree, 'Wellness').props.onPress(); });
+    await act(async () => { chip(tree, 'Hybrid').props.onPress(); });
+    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({
+      discipline_keys: ['bodybuilding', 'powerlifting', 'wellness'],
+    }));
+    expect(chip(tree, 'Hybrid').props.selected).toBe(false);
+  });
+
+  test('tapping a chosen chip again removes it', async () => {
+    const { tree } = await mount();
+    await act(async () => { chip(tree, 'Bodybuilding').props.onPress(); });
+    expect(chip(tree, 'Bodybuilding').props.selected).toBe(true);
+
+    await act(async () => { chip(tree, 'Bodybuilding').props.onPress(); });
+    expect(chip(tree, 'Bodybuilding').props.selected).toBe(false);
   });
 });

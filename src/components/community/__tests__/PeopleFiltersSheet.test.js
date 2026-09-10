@@ -46,6 +46,9 @@ jest.mock('../../../lib/community', () => ({
   TP_AGE_BANDS: { '18_24': '18 to 24', '25_34': '25 to 34' },
   COMMUNITY_STYLE_KEYS: { strength: 'Strength' },
   COMMUNITY_GOALS: { get_stronger: 'Get stronger' },
+  // Communities revamp 2026-09-10, task 8: the discipline filter.
+  COMMUNITY_DISCIPLINE_KEYS: ['bodybuilding', 'powerlifting'],
+  COMMUNITY_DISCIPLINE_LABELS: { bodybuilding: 'Bodybuilding', powerlifting: 'Powerlifting' },
 }));
 
 import PeopleFiltersSheet from '../PeopleFiltersSheet';
@@ -167,6 +170,47 @@ describe('Age band: only when the caller shares their own', () => {
     await tap(tree, 'Show results');
 
     expect(onApply).toHaveBeenCalledWith({ age_band: '25_34' });
+  });
+});
+
+describe('Discipline: single-select with an explicit Any chip (task 8)', () => {
+  test('every discipline in the list renders as its own chip', async () => {
+    const tree = await mount({ onApply: jest.fn(), onClose: jest.fn(), me: ME_NO_AGE, value: null });
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Discipline');
+    expect(text).toContain('Bodybuilding');
+    expect(text).toContain('Powerlifting');
+  });
+
+  test('choosing one applies it', async () => {
+    const onApply = jest.fn();
+    const tree = await mount({ onApply, onClose: jest.fn(), me: ME_NO_AGE, value: null });
+
+    await tap(tree, 'Bodybuilding');
+    await tap(tree, 'Show results');
+
+    expect(onApply).toHaveBeenCalledWith({ discipline: 'bodybuilding' });
+  });
+
+  test('Any clears a chosen discipline back out, the explicit chip rather than a second tap', async () => {
+    const onApply = jest.fn();
+    const tree = await mount({ onApply, onClose: jest.fn(), me: ME_NO_AGE, value: { discipline: 'powerlifting' } });
+
+    await tap(tree, 'Any');
+    await tap(tree, 'Show results');
+
+    expect(onApply).toHaveBeenCalledWith(null);
+  });
+
+  test('combines freely with another filter (Where), both travel together', async () => {
+    const onApply = jest.fn();
+    const tree = await mount({ onApply, onClose: jest.fn(), me: ME_NO_AGE, value: null });
+
+    await tap(tree, 'My gym');
+    await tap(tree, 'Powerlifting');
+    await tap(tree, 'Show results');
+
+    expect(onApply).toHaveBeenCalledWith({ scope: 'gym', discipline: 'powerlifting' });
   });
 });
 

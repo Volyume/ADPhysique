@@ -17,8 +17,16 @@
  * (`01-recon-community-today.md` section 6), so an unrecognised kind
  * renders nothing here rather than a row with a generic icon.
  *
+ * Communities revamp (2026-09-10), task 4: two more kinds, `discipline`
+ * and `age_band` (`22-MIGRATION-170A-CONTRACT.md`), with glyphs in the
+ * same vocabulary the other three already use -- a ribbon for a chosen
+ * competitive/training identity (distinct from `style`'s barbell, which
+ * is kit and method, not who someone is), a people glyph for an age
+ * cohort.
+ *
  * Props:
- *   dimension  {kind: 'style'|'gym'|'area', key, label, count}
+ *   dimension  {kind: 'style'|'gym'|'area'|'discipline'|'age_band', key,
+ *              label, count}
  *   onPress    opens the dimension page
  */
 
@@ -32,6 +40,8 @@ const GLYPH = {
   style: 'barbell-outline',
   gym: 'business-outline',
   area: 'location-outline',
+  discipline: 'ribbon-outline',
+  age_band: 'people-outline',
 };
 
 /** "6 lifters" / "1 lifter" (blueprint section 6). The count is other

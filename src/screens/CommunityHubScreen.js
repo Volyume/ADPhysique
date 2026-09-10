@@ -25,14 +25,19 @@
  * caption (above the feed), the failed-read Try again, the moderated-
  * person notice and the legacy partner card (both above the hero/You
  * line), deep-link handling, the header glyphs and their badges, the
- * unseen-dot logic. No new server calls: PEOPLE and GROUPS are built
- * from `community_dimensions_me` and `community_group_list_mine`, both
- * already read elsewhere; the gym board call is the same single call the
- * Hub already made (the limit widened from a 3-row preview to a real
- * page, since the row it now feeds needs a trained-today count, not
- * three inline names) and is only made at all once the gym cohort
- * clears the same `COMMUNITY_DIMENSION_MIN_FOR_HUB` threshold every
- * other cohort row is filtered by.
+ * unseen-dot logic.
+ *
+ * Communities revamp (2026-09-10), task 5: PEOPLE and GROUPS now come
+ * from ONE call, `community_hub_summary` (`22-MIGRATION-170A-CONTRACT.md`),
+ * which already carries `member_count`, `trained_today_count` and a
+ * `sample` for every cohort and every group -- the Hub's own gym board
+ * call and the `community_dimensions_me` read it used for PEOPLE are both
+ * gone; the roster/board pattern moves to the cohort page
+ * (`CommunityDimensionScreen`). Row order: gym, each discipline, age
+ * group (present only while the caller shares it), area -- style cohorts
+ * are never Hub rows (Find people is where they live). `member_count`
+ * being 0 already means the row was omitted server-side, so nothing here
+ * re-applies a threshold of its own.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -66,25 +71,33 @@ import {
 } from '../styles/theme';
 import {
   loadHub, hasProfile, hasUnseen, hasUnreadMessages, reactToPost,
-  COMMUNITY_DIMENSION_MIN_FOR_HUB, myDimensions,
-  loadBoard, metricLabel, loadConsistency, consistencyGateState,
-  listMyGroups, myStatus, isModeratedStatus, REPORT_REASONS,
+  loadHubSummary, metricLabel, loadConsistency, consistencyGateState,
+  myStatus, isModeratedStatus, REPORT_REASONS, TP_AGE_BANDS,
 } from '../lib/community';
 import { todayLocalKey } from '../lib/dayKey';
 
 const PAGE = 20;
 
-/** "8 members . invite only" (spec section 2 item 4 and section 4's group
- * page, the same wording twice): member count first, access lower-case,
- * matching neither `GROUP_ACCESS`'s capitalised label nor the old
- * access-first order. Kept local rather than exported from `lib/`
- * (screens compose their own small copy helpers here, same precedent as
- * `normalisePostRow`). */
-function groupLine(group) {
-  const n = Number(group?.memberCount ?? 0);
-  const access = group?.access === 'invite' ? 'invite only' : 'open';
-  return `${n} ${n === 1 ? 'member' : 'members'} · ${access}`;
+/**
+ * "3 trained today · 8 members" (task 5; `GroupRow`'s own header comment:
+ * "8 members · invite only" until the server can say who trained today,
+ * "then 3 trained today · 8 members"). `community_hub_summary` always
+ * carries both counts now, so this is the one line every PEOPLE and
+ * GROUPS row on the Hub composes from -- the same fields, the same
+ * wording, whichever kind of row it is. Kept local rather than exported
+ * from `lib/` (screens compose their own small copy helpers here, same
+ * precedent as `normalisePostRow`).
+ */
+function trainedTodayLine(memberCount, trainedTodayCount) {
+  const n = Number(memberCount) || 0;
+  const td = Number(trainedTodayCount) || 0;
+  return `${td} trained today · ${n} ${n === 1 ? 'member' : 'members'}`;
 }
+
+/** Row order for the PEOPLE cohorts (task 5): gym, each discipline, age
+ * group, area -- style is never a Hub row (Find people is where it
+ * lives), so it is filtered out before this even runs. */
+const COHORT_KIND_ORDER = Object.freeze({ gym: 0, discipline: 1, age_band: 2, area: 3 });
 
 /** "6 weeks in a row" / "Getting back into it": the You row's second-line
  * fallback when there are no trained days yet to draw as `DayDots` this
@@ -128,11 +141,9 @@ export default function CommunityHubScreen({ navigation, route }) {
   // Fails CLOSED: no You row renders until the gate explicitly clears it
   // (mirrors `consistencyGateState`'s own "fail closed" posture).
   const [consistencyGated, setConsistencyGated] = useState(true);
-  const [dimensions, setDimensions] = useState([]);
-  const [dimensionsLoading, setDimensionsLoading] = useState(true);
-  const [gymBoard, setGymBoard] = useState(null);
-  const [myGroups, setMyGroups] = useState([]);
-  const [groupsLoading, setGroupsLoading] = useState(true);
+  // PEOPLE and GROUPS (task 5): one call, `community_hub_summary`.
+  const [summary, setSummary] = useState(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
   const [status, setStatus] = useState(null);
   const listRef = useRef(null);
 
@@ -167,57 +178,18 @@ export default function CommunityHubScreen({ navigation, route }) {
     return () => { alive = false; };
   }, [joined, uid]);
 
-  // PEOPLE (spec section 2 item 3): the cohorts from `community_dimensions_
-  // me`, filtered to the same threshold Discover always used, gym kept
-  // separate from area/style. The gym board read only happens once the gym
-  // cohort itself clears the threshold -- no board call for a gym with too
-  // few other people sharing, and never more than this one board call.
+  // PEOPLE and GROUPS (task 5, 22-MIGRATION-170A-CONTRACT.md
+  // "community_hub_summary"): one call for both sections, counts, trained
+  // today and samples all carried already -- no client-side threshold, no
+  // separate board or dimensions read, no separate groups read.
   useEffect(() => {
-    if (!joined || !uid) {
-      setDimensions([]); setGymBoard(null); setDimensionsLoading(false);
-      return undefined;
-    }
+    if (!joined || !uid) { setSummary(null); setSummaryLoading(false); return undefined; }
     let alive = true;
-    setDimensionsLoading(true);
-    (async () => {
-      let dims = [];
-      try {
-        const out = await myDimensions();
-        dims = (out.dimensions ?? []).filter(
-          (d) => ['gym', 'area', 'style'].includes(d?.kind)
-            && Number(d?.count ?? 0) >= COMMUNITY_DIMENSION_MIN_FOR_HUB,
-        );
-      } catch (_e) {
-        dims = [];
-      }
-      if (!alive) return;
-      setDimensions(dims);
-      const gymEntry = dims.find((d) => d.kind === 'gym');
-      if (gymEntry) {
-        try {
-          const board = await loadBoard({ scope: 'gym', window: 'week', limit: PAGE });
-          if (alive) setGymBoard(board);
-        } catch (_e) {
-          if (alive) setGymBoard(null);
-        }
-      } else {
-        setGymBoard(null);
-      }
-      if (alive) setDimensionsLoading(false);
-    })();
-    return () => { alive = false; };
-  }, [joined, uid]);
-
-  // GROUPS (spec section 2 item 4). Best effort, same posture as before: a
-  // failed read just leaves the row empty.
-  useEffect(() => {
-    if (!joined || !uid) { setMyGroups([]); setGroupsLoading(false); return undefined; }
-    let alive = true;
-    setGroupsLoading(true);
-    listMyGroups()
-      .then((rows) => { if (alive) setMyGroups(rows.filter((r) => r.state === 'member')); })
-      .catch(() => { if (alive) setMyGroups([]); })
-      .finally(() => { if (alive) setGroupsLoading(false); });
+    setSummaryLoading(true);
+    loadHubSummary()
+      .then((out) => { if (alive) setSummary(out); })
+      .catch(() => { if (alive) setSummary(null); })
+      .finally(() => { if (alive) setSummaryLoading(false); });
     return () => { alive = false; };
   }, [joined, uid]);
 
@@ -295,18 +267,18 @@ export default function CommunityHubScreen({ navigation, route }) {
   const offline = !!hub?.fromCache && !!hub?.error;
   const failed = !!hub?.error && !hub?.fromCache;
 
-  const gymEntry = dimensions.find((d) => d.kind === 'gym') ?? null;
-  const otherDimensions = dimensions.filter((d) => d.kind !== 'gym');
-  const gymTrainedToday = gymBoard ? gymBoard.rows.filter((r) => r.trainedToday) : [];
-  // Section 5: "Phase 1 rows show member counts where trained-today is
-  // unknown, never a placeholder or a dash." A gym that cleared the
-  // threshold but whose board read failed still shows a plain member
-  // count, from the dimension entry itself, rather than nothing.
-  const gymLine = gymEntry
-    ? (gymBoard
-      ? `${gymTrainedToday.length} trained today · ${gymBoard.count} ${gymBoard.count === 1 ? 'member' : 'members'}`
-      : `${gymEntry.count} ${gymEntry.count === 1 ? 'member' : 'members'}`)
-    : null;
+  // PEOPLE cohorts (task 5): style dropped (Find people is where it
+  // lives), everything else in the fixed row order gym, discipline,
+  // age_band, area. A stable sort keeps same-kind rows (up to three
+  // disciplines) in the order the server sent them.
+  const cohorts = useMemo(
+    () => (summary?.cohorts ?? [])
+      .filter((c) => c?.kind !== 'style')
+      .slice()
+      .sort((a, b) => (COHORT_KIND_ORDER[a.kind] ?? 99) - (COHORT_KIND_ORDER[b.kind] ?? 99)),
+    [summary],
+  );
+  const groups = summary?.groups ?? [];
 
   const youPerson = joined ? {
     user_id: uid,
@@ -522,35 +494,23 @@ export default function CommunityHubScreen({ navigation, route }) {
       {joined ? (
         <>
           <Eyebrow>PEOPLE</Eyebrow>
-          {dimensionsLoading ? (
+          {summaryLoading ? (
             <>
               <SkeletonRow />
               <SkeletonRow />
             </>
           ) : (
-            <>
-              {gymEntry ? (
-                <CohortRow
-                  title={gymEntry.label}
-                  line={gymLine}
-                  people={gymTrainedToday.map((r) => r.card)}
-                  onPress={() => navigation.navigate('CommunityDimension', {
-                    kind: 'gym', key: gymEntry.key, label: gymEntry.label,
-                  })}
-                />
-              ) : null}
-              {otherDimensions.map((d) => (
-                <CohortRow
-                  key={`${d.kind}:${d.key}`}
-                  title={d.label}
-                  line={`${d.count} ${d.count === 1 ? 'member' : 'members'}`}
-                  people={Array.isArray(d.people) ? d.people : []}
-                  onPress={() => navigation.navigate('CommunityDimension', {
-                    kind: d.kind, key: d.key, label: d.label,
-                  })}
-                />
-              ))}
-            </>
+            cohorts.map((c) => (
+              <CohortRow
+                key={`${c.kind}:${c.key}`}
+                title={c.kind === 'age_band' ? (TP_AGE_BANDS[c.label] ?? c.label) : c.label}
+                line={trainedTodayLine(c.member_count, c.trained_today_count)}
+                people={Array.isArray(c.sample) ? c.sample : []}
+                onPress={() => navigation.navigate('CommunityDimension', {
+                  kind: c.kind, key: c.key, label: c.kind === 'age_band' ? (TP_AGE_BANDS[c.label] ?? c.label) : c.label,
+                })}
+              />
+            ))
           )}
           <Pressable
             onPress={() => navigation.navigate('CommunityFindPeople')}
@@ -566,21 +526,21 @@ export default function CommunityHubScreen({ navigation, route }) {
         </>
       ) : null}
 
-      {joined && !(myGroups.length === 0 && isMinor) ? (
+      {joined && !(groups.length === 0 && isMinor) ? (
         <>
           <Eyebrow trailing={!isMinor ? { label: 'New group', onPress: () => navigation.navigate('CommunityGroupCreate') } : undefined}>
             GROUPS
           </Eyebrow>
-          {groupsLoading ? (
+          {summaryLoading ? (
             <SkeletonRow />
-          ) : myGroups.length ? (
-            myGroups.map((row) => (
+          ) : groups.length ? (
+            groups.map((g) => (
               <GroupRow
-                key={row.group.id}
-                group={row.group}
-                line={groupLine(row.group)}
-                people={[]}
-                onPress={() => navigation.navigate('CommunityGroup', { id: row.group.id })}
+                key={g.id}
+                group={g}
+                line={trainedTodayLine(g.member_count, g.trained_today_count)}
+                people={Array.isArray(g.sample) ? g.sample : []}
+                onPress={() => navigation.navigate('CommunityGroup', { id: g.id })}
               />
             ))
           ) : (

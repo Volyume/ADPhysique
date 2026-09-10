@@ -49,6 +49,7 @@ import {
   FILTER_SCOPES, PLACE_BAND_MILES, PLACE_BAND_LABELS, normaliseFilters,
   TP_DAYS, TP_TIME_BANDS, TP_EXPERIENCE_BANDS, TP_AGE_BANDS,
   COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS,
+  COMMUNITY_DISCIPLINE_KEYS, COMMUNITY_DISCIPLINE_LABELS,
 } from '../../lib/community';
 
 /** Capitalised for a chip label; `TP_TIME_BANDS` reads as sentence
@@ -80,6 +81,7 @@ function draftFrom(value) {
     goal: value?.goal ?? null,
     experience_band: value?.experience_band ?? null,
     age_band: value?.age_band ?? null,
+    discipline: value?.discipline ?? null,
   };
 }
 
@@ -230,6 +232,27 @@ export default function PeopleFiltersSheet({
               selected={draft.experience_band === key}
               accessibilityRole="radio"
               onPress={() => set({ experience_band: toggleSingle(draft.experience_band, key) })}
+            />
+          ))}
+        </View>
+        {/* Task 8 (communities revamp 2026-09-10): single-select, with an
+            explicit "Any" chip rather than the tap-again-to-clear pattern
+            Goal/Experience use above -- the brief's own spec for this row. */}
+        <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>Discipline</Text>
+        <View style={styles.chips} accessibilityLabel="Discipline">
+          <Chip
+            label="Any"
+            selected={!draft.discipline}
+            accessibilityRole="radio"
+            onPress={() => set({ discipline: null })}
+          />
+          {COMMUNITY_DISCIPLINE_KEYS.map((key) => (
+            <Chip
+              key={key}
+              label={COMMUNITY_DISCIPLINE_LABELS[key]}
+              selected={draft.discipline === key}
+              accessibilityRole="radio"
+              onPress={() => set({ discipline: key })}
             />
           ))}
         </View>

@@ -77,6 +77,25 @@ export default function CommunityBoardScreen({ navigation, route }) {
   const [window, setWindow] = useState(
     BOARD_WINDOWS[route?.params?.window] ? route.params.window : 'week',
   );
+  // Task 7 (communities revamp 2026-09-10): scope and scopeKey already
+  // travel generically (loadBoard forwards whatever it is given, and
+  // community_board now accepts area/style/discipline/age_band the same
+  // way it always accepted gym/following/everyone) -- the only gap was
+  // the CHIP row, which only ever offered the three universal boards.
+  // Captured ONCE, on mount: the cohort the screen was opened FOR stays a
+  // selectable chip even after the reader taps away to one of the three
+  // universal boards, so they can tap straight back to it. `null` for
+  // group boards and for the three scopes that already have their own
+  // fixed chip.
+  const [arrivingCohort] = useState(() => {
+    const initialScope = route?.params?.scope ?? 'gym';
+    if (BOARD_SCOPE_ORDER.includes(initialScope)) return null;
+    return {
+      scope: initialScope,
+      scopeKey: route?.params?.scopeKey ?? null,
+      label: route?.params?.label || BOARD_SCOPES[initialScope] || 'This cohort',
+    };
+  });
   const [rows, setRows] = useState([]);
   const [you, setYou] = useState(null);
   const [count, setCount] = useState(0);
@@ -171,6 +190,16 @@ export default function CommunityBoardScreen({ navigation, route }) {
                 : null)}
             />
           ))}
+          {arrivingCohort ? (
+            <Chip
+              label={arrivingCohort.label}
+              selected={scope === arrivingCohort.scope && scopeKey === arrivingCohort.scopeKey}
+              accessibilityRole="radio"
+              onPress={() => navigation.setParams({
+                scope: arrivingCohort.scope, scopeKey: arrivingCohort.scopeKey, label: arrivingCohort.label,
+              })}
+            />
+          ) : null}
         </View>
       ) : null}
       <View style={styles.chipRow} accessibilityLabel="Window">

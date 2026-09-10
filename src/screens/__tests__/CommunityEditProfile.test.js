@@ -54,6 +54,14 @@ jest.mock('../../lib/community', () => ({
   COMMUNITY_GOALS: { get_stronger: 'Get stronger' },
   COMMUNITY_SETTINGS: { home_gym: 'Home gym' },
   MAX_STYLES_PER_PROFILE: 3,
+  // Communities revamp 2026-09-10: the discipline picker (task 2). Four
+  // keys (one more than the cap) so the "at most three" behaviour has
+  // something to refuse.
+  COMMUNITY_DISCIPLINE_KEYS: ['bodybuilding', 'powerlifting', 'wellness', 'hybrid'],
+  COMMUNITY_DISCIPLINE_LABELS: {
+    bodybuilding: 'Bodybuilding', powerlifting: 'Powerlifting', wellness: 'Wellness', hybrid: 'Hybrid',
+  },
+  MAX_DISCIPLINES_PER_PROFILE: 3,
   DISPLAY_NAME_MAX: 40,
   BIO_MAX: 160,
   AREA_LABEL_MAX: 60,
@@ -380,5 +388,69 @@ describe('who can send a connection request, and the two discovery links', () =>
     await act(async () => { byLabel(tree, 'Training profile').props.onPress(); });
 
     expect(navigation.navigate).toHaveBeenCalledWith('CommunityTrainingProfile');
+  });
+});
+
+// ─── Communities revamp 2026-09-10 (task 2): the discipline picker,
+// edited here after Join, optional, up to three, saved through
+// upsertProfile. ──────────────────────────────────────────────────────
+describe('the discipline picker', () => {
+  function chipGroup(tree, groupLabel) {
+    return tree.root.findAll((n) => n.props?.accessibilityLabel === groupLabel)[0];
+  }
+  function chip(tree, chipLabel) {
+    return chipGroup(tree, 'What do you train for?').findAll(
+      (n) => typeof n.type === 'function' && n.props?.label === chipLabel && n.props?.accessibilityRole === 'checkbox',
+    )[0];
+  }
+
+  test('pre-fills from the profile\'s own discipline_keys', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: { ...PROFILE, discipline_keys: ['bodybuilding'] }, is_moderator: false },
+      loading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+    const { tree } = await mount(CommunityEditProfileScreen);
+
+    expect(chip(tree, 'Bodybuilding').props.selected).toBe(true);
+    expect(chip(tree, 'Wellness').props.selected).toBe(false);
+  });
+
+  test('a profile with none chosen shows none selected, and Save still carries an empty array', async () => {
+    const { tree } = await mount(CommunityEditProfileScreen);
+    expect(chip(tree, 'Bodybuilding').props.selected).toBe(false);
+
+    await act(async () => { byLabel(tree, 'Save profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({ discipline_keys: [] }));
+  });
+
+  test('changing the selection sends exactly the new keys on Save', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: { ...PROFILE, discipline_keys: ['bodybuilding'] }, is_moderator: false },
+      loading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+    const { tree } = await mount(CommunityEditProfileScreen);
+
+    await act(async () => { chip(tree, 'Bodybuilding').props.onPress(); }); // remove
+    await act(async () => { chip(tree, 'Wellness').props.onPress(); }); // add
+    await act(async () => { byLabel(tree, 'Save profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({ discipline_keys: ['wellness'] }));
+  });
+
+  test('a fourth pick is refused: at most three travel', async () => {
+    const { tree } = await mount(CommunityEditProfileScreen);
+    await act(async () => { chip(tree, 'Bodybuilding').props.onPress(); });
+    await act(async () => { chip(tree, 'Powerlifting').props.onPress(); });
+    await act(async () => { chip(tree, 'Wellness').props.onPress(); });
+    await act(async () => { chip(tree, 'Hybrid').props.onPress(); });
+
+    expect(chip(tree, 'Hybrid').props.selected).toBe(false);
   });
 });

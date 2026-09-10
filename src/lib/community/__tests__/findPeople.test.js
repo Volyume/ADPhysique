@@ -34,7 +34,10 @@ const {
 } = require('../findPeople');
 
 const ME_FULL = {
-  profile: { handle: 'jamie', gym_label: 'PureGym Leeds', area_label: 'Leeds' },
+  profile: {
+    handle: 'jamie', gym_label: 'PureGym Leeds', area_label: 'Leeds',
+    discipline_keys: ['bodybuilding', 'powerlifting'],
+  },
 };
 
 const ME_BARE = { profile: { handle: 'jamie' } };
@@ -44,10 +47,10 @@ beforeEach(() => {
   callCommunity.mockResolvedValue({});
 });
 
-describe('the five doors', () => {
-  test('they are the five the blueprint names, in the blueprint order', () => {
+describe('the six doors', () => {
+  test('they are the six, in order -- the original five plus same_discipline (task 8)', () => {
     expect(FIND_MODE_ORDER).toEqual([
-      'gym', 'area', 'like_me', 'partners', 'might_know',
+      'gym', 'area', 'like_me', 'same_discipline', 'partners', 'might_know',
     ]);
     expect(doorsFor(ME_FULL).map((d) => d.mode)).toEqual(FIND_MODE_ORDER);
   });
@@ -61,6 +64,7 @@ describe('the five doors', () => {
     expect(FIND_MODES.gym.label).toBe('At my gym');
     expect(FIND_MODES.area.label).toBe('Near me');
     expect(FIND_MODES.like_me.label).toBe('Train like me');
+    expect(FIND_MODES.same_discipline.label).toBe('Same discipline');
     expect(FIND_MODES.partners.label).toBe('Open to training together');
     expect(FIND_MODES.might_know.label).toBe('People you might know');
   });
@@ -98,6 +102,57 @@ describe('the five doors', () => {
     const doors = doorsFor(ME_FULL);
     expect(doors.find((d) => d.mode === 'gym').key).toBe('PureGym Leeds');
     expect(doors.find((d) => d.mode === 'area').key).toBe('Leeds');
+    // same_discipline keys by the FIRST, primary discipline (task 8: the
+    // same "one canonical value" precedent the gym door already sets).
+    expect(doors.find((d) => d.mode === 'same_discipline').key).toBe('bodybuilding');
+  });
+});
+
+describe('same_discipline (task 8, communities revamp 2026-09-10)', () => {
+  test('unavailable without a discipline on the profile, and says what would fix it', () => {
+    const door = doorsFor(ME_BARE).find((d) => d.mode === 'same_discipline');
+    expect(door.available).toBe(false);
+    expect(door.requirement).toBe('Add a discipline to your profile to see people who train for the same thing');
+  });
+
+  test('an EMPTY discipline_keys array is still unavailable (arrays are truthy; length is what matters)', () => {
+    const door = doorsFor({ profile: { handle: 'jamie', discipline_keys: [] } })
+      .find((d) => d.mode === 'same_discipline');
+    expect(door.available).toBe(false);
+  });
+
+  test('available the moment one discipline is chosen', () => {
+    const door = doorsFor({ profile: { handle: 'jamie', discipline_keys: ['wellness'] } })
+      .find((d) => d.mode === 'same_discipline');
+    expect(door.available).toBe(true);
+    expect(door.key).toBe('wellness');
+    expect(door.requirement).toBeNull();
+  });
+
+  test('rides the like_me RPC mode with _discipline as the hard filter, never a made-up server mode', async () => {
+    await findPeople('same_discipline', { discipline: 'bodybuilding' });
+    expect(callCommunity).toHaveBeenCalledWith('community_find_people', {
+      _mode: 'like_me', _cursor: null, _limit: 20, _discipline: 'bodybuilding',
+    });
+  });
+
+  test('no discipline given: _discipline is not sent (every existing call stays byte-identical)', async () => {
+    await findPeople('like_me');
+    const [, params] = callCommunity.mock.calls[0];
+    expect('_discipline' in params).toBe(false);
+  });
+
+  test('a discipline nested in filters (the PeopleFiltersSheet chip) is promoted to _discipline too', async () => {
+    await findPeople('gym', { filters: { scope: 'gym', discipline: 'powerlifting' } });
+    const [, params] = callCommunity.mock.calls[0];
+    expect(params._discipline).toBe('powerlifting');
+    expect(params._filters).toEqual({ scope: 'gym', discipline: 'powerlifting' });
+  });
+
+  test('an explicit discipline option wins over one nested in filters', async () => {
+    await findPeople('same_discipline', { discipline: 'bodybuilding', filters: { discipline: 'powerlifting' } });
+    const [, params] = callCommunity.mock.calls[0];
+    expect(params._discipline).toBe('bodybuilding');
   });
 });
 
@@ -195,12 +250,13 @@ describe('the scored list', () => {
     expect(callCommunity).not.toHaveBeenCalled();
   });
 
-  test('every mode the doors offer is a mode the list accepts', async () => {
+  test('every mode the doors offer is a mode the list accepts (same_discipline rides like_me)', async () => {
     for (const mode of FIND_MODE_ORDER) {
       // eslint-disable-next-line no-await-in-loop
       await findPeople(mode);
     }
-    expect(callCommunity.mock.calls.map(([, p]) => p._mode)).toEqual(FIND_MODE_ORDER);
+    const expectedRpcModes = FIND_MODE_ORDER.map((m) => (m === 'same_discipline' ? 'like_me' : m));
+    expect(callCommunity.mock.calls.map(([, p]) => p._mode)).toEqual(expectedRpcModes);
   });
 });
 
@@ -262,10 +318,19 @@ describe('normaliseFilters: only what is actually set, or null', () => {
   test('every other field: arrays only survive non-empty, scalars only survive truthy', () => {
     expect(normaliseFilters({
       partner_only: true, days: ['mon', 'wed'], time_bands: [], styles: ['strength'],
-      goal: 'get_stronger', experience_band: '', age_band: '18_24',
+      goal: 'get_stronger', experience_band: '', age_band: '18_24', discipline: 'bodybuilding',
     })).toEqual({
-      partner_only: true, days: ['mon', 'wed'], styles: ['strength'], goal: 'get_stronger', age_band: '18_24',
+      partner_only: true,
+      days: ['mon', 'wed'],
+      styles: ['strength'],
+      goal: 'get_stronger',
+      age_band: '18_24',
+      discipline: 'bodybuilding',
     });
+  });
+
+  test('an empty discipline never survives (task 8)', () => {
+    expect(normaliseFilters({ discipline: '' })).toBeNull();
   });
 });
 
@@ -277,6 +342,7 @@ describe('filterChips: the applied-filter row', () => {
     goals: { get_stronger: 'Get stronger' },
     experience: { intermediate: 'Intermediate' },
     ageBand: { '18_24': '18 to 24' },
+    disciplines: { bodybuilding: 'Bodybuilding' },
   };
 
   test('no filters: no chips', () => {
@@ -294,7 +360,7 @@ describe('filterChips: the applied-filter row', () => {
   test('every other field becomes its own chip, in order, keyed for removal', () => {
     expect(filterChips({
       partner_only: true, days: ['mon'], time_bands: ['evening'], styles: ['strength'],
-      goal: 'get_stronger', experience_band: 'intermediate', age_band: '18_24',
+      goal: 'get_stronger', experience_band: 'intermediate', age_band: '18_24', discipline: 'bodybuilding',
     }, labels)).toEqual([
       { key: 'partner_only', label: 'Open to training together' },
       { key: 'days:mon', label: 'Mon' },
@@ -303,6 +369,7 @@ describe('filterChips: the applied-filter row', () => {
       { key: 'goal', label: 'Get stronger' },
       { key: 'experience_band', label: 'Intermediate' },
       { key: 'age_band', label: '18 to 24' },
+      { key: 'discipline', label: 'Bodybuilding' },
     ]);
   });
 
@@ -331,6 +398,15 @@ describe('removeFilterChip: clears exactly one applied choice', () => {
 
   test('an unknown key is a no-op', () => {
     expect(removeFilterChip({ goal: 'get_stronger' }, 'nonsense')).toEqual({ goal: 'get_stronger' });
+  });
+
+  test('removing discipline leaves every other choice standing (task 8)', () => {
+    expect(removeFilterChip({ scope: 'gym', discipline: 'bodybuilding' }, 'discipline'))
+      .toEqual({ scope: 'gym' });
+  });
+
+  test('clearing the only applied discipline answers null', () => {
+    expect(removeFilterChip({ discipline: 'bodybuilding' }, 'discipline')).toBeNull();
   });
 });
 

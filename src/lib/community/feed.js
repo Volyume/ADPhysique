@@ -20,6 +20,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { callCommunity } from './transport';
 import { currentUserId } from './profile';
+import { localDayKey } from '../dayKey';
 
 export const HUB_CACHE_PREFIX = '@volyume_community_hub_';
 export const DEFAULT_PAGE_SIZE = 20;
@@ -163,9 +164,58 @@ export async function suggestedPeople({ limit = 10 } = {}) {
   return listPage(await callCommunity('community_suggested_people', { _limit: limit }), 'people');
 }
 
-/** @returns {Promise<{dimensions: Array, cursor: (string|null)}>} */
+/**
+ * @returns {Promise<{dimensions: Array, cursor: (string|null)}>}
+ *
+ * `_today` (communities revamp 2026-09-10, `22-MIGRATION-170A-CONTRACT.md`
+ * "community_dimensions_me... SIGNATURE CHANGED"): only the client knows
+ * the caller's real LOCAL day, so it is always sent from here, the same
+ * way `boards.js`'s `loadBoard` always sends its own `_today`. A NULL or
+ * absent value is accepted server-side (the UK-local fallback, "a safety
+ * net for shipped builds, never the intended path"), so this is additive
+ * for every caller of this function, not a breaking change.
+ */
 export async function myDimensions() {
-  return listPage(await callCommunity('community_dimensions_me', {}), 'dimensions');
+  return listPage(
+    await callCommunity('community_dimensions_me', { _today: localDayKey() }),
+    'dimensions',
+  );
+}
+
+/**
+ * The Hub summary: one call for PEOPLE and GROUPS instead of one per
+ * cohort (blueprint section 9's Hub, `21-PHASE1-SPEC.md` section 5,
+ * `22-MIGRATION-170A-CONTRACT.md` "community_hub_summary"). `_today` is
+ * sent for the same reason `myDimensions` sends it above.
+ *
+ * @returns {Promise<{cohorts: Array, groups: Array}>}
+ */
+export async function loadHubSummary() {
+  const data = await callCommunity('community_hub_summary', { _today: localDayKey() });
+  return {
+    cohorts: Array.isArray(data?.cohorts) ? data.cohorts : [],
+    groups: Array.isArray(data?.groups) ? data.groups : [],
+  };
+}
+
+/**
+ * Recent shared moments for one cohort (discipline or age_band today; any
+ * `community_dimension` kind in principle), the cohort page's RECENT
+ * section (`21-PHASE1-SPEC.md` section 3's known gap, closed by the new
+ * `community_dimension_recent` RPC added alongside migration 170).
+ * Answers the same paged envelope and row shape as `community_feed`
+ * (`{post, author, my_reaction}` rows), so callers reuse the same
+ * `normalisePostRow` shape every screen that renders a feed already uses.
+ *
+ * @returns {Promise<{posts: Array, cursor: (string|null)}>}
+ */
+export async function loadDimensionRecent(kind, key, { cursor = null, limit = DEFAULT_PAGE_SIZE } = {}) {
+  return listPage(
+    await callCommunity('community_dimension_recent', {
+      _kind: kind, _key: key, _cursor: cursor, _limit: limit,
+    }),
+    'posts',
+  );
 }
 
 /**

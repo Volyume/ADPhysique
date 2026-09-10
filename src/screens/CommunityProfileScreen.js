@@ -220,14 +220,29 @@ export default function CommunityProfileScreen({ navigation, route }) {
 
   const posts = (data?.posts ?? []).map((r) => normalisePostRow(r, card)).filter(Boolean);
   const facts = card ? factLabels(card) : [];
-  const chipLabels = card?.open_to_partner
-    ? [...facts, 'Open to training together']
-    : facts;
+  // Task 3 (communities revamp 2026-09-10): the card's discipline_labels
+  // join the shared-facts line, right after place and before the other
+  // chosen facts -- the blueprint's own example order ("PureGym Leeds ·
+  // Men's physique · 25-34", section 9). Same viewability gate `styles`
+  // already carries (`_community_profile_card`: `[]` when not viewable),
+  // so this never needs its own check here.
+  const disciplineLabels = Array.isArray(card?.discipline_labels) ? card.discipline_labels : [];
+  const chipLabels = [
+    ...disciplineLabels,
+    ...facts,
+    ...(card?.open_to_partner ? ['Open to training together'] : []),
+  ];
   const place = card ? placeLine(card) : null;
   // Spec section 4: one shared-facts line, place first then the chosen
   // facts, only what the card actually carries.
   const sharedFactsLine = [place, chipLabels.length ? chipLabels.join(' · ') : null]
     .filter(Boolean).join(' · ');
+  // Task 3: "when the card carries the viewer counters (non-null), render
+  // the existing ProgressStrip for that person from those fields." The
+  // nine counters always travel together (contract: null unless the
+  // owner's share_consistency, active status and non-minor all hold), so
+  // one field is enough to test for the whole set's presence.
+  const othersCounters = !isMe && card?.c_sessions_week != null ? card : null;
   // Null when the viewer may not see the profile: an absent count is not
   // a zero, and "0 connections" about a private profile would be a claim
   // the card never made.
@@ -310,6 +325,12 @@ export default function CommunityProfileScreen({ navigation, route }) {
           counters={progress}
           onPress={() => navigation.navigate('CommunityBoard', { scope: 'following', window: 'week' })}
         />
+      ) : othersCounters ? (
+        // The strip for others shows only what the card carries (spec:
+        // "the strip for others shows only what the card carries").
+        // There is no per-person board scope to open, so this row is
+        // presentational only, unlike the own-profile strip above.
+        <ProgressStrip counters={othersCounters} />
       ) : null}
 
       <View style={styles.counts}>

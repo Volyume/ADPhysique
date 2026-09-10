@@ -34,7 +34,7 @@ import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, type, iconSize, circle } from '../styles/theme';
 import {
-  doorsFor, doorLine, doorZeroState, findPeople, hasProfile,
+  doorsFor, doorLine, doorZeroState, findPeople, hasProfile, COMMUNITY_DISCIPLINE_LABELS,
 } from '../lib/community';
 
 /** The glyph for each door, in the language the rest of Community uses. */
@@ -42,17 +42,21 @@ const GLYPH = {
   gym: 'business-outline',
   area: 'location-outline',
   like_me: 'barbell-outline',
+  // Task 8: same ribbon DimensionRow.js uses for a discipline cohort.
+  same_discipline: 'ribbon-outline',
   partners: 'people-outline',
   might_know: 'git-network-outline',
 };
 
 /**
  * Where a door that cannot work yet sends you. Gym and area are typed on
- * the profile editor.
+ * the profile editor; same_discipline too (task 8: the discipline picker
+ * lives on the same screen).
  */
 const REQUIREMENT_ROUTE = {
   gym: 'CommunityEditProfile',
   area: 'CommunityEditProfile',
+  same_discipline: 'CommunityEditProfile',
 };
 
 /**
@@ -80,6 +84,14 @@ export function lineFor(door, count) {
  */
 function doorTitle(door) {
   if (door.mode === 'gym' && door.available && door.key) return door.key;
+  // Task 8: same pattern as the gym door above -- the tile shows the
+  // caller's own chosen discipline ("Bodybuilding") rather than the
+  // generic door name, while the PAGE it opens keeps the generic label
+  // (CommunityPeopleListScreen's route param, unchanged) exactly the way
+  // the gym door's own page title stays "At my gym".
+  if (door.mode === 'same_discipline' && door.available && door.key) {
+    return COMMUNITY_DISCIPLINE_LABELS[door.key] ?? door.label;
+  }
   return door.label;
 }
 
@@ -140,7 +152,13 @@ export default function CommunityFindPeopleScreen({ navigation }) {
     const open = doorsFor(me).filter((d) => d.available);
     const results = await Promise.all(open.map(async (door) => {
       try {
-        const page = await findPeople(door.mode, { limit: 1 });
+        // Task 8: same_discipline rides 'like_me' with the discipline
+        // hard filter (see findPeople.js) -- only this door's own key
+        // ever travels as `discipline`, so no other door's count is
+        // narrowed by it.
+        const page = await findPeople(door.mode, {
+          limit: 1, discipline: door.mode === 'same_discipline' ? door.key : null,
+        });
         return [door.mode, { count: page.count, scope: page.label ?? null }];
       } catch (_e) {
         return [door.mode, null];

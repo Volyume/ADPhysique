@@ -39,6 +39,8 @@ jest.mock('../../lib/community', () => ({
   doorZeroState: jest.fn((door) => `${door.mode}-zero`),
   findPeople: jest.fn(),
   hasProfile: (me) => !!me?.profile?.handle,
+  // Task 8 (communities revamp 2026-09-10): the same_discipline door.
+  COMMUNITY_DISCIPLINE_LABELS: { bodybuilding: 'Bodybuilding', powerlifting: 'Powerlifting' },
 }));
 
 import {
@@ -165,6 +167,94 @@ describe('the five doors, mounted', () => {
 
     expect(navigation.navigate).toHaveBeenCalledWith('CommunityPeopleList', {
       mode: 'gym', key: 'PureGym Leeds', label: 'At my gym',
+    });
+  });
+
+  test('same_discipline: the tile shows the caller\'s own discipline label, not the generic door name', async () => {
+    const door = {
+      mode: 'same_discipline',
+      label: 'Same discipline',
+      subtitle: 'Lifters who train for the same thing',
+      available: true,
+      requirement: null,
+      key: 'bodybuilding',
+    };
+    doorsFor.mockReturnValue([door]);
+    findPeople.mockResolvedValue({ people: [], cursor: null, count: 4 });
+
+    const { tree } = await mount();
+    const list = findList(tree);
+    let rowTree;
+    await act(async () => { rowTree = create(list.props.renderItem({ item: list.props.data[0] })); });
+    expect(flattenText(rowTree.toJSON())).toContain('Bodybuilding');
+    expect(flattenText(rowTree.toJSON())).not.toContain('Same discipline');
+  });
+
+  test('same_discipline: the count read passes the door\'s own key as the discipline filter', async () => {
+    const door = {
+      mode: 'same_discipline',
+      label: 'Same discipline',
+      subtitle: 'Lifters who train for the same thing',
+      available: true,
+      requirement: null,
+      key: 'bodybuilding',
+    };
+    doorsFor.mockReturnValue([door, gymDoor()]);
+    findPeople.mockResolvedValue({ people: [], cursor: null, count: 4 });
+
+    await mount();
+
+    expect(findPeople).toHaveBeenCalledWith('same_discipline', { limit: 1, discipline: 'bodybuilding' });
+    // The gym door's own count is never narrowed by the discipline key.
+    expect(findPeople).toHaveBeenCalledWith('gym', { limit: 1, discipline: null });
+  });
+
+  test('same_discipline: unavailable sends the reader to Edit profile, the same as gym/area', async () => {
+    const door = {
+      mode: 'same_discipline',
+      label: 'Same discipline',
+      subtitle: 'Lifters who train for the same thing',
+      available: false,
+      requirement: 'Add a discipline to your profile to see people who train for the same thing',
+      key: null,
+    };
+    doorsFor.mockReturnValue([door]);
+
+    const { tree, navigation } = await mount();
+    const list = findList(tree);
+    let rowTree;
+    await act(async () => { rowTree = create(list.props.renderItem({ item: list.props.data[0] })); });
+    const card = rowTree.root.findAll(
+      (n) => typeof n.type === 'function' && 'onPress' in (n.props ?? {}) && n.props.onPress,
+    )[0];
+    await act(async () => { card.props.onPress(); });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityEditProfile');
+  });
+
+  test('same_discipline: available opens the scored list with its mode, key and generic label', async () => {
+    const door = {
+      mode: 'same_discipline',
+      label: 'Same discipline',
+      subtitle: 'Lifters who train for the same thing',
+      available: true,
+      requirement: null,
+      key: 'bodybuilding',
+    };
+    doorsFor.mockReturnValue([door]);
+    findPeople.mockResolvedValue({ people: [], cursor: null, count: 4 });
+
+    const { tree, navigation } = await mount();
+    const list = findList(tree);
+    let rowTree;
+    await act(async () => { rowTree = create(list.props.renderItem({ item: list.props.data[0] })); });
+    const card = rowTree.root.findAll(
+      (n) => typeof n.type === 'function' && 'onPress' in (n.props ?? {}) && n.props.onPress,
+    )[0];
+    await act(async () => { card.props.onPress(); });
+
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityPeopleList', {
+      mode: 'same_discipline', key: 'bodybuilding', label: 'Same discipline',
     });
   });
 

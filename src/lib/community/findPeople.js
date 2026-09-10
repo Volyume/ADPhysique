@@ -1,6 +1,7 @@
 /**
- * Find people: five doors and the scored lists behind them (discovery
- * blueprint sections 4, 5, 7, 8, 9; SD-23, SD-24, SD-27, SD-28).
+ * Find people: six doors and the scored lists behind them (discovery
+ * blueprint sections 4, 5, 7, 8, 9; SD-23, SD-24, SD-27, SD-28; task 8,
+ * communities revamp 2026-09-10, adds "Same discipline").
  *
  * Two rules run through the whole module.
  *
@@ -68,10 +69,22 @@ export const FIND_MODES = Object.freeze({
     requires: null,
     requirement: null,
   }),
+  // Task 8 (communities revamp 2026-09-10): a client-only door -- there is
+  // no server-side 'same_discipline' mode (community_find_people's _mode
+  // is still exactly the original five; see `findPeople` below), so this
+  // rides the general 'like_me' scoring with the new `_discipline`
+  // hard filter doing the actual narrowing (22-MIGRATION-170A-CONTRACT.md).
+  same_discipline: Object.freeze({
+    mode: 'same_discipline',
+    label: 'Same discipline',
+    subtitle: 'Lifters who train for the same thing',
+    requires: 'discipline_keys',
+    requirement: 'Add a discipline to your profile to see people who train for the same thing',
+  }),
 });
 
 export const FIND_MODE_ORDER = Object.freeze([
-  'gym', 'area', 'like_me', 'partners', 'might_know',
+  'gym', 'area', 'like_me', 'same_discipline', 'partners', 'might_know',
 ]);
 
 const FIND_MODE_SET = new Set(FIND_MODE_ORDER);
@@ -96,14 +109,25 @@ export function doorsFor(me) {
   return FIND_MODE_ORDER.map((mode) => {
     const door = FIND_MODES[mode];
     const value = requirementValue(me, door.requires);
-    const available = door.requires ? !!value : true;
+    // An array requirement (same_discipline's `discipline_keys`) needs at
+    // least one element: `!!value` alone is wrong here because an EMPTY
+    // array is still truthy in JavaScript, which would mark the door
+    // available for a profile that has chosen no discipline at all.
+    const available = door.requires
+      ? (Array.isArray(value) ? value.length > 0 : !!value)
+      : true;
     return {
       mode,
       label: door.label,
       subtitle: door.subtitle,
       available,
       requirement: available ? null : door.requirement,
-      key: door.requires && available ? value : null,
+      // The key is the single value a caller keys the door by (the
+      // gym/area door's own label; same_discipline's first, primary
+      // discipline -- the same "one canonical value even when more than
+      // one could apply" precedent the gym door already sets for a
+      // profile with other gyms too).
+      key: door.requires && available ? (Array.isArray(value) ? value[0] : value) : null,
     };
   });
 }
@@ -177,19 +201,43 @@ export function doorZeroState(door) {
  * given, so a caller that never passes one (every existing door) makes
  * the exact RPC call it always has.
  *
+ * `discipline` (task 8, `22-MIGRATION-170A-CONTRACT.md`): sent as
+ * `_discipline`, a HARD filter independent of `_mode`/`_filters` (the
+ * contract's own words: "combine freely with either"). The
+ * `same_discipline` door always passes its own key here; any other
+ * caller may pass one too, at their own risk of narrowing a door that
+ * was not built to expect it -- this module does not stop them, the same
+ * way `filters` never validates itself against a mode either.
+ *
  * @param {string} mode one of FIND_MODE_ORDER
- * @param {{cursor?: string|null, limit?: number, filters?: (object|null)}} [opts]
+ * @param {{cursor?: string|null, limit?: number, filters?: (object|null),
+ *   discipline?: (string|null)}} [opts]
  * @returns {Promise<{people: Array<{card: object, reasons: string[],
  *   score: number, fallback: boolean}>, cursor: (string|null),
  *   count: (number|null), count_truncated: boolean}>}
  * @throws {CommunityError} 'invalid_input' for an unknown mode.
  */
 export async function findPeople(mode, {
-  cursor = null, limit = DEFAULT_PAGE_SIZE, filters = null,
+  cursor = null, limit = DEFAULT_PAGE_SIZE, filters = null, discipline = null,
 } = {}) {
   if (!FIND_MODE_SET.has(mode)) throw new CommunityError('invalid_input');
-  const params = { _mode: mode, _cursor: cursor, _limit: limit };
+  // same_discipline is a client-only door (see FIND_MODES' own comment):
+  // community_find_people's _mode is still exactly the original five, so
+  // this rides 'like_me' server-side with the discipline hard filter
+  // doing the actual narrowing.
+  const rpcMode = mode === 'same_discipline' ? 'like_me' : mode;
+  const params = { _mode: rpcMode, _cursor: cursor, _limit: limit };
   if (filters) params._filters = filters;
+  // Discipline is a top-level hard filter, never nested in _filters
+  // server-side (the SQL's own comment on _discipline: "a first-class
+  // cohort door like gym/area, not a combinable _filters preference").
+  // PeopleFiltersSheet's own discipline chip still lives on
+  // `filters.discipline` (so the applied-chip row and clearing it work
+  // the same way every other filter does); it is promoted here to the
+  // one parameter the server actually reads. The explicit `discipline`
+  // option (the same_discipline door's own key) wins if both are given.
+  const chosenDiscipline = discipline || filters?.discipline || null;
+  if (chosenDiscipline) params._discipline = chosenDiscipline;
   const data = await callCommunity('community_find_people', params);
   const rows = Array.isArray(data?.people) ? data.people : [];
   return {
@@ -295,6 +343,11 @@ export function normaliseFilters(raw) {
   if (raw.goal) out.goal = raw.goal;
   if (raw.experience_band) out.experience_band = raw.experience_band;
   if (raw.age_band) out.age_band = raw.age_band;
+  // Task 8: the discipline chip in PeopleFiltersSheet. Carried on the
+  // same `filters` object as every other combinable choice for the UI's
+  // sake (the applied-chip row, clearing it); `findPeople` is what
+  // promotes it to the server's actual `_discipline` parameter.
+  if (raw.discipline) out.discipline = raw.discipline;
   return Object.keys(out).length ? out : null;
 }
 
@@ -310,7 +363,8 @@ export function normaliseFilters(raw) {
  *
  * @param {object|null} filters normalised filters, as sent to the server
  * @param {{styles?: object, goals?: object, days?: object,
- *   timeBands?: object, experience?: object, ageBand?: object}} [labels]
+ *   timeBands?: object, experience?: object, ageBand?: object,
+ *   disciplines?: object}} [labels]
  * @returns {Array<{key: string, label: string}>}
  */
 export function filterChips(filters, labels = {}) {
@@ -341,6 +395,9 @@ export function filterChips(filters, labels = {}) {
   }
   if (filters.age_band && labels.ageBand?.[filters.age_band]) {
     chips.push({ key: 'age_band', label: labels.ageBand[filters.age_band] });
+  }
+  if (filters.discipline && labels.disciplines?.[filters.discipline]) {
+    chips.push({ key: 'discipline', label: labels.disciplines[filters.discipline] });
   }
   return chips;
 }
@@ -378,6 +435,8 @@ export function removeFilterChip(filters, key) {
     delete next.experience_band;
   } else if (key === 'age_band') {
     delete next.age_band;
+  } else if (key === 'discipline') {
+    delete next.discipline;
   }
   return Object.keys(next).length ? next : null;
 }

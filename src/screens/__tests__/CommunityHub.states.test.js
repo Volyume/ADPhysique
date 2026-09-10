@@ -53,19 +53,17 @@ jest.mock('../../lib/community', () => ({
   hasUnseen: () => false,
   hasUnreadMessages: () => false,
   reactToPost: jest.fn(() => Promise.resolve()),
-  COMMUNITY_DIMENSION_MIN_FOR_HUB: 3,
-  // PEOPLE (spec section 2 item 3): the cohorts the Hub now reads
-  // directly, independent of the feed segment (there is no segment any
-  // more -- this is read whenever the reader is joined).
-  myDimensions: jest.fn(() => Promise.resolve({ dimensions: [] })),
-  // The gym board call (already on the Hub before this revamp; this
-  // suite resolves it empty so it never affects the states this file is
-  // actually about, covered directly in boards.test.js).
-  loadBoard: jest.fn(() => Promise.resolve({
-    rows: [], you: null, count: 0, thresholdMet: true, cursor: null,
-  })),
+  // PEOPLE and GROUPS (communities revamp 2026-09-10, task 5): one call,
+  // `community_hub_summary`, replacing the old `myDimensions` +
+  // `loadBoard` + `listMyGroups` trio this Hub used to make.
+  loadHubSummary: jest.fn(() => Promise.resolve({ cohorts: [], groups: [] })),
   metricLabel: (window, n) => (Number(n) === 1 ? '1 session' : `${Number(n) || 0} sessions`),
   daysLabel: (keys) => (Array.isArray(keys) ? keys.join(', ') : ''),
+  // Lead ruling: one wording across the app -- mirrors the shipped
+  // TP_AGE_BANDS labels exactly (trainingProfile.js), not a second copy.
+  TP_AGE_BANDS: {
+    '18_24': '18 to 24', '25_34': '25 to 34', '35_44': '35 to 44', '45_54': '45 to 54', '55_plus': '55 or over',
+  },
   // The You line's own device counters (lead ruling 2026-09-10: gated
   // ONLY on `consistencyGateState`'s `gated` field -- calm mode or an
   // open ED flag -- never on the "Share my consistency" toggle). Default
@@ -74,8 +72,6 @@ jest.mock('../../lib/community', () => ({
   consistencyGateState: jest.fn(() => Promise.resolve({ allowed: false, gated: false, isMinor: false })),
   loadConsistency: jest.fn(() => Promise.resolve(null)),
   publishConsistencyOnForeground: jest.fn(() => Promise.resolve({ sent: false, reason: null, payload: null })),
-  // GROUPS (spec section 2 item 4).
-  listMyGroups: jest.fn(() => Promise.resolve([])),
   // Moderated-person notice (40-GAP-CLOSURE.md §1): best-effort, covered
   // directly in profile.moderatedStatus.test.js; resolved to the neutral
   // shape here so it never affects the states this file is about.
@@ -85,7 +81,7 @@ jest.mock('../../lib/community', () => ({
 }));
 
 import {
-  loadHub, myDimensions, listMyGroups, reactToPost, consistencyGateState, loadConsistency,
+  loadHub, loadHubSummary, reactToPost, consistencyGateState, loadConsistency,
 } from '../../lib/community';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityHubScreen from '../CommunityHubScreen';
@@ -149,9 +145,20 @@ function post(over = {}) {
   };
 }
 
+/** A community_hub_summary group row (task 5: {id, name, access,
+ * member_count, trained_today_count, sample}), distinct from the old
+ * `community_group_list_mine` shape this replaced on the Hub. */
 function group(over = {}) {
   return {
-    id: 'g1', name: 'Iron Collective', access: 'open', memberCount: 8, ...over,
+    id: 'g1', name: 'Iron Collective', access: 'open', member_count: 8, trained_today_count: 3, sample: [], ...over,
+  };
+}
+
+/** A community_hub_summary cohort row ({kind, key, label, member_count,
+ * trained_today_count, sample}). */
+function cohort(over = {}) {
+  return {
+    kind: 'gym', key: 'g1', label: 'PureGym Leeds', member_count: 23, trained_today_count: 4, sample: [], ...over,
   };
 }
 
@@ -209,8 +216,7 @@ async function render(params = {}) {
 beforeEach(() => {
   jest.clearAllMocks();
   loadHub.mockResolvedValue(emptyHub());
-  myDimensions.mockResolvedValue({ dimensions: [] });
-  listMyGroups.mockResolvedValue([]);
+  loadHubSummary.mockResolvedValue({ cohorts: [], groups: [] });
   consistencyGateState.mockResolvedValue({ allowed: false, gated: false, isMinor: false });
   loadConsistency.mockResolvedValue(null);
   useCommunityMe.mockReturnValue({ me: { profile: null }, loading: false, error: null, refresh: jest.fn() });
@@ -348,29 +354,7 @@ describe('the You row\'s ED gate: independent of the sharing toggle, gated only 
   });
 });
 
-describe('state 3: joined, PEOPLE cohorts from community_dimensions_me', () => {
-  test('dimensions at or above the hub threshold render, below it never does', async () => {
-    useCommunityMe.mockReturnValue({
-      me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
-    });
-    loadHub.mockResolvedValue(emptyHub());
-    myDimensions.mockResolvedValue({
-      dimensions: [
-        { kind: 'style', key: 'kettlebell', label: 'Kettlebell lifters', count: 6 },
-        // Below COMMUNITY_DIMENSION_MIN_FOR_HUB: never surfaced on the hub.
-        { kind: 'area', key: 'leeds', label: 'Lifters in Leeds', count: 2 },
-      ],
-    });
-
-    const { text } = await render();
-
-    expect(text).toContain('PEOPLE');
-    expect(text).toContain('Kettlebell lifters');
-    expect(text).not.toContain('Lifters in Leeds');
-  });
-});
-
-describe('state 4: joined, GROUPS', () => {
+describe('state 3: joined, PEOPLE cohorts from community_hub_summary (task 5)', () => {
   beforeEach(() => {
     useCommunityMe.mockReturnValue({
       me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
@@ -378,16 +362,90 @@ describe('state 4: joined, GROUPS', () => {
     loadHub.mockResolvedValue(emptyHub());
   });
 
-  test('groups render as GroupRows with the member count and access line', async () => {
-    listMyGroups.mockResolvedValue([{ group: group(), role: 'member', state: 'member' }]);
+  test('style is never a Hub row (Find people is where it lives)', async () => {
+    loadHubSummary.mockResolvedValue({
+      cohorts: [
+        cohort({ kind: 'style', key: 'kettlebell', label: 'Kettlebell lifters' }),
+        cohort({ kind: 'gym', key: 'g1', label: 'PureGym Leeds' }),
+      ],
+      groups: [],
+    });
+
+    const { text } = await render();
+
+    expect(text).toContain('PEOPLE');
+    expect(text).toContain('PureGym Leeds');
+    expect(text).not.toContain('Kettlebell lifters');
+  });
+
+  test('row order: gym, each discipline, age group, area', async () => {
+    loadHubSummary.mockResolvedValue({
+      cohorts: [
+        // Deliberately out of order, so the assertion proves the Hub
+        // re-orders rather than trusting the server's own array order.
+        cohort({ kind: 'area', key: 'leeds', label: 'Lifters in Leeds' }),
+        cohort({ kind: 'discipline', key: 'bodybuilding', label: 'Bodybuilding' }),
+        cohort({ kind: 'age_band', key: 'g1', label: '25_34' }),
+        cohort({ kind: 'gym', key: 'g1', label: 'PureGym Leeds' }),
+        cohort({ kind: 'discipline', key: 'powerlifting', label: 'Powerlifting' }),
+      ],
+      groups: [],
+    });
+
+    const { partTrees } = await render();
+    const titles = partTrees[0].root.findAll(
+      (n) => typeof n.type === 'function' && typeof n.props?.title === 'string' && Array.isArray(n.props?.people),
+    ).map((n) => n.props.title);
+
+    expect(titles).toEqual(['PureGym Leeds', 'Bodybuilding', 'Powerlifting', '25 to 34', 'Lifters in Leeds']);
+  });
+
+  test('the line and sample stack come straight from the summary row (task 5: "N trained today · M members")', async () => {
+    loadHubSummary.mockResolvedValue({
+      cohorts: [cohort({
+        kind: 'gym', key: 'g1', label: 'PureGym Leeds', member_count: 23, trained_today_count: 4,
+        sample: [{ user_id: 'u3', display_name: 'Priya K', avatar_preset: null }],
+      })],
+      groups: [],
+    });
+
+    const { text } = await render();
+    expect(text).toContain('4 trained today · 23 members');
+  });
+
+  test('an age_band row maps the raw key through TP_AGE_BANDS for its title', async () => {
+    loadHubSummary.mockResolvedValue({
+      cohorts: [cohort({ kind: 'age_band', key: '25_34', label: '25_34', member_count: 5, trained_today_count: 1 })],
+      groups: [],
+    });
+
+    const { text } = await render();
+    expect(text).toContain('25 to 34');
+    expect(text).not.toContain('25_34');
+  });
+});
+
+describe('state 4: joined, GROUPS (from community_hub_summary, task 5)', () => {
+  beforeEach(() => {
+    useCommunityMe.mockReturnValue({
+      me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
+    });
+    loadHub.mockResolvedValue(emptyHub());
+  });
+
+  test('groups render as GroupRows with the trained-today line and the sample stack', async () => {
+    loadHubSummary.mockResolvedValue({
+      cohorts: [],
+      groups: [group({ member_count: 8, trained_today_count: 3 })],
+    });
     const { text } = await render();
     expect(text).toContain('GROUPS');
     expect(text).toContain('Iron Collective');
-    expect(text).toContain('8 members · open');
+    expect(text).toContain('3 trained today · 8 members');
   });
 
   test('with no groups, the eyebrow keeps its trailing action and one quiet line explains what a group is for', async () => {
-    listMyGroups.mockResolvedValue([]);
+    loadHubSummary.mockResolvedValue({ cohorts: [], groups: [] });
     const { text } = await render();
     expect(text).toContain('GROUPS');
     expect(text).toContain('New group');

@@ -59,7 +59,7 @@ import {
   findPeople, doorsFor, doorZeroState, profileUrl,
   filterChips, removeFilterChip, peopleCountLine,
   TP_DAYS, TP_TIME_BANDS, TP_EXPERIENCE_BANDS, TP_AGE_BANDS,
-  COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS,
+  COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS, COMMUNITY_DISCIPLINE_LABELS,
 } from '../lib/community';
 
 const PAGE = 20;
@@ -88,6 +88,7 @@ const FILTER_LABELS = Object.freeze({
   timeBands: TP_TIME_BANDS,
   experience: TP_EXPERIENCE_BANDS,
   ageBand: TP_AGE_BANDS,
+  disciplines: COMMUNITY_DISCIPLINE_LABELS,
 });
 
 const FALLBACK_DIVIDER = Object.freeze({ type: 'divider', key: 'fallback-divider' });
@@ -131,7 +132,13 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
   const [count, setCount] = useState(null);
   const [countTruncated, setCountTruncated] = useState(false);
 
-  const read = useCallback((opts) => findPeople(mode, { ...opts, filters }), [mode, filters]);
+  // Task 8: the same_discipline door has no server-side mode of its own
+  // (findPeople.js rides it on 'like_me'); the discipline it narrows by
+  // is this door's own `key`, arriving the same generic way every other
+  // door's key already does (`CommunityFindPeopleScreen`'s `openDoor`).
+  const read = useCallback((opts) => findPeople(mode, {
+    ...opts, filters, discipline: mode === 'same_discipline' ? key : null,
+  }), [mode, filters, key]);
 
   const load = useCallback(async () => {
     setLoading(true);

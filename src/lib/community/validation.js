@@ -120,6 +120,78 @@ export const COMMUNITY_GOALS = Object.freeze({
   returning: 'Returning to training',
 });
 
+/**
+ * The discipline taxonomy (communities revamp 2026-09-10, `docs/
+ * communities-revamp-2026-09-10/20-BLUEPRINT.md` section 12, Q1/Q1b;
+ * `22-MIGRATION-170A-CONTRACT.md`). Self-declared identity, up to three per
+ * profile, never inferred. Keys and order are pinned against the SQL
+ * taxonomy (`_community_discipline_key_ok` in
+ * `supabase/migrate_170_community_connection.sql`) by
+ * `community.discipline.guard.test.js`; change this list only alongside
+ * that migration.
+ */
+export const COMMUNITY_DISCIPLINE_KEYS = Object.freeze([
+  'bodybuilding', 'mens_physique', 'classic_physique', 'womens_physique',
+  'figure', 'bikini', 'wellness', 'powerlifting', 'olympic_weightlifting',
+  'strongman', 'crossfit_functional', 'calisthenics', 'hybrid',
+  'sport_sc', 'general_strength',
+]);
+
+/** British English labels, mirroring `_community_discipline_label` in the
+ * SQL exactly (server-authoritative; this is the client's read-only copy
+ * of the same closed set, never a second source of truth to drift from
+ * it). */
+export const COMMUNITY_DISCIPLINE_LABELS = Object.freeze({
+  bodybuilding: 'Bodybuilding',
+  mens_physique: "Men's physique",
+  classic_physique: 'Classic physique',
+  womens_physique: "Women's physique",
+  figure: 'Figure',
+  bikini: 'Bikini',
+  wellness: 'Wellness',
+  powerlifting: 'Powerlifting',
+  olympic_weightlifting: 'Olympic weightlifting',
+  strongman: 'Strongman and strongwoman',
+  crossfit_functional: 'CrossFit and functional fitness',
+  calisthenics: 'Calisthenics',
+  hybrid: 'Hybrid (lifting and endurance)',
+  sport_sc: 'Sport strength and conditioning',
+  general_strength: 'General strength and fitness',
+});
+
+/**
+ * The seven physique-division keys (blueprint section 8's safety
+ * tightening R1 and the Q1b calm-mode / open-ED-flag withhold set;
+ * `22-MIGRATION-170A-CONTRACT.md` "Physique-division keys... SEVEN" --
+ * that contract note is the authoritative count, superseding the
+ * blueprint's own prose which still says "the six" because it was
+ * written before Q1 added Women's physique). These carry the standing
+ * Beat UK signpost on every cohort page, and the client withholds a
+ * viewer's OWN page for any of these seven under calm mode or an open ED
+ * flag.
+ */
+export const PHYSIQUE_DISCIPLINE_KEYS = Object.freeze(
+  COMMUNITY_DISCIPLINE_KEYS.slice(0, 7),
+);
+
+export const MAX_DISCIPLINES_PER_PROFILE = 3;
+
+/** Up to three known discipline keys, order preserved, duplicates
+ * dropped. Mirrors `cleanStyles` exactly: the same shape of closed-set
+ * cap the server's own `_community_discipline_key_ok` enforces again. */
+export function cleanDisciplines(disciplines) {
+  if (!Array.isArray(disciplines)) return [];
+  const seen = new Set();
+  const out = [];
+  for (const key of disciplines) {
+    if (typeof key !== 'string' || !COMMUNITY_DISCIPLINE_LABELS[key] || seen.has(key)) continue;
+    seen.add(key);
+    out.push(key);
+    if (out.length >= MAX_DISCIPLINES_PER_PROFILE) break;
+  }
+  return out;
+}
+
 export const COMMUNITY_SETTINGS = Object.freeze({
   commercial_gym: 'Commercial gym',
   home_gym: 'Home gym',

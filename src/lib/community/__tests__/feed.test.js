@@ -29,9 +29,13 @@
 
 jest.mock('../transport', () => ({ callCommunity: jest.fn() }));
 jest.mock('../profile', () => ({ currentUserId: () => 'u1' }));
+jest.mock('../../dayKey', () => ({ localDayKey: jest.fn(() => '2026-09-10') }));
 
 const { callCommunity } = require('../transport');
-const { loadHub, loadFeed, listComments, clearCachedHub } = require('../feed');
+const {
+  loadHub, loadFeed, listComments, clearCachedHub,
+  myDimensions, loadHubSummary, loadDimensionRecent,
+} = require('../feed');
 const { loadActivity } = require('../activity');
 
 function refusal(code) {
@@ -188,5 +192,66 @@ describe('paging Discover', () => {
     expect(callCommunity.mock.calls.map(([name]) => name)).toEqual(['community_discover_posts']);
     expect(page.posts).toHaveLength(1);
     expect(page.cursor).toBe('next');
+  });
+});
+
+// ─── Communities revamp 2026-09-10 (task 4): _today on
+// community_dimensions_me, community_hub_summary, community_dimension_
+// recent -- all through the existing transport and error handling. ─────
+describe('myDimensions sends the caller\'s own local day (22-MIGRATION-170A-CONTRACT.md, lead ruling 1)', () => {
+  test('_today is the client\'s own localDayKey(), never left for the server to guess', async () => {
+    server({ community_dimensions_me: { dimensions: [{ kind: 'gym', key: 'g1' }] } });
+
+    const page = await myDimensions();
+
+    expect(callCommunity).toHaveBeenCalledWith('community_dimensions_me', { _today: '2026-09-10' });
+    expect(page.dimensions).toEqual([{ kind: 'gym', key: 'g1' }]);
+  });
+});
+
+describe('loadHubSummary (community_hub_summary)', () => {
+  test('answers cohorts and groups, sending the same _today', async () => {
+    server({
+      community_hub_summary: {
+        cohorts: [{ kind: 'gym', key: 'g1', label: 'PureGym Leeds', member_count: 4, trained_today_count: 1, sample: [] }],
+        groups: [{ id: 'grp1', name: 'Leeds crew', access: 'invite', member_count: 3, trained_today_count: 1, sample: [] }],
+      },
+    });
+
+    const summary = await loadHubSummary();
+
+    expect(callCommunity).toHaveBeenCalledWith('community_hub_summary', { _today: '2026-09-10' });
+    expect(summary.cohorts).toHaveLength(1);
+    expect(summary.groups).toHaveLength(1);
+  });
+
+  test('a payload of the wrong shape leaves arrays behind, never undefined', async () => {
+    server({ community_hub_summary: null });
+    const summary = await loadHubSummary();
+    expect(summary).toEqual({ cohorts: [], groups: [] });
+  });
+});
+
+describe('loadDimensionRecent (community_dimension_recent)', () => {
+  test('sends the kind, key, cursor and limit, and answers the same shape community_feed does', async () => {
+    server({ community_dimension_recent: POST_PAGE });
+
+    const page = await loadDimensionRecent('discipline', 'bodybuilding', { cursor: 'c0', limit: 10 });
+
+    expect(callCommunity).toHaveBeenCalledWith('community_dimension_recent', {
+      _kind: 'discipline', _key: 'bodybuilding', _cursor: 'c0', _limit: 10,
+    });
+    expect(page.posts).toEqual(POST_PAGE.posts);
+    expect(page.cursor).toBe(POST_PAGE.cursor);
+  });
+
+  test('cursor and limit default the same way every other paged reader here does', async () => {
+    server({ community_dimension_recent: { posts: [], cursor: null } });
+
+    await loadDimensionRecent('age_band', '25_34');
+
+    expect(callCommunity).toHaveBeenCalledWith('community_dimension_recent', {
+      _kind: 'age_band', _key: '25_34', _cursor: null, _limit: 20,
+    });
   });
 });

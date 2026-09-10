@@ -135,15 +135,24 @@ describe('client RPC arguments match the migration signatures', () => {
   // later signatures; the latest declaration of a name wins below.
   const MIGRATION_164 = path.join(ROOT, 'supabase/migrate_164_community_gap_closure.sql');
   const MIGRATION_165 = path.join(ROOT, 'supabase/migrate_165_community_boards_groups.sql');
+  // migrate_170 (communities revamp 2026-09-10, task 2/4/8): discipline and
+  // age_band cohorts, `community_hub_summary`, `community_dimension_
+  // recent`, and the `_today`-taking re-issue of `community_dimensions_me`
+  // (`22-MIGRATION-170A-CONTRACT.md`). Written in a separate, CONCURRENT
+  // lane -- folded in last, the same "latest declaration wins" way 164/165
+  // are, so its re-issued signatures correctly override the earlier 0-arg
+  // ones rather than being reported as a phantom mismatch.
+  const MIGRATION_170 = path.join(ROOT, 'supabase/migrate_170_community_connection.sql');
   const sql160 = fs.existsSync(MIGRATION) ? fs.readFileSync(MIGRATION, 'utf8') : null;
   const sql161 = fs.existsSync(MIGRATION_161) ? fs.readFileSync(MIGRATION_161, 'utf8') : null;
   const sql162 = fs.existsSync(MIGRATION_162) ? fs.readFileSync(MIGRATION_162, 'utf8') : null;
   const sql163 = fs.existsSync(MIGRATION_163) ? fs.readFileSync(MIGRATION_163, 'utf8') : null;
   const sql164 = fs.existsSync(MIGRATION_164) ? fs.readFileSync(MIGRATION_164, 'utf8') : null;
   const sql165 = fs.existsSync(MIGRATION_165) ? fs.readFileSync(MIGRATION_165, 'utf8') : null;
-  const sql = [sql160, sql161, sql162, sql163, sql164, sql165].every((s2) => s2 === null)
+  const sql170 = fs.existsSync(MIGRATION_170) ? fs.readFileSync(MIGRATION_170, 'utf8') : null;
+  const sql = [sql160, sql161, sql162, sql163, sql164, sql165, sql170].every((s2) => s2 === null)
     ? null
-    : `${sql160 ?? ''}\n${sql161 ?? ''}\n${sql162 ?? ''}\n${sql163 ?? ''}\n${sql164 ?? ''}\n${sql165 ?? ''}`;
+    : `${sql160 ?? ''}\n${sql161 ?? ''}\n${sql162 ?? ''}\n${sql163 ?? ''}\n${sql164 ?? ''}\n${sql165 ?? ''}\n${sql170 ?? ''}`;
 
   /**
    * The RPCs migrate_161 must declare (blueprint section 11), listed here
@@ -195,6 +204,7 @@ describe('client RPC arguments match the migration signatures', () => {
   const NAMES_161 = sql161 ? namesIn(sql161) : new Set();
   const NAMES_162 = sql162 ? namesIn(sql162) : new Set();
   const NAMES_163 = sql163 ? namesIn(sql163) : new Set();
+  const NAMES_170 = sql170 ? namesIn(sql170) : new Set();
 
   /** name -> Set of declared parameter names, from the SQL. */
   function declaredParams() {
@@ -312,7 +322,7 @@ describe('client RPC arguments match the migration signatures', () => {
     // nobody is writing a function for.
     const called = [...new Set(callSites().map((s2) => s2.name))];
     const unaccounted = called.filter((name) => !NAMES_160.has(name) && !NAMES_161.has(name)
-      && !NAMES_162.has(name) && !NAMES_163.has(name) && !RPCS_161.includes(name));
+      && !NAMES_162.has(name) && !NAMES_163.has(name) && !NAMES_170.has(name) && !RPCS_161.includes(name));
     expect({ unaccounted }).toEqual({ unaccounted: [] });
   });
 });

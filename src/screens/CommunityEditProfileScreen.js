@@ -52,7 +52,8 @@ import { get as getGym, setGyms, venueLine } from '../lib/gyms';
 import {
   upsertProfile, leaveCommunity, COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS,
   COMMUNITY_SETTINGS, MAX_STYLES_PER_PROFILE, DISPLAY_NAME_MAX, BIO_MAX,
-  setPlace,
+  setPlace, COMMUNITY_DISCIPLINE_KEYS, COMMUNITY_DISCIPLINE_LABELS,
+  MAX_DISCIPLINES_PER_PROFILE,
 } from '../lib/community';
 
 const MAX_OTHER_GYMS = 3;
@@ -76,6 +77,10 @@ export default function CommunityEditProfileScreen({ navigation }) {
   const [bio, setBio] = useState('');
   const [preset, setPreset] = useState(AVATAR_PRESETS[0].key);
   const [styleKeys, setStyleKeys] = useState([]);
+  // Discipline picker (communities revamp 2026-09-10, blueprint section 3,
+  // 9's Join step; same field as CommunityJoinScreen's picker, edited
+  // here after the fact): optional, up to three, self-chosen.
+  const [disciplineKeys, setDisciplineKeys] = useState([]);
   const [goal, setGoal] = useState(null);
   const [setting, setSetting] = useState(null);
   // 30-IMPLEMENTATION.md 1.1 B / 1.2: the old "Area" free-text box is
@@ -117,6 +122,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
     setBio(profile.bio ?? '');
     setPreset(profile.avatar_preset ?? AVATAR_PRESETS[0].key);
     setStyleKeys(Array.isArray(profile.styles) ? profile.styles : []);
+    setDisciplineKeys(Array.isArray(profile.discipline_keys) ? profile.discipline_keys : []);
     setGoal(profile.goal ?? null);
     setSetting(profile.setting ?? null);
     setPlaceLabel(profile.place_label ?? profile.area_label ?? null);
@@ -177,6 +183,14 @@ export default function CommunityEditProfileScreen({ navigation }) {
     });
   }
 
+  function toggleDiscipline(key) {
+    setDisciplineKeys((prev) => {
+      if (prev.includes(key)) return prev.filter((k) => k !== key);
+      if (prev.length >= MAX_DISCIPLINES_PER_PROFILE) return prev;
+      return [...prev, key];
+    });
+  }
+
   const save = useCallback(async () => {
     if (busy) return;
     setBusy(true);
@@ -186,6 +200,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
         bio: bio.trim() || null,
         avatar_preset: preset,
         styles: styleKeys,
+        discipline_keys: disciplineKeys,
         goal,
         setting,
         visibility,
@@ -209,7 +224,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
       setBusy(false);
     }
   }, [
-    busy, displayName, bio, preset, styleKeys, goal, setting, visibility,
+    busy, displayName, bio, preset, styleKeys, disciplineKeys, goal, setting, visibility,
     primaryGym, otherGyms, placeDirty, placeQuery, refresh, toast, navigation,
   ]);
 
@@ -433,6 +448,24 @@ export default function CommunityEditProfileScreen({ navigation }) {
               />
             )
           ) : null}
+        </View>
+
+        <View style={styles.field}>
+          <SectionLabel>What do you train for?</SectionLabel>
+          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+            Optional. Helps people like you find you.
+          </Text>
+          <View style={styles.chips} accessibilityLabel="What do you train for?">
+            {COMMUNITY_DISCIPLINE_KEYS.map((key) => (
+              <Chip
+                key={key}
+                label={COMMUNITY_DISCIPLINE_LABELS[key]}
+                selected={disciplineKeys.includes(key)}
+                accessibilityRole="checkbox"
+                onPress={() => toggleDiscipline(key)}
+              />
+            ))}
+          </View>
         </View>
 
         <Card

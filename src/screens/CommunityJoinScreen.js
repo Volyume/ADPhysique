@@ -52,6 +52,7 @@ import {
   COMMUNITY_RULES_VERSION, currentUserId,
   TP_DEFAULT_SHARE, loadTrainingProfile, readShareSettings, writeShareSettings,
   syncTrainingProfile, publishConsistency, shareablePayload, previewLine,
+  COMMUNITY_DISCIPLINE_KEYS, COMMUNITY_DISCIPLINE_LABELS, MAX_DISCIPLINES_PER_PROFILE,
 } from '../lib/community';
 import { bandRows, NOT_ENOUGH_LINE, NOTHING_SHARED_LINE } from './CommunityTrainingProfileScreen';
 
@@ -105,6 +106,18 @@ export default function CommunityJoinScreen({ navigation, route }) {
   const [gymStep, setGymStep] = useState('picking');
   const [otherGyms, setOtherGyms] = useState([]);
   const [addingOtherGym, setAddingOtherGym] = useState(false);
+  // Discipline picker (communities revamp 2026-09-10, blueprint section 3,
+  // 9's Join step): optional, up to three, self-chosen, never a blocker
+  // on creating the profile -- the same "optional, capped" pattern the
+  // training styles picker on Edit profile already uses.
+  const [disciplineKeys, setDisciplineKeys] = useState([]);
+  function toggleDiscipline(key) {
+    setDisciplineKeys((prev) => {
+      if (prev.includes(key)) return prev.filter((k) => k !== key);
+      if (prev.length >= MAX_DISCIPLINES_PER_PROFILE) return prev;
+      return [...prev, key];
+    });
+  }
   // Community product audit 2026-09-07 (gym finder brief): every tapped
   // gym row opens GymDetailSheet before it is ever selected, whichever of
   // the two pickers below it came from; `pendingGym.commit` is the ONE
@@ -217,6 +230,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
         display_name: displayName.trim(),
         avatar_preset: preset,
         visibility,
+        discipline_keys: disciplineKeys,
         // Passed explicitly as well as by the client library: creating the
         // profile IS the consent record, so the version being accepted is
         // stated at the call site rather than only inside the transport.
@@ -247,7 +261,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
     }
   }, [
     canCreate, handle, displayName, preset, visibility, next, navigation, refresh, toast,
-    uid, primaryGym, otherGyms, tpShare,
+    uid, primaryGym, otherGyms, tpShare, disciplineKeys,
   ]);
 
   return (
@@ -413,6 +427,24 @@ export default function CommunityJoinScreen({ navigation, route }) {
               ) : null}
             </>
           )}
+        </View>
+
+        <View style={styles.field}>
+          <SectionLabel>What do you train for?</SectionLabel>
+          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+            Optional. Helps people like you find you.
+          </Text>
+          <View style={styles.chipRow} accessibilityLabel="What do you train for?">
+            {COMMUNITY_DISCIPLINE_KEYS.map((key) => (
+              <Chip
+                key={key}
+                label={COMMUNITY_DISCIPLINE_LABELS[key]}
+                selected={disciplineKeys.includes(key)}
+                accessibilityRole="checkbox"
+                onPress={() => toggleDiscipline(key)}
+              />
+            ))}
+          </View>
         </View>
 
         <View style={styles.field}>

@@ -68,6 +68,8 @@ jest.mock('../../lib/community', () => {
     peopleCountLine: actual.peopleCountLine,
     TP_DAYS: {}, TP_TIME_BANDS: {}, TP_EXPERIENCE_BANDS: {}, TP_AGE_BANDS: {},
     COMMUNITY_STYLE_KEYS: {}, COMMUNITY_GOALS: {},
+    // Communities revamp 2026-09-10, task 8.
+    COMMUNITY_DISCIPLINE_LABELS: { bodybuilding: 'Bodybuilding' },
   };
 });
 
@@ -179,7 +181,11 @@ describe('the filter control', () => {
 describe('applying and removing a filter', () => {
   test('every existing door call starts with no _filters (filters defaults null)', async () => {
     await mount({ mode: 'gym', label: 'At my gym' });
-    expect(findPeople).toHaveBeenCalledWith('gym', { limit: 20, filters: null });
+    // Task 8: `discipline` also travels now, null for every door but
+    // same_discipline (own describe block below) -- see the `read`
+    // callback's own comment for why it is always present, never
+    // conditionally omitted like `filters`.
+    expect(findPeople).toHaveBeenCalledWith('gym', { limit: 20, filters: null, discipline: null });
   });
 
   test('applying a filter re-reads with it, and shows it as a removable chip', async () => {
@@ -187,7 +193,9 @@ describe('applying and removing a filter', () => {
     await press(tree, 'Filters');
     await press(tree, 'apply-gym-filter');
 
-    expect(findPeople).toHaveBeenLastCalledWith('like_me', { limit: 20, filters: { scope: 'gym' } });
+    expect(findPeople).toHaveBeenLastCalledWith('like_me', {
+      limit: 20, filters: { scope: 'gym' }, discipline: null,
+    });
     expect(flattenText(renderHeader(tree).toJSON())).toContain('My gym');
   });
 
@@ -204,7 +212,23 @@ describe('applying and removing a filter', () => {
     await act(async () => { removeChip.props.onPress(); });
     await flush();
 
-    expect(findPeople).toHaveBeenLastCalledWith('like_me', { limit: 20, filters: null });
+    expect(findPeople).toHaveBeenLastCalledWith('like_me', { limit: 20, filters: null, discipline: null });
+  });
+});
+
+// ─── Communities revamp 2026-09-10 (task 8): the same_discipline door
+// reads through this exact same screen, `key` promoted to `discipline`. ──
+describe('the same_discipline door', () => {
+  test('the route\'s own key travels as the discipline filter, not inside filters', async () => {
+    await mount({ mode: 'same_discipline', key: 'bodybuilding', label: 'Same discipline' });
+    expect(findPeople).toHaveBeenCalledWith('same_discipline', {
+      limit: 20, filters: null, discipline: 'bodybuilding',
+    });
+  });
+
+  test('every other door never sends a discipline, even when the route happens to carry a key', async () => {
+    await mount({ mode: 'gym', key: 'PureGym Leeds', label: 'At my gym' });
+    expect(findPeople).toHaveBeenCalledWith('gym', { limit: 20, filters: null, discipline: null });
   });
 });
 
