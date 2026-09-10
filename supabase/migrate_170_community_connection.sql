@@ -112,6 +112,74 @@
 --                        deleted whole-row, taking `discipline_keys` with
 --                        it.
 --
+--                     REVIEWER PASS 2026-09-10 (hostile security and
+--                     correctness review of this file, before any
+--                     application). Nine changes, every one a tightening or
+--                     a truth correction, each marked `-- reviewer
+--                     2026-09-10:` at its site:
+--                       1. `_community_cohort_stats` states
+--                          `share_consistency = true` on the trained-today
+--                          count AND on the sample's trained_today flag
+--                          (was correct only by side effect of migrate_165
+--                          nulling the c_* columns).
+--                       2. `community_hub_summary`'s group rows: the same
+--                          share_consistency statement, blocked pairs
+--                          excluded from the figure AND the sample, and
+--                          `member_count` computed on the same predicate
+--                          instead of `community_groups.member_count`,
+--                          which counts minors, suspended and restricted
+--                          members.
+--                       3. The four new `community_board` scopes are ANDed
+--                          with `_community_can_view`: a scoped board
+--                          otherwise discloses the caller's area /
+--                          discipline / age band membership for a profile
+--                          whose card withholds exactly those fields.
+--                       4. `community_upsert_profile` refuses a
+--                          `discipline_keys` value that is present but not
+--                          an array, instead of silently erasing the
+--                          stored keys.
+--                       5. `community_dimensions_me` gets the house
+--                          120/hour rail (it now runs the cohort helper up
+--                          to eight times per call and had none).
+--                       6. New `community_profiles_tp_age_band_idx`: the
+--                          only new cohort predicate with no index.
+--                       7. The GIN index comment now states honestly that
+--                          no predicate in this file is in a GIN-usable
+--                          form. Lead ruling 4, 2026-09-10: discipline
+--                          predicates use `= ANY` inside an OR chain, so
+--                          the GIN index is not used today; accepted at
+--                          current profile counts; review trigger: profile
+--                          count above 50,000, then move the discipline
+--                          arms to `@>` outside the OR. No refactor now.
+--                       8. Stable group ordering (`g.name, g.id`).
+--                       9. Two rationale comments restored to
+--                          `community_board`, so "byte-identical to
+--                          migrate_169" is true again.
+--                     Lead rulings applied 2026-09-10, same pass:
+--                      1. BACKWARDS COMPATIBILITY IS MANDATORY. The review
+--                         found that `community_dimensions_me`'s signature
+--                         change broke every already-installed build
+--                         (`src/lib/community/feed.js:168` calls it with
+--                         `{}`; the Hub's Discover section silently emptied,
+--                         feed.js:117-126 swallowing the rejection). Both
+--                         `community_dimensions_me` and
+--                         `community_hub_summary` now ACCEPT a NULL or
+--                         absent `_today` and fall back to the UK-local day
+--                         key, `to_char(timezone('Europe/London', now()),
+--                         'YYYY-MM-DD')` - the exact zero-padded format
+--                         src/lib/dayKey.js's localDayKey() produces, so
+--                         old and new clients compare equal against
+--                         c_last_trained_day. A SUPPLIED `_today` is still
+--                         validated and still refused when malformed, and
+--                         the fallback is never `now()::date`. Old clients
+--                         get the enriched shape; a superset is harmless to
+--                         them. `community_board` is untouched: it has
+--                         required `_today` since migrate_165 and every
+--                         shipped caller already passes one.
+--                      5. `_community_cohort_stats`' SAMPLE excludes muted
+--                         people (community_find_people's rule); the counts
+--                         stay blocked-only, as community_dimension's do.
+--
 --                     Every re-issued or new function keeps the standing
 --                     shape: SECURITY DEFINER, `SET search_path = public,
 --                     pg_temp`, no STABLE/IMMUTABLE on anything that calls
@@ -135,8 +203,8 @@
 --
 -- Safe to re-run:    YES. `ADD COLUMN IF NOT EXISTS`; the discipline_keys
 --                     CHECK is added inside a `DO $$ ... EXCEPTION WHEN
---                     duplicate_object THEN NULL; END $$;` block; the new
---                     index is `CREATE INDEX IF NOT EXISTS`; every
+--                     duplicate_object THEN NULL; END $$;` block; both new
+--                     indexes are `CREATE INDEX IF NOT EXISTS`; every
 --                     function is `CREATE OR REPLACE FUNCTION`; the two
 --                     functions whose PARAMETER LIST changes
 --                     (`community_dimensions_me`, `community_find_people`)
@@ -153,6 +221,7 @@
 -- Rollback:          ALTER TABLE public.community_profiles DROP COLUMN IF
 --                       EXISTS discipline_keys; (also drops its CHECK and
 --                       the GIN index)
+--                     DROP INDEX IF EXISTS public.community_profiles_tp_age_band_idx;
 --                     DROP FUNCTION IF EXISTS public._community_discipline_key_ok(text[]);
 --                     DROP FUNCTION IF EXISTS public._community_discipline_label(text);
 --                     DROP FUNCTION IF EXISTS public._community_cohort_stats(uuid, text, text, text);
@@ -177,9 +246,14 @@
 --                     new consent TYPE, and it is never inferred, only
 --                     chosen. It carries no Article 9 health data: the
 --                     taxonomy is fifteen closed identity labels, never a
---                     free-text field, and the six physique-adjacent
+--                     free-text field, and the seven physique-adjacent
 --                     values (bodybuilding, mens_physique, classic_
---                     physique, womens_physique, figure, bikini) are body-
+--                     physique, womens_physique, figure, bikini, wellness -
+--                     lead ruling 3, 2026-09-10: Q1 added Women's physique
+--                     to the list without removing Wellness, so the set
+--                     20-BLUEPRINT.md section 8 calls "the six" is seven,
+--                     and the contract doc names all seven for the client
+--                     lane that implements the Q1b withhold) are body-
 --                     adjacent but not body DATA - no measurement, weight
 --                     or size ever accompanies them here or anywhere in
 --                     Community. This migration does not implement the
@@ -282,11 +356,28 @@ DO $$ BEGIN
     CHECK (public._community_discipline_key_ok(discipline_keys));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
--- Same treatment styles already gets: a GIN index for the `= ANY`/`&&`
--- membership queries community_dimension, community_board,
--- community_find_people and _community_cohort_stats all run against it.
+-- Same treatment styles already gets (migrate_160 line 165): a GIN index on
+-- the array column.
+-- reviewer 2026-09-10, honest scope: every discipline predicate in this file
+-- is written `_key = ANY (p.discipline_keys)` and sits inside an OR chain on
+-- a runtime parameter (`_kind`/`_scope`/`v_discipline IS NULL OR ...`).
+-- Neither form is GIN-usable - the planner needs a containment operator
+-- (`p.discipline_keys @> ARRAY[_key]`) and a predicate it can push down - so
+-- this index is not what makes those scans fast today; it is here for the
+-- containment queries part B and the client add, and because dropping it
+-- later is far cheaper than adding it to a live table. See the open question
+-- in the review report.
 CREATE INDEX IF NOT EXISTS community_profiles_discipline_keys_idx
   ON public.community_profiles USING gin (discipline_keys);
+
+-- reviewer 2026-09-10: tp_age_band becomes a cohort key in this migration
+-- (community_dimension's age_band kind, community_board's age_band scope and
+-- _community_cohort_stats), and it was the only new cohort predicate with no
+-- supporting index - gym_key, area_key, place_key and styles all have one
+-- (migrate_160:161-166, migrate_163:311). Same additive, re-runnable form.
+CREATE INDEX IF NOT EXISTS community_profiles_tp_age_band_idx
+  ON public.community_profiles (tp_age_band)
+  WHERE tp_age_band IS NOT NULL;
 
 -- ─── Part 3: community_upsert_profile re-issued (discipline_keys) ───────
 --
@@ -399,6 +490,15 @@ BEGIN
   -- migrate_170: discipline_keys, same shape of parsing as styles above,
   -- validated against the taxonomy (and the <= 3 cap) by the one helper.
   v_discipline_keys := ARRAY[]::text[];
+  -- reviewer 2026-09-10: a `discipline_keys` key that is present but is not
+  -- an array used to fall straight through to the empty array, i.e. it
+  -- silently ERASED the stored keys instead of refusing. Refuse instead;
+  -- losing a person's saved choices to a malformed payload is worse than an
+  -- error. (`styles` a few lines above has the same shape, pre-existing and
+  -- deliberately left alone here.)
+  IF _p ? 'discipline_keys' AND jsonb_typeof(_p -> 'discipline_keys') <> 'array' THEN
+    RAISE EXCEPTION USING message = 'invalid_input';
+  END IF;
   IF _p ? 'discipline_keys' AND jsonb_typeof(_p -> 'discipline_keys') = 'array' THEN
     FOR v_dk IN SELECT jsonb_array_elements_text(_p -> 'discipline_keys') LOOP
       v_dk := lower(btrim(coalesce(v_dk, '')));
@@ -661,9 +761,16 @@ DECLARE
   v_trained_count int := 0;
   v_sample        jsonb := '[]'::jsonb;
 BEGIN
+  -- reviewer 2026-09-10: "trained today" is consistency data, so it is only
+  -- ever counted for someone actually sharing it. Correct before this line
+  -- only by side effect (migrate_165 nulls every c_* column when
+  -- share_consistency goes false); community_board states the predicate
+  -- outright, so this states it too and a future write-path change cannot
+  -- turn a silent invariant into a leak.
   SELECT count(*),
          count(*) FILTER (
-           WHERE p.c_last_trained_day IS NOT NULL AND p.c_last_trained_day = _today)
+           WHERE p.share_consistency = true
+             AND p.c_last_trained_day IS NOT NULL AND p.c_last_trained_day = _today)
   INTO v_member_count, v_trained_count
   FROM public.community_profiles p
   WHERE p.status = 'active' AND p.visibility = 'public' AND p.is_minor = false
@@ -684,11 +791,25 @@ BEGIN
   INTO v_sample
   FROM (
     SELECT p.user_id, p.handle, p.display_name, p.avatar_preset,
-      (p.c_last_trained_day IS NOT NULL AND p.c_last_trained_day = _today) AS trained_today
+      -- reviewer 2026-09-10: same explicit share_consistency gate as the
+      -- count above - the sample ORDER BY leaks "who trained today" just as
+      -- surely as the count does.
+      (p.share_consistency = true
+       AND p.c_last_trained_day IS NOT NULL AND p.c_last_trained_day = _today) AS trained_today
     FROM public.community_profiles p
     WHERE p.status = 'active' AND p.visibility = 'public' AND p.is_minor = false
       AND p.user_id <> _uid
       AND NOT public._community_is_blocked(_uid, p.user_id)
+      -- reviewer 2026-09-10 (lead ruling 5): a mute means "I do not want to
+      -- see this person", and a sample IS seeing them - a face on the Hub.
+      -- The SAMPLE therefore takes community_find_people's rule (there is no
+      -- _community_is_muted helper; this is that function's own predicate,
+      -- one-directional, muter -> muted). The COUNTS above are deliberately
+      -- unchanged: community_dimension's roster count is blocked-only, and a
+      -- cohort size that shrank because you muted someone would be wrong.
+      AND NOT EXISTS (
+        SELECT 1 FROM public.community_mutes mu
+        WHERE mu.muter_id = _uid AND mu.muted_id = p.user_id)
       AND (
         (_kind = 'style'      AND _key = ANY (p.styles))
      OR (_kind = 'gym'        AND p.gym_key = _key)
@@ -868,20 +989,43 @@ DECLARE
   v_prog  record;
   v_discipline text; -- migrate_170
   v_stats jsonb;      -- migrate_170
+  v_today text;       -- reviewer 2026-09-10
 BEGIN
   -- migrate_170: "today" is the caller's LOCAL day, the same reason
   -- community_board already requires it rather than trusting now()::date.
-  IF _today IS NULL OR _today !~ '^\d{4}-\d{2}-\d{2}$' THEN
+  -- reviewer 2026-09-10 (lead ruling 1): backwards compatibility is
+  -- mandatory. Live builds on Google Play call this with no `_today` at
+  -- all, so a NULL or absent value falls back to the UK-local day key
+  -- rather than refusing - `to_char(timezone('Europe/London', now()),
+  -- 'YYYY-MM-DD')` produces the exact zero-padded YYYY-MM-DD string
+  -- src/lib/dayKey.js's localDayKey() builds, so an old client and a new
+  -- one compare equal against c_last_trained_day. A value that IS supplied
+  -- must still be well-formed: the caller's own local day is the only
+  -- correct answer whenever the client can give it, and this fallback is
+  -- never `now()::date` (server UTC), which would put a late-evening UK
+  -- session on the wrong day for half the year.
+  v_today := nullif(btrim(coalesce(_today, '')), '');
+  IF v_today IS NULL THEN
+    v_today := to_char(timezone('Europe/London', now()), 'YYYY-MM-DD');
+  ELSIF v_today !~ '^\d{4}-\d{2}-\d{2}$' THEN
     RAISE EXCEPTION USING message = 'invalid_input';
   END IF;
 
   v_me := public._community_require_profile(v_uid, false);
+  -- reviewer 2026-09-10: this call now runs _community_cohort_stats up to
+  -- eight times (two passes over community_profiles each) where migrate_160
+  -- ran a handful of counts, and it had no rail at all. Same 120/hour rail
+  -- community_board, community_find_people and community_hub_summary carry -
+  -- the house figure set by security review 72 finding 10 for expensive
+  -- reads. The function has no STABLE/IMMUTABLE keyword (migrate_167's
+  -- lesson), so the rail's own INSERT is legal.
+  PERFORM public._community_rate_check(v_uid, 'dimensions_me', 120, 120, interval '1 hour');
 
   -- migrate_170: style rows now source member_count from the same helper
   -- that produces trained_today_count/sample, instead of a second,
   -- functionally-identical COUNT query.
   FOREACH v_style IN ARRAY v_me.styles LOOP
-    v_stats := public._community_cohort_stats(v_uid, 'style', v_style, _today);
+    v_stats := public._community_cohort_stats(v_uid, 'style', v_style, v_today);
     v_count := (v_stats ->> 'member_count')::int;
     IF v_count >= 1 THEN
       v_items := v_items || jsonb_build_object(
@@ -894,7 +1038,7 @@ BEGIN
   END LOOP;
 
   IF v_me.gym_key IS NOT NULL THEN
-    v_stats := public._community_cohort_stats(v_uid, 'gym', v_me.gym_key, _today);
+    v_stats := public._community_cohort_stats(v_uid, 'gym', v_me.gym_key, v_today);
     v_count := (v_stats ->> 'member_count')::int;
     IF v_count >= 1 THEN
       v_items := v_items || jsonb_build_object(
@@ -906,7 +1050,7 @@ BEGIN
   END IF;
 
   IF v_me.area_key IS NOT NULL THEN
-    v_stats := public._community_cohort_stats(v_uid, 'area', v_me.area_key, _today);
+    v_stats := public._community_cohort_stats(v_uid, 'area', v_me.area_key, v_today);
     v_count := (v_stats ->> 'member_count')::int;
     IF v_count >= 1 THEN
       v_items := v_items || jsonb_build_object(
@@ -920,7 +1064,7 @@ BEGIN
   -- migrate_170 (blueprint section 3): one row per discipline key the
   -- caller holds, same shape as the style loop above.
   FOREACH v_discipline IN ARRAY v_me.discipline_keys LOOP
-    v_stats := public._community_cohort_stats(v_uid, 'discipline', v_discipline, _today);
+    v_stats := public._community_cohort_stats(v_uid, 'discipline', v_discipline, v_today);
     v_count := (v_stats ->> 'member_count')::int;
     IF v_count >= 1 THEN
       v_items := v_items || jsonb_build_object(
@@ -935,7 +1079,7 @@ BEGIN
   -- migrate_170: one reciprocal age-band row, only while the caller shares
   -- their own band.
   IF v_me.tp_age_band IS NOT NULL THEN
-    v_stats := public._community_cohort_stats(v_uid, 'age_band', v_me.tp_age_band, _today);
+    v_stats := public._community_cohort_stats(v_uid, 'age_band', v_me.tp_age_band, v_today);
     v_count := (v_stats ->> 'member_count')::int;
     IF v_count >= 1 THEN
       v_items := v_items || jsonb_build_object(
@@ -1065,6 +1209,10 @@ BEGIN
     RAISE EXCEPTION USING message = 'not_allowed';
   END IF;
 
+  -- Lead ruling (community product audit): gym scope targets `_scope_key`
+  -- as the gym id when supplied -- any gym's board, not only the caller's
+  -- own -- falling back to the caller's own gym_id when `_scope_key` is
+  -- null or blank.
   IF _scope = 'gym' THEN
     IF _scope_key IS NOT NULL AND btrim(_scope_key) <> '' THEN
       BEGIN
@@ -1103,6 +1251,9 @@ BEGIN
     END;
   END IF;
 
+  -- Design 60 §2: gather every eligible profile (uncapped by page size, so
+  -- ranking and the caller's own off-page rank are correct), then rank and
+  -- keyset-page in memory the same way community_find_people does.
   FOR v_row IN
     SELECT p.user_id, p.handle, p.c_trained_days_week, p.c_last_trained_day,
       CASE _window WHEN 'week' THEN p.c_sessions_week
@@ -1133,10 +1284,25 @@ BEGIN
               SELECT 1 FROM public.community_group_members m
               WHERE m.group_id = _scope_key::uuid AND m.user_id = p.user_id AND m.state = 'member'))
         -- migrate_170: the four new scopes.
-        OR (_scope = 'area' AND v_area_key IS NOT NULL AND p.area_key = v_area_key)
-        OR (_scope = 'style' AND _scope_key = ANY (p.styles))
-        OR (_scope = 'discipline' AND _scope_key = ANY (p.discipline_keys))
-        OR (_scope = 'age_band' AND v_me.tp_age_band IS NOT NULL AND p.tp_age_band = v_me.tp_age_band)
+        -- reviewer 2026-09-10: each new arm is ANDed with _community_can_view.
+        -- A SCOPED board discloses the scope fact itself - "this handle is in
+        -- your area / your discipline / your age band" - and those are exactly
+        -- the three fields _community_profile_card withholds from a viewer who
+        -- may not see the profile (area_label, discipline_keys, tp_age_band are
+        -- all behind v_viewable). Without this the board would state what the
+        -- card refuses to. community_dimension and _community_cohort_stats
+        -- already require visibility = 'public' for the same reason; the
+        -- helper is used here instead so a follower you accepted, and you
+        -- yourself, still appear on your own cohort board. The pre-existing
+        -- gym/following/group/everyone arms are untouched.
+        OR (_scope = 'area' AND v_area_key IS NOT NULL AND p.area_key = v_area_key
+            AND public._community_can_view(v_uid, p.user_id))
+        OR (_scope = 'style' AND _scope_key = ANY (p.styles)
+            AND public._community_can_view(v_uid, p.user_id))
+        OR (_scope = 'discipline' AND _scope_key = ANY (p.discipline_keys)
+            AND public._community_can_view(v_uid, p.user_id))
+        OR (_scope = 'age_band' AND v_me.tp_age_band IS NOT NULL AND p.tp_age_band = v_me.tp_age_band
+            AND public._community_can_view(v_uid, p.user_id))
       )
     LIMIT 2000
   LOOP
@@ -1263,8 +1429,23 @@ DECLARE
   v_style   text;
   v_disc    text;
   v_stats   jsonb;
+  v_today   text;     -- reviewer 2026-09-10
 BEGIN
-  IF _today IS NULL OR _today !~ '^\d{4}-\d{2}-\d{2}$' THEN
+  -- reviewer 2026-09-10 (lead ruling 1): backwards compatibility is
+  -- mandatory. Live builds on Google Play call this with no `_today` at
+  -- all, so a NULL or absent value falls back to the UK-local day key
+  -- rather than refusing - `to_char(timezone('Europe/London', now()),
+  -- 'YYYY-MM-DD')` produces the exact zero-padded YYYY-MM-DD string
+  -- src/lib/dayKey.js's localDayKey() builds, so an old client and a new
+  -- one compare equal against c_last_trained_day. A value that IS supplied
+  -- must still be well-formed: the caller's own local day is the only
+  -- correct answer whenever the client can give it, and this fallback is
+  -- never `now()::date` (server UTC), which would put a late-evening UK
+  -- session on the wrong day for half the year.
+  v_today := nullif(btrim(coalesce(_today, '')), '');
+  IF v_today IS NULL THEN
+    v_today := to_char(timezone('Europe/London', now()), 'YYYY-MM-DD');
+  ELSIF v_today !~ '^\d{4}-\d{2}-\d{2}$' THEN
     RAISE EXCEPTION USING message = 'invalid_input';
   END IF;
 
@@ -1272,7 +1453,7 @@ BEGIN
   PERFORM public._community_rate_check(v_uid, 'hub_summary', 120, 120, interval '1 hour');
 
   IF v_me.gym_key IS NOT NULL THEN
-    v_stats := public._community_cohort_stats(v_uid, 'gym', v_me.gym_key, _today);
+    v_stats := public._community_cohort_stats(v_uid, 'gym', v_me.gym_key, v_today);
     IF (v_stats ->> 'member_count')::int >= 1 THEN
       v_cohorts := v_cohorts || jsonb_build_object(
         'kind', 'gym', 'key', v_me.gym_key, 'label', v_me.gym_label,
@@ -1283,7 +1464,7 @@ BEGIN
   END IF;
 
   IF v_me.area_key IS NOT NULL THEN
-    v_stats := public._community_cohort_stats(v_uid, 'area', v_me.area_key, _today);
+    v_stats := public._community_cohort_stats(v_uid, 'area', v_me.area_key, v_today);
     IF (v_stats ->> 'member_count')::int >= 1 THEN
       v_cohorts := v_cohorts || jsonb_build_object(
         'kind', 'area', 'key', v_me.area_key, 'label', v_me.area_label,
@@ -1294,7 +1475,7 @@ BEGIN
   END IF;
 
   FOREACH v_style IN ARRAY v_me.styles LOOP
-    v_stats := public._community_cohort_stats(v_uid, 'style', v_style, _today);
+    v_stats := public._community_cohort_stats(v_uid, 'style', v_style, v_today);
     IF (v_stats ->> 'member_count')::int >= 1 THEN
       v_cohorts := v_cohorts || jsonb_build_object(
         'kind', 'style', 'key', v_style, 'label', public._community_style_label(v_style),
@@ -1305,7 +1486,7 @@ BEGIN
   END LOOP;
 
   FOREACH v_disc IN ARRAY v_me.discipline_keys LOOP
-    v_stats := public._community_cohort_stats(v_uid, 'discipline', v_disc, _today);
+    v_stats := public._community_cohort_stats(v_uid, 'discipline', v_disc, v_today);
     IF (v_stats ->> 'member_count')::int >= 1 THEN
       v_cohorts := v_cohorts || jsonb_build_object(
         'kind', 'discipline', 'key', v_disc, 'label', public._community_discipline_label(v_disc),
@@ -1316,7 +1497,7 @@ BEGIN
   END LOOP;
 
   IF v_me.tp_age_band IS NOT NULL THEN
-    v_stats := public._community_cohort_stats(v_uid, 'age_band', v_me.tp_age_band, _today);
+    v_stats := public._community_cohort_stats(v_uid, 'age_band', v_me.tp_age_band, v_today);
     IF (v_stats ->> 'member_count')::int >= 1 THEN
       v_cohorts := v_cohorts || jsonb_build_object(
         'kind', 'age_band', 'key', v_me.tp_age_band, 'label', v_me.tp_age_band,
@@ -1326,16 +1507,40 @@ BEGIN
     END IF;
   END IF;
 
+  -- reviewer 2026-09-10: three fixes to this block.
+  --  1. member_count was `g.member_count`, the stored counter on
+  --     community_groups, which counts EVERY member row - minors, suspended
+  --     and restricted profiles included - while the two figures beside it
+  --     exclude exactly those. A hub object could therefore report more
+  --     members than the roster it samples, and a minor could be counted.
+  --     It is now computed on the same predicate as its siblings, so
+  --     trained_today_count <= member_count always holds and no minor is
+  --     ever in a count (blueprint section 8, "minors never in cohorts,
+  --     boards, groups or age bands").
+  --  2. neither figure excluded blocked pairs, so a blocked person's face
+  --     could appear in the caller's own Hub sample. Every other new query
+  --     path in this migration calls _community_is_blocked; these now do.
+  --  3. share_consistency stated outright on the trained-today tests, for
+  --     the same reason as _community_cohort_stats above.
   SELECT coalesce(jsonb_agg(jsonb_build_object(
       'id', g.id, 'name', g.name, 'access', g.access,
-      'member_count', g.member_count,
+      'member_count', (
+        SELECT count(*)
+        FROM public.community_group_members gm1
+        JOIN public.community_profiles p1 ON p1.user_id = gm1.user_id
+        WHERE gm1.group_id = g.id AND gm1.state = 'member'
+          AND p1.status = 'active' AND p1.is_minor = false
+          AND NOT public._community_is_blocked(v_uid, p1.user_id)
+      ),
       'trained_today_count', (
         SELECT count(*)
         FROM public.community_group_members gm2
         JOIN public.community_profiles p2 ON p2.user_id = gm2.user_id
         WHERE gm2.group_id = g.id AND gm2.state = 'member'
           AND p2.status = 'active' AND p2.is_minor = false
-          AND p2.c_last_trained_day IS NOT NULL AND p2.c_last_trained_day = _today
+          AND NOT public._community_is_blocked(v_uid, p2.user_id)
+          AND p2.share_consistency = true
+          AND p2.c_last_trained_day IS NOT NULL AND p2.c_last_trained_day = v_today
       ),
       'sample', (
         SELECT coalesce(jsonb_agg(jsonb_build_object(
@@ -1344,16 +1549,18 @@ BEGIN
                ) ORDER BY s.trained_today DESC, s.user_id), '[]'::jsonb)
         FROM (
           SELECT p3.user_id, p3.handle, p3.display_name, p3.avatar_preset,
-            (p3.c_last_trained_day IS NOT NULL AND p3.c_last_trained_day = _today) AS trained_today
+            (p3.share_consistency = true
+             AND p3.c_last_trained_day IS NOT NULL AND p3.c_last_trained_day = v_today) AS trained_today
           FROM public.community_group_members gm3
           JOIN public.community_profiles p3 ON p3.user_id = gm3.user_id
           WHERE gm3.group_id = g.id AND gm3.state = 'member'
             AND p3.status = 'active' AND p3.is_minor = false
+            AND NOT public._community_is_blocked(v_uid, p3.user_id)
           ORDER BY trained_today DESC, p3.user_id
           LIMIT 3
         ) s
       )
-    ) ORDER BY g.name), '[]'::jsonb)
+    ) ORDER BY g.name, g.id), '[]'::jsonb)
   INTO v_groups
   FROM public.community_group_members m
   JOIN public.community_groups g ON g.id = m.group_id
@@ -1857,6 +2064,28 @@ BEGIN
     'public.community_find_people(text, text, integer, jsonb, text)');
   IF NOT coalesce(v_ok, false) THEN
     RAISE EXCEPTION 'acceptance failed: community_find_people is not VOLATILE';
+  END IF;
+
+  -- reviewer 2026-09-10: community_dimensions_me now calls
+  -- _community_rate_check too, so it falls under the same migrate_167 rule.
+  SELECT p.provolatile = 'v' INTO v_ok
+  FROM pg_proc p WHERE p.oid = to_regprocedure('public.community_dimensions_me(text)');
+  IF NOT coalesce(v_ok, false) THEN
+    RAISE EXCEPTION 'acceptance failed: community_dimensions_me is not VOLATILE';
+  END IF;
+
+  -- reviewer 2026-09-10: both new indexes present.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname = 'public'
+      AND indexname = 'community_profiles_discipline_keys_idx'
+  ) THEN
+    RAISE EXCEPTION 'acceptance failed: community_profiles_discipline_keys_idx missing';
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname = 'public'
+      AND indexname = 'community_profiles_tp_age_band_idx'
+  ) THEN
+    RAISE EXCEPTION 'acceptance failed: community_profiles_tp_age_band_idx missing';
   END IF;
 
   -- migrate_169's lesson: no ranking CTE may reference the nonexistent

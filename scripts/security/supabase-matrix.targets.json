@@ -156,6 +156,7 @@
     "community_suggested_people",
     "community_get_profile",
     "community_dimensions_me",
+    "community_hub_summary",
     "community_dimension",
     "community_activity",
     "community_mark_activity_seen",
