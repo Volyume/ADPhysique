@@ -44,10 +44,14 @@
 //      to at most ONE push per recipient per UK-local day, the same shape as
 //      the message collapse in 4a but keyed by day rather than by a rolling
 //      window - `community_notify_daily(recipient, day, count)`
-//      (migrate_170 part B). The first Respect of the day sends; every later
-//      one this same day increments the row's count and sends nothing. This
-//      runs AFTER 5b, so a retried call against the exact same proof is
-//      already stopped there and never reaches this table at all.
+//      (migrate_170 part B). The day is CLAIMED with an INSERT before the
+//      send and released again if the send throws (reviewer 2026-09-10 (B):
+//      a read-then-send-then-insert shape let two Respects landing in the
+//      same moment both push); the claiming call sends, every later one
+//      this same day increments the row's count and sends nothing. Rows
+//      older than seven days are pruned for that recipient as the claim is
+//      taken. This runs AFTER 5b, so a retried call against the exact same
+//      proof is already stopped there and never reaches this table at all.
 //      community_respect_all writes activity rows of the identical
 //      `reaction` kind community_react does, so whichever call path
 //      notifies for them collapses through this exact same mechanism.
@@ -157,6 +161,14 @@ const ACTIVITY_BACKED_KINDS: Kind[] = [
 // not read it (blueprint section 2).
 const MESSAGE_PUSH_COLLAPSE_MS = 15 * 60 * 1000
 
+// reviewer 2026-09-10 (B): community_notify_daily keeps one row per
+// recipient per day they were pushed at, and nothing anywhere pruned it.
+// Seven days, pruned opportunistically for THIS recipient at the moment
+// their day is claimed below - the same no-cron-job shape
+// _community_rate_check already uses for community_rate_events. Nothing
+// ever reads a row older than today, so seven days is pure slack.
+const NOTIFY_DAILY_RETENTION_DAYS = 7
+
 // Communities revamp phase 3 section 6: the UK-local day key, byte-for-byte
 // the same zero-padded YYYY-MM-DD format src/lib/dayKey.js's localDayKey()
 // and this file's own SQL siblings (`to_char(timezone('Europe/London',
@@ -164,10 +176,10 @@ const MESSAGE_PUSH_COLLAPSE_MS = 15 * 60 * 1000
 // same day a client or an RPC would compute. Intl.DateTimeFormat with an
 // explicit IANA zone, the same technique the quiet-hours projection below
 // already uses in this file, rather than a manual UTC-offset calculation.
-function ukLocalDayKey(): string {
+function ukLocalDayKey(at: Date = new Date()): string {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(new Date())
+  }).formatToParts(at)
   const y = parts.find((p) => p.type === 'year')?.value ?? '0000'
   const mo = parts.find((p) => p.type === 'month')?.value ?? '00'
   const d = parts.find((p) => p.type === 'day')?.value ?? '00'
@@ -673,49 +685,6 @@ serve(async (req: Request) => {
     }
   }
 
-  // Step 5c: the daily Respect collapse, for a reaction only (Communities
-  // revamp phase 3, docs/communities-revamp-2026-09-10/23-PHASE3-SPEC.md
-  // section 6). Runs after 5b above, so a retried call against the exact
-  // same proof is already stopped there and never reaches this table.
-  // community_notify_daily(recipient, day, count) (migrate_170 part B) is
-  // the per-recipient tally: a row already there means a push already went
-  // out today, so this increments it and stays silent; no row means this
-  // IS the first Respect of the day, and the send proceeds below. The row
-  // is only written AFTER the send succeeds (the same "stamp only on
-  // success" principle 4a/5b already use), so a failed send never silences
-  // tomorrow - or a retried today.
-  let notifyDailyIsFirstOfDay = false
-  let notifyDailyDay: string | null = null
-  if (kind === 'reaction') {
-    notifyDailyDay = ukLocalDayKey()
-    const { data: daily, error: dailyErr } = await admin
-      .from('community_notify_daily')
-      .select('count')
-      .eq('recipient', targetUserId)
-      .eq('day', notifyDailyDay)
-      .maybeSingle()
-    if (dailyErr) {
-      console.error('[community-notify] daily-collapse read failed, holding push', dailyErr)
-      return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
-    }
-    if (daily) {
-      const row = daily as { count?: number }
-      const { error: incErr } = await admin
-        .from('community_notify_daily')
-        .update({ count: (row.count ?? 0) + 1 })
-        .eq('recipient', targetUserId)
-        .eq('day', notifyDailyDay)
-      if (incErr) {
-        console.error('[community-notify] daily-collapse increment failed', incErr)
-      }
-      // The in-app Activity inbox already shows every Respect immediately
-      // (the community_activity row this call is proving was written
-      // before this function was ever invoked) - only the PUSH collapses.
-      return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
-    }
-    notifyDailyIsFirstOfDay = true
-  }
-
   // The actor's handle. No Community push ever carries a real name.
   const { data: actorProfile } = await admin
     .from('community_profiles')
@@ -727,6 +696,73 @@ serve(async (req: Request) => {
     // No profile means nothing to name, and naming nobody is worse than
     // staying quiet.
     return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
+  }
+
+  // Step 5c: the daily Respect collapse, for a reaction only (Communities
+  // revamp phase 3, docs/communities-revamp-2026-09-10/23-PHASE3-SPEC.md
+  // section 6). Runs after 5b above, so a retried call against the exact
+  // same proof is already stopped there and never reaches this table, and
+  // immediately before the send so that nothing between the two can return
+  // early holding an unused claim.
+  //
+  // reviewer 2026-09-10 (B): this was a SELECT, then a send, then an
+  // INSERT. Two Respects for the same person landing in the same moment -
+  // exactly what community_respect_all's fan-out produces when several
+  // people tap "Respect everyone" at once - both read "no row", both sent,
+  // and the second INSERT failed with a duplicate key that was only
+  // logged. The collapse was bypassable by a burst, which is the one thing
+  // it exists to stop. The row's own PRIMARY KEY (recipient, day) is the
+  // only lock available here, so CLAIM the day with an INSERT first and
+  // read the outcome: 23505 means somebody else already claimed it and
+  // this call stays silent. A failed send then RELEASES the claim (the
+  // catch below), which keeps the original "a failed send never silences
+  // the day" property that writing after the send was reaching for.
+  let notifyDailyClaimed = false
+  let notifyDailyDay: string | null = null
+  if (kind === 'reaction') {
+    notifyDailyDay = ukLocalDayKey()
+    const { error: claimErr } = await admin
+      .from('community_notify_daily')
+      .insert({ recipient: targetUserId, day: notifyDailyDay, count: 1 })
+    if (claimErr) {
+      if ((claimErr as { code?: string }).code !== '23505') {
+        console.error('[community-notify] daily-collapse claim failed, holding push', claimErr)
+        return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
+      }
+      // Already claimed today: tally it and stay silent. The in-app
+      // Activity inbox already shows every Respect immediately (the
+      // community_activity row this call is proving was written before
+      // this function was ever invoked) - only the PUSH collapses.
+      const { data: daily } = await admin
+        .from('community_notify_daily')
+        .select('count')
+        .eq('recipient', targetUserId)
+        .eq('day', notifyDailyDay)
+        .maybeSingle()
+      const { error: incErr } = await admin
+        .from('community_notify_daily')
+        .update({ count: ((daily as { count?: number } | null)?.count ?? 0) + 1 })
+        .eq('recipient', targetUserId)
+        .eq('day', notifyDailyDay)
+      if (incErr) {
+        console.error('[community-notify] daily-collapse increment failed', incErr)
+      }
+      return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
+    }
+    notifyDailyClaimed = true
+    // Opportunistic retention prune for this recipient only (best effort:
+    // a failure here must never cost them their push).
+    const cutoff = ukLocalDayKey(
+      new Date(Date.now() - NOTIFY_DAILY_RETENTION_DAYS * 24 * 60 * 60 * 1000),
+    )
+    const { error: pruneErr } = await admin
+      .from('community_notify_daily')
+      .delete()
+      .eq('recipient', targetUserId)
+      .lt('day', cutoff)
+    if (pruneErr) {
+      console.error('[community-notify] daily-collapse prune failed', pruneErr)
+    }
   }
 
   const copy = pushCopy(kind, handle)
@@ -744,7 +780,13 @@ serve(async (req: Request) => {
         data: {
           type: categoryFor(kind),
           ref_id: refId,
-          actor_handle: handle,
+          // reviewer 2026-09-10 (B): no actor_handle on a reaction. That
+          // push is a collapsed daily digest whose body deliberately names
+          // nobody ("Someone gave your training respect"), and it stands
+          // for at least one Respect and possibly several - putting one
+          // actor's handle in the payload puts a name back on it. Nothing
+          // in src/ reads actor_handle, so nothing loses anything.
+          ...(kind === 'reaction' ? {} : { actor_handle: handle }),
           // The tap route for a message opens the conversation itself
           // (deep link `m`), so the id travels with the push. No content
           // ever does.
@@ -774,22 +816,29 @@ serve(async (req: Request) => {
         console.error('[community-notify] activity push stamp failed', stampErr)
       }
     }
-    // Step 5c continued: independent of the activityRowId stamp above (a
-    // reaction push does both - the activity row's pushed_at guards a
-    // retry of THIS proof; this table guards the NEXT different Respect
-    // the same day), and only ever runs for the first push of the day.
-    if (kind === 'reaction' && notifyDailyIsFirstOfDay && notifyDailyDay) {
-      const { error: dailyStampErr } = await admin
-        .from('community_notify_daily')
-        .insert({ recipient: targetUserId, day: notifyDailyDay, count: 1 })
-      if (dailyStampErr) {
-        console.error('[community-notify] daily-collapse stamp failed', dailyStampErr)
-      }
-    }
+    // Step 5c's claim is already written (above, before the send): it is
+    // what makes this the only reaction push of the day, and the activity
+    // row's pushed_at stamped just above is what guards a retry of THIS
+    // same proof. Nothing more to write here.
   } catch (e) {
     // The activity row is already written; a failed push is not a failed
     // action.
     console.error('[community-notify] push fan-out failed', e)
+    // reviewer 2026-09-10 (B): release the day back. The claim was taken
+    // before the send precisely so a burst could not slip past it; if the
+    // send then failed, holding it would silence this person's Respect
+    // push for the rest of the day on the strength of a push that never
+    // arrived.
+    if (notifyDailyClaimed && notifyDailyDay) {
+      const { error: releaseErr } = await admin
+        .from('community_notify_daily')
+        .delete()
+        .eq('recipient', targetUserId)
+        .eq('day', notifyDailyDay)
+      if (releaseErr) {
+        console.error('[community-notify] daily-collapse release failed', releaseErr)
+      }
+    }
     return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
   }
 

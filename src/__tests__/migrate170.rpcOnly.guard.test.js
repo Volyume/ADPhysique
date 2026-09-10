@@ -1203,11 +1203,27 @@ describe('PART B: community_group_get returns Together this week', () => {
     expect(sumBlock).toContain('_community_is_blocked(v_uid, p2.user_id)');
   });
 
-  test('all three Together keys are stripped alongside member_count/blurb for a non-member of an invite-only group', () => {
+  // Lead ruling 2026-09-10 (B): Together is members-only. member_count and
+  // blurb keep their own pre-part-B strip for a non-member of an invite-only
+  // group; the three Together keys are null for EVERY non-member instead.
+  test('member_count/blurb keep exactly their pre-part-B strip, with nothing else bolted on', () => {
     expect(groupGetB).toContain(
-      "v_out := v_out - 'member_count' - 'blurb'\n"
-      + "      - 'together_sessions_week' - 'together_planned_week' - 'sharing_members';",
+      "v_out := v_out - 'member_count' - 'blurb';",
     );
+  });
+
+  test('a non-member gets null for all three, and the sums are never computed for them', () => {
+    expect(groupGetB).toContain(
+      'IF v_role IS NULL THEN\n'
+      + '    v_together_sessions := NULL;\n'
+      + '    v_together_planned  := NULL;\n'
+      + '    v_sharing_members   := NULL;\n'
+      + '  ELSE\n'
+      + '    SELECT',
+    );
+    // The aggregate sits inside that ELSE, never above the role check.
+    expect(groupGetB.indexOf('IF v_role IS NULL THEN'))
+      .toBeLessThan(groupGetB.indexOf('FROM public.community_group_members gm2'));
   });
 });
 
@@ -1234,5 +1250,272 @@ describe('PART B acceptance block exists and is read-only', () => {
     const acceptanceCode = ACCEPTANCE.split('\n')
       .filter((l) => !l.trim().startsWith('--')).join('\n');
     expect(acceptanceCode).not.toMatch(/^\s*(INSERT|UPDATE|DELETE|ALTER|DROP)\s/im);
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────
+// Hostile review of PART B, 2026-09-10. Every case below is a defect that
+// WAS present in the written-not-applied file and is now fixed; each one is
+// written so that reverting the fix fails the case rather than quietly
+// shipping. Each fix carries a `-- reviewer 2026-09-10 (B):` note at its
+// own site in the SQL (or a `reviewer 2026-09-10 (B)` note in the edge
+// function), so the two can always be read against each other.
+// ───────────────────────────────────────────────────────────────────────
+
+const NOTIFY_FN = fs.readFileSync(path.join(
+  ROOT, 'supabase', 'functions', 'community-notify', 'index.ts',
+), 'utf8');
+
+describe("PART B review: a 'groups' post never reaches a mere follower", () => {
+  // The defect: both OR-chains carried a bare `EXISTS (accepted follow)`
+  // arm with no visibility test of its own. That was correct only while
+  // visibility was {public, followers}. Adding 'groups' made it admit
+  // EVERY accepted follower to a groups post they were not in the group
+  // for - through _community_can_view_post, which is the single gate
+  // community_react, community_comment, community_report, community_list_
+  // comments, community_group_feed, the connect/share previews and
+  // community_respect_all all call.
+  test('_community_can_view_post scopes its follows arm to visibility = followers', () => {
+    const body = BODIES._community_can_view_post;
+    expect(body).toContain(
+      "r.visibility = 'followers'\n"
+      + '              AND EXISTS (\n'
+      + '                SELECT 1 FROM public.community_follows f',
+    );
+    // The bare, visibility-less arm must not come back.
+    expect(body).not.toMatch(
+      /'public'\s*\n\s*OR EXISTS \(\s*\n\s*SELECT 1 FROM public\.community_follows/,
+    );
+  });
+
+  test("community_get_profile's posts list scopes its follows arm the same way", () => {
+    const body = BODIES.community_get_profile;
+    expect(body).toContain("OR (p.visibility = 'followers'");
+    expect(body).not.toMatch(
+      /v_target = v_uid\s*\n\s*OR EXISTS \(SELECT 1 FROM public\.community_follows/,
+    );
+  });
+
+  test('every follows test in either body sits inside a visibility branch', () => {
+    for (const name of ['_community_can_view_post', 'community_get_profile']) {
+      const body = BODIES[name];
+      const follows = (body.match(/FROM public\.community_follows/g) || []).length;
+      const scoped = (body.match(/visibility = 'followers'/g) || []).length;
+      expect(follows).toBeGreaterThan(0);
+      expect(scoped).toBeGreaterThanOrEqual(follows);
+    }
+  });
+
+  test('a groups post reaches only the feeds of the groups it names', () => {
+    // The defect: the pre-existing "author is a current member of this
+    // group" arm had no visibility test either, so a post addressed to
+    // group X surfaced in group Y's feed whenever its author was in Y and
+    // the viewer happened to be in X (all _community_can_view_post asks).
+    expect(BODIES.community_group_feed).toContain(
+      "(r.visibility <> 'groups' AND EXISTS (",
+    );
+  });
+});
+
+describe('PART B review: an auto item is consent-gated on the server', () => {
+  // The defect: _auto was stored "as-is on the row" on the client's word.
+  // An ambient item is Article 9 training data published with no compose
+  // step (20-BLUEPRINT.md section 8, tightening R3), so the toggle that is
+  // its lawful basis has to be a fact this function establishes itself.
+  test('community_create_post re-reads share_sessions and refuses when it is off', () => {
+    const body = BODIES.community_create_post;
+    expect(body).toContain('IF coalesce(_auto, false) THEN');
+    expect(body).toContain('SELECT p.share_sessions, p.sessions_audience');
+    expect(body).toContain(
+      'IF NOT coalesce(v_share_sessions, false) THEN\n'
+      + "      RAISE EXCEPTION USING message = 'not_allowed';",
+    );
+  });
+
+  test('an auto item is never wider than the audience its owner chose', () => {
+    const body = BODIES.community_create_post;
+    expect(body).toContain("WHEN 'everyone' THEN 'public'");
+    expect(body).toContain("WHEN 'groups'   THEN 'groups'");
+    expect(body).toContain("IF v_vis <> 'followers' AND v_vis <> v_auto_vis THEN");
+  });
+
+  test('a minor never gets an auto item above followers, belt and braces', () => {
+    expect(BODIES.community_create_post).toContain(
+      "IF v_vis <> 'followers' AND public._community_caller_is_minor(v_uid) THEN\n"
+      + "      RAISE EXCEPTION USING message = 'minor_restricted';",
+    );
+  });
+});
+
+describe('PART B review: a retried offline flush costs nothing', () => {
+  // The defect: the ON CONFLICT made the WRITE idempotent, but the rate
+  // rail was spent before it was ever reached. Three retries of one
+  // pending item exhausted a new member's whole day of three, and the
+  // queue could then never drain.
+  test('an already-flushed client_ref returns before the rate rail runs', () => {
+    const body = BODIES.community_create_post;
+    const shortCircuit = body.indexOf('IF v_client_ref IS NOT NULL THEN\n    SELECT p.id INTO v_id');
+    const rail = body.indexOf("_community_rate_check(v_uid, 'post', 3, 10)");
+    expect(shortCircuit).toBeGreaterThan(-1);
+    expect(rail).toBeGreaterThan(-1);
+    expect(shortCircuit).toBeLessThan(rail);
+  });
+
+  test('the ON CONFLICT backstop is still there for two flushes landing at once', () => {
+    expect(BODIES.community_create_post).toContain(
+      'ON CONFLICT (author_id, client_ref) WHERE client_ref IS NOT NULL',
+    );
+  });
+});
+
+describe('PART B review: community_respect_all validates before it charges', () => {
+  test('the group scope casts its key inside a guarded block, like the gym scope', () => {
+    const body = BODIES.community_respect_all;
+    expect(body).toContain('      v_group_id := _scope_key::uuid;');
+    // The unguarded cast (a raw 22P02 reaching the client) must not return,
+    // in the membership check or in the scope CTE.
+    expect(body).not.toContain('m.group_id = _scope_key::uuid');
+    expect(body).not.toContain('gm.group_id = _scope_key::uuid');
+  });
+
+  test('the 10/hour rail is spent only after every scope check has passed', () => {
+    const body = BODIES.community_respect_all;
+    const rail = body.indexOf("_community_rate_check(v_uid, 'respect_all'");
+    expect(rail).toBeGreaterThan(-1);
+    for (const check of [
+      "IF _scope = 'group' THEN",
+      "IF _scope = 'age_band' AND v_me.tp_age_band IS NULL THEN",
+      "IF _scope = 'gym' THEN",
+      "IF _scope = 'area' THEN",
+    ]) {
+      expect(body.indexOf(check)).toBeGreaterThan(-1);
+      expect(body.indexOf(check)).toBeLessThan(rail);
+    }
+  });
+
+  test('community_post_set_note is railed at a flat 10/hour, matching the contract', () => {
+    expect(BODIES.community_post_set_note).toContain(
+      "_community_rate_check(v_uid, 'post_set_note', 10, 10, interval '1 hour')",
+    );
+  });
+});
+
+describe('PART B review: the lead rulings of 2026-09-10', () => {
+  test('an auto item sits on its own post_auto rail, 12 a UK-local day, flat', () => {
+    const body = BODIES.community_create_post;
+    expect(body).toContain(
+      "PERFORM public._community_rate_check(v_uid, 'post_auto', 12, 12, now() - v_day_start);",
+    );
+    // A real UK-local day, not the helper's default rolling 24 hours.
+    expect(body).toContain(
+      "v_day_start := date_trunc('day', timezone('Europe/London', now())) AT TIME ZONE 'Europe/London';",
+    );
+  });
+
+  test('a manual post keeps the untouched 3/10 rail, and neither rail can eat the other', () => {
+    const body = BODIES.community_create_post;
+    expect(body).toContain(
+      "  ELSE\n    PERFORM public._community_rate_check(v_uid, 'post', 3, 10);\n  END IF;",
+    );
+    expect((body.match(/_community_rate_check/g) || [])).toHaveLength(2);
+  });
+
+  test('a note cannot be set on a post moderation has hidden', () => {
+    expect(BODIES.community_post_set_note).toContain(
+      "IF v_r.status <> 'visible' THEN RAISE EXCEPTION USING message = 'not_allowed'; END IF;",
+    );
+  });
+
+  test('the contract states all three rulings for the client lane', () => {
+    const contract = fs.readFileSync(path.join(
+      ROOT, 'docs', 'communities-revamp-2026-09-10', '22-MIGRATION-170A-CONTRACT.md',
+    ), 'utf8');
+    expect(contract).toContain('**12 per UK-local day**');
+    expect(contract).toContain('**`null` for any non-member**');
+    expect(contract).toContain('`not_allowed` on one moderation has hidden');
+  });
+});
+
+describe('PART B review: c_planned_per_week is bounded at 14', () => {
+  test('the clamp is 0..14, never the old 21', () => {
+    const body = BODIES.community_upsert_profile;
+    expect(body).toContain(
+      "greatest(0, least((_p ->> 'c_planned_per_week')::int, 14))",
+    );
+    expect(body).not.toContain("'c_planned_per_week')::int, 21");
+  });
+});
+
+describe('PART B review: the acceptance block catches what it says it catches', () => {
+  test('it proves the two OLD overloads are actually gone, not just that the new ones exist', () => {
+    expect(ACCEPTANCE).toContain(
+      "to_regprocedure('public.community_upsert_profile(jsonb)') IS NOT NULL",
+    );
+    expect(ACCEPTANCE).toContain(
+      "to_regprocedure('public.community_create_post(text, jsonb, text, uuid, text)') IS NOT NULL",
+    );
+  });
+
+  test('the new tables are proved free of WRITE grants too, not SELECT alone', () => {
+    for (const t of ['community_post_groups', 'community_notify_daily']) {
+      for (const role of ['authenticated', 'anon']) {
+        expect(ACCEPTANCE).toContain(
+          `has_table_privilege('${role}', 'public.${t}', 'SELECT, INSERT, UPDATE, DELETE')`,
+        );
+      }
+    }
+  });
+});
+
+describe('PART B review: the daily digest collapses even under a burst', () => {
+  // The defect: SELECT, then send, then INSERT. Two Respects for the same
+  // recipient landing in the same moment - exactly what several people
+  // tapping "Respect everyone" produces - both read "no row", both pushed,
+  // and the losing INSERT's duplicate key was only logged.
+  test('the day is claimed with an INSERT before the send, not after it', () => {
+    const claim = NOTIFY_FN.indexOf(
+      ".insert({ recipient: targetUserId, day: notifyDailyDay, count: 1 })",
+    );
+    const send = NOTIFY_FN.indexOf('functions/v1/send-push');
+    expect(claim).toBeGreaterThan(-1);
+    expect(send).toBeGreaterThan(-1);
+    expect(claim).toBeLessThan(send);
+  });
+
+  test('a duplicate key is the collapse signal, not an error to log and push through', () => {
+    expect(NOTIFY_FN).toContain("(claimErr as { code?: string }).code !== '23505'");
+  });
+
+  test('a failed send releases the day rather than silencing it', () => {
+    expect(NOTIFY_FN).toContain('if (notifyDailyClaimed && notifyDailyDay) {');
+    expect(NOTIFY_FN).toContain("[community-notify] daily-collapse release failed");
+  });
+
+  test('the daily table has a stated retention rule and a prune that enforces it', () => {
+    expect(SQL).toContain('reviewer 2026-09-10 (B): RETENTION.');
+    expect(NOTIFY_FN).toContain('const NOTIFY_DAILY_RETENTION_DAYS = 7');
+    expect(NOTIFY_FN).toContain('.lt(\'day\', cutoff)');
+  });
+
+  test('the collapsed push names nobody, in its body or in its payload', () => {
+    expect(NOTIFY_FN).toContain(
+      "return { title: 'Community', body: 'Someone gave your training respect' }",
+    );
+    expect(NOTIFY_FN).toContain(
+      "...(kind === 'reaction' ? {} : { actor_handle: handle }),",
+    );
+    expect(NOTIFY_FN).not.toContain('\n          actor_handle: handle,\n');
+  });
+
+  test('the day key is UK-local and the collapse only ever touches a reaction', () => {
+    expect(NOTIFY_FN).toContain("timeZone: 'Europe/London'");
+    expect(NOTIFY_FN).toContain("if (kind === 'reaction') {\n    notifyDailyDay = ukLocalDayKey()");
+    // Quiet hours and the ED flag both still return before the claim is
+    // ever taken, so a held push never burns the day.
+    const quiet = NOTIFY_FN.indexOf('Step 4a: quiet hours');
+    const edFlag = NOTIFY_FN.indexOf("Step 5: the recipient's open ED/wellbeing flag");
+    const claim = NOTIFY_FN.indexOf('Step 5c: the daily Respect collapse');
+    expect(quiet).toBeLessThan(claim);
+    expect(edFlag).toBeLessThan(claim);
   });
 });

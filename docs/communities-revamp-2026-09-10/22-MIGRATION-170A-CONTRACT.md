@@ -221,7 +221,7 @@ New keys in `_p`, same "omit the key to leave it unchanged" contract `discipline
 - `sessions_audience` (`followers` | `groups` | `everyone`, default `followers`). **Minors**: `everyone` is
   refused (`invalid_input`) if sent; any other value is silently forced to `followers` server-side (mirrors the
   existing `visibility` force-to-followers for a minor a few lines above it in the same function).
-- `c_planned_per_week` (integer 0-21, or `null` to clear). Out-of-range or malformed is dropped to `null`, never
+- `c_planned_per_week` (integer 0-14, or `null` to clear; reviewer 2026-09-10 (B) lowered the cap from 21). Out-of-range or malformed is dropped to `null`, never
   a hard refusal — the same posture `community_update_training_profile` already uses for its own counters.
 
 `_remove_shared = true`, combined with a resulting `share_sessions = false` (either just turned off, or already
@@ -237,7 +237,11 @@ Return shape unchanged: the profile card, `_community_profile_card(v_uid, v_uid)
 Was `(_kind, _payload, _caption, _programme_id, _visibility)`; now also `_auto boolean DEFAULT false,
 _client_ref text DEFAULT NULL, _group_ids uuid[] DEFAULT NULL`. The old 5-arg overload is DROPped (same
 DROP-first reasoning as above). Existing behaviour and validation (payload allow-list per `kind`, forbidden-key
-scan, caption clean-text + 280 chars, the 3-per-day/10-established rate rail) is unchanged.
+scan, caption clean-text + 280 chars) is unchanged for a MANUAL post, including its 3-per-day/10-established
+rate rail. An `_auto = true` call sits on its own rail instead (lead ruling 2026-09-10): action `post_auto`,
+**12 per UK-local day**, flat for new and established accounts, independent of the manual rail in both
+directions. One workout makes at most four items, so 12 is three workouts a day; the manual 3-a-day would
+otherwise have made the feature unusable on a new member's first PR-heavy session.
 
 - `_visibility` gains `'groups'`. A `'groups'` post **must** carry at least one `_group_ids` entry
   (`invalid_input` otherwise — a groups post naming no group would be visible to nobody but its own author); a
@@ -252,13 +256,25 @@ scan, caption clean-text + 280 chars, the 3-per-day/10-established rate rail) is
   offline-queued flush any number of times. An ordinary manual post that never sends `_client_ref` is never
   constrained by this at all. `_group_ids` is written ONLY on the genuinely first (inserting) call; a
   conflict-hit call leaves the post's existing group audience untouched.
-- `_auto`: stored as-is on the row (`community_posts.auto`).
+- `_auto`: stored on the row (`community_posts.auto`), but **consent-gated server-side** (reviewer 2026-09-10
+  (B); it used to be stored as-is on the client's word alone). An `_auto = true` call re-reads the caller's
+  `share_sessions`/`sessions_audience` from their profile and refuses with `not_allowed` when sharing is off, or
+  when `_visibility` is WIDER than the chosen audience (`public` needs `everyone`; `groups` needs `groups`;
+  `followers` is always accepted, being the product's consent floor and the value a minor is forced to). An
+  `_auto` post above `followers` by a minor is `minor_restricted`. Client consequence: a queued offline item
+  flushed after the toggle went off is refused permanently — drop it from the queue on `not_allowed`, never
+  retry it.
+- **The rate rail is not spent on a repeat `_client_ref`** (reviewer 2026-09-10 (B)): a call whose
+  `(author, client_ref)` pair already exists returns that post's id BEFORE `_community_rate_check` runs, so a
+  flush really is safe to retry any number of times. Previously three retries of one pending item exhausted a
+  new member's whole day of three and the queue could never drain.
 
 Return shape unchanged: `{ id }`.
 
 ## community_post_set_note(_post_id uuid, _text text) — NEW
 
-Author-only (`not_found` for anyone else, including a viewer who could otherwise see the post). Sets the post's
+Author-only (`not_found` for anyone else, including a viewer who could otherwise see the post), and only on a
+post whose `status` is still `visible` (`not_allowed` on one moderation has hidden - lead ruling 2026-09-10). Sets the post's
 `caption` (the existing "note"/text field `community_get_post`/`community_feed` etc. already return under the
 `post` object's `caption` key) through the identical content check `community_create_post` applies to its own
 caption: `_community_clean_text` (the keyword filter) then a 280-character cap. `null`/empty text clears the
@@ -270,7 +286,10 @@ note. VOLATILE, rate-railed 10 per hour (action `post_set_note`). Returns the up
 `community_posts.visibility` CHECK now allows `'groups'`, alongside a new join table
 `community_post_groups(post_id, group_id)` (RLS on, no grants, RPC-only, cascades on either FK). A `'groups'`
 post is visible to: its own author always, and any caller who is a **current `state = 'member'`** of at least
-one group the post names. Every RPC that decides "may this caller see this post" gained that exact branch,
+one group the post names — and NOBODY else, a follower of the author included (reviewer 2026-09-10 (B): the
+follows arm inside `_community_can_view_post` and inside `community_get_profile`'s posts list carried no
+visibility test of its own, which was harmless while the set was {public, followers} and admitted every
+follower to a groups post once `'groups'` existed; both are now scoped to `visibility = 'followers'`). Every RPC that decides "may this caller see this post" gained that exact branch,
 re-issued with unchanged signatures:
 - `_community_can_view_post(_viewer, _post_id)` — the shared gate `community_react`, `community_comment`,
   `community_report` and the connect/share preview paths all already call; re-issuing it alone makes every one
@@ -282,7 +301,9 @@ re-issued with unchanged signatures:
 - `community_group_feed(_group_id, _cursor, _limit)` — gains a second inclusion arm, ORed with the existing
   "author is a current member of `_group_id`" one: **posts whose audience names `_group_id`** (via
   `community_post_groups`), regardless of the author's CURRENT membership. Both arms still go through
-  `_community_can_view_post` before being returned.
+  `_community_can_view_post` before being returned. The first arm now also requires `visibility <> 'groups'`
+  (reviewer 2026-09-10 (B)): a post addressed to group X reaches group X's feed and no other, where before it
+  surfaced in any other group its author belonged to whenever the viewer happened to be in X.
 - `community_get_profile(_handle, _uid)` — the profile's own posts list gains the same branch in its inline
   visibility OR-chain (`v_target = v_uid` already covers "the author viewing their own profile").
 `community_discover_posts` and `community_dimension_recent` are UNCHANGED: both hard-filter to
@@ -296,14 +317,20 @@ table explicitly) and `community_notify_daily` (deleted by `recipient`, item 6 b
 
 ## community_group_get(_group_id) — signature unchanged, Together this week added
 
-Three new always-computed keys, stripped alongside `member_count`/`blurb` for a non-member of an invite-only
-group (the same "count-shaped fact an invite-only group withholds" rule):
+Three new keys, **always present** but **`null` for any non-member** of the group, open or invite-only (lead
+ruling 2026-09-10: a non-member browsing an open group used to get all three, and at `sharing_members = 1` that
+"aggregate" is one member's exact weekly count; the sums are not even computed for a non-member now). A
+non-member still sees the group's name, and for an open group its `member_count`; `member_count`/`blurb` keep
+their existing strip for a non-member of an invite-only group. For a member, the three are:
 - `together_sessions_week` (int): `sum(c_sessions_week)`.
 - `together_planned_week` (int): `sum(c_planned_per_week)`, counting only members who HAVE a plan
   (`c_planned_per_week IS NOT NULL`) — a member with no plan contributes nothing, not zero, so a group where
   nobody plans never reads as "0 of 0 planned".
 - `sharing_members` (int): the count of members the two sums above are computed over — the "6" in "6 of 8
   sharing", where the existing `member_count` is the "8".
+
+Client rendering (lead ruling 2026-09-10): "Together: nothing shared yet" when `sharing_members` is 0, and the
+planned figure omitted when `together_planned_week` is 0 ("Together: 11 sessions this week · 6 of 8 sharing").
 
 All three are computed over the SAME member set: `state = 'member'`, `status = 'active'`, `is_minor = false`,
 `share_consistency = true`, and — unlike `member_count`, which is never reduced by a personal block list because
@@ -324,7 +351,9 @@ blast): `gym`, `area`, `style`, `discipline`, `age_band`, `group`, `following`. 
 the caller's own `gym_id`/`area_key`); none for `age_band` (always the caller's own band; `not_allowed` if the
 caller does not share one) or `following`. `discipline`'s key is validated against the taxonomy
 (`_community_discipline_key_ok`); `group`'s key requires the caller to already be a `state = 'member'`
-(`not_allowed` otherwise).
+(`not_allowed` otherwise; a non-uuid key is `invalid_input`, not a raw Postgres cast error — reviewer
+2026-09-10 (B)). The 10-per-hour rail is spent only after every one of these checks passes (reviewer
+2026-09-10 (B): it used to run first, so a client looping on `not_allowed` locked the button for an hour).
 
 **Target selection**, per eligible scope member: their single LATEST `auto = true, kind = 'session'` post.
 Eligible means, ALL of: `status = 'active'`, `is_minor = false`, not the caller, `share_sessions = true`
@@ -372,16 +401,23 @@ client-side move lands, by design (it reads `migrate_161`, not this file's Part 
 
 New table `community_notify_daily(recipient uuid, day text, count int, PRIMARY KEY (recipient, day))` — RLS on,
 no grants; written only by the `community-notify` edge function's service-role client (which bypasses RLS and
-grants entirely), never by an RPC.
+grants entirely), never by an RPC. **Retention: 7 days** (reviewer 2026-09-10 (B) — it had none), pruned for
+that recipient by the edge function at the moment it claims a day, the same opportunistic no-cron shape
+`_community_rate_check` uses for `community_rate_events`.
 
 `supabase/functions/community-notify/index.ts` (separate file, not SQL): for `kind = 'reaction'` only, after the
 existing per-proof replay guard (step 5b) and before the send, the function now checks `community_notify_daily`
 for a row `(recipient = target_user_id, day = <UK-local today>)`:
-- **No row** (first Respect of the day): sends the push as normal, with a new fixed body — **"Someone gave your
+- **Claim taken** (first Respect of the day): sends the push, with a new fixed body — **"Someone gave your
   training respect"** (no handle; a collapsed digest represents at least one Respect, possibly several, so it
-  never names a single person) — inside the existing `COMMUNITY_ACTIVITY` category and quiet hours. After a
-  successful send, inserts `(recipient, day, count: 1)`.
-- **Row exists** (a later Respect the same day): the row's `count` is incremented and **no push is sent**.
+  never names a single person) — inside the existing `COMMUNITY_ACTIVITY` category and quiet hours. The push's
+  `data` payload also carries **no `actor_handle`** for this kind, for the same reason the body carries no
+  handle (reviewer 2026-09-10 (B); nothing in `src/` reads that field).
+- **Claim refused** (a later Respect the same day): the row's `count` is incremented and **no push is sent**.
+- The claim is an `INSERT` taken **before** the send, with the row's own `PRIMARY KEY (recipient, day)` as the
+  lock, and released (deleted) if the send throws (reviewer 2026-09-10 (B)). The previous read-then-send-then-
+  insert shape let two Respects landing in the same moment — exactly what several people tapping "Respect
+  everyone" produces — both read "no row" and both push, so the collapse was bypassable by a burst.
 `community_respect_all`'s reactions write the identical `reaction`-kind activity rows `community_react` does, so
 whichever client-side call path notifies for them collapses through this exact same mechanism — no separate
 digest logic for bulk Respect. The in-app Activity inbox is unaffected: every Respect still appears there

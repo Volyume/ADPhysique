@@ -388,6 +388,25 @@
 --                     refused, mirroring the existing minor-safety posture
 --                     this file already applies to `visibility`.
 --
+--                     PART B, stated plainly (reviewer 2026-09-10 (B)): an
+--                     auto item IS Article 9 health data on this repo's own
+--                     reading (training data), published automatically
+--                     without a compose step. Its lawful basis is the
+--                     express, informed act of turning `share_sessions` on
+--                     (20-BLUEPRINT.md section 8, tightening R3), so
+--                     `community_create_post` re-reads that toggle and the
+--                     chosen `sessions_audience` from the profile on EVERY
+--                     `_auto` write rather than trusting the client that
+--                     set the flag, and refuses when consent is off or the
+--                     requested audience is wider than the one chosen.
+--                     Withdrawal is real and is the same act: turning the
+--                     toggle off with `_remove_shared` deletes every auto
+--                     item the account has posted, with its comments and
+--                     activity rows. `community_notify_daily` carries a
+--                     stated retention rule (7 days, pruned per recipient
+--                     by the edge function as it claims each day) rather
+--                     than growing for the life of the account.
+--
 -- Transaction:       no explicit BEGIN/COMMIT; the runner supplies one.
 
 -- ─── Part 1: community_profiles.discipline_keys ──────────────────────────
@@ -2780,7 +2799,12 @@ BEGIN
   -- a stale build sending one bad field should not lose the whole call).
   v_c_planned_per_week := NULL;
   IF jsonb_typeof(_p -> 'c_planned_per_week') = 'number' THEN
-    v_c_planned_per_week := greatest(0, least((_p ->> 'c_planned_per_week')::int, 21));
+    -- reviewer 2026-09-10 (B): upper bound 14, not 21. This number is only
+    -- ever summed into the group's "Together" planned figure, and a bound
+    -- nobody can plan to is a bound that only ever makes that line read
+    -- wrong. Two sessions a day, every day, is already past any plan this
+    -- engine generates.
+    v_c_planned_per_week := greatest(0, least((_p ->> 'c_planned_per_week')::int, 14));
   END IF;
 
   PERFORM public._community_rate_check(v_uid, 'profile_upsert', 5, 5);
@@ -2975,6 +2999,10 @@ DECLARE
   v_group_ids  uuid[]; -- migrate_170 part B
   v_gid        uuid; -- migrate_170 part B
   v_inserted   boolean; -- migrate_170 part B
+  v_share_sessions    boolean; -- reviewer 2026-09-10 (B)
+  v_sessions_audience text;    -- reviewer 2026-09-10 (B)
+  v_auto_vis          text;    -- reviewer 2026-09-10 (B)
+  v_day_start         timestamptz; -- lead ruling 2026-09-10 (B)
 BEGIN
   PERFORM public._community_require_profile(v_uid, true);
 
@@ -3052,9 +3080,77 @@ BEGIN
     RAISE EXCEPTION USING message = 'invalid_input';
   END IF;
 
+  -- reviewer 2026-09-10 (B): CONSENT, checked on the server, not only in
+  -- the client that sets _auto. An ambient item is Article 9 training data
+  -- published on an express toggle (blueprint section 8, tightening R3), so
+  -- "share_sessions is on" must be a fact this function establishes for
+  -- itself: a stale build, a replayed offline queue flushed after the
+  -- toggle went off, or any caller holding a session JWT could otherwise
+  -- publish auto items the owner never consented to. The audience is
+  -- enforced with it - an auto item may never be WIDER than the audience
+  -- the owner chose ('public' only under 'everyone', 'groups' only under
+  -- 'groups'), while 'followers' stays permitted under every audience
+  -- because it is this product's consent floor: the value a minor is
+  -- forced to, and the value a queued item narrows to when the owner's
+  -- choice moved on. A minor therefore can never reach 'public' or
+  -- 'groups' here at all, since sessions_audience is forced to 'followers'
+  -- for them on write (B2 above); the explicit minor line below is belt
+  -- and braces on top of that, never the only thing standing in the way.
+  IF coalesce(_auto, false) THEN
+    SELECT p.share_sessions, p.sessions_audience
+      INTO v_share_sessions, v_sessions_audience
+    FROM public.community_profiles p WHERE p.user_id = v_uid;
+    IF NOT coalesce(v_share_sessions, false) THEN
+      RAISE EXCEPTION USING message = 'not_allowed';
+    END IF;
+    v_auto_vis := CASE coalesce(v_sessions_audience, 'followers')
+                    WHEN 'everyone' THEN 'public'
+                    WHEN 'groups'   THEN 'groups'
+                    ELSE 'followers' END;
+    IF v_vis <> 'followers' AND v_vis <> v_auto_vis THEN
+      RAISE EXCEPTION USING message = 'not_allowed';
+    END IF;
+    IF v_vis <> 'followers' AND public._community_caller_is_minor(v_uid) THEN
+      RAISE EXCEPTION USING message = 'minor_restricted';
+    END IF;
+  END IF;
+
+  -- reviewer 2026-09-10 (B): resolve an already-flushed client_ref BEFORE
+  -- the rate rail. The ON CONFLICT below made the WRITE idempotent, but the
+  -- rail is spent before it is ever reached, so the contract's "safe to
+  -- retry an offline-queued flush any number of times" was false: three
+  -- retries of one pending item exhaust a new member's whole day of three
+  -- and the queue can then never drain. A ref this author has already
+  -- posted is not a new post and must not cost one. The ON CONFLICT clause
+  -- stays as the race-safe backstop for two flushes landing at once.
+  IF v_client_ref IS NOT NULL THEN
+    SELECT p.id INTO v_id FROM public.community_posts p
+    WHERE p.author_id = v_uid AND p.client_ref = v_client_ref;
+    IF FOUND THEN
+      RETURN jsonb_build_object('id', v_id);
+    END IF;
+  END IF;
+
   -- The rate check runs LAST, after every validation: a rejected post must
   -- not spend one of the day's three.
-  PERFORM public._community_rate_check(v_uid, 'post', 3, 10);
+  --
+  -- Lead ruling 2026-09-10 (B): an ambient item does NOT spend the manual
+  -- post rail. One workout makes at most four items (a session plus up to
+  -- three PR moments), so the manual rail's 3-a-day for an account under a
+  -- week old made the feature unusable on a new member's first PR-heavy
+  -- session. `post_auto` is its own action, 12 a day (three workouts at
+  -- four items), flat for new and established accounts alike; the manual
+  -- `post` rail is untouched, and neither can eat the other. The window is
+  -- a real UK-local day rather than the helper's default rolling 24 hours:
+  -- the interval passed is exactly "how long since UK-local midnight", so
+  -- _community_rate_check counts only today's own items and the allowance
+  -- resets at midnight the way a person expects it to.
+  IF coalesce(_auto, false) THEN
+    v_day_start := date_trunc('day', timezone('Europe/London', now())) AT TIME ZONE 'Europe/London';
+    PERFORM public._community_rate_check(v_uid, 'post_auto', 12, 12, now() - v_day_start);
+  ELSE
+    PERFORM public._community_rate_check(v_uid, 'post', 3, 10);
+  END IF;
 
   -- migrate_170 part B: idempotent on (author_id, client_ref) when a
   -- client_ref is supplied - a retried flush of the same pending ambient
@@ -3111,6 +3207,10 @@ BEGIN
 
   SELECT * INTO v_r FROM public.community_posts WHERE id = _post_id AND author_id = v_uid;
   IF NOT FOUND THEN RAISE EXCEPTION USING message = 'not_found'; END IF;
+  -- Lead ruling 2026-09-10 (B): a post moderation has hidden is not
+  -- editable. not_allowed, not not_found: the author knows their own post
+  -- exists, and a report/auto-hide is not something to edit around.
+  IF v_r.status <> 'visible' THEN RAISE EXCEPTION USING message = 'not_allowed'; END IF;
 
   v_note := nullif(btrim(coalesce(_text, '')), '');
   IF v_note IS NOT NULL THEN
@@ -3118,7 +3218,11 @@ BEGIN
     IF length(v_note) > 280 THEN RAISE EXCEPTION USING message = 'invalid_input'; END IF;
   END IF;
 
-  PERFORM public._community_rate_check(v_uid, 'post_set_note', 10, 30, interval '1 hour');
+  -- reviewer 2026-09-10 (B): 10/10, not 10/30. The contract states this
+  -- rail as "10 per hour" flat, the same shape community_respect_all uses;
+  -- an established account editing its own note thirty times an hour is
+  -- not a case worth widening a rail for.
+  PERFORM public._community_rate_check(v_uid, 'post_set_note', 10, 10, interval '1 hour');
 
   UPDATE public.community_posts SET caption = v_note, updated_at = now() WHERE id = _post_id;
   SELECT * INTO v_r FROM public.community_posts WHERE id = _post_id;
@@ -3154,10 +3258,24 @@ AS $$
           AND public._community_can_view(_viewer, r.author_id)
           AND (
             r.visibility = 'public'
-            OR EXISTS (
-              SELECT 1 FROM public.community_follows f
-              WHERE f.follower_id = _viewer AND f.followee_id = r.author_id
-                AND f.state = 'accepted')
+            -- reviewer 2026-09-10 (B): this follows arm used to carry NO
+            -- visibility test at all, which was correct only while the set
+            -- was {public, followers}. With 'groups' added it admitted every
+            -- accepted FOLLOWER to a groups post they were not in the group
+            -- for - through the one gate community_react, community_comment,
+            -- community_report, community_list_comments, community_group_
+            -- feed, the connect/share previews and community_respect_all all
+            -- call. Scoped to 'followers', which is byte-identical in effect
+            -- for the two old values and closes the leak for the new one.
+            -- community_get_profile's programme OR-chain already spells it
+            -- this way (gg.visibility = 'followers' AND EXISTS ...).
+            OR (
+              r.visibility = 'followers'
+              AND EXISTS (
+                SELECT 1 FROM public.community_follows f
+                WHERE f.follower_id = _viewer AND f.followee_id = r.author_id
+                  AND f.state = 'accepted')
+            )
             -- migrate_170 part B (phase3 spec section 3): a 'groups' post is
             -- visible to a member of any group it names.
             OR (
@@ -3347,9 +3465,16 @@ BEGIN
     FROM public.community_posts r
     WHERE r.status = 'visible'
       AND (
-        EXISTS (
+        -- reviewer 2026-09-10 (B): `r.visibility <> 'groups'` added to this
+        -- pre-existing arm. Without it, a post addressed to group X by an
+        -- author who also belongs to group Y appeared in group Y's feed
+        -- whenever the viewer happened to be in X (which is all _community_
+        -- can_view_post asks). A named audience means the groups it names,
+        -- so a groups post now only ever reaches the feeds of those groups,
+        -- through the second arm below.
+        (r.visibility <> 'groups' AND EXISTS (
           SELECT 1 FROM public.community_group_members m
-          WHERE m.group_id = _group_id AND m.user_id = r.author_id AND m.state = 'member')
+          WHERE m.group_id = _group_id AND m.user_id = r.author_id AND m.state = 'member'))
         -- migrate_170 part B (phase3 spec section 3).
         OR EXISTS (
           SELECT 1 FROM public.community_post_groups pg
@@ -3444,9 +3569,16 @@ BEGIN
       SELECT * FROM public.community_posts p
       WHERE p.author_id = v_target AND p.status = 'visible'
         AND (p.visibility = 'public' OR v_target = v_uid
-             OR EXISTS (SELECT 1 FROM public.community_follows f
-                        WHERE f.follower_id = v_uid AND f.followee_id = v_target
-                          AND f.state = 'accepted')
+             -- reviewer 2026-09-10 (B): the follows arm carried no
+             -- visibility test, so once 'groups' existed a plain FOLLOWER
+             -- saw a groups post on the author's profile without being in
+             -- any named group. Scoped to 'followers' - identical in effect
+             -- for the two old values, and exactly the shape the programme
+             -- OR-chain fifteen lines below already uses.
+             OR (p.visibility = 'followers'
+                 AND EXISTS (SELECT 1 FROM public.community_follows f
+                             WHERE f.follower_id = v_uid AND f.followee_id = v_target
+                               AND f.state = 'accepted'))
              -- migrate_170 part B: the 'groups' branch.
              OR (p.visibility = 'groups'
                  AND EXISTS (
@@ -3542,17 +3674,30 @@ BEGIN
   -- reduced by the caller's own blocks - it is the viewer's own sense of
   -- "us", not the group's stated size, and a blocked pair should not
   -- silently count towards a number the blocker reads as their own team.
-  SELECT
-    coalesce(sum(p2.c_sessions_week), 0),
-    coalesce(sum(p2.c_planned_per_week) FILTER (WHERE p2.c_planned_per_week IS NOT NULL), 0),
-    count(*)
-  INTO v_together_sessions, v_together_planned, v_sharing_members
-  FROM public.community_group_members gm2
-  JOIN public.community_profiles p2 ON p2.user_id = gm2.user_id
-  WHERE gm2.group_id = _group_id AND gm2.state = 'member'
-    AND p2.status = 'active' AND p2.is_minor = false
-    AND p2.share_consistency = true
-    AND NOT public._community_is_blocked(v_uid, p2.user_id);
+  -- Lead ruling 2026-09-10 (B): MEMBERS only. A non-member browsing an
+  -- OPEN group used to get all three, and with sharing_members = 1 that
+  -- "aggregate" is one identifiable member's exact weekly session count.
+  -- A non-member now gets null for all three (the key is always present,
+  -- the same shape the profile card's consistency counters use) and the
+  -- sum is never even computed for them - they still see the group's name
+  -- and, for an open group, its member count.
+  IF v_role IS NULL THEN
+    v_together_sessions := NULL;
+    v_together_planned  := NULL;
+    v_sharing_members   := NULL;
+  ELSE
+    SELECT
+      coalesce(sum(p2.c_sessions_week), 0),
+      coalesce(sum(p2.c_planned_per_week) FILTER (WHERE p2.c_planned_per_week IS NOT NULL), 0),
+      count(*)
+    INTO v_together_sessions, v_together_planned, v_sharing_members
+    FROM public.community_group_members gm2
+    JOIN public.community_profiles p2 ON p2.user_id = gm2.user_id
+    WHERE gm2.group_id = _group_id AND gm2.state = 'member'
+      AND p2.status = 'active' AND p2.is_minor = false
+      AND p2.share_consistency = true
+      AND NOT public._community_is_blocked(v_uid, p2.user_id);
+  END IF;
 
   v_out := v_out || jsonb_build_object(
     'together_sessions_week', v_together_sessions,
@@ -3565,8 +3710,9 @@ BEGIN
   -- the same "count-shaped" fact an invite-only group withholds from a
   -- non-member.
   IF v_role IS NULL AND v_g.access = 'invite' THEN
-    v_out := v_out - 'member_count' - 'blurb'
-      - 'together_sessions_week' - 'together_planned_week' - 'sharing_members';
+    -- The three Together keys are already null for every non-member above,
+    -- so this strip stays exactly what it was before part B.
+    v_out := v_out - 'member_count' - 'blurb';
   END IF;
   RETURN v_out || jsonb_build_object('my_role', v_role, 'my_state',
     (SELECT state FROM public.community_group_members WHERE group_id = _group_id AND user_id = v_uid));
@@ -3607,6 +3753,7 @@ DECLARE
   v_me       public.community_profiles%ROWTYPE;
   v_today    text;
   v_gym_id   uuid;
+  v_group_id uuid; -- reviewer 2026-09-10 (B)
   v_area_key text;
   v_given    int := 0;
   v_row      record;
@@ -3633,12 +3780,20 @@ BEGIN
   END IF;
 
   v_me := public._community_require_profile(v_uid, true);
-  PERFORM public._community_rate_check(v_uid, 'respect_all', 10, 10, interval '1 hour');
 
   IF _scope = 'group' THEN
+    -- reviewer 2026-09-10 (B): the cast is guarded, exactly as the gym
+    -- scope's already was. A non-uuid _scope_key used to raise Postgres's
+    -- own 22P02 here, which reaches the client as a raw invalid-input-
+    -- syntax string instead of this file's own 'invalid_input' envelope.
+    BEGIN
+      v_group_id := _scope_key::uuid;
+    EXCEPTION WHEN others THEN
+      RAISE EXCEPTION USING message = 'invalid_input';
+    END;
     IF NOT EXISTS (
       SELECT 1 FROM public.community_group_members m
-      WHERE m.group_id = _scope_key::uuid AND m.user_id = v_uid AND m.state = 'member'
+      WHERE m.group_id = v_group_id AND m.user_id = v_uid AND m.state = 'member'
     ) THEN
       RAISE EXCEPTION USING message = 'not_allowed';
     END IF;
@@ -3668,6 +3823,14 @@ BEGIN
     END IF;
   END IF;
 
+  -- reviewer 2026-09-10 (B): the rail runs LAST, after every validation -
+  -- this file's own stated convention ("a rejected post must not spend one
+  -- of the day's three", community_create_post). It used to sit above the
+  -- group-membership, age-band and gym-key checks, so a refused call still
+  -- spent one of the ten an hour and a client looping on a not_allowed
+  -- locked the caller out of the button for an hour.
+  PERFORM public._community_rate_check(v_uid, 'respect_all', 10, 10, interval '1 hour');
+
   -- One reaction per eligible member's latest today-dated auto session
   -- post, exactly community_react's own INSERT ... ON CONFLICT DO NOTHING,
   -- looped so v_given only counts genuinely NEW reactions (idempotent per
@@ -3694,7 +3857,7 @@ BEGIN
           OR (_scope = 'age_band' AND v_me.tp_age_band IS NOT NULL AND p.tp_age_band = v_me.tp_age_band)
           OR (_scope = 'group' AND EXISTS (
                 SELECT 1 FROM public.community_group_members gm
-                WHERE gm.group_id = _scope_key::uuid AND gm.user_id = p.user_id AND gm.state = 'member'))
+                WHERE gm.group_id = v_group_id AND gm.user_id = p.user_id AND gm.state = 'member'))
           OR (_scope = 'following' AND EXISTS (
                 SELECT 1 FROM public.community_follows f
                 WHERE f.follower_id = v_uid AND f.followee_id = p.user_id AND f.state = 'accepted'))
@@ -3756,6 +3919,14 @@ REVOKE ALL ON FUNCTION public._community_connect_reasons_list() FROM PUBLIC, ano
 -- RLS on, no grants, RPC-only posture; no RPC in this file writes it, only
 -- the edge function's service-role client does.
 
+--
+-- reviewer 2026-09-10 (B): RETENTION. One row per recipient per day they
+-- were pushed at is unbounded growth with nothing anywhere pruning it. The
+-- rule is 7 days: the edge function deletes that recipient's rows older
+-- than 7 days at the moment it claims the day's first push, which is the
+-- same opportunistic, per-user, no-cron-job prune _community_rate_check
+-- already does for community_rate_events. Nothing reads a row older than
+-- today, so 7 days is pure slack for a clock or a timezone edge.
 CREATE TABLE IF NOT EXISTS public.community_notify_daily (
   recipient uuid NOT NULL,
   day       text NOT NULL,
@@ -4068,10 +4239,22 @@ BEGIN
   END IF;
 
   IF to_regprocedure('public.community_upsert_profile(jsonb, boolean)') IS NULL THEN
-    RAISE EXCEPTION 'acceptance failed: community_upsert_profile(jsonb, boolean) missing (old 1-arg signature not dropped, or new one not created)';
+    RAISE EXCEPTION 'acceptance failed: community_upsert_profile(jsonb, boolean) missing (new signature not created)';
   END IF;
   IF to_regprocedure('public.community_create_post(text, jsonb, text, uuid, text, boolean, text, uuid[])') IS NULL THEN
-    RAISE EXCEPTION 'acceptance failed: community_create_post with auto/client_ref/_group_ids missing (old 5-arg signature not dropped, or new one not created)';
+    RAISE EXCEPTION 'acceptance failed: community_create_post with auto/client_ref/_group_ids missing (new signature not created)';
+  END IF;
+  -- reviewer 2026-09-10 (B): the two checks above only ever proved the NEW
+  -- signature exists, while their own message claimed to catch "old
+  -- signature not dropped". A surviving old overload is the actual danger
+  -- (PostgREST resolves by the argument names a client sends, so a stale
+  -- 1-arg community_upsert_profile would keep answering and silently skip
+  -- every part B field), so prove it is gone.
+  IF to_regprocedure('public.community_upsert_profile(jsonb)') IS NOT NULL THEN
+    RAISE EXCEPTION 'acceptance failed: the old community_upsert_profile(jsonb) overload still exists';
+  END IF;
+  IF to_regprocedure('public.community_create_post(text, jsonb, text, uuid, text)') IS NOT NULL THEN
+    RAISE EXCEPTION 'acceptance failed: the old community_create_post 5-arg overload still exists';
   END IF;
   IF to_regprocedure('public.community_post_set_note(uuid, text)') IS NULL THEN
     RAISE EXCEPTION 'acceptance failed: community_post_set_note missing';
@@ -4156,11 +4339,15 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'acceptance failed: a part B table does not have RLS enabled';
   END IF;
-  IF has_table_privilege('authenticated', 'public.community_post_groups', 'SELECT')
-     OR has_table_privilege('anon', 'public.community_post_groups', 'SELECT')
-     OR has_table_privilege('authenticated', 'public.community_notify_daily', 'SELECT')
-     OR has_table_privilege('anon', 'public.community_notify_daily', 'SELECT') THEN
-    RAISE EXCEPTION 'acceptance failed: a part B table has SELECT reaching anon or authenticated';
+  -- reviewer 2026-09-10 (B): INSERT/UPDATE/DELETE checked too, not SELECT
+  -- alone. A write grant on either table is worse than a read one - a
+  -- direct INSERT into community_post_groups would hand any account the
+  -- power to add its own group to somebody else's post's audience.
+  IF has_table_privilege('authenticated', 'public.community_post_groups', 'SELECT, INSERT, UPDATE, DELETE')
+     OR has_table_privilege('anon', 'public.community_post_groups', 'SELECT, INSERT, UPDATE, DELETE')
+     OR has_table_privilege('authenticated', 'public.community_notify_daily', 'SELECT, INSERT, UPDATE, DELETE')
+     OR has_table_privilege('anon', 'public.community_notify_daily', 'SELECT, INSERT, UPDATE, DELETE') THEN
+    RAISE EXCEPTION 'acceptance failed: a part B table has a grant reaching anon or authenticated';
   END IF;
 
   -- delete_user_data names both new tables (the GDPR erasure completeness
