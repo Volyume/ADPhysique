@@ -10,7 +10,8 @@ elite, one product; never explained as programme sharing. Branch
 `claude/communities-feature-overhaul-68l923`, folder
 `docs/communities-revamp-2026-09-10/` (README = map). Six read-only lanes
 at Haiku/Sonnet: 01 recon (HEAD verified), 02 visual audit, 03 explanation
-audit (eight wrong sites), 10 mechanisms, 11 safety, 12 look and feel.
+audit (eight wrong sites), 10 mechanisms, 11 safety (four tightenings,
+no STOP), 12 look and feel.
 Lead blueprint `20-BLUEPRINT.md` + rulings `40-DECISIONS.md` CR-01..CR-12
 (register D155). Observed at HEAD: no amber fill in Community beyond the
 three committing actions; the Hub stacks 7-9 blocks before the feed;

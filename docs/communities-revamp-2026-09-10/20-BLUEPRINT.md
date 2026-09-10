@@ -227,8 +227,15 @@ billing.
 
 ## 8. Safety posture (CR-08)
 
-Pending `11-research-safety-cohorts.md`; the rulings below are the
-conservative floor and can only be tightened by that lane.
+Tested by `11-research-safety-cohorts.md`: no STOP; R2 (age bands) and R6
+(nothing ranked by weight, bodyweight or volume) HOLD; R1, R3, R4 and R5
+TIGHTEN as folded in below. Its evidence class is stated honestly: the
+Peloton case, the Apple and Google UGC policy text and three peer-reviewed
+physique-athlete studies were fetched; ICO and Ofcom text is drawn from
+the repo's earlier verified fetches plus recalled doctrine (its section
+11). Apple's UGC age-rating questionnaire may raise the store age band
+when this ships: a founder-side check at submission, already flagged in
+`docs/social-discovery-2026-09-06/13-research-policy-safety-coldstart.md`.
 - Cohort and group surfaces show training facts only, as everywhere in
   Community: sessions, days, streaks, lifts and reps. Never bodyweight,
   measurements, food, photos or "cutting" framing; the keyword filter for
@@ -243,7 +250,33 @@ conservative floor and can only be tightened by that lane.
   ambient items follow the followers-only rule.
 - Reporting, blocking, muting, the moderator queue, the rules acceptance
   and the 24-hour runbook already exist; the Rules text is rewritten
-  (section 9) and re-accepted once through the existing updated-rules path.
+  (section 10) and re-accepted once through the existing updated-rules path.
+- **Tightening R1.** The six physique-division cohort pages carry a
+  standing, quiet Beat UK signpost row for everyone, not only the
+  reactive withhold: peer-reviewed prevalence of disordered eating in
+  physique and bodybuilding populations runs 28-72 percent across three
+  studies (lane 11 section 2), so the un-flagged majority still gets the
+  support signal. The row is `SettingRow`-shaped, `bodySm`, never a card.
+- **Tightening R3.** Turning on "Share what I did" is an express, informed
+  act (training data is Article 9 data on the repo's own reading): the
+  toggle's explanation states that sharing is automatic with nothing to
+  post yourself, names the chosen audience, and offers removal of what
+  was already shared (wording: lane 11 section 10, adopted verbatim).
+  Notes attached to items pass the keyword filter. The design also
+  answers the documented pressure to "train more so the roster looks
+  good": no lapse is ever visible, a quiet week is absence not a low
+  rank, and calm mode or an open ED flag silences everything.
+- **Tightening R4.** `community_respect_all` excludes blocked and muted
+  pairs server-side in both directions, pinned by a test; the Peloton
+  harassment case arose exactly because the fan-out had no block check.
+- **Tightening R5.** Invite-only groups get identical moderation coverage
+  to public content (reports, auto-hide thresholds, the queue, the
+  runbook): a closed group is user-to-user content under the Online
+  Safety Act and the DSA, never exempt interpersonal communication.
+  `DSA-SIZE-SELF-ASSESSMENT.md` section 6 gains that sentence.
+- Truth fields stay honest and unchanged: no clinical review exists or is
+  pending (founder law GC-D12); REAL-DISABLED-USER-VALIDATED stays NO;
+  age is self-declared and the age bands never strengthen assurance.
 
 ## 9. Presentation law: slick, flat, one product (CR-09)
 
@@ -343,7 +376,7 @@ with their items. No cards.
 
 **Join** (`CommunityJoinScreen`): unchanged flow; adds the discipline picker
 (chips, up to three) after gym, and the two sharing toggles (section 4)
-with the wording from `11-research-safety-cohorts.md` section 10.
+with the wording from `11-research-safety-cohorts.md` section 10 (adopted verbatim).
 
 ## 10. Copy: every explanation says the same thing (CR-11)
 

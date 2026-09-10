@@ -57,8 +57,8 @@ explanation audit (Haiku; founder addition: programme-sharing residue on
 Train and routines) + 11 safety/cohorts research (Sonnet, web). All
 read-only. Recovery path for each: re-dispatch the same brief (agents write
 only their own numbered file). No code changes this stage.
-LANDED (D155): lanes 01, 02, 03, 10, 12 in the folder; lane 11 (safety,
-Sonnet) lands last and can only tighten CR-08. Blueprint `20-BLUEPRINT.md`
+LANDED (D155): all six lanes 01, 02, 03, 10, 11, 12 in the folder; lane 11
+(safety) tightened CR-08 on four points, no STOP. Blueprint `20-BLUEPRINT.md`
 (purpose, cohorts, ambient activity, encouragement, groups, data, safety
 floor, presentation law, copy sites, four build phases) and rulings
 `40-DECISIONS.md` CR-01..CR-12 are the edit gate. Evidence class stated
