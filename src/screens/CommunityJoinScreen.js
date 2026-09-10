@@ -25,7 +25,7 @@
  * say different things about what would be shared.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, Switch,
 } from 'react-native';
@@ -51,7 +51,8 @@ import {
   isValidHandle, checkHandle, upsertProfile, DISPLAY_NAME_MAX,
   COMMUNITY_RULES_VERSION, currentUserId,
   TP_DEFAULT_SHARE, loadTrainingProfile, readShareSettings, writeShareSettings,
-  syncTrainingProfile, publishConsistency, shareablePayload, previewLine,
+  syncTrainingProfile, publishConsistency, publishSharingSettings, shareablePayload, previewLine,
+  SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS,
   COMMUNITY_DISCIPLINE_KEYS, COMMUNITY_DISCIPLINE_LABELS, MAX_DISCIPLINES_PER_PROFILE,
 } from '../lib/community';
 import { bandRows, NOT_ENOUGH_LINE, NOTHING_SHARED_LINE } from './CommunityTrainingProfileScreen';
@@ -243,6 +244,16 @@ export default function CommunityJoinScreen({ navigation, route }) {
       // tomorrow's throttle window or the next foreground trigger.
       syncTrainingProfile(uid, { force: true }).catch(() => { /* best effort */ });
       if (tpShare.consistency) publishConsistency(uid).catch(() => { /* best effort */ });
+      // Phase 3: "Share what I did" and its audience, chosen on this same
+      // step, go through the separate community_upsert_profile call
+      // (publishSharingSettings) rather than syncTrainingProfile above.
+      // Belt and braces: a minor never gets an audience beyond followers
+      // (the Chip row is never shown to one, so this is unreachable via
+      // the UI, but the server-side force is not the only guard).
+      if (tpShare.share_sessions) {
+        const sharing = isMinor ? { ...tpShare, sessions_audience: 'followers' } : tpShare;
+        publishSharingSettings(uid, sharing).catch(() => { /* best effort */ });
+      }
       // Optional (GD-14), and best effort the same way: the profile itself
       // is already created, and a gym can always be added later from the
       // profile editor. The profile's place is populated server-side from
@@ -261,7 +272,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
     }
   }, [
     canCreate, handle, displayName, preset, visibility, next, navigation, refresh, toast,
-    uid, primaryGym, otherGyms, tpShare, disciplineKeys,
+    uid, primaryGym, otherGyms, tpShare, disciplineKeys, isMinor,
   ]);
 
   return (
@@ -497,27 +508,58 @@ export default function CommunityJoinScreen({ navigation, route }) {
 
           {bandRows(tpBands, me)
             .filter((row) => !(isMinor && (row.key === 'age_band' || row.key === 'consistency')))
-            .map((row) => (
-              <View key={row.key} style={styles.tpRow}>
-                <View style={styles.tpBody}>
-                  <Text style={[styles.tpLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
-                    {row.label}
-                  </Text>
-                  <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                    {row.value || row.empty || NOT_ENOUGH_LINE}
-                  </Text>
-                </View>
-                <Switch
-                  value={!!tpShare[row.key]}
-                  onValueChange={(next) => toggleBand(row.key, next)}
-                  disabled={tpLoading}
-                  accessibilityLabel={`Share ${row.label.toLowerCase()}`}
-                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                  thumbColor={t.colors.primary}
-                  ios_backgroundColor={t.colors.surface2}
-                />
-              </View>
-            ))}
+            .map((row) => {
+              const isShareSessions = row.key === 'share_sessions';
+              return (
+                <Fragment key={row.key}>
+                  <View style={styles.tpRow}>
+                    <View style={styles.tpBody}>
+                      <Text style={[styles.tpLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
+                        {row.label}
+                      </Text>
+                      <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+                        {row.value || row.empty || NOT_ENOUGH_LINE}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={!!tpShare[row.key]}
+                      onValueChange={(next) => toggleBand(row.key, next)}
+                      disabled={tpLoading}
+                      accessibilityLabel={`Share ${row.label.toLowerCase()}`}
+                      trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+                      thumbColor={t.colors.primary}
+                      ios_backgroundColor={t.colors.surface2}
+                    />
+                  </View>
+                  {/* Nothing exists to remove yet at Join (the profile is
+                      not created until "Create profile" below), so
+                      turning this off here is a plain local toggle --
+                      the Remove/Keep confirm belongs to the Training
+                      profile screen, which is the only place the toggle
+                      can ever be switched off with items already shared
+                      behind it. */}
+                  {isShareSessions && tpShare.share_sessions ? (
+                    isMinor ? (
+                      <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+                        Shared with people who follow you.
+                      </Text>
+                    ) : (
+                      <View style={styles.chipRow} accessibilityLabel="Who sees what you did">
+                        {SESSIONS_AUDIENCE_VALUES.map((value) => (
+                          <Chip
+                            key={value}
+                            label={SESSIONS_AUDIENCE_LABELS[value]}
+                            selected={tpShare.sessions_audience === value}
+                            onPress={() => toggleBand('sessions_audience', value)}
+                            accessibilityRole="radio"
+                          />
+                        ))}
+                      </View>
+                    )
+                  ) : null}
+                </Fragment>
+              );
+            })}
         </View>
 
         <Button

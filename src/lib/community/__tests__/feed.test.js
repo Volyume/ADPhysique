@@ -35,6 +35,7 @@ const { callCommunity } = require('../transport');
 const {
   loadHub, loadFeed, listComments, clearCachedHub,
   myDimensions, loadHubSummary, loadDimensionRecent,
+  createPost, setPostNote,
 } = require('../feed');
 const { loadActivity } = require('../activity');
 
@@ -229,6 +230,63 @@ describe('loadHubSummary (community_hub_summary)', () => {
     server({ community_hub_summary: null });
     const summary = await loadHubSummary();
     expect(summary).toEqual({ cohorts: [], groups: [] });
+  });
+});
+
+// ─── Phase 3 (`docs/communities-revamp-2026-09-10/23-PHASE3-SPEC.md`
+// section 2; `22-MIGRATION-170A-CONTRACT.md` Part B): createPost's three
+// new trailing parameters, and the new community_post_set_note wrapper.
+describe('createPost: auto, client_ref and group_ids', () => {
+  test('a plain manual post still sends the original five parameters, with the new three defaulted', async () => {
+    server({ community_create_post: { id: 'p1' } });
+    await createPost({ kind: 'session', payload: { a: 1 }, visibility: 'public' });
+    expect(callCommunity).toHaveBeenCalledWith('community_create_post', {
+      _kind: 'session', _payload: { a: 1 }, _caption: null, _programme_id: null, _visibility: 'public',
+      _auto: false, _client_ref: null, _group_ids: null,
+    });
+  });
+
+  test('an auto item carries _auto, _client_ref and its visibility', async () => {
+    server({ community_create_post: { id: 'p2' } });
+    await createPost({
+      kind: 'session', payload: {}, visibility: 'followers', auto: true, clientRef: 'w1',
+    });
+    expect(callCommunity).toHaveBeenCalledWith('community_create_post', expect.objectContaining({
+      _auto: true, _client_ref: 'w1', _visibility: 'followers',
+    }));
+  });
+
+  test('an empty group_ids array is sent as null, never an empty array', async () => {
+    server({ community_create_post: { id: 'p3' } });
+    await createPost({ kind: 'session', payload: {}, visibility: 'groups', groupIds: [] });
+    expect(callCommunity).toHaveBeenCalledWith('community_create_post', expect.objectContaining({
+      _group_ids: null,
+    }));
+  });
+
+  test('a real group_ids list travels through', async () => {
+    server({ community_create_post: { id: 'p4' } });
+    await createPost({ kind: 'session', payload: {}, visibility: 'groups', groupIds: ['g1', 'g2'] });
+    expect(callCommunity).toHaveBeenCalledWith('community_create_post', expect.objectContaining({
+      _group_ids: ['g1', 'g2'],
+    }));
+  });
+});
+
+describe('setPostNote (community_post_set_note)', () => {
+  test('sends the post id and text', async () => {
+    server({ community_post_set_note: { id: 'p1', caption: 'Great session' } });
+    const out = await setPostNote('p1', 'Great session');
+    expect(callCommunity).toHaveBeenCalledWith('community_post_set_note', {
+      _post_id: 'p1', _text: 'Great session',
+    });
+    expect(out.caption).toBe('Great session');
+  });
+
+  test('an empty string clears the note as null, not an empty string', async () => {
+    server({ community_post_set_note: { id: 'p1', caption: null } });
+    await setPostNote('p1', '');
+    expect(callCommunity).toHaveBeenCalledWith('community_post_set_note', { _post_id: 'p1', _text: null });
   });
 });
 

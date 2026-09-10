@@ -31,14 +31,19 @@ import { spacing, type } from '../styles/theme';
 import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
 import {
-  loadMe, hasProfile, createPost,
+  loadMe, hasProfile, createPost, setPostNote, listMyGroups,
   buildPrPayload, buildSessionPayload, buildBlockPayload, buildMilestonePayload,
   CAPTION_MAX,
 } from '../lib/community';
 
+// Phase 3 (spec section 3): "Followers / Everyone / one or more of my
+// groups" -- the first two behave as a radio pair, the group chips
+// (appended below, only when the person is in any) behave as checkboxes
+// among themselves; picking either radio clears any chosen groups, and
+// picking a group clears the radio (see `pickVisibility`/`toggleGroup`).
 const VISIBILITY_OPTIONS = [
-  { label: 'Public', value: 'public' },
   { label: 'Followers', value: 'followers' },
+  { label: 'Everyone', value: 'public' },
 ];
 
 export function composeErrorLine(code) {
@@ -64,14 +69,23 @@ export default function CommunityComposeScreen({ navigation, route }) {
   const toast = useToast();
   const params = route?.params ?? {};
   const kind = params.kind ?? null;
+  // Phase 3 (spec section 2): "Add a note" on an EXISTING auto item
+  // (WorkoutSummaryScreen hands over `postId` + the payload it already
+  // has) reuses this screen's preview and caption field, but SAVES
+  // through `community_post_set_note` on that row instead of creating a
+  // new post. No audience chooser here: the item's audience was set at
+  // creation and a note never changes it.
+  const noteMode = !!params.postId;
   const user = useAppStore((s) => s.user);
   const units = useAppStore((s) => s.units);
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
-  const [payload, setPayload] = useState(null);
+  const [payload, setPayload] = useState(noteMode ? (params.payload ?? null) : null);
   const [caption, setCaption] = useState('');
-  const [visibility, setVisibility] = useState('public');
+  const [visibility, setVisibility] = useState('followers');
+  const [myGroups, setMyGroups] = useState([]);
+  const [groupIds, setGroupIds] = useState([]);
   const [posting, setPosting] = useState(false);
   const postingRef = useRef(false);
 
@@ -90,8 +104,29 @@ export default function CommunityComposeScreen({ navigation, route }) {
       return;
     }
     setProfile(me.profile);
+    if (noteMode) {
+      // The payload came from the caller (the row already exists); a
+      // manual compose is the only path that needs to build one.
+      setLoading(false);
+      return;
+    }
     try {
-      setPayload(await payloadFor(params, { userId: user?.id ?? null, units }));
+      const [builtPayload, groupsResult] = await Promise.all([
+        payloadFor(params, { userId: user?.id ?? null, units }),
+        listMyGroups().catch(() => []),
+      ]);
+      setPayload(builtPayload);
+      const groups = groupsResult.map((row) => row.group).filter(Boolean);
+      setMyGroups(groups);
+      // Communities revamp phase 3 (blueprint section 9's group page; lead
+      // ruling): "Share a workout with the group" hands over a group id to
+      // preselect here. Only honoured when the caller is genuinely still a
+      // member of it (the same membership check `_group_ids` gets
+      // server-side) -- never a stale/foreign id taken on faith.
+      if (params.presetGroupId && groups.some((g) => g.id === params.presetGroupId)) {
+        setVisibility('groups');
+        setGroupIds([params.presetGroupId]);
+      }
     } catch (e) {
       logError('CommunityComposeScreen.load', e, { kind });
       setPayload(null);
@@ -100,9 +135,25 @@ export default function CommunityComposeScreen({ navigation, route }) {
     }
     // `params` is a route object, stable for the life of this screen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigation, user?.id, units, kind]);
+  }, [navigation, user?.id, units, kind, noteMode]);
 
   useEffect(() => { load(); }, [load]);
+
+  /** Followers/Everyone are mutually exclusive with each other AND with
+   * any chosen group (spec section 3: a post's audience is one thing). */
+  function pickVisibility(value) {
+    setVisibility(value);
+    setGroupIds([]);
+  }
+
+  function toggleGroup(id) {
+    setGroupIds((prev) => {
+      const has = prev.includes(id);
+      const next = has ? prev.filter((x) => x !== id) : [...prev, id];
+      setVisibility(next.length ? 'groups' : 'followers');
+      return next;
+    });
+  }
 
   async function handlePost() {
     if (!payload || postingRef.current) return;
@@ -110,11 +161,18 @@ export default function CommunityComposeScreen({ navigation, route }) {
     postingRef.current = true;
     setPosting(true);
     try {
+      if (noteMode) {
+        const updated = await setPostNote(params.postId, caption.trim() || null);
+        toast.show('Note saved', { variant: 'success' });
+        navigation.replace('CommunityPost', { id: updated?.id ?? params.postId });
+        return;
+      }
       const created = await createPost({
         kind,
         payload,
         caption: caption.trim() || null,
         visibility,
+        groupIds: visibility === 'groups' ? groupIds : null,
       });
       if (!created?.id) throw new Error('Post failed.');
       toast.show('Posted to Community', { variant: 'success' });
@@ -134,15 +192,17 @@ export default function CommunityComposeScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
-      <BackHeader title="Post to Community" />
+      <BackHeader title={noteMode ? 'Add a note' : 'Post to Community'} />
       {loading ? (
         <View style={styles.centre}><ActivityIndicator color={t.colors.primary} /></View>
       ) : !previewPost ? (
         <View style={styles.centre}>
           <EmptyState
             icon="document-outline"
-            title="Nothing to post yet"
-            text="Volyume could not read this session. Open it again from where you finished it, then post."
+            title={noteMode ? 'Nothing to add a note to' : 'Nothing to post yet'}
+            text={noteMode
+              ? 'Volyume could not find that item. Go back and try again from the summary.'
+              : 'Volyume could not read this session. Open it again from where you finished it, then post.'}
             actionLabel="Go back"
             onAction={() => navigation.goBack()}
           />
@@ -167,24 +227,38 @@ export default function CommunityComposeScreen({ navigation, route }) {
             </Text>
           </View>
 
-          <View style={styles.field}>
-            <SectionLabel tone="muted">Who can see it</SectionLabel>
-            <View style={styles.chipRow}>
-              {VISIBILITY_OPTIONS.map((opt) => (
-                <Chip
-                  key={opt.value}
-                  label={opt.label}
-                  selected={visibility === opt.value}
-                  onPress={() => setVisibility(opt.value)}
-                  accessibilityRole="radio"
-                />
-              ))}
+          {/* Phase 3 (spec section 3): the audience chooser, manual posts
+              only -- a note edits an existing item whose audience was
+              already set at creation. */}
+          {!noteMode ? (
+            <View style={styles.field}>
+              <SectionLabel tone="muted">Who can see it</SectionLabel>
+              <View style={styles.chipRow} accessibilityLabel="Who can see it">
+                {VISIBILITY_OPTIONS.map((opt) => (
+                  <Chip
+                    key={opt.value}
+                    label={opt.label}
+                    selected={visibility === opt.value}
+                    onPress={() => pickVisibility(opt.value)}
+                    accessibilityRole="radio"
+                  />
+                ))}
+                {myGroups.map((group) => (
+                  <Chip
+                    key={group.id}
+                    label={group.name}
+                    selected={groupIds.includes(group.id)}
+                    onPress={() => toggleGroup(group.id)}
+                    accessibilityRole="checkbox"
+                  />
+                ))}
+              </View>
             </View>
-          </View>
+          ) : null}
 
           <Button
             variant="emphatic"
-            title="Post"
+            title={noteMode ? 'Save' : 'Post'}
             size="lg"
             onPress={handlePost}
             loading={posting}

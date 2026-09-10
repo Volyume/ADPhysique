@@ -237,13 +237,51 @@ export async function loadDimension(kind, key, { cursor = null, limit = DEFAULT_
 
 // ─── Posts, reactions and comments ───────────────────────────────────
 
+/**
+ * @param {object} input
+ * @param {string} input.kind
+ * @param {object} input.payload
+ * @param {string|null} [input.caption]
+ * @param {string|null} [input.programmeId]
+ * @param {'public'|'followers'|'groups'} [input.visibility]
+ * @param {boolean} [input.auto] phase 3 (contract Part B): stored on the
+ *   row, but CONSENT-GATED SERVER-SIDE -- a true here still fails with
+ *   `not_allowed` unless the caller's own `share_sessions` is on and
+ *   `visibility` is no wider than their chosen `sessions_audience`.
+ * @param {string|null} [input.clientRef] phase 3: the idempotency key
+ *   (`_client_ref`). A second call with the same (author, clientRef)
+ *   pair returns the EXISTING post rather than creating a duplicate --
+ *   safe to retry an offline-queued flush any number of times.
+ * @param {string[]|null} [input.groupIds] phase 3: required (non-empty)
+ *   when `visibility === 'groups'`, refused otherwise.
+ * @returns {Promise<{id: string}>}
+ */
 export async function createPost({
   kind, payload, caption = null, programmeId = null, visibility = 'public',
+  auto = false, clientRef = null, groupIds = null,
 }) {
   return callCommunity('community_create_post', {
     _kind: kind, _payload: payload, _caption: caption,
     _programme_id: programmeId, _visibility: visibility,
+    _auto: !!auto,
+    _client_ref: clientRef || null,
+    _group_ids: Array.isArray(groupIds) && groupIds.length ? groupIds : null,
   });
+}
+
+/**
+ * Set (or clear) one post's note text (phase 3, "Add a note": contract
+ * Part B `community_post_set_note`). Author-only server-side; filtered
+ * and length-capped there through the identical check `createPost`'s own
+ * caption goes through.
+ *
+ * @param {string} postId
+ * @param {string|null} text `null`/empty clears the note
+ * @returns {Promise<object>} the updated post, the same shape the `post`
+ *   key carries everywhere else
+ */
+export async function setPostNote(postId, text) {
+  return callCommunity('community_post_set_note', { _post_id: postId, _text: text || null });
 }
 
 export async function deletePost(id) {

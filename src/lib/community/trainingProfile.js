@@ -29,6 +29,15 @@
  *    `community.privacy.guard.test.js`, so `getActivePlan` is still
  *    imported and called; its result is simply never surfaced).
  *
+ *    Phase 3 (2026-09-10, `docs/communities-revamp-2026-09-10/
+ *    23-PHASE3-SPEC.md` section 1): a second toggle, `share_sessions`
+ *    ("Share what I did"), plus its `sessions_audience` choice
+ *    (followers/groups/everyone). Unlike the bands above, `share_sessions`
+ *    is never age-gated (a minor may set it; only the CHOSEN audience is
+ *    narrowed, downstream of this file, to followers). Both fields always
+ *    travel in `shareablePayload`'s output, the same "the current value
+ *    travels every time" shape `share_consistency` already has.
+ *
  * SD-31, the creepiness rule, is why every value in this file is a BAND.
  * Nothing finer than a band exists in the payload: no dates, no times, no
  * "last trained", no session count. A band says "usually trains
@@ -136,9 +145,26 @@ export const TP_DEFAULT_SHARE = Object.freeze({
   // `shareablePayload` (its fields come from `trainingConsistency.js`,
   // not from `deriveTrainingProfile`).
   consistency: false,
+  // Phase 3 (spec section 1): "Share what I did" - off by default, same
+  // as every other revealing toggle. Its audience lives in the sibling
+  // `sessions_audience` field below, kept OUTSIDE this boolean set
+  // because it is a three-way choice, not a switch.
+  share_sessions: false,
 });
 
 export const TP_SHARE_KEYS = Object.freeze(Object.keys(TP_DEFAULT_SHARE));
+
+/** The closed set `sessions_audience` may hold (contract Part B). */
+export const SESSIONS_AUDIENCE_VALUES = Object.freeze(['followers', 'groups', 'everyone']);
+
+/** The three `Chip` labels the audience row renders, in this order. */
+export const SESSIONS_AUDIENCE_LABELS = Object.freeze({
+  followers: 'Followers',
+  groups: 'My groups',
+  everyone: 'Everyone',
+});
+
+export const DEFAULT_SESSIONS_AUDIENCE = 'followers';
 
 /**
  * Which band each toggle carries. The payload is built from THIS map and
@@ -393,12 +419,17 @@ export function previewLine(bands = {}, ageBand = null) {
 
 // ─── Share settings ──────────────────────────────────────────────────
 
-/** Only the seven known toggles, only booleans, defaults for the rest. */
+/** Only the known toggles, only booleans, plus `sessions_audience` (the
+ * one string-valued member of this settings object, validated against
+ * its own closed set), defaults for the rest. */
 function normaliseShare(raw) {
-  const out = { ...TP_DEFAULT_SHARE };
+  const out = { ...TP_DEFAULT_SHARE, sessions_audience: DEFAULT_SESSIONS_AUDIENCE };
   if (raw && typeof raw === 'object') {
     for (const key of TP_SHARE_KEYS) {
       if (typeof raw[key] === 'boolean') out[key] = raw[key];
+    }
+    if (SESSIONS_AUDIENCE_VALUES.includes(raw.sessions_audience)) {
+      out.sessions_audience = raw.sessions_audience;
     }
   }
   return out;
@@ -537,7 +568,12 @@ export async function loadTrainingProfile(userId, { nowMs = Date.now(), windowWe
  *   `consistencyGated` is true when calm mode, an open ED-pattern flag,
  *   or a minor's account means the counters must never be sent even if
  *   the toggle itself is on (`trainingConsistency.js` computes this).
- * @returns {object} the `_p` payload
+ * @returns {object} the `_p` payload. Phase 3: always carries
+ *   `share_sessions` and `sessions_audience` (contract Part B,
+ *   `community_upsert_profile`'s new keys); `c_planned_per_week` only
+ *   when consistency sharing is allowed (see the field's own comment
+ *   below), so a caller who does not share consistency at all never
+ *   reveals their plan's shape either.
  */
 export function shareablePayload(bands = {}, share = TP_DEFAULT_SHARE, {
   consistencyCounters = null, consistencyGated = false,
@@ -552,6 +588,14 @@ export function shareablePayload(bands = {}, share = TP_DEFAULT_SHARE, {
   // The age band never crosses as a value: the server derives it from the
   // person's own record when this says it may, and never for a minor.
   payload.share_age_band = !!settings.age_band;
+
+  // Phase 3 (spec section 1): always stamped, the same "the current
+  // value travels every time" shape `share_consistency` uses just below.
+  // Never folded into the age-gated band loop above: a minor may set
+  // `share_sessions` (nothing in it is age-restricted per the contract),
+  // only the chosen audience is narrowed downstream of this function.
+  payload.share_sessions = !!settings.share_sessions;
+  payload.sessions_audience = settings.sessions_audience;
 
   const shareConsistency = !!settings.consistency && !consistencyGated;
   payload.share_consistency = shareConsistency;
@@ -570,6 +614,25 @@ export function shareablePayload(bands = {}, share = TP_DEFAULT_SHARE, {
     payload.c_weeks_history = Array.isArray(consistencyCounters?.c_weeks_history)
       ? consistencyCounters.c_weeks_history : [];
     payload.c_updated_at = consistencyCounters?.c_updated_at ?? null;
+    // Phase 3 ("Together this week", blueprint section 6): the plan's
+    // sessions per week, the same figure `trainingConsistency.js` already
+    // derives for `c_planned_pct_4w`. Kept behind the SAME
+    // share_consistency gate as every counter above rather than
+    // `share_sessions`'s own state, because it is a consistency-domain
+    // fact (a schedule shape), and the one place it is ever read back
+    // (`community_group_get`'s Together sums) already restricts itself to
+    // members who share consistency -- sending it under a narrower
+    // consent than that would be pointless exposure for no product
+    // benefit. Clamped to the contract's 0-14 range; out of range or
+    // absent is null, never a refusal.
+    // `null`/absent (no plan) is checked FIRST and separately: `Number(null)`
+    // is 0, a perfectly finite number, so folding the null check into the
+    // isFinite test below would silently turn "no plan" into "a 0-day plan".
+    payload.c_planned_per_week = consistencyCounters?.c_planned_per_week == null
+      ? null
+      : (Number.isFinite(Number(consistencyCounters.c_planned_per_week))
+        ? Math.max(0, Math.min(14, Math.trunc(Number(consistencyCounters.c_planned_per_week))))
+        : null);
   }
   return payload;
 }

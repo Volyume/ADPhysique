@@ -54,7 +54,10 @@ jest.mock('../../lib/community', () => ({
   },
   TP_DEFAULT_SHARE: {
     days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, age_band: false,
+    consistency: false, share_sessions: false, sessions_audience: 'followers',
   },
+  SESSIONS_AUDIENCE_VALUES: ['followers', 'groups', 'everyone'],
+  SESSIONS_AUDIENCE_LABELS: { followers: 'Followers', groups: 'My groups', everyone: 'Everyone' },
   dayListLabel: (days) => (Array.isArray(days) && days.length ? days.join(', ') : ''),
   timeBandsLabel: (bands) => (Array.isArray(bands) && bands.length ? bands.join(', ') : ''),
   previewLine: (shared, ageBand) => [
@@ -74,11 +77,17 @@ jest.mock('../../lib/community', () => ({
   readShareSettings: jest.fn(),
   writeShareSettings: jest.fn(() => Promise.resolve()),
   syncTrainingProfile: jest.fn(() => Promise.resolve({ sent: true, reason: null, payload: null })),
+  publishSharingSettings: jest.fn(() => Promise.resolve({ sent: true, reason: null })),
+  publishConsistency: jest.fn(() => Promise.resolve({ sent: true, reason: null, payload: null })),
   setPartner: jest.fn(() => Promise.resolve()),
 }));
 
+const mockAppAlert = jest.fn();
+jest.mock('../../components/AppAlert', () => ({ appAlert: (...args) => mockAppAlert(...args) }));
+
 import {
-  TP_DEFAULT_SHARE, loadTrainingProfile, readShareSettings, writeShareSettings, syncTrainingProfile, setPartner,
+  TP_DEFAULT_SHARE, loadTrainingProfile, readShareSettings, writeShareSettings, syncTrainingProfile,
+  publishSharingSettings, setPartner,
 } from '../../lib/community';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityTrainingProfileScreen, {
@@ -125,18 +134,21 @@ async function mount() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockAppAlert.mockReset();
   loadTrainingProfile.mockResolvedValue({ ...BANDS });
   readShareSettings.mockResolvedValue({ ...TP_DEFAULT_SHARE });
   useCommunityMe.mockReturnValue({ me: ME, loading: false, error: null, refresh: jest.fn(() => Promise.resolve()) });
 });
 
-describe('bandRows: the six bands plus consistency, in order, each with its own value (SD-22)', () => {
+describe('bandRows: the six bands plus consistency and share_sessions, in order, each with its own value (SD-22)', () => {
   test('every row is present, in the blueprint order', () => {
     const rows = bandRows(BANDS, ME);
     expect(rows.map((r) => r.key)).toEqual([
       'days', 'time_bands', 'sessions', 'staple_lifts', 'experience', 'age_band',
       // Community product audit `60-DESIGN-PROGRESS-COMMUNITY.md` section 1.
       'consistency',
+      // Phase 3 (spec section 1): "Share what I did".
+      'share_sessions',
     ]);
   });
 
@@ -229,6 +241,101 @@ describe('toggling a band', () => {
     });
     const { tree } = await mount();
     expect(flattenText(tree.toJSON())).not.toContain('age:35_44');
+  });
+});
+
+describe('share what I did (phase 3 spec section 1)', () => {
+  test('switching it on saves and publishes through publishSharingSettings, not syncTrainingProfile', async () => {
+    const { tree } = await mount();
+    const shareSwitch = switchFor(tree, 'Share share what i did');
+
+    await act(async () => { shareSwitch.props.onValueChange(true); });
+    await flush();
+
+    expect(writeShareSettings).toHaveBeenCalledWith('u1', expect.objectContaining({ share_sessions: true }));
+    expect(publishSharingSettings).toHaveBeenCalledWith(
+      'u1', expect.objectContaining({ share_sessions: true }), { removeShared: false },
+    );
+  });
+
+  test('switching it off asks once whether to remove what is already shared', async () => {
+    readShareSettings.mockResolvedValue({ ...TP_DEFAULT_SHARE, share_sessions: true });
+    const { tree } = await mount();
+    const shareSwitch = switchFor(tree, 'Share share what i did');
+
+    await act(async () => { shareSwitch.props.onValueChange(false); });
+    await flush();
+
+    expect(mockAppAlert).toHaveBeenCalledWith(
+      'Remove the items already shared?',
+      expect.any(String),
+      expect.any(Array),
+    );
+    // Nothing saved yet -- only the confirm's own button press commits.
+    expect(publishSharingSettings).not.toHaveBeenCalled();
+  });
+
+  test('"Keep" turns it off without removing anything', async () => {
+    readShareSettings.mockResolvedValue({ ...TP_DEFAULT_SHARE, share_sessions: true });
+    const { tree } = await mount();
+    const shareSwitch = switchFor(tree, 'Share share what i did');
+    await act(async () => { shareSwitch.props.onValueChange(false); });
+    await flush();
+
+    const [, , buttons] = mockAppAlert.mock.calls[0];
+    await act(async () => { buttons.find((b) => b.text === 'Keep').onPress(); });
+    await flush();
+
+    expect(publishSharingSettings).toHaveBeenCalledWith(
+      'u1', expect.objectContaining({ share_sessions: false }), { removeShared: false },
+    );
+  });
+
+  test('"Remove" turns it off and sends _remove_shared', async () => {
+    readShareSettings.mockResolvedValue({ ...TP_DEFAULT_SHARE, share_sessions: true });
+    const { tree } = await mount();
+    const shareSwitch = switchFor(tree, 'Share share what i did');
+    await act(async () => { shareSwitch.props.onValueChange(false); });
+    await flush();
+
+    const [, , buttons] = mockAppAlert.mock.calls[0];
+    await act(async () => { buttons.find((b) => b.text === 'Remove').onPress(); });
+    await flush();
+
+    expect(publishSharingSettings).toHaveBeenCalledWith(
+      'u1', expect.objectContaining({ share_sessions: false }), { removeShared: true },
+    );
+  });
+
+  test('the audience Chip row shows exactly three options, Followers selected by default', async () => {
+    readShareSettings.mockResolvedValue({ ...TP_DEFAULT_SHARE, share_sessions: true });
+    const { tree } = await mount();
+    const chips = tree.root.findAll((n) => n.props?.accessibilityRole === 'radio' && 'selected' in n.props
+      && ['Followers', 'My groups', 'Everyone'].includes(n.props.label));
+    expect(chips.map((c) => c.props.label)).toEqual(['Followers', 'My groups', 'Everyone']);
+    expect(chips.find((c) => c.props.label === 'Followers').props.selected).toBe(true);
+  });
+
+  test('picking an audience chip publishes the new choice', async () => {
+    readShareSettings.mockResolvedValue({ ...TP_DEFAULT_SHARE, share_sessions: true });
+    const { tree } = await mount();
+    const everyone = tree.root.findAll((n) => n.props?.label === 'Everyone' && n.props?.onPress)[0];
+    await act(async () => { everyone.props.onPress(); });
+    await flush();
+
+    expect(publishSharingSettings).toHaveBeenCalledWith(
+      'u1', expect.objectContaining({ sessions_audience: 'everyone' }), { removeShared: false },
+    );
+  });
+
+  test('the audience chips never render for a minor, even with sharing on', async () => {
+    readShareSettings.mockResolvedValue({ ...TP_DEFAULT_SHARE, share_sessions: true });
+    useCommunityMe.mockReturnValue({
+      me: { ...ME, is_minor: true }, loading: false, error: null, refresh: jest.fn(() => Promise.resolve()),
+    });
+    const { tree } = await mount();
+    expect(tree.root.findAll((n) => n.props?.label === 'Everyone' && n.props?.onPress)).toHaveLength(0);
+    expect(flattenText(tree.toJSON())).toContain('Shared with people who follow you.');
   });
 });
 

@@ -210,6 +210,34 @@ const TRAINING_CONSISTENCY_DB_READS = [
   'getRoutinesForPlan',
 ];
 
+/**
+ * Phase 3 (`docs/communities-revamp-2026-09-10/23-PHASE3-SPEC.md` section
+ * 8): "the ambient payload builders import nothing new from the
+ * database". `posts.js`'s `buildSessionPayload`/`buildPrPayload` are
+ * reused, unchanged, by the new ambient-item path (`ambient.js`); this
+ * pins their existing device-read surface so a future edit cannot widen
+ * it silently just because a NEW caller (the completion hook) now exists.
+ * An allow-list, matching the shape `trainingProfile.js`'s own pin above
+ * already uses.
+ */
+const POSTS_FILE = path.join(LIB_DIR, 'posts.js');
+const POSTS_DB_READS = [
+  'getWorkoutById', 'getWorkoutSetsForWorkout', 'getWorkoutSetsForExercise',
+  'getRoutineById', 'getProgrammeById', 'getAllExercises',
+  'getAllMesocyclesForUser', 'getBlockTrainingData', 'getPriorCompletedSets',
+];
+
+/**
+ * Phase 3 (spec section 8): "the ED gate is consulted before any auto
+ * item (regex pin on the completion hook)". `publishAmbientItems`
+ * (`ambient.js`) is the completion hook every auto item flows through;
+ * this pins that its own gate check (`sessionShareGateState`) is called
+ * BEFORE it ever calls `sendAutoItem` (which is what actually posts),
+ * inside that one function's own body -- not merely somewhere earlier in
+ * the file, which file order alone could satisfy by accident.
+ */
+const AMBIENT_FILE = path.join(LIB_DIR, 'ambient.js');
+
 describe('no Community file reads personal data', () => {
   test('there is Community source to guard', () => {
     // If this ever fails, the guard has quietly stopped guarding
@@ -288,6 +316,31 @@ describe('no Community file reads personal data', () => {
       .filter(Boolean);
     expect(named.sort()).toEqual([...TRAINING_CONSISTENCY_DB_READS].sort());
     expect(source).not.toMatch(/require\(['"][^'"]*database['"]\)/);
+  });
+
+  test('posts.js payload builders read only the nine device functions they always have', () => {
+    const source = code(fs.readFileSync(POSTS_FILE, 'utf8'));
+    const imports = source.match(/import\s*\{[^}]*\}\s*from\s*'\.\.\/database';/g) ?? [];
+    expect(imports).toHaveLength(1);
+    const named = imports[0]
+      .replace(/^import\s*\{|\}\s*from\s*'\.\.\/database';$/g, '')
+      .split(',')
+      .map((s2) => s2.trim())
+      .filter(Boolean);
+    expect(named.sort()).toEqual([...POSTS_DB_READS].sort());
+    expect(source).not.toMatch(/require\(['"][^'"]*database['"]\)/);
+  });
+
+  test('the ambient completion hook consults the gate before any auto item is sent', () => {
+    const source = code(fs.readFileSync(AMBIENT_FILE, 'utf8'));
+    const fnMatch = /export async function publishAmbientItems\([\s\S]*?\n}\n/.exec(source);
+    expect(fnMatch).toBeTruthy();
+    const body = fnMatch[0];
+    const gateIdx = body.indexOf('sessionShareGateState(');
+    const sendIdx = body.indexOf('sendAutoItem(');
+    expect(gateIdx).toBeGreaterThan(-1);
+    expect(sendIdx).toBeGreaterThan(-1);
+    expect(gateIdx).toBeLessThan(sendIdx);
   });
 
   test('no Community file imports the food, nutrition, wellbeing or ED modules', () => {
@@ -463,6 +516,14 @@ describe('the client and the SQL agree', () => {
 describe('the closed sets are the same on both sides', () => {
   const MIGRATION_161 = path.join(ROOT, 'supabase/migrate_161_community_connections.sql');
   const sql161 = fs.existsSync(MIGRATION_161) ? fs.readFileSync(MIGRATION_161, 'utf8') : null;
+  // Phase 3 (`22-MIGRATION-170A-CONTRACT.md` Part B): `_community_
+  // connect_reasons_list` was RE-ISSUED inside migrate_170 ("same_
+  // programme" retired, "same_discipline" added), not migrate_161 -- so
+  // that ONE helper's equality check below reads THIS file instead; every
+  // other closed set above is untouched by 170 and stays pinned against
+  // 161, exactly as before.
+  const MIGRATION_170 = path.join(ROOT, 'supabase/migrate_170_community_connection.sql');
+  const sql170 = fs.existsSync(MIGRATION_170) ? fs.readFileSync(MIGRATION_170, 'utf8') : null;
 
   const {
     TP_DAYS, TP_TIME_BANDS, TP_SESSIONS_BANDS, TP_SESSIONS_BAND_ORDER,
@@ -471,9 +532,9 @@ describe('the closed sets are the same on both sides', () => {
   const { CONNECT_REASONS, CONNECT_FROM_VALUES } = require('../lib/community/connections');
 
   /** The array literal one `_community_*_list()` helper returns. */
-  function sqlList(helper) {
+  function sqlList(helper, sqlText = sql161) {
     const re = new RegExp(`FUNCTION public\\.${helper}\\(\\)[\\s\\S]*?ARRAY\\[([^\\]]*)\\]`, 'i');
-    const m = re.exec(sql161);
+    const m = re.exec(sqlText);
     if (!m) return null;
     return m[1].split(',').map((s2) => s2.trim().replace(/^'|'$/g, '')).filter(Boolean);
   }
@@ -486,11 +547,20 @@ describe('the closed sets are the same on both sides', () => {
     ['_community_tp_sessions_list', () => [...TP_SESSIONS_BAND_ORDER]],
     ['_community_tp_experience_list', () => Object.keys(TP_EXPERIENCE_BANDS)],
     ['_community_tp_age_bands_list', () => Object.keys(TP_AGE_BANDS)],
-    ['_community_connect_reasons_list', () => Object.keys(CONNECT_REASONS)],
   ])('%s carries the client set, in the same order', (helper, clientKeys) => {
     if (!sql161) { expect(fs.existsSync(MIGRATION_161)).toBe(false); return; }
     expect({ helper, values: sqlList(helper) })
       .toEqual({ helper, values: clientKeys() });
+  });
+
+  // Phase 3: this one closed set moved to migrate_170 Part B (see the
+  // header comment above `sql170`) -- read against that file, not 161.
+  // Per the contract's own note, this case FAILS if read against 161
+  // (which still carries the retired `same_programme`), by design.
+  test('_community_connect_reasons_list carries the client set, in the same order', () => {
+    if (!sql170) { expect(fs.existsSync(MIGRATION_170)).toBe(false); return; }
+    expect({ helper: '_community_connect_reasons_list', values: sqlList('_community_connect_reasons_list', sql170) })
+      .toEqual({ helper: '_community_connect_reasons_list', values: Object.keys(CONNECT_REASONS) });
   });
 
   test('the connect_from CHECK carries the client values', () => {

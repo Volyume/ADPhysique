@@ -98,7 +98,10 @@ jest.mock('../../lib/community', () => ({
   },
   TP_DEFAULT_SHARE: {
     days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, age_band: false,
+    consistency: false, share_sessions: false,
   },
+  SESSIONS_AUDIENCE_VALUES: ['followers', 'groups', 'everyone'],
+  SESSIONS_AUDIENCE_LABELS: { followers: 'Followers', groups: 'My groups', everyone: 'Everyone' },
   dayListLabel: () => '',
   timeBandsLabel: () => '',
   previewLine: () => '',
@@ -106,14 +109,17 @@ jest.mock('../../lib/community', () => ({
   loadTrainingProfile: jest.fn(() => Promise.resolve({})),
   readShareSettings: jest.fn(() => Promise.resolve({
     days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, age_band: false,
+    consistency: false, share_sessions: false, sessions_audience: 'followers',
   })),
   writeShareSettings: jest.fn(() => Promise.resolve()),
   syncTrainingProfile: jest.fn(() => Promise.resolve({ sent: true, reason: null, payload: null })),
+  publishConsistency: jest.fn(() => Promise.resolve({ sent: true, reason: null, payload: null })),
+  publishSharingSettings: jest.fn(() => Promise.resolve({ sent: true, reason: null })),
   setPartner: jest.fn(() => Promise.resolve()),
 }));
 
 import {
-  checkHandle, upsertProfile, COMMUNITY_RULES_VERSION, syncTrainingProfile,
+  checkHandle, upsertProfile, COMMUNITY_RULES_VERSION, syncTrainingProfile, publishSharingSettings,
 } from '../../lib/community';
 import { search as searchGyms, setGyms, get as getGym } from '../../lib/gyms';
 import useCommunityMe from '../../hooks/useCommunityMe';
@@ -281,6 +287,45 @@ describe('the training profile step (SD-22)', () => {
 
     expect(text).toContain('Your training profile');
     expect(text).toContain('Nothing from your training is shared just now.');
+  });
+
+  // Phase 3 (spec section 1): "Share what I did" is offered here too,
+  // beside the other bands, and its choice takes on Create.
+  test('"Share what I did" is offered alongside the other bands', async () => {
+    const { tree } = await mount();
+    expect(flattenText(tree.toJSON())).toContain('Share what I did');
+  });
+
+  test('switching it on and choosing Everyone publishes that on Create', async () => {
+    const { tree } = await mount();
+    const shareSwitch = tree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Share share what i did' && typeof n.props?.onValueChange === 'function',
+    )[0];
+    await act(async () => { shareSwitch.props.onValueChange(true); });
+    await flush();
+
+    const everyone = tree.root.findAll((n) => n.props?.label === 'Everyone' && n.props?.onPress)[0];
+    await act(async () => { everyone.props.onPress(); });
+    await flush();
+
+    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(publishSharingSettings).toHaveBeenCalledWith(
+      'u1', expect.objectContaining({ share_sessions: true, sessions_audience: 'everyone' }),
+    );
+  });
+
+  test('left off, nothing is published for it on Create', async () => {
+    const { tree } = await mount();
+    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(publishSharingSettings).not.toHaveBeenCalled();
   });
 });
 

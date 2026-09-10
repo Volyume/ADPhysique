@@ -19,8 +19,10 @@
  *   4. ConnectSheet pre-selects the reason the door it opened from
  *      implies (the partners list pre-selects "Want to train together?",
  *      SD-25), and sends the reasons and note it has on screen.
- *   5. "Same programme" is never offered as a selectable reason
- *      (communities revamp 2026-09-10, phase 0).
+ *   5. Phase 3 (`docs/communities-revamp-2026-09-10/23-PHASE3-SPEC.md`
+ *      section 7): "Same discipline" replaces "Same programme" in
+ *      `CONNECT_REASONS`, and shows as a selectable reason only when the
+ *      viewer and the card share a discipline key.
  *
  * The client library is mocked: this is about what the components do
  * with the connection state, not about the RPC.
@@ -52,6 +54,14 @@ jest.mock('../../components/BottomSheet', () => {
 const mockToastShow = jest.fn();
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 
+// Phase 3: ConnectSheet reads the viewer's own discipline keys to decide
+// whether "Same discipline" shows at all.
+const mockUseCommunityMe = jest.fn(() => ({ me: { profile: { user_id: 'u1' } } }));
+jest.mock('../../hooks/useCommunityMe', () => ({
+  __esModule: true,
+  default: (...args) => mockUseCommunityMe(...args),
+}));
+
 jest.mock('../../lib/community', () => ({
   connectionState: (card) => {
     const v = card?.connection ?? null;
@@ -61,9 +71,12 @@ jest.mock('../../lib/community', () => ({
   withdrawConnect: jest.fn(),
   respondToConnect: jest.fn(),
   removeConnection: jest.fn(),
+  // Phase 3 (`22-MIGRATION-170A-CONTRACT.md` Part B): `same_programme`
+  // retired, `same_discipline` added in the same position -- matching the
+  // real, updated constant.
   CONNECT_REASONS: {
     same_gym: 'Same gym',
-    same_programme: 'Same programme',
+    same_discipline: 'Same discipline',
     train_like_me: 'You train like me',
     train_together: 'Want to train together?',
   },
@@ -103,7 +116,10 @@ function card(over = {}) {
 
 const ME = { profile: { user_id: 'u1' }, is_minor: false };
 
-beforeEach(() => { jest.clearAllMocks(); });
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockUseCommunityMe.mockReturnValue({ me: { profile: { user_id: 'u1' } } });
+});
 
 describe('shouldOfferConnect: nobody who cannot connect ever gets the control (SD-32)', () => {
   test('a minor VIEWER never sees a Connect control anywhere', () => {
@@ -330,20 +346,31 @@ describe('ConnectSheet: reasons, note, and the door it was opened from (SD-25)',
     expect(chip.props.selected).toBe(true);
   });
 
-  // Communities revamp (2026-09-10), phase 0: the client never offers
-  // "Same programme" as a reason to pick, even though CONNECT_REASONS
-  // (mocked above with all four, matching the real, unchanged constant)
-  // still carries it for the SQL cross-check guard.
-  test('"Same programme" is never offered as a selectable reason', async () => {
+  // Phase 3 (spec section 7): "Same discipline" is hidden when the
+  // viewer's own profile shares no discipline with the card.
+  test('"Same discipline" is not offered when the two people share no discipline key', async () => {
+    mockUseCommunityMe.mockReturnValue({ me: { profile: { user_id: 'u1', discipline_keys: ['powerlifting'] } } });
     let tree;
     await act(async () => {
-      tree = create(<ConnectSheet visible card={card()} onClose={() => {}} />);
+      tree = create(<ConnectSheet visible card={card({ discipline_keys: ['bodybuilding'] })} onClose={() => {}} />);
     });
     const chips = tree.root.findAll((n) => 'selected' in n.props && 'label' in n.props);
-    expect(chips.map((n) => n.props.label)).not.toContain('Same programme');
+    expect(chips.map((n) => n.props.label)).not.toContain('Same discipline');
     expect(chips.map((n) => n.props.label)).toEqual([
       'Same gym', 'You train like me', 'Want to train together?',
     ]);
+  });
+
+  test('"Same discipline" is offered when the viewer and the card share a discipline key', async () => {
+    mockUseCommunityMe.mockReturnValue({
+      me: { profile: { user_id: 'u1', discipline_keys: ['powerlifting', 'hybrid'] } },
+    });
+    let tree;
+    await act(async () => {
+      tree = create(<ConnectSheet visible card={card({ discipline_keys: ['hybrid'] })} onClose={() => {}} />);
+    });
+    const chips = tree.root.findAll((n) => 'selected' in n.props && 'label' in n.props);
+    expect(chips.map((n) => n.props.label)).toContain('Same discipline');
   });
 
   test('sending carries the chosen reasons and the trimmed note', async () => {

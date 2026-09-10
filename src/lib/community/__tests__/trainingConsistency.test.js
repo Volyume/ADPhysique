@@ -57,7 +57,8 @@ const {
   getCompletedWorkoutStartTimestamps, getActivePlan, getRoutinesForPlan,
 } = db;
 const {
-  computeConsistency, consistencyGateState, publishConsistency,
+  computeConsistency, consistencyGateState, sessionShareGateState,
+  publishConsistency, publishSharingSettings, loadConsistency,
   NO_PLAN_CONSISTENT_THRESHOLD,
 } = require('../trainingConsistency');
 const { shareablePayload, TP_DEFAULT_SHARE } = require('../trainingProfile');
@@ -255,6 +256,76 @@ describe('the ED/calm/minor gate', () => {
     const out = await consistencyGateState('u1', true);
     expect(out.isMinor).toBe(true);
     expect(out.allowed).toBe(false);
+  });
+});
+
+describe('sessionShareGateState (phase3 spec section 2): the ED/calm gate, WITHOUT the minor exclusion', () => {
+  test('allowed when the toggle is on and nothing gates it', async () => {
+    expect(await sessionShareGateState('u1', true)).toEqual({ allowed: true, gated: false });
+  });
+
+  test('refused when the toggle is off', async () => {
+    expect((await sessionShareGateState('u1', false)).allowed).toBe(false);
+  });
+
+  test('refused under calm mode / an open ED-pattern flag', async () => {
+    mockEdSuppressed = true;
+    expect(await sessionShareGateState('u1', true)).toEqual({ allowed: false, gated: true });
+  });
+
+  test('a minor is NOT excluded here (unlike consistencyGateState): sharing what they did is allowed, only the audience narrows elsewhere', async () => {
+    mockCachedMe = { is_minor: true };
+    expect((await sessionShareGateState('u1', true)).allowed).toBe(true);
+  });
+});
+
+describe('loadConsistency: c_planned_per_week rides alongside the eight counters', () => {
+  test('null without a plan', async () => {
+    const out = await loadConsistency('u1', { nowMs: MON });
+    expect(out.c_planned_per_week).toBeNull();
+  });
+
+  test('the plan\'s routine count, with a plan', async () => {
+    getActivePlan.mockResolvedValue({ id: 'plan1' });
+    getRoutinesForPlan.mockResolvedValue([{ id: 'r1' }, { id: 'r2' }, { id: 'r3' }]);
+    const out = await loadConsistency('u1', { nowMs: MON });
+    expect(out.c_planned_per_week).toBe(3);
+  });
+});
+
+describe('publishSharingSettings: share_sessions/sessions_audience/c_planned_per_week -> community_upsert_profile', () => {
+  test('sends share_sessions and sessions_audience to a DIFFERENT RPC from the bands', async () => {
+    const out = await publishSharingSettings('u1', { share_sessions: true, sessions_audience: 'everyone', consistency: false });
+    expect(out.sent).toBe(true);
+    expect(mockCallCommunity).toHaveBeenCalledWith('community_upsert_profile', {
+      _p: { share_sessions: true, sessions_audience: 'everyone', c_planned_per_week: null },
+      _remove_shared: false,
+    });
+  });
+
+  test('_remove_shared travels through when asked', async () => {
+    await publishSharingSettings('u1', { share_sessions: false, sessions_audience: 'followers' }, { removeShared: true });
+    expect(mockCallCommunity).toHaveBeenCalledWith('community_upsert_profile', expect.objectContaining({
+      _remove_shared: true,
+    }));
+  });
+
+  test('c_planned_per_week only travels when consistency sharing is allowed (gated behind share_consistency, not share_sessions)', async () => {
+    getActivePlan.mockResolvedValue({ id: 'plan1' });
+    getRoutinesForPlan.mockResolvedValue([{ id: 'r1' }, { id: 'r2' }]);
+
+    await publishSharingSettings('u1', { share_sessions: true, sessions_audience: 'followers', consistency: false });
+    expect(mockCallCommunity.mock.calls.at(-1)[1]._p.c_planned_per_week).toBeNull();
+
+    mockCallCommunity.mockClear();
+    await publishSharingSettings('u1', { share_sessions: true, sessions_audience: 'followers', consistency: true });
+    expect(mockCallCommunity.mock.calls.at(-1)[1]._p.c_planned_per_week).toBe(2);
+  });
+
+  test('a refused send answers sent:false with the code', async () => {
+    mockCallCommunity.mockRejectedValueOnce(Object.assign(new Error('offline'), { code: 'offline' }));
+    const out = await publishSharingSettings('u1', { share_sessions: true, sessions_audience: 'followers' });
+    expect(out).toEqual({ sent: false, reason: 'offline' });
   });
 });
 

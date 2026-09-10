@@ -72,6 +72,8 @@ jest.mock('../../lib/community', () => ({
   consistencyGateState: jest.fn(() => Promise.resolve({ allowed: false, gated: false, isMinor: false })),
   loadConsistency: jest.fn(() => Promise.resolve(null)),
   publishConsistencyOnForeground: jest.fn(() => Promise.resolve({ sent: false, reason: null, payload: null })),
+  // Phase 3: the same foreground trigger drains any queued ambient items.
+  flushPendingAmbientItems: jest.fn(() => Promise.resolve({ flushed: 0, dropped: 0, remaining: 0 })),
   // Moderated-person notice (40-GAP-CLOSURE.md §1): best-effort, covered
   // directly in profile.moderatedStatus.test.js; resolved to the neutral
   // shape here so it never affects the states this file is about.

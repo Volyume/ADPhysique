@@ -29,7 +29,7 @@
  *   onRulesOutdated  () the rules changed and must be accepted first
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import BottomSheet from '../BottomSheet';
 import ModalHeader from '../ModalHeader';
@@ -40,23 +40,13 @@ import SectionLabel from '../SectionLabel';
 import { useToast } from '../Toast';
 import { spacing, type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
+import useCommunityMe from '../../hooks/useCommunityMe';
 import {
   CONNECT_REASONS, MAX_CONNECT_REASONS, CONNECT_NOTE_MAX, connect,
 } from '../../lib/community';
 import { connectRefusalLine } from './ConnectButton';
 
 export const CONNECT_EXPLAINS_LINE = 'Become connected. They need to accept.';
-
-/**
- * The reasons offered in the picker. `same_programme` is hidden here
- * (communities revamp 2026-09-10, phase 0: Volyume never explains
- * Community as programme sharing) without touching `CONNECT_REASONS`
- * itself -- `community.privacy.guard.test.js` pins that constant's keys
- * to the SQL helper list. A request already carrying this reason (sent
- * before this change) still displays it in full on `ConnectRequestRow`.
- */
-const SELECTABLE_CONNECT_REASONS = Object.entries(CONNECT_REASONS)
-  .filter(([key]) => !/programme/i.test(key));
 
 export default function ConnectSheet({
   visible,
@@ -68,9 +58,24 @@ export default function ConnectSheet({
 }) {
   const t = useTheme();
   const toast = useToast();
+  const { me } = useCommunityMe();
   const [reasons, setReasons] = useState([]);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // Phase 3 (spec section 7): "Same discipline" shows only when both
+  // people share a discipline key -- never a reason offered on faith.
+  // `same_programme` is retired outright (Community never explains
+  // itself as programme sharing), so no regex hiding is needed any more:
+  // `CONNECT_REASONS` itself carries only the reasons that may ever show.
+  const shareDiscipline = useMemo(() => {
+    const mine = new Set(me?.profile?.discipline_keys ?? []);
+    return (card?.discipline_keys ?? []).some((k) => mine.has(k));
+  }, [me, card]);
+  const selectableReasons = useMemo(
+    () => Object.entries(CONNECT_REASONS).filter(([key]) => key !== 'same_discipline' || shareDiscipline),
+    [shareDiscipline],
+  );
 
   // Each opening starts clean, with whatever the door pre-selected: a
   // note typed for one person must never travel to the next.
@@ -131,7 +136,7 @@ export default function ConnectSheet({
             {`Up to ${MAX_CONNECT_REASONS}. Optional.`}
           </Text>
           <View style={styles.chips}>
-            {SELECTABLE_CONNECT_REASONS.map(([key, label]) => (
+            {selectableReasons.map(([key, label]) => (
               <Chip
                 key={key}
                 label={label}

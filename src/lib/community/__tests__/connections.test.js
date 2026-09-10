@@ -72,18 +72,21 @@ describe('the state machine behind the Connect button', () => {
 });
 
 describe('the reasons a request may carry', () => {
+  // Phase 3 (`docs/communities-revamp-2026-09-10/23-PHASE3-SPEC.md`
+  // section 7; `22-MIGRATION-170A-CONTRACT.md` Part B): same_programme
+  // retired, same_discipline added, same position.
   test('the four reasons read exactly as the blueprint writes them', () => {
     expect(CONNECT_REASONS).toEqual({
       same_gym: 'Same gym',
-      same_programme: 'Same programme',
+      same_discipline: 'Same discipline',
       train_like_me: 'You train like me',
       train_together: 'Want to train together?',
     });
   });
 
   test('at most two, in the order they were chosen', () => {
-    expect(cleanReasons(['same_gym', 'same_programme', 'train_like_me']))
-      .toEqual(['same_gym', 'same_programme']);
+    expect(cleanReasons(['same_gym', 'same_discipline', 'train_like_me']))
+      .toEqual(['same_gym', 'same_discipline']);
     expect(MAX_CONNECT_REASONS).toBe(2);
   });
 

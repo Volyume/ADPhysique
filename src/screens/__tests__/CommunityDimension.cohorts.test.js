@@ -50,6 +50,12 @@ jest.mock('../../hooks/usePhotoSuppression', () => ({
   readEdOrCalmSuppressed: jest.fn(() => Promise.resolve(false)),
 }));
 
+// Phase 3's RespectAllRow has its own async device-flag lifecycle
+// (AsyncStorage read on mount); stubbed here so this suite's own
+// assertions never race it -- `RespectAllRow.test.js` owns that
+// component's behaviour.
+jest.mock('../../components/community/RespectAllRow', () => () => null);
+
 jest.mock('../../lib/community', () => ({
   loadDimension: jest.fn(),
   loadDimensionRecent: jest.fn(() => Promise.resolve({ posts: [], cursor: null })),

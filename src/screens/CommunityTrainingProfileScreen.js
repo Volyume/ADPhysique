@@ -24,7 +24,7 @@
  * you were ever looking.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
@@ -34,6 +34,7 @@ import Chip from '../components/Chip';
 import SectionLabel from '../components/SectionLabel';
 import { SkeletonCard, SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
+import { appAlert } from '../components/AppAlert';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
@@ -41,7 +42,8 @@ import {
   TP_DAYS, TP_TIME_BANDS, TP_SESSIONS_BANDS, TP_EXPERIENCE_BANDS, TP_AGE_BANDS,
   TP_DEFAULT_SHARE, dayListLabel, timeBandsLabel, previewLine, shareablePayload,
   loadTrainingProfile, readShareSettings, writeShareSettings, syncTrainingProfile,
-  publishConsistency,
+  publishConsistency, publishSharingSettings,
+  SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS,
   setPartner,
 } from '../lib/community';
 
@@ -90,6 +92,12 @@ export function bandRows(bands, me) {
       label: 'Share my consistency',
       value: '',
       empty: 'Your sessions this week, this month and your weeks in a row. Never your weight or food.',
+    },
+    {
+      key: 'share_sessions',
+      label: 'Share what I did',
+      value: '',
+      empty: "Turns each finished workout into an activity item for the audience you choose, automatically, with nothing to post yourself. Off by default. Turn it off any time and remove what you've already shared.",
     },
   ];
 }
@@ -174,6 +182,57 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
     } else if (!out?.sent) {
       toast.show('Saved on this device. It will share when you are back online.');
     }
+  }
+
+  /**
+   * "Share what I did" and its audience (spec section 1) go through a
+   * SEPARATE server call from the bands above
+   * (`publishSharingSettings` -> `community_upsert_profile`, not
+   * `community_update_training_profile`), so this has its own save
+   * helper rather than reusing `toggleBand`. Same optimistic-then-revert
+   * shape.
+   */
+  async function saveSharing(nextSettings, { removeShared = false } = {}) {
+    // A minor never gets an audience beyond followers, whatever the chip
+    // row shows (belt and braces: the server also forces this).
+    const clamped = isMinor ? { ...nextSettings, sessions_audience: 'followers' } : nextSettings;
+    const prevSettings = share;
+    setShare(clamped);
+    await writeShareSettings(uid, clamped);
+    const out = await publishSharingSettings(uid, clamped, { removeShared });
+    if (out?.reason === 'rules_outdated') {
+      setShare(prevSettings);
+      await writeShareSettings(uid, prevSettings);
+      navigation.navigate('CommunityRules', { mustAccept: true });
+    } else if (!out?.sent) {
+      toast.show('Saved on this device. It will share when you are back online.');
+    }
+  }
+
+  function toggleShareSessions(next) {
+    if (!next) {
+      // Spec section 1: turning it off asks ONCE whether to remove what
+      // is already shared, then stops new items either way.
+      appAlert(
+        'Remove the items already shared?',
+        'Turning this off stops new activity items straight away. You can also remove what has already been shared, or keep it as it is.',
+        [
+          { text: 'Keep', onPress: () => saveSharing({ ...share, share_sessions: false }) },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: () => saveSharing({ ...share, share_sessions: false }, { removeShared: true }),
+          },
+        ],
+      );
+      return;
+    }
+    saveSharing({ ...share, share_sessions: true });
+  }
+
+  function setSessionsAudience(value) {
+    if (!SESSIONS_AUDIENCE_VALUES.includes(value)) return;
+    saveSharing({ ...share, sessions_audience: value });
   }
 
   async function recalculate() {
@@ -262,24 +321,54 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
                   Join filters the same row (CommunityJoinScreen.js). */}
               {bandRows(bands, me)
                 .filter((row) => !(isMinor && (row.key === 'age_band' || row.key === 'consistency')))
-                .map((row) => (
-                <View key={row.key} style={styles.bandRow}>
-                  <View style={styles.bandBody}>
-                    <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
-                      {row.label}
-                    </Text>
-                    <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                      {row.value || row.empty || NOT_ENOUGH_LINE}
-                    </Text>
-                  </View>
-                  <Switch
-                    value={!!share[row.key]}
-                    onValueChange={(next) => toggleBand(row.key, next)}
-                    accessibilityLabel={`Share ${row.label.toLowerCase()}`}
-                    {...switchColours}
-                  />
-                </View>
-              ))}
+                .map((row) => {
+                  const isShareSessions = row.key === 'share_sessions';
+                  return (
+                    <Fragment key={row.key}>
+                      <View style={styles.bandRow}>
+                        <View style={styles.bandBody}>
+                          <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
+                            {row.label}
+                          </Text>
+                          <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+                            {row.value || row.empty || NOT_ENOUGH_LINE}
+                          </Text>
+                        </View>
+                        <Switch
+                          value={!!share[row.key]}
+                          onValueChange={(next) => (isShareSessions ? toggleShareSessions(next) : toggleBand(row.key, next))}
+                          accessibilityLabel={`Share ${row.label.toLowerCase()}`}
+                          {...switchColours}
+                        />
+                      </View>
+                      {/* Spec section 1: the audience Chip radio row under
+                          "Share what I did", only while it is on. A minor
+                          never gets more than followers (HARD BOUND), so
+                          the row itself never renders for one -- a single
+                          calm line instead, matching the age-band row's own
+                          minor treatment elsewhere on this screen. */}
+                      {isShareSessions && share.share_sessions ? (
+                        isMinor ? (
+                          <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textMuted }]}>
+                            Shared with people who follow you.
+                          </Text>
+                        ) : (
+                          <View style={styles.chips} accessibilityLabel="Who sees what you did">
+                            {SESSIONS_AUDIENCE_VALUES.map((value) => (
+                              <Chip
+                                key={value}
+                                label={SESSIONS_AUDIENCE_LABELS[value]}
+                                selected={share.sessions_audience === value}
+                                onPress={() => setSessionsAudience(value)}
+                                accessibilityRole="radio"
+                              />
+                            ))}
+                          </View>
+                        )
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
               <Button
                 variant="tertiary"
                 size="sm"

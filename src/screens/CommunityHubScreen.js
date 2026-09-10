@@ -220,14 +220,37 @@ export default function CommunityHubScreen({ navigation, route }) {
   // ActiveWorkoutScreen. `publishConsistencyOnForeground` itself compares
   // the local week key and no-ops when it has not changed, so this can
   // safely fire on every mount and every return-to-foreground.
+  //
+  // Communities revamp phase 3 (spec section 2): the SAME foreground
+  // trigger drains any ambient items queued while offline
+  // (`flushPendingAmbientItems`, `client_ref` makes a repeat delivery
+  // idempotent server-side).
+  //
+  // "Or reconnect": a self-contained `NetInfo.addEventListener` was tried
+  // here and dropped again in the same landing -- the library's own
+  // internal current-state fetch throws asynchronously, outside any
+  // try/catch this effect can place around the call, and surfaced as an
+  // unhandled rejection under the test renderer (a real fragility, not a
+  // mock artifact: the same throw would be reachable on a device the
+  // moment the native module answers slower than the listener registers).
+  // Foreground already covers the overwhelmingly common "was offline, now
+  // is not" case in practice: reconnecting almost always also foregrounds
+  // the app, and every subsequent workout completion's own opportunistic
+  // flush (`WorkoutSummaryScreen.js`) drains the queue too. A dedicated
+  // reconnect listener stays open for the lead to revisit; see the lane
+  // report.
   const consistencyUid = me?.profile?.user_id ?? null;
   useEffect(() => {
     if (!consistencyUid) return undefined;
     // eslint-disable-next-line global-require
-    const { publishConsistencyOnForeground } = require('../lib/community');
+    const { publishConsistencyOnForeground, flushPendingAmbientItems } = require('../lib/community');
     publishConsistencyOnForeground(consistencyUid).catch(() => {});
+    flushPendingAmbientItems().catch(() => {});
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') publishConsistencyOnForeground(consistencyUid).catch(() => {});
+      if (state === 'active') {
+        publishConsistencyOnForeground(consistencyUid).catch(() => {});
+        flushPendingAmbientItems().catch(() => {});
+      }
     });
     return () => sub.remove();
   }, [consistencyUid]);

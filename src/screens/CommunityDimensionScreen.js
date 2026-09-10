@@ -68,6 +68,7 @@ import { SkeletonRow } from '../components/Skeleton';
 import Eyebrow from '../components/community/Eyebrow';
 import PersonRow from '../components/community/PersonRow';
 import ActivityItemRow from '../components/community/ActivityItemRow';
+import RespectAllRow from '../components/community/RespectAllRow';
 import GymSummary from '../components/community/GymSummary';
 import BottomSheet from '../components/BottomSheet';
 import ModalHeader from '../components/ModalHeader';
@@ -645,6 +646,18 @@ export default function CommunityDimensionScreen({ navigation, route }) {
                   <Text style={[styles.coldStart, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
                     No one else here is sharing yet.
                   </Text>
+                ) : null}
+                {/* Phase 3 (spec section 5), landing where phase 1 reserved
+                    the spot: "Respect everyone who trained today", roster
+                    scopes only (gym/area/style/discipline/age_band all
+                    share community_board's own scope names, so `kind`
+                    and `boardScopeKey` pass straight through). */}
+                {rosterMode ? (
+                  <RespectAllRow
+                    scope={kind}
+                    scopeKey={boardScopeKey}
+                    hasTrainedToday={displayRows.some((row) => row.trainedToday)}
+                  />
                 ) : null}
                 <Pressable
                   onPress={() => navigation.navigate('CommunityBoard', {

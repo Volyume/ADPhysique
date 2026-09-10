@@ -26,6 +26,8 @@ jest.mock('../../lib/community', () => ({
   loadMe: jest.fn(),
   hasProfile: (me) => !!me?.profile?.handle,
   createPost: jest.fn(),
+  setPostNote: jest.fn(),
+  listMyGroups: jest.fn(() => Promise.resolve([])),
   buildPrPayload: jest.fn(() => ({ exercise_name: 'Squat' })),
   buildSessionPayload: jest.fn(() => ({ exercises: 5 })),
   buildBlockPayload: jest.fn(() => ({ weeks: 4 })),

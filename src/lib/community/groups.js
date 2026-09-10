@@ -33,7 +33,53 @@ function normaliseGroup(g) {
     memberCount: Number.isFinite(Number(g.member_count)) ? Number(g.member_count) : 0,
     status: g.status ?? 'active',
     createdAt: g.created_at ?? null,
+    // Phase 3 ("Together this week": `22-MIGRATION-170A-CONTRACT.md` Part
+    // B, `community_group_get`). Only `community_group_get` ever returns
+    // these three; every other RPC this file wraps (`community_group_
+    // create`/`_update`/`_close`/`_list_mine`/`_search`) simply omits
+    // them, and `Number.isFinite` reads that absence as `null` here too --
+    // the SAME shape the server uses for a non-member of an invite-only
+    // group (stripped alongside `member_count`/`blurb`), so `togetherLine`
+    // below renders no line at all for either case, never a false zero.
+    togetherSessionsWeek: Number.isFinite(Number(g.together_sessions_week))
+      ? Number(g.together_sessions_week) : null,
+    togetherPlannedWeek: Number.isFinite(Number(g.together_planned_week))
+      ? Number(g.together_planned_week) : null,
+    sharingMembers: Number.isFinite(Number(g.sharing_members)) ? Number(g.sharing_members) : null,
   };
+}
+
+/**
+ * The group page's "Together this week" line (phase3 spec section 4;
+ * blueprint section 6). Cooperative, never per-member, never red.
+ *
+ * - Any of the three fields missing (a non-member of an invite-only
+ *   group, or an RPC that never carries them) answers `null`: no line at
+ *   all, not a claim about a group the caller cannot see the shape of.
+ * - Nobody sharing (`sharingMembers === 0`): the fixed line "Together:
+ *   nothing shared yet", regardless of the other two numbers.
+ * - Nobody who shares has a plan (`togetherPlannedWeek === 0`, even
+ *   though sessions may be > 0): the planned figure is OMITTED rather
+ *   than rendering "0 of 0" or a stray zero denominator --
+ *   "Together: 11 sessions this week · 6 of 8 sharing".
+ * - Otherwise: "Together: 11 of 16 planned sessions this week · 6 of 8
+ *   sharing".
+ *
+ * @param {{togetherSessionsWeek: (number|null), togetherPlannedWeek: (number|null),
+ *   sharingMembers: (number|null), memberCount?: number}} group
+ * @returns {string|null}
+ */
+export function togetherLine(group) {
+  const sessions = group?.togetherSessionsWeek;
+  const planned = group?.togetherPlannedWeek;
+  const sharing = group?.sharingMembers;
+  if (sessions == null || planned == null || sharing == null) return null;
+  if (sharing === 0) return 'Together: nothing shared yet';
+  const memberCount = Number.isFinite(Number(group?.memberCount)) ? Number(group.memberCount) : sharing;
+  const sessionsPart = planned > 0
+    ? `${sessions} of ${planned} planned session${planned === 1 ? '' : 's'} this week`
+    : `${sessions} session${sessions === 1 ? '' : 's'} this week`;
+  return `Together: ${sessionsPart} · ${sharing} of ${memberCount} sharing`;
 }
 
 /**

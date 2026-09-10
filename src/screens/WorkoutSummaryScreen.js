@@ -56,6 +56,11 @@ import { formatNumber, formatWithUnit } from '../lib/format';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
 import { touchTarget } from '../styles/layout';
+import {
+  loadMe, hasProfile, readShareSettings, writeShareSettings,
+  publishConsistency, publishAmbientItems,
+  flushPendingAmbientItems, hasSeenSessionShareOffer, recordSessionShareOfferSeen,
+} from '../lib/community';
 
 // COMP-008: soreness, energy and sleep moved to the pre-workout intent prompt
 // (captured where they are accurate). The post-workout block keeps only the
@@ -238,6 +243,19 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // cards (the programme-arc strip + the phase-completion card). Set once from
   // the shared wellbeing read in loadVolumeAndHistory.
   const [calmSuppressed, setCalmSuppressed] = useState(false);
+  // Communities revamp phase 3 (spec section 1, blueprint Q2): the
+  // once-only "Show your gym you trained today?" offer. `shareOfferEligible`
+  // is set inside loadVolumeAndHistory (the very first completed workout
+  // ever, and not suppressed) alongside firstSessionLine/milestone;
+  // `showShareOffer` is decided in its own effect below (async: the
+  // device-recorded seen flag and the Community profile), so a slow
+  // Community read never blocks the rest of this screen's first paint.
+  const [shareOfferEligible, setShareOfferEligible] = useState(false);
+  const [showShareOffer, setShowShareOffer] = useState(false);
+  // The auto session item's own id and payload, once genuinely created
+  // (never for a queued-offline or gated/skipped attempt, which has no
+  // row yet): "Add a note" opens compose already pointed at this row.
+  const [autoSessionPost, setAutoSessionPost] = useState(null);
   // Keep the completion state calm: the workout is done, and the primary
   // actions must be visible immediately. These optional answers still feed the
   // coaching loop, but only open when the lifter deliberately rates the session.
@@ -319,6 +337,100 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     loadVolumeAndHistory();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Communities revamp phase 3 (spec section 2): on workout completion,
+  // when "Share what I did" is on and the ED/calm gate allows,
+  // `publishAmbientItems` creates the session item and up to three PR
+  // items. Live summary only (the workout is already complete by the
+  // time this screen shows). A best-effort opportunistic flush of any
+  // previously queued items rides along, so returning to the app after
+  // being offline also drains the queue without a dedicated global hook.
+  const ambientPublishedRef = useRef(false);
+  useEffect(() => {
+    if (readOnly || !workoutId || !user?.id || ambientPublishedRef.current) return;
+    ambientPublishedRef.current = true;
+    (async () => {
+      try {
+        const share = await readShareSettings(user.id);
+        flushPendingAmbientItems().catch(() => {});
+        if (!share.share_sessions) return;
+        const prList = (detectedPRs || []).map((p) => ({
+          exerciseId: p.exerciseId,
+          exerciseName: p.exerciseName,
+          weight: p.weight,
+          reps: p.reps,
+          units: p.units,
+          previousBest: p.previousValue ?? null,
+          date: startedAt ?? endedAt ?? Date.now(),
+        }));
+        const out = await publishAmbientItems({
+          userId: user.id, workoutId, prList, units: units === 'lbs' ? 'lbs' : 'kg',
+        });
+        if (out?.sessionPostId) {
+          setAutoSessionPost({ id: out.sessionPostId, payload: out.sessionPayload });
+        }
+      } catch (_e) { /* best effort: never the reason the summary fails to show */ }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readOnly, workoutId, user?.id]);
+
+  // Communities revamp phase 3 (Q2): decide whether to show the
+  // once-only offer, once eligibility (the first completed workout ever,
+  // not suppressed) is known. Skipped entirely without a Community
+  // profile yet (Join is a bigger ask than this one line belongs to) and
+  // when the day-level toggle is already on.
+  //
+  // Lead ruling (safety verdict R3): this offer turns on "Share my
+  // consistency" ONLY -- day-level facts, never "Share what I did". The
+  // higher-disclosure toggle is an express, informed act that needs its
+  // full wording (audience choice, what it turns each workout into) at
+  // the Training profile screen, not a one-line summary prompt; this
+  // offer's own tertiary link routes there instead of setting it here.
+  useEffect(() => {
+    if (readOnly || !shareOfferEligible || !user?.id) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        const seen = await hasSeenSessionShareOffer(user.id);
+        if (seen || cancelled) return;
+        const { me } = await loadMe({});
+        if (cancelled || !hasProfile(me)) return;
+        const share = await readShareSettings(user.id);
+        if (cancelled) return;
+        if (share.consistency) {
+          // Already sharing consistency: nothing this offer would change,
+          // and it must never show again after this point either.
+          await recordSessionShareOfferSeen(user.id);
+          return;
+        }
+        setShowShareOffer(true);
+      } catch (_e) { /* best effort: never block the summary on this */ }
+    })();
+    return () => { cancelled = true; };
+  }, [readOnly, shareOfferEligible, user?.id]);
+
+  async function acceptShareOffer() {
+    if (!user?.id) return;
+    hapticSelection();
+    setShowShareOffer(false);
+    await recordSessionShareOfferSeen(user.id);
+    const settings = { ...(await readShareSettings(user.id)), consistency: true };
+    await writeShareSettings(user.id, settings);
+    publishConsistency(user.id).catch(() => {});
+    toast.show('Shown to people who follow you.');
+  }
+
+  // Named for the source-level pin `HowYouTrainScreen.capabilityFlows.
+  // guard.test.js` sweeps every "Not now" button against in any file
+  // touching the capability-rewrite lane's identifiers (this file also
+  // imports getSessionConstraintEffect, unrelated, for the constraint-
+  // effect summary line): the sweep sees this handler's own name, which
+  // is accurate here too -- it declines the offer, now.
+  async function declineNow() {
+    if (!user?.id) { setShowShareOffer(false); return; }
+    setShowShareOffer(false);
+    await recordSessionShareOfferSeen(user.id);
+  }
 
   // Load the routine/day name so the share card can title the session with the
   // real workout name rather than a join of the first two exercise names.
@@ -701,6 +813,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       } catch (_) {}
       const suppressed = calm || !!edFlag;
       setCalmSuppressed(suppressed);
+      // Communities revamp phase 3 (Q2): eligibility only, not the
+      // decision to show -- that also needs the device-recorded seen
+      // flag and a Community profile, both read async in their own
+      // effect below.
+      setShareOfferEligible(totalCompleted === 1 && !suppressed);
 
       // COMP-013: first completed session ever → the calibrated acknowledgement.
       if (totalCompleted === 1) {
@@ -1254,24 +1371,76 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <StatBox icon="time-outline" value={`${durationMinutes || 0} min`} label="Duration" animateOrder={2} />
         </View>
 
+        {/* Communities revamp phase 3 (spec section 1, Q2; lead ruling,
+            safety verdict R3): the once-only day-level-only offer, after
+            the very first completed workout ever. One line, two buttons,
+            plus a tertiary link to the fuller "Share what I did" toggle
+            (its own express act, with its own full wording); never shown
+            again once answered either way. */}
+        {!readOnly && showShareOffer ? (
+          <RevealSection delay={1130}>
+            <Card style={styles.shareOfferCard}>
+              <Text style={[styles.shareOfferLine, { ...t.type.body, color: t.colors.textPrimary }]}>
+                Show people who follow you which days you trained? Never your weight, food or photos.
+              </Text>
+              <View style={styles.shareOfferButtons}>
+                <Button
+                  title="Not now"
+                  variant="tertiary"
+                  size="sm"
+                  fullWidth={false}
+                  onPress={declineNow}
+                  accessibilityLabel="Not now"
+                />
+                <Button
+                  title="Show them"
+                  variant="primary"
+                  size="sm"
+                  fullWidth={false}
+                  onPress={acceptShareOffer}
+                  accessibilityLabel="Show people who follow you which days you trained"
+                />
+              </View>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('CommunityTrainingProfile')}
+                accessibilityRole="button"
+                accessibilityLabel="Share your workouts from your training profile"
+              >
+                <Text style={[styles.shareOfferLink, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+                  You can also share your workouts from your training profile.
+                </Text>
+              </TouchableOpacity>
+            </Card>
+          </RevealSection>
+        ) : null}
+
         {/* Community entry point 6 (social-discovery blueprint section 1):
             where the retired Partners "share with your partner" beat used
             to sit, because
             this is the moment a session is worth telling someone about.
             Always shown: CommunityCompose routes to Join first when there is
             no profile yet. The read-only re-open of an old summary is not a
-            posting moment, so it is the one state without it. */}
+            posting moment, so it is the one state without it.
+            Phase 3 (spec section 2): once sharing has put an ambient item
+            on this workout, the button becomes "Add a note" on that same
+            row instead of opening a fresh manual compose. */}
         {!readOnly && workoutId ? (
           <RevealSection delay={1140}>
             <Button
-              title="Post to Community"
+              title={autoSessionPost ? 'Add a note' : 'Post to Community'}
               icon="people-outline"
               variant="secondary"
               onPress={() => {
                 hapticSelection();
-                navigation.navigate('CommunityCompose', { kind: 'session', workoutId });
+                if (autoSessionPost) {
+                  navigation.navigate('CommunityCompose', {
+                    postId: autoSessionPost.id, kind: 'session', payload: autoSessionPost.payload,
+                  });
+                } else {
+                  navigation.navigate('CommunityCompose', { kind: 'session', workoutId });
+                }
               }}
-              accessibilityLabel="Post this session to Community"
+              accessibilityLabel={autoSessionPost ? 'Add a note to this session' : 'Post this session to Community'}
             />
           </RevealSection>
         ) : null}
@@ -2068,6 +2237,11 @@ const styles = StyleSheet.create({
   blockArcSection: {
     gap: spacing.sm,
   },
+  // Communities revamp phase 3 (Q2): the once-only share offer card.
+  shareOfferCard: { gap: spacing.md },
+  shareOfferLine: { ...type.body, color: colors.textPrimary },
+  shareOfferButtons: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' },
+  shareOfferLink: { ...type.bodySm, color: colors.textMuted },
   blockArcName: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   // D3 hero: the one elevated object on the screen (surfaceElevated ranks
   // the hero, design audit 03 rule 4), carrying the display-size tonnage.

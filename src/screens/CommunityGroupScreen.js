@@ -33,17 +33,18 @@ import Button from '../components/Button';
 import Eyebrow from '../components/community/Eyebrow';
 import PersonRow from '../components/community/PersonRow';
 import ActivityItemRow from '../components/community/ActivityItemRow';
+import RespectAllRow from '../components/community/RespectAllRow';
 import MenuSheet from '../components/community/MenuSheet';
 import ReportSheet from '../components/community/ReportSheet';
 import GroupInviteSheet from '../components/community/GroupInviteSheet';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, hitSlop } from '../styles/theme';
+import { colors, spacing, type, radius, hitSlop } from '../styles/theme';
 import { touchTarget } from '../styles/layout';
 import {
   getGroup, joinGroup, leaveGroup, closeGroup, loadGroupFeed, reactToPost,
-  loadBoard, metricLabel,
+  loadBoard, metricLabel, togetherLine,
 } from '../lib/community';
 
 const PAGE = 20;
@@ -148,6 +149,37 @@ export default function CommunityGroupScreen({ navigation, route }) {
     } catch (_e) {
       // A reaction that did not land is not worth interrupting for; the
       // next refresh shows the truth.
+    }
+  }
+
+  // Phase 3 (blueprint section 9's group page; lead ruling): "Share a
+  // workout with the group", top of ACTIVITY, members only. Opens Compose
+  // on the caller's own most recently completed workout with this group
+  // preselected as the audience (the manual audience chooser task 3
+  // built). The read is narrow and stays on-device: only an id is taken
+  // from it, never any training detail rendered or sent from this screen.
+  const [sharingWorkout, setSharingWorkout] = useState(false);
+  async function shareWorkoutWithGroup() {
+    if (sharingWorkout || !me?.profile?.user_id) return;
+    setSharingWorkout(true);
+    try {
+      // eslint-disable-next-line global-require
+      const { getAllWorkouts } = require('../lib/database');
+      const workouts = await getAllWorkouts(me.profile.user_id);
+      const latest = (workouts ?? [])
+        .filter((w) => w.isCompleted)
+        .sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))[0];
+      if (!latest?.id) {
+        toast.show('Finish a workout first, then share it here.');
+        return;
+      }
+      navigation.navigate('CommunityCompose', {
+        kind: 'session', workoutId: latest.id, presetGroupId: groupId,
+      });
+    } catch (_e) {
+      toast.show('Could not open that just now.', { variant: 'error' });
+    } finally {
+      setSharingWorkout(false);
     }
   }
 
@@ -327,6 +359,28 @@ export default function CommunityGroupScreen({ navigation, route }) {
                   {group.blurb}
                 </Text>
               ) : null}
+              {/* Phase 3 (spec section 4): "Together this week", a label
+                  line plus a 2 dp bar. Null (a non-member of an invite-
+                  only group) renders no line at all -- togetherLine's own
+                  data-driven check, not an isMember gate, since an OPEN
+                  group's non-member browsing still gets a real line. */}
+              {togetherLine(group) ? (
+                <View style={styles.togetherWrap}>
+                  <Text style={[styles.together, { ...t.type.label, color: t.colors.textSecondary }]}>
+                    {togetherLine(group)}
+                  </Text>
+                  {group.togetherPlannedWeek > 0 ? (
+                    <View style={[styles.togetherTrack, { backgroundColor: t.colors.primaryBg }]}>
+                      <View
+                        style={[styles.togetherFill, {
+                          backgroundColor: t.colors.primary,
+                          width: `${Math.round(Math.min(1, group.togetherSessionsWeek / group.togetherPlannedWeek) * 100)}%`,
+                        }]}
+                      />
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
               {!isMember && !isMinor ? (
                 <Button
                   variant="primary"
@@ -360,7 +414,26 @@ export default function CommunityGroupScreen({ navigation, route }) {
                       onPress={() => openProfile(row.card)}
                     />
                   ))}
+                  {/* Phase 3 (spec section 5): "Respect everyone who
+                      trained today", foot of the roster. */}
+                  <RespectAllRow
+                    scope="group"
+                    scopeKey={groupId}
+                    hasTrainedToday={displayMembers.some((row) => row.trainedToday)}
+                  />
                   <Eyebrow>ACTIVITY</Eyebrow>
+                  {/* Phase 3, lead ruling: top of ACTIVITY, members only. */}
+                  <Pressable
+                    onPress={shareWorkoutWithGroup}
+                    disabled={sharingWorkout}
+                    style={styles.tertiaryRow}
+                    accessibilityRole="button"
+                    accessibilityLabel="Share a workout with the group"
+                  >
+                    <Text style={[styles.tertiaryLabel, { ...t.type.label, color: t.colors.textSecondary }]}>
+                      Share a workout with the group
+                    </Text>
+                  </Pressable>
                 </>
               ) : null}
             </View>
@@ -422,4 +495,14 @@ const styles = StyleSheet.create({
   label: { ...type.label, color: colors.textSecondary },
   blurb: { ...type.bodySm, color: colors.textSecondary },
   joinBtn: { marginTop: spacing.sm, alignSelf: 'flex-start' },
+  // Phase 3: "Together this week" (spec section 4).
+  togetherWrap: { gap: spacing.xxs },
+  together: { ...type.label, color: colors.textSecondary },
+  togetherTrack: {
+    height: radius.hair, borderRadius: radius.hair, overflow: 'hidden', backgroundColor: colors.primaryBg,
+  },
+  togetherFill: { height: '100%', borderRadius: radius.hair, backgroundColor: colors.primary },
+  // Phase 3: "Share a workout with the group", top of ACTIVITY.
+  tertiaryRow: { minHeight: 48, justifyContent: 'center', paddingVertical: spacing.sm },
+  tertiaryLabel: { ...type.label, color: colors.textSecondary },
 });

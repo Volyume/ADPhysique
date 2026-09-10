@@ -377,8 +377,8 @@ describe('only the opted-in bands are sent', () => {
   test('the defaults leave days, time bands and the age band behind', () => {
     const payload = shareablePayload(BANDS, TP_DEFAULT_SHARE);
     expect(Object.keys(payload).sort()).toEqual([
-      'share_age_band', 'share_consistency', 'tp_experience_band',
-      'tp_sessions_band', 'tp_staple_lifts',
+      'sessions_audience', 'share_age_band', 'share_consistency', 'share_sessions',
+      'tp_experience_band', 'tp_sessions_band', 'tp_staple_lifts',
     ]);
     expect(payload.share_age_band).toBe(false);
     // `share_consistency` always travels, the same as `share_age_band`
@@ -386,6 +386,10 @@ describe('only the opted-in bands are sent', () => {
     // 1); its counters are a separate module's concern, pinned in
     // `trainingConsistency.test.js`.
     expect(payload.share_consistency).toBe(false);
+    // Phase 3 (spec section 1): `share_sessions`/`sessions_audience`
+    // always travel too, the identical shape.
+    expect(payload.share_sessions).toBe(false);
+    expect(payload.sessions_audience).toBe('followers');
   });
 
   test('a band whose toggle is off is ABSENT, not sent as null', () => {
@@ -405,9 +409,44 @@ describe('only the opted-in bands are sent', () => {
       experience: true, age_band: true,
     });
     expect(Object.keys(payload).sort()).toEqual([
-      'share_age_band', 'share_consistency', 'tp_days', 'tp_experience_band',
-      'tp_sessions_band', 'tp_staple_lifts', 'tp_time_bands',
+      'sessions_audience', 'share_age_band', 'share_consistency', 'share_sessions',
+      'tp_days', 'tp_experience_band', 'tp_sessions_band', 'tp_staple_lifts', 'tp_time_bands',
     ]);
+  });
+
+  test('share_sessions and sessions_audience always travel, whatever the toggle says', () => {
+    const on = shareablePayload(BANDS, { ...TP_DEFAULT_SHARE, share_sessions: true, sessions_audience: 'everyone' });
+    expect(on.share_sessions).toBe(true);
+    expect(on.sessions_audience).toBe('everyone');
+
+    const off = shareablePayload(BANDS, { ...TP_DEFAULT_SHARE, share_sessions: false });
+    expect(off.share_sessions).toBe(false);
+    expect(off.sessions_audience).toBe('followers');
+  });
+
+  test('an unrecognised sessions_audience value falls back to followers, never travels raw', () => {
+    const payload = shareablePayload(BANDS, { ...TP_DEFAULT_SHARE, sessions_audience: 'the-whole-internet' });
+    expect(payload.sessions_audience).toBe('followers');
+  });
+
+  test('c_planned_per_week only travels when consistency is shared, clamped to 0-14', () => {
+    const off = shareablePayload(BANDS, { ...TP_DEFAULT_SHARE, consistency: false });
+    expect('c_planned_per_week' in off).toBe(false);
+
+    const on = shareablePayload(BANDS, { ...TP_DEFAULT_SHARE, consistency: true }, {
+      consistencyCounters: { c_planned_per_week: 99 },
+    });
+    expect(on.c_planned_per_week).toBe(14);
+
+    const negative = shareablePayload(BANDS, { ...TP_DEFAULT_SHARE, consistency: true }, {
+      consistencyCounters: { c_planned_per_week: -3 },
+    });
+    expect(negative.c_planned_per_week).toBe(0);
+
+    const noPlan = shareablePayload(BANDS, { ...TP_DEFAULT_SHARE, consistency: true }, {
+      consistencyCounters: { c_planned_per_week: null },
+    });
+    expect(noPlan.c_planned_per_week).toBeNull();
   });
 
   test('a stray "programme" toggle is ignored: the key is not a share field any more', () => {

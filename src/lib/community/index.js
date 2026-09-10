@@ -62,7 +62,7 @@ export {
   HUB_CACHE_PREFIX, hubCacheKey, clearCachedHub, loadHub, loadFeed,
   loadDiscoverPosts, searchPeople, suggestedPeople,
   myDimensions, loadDimension, loadHubSummary, loadDimensionRecent,
-  createPost, deletePost, getPost, reactToPost,
+  createPost, deletePost, getPost, reactToPost, setPostNote,
   addComment, deleteComment, listComments,
 } from './feed';
 
@@ -85,6 +85,7 @@ export {
   TP_DEFAULT_SHARE, TP_SHARE_KEYS, TP_WINDOW_WEEKS, TP_MAX_STAPLE_LIFTS,
   TP_MAX_TIME_BANDS, TP_DAY_SHARE, TP_DAY_MIN_SESSIONS, TP_TIME_BAND_SHARE,
   TP_SHARE_PREFIX, TP_SYNCED_PREFIX, TP_SYNC_INTERVAL_MS,
+  SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS, DEFAULT_SESSIONS_AUDIENCE,
   tpShareKey, tpSyncedKey, timeBandForHour, experienceBand, sessionsBandFor,
   deriveTrainingProfile, dayListLabel, timeBandsLabel, previewLine,
   readShareSettings, writeShareSettings, shareablePayload,
@@ -93,9 +94,20 @@ export {
 
 export {
   NO_PLAN_CONSISTENT_THRESHOLD, PLANNED_WINDOW_WEEKS, CONSISTENT_WINDOW_WEEKS,
-  computeConsistency, loadConsistency, consistencyGateState, publishConsistency,
+  computeConsistency, loadConsistency, consistencyGateState, sessionShareGateState,
+  publishConsistency, publishSharingSettings,
   CONSISTENCY_WEEK_KEY_PREFIX, publishConsistencyOnForeground,
 } from './trainingConsistency';
+
+export {
+  PENDING_ITEMS_KEY, MAX_AUTO_PRS, publishAmbientItems, flushPendingAmbientItems,
+  clearPendingAmbientItems, shareOfferSeenKey, hasSeenSessionShareOffer,
+  recordSessionShareOfferSeen,
+} from './ambient';
+
+export {
+  respectGivenKey, lastRespectGivenState, recordRespectGiven, respectAll,
+} from './respect';
 
 export {
   CONNECT_REASONS, CONNECT_REASON_KEYS, MAX_CONNECT_REASONS, CONNECT_NOTE_MAX,
@@ -140,4 +152,5 @@ export {
   approveGroupRequest, removeGroupMember, promoteGroupMember,
   inviteToGroup, createGroupInviteLink, acceptGroupInvite,
   listMyGroups, getGroup, listGroupMembers, searchGroups, loadGroupFeed,
+  togetherLine,
 } from './groups';

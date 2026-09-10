@@ -32,6 +32,7 @@ const {
   approveGroupRequest, removeGroupMember, promoteGroupMember,
   inviteToGroup, createGroupInviteLink, acceptGroupInvite,
   listMyGroups, getGroup, listGroupMembers, searchGroups, loadGroupFeed,
+  togetherLine,
 } = require('../groups');
 
 const CARD = {
@@ -52,6 +53,10 @@ test('createGroup calls community_group_create with _name/_blurb/_access and nor
   expect(out).toEqual({
     id: 'g1', name: 'Iron Collective', blurb: 'Monday leg day crew', access: 'open',
     createdBy: 'u1', memberCount: 4, status: 'active', createdAt: '2026-09-01T00:00:00Z',
+    // Phase 3: only community_group_get ever returns these three; every
+    // other RPC this file wraps (this one included) simply omits them,
+    // which normaliseGroup reads as null.
+    togetherSessionsWeek: null, togetherPlannedWeek: null, sharingMembers: null,
   });
 });
 
@@ -216,4 +221,71 @@ test('loadGroupFeed drops a row with no post', async () => {
   const out = await loadGroupFeed('g1');
   expect(out.rows).toHaveLength(1);
   expect(out.rows[0].post.id).toBe('p2');
+});
+
+// ─── Phase 3 ("Together this week": `22-MIGRATION-170A-CONTRACT.md`
+// Part B, `community_group_get`) ────────────────────────────────────────
+describe('getGroup: Together this week fields', () => {
+  test('a member sees the three computed figures', async () => {
+    callCommunity.mockResolvedValueOnce({
+      ...CARD, my_role: 'member', my_state: 'member',
+      together_sessions_week: 11, together_planned_week: 16, sharing_members: 6,
+    });
+    const out = await getGroup('g1');
+    expect(out.togetherSessionsWeek).toBe(11);
+    expect(out.togetherPlannedWeek).toBe(16);
+    expect(out.sharingMembers).toBe(6);
+  });
+
+  test('a genuine zero is kept as 0, never confused with "absent"', async () => {
+    callCommunity.mockResolvedValueOnce({
+      ...CARD, together_sessions_week: 0, together_planned_week: 0, sharing_members: 0,
+    });
+    const out = await getGroup('g1');
+    expect(out.togetherSessionsWeek).toBe(0);
+    expect(out.togetherPlannedWeek).toBe(0);
+    expect(out.sharingMembers).toBe(0);
+  });
+
+  test('a non-member of an invite-only group (the fields simply absent) answers null, not 0', async () => {
+    callCommunity.mockResolvedValueOnce({ id: 'g1', name: 'Iron Collective', access: 'invite' });
+    const out = await getGroup('g1');
+    expect(out.togetherSessionsWeek).toBeNull();
+    expect(out.togetherPlannedWeek).toBeNull();
+    expect(out.sharingMembers).toBeNull();
+  });
+});
+
+describe('togetherLine', () => {
+  test('null when any of the three fields is missing (a non-member)', () => {
+    expect(togetherLine({ togetherSessionsWeek: 11, togetherPlannedWeek: 16, sharingMembers: null })).toBeNull();
+    expect(togetherLine({})).toBeNull();
+  });
+
+  test('"nothing shared yet" when nobody in the group shares, regardless of the other numbers', () => {
+    expect(togetherLine({
+      togetherSessionsWeek: 0, togetherPlannedWeek: 0, sharingMembers: 0, memberCount: 8,
+    })).toBe('Together: nothing shared yet');
+  });
+
+  test('the planned figure when at least one sharer has a plan', () => {
+    expect(togetherLine({
+      togetherSessionsWeek: 11, togetherPlannedWeek: 16, sharingMembers: 6, memberCount: 8,
+    })).toBe('Together: 11 of 16 planned sessions this week · 6 of 8 sharing');
+  });
+
+  test('the planned figure is OMITTED, never "0 of 0", when nobody who shares has a plan', () => {
+    expect(togetherLine({
+      togetherSessionsWeek: 11, togetherPlannedWeek: 0, sharingMembers: 6, memberCount: 8,
+    })).toBe('Together: 11 sessions this week · 6 of 8 sharing');
+  });
+
+  test('singular session/plan wording', () => {
+    expect(togetherLine({
+      togetherSessionsWeek: 1, togetherPlannedWeek: 1, sharingMembers: 1, memberCount: 2,
+    })).toBe('Together: 1 of 1 planned session this week · 1 of 2 sharing');
+    expect(togetherLine({
+      togetherSessionsWeek: 1, togetherPlannedWeek: 0, sharingMembers: 1, memberCount: 2,
+    })).toBe('Together: 1 session this week · 1 of 2 sharing');
+  });
 });

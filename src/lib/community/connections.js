@@ -31,10 +31,18 @@ export const DEFAULT_PAGE_SIZE = 30;
  * The four reasons a request may carry, in the wording the sheet shows.
  * A closed set on purpose: free text is the note, and a fixed reason is
  * something the recipient can read at a glance and trust.
+ *
+ * Phase 3 (`docs/communities-revamp-2026-09-10/23-PHASE3-SPEC.md`
+ * section 7; `22-MIGRATION-170A-CONTRACT.md` Part B): `same_programme`
+ * retired, `same_discipline` added in the same position -- Community
+ * never explains itself as programme sharing, and the SQL helper
+ * (`_community_connect_reasons_list`, re-issued in
+ * `migrate_170_community_connection.sql` Part B) moves with it in the
+ * same landing (`community.privacy.guard.test.js`'s equality section).
  */
 export const CONNECT_REASONS = Object.freeze({
   same_gym: 'Same gym',
-  same_programme: 'Same programme',
+  same_discipline: 'Same discipline',
   train_like_me: 'You train like me',
   train_together: 'Want to train together?',
 });

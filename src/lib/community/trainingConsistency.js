@@ -197,7 +197,12 @@ export function computeConsistency({
  *
  * @param {string} userId
  * @param {{nowMs?: number}} [opts]
- * @returns {Promise<object>} the eight counters
+ * @returns {Promise<object>} the eight `computeConsistency` counters plus
+ *   `c_planned_per_week` (phase 3, "Together this week"): the SAME
+ *   `daysPerWeek` read this function already derives for
+ *   `c_planned_pct_4w`, carried alongside rather than folded into
+ *   `computeConsistency` itself, so that pure function's own pinned
+ *   return shape is untouched. Null without a plan.
  */
 export async function loadConsistency(userId, { nowMs = Date.now() } = {}) {
   const uid = userId ?? currentUserId();
@@ -215,7 +220,8 @@ export async function loadConsistency(userId, { nowMs = Date.now() } = {}) {
       daysPerWeek = null;
     }
   }
-  return computeConsistency({ workouts, plan: { daysPerWeek }, now: nowMs });
+  const counters = computeConsistency({ workouts, plan: { daysPerWeek }, now: nowMs });
+  return { ...counters, c_planned_per_week: daysPerWeek };
 }
 
 /**
@@ -236,6 +242,26 @@ export async function consistencyGateState(uid, shareToggleOn) {
   // is treated as a minor rather than risk sending counters for one.
   const isMinor = cachedMe ? !!cachedMe.is_minor : true;
   return { allowed: !!shareToggleOn && !gated && !isMinor, gated: !!gated, isMinor };
+}
+
+/**
+ * Whether an ambient "Share what I did" item may be created right now:
+ * the toggle is on AND neither calm mode nor an open ED-pattern flag is
+ * active (phase3 spec section 2). Deliberately WITHOUT
+ * `consistencyGateState`'s minor exclusion above: a minor MAY share what
+ * they did (contract Part B: "Minors may set it; nothing in it is
+ * age-restricted") -- only the AUDIENCE is narrowed to followers, which
+ * is the caller's job (`ambient.js`), never this gate's. Fails CLOSED on
+ * an unreadable calm/ED read, the same posture `consistencyGateState`
+ * uses (`readEdOrCalmSuppressed` itself fails closed).
+ *
+ * @param {string} uid
+ * @param {boolean} shareSessionsOn
+ * @returns {Promise<{allowed: boolean, gated: boolean}>}
+ */
+export async function sessionShareGateState(uid, shareSessionsOn) {
+  const gated = await readEdOrCalmSuppressed(uid);
+  return { allowed: !!shareSessionsOn && !gated, gated: !!gated };
 }
 
 /**
@@ -273,6 +299,49 @@ export async function publishConsistency(userId, { nowMs = Date.now() } = {}) {
     return { sent: true, reason: null, payload };
   } catch (e) {
     return { sent: false, reason: e?.code ?? 'unavailable', payload: null };
+  }
+}
+
+/**
+ * Send `share_sessions`, `sessions_audience` and `c_planned_per_week` to
+ * `community_upsert_profile` (phase3 spec section 1; `22-MIGRATION-170A-
+ * CONTRACT.md` Part B) -- a DIFFERENT RPC from `community_update_training_
+ * profile` above, which keeps owning the tp_ and c_ prefixed bands and
+ * counters. The three values are computed the identical way `publishConsistency` computes
+ * its own payload (the same `shareablePayload` call, so the two can never
+ * disagree about what "sharing consistency" means for `c_planned_per_week`'s
+ * gate), then only the three new keys are lifted out for this call.
+ *
+ * @param {string} userId
+ * @param {object} share the settings object `readShareSettings` returns
+ * @param {{removeShared?: boolean, nowMs?: number}} [opts] `removeShared`
+ *   is the `_remove_shared` trailing parameter: true deletes every
+ *   `auto = true` post this account has, but ONLY when `share_sessions`
+ *   is (or becomes) false -- a no-op otherwise, entirely server-side.
+ * @returns {Promise<{sent: boolean, reason: (string|null)}>}
+ */
+export async function publishSharingSettings(userId, share, { removeShared = false, nowMs = Date.now() } = {}) {
+  const uid = userId ?? currentUserId();
+  if (!uid) return { sent: false, reason: 'no_user' };
+  try {
+    const [bands, counters] = await Promise.all([
+      loadTrainingProfile(uid, { nowMs, windowWeeks: TP_WINDOW_WEEKS }),
+      loadConsistency(uid, { nowMs }),
+    ]);
+    const { gated, isMinor } = await consistencyGateState(uid, !!share?.consistency);
+    const full = shareablePayload(bands, share, {
+      consistencyCounters: counters,
+      consistencyGated: gated || isMinor,
+    });
+    const p = {
+      share_sessions: full.share_sessions,
+      sessions_audience: full.sessions_audience,
+      c_planned_per_week: 'c_planned_per_week' in full ? full.c_planned_per_week : null,
+    };
+    await callCommunity('community_upsert_profile', { _p: p, _remove_shared: !!removeShared });
+    return { sent: true, reason: null };
+  } catch (e) {
+    return { sent: false, reason: e?.code ?? 'unavailable' };
   }
 }
 
