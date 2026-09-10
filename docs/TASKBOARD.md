@@ -99,6 +99,13 @@ dimension kinds and board scopes, hub summary RPC, viewer counters on the
 profile card, connect reasons), written only, never applied; hostile SQL
 review (Opus) before any "run against production". Recovery path for
 each: re-dispatch the same brief over `git checkout -- <lane files>`.
+PROGRESS: P1-A LANDED (seven components, GroupRow collapsed onto
+CohortRow by the lead; components suites 19 / 178 green; committed).
+P2-SQL LANDED as written-not-applied (1902 lines, contract `22-`, README
+row; committed). IN FLIGHT: P1-B screens (Sonnet) and the hostile review
+of 170A (Opus; may fix definite defects in place and writes
+`migrate170.rpcOnly.guard.test.js`). Recovery for the review: re-dispatch
+over `git checkout -- supabase/migrate_170_community_connection.sql`.
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
