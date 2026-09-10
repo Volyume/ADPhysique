@@ -1,6 +1,24 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-10 — COMMUNITIES REVAMP: RESEARCH STAGE LANDED; BUILD GATED ON FOUNDER ANSWERS ★
+
+Founder brief (chat): Community was spec'd on plan sharing, the wrong
+foundation; it is for connecting (gym, age group, discipline, friends),
+seeing each other's consistency and progress, encouragement; slick and
+elite, one product; never explained as programme sharing. Branch
+`claude/communities-feature-overhaul-68l923`, folder
+`docs/communities-revamp-2026-09-10/` (README = map). Six read-only lanes
+at Haiku/Sonnet: 01 recon (HEAD verified), 02 visual audit, 03 explanation
+audit (eight wrong sites), 10 mechanisms, 11 safety, 12 look and feel.
+Lead blueprint `20-BLUEPRINT.md` + rulings `40-DECISIONS.md` CR-01..CR-12
+(register D155). Observed at HEAD: no amber fill in Community beyond the
+three committing actions; the Hub stacks 7-9 blocks before the feed;
+19 of 24 screens spin on first load; the progress strip hides on every
+profile but your own. NEXT: founder answers Q1-Q8 (blueprint section
+12); phase 0 Truth, then 1 Arrangement, 2 Cohorts (migration 170 part
+A), 3 Ambient (part B); each green, merged to main, device-walked.
+===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 
 Latest: founder redirected Community to progress and consistency (sessions,

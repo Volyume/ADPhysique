@@ -21,7 +21,7 @@ friends, sees each other's training consistency and progress (sessions,
 weeks in a row, PRs), and encourages them. It is never a place to share
 plans, programmes or routines: Volyume builds each person's plan. Every
 sentence the app uses to explain Community says the first thing and never
-the second (section 9 lists the sites).
+the second (section 10 lists the sites).
 
 What the founder described maps onto three objects, and the whole design
 is those three, nothing else:
@@ -244,3 +244,181 @@ conservative floor and can only be tightened by that lane.
 - Reporting, blocking, muting, the moderator queue, the rules acceptance
   and the 24-hour runbook already exist; the Rules text is rewritten
   (section 9) and re-accepted once through the existing updated-rules path.
+
+## 9. Presentation law: slick, flat, one product (CR-09)
+
+Evidence: `12-research-look-and-feel.md` (NN/g visual hierarchy, gestalt
+proximity, cards, tabs, skeletons, empty states; Linear; the cross-product
+read that every roster in Strava, Peloton, WHOOP, Discord, Chess.com and
+Duolingo is a flat hairline list showing two or three type sizes and one
+accent) and `02-visual-audit.md` (the Hub's seven-to-nine stacked blocks,
+spinners on nineteen screens, missing roles). V1-V20 and D148 stand; the
+rules below are added on top and are the edit gate for every Community
+surface.
+
+**Ten rules, all Community screens:**
+1. Two prominent type sizes per screen: the header title and row names
+   (`bodyStrong`). Everything else is `bodySm`, `label` or `caption`.
+   No `h1`, `h2` or `h3` on any list screen; the one `h3` allowed in
+   Community is the not-joined hero on the Hub.
+2. No `Card` for people, groups, cohorts or activity. Rosters, group
+   lists and the feed are flat rows with hairline dividers. `Card` is
+   allowed only for the not-joined hero and the moderated-person notice.
+3. Sections are uppercase eyebrow labels (`caption`,
+   `letterSpacing.overline`, `textMuted`) with `spacing.xl` above and
+   `spacing.sm` below; no boxed section, no nested container.
+4. Rows are 56 dp (one metric) or 64 dp (two lines with an avatar 32);
+   profile hero avatar 56; inline avatar stacks 24. Every row is a
+   `Pressable` with `accessibilityRole="button"` and a label; audit 02's
+   twelve unlabelled Hub targets are fixed by construction.
+5. Presence lives on the avatar: the amber ring dot for trained today,
+   nothing else. Trained days are seven 6 dp dots on the row's second
+   line (`primary` filled for trained, `border` for not, today ringed).
+6. Every comparable figure is right-aligned in `type.num(label)`; one
+   metric per row.
+7. Amber is spent only on: the trained-today ring, a given Respect glyph,
+   a PR mark, the selected chip, and the one emphatic button per journey
+   (Create profile, Post, Accept rules). Every other button is `primary`
+   (charcoal), `secondary`, `tertiary` or icon-only.
+8. First load of every list is `SkeletonRow` in the true row shape;
+   `ActivityIndicator` only inside a button or a single row mid-action.
+   This retires the spinner drift on nineteen screens.
+9. Empty states are one line and one action, never a paragraph; a section
+   with nothing behind it collapses rather than showing a "See all".
+10. Motion: one staggered `AnimatedEntrance` on the Hub's first paint,
+    spring press feedback through the shared primitives, Reduce Motion
+    honoured everywhere; no other animation.
+
+**The Hub, top to bottom (one `FlashList`, header content then feed):**
+1. `BackHeader` "Community" with right glyphs: search, activity (unseen
+   dot), messages (count). Unchanged.
+2. Not joined: the hero card (`h3` "Your gym, your people", one `bodySm`
+   line, `primary` "Create my profile", `tertiary` "Browse first") and
+   the compact `PrivacyReceipt`. Joined: one line, avatar 32 with your
+   ring dot, "3 sessions this week · 6 weeks running" in `label`.
+3. Eyebrow PEOPLE. One row per cohort you belong to, in this order: your
+   gym, each discipline, your age group (only while you share it), near
+   you. Row: avatar stack 24 of up to three members who trained today,
+   name `bodyStrong`, second line "4 trained today · 23 members", chevron.
+   Last row, tertiary: "Find people" (opens Find people with its filters;
+   the "People like you" suggestions live there, not on the Hub).
+4. Eyebrow GROUPS. One row per group: avatar stack of members who trained
+   today, name, "Together 11 of 16 · 3 trained today", chevron. Last row,
+   tertiary: "New group". Section collapses to the single "New group"
+   row when you have none.
+5. Eyebrow ACTIVITY. The feed: one chronological list of items from the
+   people you follow and your groups (ambient sessions, PR moments, posts,
+   milestones). No Following/Discover segment: discovery happens on the
+   cohort pages. Row: avatar 32 with ring dot, line one "Sam Rees · Upper A"
+   (name `bodyStrong`, session `body` `textSecondary`), line two
+   "52 min · 18 sets · 2 PRs · Tue" (`label`, tabular), optional note
+   line (`bodySm`), trailing Respect glyph (amber when given), comment
+   count caption. A PR moment: "Sam Rees · new best" then "Bench press
+   100 kg × 5 · was 97.5". Tap opens the item.
+6. Offline and moderated notices keep their places above the header
+   content; the legacy partner card stays until migration 155 retires it.
+
+**Cohort page** (`CommunityDimensionScreen`, one pattern for gym, discipline,
+age group, area): `BackHeader` with the cohort name; one `label` line
+"23 members · 4 trained today"; eyebrow TRAINED THIS WEEK; the week
+roster (rank numbers from eight participants); a tertiary row "Respect
+everyone who trained today"; a tertiary row "This month and consistency"
+opening `CommunityBoardScreen` with the scope preselected; eyebrow RECENT;
+activity rows shared to Everyone by members. Cold start line per
+section 3.
+
+**Group page** (`CommunityGroupScreen`): `BackHeader` with the group name
+and the menu glyph; one `label` line "8 members · invite only"; the
+Together line with a 2 dp progress bar (`radius.hair`) under it; eyebrow
+MEMBERS with the roster; "Respect everyone who trained today"; eyebrow
+ACTIVITY with a tertiary "Share a workout with the group" first, then the
+group feed rows. Admin actions stay in the `MenuSheet`.
+
+**Profile** (`CommunityProfileScreen`): avatar 56, name, handle, one
+`bodySm` line of shared facts ("PureGym Leeds · Men's physique · 25-34");
+the progress strip when the person shares (sessions this week, weeks
+running, eight-week bars, "3 PRs in 4 weeks" when they share what they
+did); the Follow, Connect and Message actions as today; eyebrow ACTIVITY
+with their items. No cards.
+
+**Join** (`CommunityJoinScreen`): unchanged flow; adds the discipline picker
+(chips, up to three) after gym, and the two sharing toggles (section 4)
+with the wording from `11-research-safety-cohorts.md` section 10.
+
+## 10. Copy: every explanation says the same thing (CR-11)
+
+The definition, used verbatim wherever Community is explained: "Community
+is where you connect with people at your gym and your friends, see each
+other's training weeks and progress, and give respect. Never plans or
+programmes: Volyume builds yours."
+
+Sites to correct (recon 01 section 6 and audit 03), all in one commit:
+- `HomeCommunityIntroCard.js:25,28`: title "See who is training", body
+  "Connect with people at your gym and your friends, see each other's
+  training weeks, and give respect."
+- `CommunityRulesScreen.js:42-45,94-96,107,113,116` and
+  `docs/community-safety/COMMUNITY-RULES.md:23-24,62-63,73,78,83`: rewrite
+  without programmes; bump the rules version so the existing updated-rules
+  acceptance path shows the new text once.
+- `PrivacyReceipt.js:40`: "Programmes you publish" becomes "Sessions you
+  choose to share".
+- `NotificationSettingsScreen.js:880`: drop "or uses your programme".
+- `findPeople.js:57-63` and `CommunityFindPeopleScreen.js:132`: the "On my
+  programme" door becomes "Same discipline" (phase 2 needs the field;
+  phase 0 hides the door).
+- `CommunityTrainingProfileScreen.js:90` and `trainingProfile.js:148,
+  434-453`: the "Programme" toggle and `tp_programme_key` stop being sent
+  (the column stays; server nulls it).
+- `connections.js:37`: "Same programme" reason hidden in phase 0, retired
+  in the migration in phase 2 with `same_discipline` added (guard test
+  lines 454-511 updated with the SQL helper in the same change).
+- `profile.js:58` `show_programmes` no longer sent; `CommunityEditProfileScreen.js:218`
+  deletion copy loses "published programmes".
+- `posts.js:294-308`, `validation.js:87-102`, `PostCard.js:101-108`,
+  `CommunityComposeScreen.js:59,118`, `DimensionRow.js:14,24-29`: the dead
+  `programme` story kind and dimension icon go from the client (server
+  keeps returning the empty dimension for stale links).
+- Comments at `RootNavigator.js:499-501` and `AnalyticsScreen.js:511-514`
+  corrected.
+
+## 11. Build order and verification (CR-12)
+
+All four phases are in scope; the order exists so each lands green,
+lead-reviewed, merged to main and device-walked before the next. Cloud
+changes are applied only on the founder's "run against production".
+
+| Phase | Delivers | Schema | Tests and guards |
+|---|---|---|---|
+| 0 Truth | Section 10 copy and residue; progress strip on any sharing profile; group notification copy; Skeleton first loads on nineteen screens; roles on every Hub target; the stale comments | none | copy guard test pins the definition and bans "programme" in Community copy; privacy guard unchanged; screen-mount |
+| 1 Arrangement | Section 9: the Hub, cohort page, group page, profile, shared row components (`PersonRow`, `CohortRow`, `GroupRow`, `ActivityItemRow`, `DayDots`, `AvatarStack`) | none | Button hierarchy guard extended to Community rows (no amber fill outside the curated set); a new `community.presentation.guard.test.js` pins rules 1, 2 and 7 by source regex; render review of six surfaces in `render-2026-09-10/` |
+| 2 Cohorts | Discipline taxonomy, picker at Join and Edit profile, discipline and age-group dimension kinds and board scopes, `same_discipline` reason, "On my programme" door retired | `migrate_170_community_connection.sql` part A | band and reason equality guard updated with the SQL; rpcOnly guard; migration shape header |
+| 3 Ambient | Share what I did, audiences, automatic session items and PR moments, notes, group audiences, Together line, Respect everyone, daily digest | `migrate_170` part B (or 171 if the founder wants the cohorts batch applied first) | privacy guard extended to the new fields (no forbidden keys, ED gate withheld, minors followers-only); notification budget test for the digest; deletion names the new table |
+
+Every phase: `npm run lint && npm test` on the settled tree with exact
+output reported; small per-feature commits; merge to main in the same
+session; a numbered device checklist for a physical Android EAS build
+including the ED-safety cases (calm mode on: no counters, no items, no
+physique cohort pages; open ED flag: the same; minor account: no cohorts,
+groups or age band). The fresh-eyes review agent (Opus) runs against this
+blueprint after phase 1 and after phase 3.
+
+## 12. Founder questions (delivered in chat)
+
+Q1 discipline taxonomy: confirm or edit the list in section 3.
+Q1b physique divisions under calm mode or an open ED flag: withhold the
+person's own physique cohort pages (the blueprint's floor) or keep them
+visible with training facts only.
+Q2 sharing defaults: both toggles OFF at Join with an offer after the
+first workout (the consent floor the blueprint takes), or "Share that I
+train" ON for followers by default.
+Q3 the verb: Respect (kept), Encourage, or Cheer.
+Q4 the static orange button: which screen and which build; a screenshot
+settles it. At HEAD the only amber fills in Community are Create profile,
+Post and Accept rules.
+Q5 pushes: daily digest only inside the existing budget (the blueprint),
+or per-event pushes for close friends (amends `NOTIFICATIONS_LOCKED.md`).
+Q6 build go: phase 0 now on this branch, or the whole order.
+Q7 a home-screen widget line "a friend trained today" (Locket evidence):
+in scope for a later phase, or not.
+Q8 a visual mock (design canvas) of the Hub, cohort page and group page
+before phase 1, or straight to code.

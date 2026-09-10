@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## COMMUNITIES REVAMP: RESEARCH + LOOK-AND-FEEL AUDIT (2026-09-10, founder prompt) — IN FLIGHT on `claude/communities-feature-overhaul-68l923`
+## COMMUNITIES REVAMP (2026-09-10, founder prompt) — RESEARCH STAGE LANDED on `claude/communities-feature-overhaul-68l923`; BUILD GATED on founder answers Q1-Q8
 
 Founder brief in chat (2026-09-10): Community was spec'd on plan sharing,
 which is the wrong foundation; the purpose is connecting (gym, age group,
@@ -57,6 +57,17 @@ explanation audit (Haiku; founder addition: programme-sharing residue on
 Train and routines) + 11 safety/cohorts research (Sonnet, web). All
 read-only. Recovery path for each: re-dispatch the same brief (agents write
 only their own numbered file). No code changes this stage.
+LANDED (D155): lanes 01, 02, 03, 10, 12 in the folder; lane 11 (safety,
+Sonnet) lands last and can only tighten CR-08. Blueprint `20-BLUEPRINT.md`
+(purpose, cohorts, ambient activity, encouragement, groups, data, safety
+floor, presentation law, copy sites, four build phases) and rulings
+`40-DECISIONS.md` CR-01..CR-12 are the edit gate. Evidence class stated
+honestly: lane 12's per-product screen arrangements are recalled and
+flagged (WebSearch was down for that agent); its principles are fetched
+NN/g and Linear sources. NEXT: founder answers Q1-Q8 (blueprint section
+12, delivered in chat); then phase 0 (Truth) on this branch, merged to
+main when green; phases 1-3 in order; migration 170 on "run against
+production".
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 

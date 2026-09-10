@@ -1,0 +1,22 @@
+# 40 — DECISIONS: communities revamp (CR-nn, lead under D33, 2026-09-10)
+
+Authority: founder brief and additions in chat, 2026-09-10 (`README.md`).
+Evidence lanes 01, 02, 03, 10, 11, 12. Every ruling keeps the CLAUDE.md
+Section 2 inviolables and the standing Community rulings (SD-nn, GD-nn,
+V1-V20, D148, `40-GAP-CLOSURE.md` sections 2, 4, 5, `60-DESIGN`). Founder
+forks are listed in `20-BLUEPRINT.md` section 12, not decided here.
+
+| Id | Ruling | Rationale (evidence) |
+|---|---|---|
+| CR-01 | Community is connection, consistency and encouragement; never plan or programme sharing; one definition used everywhere | Founder brief; recon 01 section 6 and audit 03 show the old definition still live at eight user-facing sites |
+| CR-02 | Four headline cohorts: gym, discipline (new, self-chosen, up to three), age group (reciprocal, never a minor), near me; training style stays a filter | Founder named gym, age group and discipline; Peloton tags (research 10 item 1); age band already exists server-derived and gated (recon 01 section 2) |
+| CR-03 | One cohort page pattern: count line, week roster, Respect everyone, deeper board link, recent items; structure shrinks when small | `60-DESIGN` sections 2 and 5 stand; Discord structure-scales-with-size (research 10 item 9); NN/g empty states (research 12) |
+| CR-04 | Two explicit sharing levels, both default OFF: "Share that I train" (counters, exists) and "Share what I did" (ambient session items with an audience of Followers, Groups or Everyone) | Manual posting leaves a small community silent; Letterboxd log-is-the-feed (research 10 item 7); consent floor: explicit, specific, easy to withdraw; payload stays the existing allow-list, ED and minor gates reused |
+| CR-05 | PRs are moments and counts, never a table; the progress strip renders on any sharing profile | Founder "see if they've had a PR"; SD rulings against ranking lifts stand; recon 01 section 3 found the strip hidden on others' profiles against `60-DESIGN` section 4 |
+| CR-06 | One verb, Respect, on every item; "Respect everyone who trained today" batch action; encouragement attaches only to effort shown; pushes as one daily digest in the existing category | Zwift Ride On and Strava kudos bomb (research 10 items 3, 4); Peloton harassment case needs block, which exists (refuse 1); no-shame voice law; notification batching evidence (item 20) and `NOTIFICATIONS_LOCKED.md` |
+| CR-07 | Groups are friend circles: invite-only by default, Together this week as a cooperative sum, group audiences for items and posts, group notification copy; no hard cap | Chess.com club matches and Duolingo friends quests (research 10 items 5, 6); Oura around twenty (item 13); Habitica and Focusmate penalties refused (refuse 5, 6); recon 01 section 4 gap |
+| CR-08 | Safety floor: training facts only; calm mode or an open ED flag sends nothing and withholds the person's own physique cohort pages; minors excluded everywhere; rules re-accepted once | ED-safety inviolables; `50` section 8 harms; pending lane 11 can only tighten; Q1b to the founder because it touches the ED system |
+| CR-09 | Presentation law: two prominent type sizes, no cards for people or activity, eyebrow sections, avatar presence, tabular figures, amber on signals only, skeleton first loads, one-line empty states, one entrance motion | Research 12 sections 3, 4, 5, 7 (NN/g, Linear, cross-product read); audit 02 (stacked Hub, nineteen spinners, twelve unlabelled targets); founder "slick, not stacked cards, one product" |
+| CR-10 | One additive migration (170) for discipline, sharing level and audience, auto items, group audiences, cohort dimension kinds and board scopes, Respect batch, digest kind, reason list change; RPC-only, RLS on, deletion updated | Schema rule (additive, idempotent, header, founder-applied); rpcOnly and migration-shape guards; the band and reason equality guard requires client and SQL to move together |
+| CR-11 | Copy correction of every site in blueprint section 10 in one commit, with a source guard that bans "programme" in Community copy | Founder rule that the app never explains Community as programme sharing; audit 03 and recon 01 section 6 |
+| CR-12 | Four phases in order (Truth, Arrangement, Cohorts, Ambient), each green, merged and device-walked before the next; all four in scope | Merge-continually order; no silent parking rule; cloud changes gated on "run against production" |

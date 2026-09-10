@@ -6426,3 +6426,24 @@ kettlebells, the product change is an equipment inventory (a "which of
 these do you own" answer that adds kettlebell rows to the person's own
 pool), not a tier edit. Put to the founder in chat as a multiple-choice
 question; no work started.
+
+## D155
+
+**Communities revamp: research stage ruled, build gated on the founder's
+answers (lead, 2026-09-10).** Founder brief in chat: Community was spec'd
+on plan sharing, which is the wrong foundation; it is for connecting
+(gym, age group, discipline, friends), seeing each other's training
+consistency and progress, and encouragement; slick and elite, one
+product; never explained as programme sharing anywhere. Six read-only
+evidence lanes (Haiku and Sonnet) landed in
+`docs/communities-revamp-2026-09-10/` (README = map). The lead blueprint
+`20-BLUEPRINT.md` and rulings CR-01 to CR-12 in `40-DECISIONS.md` are the
+edit gate for the build: four headline cohorts (gym, discipline, age
+group, near me), two explicit sharing levels both default OFF (that I
+train; what I did, ambient from the log), PRs as moments never tables,
+one verb Respect with a batch form, friend circles with a cooperative
+Together line, a presentation law (two type sizes, no cards for people or
+activity, eyebrow sections, avatar presence, amber on signals only,
+skeleton first loads), one additive migration 170, four build phases all
+in scope. Founder forks Q1 to Q8 in blueprint section 12, delivered in
+chat. Safety lane 11 can only tighten CR-08.
