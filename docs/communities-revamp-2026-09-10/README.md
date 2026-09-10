@@ -21,7 +21,17 @@ Founder brief (in chat, 2026-09-10), verbatim substance:
   Community although earlier tasks removed them (D148: colour is hierarchy).
 - Look at how the best community products do it: not only gym or workout
   apps, the best of the best communities anywhere.
-- Token preservation on every task.
+- Token preservation on every task. Founder addition (chat, same day):
+  Fable does the design ruling and the integration judgement itself;
+  big reads and research go to the lowest adequate tier.
+- Founder addition (chat, same day): research the LOOK AND FEEL and
+  ARRANGEMENT of the best community products as much as their features.
+  The current surface "does not look elite": text too big in places,
+  things stacked together too much. Slick is the aim.
+- Founder addition (chat, same day): the app must never explain
+  Community as programme or routine sharing anywhere. Residue was seen
+  on the routines tab ("share programmes") and the Train page (a link
+  saying Community is for programmes). Audit every explanation site.
 
 Standing authority that still binds (not re-litigated here):
 `docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` sections 2, 4, 5
@@ -35,7 +45,9 @@ deterministic engine, no new dependency without a yes, no minors in social).
 Document map (filled as the campaign runs):
 - `01-recon-community-today.md`     What Community is today: IA, dimensions, feed kinds, boards, groups, consent bands, plan residue, reuse map (Sonnet)
 - `02-visual-audit.md`              Mechanical look-and-feel audit of every Community surface against theme.js, D148 and V1-V20, file:line (Haiku)
+- `03-copy-audit-explanations.md`   Every place the app explains Community, checked against the founder's definition, exact string per site (Haiku)
 - `10-research-best-communities.md` Mechanism-level evidence from the best community products, fitness and beyond (Sonnet, web)
+- `12-research-look-and-feel.md`    How the best community products ARRANGE their surfaces: IA, hierarchy, type scale, density, motion; what slick looks like (Sonnet, web)
 - `11-research-safety-cohorts.md`   Safety, data-protection and platform-policy deltas of cohorts, PR visibility, workout sharing, encouragement (Sonnet, web)
 - `20-BLUEPRINT.md`                 Lead synthesis and design ruling: vision, IA, surfaces, data, phased build, verification (Fable, hands-on)
 - `40-DECISIONS.md`                 CR-nn rulings with rationale; pointer entry in the main register

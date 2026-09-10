@@ -49,11 +49,14 @@ evidence lanes 01, 02, 10, 11 landed; lead blueprint `20-BLUEPRINT.md` with
 rulings `40-DECISIONS.md`; founder questions delivered in chat. ELEVATES
 BECAUSE: the founder has re-stated the purpose of Community and the current
 surface is judged not yet elite; the build is gated on the blueprint.
-Lanes: 01 recon (Sonnet, read-only), 10 best-communities research (Sonnet,
-web, read-only) run first; then 02 visual audit (Haiku, read-only) and 11
-safety/cohorts research (Sonnet, web, read-only). Recovery path for each:
-re-dispatch the same brief (agents write only their own numbered file).
-No code changes this stage.
+Lanes, two at a time: wave 1 = 01 recon (Sonnet) + 10 best-communities
+research (Sonnet, web); wave 2 = 02 visual audit (Haiku) + 12 look-and-feel
+arrangement research (Sonnet, web; founder addition: how the best arrange
+their surfaces, not only what they offer); wave 3 = 03 app-wide Community
+explanation audit (Haiku; founder addition: programme-sharing residue on
+Train and routines) + 11 safety/cohorts research (Sonnet, web). All
+read-only. Recovery path for each: re-dispatch the same brief (agents write
+only their own numbered file). No code changes this stage.
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
