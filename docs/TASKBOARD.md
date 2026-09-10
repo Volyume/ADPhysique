@@ -33,6 +33,28 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## COMMUNITIES REVAMP: RESEARCH + LOOK-AND-FEEL AUDIT (2026-09-10, founder prompt) — IN FLIGHT on `claude/communities-feature-overhaul-68l923`
+
+Founder brief in chat (2026-09-10): Community was spec'd on plan sharing,
+which is the wrong foundation; the purpose is connecting (gym, age group,
+discipline such as men's physique, similar dimensions), seeing each other's
+training frequency, PRs and progress, friend groups with encouragement and
+sharing a great workout inside a group. Research first through the lowest
+adequate tier; full presentation revamp (slicker, no stacked cards, elite,
+one product); audit look and feel (a static orange button reappeared against
+D148). Folder `docs/communities-revamp-2026-09-10/` (README = map).
+CURRENT STATE: Community as landed 2026-09-07 (boards, groups, following
+feed, gym directory; programme sharing removed). END STATE (this stage):
+evidence lanes 01, 02, 10, 11 landed; lead blueprint `20-BLUEPRINT.md` with
+rulings `40-DECISIONS.md`; founder questions delivered in chat. ELEVATES
+BECAUSE: the founder has re-stated the purpose of Community and the current
+surface is judged not yet elite; the build is gated on the blueprint.
+Lanes: 01 recon (Sonnet, read-only), 10 best-communities research (Sonnet,
+web, read-only) run first; then 02 visual audit (Haiku, read-only) and 11
+safety/cohorts research (Sonnet, web, read-only). Recovery path for each:
+re-dispatch the same brief (agents write only their own numbered file).
+No code changes this stage.
+
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
 Founder-reported (chat, screenshots): gym finder found no gyms within 50
