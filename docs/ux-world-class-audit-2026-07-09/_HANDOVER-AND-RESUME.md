@@ -27,6 +27,13 @@ a touch-target fix. Settled tree: lint clean, 1266 suites / 19056 tests.
 Phase 1 edit gate `21-PHASE1-SPEC.md`; lanes P1-A (components) and
 P2-SQL (migration 170 part A, written not applied) dispatched; P1-B
 (screens) follows P1-A. STOP carried: others' profile counters need 170.
+PHASE 1 LANDED and MERGED to main (settled tree lint clean, 1276 suites /
+19341 tests): seven flat row components, the Hub as one list (You line,
+PEOPLE, GROUPS, ACTIVITY), cohort page, group page, profile and board
+rebuilt, a presentation guard. Migration 170A hostile-reviewed (Opus, six
+fixes, own guard), part A2 (cohort recent stories, group count alignment)
+in flight; still NOT APPLIED. NEXT: P2-client, then a device walk from a
+green Android build, then the founder's phrase for 170.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 

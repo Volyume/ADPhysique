@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## COMMUNITIES REVAMP (2026-09-10, founder prompt) — PHASE 0 TRUTH LANDED and MERGED to main; PHASE 1 ARRANGEMENT + MIGRATION 170 PART A IN FLIGHT on `claude/communities-feature-overhaul-68l923`
+## COMMUNITIES REVAMP (2026-09-10, founder prompt) — PHASES 0 and 1 LANDED and MERGED to main; MIGRATION 170A REVIEWED (written, not applied); PHASE 2 COHORTS IN FLIGHT on `claude/communities-feature-overhaul-68l923`
 
 Founder brief in chat (2026-09-10): Community was spec'd on plan sharing,
 which is the wrong foundation; the purpose is connecting (gym, age group,
@@ -106,6 +106,25 @@ row; committed). IN FLIGHT: P1-B screens (Sonnet) and the hostile review
 of 170A (Opus; may fix definite defects in place and writes
 `migrate170.rpcOnly.guard.test.js`). Recovery for the review: re-dispatch
 over `git checkout -- supabase/migrate_170_community_connection.sql`.
+PHASE 1 LANDED and MERGED to main (lead-reviewed from the structural
+outline in `render-2026-09-10/README.md`, no pixel harness exists): lint
+exit 0; `Test Suites: 1 skipped, 1276 passed, 1276 of 1277`, `Tests: 16
+skipped, 19341 passed, 19357`. Lead rulings on the lane's forks: the You
+line on the ED gate alone (fail closed), bio and blurb restored as
+running text, board rows pressable. STOP carried: the cohort page's
+RECENT section needs `community_dimension_recent` (170 part A2, lane
+in flight). Hostile review of 170A (Opus) fixed six defects and pinned
+them in `migrate170.rpcOnly.guard.test.js`; six lead rulings applied
+(UK-local day fallback for old builds, muted out of samples, seven
+physique keys, matrix entry, no predicate refactor with a 50,000-profile
+review trigger, group count alignment in A2). NEXT: P2-SQL-A2 lands;
+P2-client (Sonnet) builds the cohorts client against `22-` contract:
+discipline picker at Join and Edit profile, discipline and age-group
+cohort pages with the seven-key calm-mode withhold and the standing Beat
+row, RECENT on cohort pages, hub summary in one call with `_today`,
+board scopes, strip on others' profiles, Find people discipline filter
+and door; then device checklist and merge. Founder: one Android build
+from main after phase 2 is the suggested first device walk.
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
