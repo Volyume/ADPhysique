@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## COMMUNITIES REVAMP (2026-09-10, founder prompt) — RESEARCH STAGE LANDED on `claude/communities-feature-overhaul-68l923`; BUILD GATED on founder answers Q1-Q8
+## COMMUNITIES REVAMP (2026-09-10, founder prompt) — RESEARCH LANDED; FORKS RULED (CR-13); PHASE 0 TRUTH IN FLIGHT on `claude/communities-feature-overhaul-68l923`
 
 Founder brief in chat (2026-09-10): Community was spec'd on plan sharing,
 which is the wrong foundation; the purpose is connecting (gym, age group,
@@ -68,6 +68,22 @@ NN/g and Linear sources. NEXT: founder answers Q1-Q8 (blueprint section
 12, delivered in chat); then phase 0 (Truth) on this branch, merged to
 main when green; phases 1-3 in order; migration 170 on "run against
 production".
+FOUNDER DELEGATION (chat): "use your judgement for what brings the best
+product for all variety of users"; the eight forks are ruled in blueprint
+section 12 (CR-13). PHASE 0 TRUTH lanes (Sonnet, two at a time, edit gate
+= blueprint sections 10 and 11 row 0): P0-A copy and residue (intro card,
+Rules text + `COMMUNITY-RULES.md` + version bump, receipt, notification
+hint, "On my programme" door and "Same programme" reason hidden,
+Programme toggle and `tp_programme_key` no longer sent, `show_programmes`
+not sent, deletion copy, dead `programme` story kind out of the client,
+stale comments, a copy guard test) plus Skeleton first loads on
+FindPeople, TrainingProfile, EditProfile; P0-B Skeleton first loads on
+the other sixteen list screens, accessibility roles on every Hub target,
+group notification copy, progress strip on any sharing profile (STOP if
+the profile RPC does not return counters; then it moves to phase 2).
+Recovery path: re-dispatch the same brief over `git checkout -- <lane
+files>`; agents never commit. Landing: lead diff review, `npm run lint &&
+npm test`, per-feature commits, merge to main, device checklist in chat.
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 

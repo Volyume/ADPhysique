@@ -435,23 +435,47 @@ physique cohort pages; open ED flag: the same; minor account: no cohorts,
 groups or age band). The fresh-eyes review agent (Opus) runs against this
 blueprint after phase 1 and after phase 3.
 
-## 12. Founder questions (delivered in chat)
+## 12. Founder forks, delegated and ruled (CR-13)
 
-Q1 discipline taxonomy: confirm or edit the list in section 3.
-Q1b physique divisions under calm mode or an open ED flag: withhold the
-person's own physique cohort pages (the blueprint's floor) or keep them
-visible with training facts only.
-Q2 sharing defaults: both toggles OFF at Join with an offer after the
-first workout (the consent floor the blueprint takes), or "Share that I
-train" ON for followers by default.
-Q3 the verb: Respect (kept), Encourage, or Cheer.
-Q4 the static orange button: which screen and which build; a screenshot
-settles it. At HEAD the only amber fills in Community are Create profile,
-Post and Accept rules.
-Q5 pushes: daily digest only inside the existing budget (the blueprint),
-or per-event pushes for close friends (amends `NOTIFICATIONS_LOCKED.md`).
-Q6 build go: phase 0 now on this branch, or the whole order.
-Q7 a home-screen widget line "a friend trained today" (Locket evidence):
-in scope for a later phase, or not.
-Q8 a visual mock (design canvas) of the Hub, cohort page and group page
-before phase 1, or straight to code.
+Delivered in chat 2026-09-10; the founder replied "use your judgement for
+what brings the best product for all variety of users". Ruled on that one
+criterion:
+
+- **Q1 discipline list**: the fifteen, with two edits. "Getting back into
+  training" leaves the list (it duplicates the existing goal `returning`;
+  disciplines are identities, goals are goals) and "Women's physique" joins
+  it (a recognised UK division; without it half the physique field has no
+  home). Final: Bodybuilding; Men's physique; Classic physique; Women's
+  physique; Figure; Bikini; Wellness; Powerlifting; Olympic weightlifting;
+  Strongman and strongwoman; CrossFit and functional fitness; Calisthenics;
+  Hybrid (lifting and endurance); Sport strength and conditioning; General
+  strength and fitness. No adaptive or para tag: self-declaring it would
+  disclose disability, special-category data, and the app must never invite
+  that in a social profile; adaptive athletes are served by every other
+  cohort and by the accessibility work already in the app.
+- **Q1b physique pages under calm mode or an open ED flag**: withhold the
+  person's own physique pages and keep the standing Beat signpost for
+  everyone. The before/after card sets the precedent, and the person keeps
+  gym, age group, area and groups, so they are never cut off.
+- **Q2 sharing defaults**: both toggles OFF at Join, offered once more in
+  the workout summary after the first completed workout ("Show your gym
+  you trained today?", one line, two buttons, never again if declined).
+  An express act is what training data needs; the offer moment answers the
+  empty-community risk without a default.
+- **Q3 verb**: Respect. Already built, one word, lifting-native, cannot
+  read as a peer coaching or nudging someone; "encourage" and "cheer" both
+  can.
+- **Q4 pushes**: daily digest only, inside the locked budget; the in-app
+  inbox is immediate. A person who trains at 6am should not wake five
+  friends; a person prone to comparison should not be pinged per event.
+- **Q5 build go**: phase 0 starts now on this branch and merges to main
+  when green; phases 1 to 3 follow in order under the same discipline.
+- **Q6 widget** ("a friend trained today" on the home-screen widget): in
+  scope as phase 4, after phases 1 to 3 are device-walked, because it
+  needs the widget data path and the ambient items to exist first.
+- **Q7 visual mock**: straight to code; the lead render review of six
+  surfaces before the phase 1 merge is the visual gate, at no design-canvas
+  cost.
+- **The orange button**: still an open fact for the founder (screen and
+  build); at HEAD no amber fill exists in Community beyond the three
+  committing actions, and phase 1's presentation guard pins that.
