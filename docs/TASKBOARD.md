@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## COMMUNITIES REVAMP (2026-09-10, founder prompt) — PHASES 0 and 1 LANDED and MERGED to main; MIGRATION 170A REVIEWED (written, not applied); PHASE 2 COHORTS IN FLIGHT on `claude/communities-feature-overhaul-68l923`
+## COMMUNITIES REVAMP (2026-09-10, founder prompt) — PHASES 0, 1 and 2 LANDED and MERGED to main; MIGRATION 170 (A, A2, B) WRITTEN and HOSTILE-REVIEWED, NOT APPLIED; PHASE 3 AMBIENT CLIENT IN FLIGHT on `claude/communities-feature-overhaul-68l923`
 
 Founder brief in chat (2026-09-10): Community was spec'd on plan sharing,
 which is the wrong foundation; the purpose is connecting (gym, age group,
@@ -125,6 +125,31 @@ row, RECENT on cohort pages, hub summary in one call with `_today`,
 board scopes, strip on others' profiles, Find people discipline filter
 and door; then device checklist and merge. Founder: one Android build
 from main after phase 2 is the suggested first device walk.
+PHASE 2 LANDED and MERGED to main: disciplines (fifteen keys, up to
+three), discipline and age-group cohort pages with the standing Beat row
+and the calm-mode resting state on the seven physique pages (no fetch
+under the gate), one-call Hub summary, board scopes for every cohort,
+RECENT on cohort pages, viewer progress strips, Find people discipline
+filter and door, a taxonomy guard. Verified on a clean worktree of the
+committed state: lint exit 0; `Test Suites: 1 failed, 1 skipped, 1280
+passed`, the one failure `exerciseFuzzySearch.test.js:378` is a 30 ms
+wall-clock threshold that passes in isolation (38/38) and tripped under
+parallel load, not a Community regression. Migration 170 part A2 (cohort
+recent stories, group count alignment) and part B (ambient items with
+server-side consent, group audiences, notes, Together, Respect everyone,
+daily Respect digest, connect reasons) written; part B hostile review
+(Opus) fixed two BLOCKERS (followers admitted to group posts via the
+shared visibility gate and on profiles) and nine more, all pinned in
+`migrate170.rpcOnly.guard.test.js`; lead rulings on its five questions:
+own `post_auto` rail 12/day, Together fields members-only, keep the
+not_allowed posture, client renders "nothing shared yet" and omits a zero
+planned figure, notes refused on hidden posts. IN FLIGHT: the reviewer
+applying those three edits; P3-client (Sonnet) building the ambient
+client to `23-PHASE3-SPEC.md`. Recovery: re-dispatch over
+`git checkout -- <lane files>`. NEXT: land P3-client (review, full run,
+merge); THEN the founder's phrase for migration 170 (one file, A + A2 +
+B), THEN one Android build from main, THEN the device walks (phase 2 and
+3 checklists delivered in chat). Phase 4 (widget) after the walks.
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 

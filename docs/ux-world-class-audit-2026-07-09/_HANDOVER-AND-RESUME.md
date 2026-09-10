@@ -34,6 +34,13 @@ rebuilt, a presentation guard. Migration 170A hostile-reviewed (Opus, six
 fixes, own guard), part A2 (cohort recent stories, group count alignment)
 in flight; still NOT APPLIED. NEXT: P2-client, then a device walk from a
 green Android build, then the founder's phrase for 170.
+PHASE 2 LANDED and MERGED to main (clean-worktree run: lint clean, 1280
+suites green, one load-induced 30 ms threshold flake in
+exerciseFuzzySearch that passes alone). Migration 170 now carries A, A2
+and B, all hostile-reviewed (Opus), still NOT APPLIED. Phase 3 client in
+flight to `23-PHASE3-SPEC.md`. Order of founder actions after phase 3
+lands: "run against production" for 170, then one Android build from
+main, then the phase 2 and 3 device walks from chat.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 
