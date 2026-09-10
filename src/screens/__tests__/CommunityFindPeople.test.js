@@ -129,7 +129,7 @@ describe('lineFor: the three honest answers a door can give (SD-28)', () => {
   });
 });
 
-describe('the six doors, mounted', () => {
+describe('the five doors, mounted', () => {
   test('a door that cannot work opens the screen that fixes it', async () => {
     doorsFor.mockReturnValue([
       gymDoor({ available: false, key: null, requirement: 'Add your gym to see who trains there' }),

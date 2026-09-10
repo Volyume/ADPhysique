@@ -510,8 +510,8 @@ export default function AnalyticsScreen({ navigation, route }) {
             })()}
             {/* The Partners tile is REMOVED (blueprint section 1, entry
                 point 4). Community is not a stat, so it gets no tile here;
-                it is reached from the Today header, the Coach Support row
-                and the Train programmes row. No replacement is added. */}
+                it is reached from the Today header glyph, the Today intro
+                card and the You screen row. No replacement is added. */}
           </View>
         </View>
       </ScrollView>

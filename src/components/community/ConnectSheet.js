@@ -47,6 +47,17 @@ import { connectRefusalLine } from './ConnectButton';
 
 export const CONNECT_EXPLAINS_LINE = 'Become connected. They need to accept.';
 
+/**
+ * The reasons offered in the picker. `same_programme` is hidden here
+ * (communities revamp 2026-09-10, phase 0: Volyume never explains
+ * Community as programme sharing) without touching `CONNECT_REASONS`
+ * itself -- `community.privacy.guard.test.js` pins that constant's keys
+ * to the SQL helper list. A request already carrying this reason (sent
+ * before this change) still displays it in full on `ConnectRequestRow`.
+ */
+const SELECTABLE_CONNECT_REASONS = Object.entries(CONNECT_REASONS)
+  .filter(([key]) => !/programme/i.test(key));
+
 export default function ConnectSheet({
   visible,
   onClose,
@@ -120,7 +131,7 @@ export default function ConnectSheet({
             {`Up to ${MAX_CONNECT_REASONS}. Optional.`}
           </Text>
           <View style={styles.chips}>
-            {Object.entries(CONNECT_REASONS).map(([key, label]) => (
+            {SELECTABLE_CONNECT_REASONS.map(([key, label]) => (
               <Chip
                 key={key}
                 label={label}

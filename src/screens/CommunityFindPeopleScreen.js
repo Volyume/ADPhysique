@@ -3,8 +3,8 @@
  * `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md` sections 4,
  * 5 and 9; SD-23, SD-24, SD-28)
  *
- * Six doors and a search field. At my gym, near me, train like me, on my
- * programme, open to training together, people you might know.
+ * Five doors and a search field. At my gym, near me, train like me,
+ * open to training together, people you might know.
  *
  * Every door is honest (SD-28). One that can work says how many are
  * behind it. One that has nobody behind it yet says exactly that and what
@@ -19,7 +19,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList.
@@ -29,6 +29,7 @@ import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import SearchBar from '../components/SearchBar';
 import EmptyState from '../components/EmptyState';
+import { SkeletonRow } from '../components/Skeleton';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, type, iconSize, circle } from '../styles/theme';
@@ -41,20 +42,17 @@ const GLYPH = {
   gym: 'business-outline',
   area: 'location-outline',
   like_me: 'barbell-outline',
-  programme: 'list-outline',
   partners: 'people-outline',
   might_know: 'git-network-outline',
 };
 
 /**
  * Where a door that cannot work yet sends you. Gym and area are typed on
- * the profile editor; the programme key comes from the training profile,
- * which is where the plan behind it is explained.
+ * the profile editor.
  */
 const REQUIREMENT_ROUTE = {
   gym: 'CommunityEditProfile',
   area: 'CommunityEditProfile',
-  programme: 'CommunityTrainingProfile',
 };
 
 /**
@@ -126,7 +124,6 @@ export default function CommunityFindPeopleScreen({ navigation }) {
 
   const [query, setQuery] = useState('');
   const [counts, setCounts] = useState({});
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const doors = doorsFor(me);
@@ -134,11 +131,12 @@ export default function CommunityFindPeopleScreen({ navigation }) {
   /**
    * One count per door that can work. Read together rather than one after
    * another, and a door whose count will not read keeps `null`, which
-   * `doorLine` renders as its plain subtitle rather than as a zero.
+   * `doorLine` renders as its plain subtitle rather than as a zero
+   * (SD-28): each row is already meaningful the moment it renders, so
+   * there is no separate loading affordance for the counts themselves.
    */
   const load = useCallback(async () => {
-    if (!joined) { setLoading(false); return; }
-    setLoading(true);
+    if (!joined) return;
     const open = doorsFor(me).filter((d) => d.available);
     const results = await Promise.all(open.map(async (door) => {
       try {
@@ -149,7 +147,6 @@ export default function CommunityFindPeopleScreen({ navigation }) {
       }
     }));
     setCounts(Object.fromEntries(results));
-    setLoading(false);
     // `me` is the payload the doors are derived from; a new identity per
     // refresh is what should re-read the counts.
   }, [joined, me]);
@@ -179,14 +176,19 @@ export default function CommunityFindPeopleScreen({ navigation }) {
           if (q) navigation.navigate('CommunitySearch', { q });
         }}
       />
-      {loading && joined ? (
-        <ActivityIndicator color={t.colors.primary} style={styles.loadingLine} />
-      ) : null}
     </View>
   );
 
+  // First paint: the doors themselves render the moment `me` resolves
+  // (`lineFor` already answers a still-loading count with the door's
+  // plain subtitle, never a blank or a spinner -- SD-28), so the only
+  // true first-load gap is not yet knowing whether a profile exists at
+  // all. Five rows, the true row shape (`docs/rules/styling.md`,
+  // "Loading states").
   const empty = meLoading ? (
-    <View style={styles.loading}><ActivityIndicator color={t.colors.primary} /></View>
+    <View style={styles.skeletonStack}>
+      {[0, 1, 2, 3, 4].map((i) => <SkeletonRow key={i} />)}
+    </View>
   ) : (
     <EmptyState
       icon="people-outline"
@@ -216,7 +218,7 @@ export default function CommunityFindPeopleScreen({ navigation }) {
         ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.4}
-        onEndReached={() => { /* six doors; there is no second page */ }}
+        onEndReached={() => { /* five doors; there is no second page */ }}
         refreshControl={(
           <RefreshControl
             refreshing={refreshing}
@@ -237,7 +239,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
   header: { gap: spacing.md, marginBottom: spacing.md },
-  loadingLine: { alignSelf: 'flex-start' },
+  skeletonStack: { gap: spacing.sm },
   door: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   glyph: {
     width: 36,
@@ -249,5 +251,4 @@ const styles = StyleSheet.create({
   doorBody: { flex: 1, gap: spacing.xxs },
   doorLabel: { ...type.bodyStrong, color: colors.textPrimary },
   doorLine: { ...type.bodySm, color: colors.textSecondary },
-  loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
 });

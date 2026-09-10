@@ -1,7 +1,7 @@
 /**
  * ReportSheet (blueprint sections 2, 6; SD-11)
  *
- * Report a profile, post, comment or programme. The six reasons are the
+ * Report a profile, post, comment or group. The six reasons are the
  * server's own list (`REPORT_REASONS`), rendered as radio chips, with an
  * optional detail field.
  *
@@ -17,7 +17,7 @@
  * Props:
  *   visible      controlled, like every sheet in the app
  *   onClose      close without reporting
- *   targetKind   'profile' | 'post' | 'comment' | 'programme'
+ *   targetKind   'profile' | 'post' | 'comment' | 'message' | 'group'
  *   targetId     the row being reported
  *   onReported   called after the report is filed
  */

@@ -1,6 +1,6 @@
 # Community Rules: Volyume Community
 
-**In-app rules text, version 2.** Shown on the Join screen before a
+**In-app rules text, version 3.** Shown on the Join screen before a
 profile is created, and reachable any time from Community settings and
 from the Community Rules screen. Written in Volyume's house voice: calm,
 plain, no shame, no guilt, no clipped commands.
@@ -8,21 +8,27 @@ plain, no shame, no guilt, no clipped commands.
 Authority: `docs/social-discovery-2026-09-06/30-BLUEPRINT.md` §§2, 6;
 `40-DECISIONS.md` SD-04, SD-11; `docs/social-discovery-2026-09-06/
 70-DISCOVERY-BLUEPRINT.md` §§1, 2, 3, 6; `40-DECISIONS.md` SD-20, SD-21,
-SD-22, SD-25. `COMMUNITY_RULES_VERSION = 2`.
+SD-22, SD-25; `docs/communities-revamp-2026-09-10/20-BLUEPRINT.md`
+section 10 (CR-11). `COMMUNITY_RULES_VERSION = 3`.
 
-Version 2 adds rules for messages, meeting a training partner in person,
+Version 2 added rules for messages, meeting a training partner in person,
 and an explanation of the training profile under "what stays private".
-The in-app `COMMUNITY_RULES_VERSION` constant must move to 2 in step with
-this document; that code change is for the screens lane to make, not this
+
+Version 3 (2026-09-10, communities revamp) removes every mention of
+programmes: Community is never framed as programme, plan or routine
+sharing anywhere. The welcome line, the privacy note and the
+reporting/blocking copy are rewritten accordingly. The in-app
+`COMMUNITY_RULES_VERSION` constant must move to 3 in step with this
+document; that code change is for the screens lane to make, not this
 update.
 
 ---
 
 ## Welcome to Community
 
-Community is where you share your training, follow people you rate, and
-use or adapt the programmes other lifters have built. It works best when
-it stays about training. Here is what that means in practice.
+Community is where you connect with people at your gym and your friends,
+see each other's training weeks and progress, and give respect. It works
+best when it stays about training. Here is what that means in practice.
 
 ## The rules
 
@@ -58,10 +64,10 @@ The following never appear in Community, in any form, however you share:
 - Your progress photos
 - Your first name, date of birth, email, height or age
 
-If you post a personal best, the weight and reps on that specific lift are
-shown because you chose to share that result. Programmes you publish
-share their structure (days, exercises, sets, reps, rest) and never a
-weight.
+If you share a personal best, the weight and reps on that specific lift
+are shown because you chose to share that result. Your training weeks
+show days and session counts, never a weight on the scale, food or
+photos.
 
 Your training profile works the same way. If you choose to share it, only
 the bands you have switched on are ever shown, and never anything more
@@ -70,18 +76,18 @@ afternoon, evening or late, and never where you are right now.
 
 ## Reporting and blocking
 
-Every profile, post, comment and programme has a Report option with a
+Every profile, post, comment and group has a Report option with a
 short list of reasons to choose from, including a dedicated reason for
 harmful body or eating content. Reports go straight to a moderator queue.
 
 You can also block anyone. Blocking is two-way: once you block someone,
-neither of you can see the other's profile, posts, programmes or
+neither of you can see the other's profile, posts, groups or
 comments, and any follow between you is removed. You can unblock at any
 time. Muting is quieter: you stop seeing someone's posts, and they are
 never told.
 
-If a post, comment or programme gets reported by three different people,
-it is hidden automatically while a moderator looks at it.
+If a post or comment gets reported by three different people, it is
+hidden automatically while a moderator looks at it.
 
 ## What moderators can do
 
@@ -96,7 +102,7 @@ rather raise directly: **support@volyume.app**.
 
 ## Rules version
 
-Community rules version **2**, published **6 September 2026**. Any future
+Community rules version **3**, published **10 September 2026**. Any future
 change to these rules is a new version, and you will be asked to accept it
 before you can keep using Community.
 
@@ -104,18 +110,18 @@ before you can keep using Community.
 
 ```js
 // src/lib/community/rulesText.js
-// Community Rules v2, paste-ready for CommunityRulesScreen.
+// Community Rules v3, paste-ready for CommunityRulesScreen.
 // Keep this file's content in step with docs/community-safety/COMMUNITY-RULES.md.
 
-export const COMMUNITY_RULES_VERSION = 2;
+export const COMMUNITY_RULES_VERSION = 3;
 
 export const COMMUNITY_RULES_TEXT = {
   title: 'Community rules',
   intro:
-    "Community is where you share your training, follow people you rate, " +
-    "and use or adapt the programmes other lifters have built. It works " +
-    "best when it stays about training. Here is what that means in " +
-    "practice.",
+    "Community is where you connect with people at your gym and your " +
+    "friends, see each other's training weeks and progress, and give " +
+    "respect. It works best when it stays about training. Here is what " +
+    "that means in practice.",
   rules: [
     {
       heading: 'Training talk only.',
@@ -163,10 +169,10 @@ export const COMMUNITY_RULES_TEXT = {
       'Your first name, date of birth, email, height or age',
     ],
     note:
-      'If you post a personal best, the weight and reps on that specific ' +
-      'lift are shown because you chose to share that result. Programmes ' +
-      'you publish share their structure (days, exercises, sets, reps, ' +
-      'rest) and never a weight.',
+      'If you share a personal best, the weight and reps on that specific ' +
+      'lift are shown because you chose to share that result. Your ' +
+      'training weeks show days and session counts, never a weight on ' +
+      'the scale, food or photos.',
     trainingProfileNote:
       'Your training profile works the same way. If you choose to share ' +
       'it, only the bands you have switched on are ever shown, and never ' +
@@ -177,16 +183,16 @@ export const COMMUNITY_RULES_TEXT = {
   reporting: {
     heading: 'Reporting and blocking',
     body:
-      'Every profile, post, comment and programme has a Report option ' +
+      'Every profile, post, comment and group has a Report option ' +
       'with a short list of reasons to choose from, including a ' +
       'dedicated reason for harmful body or eating content. Reports go ' +
       'straight to a moderator queue.\n\n' +
       'You can also block anyone. Blocking is two-way: once you block ' +
       'someone, neither of you can see the other’s profile, posts, ' +
-      'programmes or comments, and any follow between you is removed. ' +
+      'groups or comments, and any follow between you is removed. ' +
       'You can unblock at any time. Muting is quieter: you stop seeing ' +
       'someone’s posts, and they are never told.\n\n' +
-      'If a post, comment or programme gets reported by three different ' +
+      'If a post or comment gets reported by three different ' +
       'people, it is hidden automatically while a moderator looks at it.',
   },
   moderatorActions: {
@@ -206,8 +212,8 @@ export const COMMUNITY_RULES_TEXT = {
   },
   version: {
     number: COMMUNITY_RULES_VERSION,
-    publishedDate: '2026-09-06',
-    label: 'Community rules version 2, published 6 September 2026.',
+    publishedDate: '2026-09-10',
+    label: 'Community rules version 3, published 10 September 2026.',
     changeNote:
       'Any future change to these rules is a new version, and you will ' +
       'be asked to accept it before you can keep using Community.',

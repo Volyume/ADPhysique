@@ -5,10 +5,11 @@
  *
  * What this suite pins:
  *
- *   1. `bandRows` renders the seven bands in the fixed order the blueprint
- *      sets out, each with the value it is offering to share, and the
- *      programme band never shows the key behind it (SD-26 leaks the
- *      wrong thing if it did).
+ *   1. `bandRows` renders the six bands in the fixed order the blueprint
+ *      sets out, each with the value it is offering to share. There is
+ *      no Programme band (communities revamp, 2026-09-10,
+ *      `docs/communities-revamp-2026-09-10/20-BLUEPRINT.md` section 10):
+ *      Volyume never explains Community as programme sharing.
  *   2. Switching a toggle writes the local share settings AND sends the
  *      recompute FORCED (`syncTrainingProfile(uid, {force: true})`),
  *      because the person just changed their mind and expects it to take
@@ -52,7 +53,7 @@ jest.mock('../../lib/community', () => ({
     '18_24': '18 to 24', '25_34': '25 to 34', '35_44': '35 to 44', '45_54': '45 to 54', '55_plus': '55 or over',
   },
   TP_DEFAULT_SHARE: {
-    days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, programme: true, age_band: false,
+    days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, age_band: false,
   },
   dayListLabel: (days) => (Array.isArray(days) && days.length ? days.join(', ') : ''),
   timeBandsLabel: (bands) => (Array.isArray(bands) && bands.length ? bands.join(', ') : ''),
@@ -67,7 +68,6 @@ jest.mock('../../lib/community', () => ({
     if (share?.sessions) out.tp_sessions_band = bands?.tp_sessions_band ?? null;
     if (share?.staple_lifts) out.tp_staple_lifts = bands?.tp_staple_lifts ?? null;
     if (share?.experience) out.tp_experience_band = bands?.tp_experience_band ?? null;
-    if (share?.programme) out.tp_programme_key = bands?.tp_programme_key ?? null;
     return out;
   }),
   loadTrainingProfile: jest.fn(),
@@ -82,7 +82,7 @@ import {
 } from '../../lib/community';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityTrainingProfileScreen, {
-  bandRows, programmeValue, NOT_ENOUGH_LINE, NOTHING_SHARED_LINE,
+  bandRows, NOT_ENOUGH_LINE, NOTHING_SHARED_LINE,
 } from '../CommunityTrainingProfileScreen';
 
 const BANDS = {
@@ -91,7 +91,6 @@ const BANDS = {
   tp_sessions_band: '4_5',
   tp_staple_lifts: ['back_squat', 'bench_press'],
   tp_experience_band: 'intermediate',
-  tp_programme_key: 'style:strength',
   sessions: 20,
 };
 
@@ -131,14 +130,18 @@ beforeEach(() => {
   useCommunityMe.mockReturnValue({ me: ME, loading: false, error: null, refresh: jest.fn(() => Promise.resolve()) });
 });
 
-describe('bandRows: the seven bands plus consistency, in order, each with its own value (SD-22)', () => {
+describe('bandRows: the six bands plus consistency, in order, each with its own value (SD-22)', () => {
   test('every row is present, in the blueprint order', () => {
     const rows = bandRows(BANDS, ME);
     expect(rows.map((r) => r.key)).toEqual([
-      'days', 'time_bands', 'sessions', 'staple_lifts', 'experience', 'programme', 'age_band',
+      'days', 'time_bands', 'sessions', 'staple_lifts', 'experience', 'age_band',
       // Community product audit `60-DESIGN-PROGRESS-COMMUNITY.md` section 1.
       'consistency',
     ]);
+  });
+
+  test('there is no Programme row (communities revamp, 2026-09-10)', () => {
+    expect(bandRows(BANDS, ME).some((r) => r.key === 'programme')).toBe(false);
   });
 
   test('the consistency row always shows the fixed copy, never a computed value', () => {
@@ -162,11 +165,6 @@ describe('bandRows: the seven bands plus consistency, in order, each with its ow
     expect(rows.find((r) => r.key === 'sessions').value).toBe('');
   });
 
-  test('programme names what kind of thing it is, never the key (SD-26)', () => {
-    expect(programmeValue({ tp_programme_key: 'style:strength' })).toBe('Your training style');
-    expect(programmeValue({ tp_programme_key: 'abc123' })).toBe('Your current programme');
-    expect(programmeValue({ tp_programme_key: null })).toBe('');
-  });
 });
 
 describe('toggling a band', () => {
@@ -195,13 +193,13 @@ describe('toggling a band', () => {
   test('the preview line reflects only the toggles switched on', async () => {
     const { tree } = await mount();
     expect(flattenText(tree.toJSON())).toContain(
-      'tp_sessions_band|tp_staple_lifts|tp_experience_band|tp_programme_key',
+      'tp_sessions_band|tp_staple_lifts|tp_experience_band',
     );
   });
 
   test('with nothing shared, the preview says so plainly', async () => {
     readShareSettings.mockResolvedValue({
-      days: false, time_bands: false, sessions: false, staple_lifts: false, experience: false, programme: false, age_band: false,
+      days: false, time_bands: false, sessions: false, staple_lifts: false, experience: false, age_band: false,
     });
     const { tree } = await mount();
     expect(flattenText(tree.toJSON())).toContain(NOTHING_SHARED_LINE);

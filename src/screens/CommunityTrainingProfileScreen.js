@@ -25,13 +25,14 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import Chip from '../components/Chip';
 import SectionLabel from '../components/SectionLabel';
+import { SkeletonCard, SkeletonRow } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
@@ -62,17 +63,8 @@ const PARTNER_TIME_LABELS = Object.freeze({
   late: 'Late',
 });
 
-/** The programme band, without ever showing the key behind it. */
-export function programmeValue(bands) {
-  const key = bands?.tp_programme_key ?? null;
-  if (!key) return '';
-  return typeof key === 'string' && key.startsWith('style:')
-    ? 'Your training style'
-    : 'Your current programme';
-}
-
 /**
- * The seven toggles, in the order the screen reads them, each with the
+ * The six toggles, in the order the screen reads them, each with the
  * value it is offering to share.
  */
 export function bandRows(bands, me) {
@@ -87,7 +79,6 @@ export function bandRows(bands, me) {
       value: staples ? `${staples} ${staples === 1 ? 'lift' : 'lifts'}` : '',
     },
     { key: 'experience', label: 'Experience', value: TP_EXPERIENCE_BANDS[bands?.tp_experience_band] ?? '' },
-    { key: 'programme', label: 'Programme', value: programmeValue(bands), empty: 'No active plan yet' },
     {
       key: 'age_band',
       label: 'Age band',
@@ -248,50 +239,59 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
         </Text>
 
         {loading ? (
-          <ActivityIndicator color={t.colors.primary} />
-        ) : null}
+          // First paint: the real shape below is a preview card and a
+          // stack of band rows, so that is what previews it
+          // (`docs/rules/styling.md`, "Loading states") rather than a
+          // bare spinner sitting above content that has not loaded yet.
+          <View style={styles.skeletonStack}>
+            <SkeletonCard height={64} />
+            {[0, 1, 2, 3, 4, 5, 6].map((i) => <SkeletonRow key={i} />)}
+          </View>
+        ) : (
+          <>
+            <Card style={styles.preview}>
+              <SectionLabel tone="muted">What other people see</SectionLabel>
+              <Text style={[styles.previewLine, { ...t.type.body, color: t.colors.textPrimary }]}>
+                {preview || NOTHING_SHARED_LINE}
+              </Text>
+            </Card>
 
-        <Card style={styles.preview}>
-          <SectionLabel tone="muted">What other people see</SectionLabel>
-          <Text style={[styles.previewLine, { ...t.type.body, color: t.colors.textPrimary }]}>
-            {preview || NOTHING_SHARED_LINE}
-          </Text>
-        </Card>
-
-        <View style={styles.section}>
-          <SectionLabel tone="muted">Your bands</SectionLabel>
-          {/* SD-32: the age band never appears for a minor, exactly as
-              Join filters the same row (CommunityJoinScreen.js). */}
-          {bandRows(bands, me)
-            .filter((row) => !(isMinor && (row.key === 'age_band' || row.key === 'consistency')))
-            .map((row) => (
-            <View key={row.key} style={styles.bandRow}>
-              <View style={styles.bandBody}>
-                <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
-                  {row.label}
-                </Text>
-                <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-                  {row.value || row.empty || NOT_ENOUGH_LINE}
-                </Text>
-              </View>
-              <Switch
-                value={!!share[row.key]}
-                onValueChange={(next) => toggleBand(row.key, next)}
-                accessibilityLabel={`Share ${row.label.toLowerCase()}`}
-                {...switchColours}
+            <View style={styles.section}>
+              <SectionLabel tone="muted">Your bands</SectionLabel>
+              {/* SD-32: the age band never appears for a minor, exactly as
+                  Join filters the same row (CommunityJoinScreen.js). */}
+              {bandRows(bands, me)
+                .filter((row) => !(isMinor && (row.key === 'age_band' || row.key === 'consistency')))
+                .map((row) => (
+                <View key={row.key} style={styles.bandRow}>
+                  <View style={styles.bandBody}>
+                    <Text style={[styles.bandLabel, { ...t.type.body, color: t.colors.textPrimary }]}>
+                      {row.label}
+                    </Text>
+                    <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+                      {row.value || row.empty || NOT_ENOUGH_LINE}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={!!share[row.key]}
+                    onValueChange={(next) => toggleBand(row.key, next)}
+                    accessibilityLabel={`Share ${row.label.toLowerCase()}`}
+                    {...switchColours}
+                  />
+                </View>
+              ))}
+              <Button
+                variant="tertiary"
+                size="sm"
+                fullWidth={false}
+                title="Recalculate"
+                loading={busy}
+                onPress={recalculate}
+                accessibilityLabel="Work out my training profile again"
               />
             </View>
-          ))}
-          <Button
-            variant="tertiary"
-            size="sm"
-            fullWidth={false}
-            title="Recalculate"
-            loading={busy}
-            onPress={recalculate}
-            accessibilityLabel="Work out my training profile again"
-          />
-        </View>
+          </>
+        )}
 
         {isMinor ? (
           <View style={styles.section}>
@@ -402,6 +402,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   intro: { ...type.bodySm, color: colors.textSecondary },
+  skeletonStack: { gap: spacing.sm },
   preview: { gap: spacing.xs },
   previewLine: { ...type.body, color: colors.textPrimary },
   section: { gap: spacing.md },

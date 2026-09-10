@@ -34,15 +34,15 @@ import useTheme from '../hooks/useTheme';
 import { colors, spacing, type } from '../styles/theme';
 import { COMMUNITY_RULES_VERSION, acceptRules } from '../lib/community';
 
-// Community Rules v2, from docs/community-safety/COMMUNITY-RULES.md.
+// Community Rules v3, from docs/community-safety/COMMUNITY-RULES.md.
 // Keep this block in step with that document.
 export const COMMUNITY_RULES_TEXT = {
   title: 'Community rules',
   intro:
-    'Community is where you share your training, follow people you rate, '
-    + 'and use or adapt the programmes other lifters have built. It works '
-    + 'best when it stays about training. Here is what that means in '
-    + 'practice.',
+    'Community is where you connect with people at your gym and your '
+    + 'friends, see each other\'s training weeks and progress, and give '
+    + 'respect. It works best when it stays about training. Here is what '
+    + 'that means in practice.',
   rules: [
     {
       heading: 'Training talk only.',
@@ -90,10 +90,10 @@ export const COMMUNITY_RULES_TEXT = {
       'Your first name, date of birth, email, height or age',
     ],
     note:
-      'If you post a personal best, the weight and reps on that specific '
-      + 'lift are shown because you chose to share that result. Programmes '
-      + 'you publish share their structure (days, exercises, sets, reps, '
-      + 'rest) and never a weight.',
+      'If you share a personal best, the weight and reps on that specific '
+      + 'lift are shown because you chose to share that result. Your '
+      + 'training weeks show days and session counts, never a weight on '
+      + 'the scale, food or photos.',
     trainingProfileNote:
       'Your training profile works the same way. If you choose to share '
       + 'it, only the bands you have switched on are ever shown, and never '
@@ -104,16 +104,16 @@ export const COMMUNITY_RULES_TEXT = {
   reporting: {
     heading: 'Reporting and blocking',
     body:
-      'Every profile, post, comment and programme has a Report option '
+      'Every profile, post, comment and group has a Report option '
       + 'with a short list of reasons to choose from, including a '
       + 'dedicated reason for harmful body or eating content. Reports go '
       + 'straight to a moderator queue.\n\n'
       + 'You can also block anyone. Blocking is two-way: once you block '
       + 'someone, neither of you can see the other’s profile, posts, '
-      + 'programmes or comments, and any follow between you is removed. '
+      + 'groups or comments, and any follow between you is removed. '
       + 'You can unblock at any time. Muting is quieter: you stop seeing '
       + 'someone’s posts, and they are never told.\n\n'
-      + 'If a post, comment or programme gets reported by three different '
+      + 'If a post or comment gets reported by three different '
       + 'people, it is hidden automatically while a moderator looks at it.',
   },
   moderatorActions: {
@@ -133,8 +133,8 @@ export const COMMUNITY_RULES_TEXT = {
   },
   version: {
     number: COMMUNITY_RULES_VERSION,
-    publishedDate: '2026-09-06',
-    label: 'Community rules version 2, published 6 September 2026.',
+    publishedDate: '2026-09-10',
+    label: 'Community rules version 3, published 10 September 2026.',
     changeNote:
       'Any future change to these rules is a new version, and you will '
       + 'be asked to accept it before you can keep using Community.',

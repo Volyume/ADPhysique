@@ -1,5 +1,5 @@
 /**
- * CommentRow — one comment on a story or a programme (blueprint section 6,
+ * CommentRow — one comment on a story (blueprint section 6,
  * `docs/social-discovery-2026-09-06/30-BLUEPRINT.md`).
  *
  * Author, body, day, and the two actions a reader needs: delete (their own,
@@ -16,8 +16,7 @@
  *   onReport      () => void, omit to hide reporting (your own comment)
  *
  * `CommentComposer` ships alongside it, because the field that writes a
- * comment belongs with the row that reads one and both screens that carry a
- * thread (the programme and the story) need exactly the same field.
+ * comment belongs with the row that reads one.
  */
 
 import { useState } from 'react';

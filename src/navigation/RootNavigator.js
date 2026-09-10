@@ -497,7 +497,7 @@ function HomeStack({ navigation }) {
           HowYouTrain, already above). */}
       <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
       {/* Community (blueprint section 1). One destination, reached from the
-          Today header, the Coach Support row, the Train programmes row and
+          Today header glyph, the Today intro card, the You screen row and
           the deep links below; every screen is pushed and draws its own
           BackHeader. */}
       <Stack.Screen name="Community" component={CommunityHubScreen} options={{ headerShown: false }} />

@@ -48,7 +48,7 @@ describe('HomeCommunityIntroCard', () => {
     let tree;
     act(() => { tree = create(<HomeCommunityIntroCard onOpen={onOpen} onDismiss={onDismiss} />); });
     expect(textOf(tree)).toContain(COMMUNITY_INTRO_TITLE);
-    expect(COMMUNITY_INTRO_BODY).toMatch(/refitted to your kit/);
+    expect(COMMUNITY_INTRO_BODY).toMatch(/give respect/);
     // V3a (81-VISUAL-RULINGS.md): the closing privacy sentence is dropped
     // from the body copy, matching the Community hub hero.
     expect(COMMUNITY_INTRO_BODY).not.toMatch(/Nothing about your body, food or coaching is ever shared\./);

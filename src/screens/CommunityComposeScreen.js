@@ -33,7 +33,7 @@ import { logError } from '../lib/errorLog';
 import {
   loadMe, hasProfile, createPost,
   buildPrPayload, buildSessionPayload, buildBlockPayload, buildMilestonePayload,
-  buildProgrammePayload, CAPTION_MAX,
+  CAPTION_MAX,
 } from '../lib/community';
 
 const VISIBILITY_OPTIONS = [
@@ -51,12 +51,11 @@ export function composeErrorLine(code) {
 
 /** Build the payload for one kind from what the entry point handed over.
  * Each branch calls exactly one builder and nothing else. */
-export async function payloadFor({ kind, workoutId, mesocycleId, pr, milestone, programme }, { userId, units }) {
+export async function payloadFor({ kind, workoutId, mesocycleId, pr, milestone }, { userId, units }) {
   if (kind === 'pr') return pr ? buildPrPayload({ ...pr, units: pr.units ?? units }) : null;
   if (kind === 'milestone') return milestone ? buildMilestonePayload(milestone) : null;
   if (kind === 'session') return workoutId ? buildSessionPayload(workoutId, { userId, units }) : null;
   if (kind === 'block') return mesocycleId ? buildBlockPayload(mesocycleId, { userId, units }) : null;
-  if (kind === 'programme') return programme ? buildProgrammePayload(programme) : null;
   return null;
 }
 
@@ -115,7 +114,6 @@ export default function CommunityComposeScreen({ navigation, route }) {
         kind,
         payload,
         caption: caption.trim() || null,
-        programmeId: kind === 'programme' ? (payload.id ?? null) : null,
         visibility,
       });
       if (!created?.id) throw new Error('Post failed.');

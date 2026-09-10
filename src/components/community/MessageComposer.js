@@ -3,8 +3,8 @@
  * blueprint section 2; SD-21).
  *
  * The field starts EMPTY, always. The placeholder is a prompt, not a
- * draft: opening a conversation from a programme or a story suggests
- * what to ask ("Ask about this programme"), and the person writes their
+ * draft: opening a conversation from someone's post suggests what to
+ * ask ("Say something about this session"), and the person writes their
  * own words. Nothing is ever pre-written or sent on anyone's behalf.
  *
  * The counter appears only near the ceiling. A character count sitting

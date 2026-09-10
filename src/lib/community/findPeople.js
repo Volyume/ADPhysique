@@ -1,5 +1,5 @@
 /**
- * Find people: six doors and the scored lists behind them (discovery
+ * Find people: five doors and the scored lists behind them (discovery
  * blueprint sections 4, 5, 7, 8, 9; SD-23, SD-24, SD-27, SD-28).
  *
  * Two rules run through the whole module.
@@ -24,7 +24,7 @@ import { callCommunity, CommunityError } from './transport';
 export const DEFAULT_PAGE_SIZE = 20;
 
 /**
- * The six doors, in the order the screen lists them (blueprint section 4).
+ * The five doors, in the order the screen lists them (blueprint section 4).
  *
  * `requires` names the field on the caller's own profile that a door
  * needs; `requirement` is what the row says instead when it is missing,
@@ -54,13 +54,6 @@ export const FIND_MODES = Object.freeze({
     requires: null,
     requirement: null,
   }),
-  programme: Object.freeze({
-    mode: 'programme',
-    label: 'On my programme',
-    subtitle: 'Lifters on the same programme',
-    requires: 'tp_programme_key',
-    requirement: 'Set an active plan to see who else is on it',
-  }),
   partners: Object.freeze({
     mode: 'partners',
     label: 'Open to training together',
@@ -78,24 +71,22 @@ export const FIND_MODES = Object.freeze({
 });
 
 export const FIND_MODE_ORDER = Object.freeze([
-  'gym', 'area', 'like_me', 'programme', 'partners', 'might_know',
+  'gym', 'area', 'like_me', 'partners', 'might_know',
 ]);
 
 const FIND_MODE_SET = new Set(FIND_MODE_ORDER);
 
 /**
- * Where each door's requirement lives on the `me` payload. The gym and
- * area labels sit on the profile card; the programme key is a training
- * profile band, which is on `me` itself (blueprint section 11).
+ * Where each door's requirement lives on the `me` payload: the gym and
+ * area labels sit on the profile card.
  */
 function requirementValue(me, field) {
   if (!field) return true;
-  if (field === 'tp_programme_key') return me?.tp_programme_key ?? me?.profile?.tp_programme_key ?? null;
   return me?.profile?.[field] ?? me?.[field] ?? null;
 }
 
 /**
- * The six door descriptors for this person.
+ * The five door descriptors for this person.
  *
  * @param {object|null} me the `community_get_me` payload
  * @returns {Array<{mode: string, label: string, subtitle: string,
@@ -137,8 +128,6 @@ export function doorLine(door, count = null, scope = null) {
       return `Trains at ${door.key} · ${n} ${n === 1 ? 'other' : 'others'}`;
     case 'area':
       return `Lifters in ${door.key} · ${n}`;
-    case 'programme':
-      return `On your programme · ${n}`;
     case 'partners':
       // The server says where the count applies ("at your gym" when the
       // person set same gym only, else "in your area"); the client never

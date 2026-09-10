@@ -159,8 +159,8 @@ export async function sendMessage(targetUserId, body, { refKind = null, refId = 
     );
   }
   // 'session' carries no ref_id (nothing to look up server-side): its
-  // whole reference is the validated payload, unlike 'post'/'programme'
-  // which point at an existing row and are dropped without an id.
+  // whole reference is the validated payload, unlike 'post', which
+  // points at an existing row and is dropped without an id.
   const kind = MESSAGE_REF_KINDS.includes(refKind)
     && (refKind === 'session' ? !!refPayload : !!refId)
     ? refKind : null;

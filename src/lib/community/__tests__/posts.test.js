@@ -39,7 +39,7 @@ jest.mock('../../sync', () => ({ scheduleSync: () => {} }));
 const { db, _invalidateExercisesCache } = require('../../database');
 const { canonicalExerciseId } = require('../../exercise/canonicalId');
 const {
-  buildPrPayload, buildMilestonePayload, buildProgrammePayload,
+  buildPrPayload, buildMilestonePayload,
   buildSessionPayload, buildBlockPayload,
 } = require('../posts');
 const { POST_PAYLOAD_KEYS, validatePostPayload, SENSITIVE_COMMUNITY_KEYS } = require('../validation');
@@ -90,13 +90,14 @@ describe('pure builders', () => {
     expect(validatePostPayload('milestone', p).ok).toBe(true);
   });
 
-  test('a programme payload carries exactly the programme keys', () => {
-    const p = buildProgrammePayload({
-      id: 'prog-1', title: 'Push Pull Legs', style_key: 'kettlebell_foundations',
-      days_per_week: 3, exercise_count: 18, owner_id: 'someone', snapshot: {},
-    });
-    expect(keysOf(p)).toEqual(allowed('programme'));
-    expect(validatePostPayload('programme', p).ok).toBe(true);
+  // The "programme" story kind (and buildProgrammePayload with it) is
+  // retired: Community never shares published programmes
+  // (communities revamp 2026-09-10). `POST_PAYLOAD_KEYS`/`POST_KINDS`
+  // carry no `programme` entry any more -- see the guard below.
+  test('there is no programme kind any more', () => {
+    expect(POST_PAYLOAD_KEYS.programme).toBeUndefined();
+    expect(Object.keys(POST_PAYLOAD_KEYS)).not.toContain('programme');
+    expect(validatePostPayload('programme', { id: 'x' }).ok).toBe(false);
   });
 });
 

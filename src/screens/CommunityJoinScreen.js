@@ -22,10 +22,7 @@
  * explicit act rather than something the profile inherits by default. The
  * toggles reuse `bandRows` from the Training profile screen, which is
  * also where the SAME preview line is built, so the two screens can never
- * say different things about what would be shared. "Show which
- * programmes I use" (SD-26) is shown here too, because it decides who can
- * find this person from a programme page from the moment the profile
- * exists.
+ * say different things about what would be shared.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -129,8 +126,8 @@ export default function CommunityJoinScreen({ navigation, route }) {
 
   // The training profile step (SD-22): derived once from the person's own
   // device, with the same defaults the Training profile screen starts
-  // from (sessions, staple lifts, experience and programme on; days, time
-  // bands and age band off).
+  // from (sessions, staple lifts and experience on; days, time bands and
+  // age band off).
   const [tpBands, setTpBands] = useState(null);
   const [tpShare, setTpShare] = useState(TP_DEFAULT_SHARE);
   const [tpLoading, setTpLoading] = useState(true);

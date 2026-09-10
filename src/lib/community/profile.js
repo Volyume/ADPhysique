@@ -47,15 +47,14 @@ export function emptyMe() {
     // Discovery campaign (blueprint section 11). The counts and the
     // training profile bands start EMPTY: an unreadable `me` must never
     // render as "3 people want to connect" or claim a band the person
-    // has not shared. `connect_from` and `show_programmes` mirror the
-    // column defaults in migrate_161 instead, so a cold render matches
-    // what the server would say about a profile that has just been made.
+    // has not shared. `connect_from` mirrors the column default in
+    // migrate_161 instead, so a cold render matches what the server
+    // would say about a profile that has just been made.
     pending_connect_requests: 0,
     unseen_messages: 0,
     connect_from: 'anyone',
     open_to_partner: false,
     partner_prefs: null,
-    show_programmes: true,
     tp_days: null,
     tp_time_bands: null,
     tp_sessions_band: null,

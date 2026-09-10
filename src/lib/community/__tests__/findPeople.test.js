@@ -2,7 +2,7 @@
  * What this suite pins (discovery blueprint sections 4, 5, 7, 8, 9;
  * SD-23, SD-24, SD-27, SD-28):
  *
- *  - the six doors exist, in order, and a door that cannot work yet says
+ *  - the five doors exist, in order, and a door that cannot work yet says
  *    what would make it work rather than disappearing. SD-28: a door that
  *    hides itself when the network is small is a door nobody can be the
  *    first through, and the honest zero state is the whole density
@@ -35,7 +35,6 @@ const {
 
 const ME_FULL = {
   profile: { handle: 'jamie', gym_label: 'PureGym Leeds', area_label: 'Leeds' },
-  tp_programme_key: 'community:prog-9',
 };
 
 const ME_BARE = { profile: { handle: 'jamie' } };
@@ -45,19 +44,23 @@ beforeEach(() => {
   callCommunity.mockResolvedValue({});
 });
 
-describe('the six doors', () => {
-  test('they are the six the blueprint names, in the blueprint order', () => {
+describe('the five doors', () => {
+  test('they are the five the blueprint names, in the blueprint order', () => {
     expect(FIND_MODE_ORDER).toEqual([
-      'gym', 'area', 'like_me', 'programme', 'partners', 'might_know',
+      'gym', 'area', 'like_me', 'partners', 'might_know',
     ]);
     expect(doorsFor(ME_FULL).map((d) => d.mode)).toEqual(FIND_MODE_ORDER);
+  });
+
+  test('there is no programme door (communities revamp, 2026-09-10)', () => {
+    expect(FIND_MODES.programme).toBeUndefined();
+    expect(doorsFor(ME_FULL).some((d) => d.mode === 'programme')).toBe(false);
   });
 
   test('the labels read as the blueprint writes them', () => {
     expect(FIND_MODES.gym.label).toBe('At my gym');
     expect(FIND_MODES.area.label).toBe('Near me');
     expect(FIND_MODES.like_me.label).toBe('Train like me');
-    expect(FIND_MODES.programme.label).toBe('On my programme');
     expect(FIND_MODES.partners.label).toBe('Open to training together');
     expect(FIND_MODES.might_know.label).toBe('People you might know');
   });
@@ -77,12 +80,10 @@ describe('the six doors', () => {
     expect(doorLine(gym)).toBe('Add your gym to see who trains there');
   });
 
-  test('the area and programme doors follow the same pattern', () => {
+  test('the area door follows the same pattern', () => {
     const doors = doorsFor(ME_BARE);
     expect(doors.find((d) => d.mode === 'area').requirement)
       .toBe('Add your area to see who trains near you');
-    expect(doors.find((d) => d.mode === 'programme').requirement)
-      .toBe('Set an active plan to see who else is on it');
   });
 
   test('the three doors that need nothing are open the moment a profile exists', () => {

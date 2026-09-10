@@ -2,7 +2,7 @@
  * ComposerInput (lead visual review 2026-09-06, ruling V17)
  *
  * The one multiline text field Community writes into: a story caption, a
- * programme description, a moderation note, a comment or a message. Wraps
+ * moderation note, a comment or a message. Wraps
  * the shared `TextField` in `multiline` mode on `surface2` (`TextField`'s
  * own default) with `radius.md` (`TextField`'s own field radius), so every
  * one of those fields stops hand-rolling its own bordered `<TextInput>`.

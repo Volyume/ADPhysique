@@ -98,15 +98,6 @@ export function bodyForKind(post) {
         hero: `${p.heroValue ?? ''}${p.heroUnit ? ` ${p.heroUnit}` : ''}`.trim(),
         line: p.caption ?? null,
       };
-    case 'programme':
-      return {
-        eyebrow: 'Programme · Published',
-        hero: p.title ?? 'Programme',
-        line: [
-          p.days_per_week ? `${number(p.days_per_week)} days` : null,
-          p.exercise_count ? `${number(p.exercise_count)} exercises` : null,
-        ].filter(Boolean).join(' · ') || null,
-      };
     default:
       return { eyebrow: null, hero: null, line: null };
   }

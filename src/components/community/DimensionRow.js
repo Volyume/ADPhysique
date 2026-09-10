@@ -1,17 +1,24 @@
 /**
  * DimensionRow (blueprint section 6; SD-10)
  *
- * One dimension the user shares with other people: a style, a programme,
- * a gym or an area. A dimension is a page listing the people who chose
- * it, never a room with its own feed or admin, so the row states the
- * label and the count and nothing more.
+ * One dimension the user shares with other people: a style, a gym or an
+ * area. A dimension is a page listing the people who chose it, never a
+ * room with its own feed or admin, so the row states the label and the
+ * count and nothing more.
  *
  * Lead visual review 2026-09-06, ruling V18: `Card padding="md"
  * radius="md"`, glyph 36, one-line `body` title, one-line `caption` sub,
  * trailing chevron.
  *
+ * Communities revamp (2026-09-10): the "programme" dimension and its
+ * icon are retired from the client (Volyume never explains Community as
+ * programme sharing). The server still resolves a stale "on my
+ * programme" link to an always-empty dimension of that kind
+ * (`01-recon-community-today.md` section 6), so an unrecognised kind
+ * renders nothing here rather than a row with a generic icon.
+ *
  * Props:
- *   dimension  {kind: 'style'|'programme'|'gym'|'area', key, label, count}
+ *   dimension  {kind: 'style'|'gym'|'area', key, label, count}
  *   onPress    opens the dimension page
  */
 
@@ -23,7 +30,6 @@ import useTheme from '../../hooks/useTheme';
 
 const GLYPH = {
   style: 'barbell-outline',
-  programme: 'list-outline',
   gym: 'business-outline',
   area: 'location-outline',
 };
@@ -37,7 +43,10 @@ export function peopleLine(count) {
 
 export default function DimensionRow({ dimension, onPress }) {
   const t = useTheme();
-  if (!dimension) return null;
+  // An unrecognised kind (the retired "programme" dimension, always
+  // empty when the server still resolves one) renders nothing rather
+  // than a row with a generic icon and no real content behind it.
+  if (!dimension || !GLYPH[dimension.kind]) return null;
   const sub = peopleLine(dimension.count);
 
   return (
@@ -50,7 +59,7 @@ export default function DimensionRow({ dimension, onPress }) {
     >
       <View style={[styles.glyph, { backgroundColor: t.colors.surface2 }]}>
         <Ionicons
-          name={GLYPH[dimension.kind] ?? 'people-outline'}
+          name={GLYPH[dimension.kind]}
           size={iconSize.md}
           color={t.colors.textSecondary}
         />

@@ -371,14 +371,13 @@ describe('only the opted-in bands are sent', () => {
     tp_sessions_band: '4_5',
     tp_staple_lifts: ['squat'],
     tp_experience_band: 'intermediate',
-    tp_programme_key: 'style:kettlebell_foundations',
     sessions: 20,
   };
 
   test('the defaults leave days, time bands and the age band behind', () => {
     const payload = shareablePayload(BANDS, TP_DEFAULT_SHARE);
     expect(Object.keys(payload).sort()).toEqual([
-      'share_age_band', 'share_consistency', 'tp_experience_band', 'tp_programme_key',
+      'share_age_band', 'share_consistency', 'tp_experience_band',
       'tp_sessions_band', 'tp_staple_lifts',
     ]);
     expect(payload.share_age_band).toBe(false);
@@ -403,12 +402,17 @@ describe('only the opted-in bands are sent', () => {
   test('nothing but the named bands can ever travel', () => {
     const payload = shareablePayload({ ...BANDS, sessions: 20, secret: 'x' }, {
       days: true, time_bands: true, sessions: true, staple_lifts: true,
-      experience: true, programme: true, age_band: true,
+      experience: true, age_band: true,
     });
     expect(Object.keys(payload).sort()).toEqual([
-      'share_age_band', 'share_consistency', 'tp_days', 'tp_experience_band', 'tp_programme_key',
+      'share_age_band', 'share_consistency', 'tp_days', 'tp_experience_band',
       'tp_sessions_band', 'tp_staple_lifts', 'tp_time_bands',
     ]);
+  });
+
+  test('a stray "programme" toggle is ignored: the key is not a share field any more', () => {
+    const payload = shareablePayload(BANDS, { ...TP_DEFAULT_SHARE, programme: true });
+    expect('tp_programme_key' in payload).toBe(false);
   });
 
   test('the age band itself never travels: only the permission does', () => {
@@ -433,7 +437,12 @@ describe('only the opted-in bands are sent', () => {
 });
 
 describe('the loader reads training structure and nothing else', () => {
-  test('four reads, and the programme key comes from the plan\'s training style', async () => {
+  // Communities revamp (2026-09-10): the Programme share toggle is
+  // retired and `tp_programme_key` never appears on what this returns.
+  // The active-plan read stays (`db.getActivePlan` is still called
+  // below) only to hold the SD-30 device-read surface steady -- see
+  // `programmeKeyFor`'s header comment in `trainingProfile.js`.
+  test('four reads, including the plan, but its style never becomes a returned key', async () => {
     db.getCompletedWorkoutStartTimestamps.mockResolvedValue([NOW - DAY]);
     db.getAllExercises.mockResolvedValue([
       { id: 'squat', isCustom: 0 }, { id: 'mine', isCustom: 1 },
@@ -446,22 +455,23 @@ describe('the loader reads training structure and nothing else', () => {
 
     const out = await loadTrainingProfile('u1', { nowMs: NOW });
 
-    expect(out.tp_programme_key).toBe('style:kettlebell_foundations');
+    expect('tp_programme_key' in out).toBe(false);
     expect(out.tp_staple_lifts).toEqual(['squat']);
     expect(db.getCompletedWorkoutStartTimestamps).toHaveBeenCalledWith('u1');
     expect(db.getWorkoutSetsSince).toHaveBeenCalledWith('u1', NOW - (12 * WEEK));
+    expect(db.getActivePlan).toHaveBeenCalledWith('u1');
   });
 
-  test('no plan at all is no key, never a guess', async () => {
+  test('no plan at all: still no key on the bands', async () => {
     const out = await loadTrainingProfile('u1', { nowMs: NOW });
-    expect(out.tp_programme_key).toBeNull();
+    expect('tp_programme_key' in out).toBe(false);
   });
 
   test('a plan read that fails never stops the bands being derived', async () => {
     db.getActivePlan.mockRejectedValue(Object.assign(new Error('offline'), { code: 'offline' }));
     db.getCompletedWorkoutStartTimestamps.mockResolvedValue([NOW - DAY, NOW - (2 * DAY)]);
     const out = await loadTrainingProfile('u1', { nowMs: NOW });
-    expect(out.tp_programme_key).toBeNull();
+    expect('tp_programme_key' in out).toBe(false);
     expect(out.sessions).toBe(2);
   });
 });

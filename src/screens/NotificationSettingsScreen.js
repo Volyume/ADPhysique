@@ -877,7 +877,7 @@ export default function NotificationSettingsScreen({ navigation }) {
           </View>
           <View style={[styles.helperRow, live.helperRow]}>
             <Text style={[styles.helperText, live.helperText]}>
-              When someone reacts to or comments on your posts, or uses your programme.
+              When someone reacts to or comments on your posts.
             </Text>
           </View>
           <View style={styles.toggleRow}>

@@ -18,9 +18,16 @@
  *  - `loadTrainingProfile` is the I/O half. It reads exactly four things
  *    from the device: completed-workout start timestamps, the set rows in
  *    the window (for exercise ids only), the exercise library (to tell a
- *    canonical id from a custom one) and the active plan (for the
- *    programme key). SD-30: nothing about the body, food, Progress Scan,
- *    injuries, coaching or check-ins is read here, ever.
+ *    canonical id from a custom one) and the active plan. SD-30: nothing
+ *    about the body, food, Progress Scan, injuries, coaching or check-ins
+ *    is read here, ever.
+ *
+ *    Communities revamp (2026-09-10): the active plan's read stopped
+ *    producing a shareable `tp_programme_key` -- there is no Programme
+ *    toggle any more and the training profile never sends that field
+ *    (the SD-30 read stays exactly as pinned by
+ *    `community.privacy.guard.test.js`, so `getActivePlan` is still
+ *    imported and called; its result is simply never surfaced).
  *
  * SD-31, the creepiness rule, is why every value in this file is a BAND.
  * Nothing finer than a band exists in the payload: no dates, no times, no
@@ -110,10 +117,10 @@ export const TP_MAX_STAPLE_LIFTS = 5;
 export const TP_WINDOW_WEEKS = 12;
 
 /**
- * Defaults (blueprint section 3): sessions, staple lifts, experience and
- * programme ON; days, time bands and age band OFF. The three that are off
- * are the three that say most about where a person is and when, so they
- * start off and are switched on deliberately.
+ * Defaults (blueprint section 3): sessions, staple lifts and experience
+ * ON; days, time bands and age band OFF. The three that are off are the
+ * three that say most about where a person is and when, so they start
+ * off and are switched on deliberately.
  */
 export const TP_DEFAULT_SHARE = Object.freeze({
   days: false,
@@ -121,7 +128,6 @@ export const TP_DEFAULT_SHARE = Object.freeze({
   sessions: true,
   staple_lifts: true,
   experience: true,
-  programme: true,
   age_band: false,
   // Community product audit `60-DESIGN-PROGRESS-COMMUNITY.md` section 1:
   // "Share my consistency" - sessions this week/month, weeks streak. A
@@ -145,7 +151,6 @@ const SHARE_KEY_TO_FIELD = Object.freeze({
   sessions: 'tp_sessions_band',
   staple_lifts: 'tp_staple_lifts',
   experience: 'tp_experience_band',
-  programme: 'tp_programme_key',
 });
 
 export const TP_SHARE_PREFIX = '@volyume_community_tp_share_';
@@ -432,13 +437,21 @@ export async function writeShareSettings(uid, settings) {
 // ─── The I/O half ────────────────────────────────────────────────────
 
 /**
- * The active plan's programme key: the plan's training style, or nothing.
+ * The active plan's training style, kept internal and never returned.
  * (Community programme-sharing, and the two lookups this key used to try
  * first, were removed entirely --
- * `docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2.)
+ * `docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2; the
+ * Programme share toggle itself was retired in the communities revamp,
+ * 2026-09-10, `docs/communities-revamp-2026-09-10/20-BLUEPRINT.md`
+ * section 10.)
  *
- * Best effort throughout. A key is a nice-to-have on a discovery row, and
- * a failed read must never stop the rest of the bands from being derived.
+ * `loadTrainingProfile` still calls this, and this still reads the
+ * active plan, ONLY because `community.privacy.guard.test.js` pins this
+ * file's device-read surface to exactly `getCompletedWorkoutStartTimestamps`,
+ * `getWorkoutSetsSince`, `getAllExercises` and `getActivePlan` (SD-30):
+ * dropping the call would leave `getActivePlan` imported and unused. The
+ * value it returns is discarded, never attached to the bands object, and
+ * never reaches a screen or the server.
  */
 async function programmeKeyFor(userId) {
   let plan = null;
@@ -457,20 +470,25 @@ async function programmeKeyFor(userId) {
  * Read the device and derive. The ONLY four reads are the four named
  * here, and each answers training structure: when sessions started, which
  * exercise ids they contained, which ids are canonical, and which plan is
- * active (SD-30).
+ * active (SD-30). The active-plan read is kept only to hold that SD-30
+ * surface steady; see `programmeKeyFor`.
  *
  * @param {string} userId
  * @param {{nowMs?: number, windowWeeks?: number}} [opts]
- * @returns {Promise<object>} the bands, plus `tp_programme_key`
+ * @returns {Promise<object>} the bands. No `tp_programme_key`: the
+ *   Programme share toggle was retired in the communities revamp
+ *   (2026-09-10).
  */
 export async function loadTrainingProfile(userId, { nowMs = Date.now(), windowWeeks = TP_WINDOW_WEEKS } = {}) {
   const uid = userId ?? currentUserId();
   const since = nowMs - (windowWeeks * WEEK_MS);
 
-  const [startTimestamps, setsRows, exercises, programmeKey] = await Promise.all([
+  const [startTimestamps, setsRows, exercises] = await Promise.all([
     getCompletedWorkoutStartTimestamps(uid).catch(() => []),
     getWorkoutSetsSince(uid, since).catch(() => []),
     getAllExercises().catch(() => []),
+    // Discarded on purpose: kept only so `getActivePlan` stays a real,
+    // exercised read (see `programmeKeyFor`'s header).
     programmeKeyFor(uid),
   ]);
 
@@ -494,7 +512,7 @@ export async function loadTrainingProfile(userId, { nowMs = Date.now(), windowWe
   const bands = deriveTrainingProfile({
     startTimestamps, setsRows, experience, nowMs, windowWeeks, canonicalIds,
   });
-  return { ...bands, tp_programme_key: programmeKey };
+  return { ...bands };
 }
 
 /**

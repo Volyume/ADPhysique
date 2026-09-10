@@ -5,9 +5,10 @@
  * A new person has no labelled path to Community on Today until their
  * first workout summary; the header action is a glyph with no name. This
  * card names it once, after the first completed session, and leads with
- * the one thing Volyume does that other apps do not: another lifter's
- * programme refitted to your kit. Either button dismisses it for good;
- * HomeScreen also never shows it to someone who already has a profile.
+ * what Community is for: connecting with people at your gym and your
+ * friends, seeing each other's training weeks, and giving respect. Either
+ * button dismisses it for good; HomeScreen also never shows it to someone
+ * who already has a profile.
  * The gating lives in HomeScreen.js; this file renders only the content,
  * on the shared Card and Button, mirroring HomeHowYouTrainOfferCard.
  *
@@ -22,10 +23,10 @@ import useTheme from '../hooks/useTheme';
 import Card from './Card';
 import Button from './Button';
 
-export const COMMUNITY_INTRO_TITLE = 'Other lifters, their programmes, your stories';
+export const COMMUNITY_INTRO_TITLE = 'See who is training';
 // V3a (docs/social-discovery-2026-09-06/81-VISUAL-RULINGS.md): drops the
 // closing privacy sentence, matching the Community hub hero.
-export const COMMUNITY_INTRO_BODY = 'Use a programme another lifter built, as-is or refitted to your kit, and share the training you actually did.';
+export const COMMUNITY_INTRO_BODY = 'Connect with people at your gym and your friends, see each other\'s training weeks, and give respect.';
 
 export default function HomeCommunityIntroCard({ onOpen, onDismiss }) {
   const t = useTheme();

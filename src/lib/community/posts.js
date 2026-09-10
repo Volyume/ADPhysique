@@ -291,18 +291,3 @@ export function buildMilestonePayload(recap = {}) {
   });
 }
 
-/**
- * A published programme, for the "programme" story kind. PURE.
- *
- * @param {object} programmeRow a `community_programmes` row
- * @returns {object} a `programme` payload
- */
-export function buildProgrammePayload(programmeRow = {}) {
-  return pick('programme', {
-    id: programmeRow.id ?? null,
-    title: programmeRow.title == null ? null : String(programmeRow.title),
-    style_key: programmeRow.style_key ?? programmeRow.styleKey ?? null,
-    days_per_week: round(programmeRow.days_per_week ?? programmeRow.daysPerWeek),
-    exercise_count: round(programmeRow.exercise_count ?? programmeRow.exerciseCount),
-  });
-}

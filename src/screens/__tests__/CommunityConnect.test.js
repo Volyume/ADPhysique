@@ -19,6 +19,8 @@
  *   4. ConnectSheet pre-selects the reason the door it opened from
  *      implies (the partners list pre-selects "Want to train together?",
  *      SD-25), and sends the reasons and note it has on screen.
+ *   5. "Same programme" is never offered as a selectable reason
+ *      (communities revamp 2026-09-10, phase 0).
  *
  * The client library is mocked: this is about what the components do
  * with the connection state, not about the RPC.
@@ -326,6 +328,22 @@ describe('ConnectSheet: reasons, note, and the door it was opened from (SD-25)',
       (n) => n.props?.label === 'Want to train together?' && 'selected' in n.props,
     )[0];
     expect(chip.props.selected).toBe(true);
+  });
+
+  // Communities revamp (2026-09-10), phase 0: the client never offers
+  // "Same programme" as a reason to pick, even though CONNECT_REASONS
+  // (mocked above with all four, matching the real, unchanged constant)
+  // still carries it for the SQL cross-check guard.
+  test('"Same programme" is never offered as a selectable reason', async () => {
+    let tree;
+    await act(async () => {
+      tree = create(<ConnectSheet visible card={card()} onClose={() => {}} />);
+    });
+    const chips = tree.root.findAll((n) => 'selected' in n.props && 'label' in n.props);
+    expect(chips.map((n) => n.props.label)).not.toContain('Same programme');
+    expect(chips.map((n) => n.props.label)).toEqual([
+      'Same gym', 'You train like me', 'Want to train together?',
+    ]);
   });
 
   test('sending carries the chosen reasons and the trimmed note', async () => {

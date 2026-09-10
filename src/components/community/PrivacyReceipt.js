@@ -37,7 +37,7 @@ import useTheme from '../../hooks/useTheme';
 const SHOWN = [
   'Your handle and name',
   'Styles, goal, gym and area you type',
-  'Programmes you publish',
+  'Sessions you choose to share',
   'Stories you post',
   'Training profile: only the bands you choose',
 ];

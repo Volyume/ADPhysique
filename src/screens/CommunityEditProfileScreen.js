@@ -37,6 +37,7 @@ import Button from '../components/Button';
 import Chip from '../components/Chip';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
+import { SkeletonCard, SkeletonRow } from '../components/Skeleton';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import GymPicker from '../components/community/GymPicker';
 import GymDetailSheet from '../components/community/GymDetailSheet';
@@ -68,7 +69,7 @@ const REFUSALS = {
 export default function CommunityEditProfileScreen({ navigation }) {
   const t = useTheme();
   const toast = useToast();
-  const { me, refresh } = useCommunityMe();
+  const { me, loading: meLoading, refresh } = useCommunityMe();
   const profile = me?.profile ?? null;
 
   const [displayName, setDisplayName] = useState('');
@@ -215,7 +216,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
   function confirmLeave() {
     appAlert(
       'Leave Community?',
-      'Your profile, posts, published programmes and follows are deleted. Your training, plans and food diary are not touched.',
+      'Your profile, posts and follows are deleted. Your training, plans and food diary are not touched.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -240,6 +241,18 @@ export default function CommunityEditProfileScreen({ navigation }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title="Edit profile" />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {meLoading ? (
+          // First paint: nothing below can render honestly until `me`
+          // resolves (the form otherwise flashes its empty defaults,
+          // then pops to the real values) -- the real shape is a field
+          // stack, so that is what previews it
+          // (`docs/rules/styling.md`, "Loading states").
+          <View style={styles.skeletonStack}>
+            <SkeletonRow />
+            {[0, 1, 2, 3, 4].map((i) => <SkeletonCard key={i} height={56} />)}
+          </View>
+        ) : (
+          <>
         <View style={styles.field}>
           <SectionLabel>Avatar</SectionLabel>
           <View style={styles.presets}>
@@ -477,6 +490,8 @@ export default function CommunityEditProfileScreen({ navigation }) {
           onPress={confirmLeave}
           accessibilityLabel="Leave Community"
         />
+          </>
+        )}
       </ScrollView>
 
       <GymDetailSheet
@@ -492,6 +507,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
+  skeletonStack: { gap: spacing.md },
   field: { gap: spacing.sm },
   hint: { ...type.caption, color: colors.textMuted },
   gymRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

@@ -96,7 +96,6 @@ export const POST_PAYLOAD_KEYS = Object.freeze({
   milestone: Object.freeze([
     'eyebrow', 'title', 'heroValue', 'heroUnit', 'caption', 'stats',
   ]),
-  programme: Object.freeze(['id', 'title', 'style_key', 'days_per_week', 'exercise_count']),
 });
 
 export const POST_KINDS = Object.freeze(Object.keys(POST_PAYLOAD_KEYS));

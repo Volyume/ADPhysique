@@ -46,7 +46,7 @@
  *              own card and inside a picker); only takes effect when
  *              Connect is not offered here (V8a)
  *   onFollowChange (relationship, card) after a successful follow toggle
- *   compact    drops the training line, for a creator line above a programme
+ *   compact    drops the training line, for a condensed creator line
  *   showConnect offer the connection tier instead of Follow when the viewer
  *              may connect (discovery blueprint section 4); V8a: one
  *              trailing action only, never both

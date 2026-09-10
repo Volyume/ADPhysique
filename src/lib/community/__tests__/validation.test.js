@@ -134,14 +134,17 @@ describe('post payload allow-lists', () => {
     expect(POST_PAYLOAD_KEYS.milestone).toEqual(
       ['eyebrow', 'title', 'heroValue', 'heroUnit', 'caption', 'stats'],
     );
-    expect(POST_PAYLOAD_KEYS.programme).toEqual(
-      ['id', 'title', 'style_key', 'days_per_week', 'exercise_count'],
-    );
   });
 
-  test('there are exactly five kinds', () => {
+  // Communities revamp (2026-09-10): the "programme" story kind is
+  // retired -- Community never shares a published programme.
+  test('there is no programme kind', () => {
+    expect(POST_PAYLOAD_KEYS.programme).toBeUndefined();
+  });
+
+  test('there are exactly four kinds', () => {
     expect(Object.keys(POST_PAYLOAD_KEYS).sort())
-      .toEqual(['block', 'milestone', 'pr', 'programme', 'session']);
+      .toEqual(['block', 'milestone', 'pr', 'session']);
   });
 
   test('a valid PR payload passes', () => {

@@ -2,7 +2,7 @@
  * Reporting and the moderator queue (blueprint sections 3, 5.7; SD-11).
  *
  * Moderation ships with the feature, not after it. Reporting is
- * available on every profile, post, comment and programme; three
+ * available on every profile, post, comment and group; three
  * distinct open reports auto-hide a piece of content pending review;
  * a moderator can dismiss, hide, unhide, delete, restrict or suspend,
  * and every action writes an audit row server-side.
@@ -29,7 +29,13 @@ export const MODERATION_ACTIONS = Object.freeze([
 // 'group' added by community product audit `60-DESIGN-PROGRESS-COMMUNITY.md`
 // section 3: `community_report` re-issued by migrate_165 to accept
 // `target_kind = 'group'`, owner = the group's `created_by`.
-export const REPORT_TARGET_KINDS = Object.freeze(['profile', 'post', 'comment', 'programme', 'message', 'group']);
+//
+// 'programme' is dropped from the CLIENT's allow-list (communities
+// revamp 2026-09-10: there is no more programme content to report; the
+// dead story kind is retired in `posts.js`/`validation.js`). The SQL
+// CHECK constraint keeps the value for old rows -- this list only
+// narrows what the client will ever SEND, never what the server accepts.
+export const REPORT_TARGET_KINDS = Object.freeze(['profile', 'post', 'comment', 'message', 'group']);
 
 /**
  * File a report.

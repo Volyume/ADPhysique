@@ -89,7 +89,7 @@ jest.mock('../../lib/community', () => ({
     '18_24': '18 to 24', '25_34': '25 to 34', '35_44': '35 to 44', '45_54': '45 to 54', '55_plus': '55 or over',
   },
   TP_DEFAULT_SHARE: {
-    days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, programme: true, age_band: false,
+    days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, age_band: false,
   },
   dayListLabel: () => '',
   timeBandsLabel: () => '',
@@ -97,7 +97,7 @@ jest.mock('../../lib/community', () => ({
   shareablePayload: () => ({}),
   loadTrainingProfile: jest.fn(() => Promise.resolve({})),
   readShareSettings: jest.fn(() => Promise.resolve({
-    days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, programme: true, age_band: false,
+    days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, age_band: false,
   })),
   writeShareSettings: jest.fn(() => Promise.resolve()),
   syncTrainingProfile: jest.fn(() => Promise.resolve({ sent: true, reason: null, payload: null })),

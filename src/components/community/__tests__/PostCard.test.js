@@ -89,13 +89,6 @@ const POSTS = {
       heroUnit: 'sessions', caption: 'Two years next.', stats: [],
     },
   },
-  programme: {
-    id: 'p5', kind: 'programme', reaction_count: 0, comment_count: 0, created_at: Date.now(),
-    payload: {
-      id: 'prog1', title: 'Three days, no machines', style_key: 'strength',
-      days_per_week: 3, exercise_count: 12,
-    },
-  },
 };
 
 describe('every story kind renders a body', () => {

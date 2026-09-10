@@ -23,8 +23,15 @@
  * raises `rules_outdated` on the first connect, message or training
  * profile update from a profile that accepted version 1, and the screen
  * shows the rules again and re-accepts.
+ *
+ * Version 3 (2026-09-10, communities revamp): the rules text stopped
+ * framing Community as programme/plan sharing (founder brief,
+ * `docs/communities-revamp-2026-09-10/README.md`, `20-BLUEPRINT.md`
+ * section 10) -- the welcome line, the privacy note and the
+ * reporting/blocking copy no longer mention programmes. Same re-consent
+ * mechanism as version 2, now gating on "accepted version < 3".
  */
-export const COMMUNITY_RULES_VERSION = 2;
+export const COMMUNITY_RULES_VERSION = 3;
 
 /**
  * SD-10: a dimension (style, programme, gym, area) is surfaced on the

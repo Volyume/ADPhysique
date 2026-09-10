@@ -30,7 +30,6 @@ jest.mock('../../lib/community', () => ({
   buildSessionPayload: jest.fn(() => ({ exercises: 5 })),
   buildBlockPayload: jest.fn(() => ({ weeks: 4 })),
   buildMilestonePayload: jest.fn(() => ({ kind: 'streak' })),
-  buildProgrammePayload: jest.fn(() => ({ id: 'prog1' })),
   CAPTION_MAX: 280,
 }));
 
