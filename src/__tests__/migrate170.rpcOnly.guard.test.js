@@ -64,8 +64,11 @@ const BODIES = functionBodies();
 const HEADERS = functionHeaders();
 const DECLARED = Object.keys(BODIES);
 
-// The six the client may call, with the exact signature each REVOKE/GRANT
-// pair names. A helper must never appear here.
+// The eight the client may call, with the exact signature each REVOKE/GRANT
+// pair names. A helper must never appear here. community_dimension_recent
+// and community_group_get are part A2 additions (community_group_get was
+// already a client RPC before migrate_170 touched it; it is re-issued here
+// only to align its member_count, on the same unchanged signature).
 const PUBLIC_RPCS = {
   community_upsert_profile: 'community_upsert_profile(jsonb)',
   community_dimension: 'community_dimension(text, text, text, int)',
@@ -73,6 +76,8 @@ const PUBLIC_RPCS = {
   community_board: 'community_board(text, text, text, text, integer, text)',
   community_hub_summary: 'community_hub_summary(text)',
   community_find_people: 'community_find_people(text, text, int, jsonb, text)',
+  community_dimension_recent: 'community_dimension_recent(text, text, text, int)',
+  community_group_get: 'community_group_get(uuid)',
 };
 const HELPERS = {
   _community_discipline_key_ok: '_community_discipline_key_ok(text[])',
@@ -281,15 +286,15 @@ describe('migrate_167 lesson: anything that calls _community_rate_check is VOLAT
     .filter(([, b]) => b.includes('_community_rate_check'))
     .map(([n]) => n);
 
-  test('the rate-railed set is exactly the six writers and expensive reads', () => {
+  test('the rate-railed set is exactly the six writers/reads plus the part A2 recent-stories read', () => {
     expect(RAILED.sort()).toEqual([
-      'community_board', 'community_dimensions_me', 'community_find_people',
-      'community_hub_summary', 'community_upsert_profile',
+      'community_board', 'community_dimension_recent', 'community_dimensions_me',
+      'community_find_people', 'community_hub_summary', 'community_upsert_profile',
     ]);
   });
 
-  test.each(['community_board', 'community_dimensions_me', 'community_find_people',
-    'community_hub_summary', 'community_upsert_profile'])(
+  test.each(['community_board', 'community_dimension_recent', 'community_dimensions_me',
+    'community_find_people', 'community_hub_summary', 'community_upsert_profile'])(
     '%s carries no STABLE/IMMUTABLE keyword (PostgREST would force a read-only txn)',
     (name) => {
       expect(HEADERS[name]).not.toMatch(/\n\s*(STABLE|IMMUTABLE)\s*\n/);
@@ -305,9 +310,15 @@ describe('migrate_167 lesson: anything that calls _community_rate_check is VOLAT
     );
   });
 
+  test('community_dimension_recent (part A2) sits on the same house rail', () => {
+    expect(BODIES.community_dimension_recent).toContain(
+      "_community_rate_check(v_uid, 'dimension_recent', 120, 120, interval '1 hour')",
+    );
+  });
+
   test('the acceptance check re-asserts provolatile against pg_proc', () => {
     for (const name of ['community_hub_summary', 'community_board',
-      'community_find_people', 'community_dimensions_me']) {
+      'community_find_people', 'community_dimensions_me', 'community_dimension_recent']) {
       expect(ACCEPTANCE).toContain(`${name} is not VOLATILE`);
     }
   });
@@ -396,6 +407,8 @@ describe('minors are excluded from every count, sample, roster and board row', (
     ['community_board', 1],
     ['community_hub_summary', 3],
     ['community_find_people', 2],
+    ['community_dimension_recent', 1],
+    ['community_group_get', 1],
   ])('%s carries is_minor = false on all %i of its query paths', (name, n) => {
     expect((BODIES[name].match(/is_minor = false/g) || [])).toHaveLength(n);
   });
@@ -513,6 +526,7 @@ describe('blocks and visibility are checked on every new query path', () => {
     ['community_board', 1],
     ['community_hub_summary', 3],
     ['community_find_people', 2],
+    ['community_dimension_recent', 1],
   ])('%s calls _community_is_blocked on all %i of its query paths', (name, n) => {
     expect((BODIES[name].match(/_community_is_blocked/g) || [])).toHaveLength(n);
   });
@@ -571,6 +585,19 @@ describe('migrate_169 lesson: the ranking CTEs alias the derived table', () => {
     expect(BODIES.community_dimension).toContain('ORDER BY p.created_at DESC, p.user_id DESC');
     expect(BODIES._community_cohort_stats).toContain('ORDER BY trained_today DESC, p.user_id');
   });
+
+  test('community_dimension_recent (part A2) never writes the phantom `x` alias either', () => {
+    // It has no computed rank to page, so it never needed the array/unnest
+    // 'u.x' idiom community_board/community_find_people use in the first
+    // place - it pages real table columns the plain community_feed way.
+    const body = BODIES.community_dimension_recent;
+    expect(body).not.toContain('SELECT x.*,');
+    expect(body).not.toContain('unnest(v_items)');
+    expect(body).toContain('(v_ts IS NULL OR (r.created_at, r.id) < (v_ts, v_id))');
+    expect(body).toContain('ORDER BY r.created_at DESC, r.id DESC');
+    expect(body).toContain('public._community_cursor_parts(_cursor)');
+    expect(body).toContain('public._community_cursor_of(v_lts, v_lid)');
+  });
 });
 
 describe('the retired programme layer stays retired', () => {
@@ -585,6 +612,110 @@ describe('the retired programme layer stays retired', () => {
     const progAt = BODIES.community_dimensions_me.indexOf('community_programme_uses');
     expect(progAt).toBeGreaterThan(-1);
     expect(BODIES.community_dimensions_me.slice(progAt)).not.toContain('_community_cohort_stats');
+  });
+
+  test('community_dimension_recent (part A2) reads no programme table either', () => {
+    expect(BODIES.community_dimension_recent).not.toContain('community_programme_uses');
+    expect(BODIES.community_dimension_recent).not.toContain('community_programmes');
+  });
+});
+
+describe('PART A2: community_dimension_recent (RECENT stories) and the community_group_get alignment', () => {
+  const recent = BODIES.community_dimension_recent;
+  const groupGet = BODIES.community_group_get;
+
+  test('a NULL _key is invalid_input, checked before any real work', () => {
+    const at = recent.indexOf("IF _key IS NULL THEN");
+    expect(at).toBeGreaterThan(-1);
+    expect(recent.slice(at, at + 80)).toContain("RAISE EXCEPTION USING message = 'invalid_input'");
+    // The key check comes before the rate check and the kind dispatch, so a
+    // malformed call fails fast rather than spending budget or falling
+    // through to the wrong branch.
+    expect(at).toBeLessThan(recent.indexOf('_community_rate_check'));
+    expect(at).toBeLessThan(recent.indexOf("_kind NOT IN"));
+  });
+
+  test("'programme' and any kind outside the five cohorts get the empty shape, never invalid_input", () => {
+    expect(recent).toContain(
+      "IF _kind NOT IN ('gym', 'area', 'style', 'discipline', 'age_band') THEN",
+    );
+    const at = recent.indexOf("IF _kind NOT IN ('gym', 'area', 'style', 'discipline', 'age_band') THEN");
+    expect(recent.slice(at, at + 200)).toContain("jsonb_build_object('rows', '[]'::jsonb, 'cursor', NULL)");
+    // Five kinds only - never community_dimension's six ('programme' is
+    // deliberately not in this list, so it falls into the branch above).
+    expect(recent).not.toContain("'programme'");
+  });
+
+  test('age-band reciprocity is byte-identical in shape to community_dimension\'s gate', () => {
+    expect(recent).toContain('SELECT tp_age_band INTO v_my_age_band');
+    expect(recent).toContain('IF v_my_age_band IS NULL OR v_my_age_band <> _key THEN');
+    expect(BODIES.community_dimension).toContain('IF v_my_age_band IS NULL OR v_my_age_band <> _key THEN');
+  });
+
+  test('the cohort membership OR-chain matches _community_cohort_stats/community_dimension exactly', () => {
+    const chain = "(_kind = 'style'      AND _key = ANY (p.styles))\n"
+      + "     OR (_kind = 'gym'        AND p.gym_key = _key)\n"
+      + "     OR (_kind = 'area'       AND p.area_key = _key)\n"
+      + "     OR (_kind = 'discipline' AND _key = ANY (p.discipline_keys))\n"
+      + "     OR (_kind = 'age_band'   AND p.tp_age_band = _key)";
+    expect(recent).toContain(chain);
+  });
+
+  test('posts are limited to exactly the community_discover_posts visibility predicate', () => {
+    expect(recent).toContain("r.status = 'visible'");
+    expect(recent).toContain("r.visibility = 'public'");
+    expect(recent).toContain("p.status = 'active' AND p.visibility = 'public' AND p.is_minor = false");
+    expect(recent).toContain(
+      'AND NOT EXISTS (\n'
+      + '        SELECT 1 FROM public.community_mutes m\n'
+      + '        WHERE m.muter_id = v_uid AND m.muted_id = r.author_id)',
+    );
+    // Never the caller's own post: same "never yourself" rule
+    // community_dimension's own roster query already applies.
+    expect(recent).toContain('p.user_id <> v_uid');
+  });
+
+  test('rows carry the exact {post, author, my_reaction} shape community_feed returns, wrapped as {rows, cursor}', () => {
+    expect(recent).toContain("'post',   public._community_post_json(page.rec)");
+    expect(recent).toContain("'author', public._community_profile_card(page.author_id, v_uid)");
+    expect(recent).toContain("'my_reaction', EXISTS (");
+    expect(recent).toContain("RETURN jsonb_build_object(\n    'rows', coalesce(v_rows, '[]'::jsonb),");
+    // The envelope key is 'rows' (the community_board-style paged-read
+    // name), never 'posts' (the feed family's) - the contract is explicit
+    // that this differs deliberately from community_feed's own envelope.
+    expect(recent).not.toContain("'posts',");
+  });
+
+  test("community_group_get's member_count is computed on community_hub_summary's predicate, not the stored counter", () => {
+    expect(groupGet).toContain(
+      'SELECT count(*) INTO v_member_count\n'
+      + '  FROM public.community_group_members gm\n'
+      + '  JOIN public.community_profiles p ON p.user_id = gm.user_id\n'
+      + "  WHERE gm.group_id = _group_id AND gm.state = 'member'\n"
+      + "    AND p.status = 'active' AND p.is_minor = false;",
+    );
+    expect(groupGet).toContain("v_out := v_out || jsonb_build_object('member_count', v_member_count);");
+    // The override happens before the existing invite-only stripping, so a
+    // non-member of an invite-only group still loses the key exactly as
+    // before - the override never re-adds what the strip removes.
+    expect(groupGet.indexOf('v_member_count')).toBeLessThan(
+      groupGet.indexOf("v_out := v_out - 'member_count' - 'blurb';"),
+    );
+    // Deliberately NOT block-aware, unlike community_hub_summary's figure
+    // (this card is shown to every member, and to a non-member browsing an
+    // open group, not only the caller - see the contract doc).
+    expect(groupGet).not.toContain('_community_is_blocked');
+    // Signature is unchanged: CREATE OR REPLACE only, never the DROP-first
+    // dance part 7/10 use for a real (parameter-list) signature change.
+    expect(SQL).toContain('CREATE OR REPLACE FUNCTION public.community_group_get(_group_id uuid)');
+    expect(CODE).not.toContain("p.proname = 'community_group_get'");
+  });
+
+  test("community_group_get's aligned predicate textually matches community_hub_summary's group block", () => {
+    expect(BODIES.community_hub_summary).toContain(
+      "AND p1.status = 'active' AND p1.is_minor = false\n",
+    );
+    expect(groupGet).toContain("AND p.status = 'active' AND p.is_minor = false;");
   });
 });
 

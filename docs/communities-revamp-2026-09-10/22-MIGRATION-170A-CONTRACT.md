@@ -128,13 +128,57 @@ see. The `member_count`/`trained_today_count` figures are deliberately NOT reduc
 cohort look smaller than it is); they stay blocked-only, matching `community_dimension`.
 
 Lead ruling 6, 2026-09-10: the `member_count` divergence between this RPC (computed, minor- and block-aware) and
-`community_group_get` (the stored `community_groups.member_count`, which counts everyone) is knowingly left in
-place for part A. Part B (phase 3, which touches groups anyway) aligns `community_group_get` to the computed
-figure. Until then, do not compare the two numbers in the UI.
+`community_group_get` (the stored `community_groups.member_count`, which counts everyone) was originally left in
+place for part A, with part B (phase 3) named to align it later. **Superseded, part A2**: `community_group_get`
+now computes its own `member_count` too (active, non-minor members of the group; see its own note below), so the
+two never disagree on who counts, from part A2 onward rather than only once part B lands. One difference remains,
+deliberately: this RPC's figure is also reduced by the caller's own blocks (a face the caller would actually see
+in their own Hub sample), while `community_group_get`'s is not — that card is shown to every member of the group,
+and to a non-member browsing an open one, not only the caller, so a personal block list must never change the
+group's own stated size. A caller who has blocked a member of a group they are in may therefore still see a
+marginally lower figure here than on the group page itself; that is expected, not a bug to chase.
 
 One call for the whole Hub instead of one per cohort
 (21-PHASE1-SPEC.md section 5). No minor-caller gate beyond the per-row `is_minor = false` filters — no existing
 Community read blocks a minor caller outright.
+
+## community_dimension_recent(_kind, _key, _cursor?, _limit?) — NEW (part A2)
+
+Backs the cohort page's RECENT eyebrow (`21-PHASE1-SPEC.md` section 3, the RECENT correction: `community_dimension`
+carries no stories, only `label`, `count`, `people` and `cursor`). Same five `_kind` values as the headline cohorts
+(`gym`, `area`, `style`, `discipline`, `age_band`) and the same membership rules as `community_dimension`, including
+the age-band reciprocity gate: a caller who does not share their own band, or asks for a band that is not their
+own, gets the empty shape below, never another band's stories. `'programme'` and any kind this RPC does not
+recognise ALSO get the empty shape — never `invalid_input` — because this RPC supports five kinds, not
+`community_dimension`'s six, and a stale or future kind value should degrade the RECENT section honestly rather
+than fail the whole cohort page. A NULL `_key` is still `invalid_input` (every kind needs one).
+
+Posts are exactly what `community_discover_posts` (migrate_160) already lets the viewer see: public visibility,
+active non-minor authors, never blocked either way, never muted by the viewer, never hidden by moderation. Never a
+minor's post; never a followers-only post; never the caller's own post (same "never yourself" rule
+`community_dimension`'s roster already applies). Newest first, keyset-paged the plain `community_feed` way
+((`created_at`, `id`) tuple comparison) — no in-memory rank, so none of `community_board`/`community_find_people`'s
+array/unnest `u.x` idiom (the migrate_169 lesson) applies here.
+
+Envelope: `{ rows: [ {post, author, my_reaction} ], cursor }` — the same per-row shape `community_feed` returns, so
+the client's existing `normalisePostRow` (`CommunityHubScreen.js`) reads a row from this RPC exactly as it reads
+one from `community_feed`, `community_discover_posts` or `community_group_feed`. Note the envelope key is `rows`,
+not `posts`: this RPC follows the `community_board`-style envelope naming for a paged read, not the feed family's.
+
+Rate-railed at 120/hour (action `dimension_recent`), same house rail as `community_board`/`community_find_people`/
+`community_hub_summary`/`community_dimensions_me`. VOLATILE (it calls `_community_rate_check`, which writes —
+migrate_167's lesson).
+
+## community_group_get(_group_id) — signature unchanged, member_count aligned (part A2)
+
+`member_count` is now computed (active, non-minor members with `state = 'member'`) instead of returned from the
+stored `community_groups.member_count` counter, which counted every member row regardless of status or age. Same
+predicate `community_hub_summary`'s group block uses, so the two RPCs never disagree about who counts (see the
+Lead ruling 6 note above — this is that alignment, pulled forward from the originally-named part B into part A2).
+NOT reduced by the caller's own blocks, unlike `community_hub_summary`'s figure: this card is shown to every
+member of the group, and to a non-member browsing an open one (Design 60 section 3), not only the caller, so a
+personal block list must never change the group's own stated size. Everything else about the RPC — its signature,
+the invite-only stripping of `member_count`/`blurb` for a non-member, `my_role`/`my_state` — is unchanged.
 
 ## community_find_people(_mode, _cursor?, _limit?, _filters?, _discipline?)
 
@@ -145,9 +189,11 @@ New trailing param: `_discipline text DEFAULT NULL`. A **hard filter** (narrows 
 ## What did not change
 
 `delete_user_data()` — no change (no new table; `community_profiles` is already deleted whole-row, taking
-`discipline_keys` with it). Groups (`community_group_list_mine`, `community_group_get`, etc.) — unchanged; Part A
-only reads group membership for the Hub summary. No new consent type, no new notification category, no change to
-any existing band/reason list (`TP_AGE_BANDS`, `CONNECT_REASONS`, etc.).
+`discipline_keys` with it). Groups (`community_group_list_mine`, etc.) — unchanged; Part A only reads group
+membership for the Hub summary. `community_group_get` DOES change, in part A2 (its `member_count` aligned to
+`community_hub_summary`'s predicate — see its own section above); signature and every other field stay the same.
+No new consent type, no new notification category, no change to any existing band/reason list (`TP_AGE_BANDS`,
+`CONNECT_REASONS`, etc.).
 
 ## Client-side, not this migration
 

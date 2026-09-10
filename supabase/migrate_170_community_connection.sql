@@ -2129,3 +2129,242 @@ BEGIN
 
   RAISE NOTICE 'migrate_170 part A acceptance: OK';
 END $$;
+
+-- ─── PART A2: community_dimension_recent + community_group_get alignment ─
+--
+-- Additive to Part A above (unchanged), same file, same "run against
+-- production" gate (the header's "Applied remotely: NO" still covers
+-- everything below). Authority: `docs/communities-revamp-2026-09-10/
+-- 21-PHASE1-SPEC.md` section 3 (the RECENT correction, lane P1-B STOP
+-- 2026-09-10: "community_dimension returns no stories, only label, count,
+-- people and cursor; this section is built in phase 2 on a new
+-- community_dimension_recent RPC added to migration 170 as part A2");
+-- `20-BLUEPRINT.md` section 3 (cohort page item 3, "Recent: shared moments
+-- from cohort members whose audience is Everyone") and section 9's
+-- cohort-page RECENT eyebrow. `22-MIGRATION-170A-CONTRACT.md` documents
+-- both pieces below for the client lane.
+--
+-- 1. community_dimension_recent(_kind, _key, _cursor, _limit): the RECENT
+--    section's data source. Same cohort membership test community_
+--    dimension and _community_cohort_stats already use for style/gym/
+--    area/discipline/age_band (active, non-minor, public profiles, never
+--    the caller, never a blocked pair), the same age-band reciprocity
+--    gate community_dimension uses, and the same empty shape community_
+--    dimension returns for 'programme' - extended here to also cover any
+--    kind this function does not recognise, since it supports five kinds,
+--    not community_dimension's six ('programme' has no posts of its own
+--    to page; the layer is retired, migrate_164). Posts are filtered to
+--    exactly what community_discover_posts (migrate_160) already lets the
+--    viewer see: status = 'visible', visibility = 'public', author
+--    active/public/non-minor, never blocked either way, never muted by
+--    the viewer - never a minor's post, never a followers-only post.
+--    Newest first, keyset-paged the same (created_at, id) way community_
+--    feed/community_discover_posts/community_group_feed already page (a
+--    straight indexed ORDER BY needs none of the array/unnest 'u.x' idiom
+--    community_board/community_find_people use for an in-memory metric
+--    rank - migrate_169's lesson does not apply to a query ordered on
+--    real indexed columns). Rows carry the exact {post, author,
+--    my_reaction} shape community_feed returns, wrapped as {rows, cursor}
+--    so the client's existing normalisePostRow (CommunityHubScreen.js)
+--    reads a row of that shape regardless of which RPC produced it.
+--    VOLATILE and rate-railed at 120/hour (action 'dimension_recent'),
+--    the same rail every other cohort read in this file carries - it
+--    calls _community_rate_check, so migrate_167's lesson applies: no
+--    STABLE/IMMUTABLE keyword.
+-- 2. community_group_get re-issued: member_count is now computed on the
+--    same predicate community_hub_summary's group block already uses
+--    (active, non-minor - which alone also means non-suspended and
+--    non-restricted, since community_profiles.status's CHECK is only
+--    'active'/'restricted'/'suspended'), replacing the raw stored
+--    community_groups.member_count counter, which counts every member
+--    row regardless of status or age. Lead ruling 6, 2026-09-10 (this
+--    file's own header, community_hub_summary section) named this a
+--    part B (phase 3) job; it is pulled forward into part A2 instead, so
+--    the two RPCs never disagree about who counts from the moment either
+--    ships, not only once part B lands. Signature unchanged (_group_id
+--    uuid only) - CREATE OR REPLACE, not the DROP-first dance part 7/10
+--    above use, because no parameter list changes. Unlike community_hub_
+--    summary's figure, this one is NOT reduced by the caller's own
+--    blocks: the card is shown to every member of an open group, and to
+--    a non-member browsing one (Design 60 section 3), not only the
+--    caller, so a personal block list must never change the group's own
+--    stated size - only community_hub_summary's per-viewer sample and
+--    count (a face the caller would actually see) does that.
+
+CREATE OR REPLACE FUNCTION public.community_dimension_recent(
+  _kind text, _key text, _cursor text DEFAULT NULL, _limit int DEFAULT 20)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_uid   uuid := public._community_caller();
+  v_lim   int  := public._community_limit(_limit);
+  v_ts    timestamptz;
+  v_id    uuid;
+  v_rows  jsonb;
+  v_lts   timestamptz;
+  v_lid   uuid;
+  v_my_age_band text;
+BEGIN
+  IF _key IS NULL THEN
+    RAISE EXCEPTION USING message = 'invalid_input';
+  END IF;
+
+  PERFORM public._community_rate_check(v_uid, 'dimension_recent', 120, 120, interval '1 hour');
+
+  -- part A2: five recognised kinds, not community_dimension's six -
+  -- 'programme' and anything else this function does not recognise get
+  -- the same empty shape community_dimension returns for 'programme',
+  -- never an error, so a stale or future kind value degrades honestly
+  -- instead of failing the whole cohort page's RECENT section.
+  IF _kind NOT IN ('gym', 'area', 'style', 'discipline', 'age_band') THEN
+    RETURN jsonb_build_object('rows', '[]'::jsonb, 'cursor', NULL);
+  END IF;
+
+  -- part A2 (blueprint section 3): age_band is reciprocal, byte-identical
+  -- to community_dimension's own gate - a caller who does not share their
+  -- own band, or asks for a band that is not their own, gets the same
+  -- empty shape, never another band's stories.
+  IF _kind = 'age_band' THEN
+    SELECT tp_age_band INTO v_my_age_band
+    FROM public.community_profiles WHERE user_id = v_uid;
+    IF v_my_age_band IS NULL OR v_my_age_band <> _key THEN
+      RETURN jsonb_build_object('rows', '[]'::jsonb, 'cursor', NULL);
+    END IF;
+  END IF;
+
+  SELECT c_ts, c_id INTO v_ts, v_id FROM public._community_cursor_parts(_cursor);
+
+  -- part A2: the exact community_discover_posts visibility predicate,
+  -- ANDed with the same cohort membership test _community_cohort_stats/
+  -- community_dimension use.
+  WITH page AS (
+    SELECT r AS rec, r.created_at AS created_at, r.id AS id, r.author_id AS author_id
+    FROM public.community_posts r
+    JOIN public.community_profiles p ON p.user_id = r.author_id
+    WHERE r.status = 'visible'
+      AND r.visibility = 'public'
+      AND p.status = 'active' AND p.visibility = 'public' AND p.is_minor = false
+      AND p.user_id <> v_uid
+      AND NOT public._community_is_blocked(v_uid, p.user_id)
+      AND NOT EXISTS (
+        SELECT 1 FROM public.community_mutes m
+        WHERE m.muter_id = v_uid AND m.muted_id = r.author_id)
+      AND (
+        (_kind = 'style'      AND _key = ANY (p.styles))
+     OR (_kind = 'gym'        AND p.gym_key = _key)
+     OR (_kind = 'area'       AND p.area_key = _key)
+     OR (_kind = 'discipline' AND _key = ANY (p.discipline_keys))
+     OR (_kind = 'age_band'   AND p.tp_age_band = _key)
+      )
+      AND (v_ts IS NULL OR (r.created_at, r.id) < (v_ts, v_id))
+    ORDER BY r.created_at DESC, r.id DESC
+    LIMIT v_lim
+  )
+  SELECT
+    coalesce(jsonb_agg(jsonb_build_object(
+        'post',   public._community_post_json(page.rec),
+        'author', public._community_profile_card(page.author_id, v_uid),
+        'my_reaction', EXISTS (
+          SELECT 1 FROM public.community_reactions rr
+          WHERE rr.post_id = page.id AND rr.user_id = v_uid))
+      ORDER BY page.created_at DESC, page.id DESC), '[]'::jsonb),
+    (array_agg(page.created_at ORDER BY page.created_at ASC, page.id ASC))[1],
+    (array_agg(page.id         ORDER BY page.created_at ASC, page.id ASC))[1]
+  INTO v_rows, v_lts, v_lid
+  FROM page;
+
+  RETURN jsonb_build_object(
+    'rows', coalesce(v_rows, '[]'::jsonb),
+    'cursor', public._community_cursor_of(v_lts, v_lid));
+END $$;
+
+REVOKE ALL ON FUNCTION public.community_dimension_recent(text, text, text, int) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.community_dimension_recent(text, text, text, int) TO authenticated;
+
+-- part A2: community_group_get re-issued. Body identical to migrate_165's
+-- version except for the member_count override marked part A2 below.
+
+CREATE OR REPLACE FUNCTION public.community_group_get(_group_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_uid uuid := public._community_caller();
+  v_g   public.community_groups%ROWTYPE;
+  v_role text;
+  v_out jsonb;
+  v_member_count int; -- part A2
+BEGIN
+  PERFORM public._community_require_profile(v_uid, false);
+  SELECT * INTO v_g FROM public.community_groups WHERE id = _group_id;
+  IF NOT FOUND THEN RAISE EXCEPTION USING message = 'not_found'; END IF;
+
+  v_role := public._community_group_role(_group_id, v_uid);
+  v_out := public._community_group_card(v_g);
+
+  -- part A2 (lead ruling 6 alignment, pulled forward from part B): the
+  -- card's member_count is the stored community_groups.member_count
+  -- counter, which counts every member row - minors, suspended and
+  -- restricted profiles included. community_hub_summary's group block
+  -- already computes member_count on active/non-minor members only (its
+  -- own reviewer pass, 2026-09-10); this overrides the card's figure with
+  -- the same predicate so the two RPCs never disagree about who counts.
+  -- Not reduced by the caller's own blocks (see the part A2 header note
+  -- above): this card is shown to every member, and to a non-member
+  -- browsing an open group, not only the caller.
+  SELECT count(*) INTO v_member_count
+  FROM public.community_group_members gm
+  JOIN public.community_profiles p ON p.user_id = gm.user_id
+  WHERE gm.group_id = _group_id AND gm.state = 'member'
+    AND p.status = 'active' AND p.is_minor = false;
+  v_out := v_out || jsonb_build_object('member_count', v_member_count);
+
+  -- Design 60 §3: name and count visible to all for an open group, name
+  -- only for an invite group, unless the caller is already a member.
+  IF v_role IS NULL AND v_g.access = 'invite' THEN
+    v_out := v_out - 'member_count' - 'blurb';
+  END IF;
+  RETURN v_out || jsonb_build_object('my_role', v_role, 'my_state',
+    (SELECT state FROM public.community_group_members WHERE group_id = _group_id AND user_id = v_uid));
+END $$;
+
+REVOKE ALL ON FUNCTION public.community_group_get(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.community_group_get(uuid) TO authenticated;
+
+-- ─── Part A2 acceptance check (read-only) ────────────────────────────────
+
+DO $$
+DECLARE v_ok boolean;
+BEGIN
+  IF to_regprocedure('public.community_dimension_recent(text, text, text, int)') IS NULL THEN
+    RAISE EXCEPTION 'acceptance failed: community_dimension_recent missing';
+  END IF;
+
+  SELECT p.provolatile = 'v' INTO v_ok
+  FROM pg_proc p WHERE p.oid = to_regprocedure(
+    'public.community_dimension_recent(text, text, text, int)');
+  IF NOT coalesce(v_ok, false) THEN
+    RAISE EXCEPTION 'acceptance failed: community_dimension_recent is not VOLATILE';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'community_dimension_recent'
+      AND (NOT p.prosecdef OR NOT ('search_path=public, pg_temp' = ANY (p.proconfig)))
+  ) THEN
+    RAISE EXCEPTION 'acceptance failed: community_dimension_recent is missing SECURITY DEFINER or its pinned search_path';
+  END IF;
+
+  IF NOT has_function_privilege('authenticated',
+      'public.community_dimension_recent(text, text, text, int)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'acceptance failed: community_dimension_recent is not executable by authenticated';
+  END IF;
+
+  RAISE NOTICE 'migrate_170 part A2 acceptance: OK';
+END $$;
