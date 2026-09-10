@@ -241,9 +241,10 @@ when this ships: a founder-side check at submission, already flagged in
   measurements, food, photos or "cutting" framing; the keyword filter for
   harmful body and eating content applies to notes and group names.
 - Under calm mode or an open ED flag: nothing is sent (counters, sessions,
-  PR moments), and the person's physique-division cohort pages (Men's
-  physique, Classic physique, Bikini, Wellness, Figure, Bodybuilding) are
-  withheld from view for them, the same way the before/after card is
+  PR moments), and the person's physique-division cohort pages (the seven
+  keys bodybuilding, mens_physique, classic_physique, womens_physique,
+  figure, bikini, wellness; Q1 added Women's physique) are withheld from
+  view for them, the same way the before/after card is
   withheld. A tightening of an existing suppression, never a loosening;
   surfaced to the founder as Q1b because it touches the ED-safety system.
 - Minors: never in cohorts, boards, groups or age bands (existing rule);
