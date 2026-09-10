@@ -119,7 +119,7 @@ available (gym), else "23 members". Then:
 - Other scopes (no board yet): `Eyebrow` PEOPLE; the dimension's people as
   `PersonRow`s with the caption line (gym or style) and no dots.
 - `Eyebrow` RECENT: the dimension's recent stories as `ActivityItemRow`s
-  (the RPC already returns them).
+  (CORRECTION, lane P1-B STOP 2026-09-10: `community_dimension` returns no stories, only label, count, people and cursor; this section is built in phase 2 on a new `community_dimension_recent` RPC added to migration 170 as part A2; the screen carries a header comment until then).
 Cold start: your own row and the line "No one else here is sharing yet."
 First load: `SkeletonRow` ×5.
 
@@ -135,7 +135,7 @@ Join/Request `Button` primary in place of the feed. No `h2` name in the
 body: the header carries it.
 
 **Profile**: avatar 56 (`ProfileAvatarMark`), name `bodyStrong`, handle
-`bodySm` `textMuted`, one `bodySm` `textSecondary` line of shared facts
+`bodySm` `textMuted`, the bio in `bodySm` `textSecondary` (three lines, when present), one `bodySm` `textSecondary` line of shared facts
 (gym · place · styles, only what the card carries and the person shows);
 own progress strip as today (others' strips arrive in phase 2); the
 existing Follow / Connect / Message row; `Eyebrow` ACTIVITY with
