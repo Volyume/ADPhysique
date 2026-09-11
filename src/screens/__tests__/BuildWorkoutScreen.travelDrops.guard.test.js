@@ -22,6 +22,15 @@
  * cascade. The pins below are updated to that shape; what they pin
  * (lazy require, capability checked first, exactly one drop branch) is
  * unchanged.
+ *
+ * REVISED A THIRD TIME (fresh-eyes review of 46961f5, same day):
+ * NAME-based matching had its own hole - a custom exercise can share a
+ * canonical row's display name, letting the custom row mask the
+ * canonical row's real removal. Matching moved to `id` (unique per row;
+ * names are not). The classifier call is now wrapped in try/catch (a
+ * throw counts as a preference drop, matching the screen's own fail-safe
+ * before this landing). The screen also now names an UNFILLED slot in
+ * the same toast, not just a dropped one - pinned here too.
  */
 const fs = require('fs');
 const path = require('path');
@@ -57,21 +66,24 @@ describe('T1-23: the quick session\'s drops are counted and classified', () => {
     );
   });
 
-  test('classification lives in quickSession.js: a lazy capabilityBlockReason read, capability checked first, exactly one drop branch', () => {
+  test('classification lives in quickSession.js: a lazy capabilityBlockReason read inside try/catch, capability checked first, exactly one drop branch', () => {
     const body = explainQuickSessionDropsBody();
     expect(body).toMatch(/require\('\.\/capability\/resolve'\)/);
     expect(body).toMatch(
-      /if \(capabilityBlockReason\(capabilityState, item\.exercise\)\) capabilityDrops \+= 1;\s*\n\s*else preferenceDrops \+= 1;/,
+      /try \{[\s\S]{0,600}if \(capabilityBlockReason\(capabilityState, item\.exercise\)\) capabilityDrops \+= 1;\s*\n\s*else preferenceDrops \+= 1;[\s\S]{0,80}catch \(_e\) \{\s*\n\s*preferenceDrops \+= 1;/,
     );
-    // Exactly one of each - classification never adds a second silent path.
+    // Exactly one of each ORDINARY branch, plus the catch's own fallback
+    // increment - classification never adds a second silent path beyond
+    // the documented fail-safe.
     expect((body.match(/capabilityDrops \+= 1/g) ?? []).length).toBe(1);
-    expect((body.match(/preferenceDrops \+= 1/g) ?? []).length).toBe(1);
+    expect((body.match(/preferenceDrops \+= 1/g) ?? []).length).toBe(2);
   });
 
-  test('the classification checks library membership by NAME, not a per-slot winner comparison (immune to the chosen-name cascade)', () => {
+  test('the classification checks library membership by ID, not NAME and not a per-slot winner comparison (immune to both the chosen-name cascade and a custom/canonical name collision)', () => {
     const body = explainQuickSessionDropsBody();
-    expect(body).toMatch(/filteredNames\.has\(item\.exercise\.name\)/);
-    expect(body).toMatch(/const filteredNames = new Set\(/);
+    expect(body).toMatch(/filteredIds\.has\(item\.exercise\.id\)/);
+    expect(body).toMatch(/const filteredIds = new Set\(/);
+    expect(body).not.toMatch(/filteredNames/);
     // The generator runs exactly once here (over `all`) - no second
     // buildQuickSession call over `filtered` to compare winners against.
     expect((body.match(/buildQuickSession\(/g) ?? []).length).toBe(1);
@@ -95,6 +107,13 @@ describe('T1-23: the quick session\'s drops are counted and classified', () => {
     expect(body).toMatch(/toast\.show\(dropLines\.join\(' '\), \{ variant: 'info', duration: 5000 \}\);/);
     // Only shown when at least one class is non-zero.
     expect(body).toMatch(/if \(dropLines\.length\) \{/);
+  });
+
+  test('fresh-eyes review, 2026-09-11: an unfilled slot gets its own toast line, using MUSCLE_DISPLAY_NAMES (the group slot reads "shoulders")', () => {
+    const body = applyQuickSessionBody();
+    expect(body).toMatch(/if \(unfilled\.length\) \{/);
+    expect(body).toMatch(/Nothing fitted your kit for \$\{unfilledLabels\.join\(', '\)\}\.`/);
+    expect(body).toMatch(/slotKey === 'shoulders' \? 'shoulders' : \(MUSCLE_DISPLAY_NAMES\[slotKey\] \|\| slotKey\)/);
   });
 
   test('setExercises still runs unconditionally before the toast (the build itself never blocks on the count)', () => {

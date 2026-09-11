@@ -10,6 +10,12 @@
  * blank-workout path, and a committing button that says what it does.
  * Added: the multi-select checkbox contract (was single-select radio) and
  * the two-preset row ruling 7 adds.
+ *
+ * REVISED (fresh-eyes review of 46961f5, 2026-09-11): every chip/preset
+ * press now also marks quickKitTouchedRef true (so the remembered-kit
+ * read, in flight when the sheet opens, cannot stomp a tap that lands
+ * before it resolves), and each preset now carries a DERIVED selected
+ * state instead of none at all.
  */
 import fs from 'fs';
 import path from 'path';
@@ -29,20 +35,30 @@ describe('BuildWorkoutScreen quick session equipment sheet guard', () => {
     // (Haptics rollout, docs/ux-world-class-audit-2026-07-09/
     // DECISIONS-2026-07-09.md).
     expect(source).toMatch(
-      /<Chip[\s\S]*selected=\{checked\}[\s\S]*accessibilityRole="checkbox"[\s\S]*onPress=\{\(\) => \{\s*haptics\.selection\(\);\s*setQuickKit\(prev => \(prev\.includes\(kind\.id\)/,
+      /<Chip[\s\S]*selected=\{checked\}[\s\S]*accessibilityRole="checkbox"[\s\S]*onPress=\{\(\) => \{\s*haptics\.selection\(\);\s*quickKitTouchedRef\.current = true;\s*setQuickKit\(prev => \(prev\.includes\(kind\.id\)/,
     );
     expect(source).not.toMatch(/accessibilityRole="radio"/);
     expect(source).not.toMatch(/styles\.travelOverlay/);
     expect(source).not.toMatch(/styles\.travelOpt[\],)]/);
   });
 
-  test('ruling 7: a preset row of two Chips (Full gym; Nothing, bodyweight only) ahead of the six kind chips', () => {
+  test('ruling 7: a preset row of two Chips (Full gym; Nothing, bodyweight only) ahead of the six kind chips, each with a derived selected state', () => {
     expect(source).toMatch(/import \{[\s\S]*KIT_PRESETS[\s\S]*\} from '\.\.\/lib\/quickSession';/);
     expect(source).toMatch(/<View style=\{styles\.kitPresetRow\}>\s*\{KIT_PRESETS\.map\(preset =>/);
     const presetAt = source.indexOf('styles.kitPresetRow');
     const kindsAt = source.indexOf('QUICK_KIT_KINDS.map(kind =>');
     expect(presetAt).toBeGreaterThan(-1);
     expect(kindsAt).toBeGreaterThan(presetAt);
+    // Fresh-eyes review: "Full gym" reads selected only when every kind is
+    // in the kit, "Nothing, bodyweight only" only when the kit is empty -
+    // both derived from set equality against the CURRENT quickKit, never a
+    // separate "last preset tapped" flag that could drift from a manual
+    // chip toggle.
+    expect(source).toMatch(
+      /const presetSelected = preset\.kit\.length === quickKit\.length\s*\n\s*&& preset\.kit\.every\(id => quickKit\.includes\(id\)\);/,
+    );
+    expect(source).toMatch(/<Chip[\s\S]{0,120}selected=\{presetSelected\}/);
+    expect(source).toMatch(/quickKitTouchedRef\.current = true;\s*\n\s*setQuickKit\(preset\.kit\);/);
   });
 
   test('ruling 7: the exact sheet copy, including the always-bodyweight sentence', () => {
@@ -77,5 +93,13 @@ describe('BuildWorkoutScreen quick session equipment sheet guard', () => {
     // it says what it does, and says "replace" when it would replace.
     expect(source).toMatch(/title=\{exercises\.length > 0 \? 'Replace with session' : 'Fill workout'\}[\s\S]{0,400}onPress=\{applyQuickSession\}/);
     expect(source).not.toMatch(/Travel \/ hotel gym/);
+  });
+
+  test('fresh-eyes review, 2026-09-11: the remembered-kit read cannot overwrite a tap that happened while it was in flight', () => {
+    // Reset to false on every sheet OPEN, before the read starts; the read
+    // applies its result only if nothing was touched in the meantime.
+    expect(source).toMatch(
+      /useEffect\(\(\) => \{\s*\n\s*if \(!showTravelModal \|\| !user\?\.id\) return;\s*\n\s*quickKitTouchedRef\.current = false;\s*\n\s*readQuickKit\(user\.id\)\.then\(\(stored\) => \{\s*\n\s*if \(!quickKitTouchedRef\.current\) setQuickKit\(stored\);\s*\n\s*\}\)\.catch\(\(\) => \{\}\);\s*\n\s*\}, \[showTravelModal, user\?\.id\]\);/,
+    );
   });
 });

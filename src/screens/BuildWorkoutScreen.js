@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform,
@@ -63,12 +63,20 @@ export default function BuildWorkoutScreen({ navigation }) {
   // D156: an equipment INVENTORY (which kinds the person has to hand
   // today), not a single-select profile - replaces travelEquipment.
   const [quickKit, setQuickKit] = useState([]);
+  // Fresh-eyes review, 2026-09-11: the remembered-kit read must not
+  // overwrite a tap that happened while it was still in flight. Reset to
+  // false whenever the sheet opens; every chip/preset press sets it true;
+  // the read only applies its result while it is still false.
+  const quickKitTouchedRef = useRef(false);
   // Ruling 8: read the remembered kit on sheet open (not on screen mount),
   // shape-checked and never throwing - first use resolves to the empty
   // kit (bodyweight only).
   useEffect(() => {
     if (!showTravelModal || !user?.id) return;
-    readQuickKit(user.id).then(setQuickKit).catch(() => {});
+    quickKitTouchedRef.current = false;
+    readQuickKit(user.id).then((stored) => {
+      if (!quickKitTouchedRef.current) setQuickKit(stored);
+    }).catch(() => {});
   }, [showTravelModal, user?.id]);
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
   // to keep the exercise-row map below cheap to re-render.
@@ -258,7 +266,7 @@ export default function BuildWorkoutScreen({ navigation }) {
       capabilityState = state?.capability ?? null;
       library = filterLibraryForGeneration(all, state).library;
     } catch (_) { /* additive: an intent read failure leaves the library whole */ }
-    const { items } = buildQuickSession({ library, kit: quickKit });
+    const { items, unfilled } = buildQuickSession({ library, kit: quickKit });
     const newItems = items.map(({ exercise, sets, repsMin, repsMax, restSeconds, restSuggested }) => ({
       key: `${exercise.id}-${Date.now()}-${Math.random()}`,
       exercise,
@@ -284,6 +292,15 @@ export default function BuildWorkoutScreen({ navigation }) {
     }
     if (preferenceDrops > 0) {
       dropLines.push(`${preferenceDrops === 1 ? '1 movement' : `${preferenceDrops} movements`} left out for your avoided movements.`);
+    }
+    // Fresh-eyes review, 2026-09-11: name an unfilled slot too, not just a
+    // dropped one - the group slot reads as "shoulders", every other slot
+    // by its own display name.
+    if (unfilled.length) {
+      const unfilledLabels = unfilled.map((slotKey) => (
+        slotKey === 'shoulders' ? 'shoulders' : (MUSCLE_DISPLAY_NAMES[slotKey] || slotKey)
+      ));
+      dropLines.push(`Nothing fitted your kit for ${unfilledLabels.join(', ')}.`);
     }
     if (dropLines.length) {
       toast.show(dropLines.join(' '), { variant: 'info', duration: 5000 });
@@ -495,14 +512,27 @@ export default function BuildWorkoutScreen({ navigation }) {
             : ''}
         </Text>
         <View style={styles.kitPresetRow}>
-          {KIT_PRESETS.map(preset => (
-            <Chip
-              key={preset.id}
-              label={preset.label}
-              accessibilityLabel={preset.label}
-              onPress={() => { haptics.selection(); setQuickKit(preset.kit); }}
-            />
-          ))}
+          {KIT_PRESETS.map(preset => {
+            // Fresh-eyes review, 2026-09-11: a derived selected state - set
+            // equality against the CURRENT kit, so it always reflects
+            // reality (never a separate "which preset was last tapped"
+            // flag that could drift from manual chip toggles).
+            const presetSelected = preset.kit.length === quickKit.length
+              && preset.kit.every(id => quickKit.includes(id));
+            return (
+              <Chip
+                key={preset.id}
+                label={preset.label}
+                selected={presetSelected}
+                accessibilityLabel={preset.label}
+                onPress={() => {
+                  haptics.selection();
+                  quickKitTouchedRef.current = true;
+                  setQuickKit(preset.kit);
+                }}
+              />
+            );
+          })}
         </View>
         <View style={styles.travelOptions} accessibilityLabel="Available equipment">
           {QUICK_KIT_KINDS.map(kind => {
@@ -516,6 +546,7 @@ export default function BuildWorkoutScreen({ navigation }) {
                 accessibilityRole="checkbox"
                 onPress={() => {
                   haptics.selection();
+                  quickKitTouchedRef.current = true;
                   setQuickKit(prev => (prev.includes(kind.id)
                     ? prev.filter(id => id !== kind.id)
                     : [...prev, kind.id]));

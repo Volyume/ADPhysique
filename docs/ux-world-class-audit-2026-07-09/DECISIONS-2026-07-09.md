@@ -6468,3 +6468,32 @@ D154 concern weekly plan generation and are untouched; the quick session
 is the explicit inventory D154 named as the right mechanism, scoped to one
 session. Spec: `docs/quick-session-equipment-2026-09-11/10-SPEC.md`;
 recon: `01-RECON.md` in the same folder.
+
+**Amended after the fresh-eyes review 2026-09-11:** the review of the
+first landing (46961f5) returned FIX FIRST; the lead's rulings on it, and
+one further ruling the same day correcting two details of the ranking
+order itself, are folded into `10-SPEC.md` rulings 4 and 6 directly
+rather than restated here. Summary, final order: exception-admitted rows
+sort last; kit before bodyweight; a rep-based row before a timed hold (a
+carry or a plank is only ever the fallback for a slot); tier is now a LOCAL order in `quickSession.js`
+(`QUICK_SESSION_TIER_ORDER`) that ranks specialist LAST, after niche -
+the reverse of canonicality.js's own order and never a change to
+canonicality.js or `tierRank()` itself - so a bodyweight-only session
+reaches for a niche single-leg RDL rather than a specialist Nordic curl;
+compound before isolation outranks movement-pattern reuse (a shoulder
+press after a chest press is ordinary programming, not a pattern to
+avoid - the pattern rule is a tiebreak among otherwise-equal candidates
+only); difficulty/name/id close out the tiebreak. The shoulders slot now pools
+all three shoulder muscles and ranks across the whole pool at once,
+rather than stopping at the first muscle with any candidate; a duration
+row (a plank, a hold, a carry) keeps its own seconds instead of the
+isolation rep scheme; drop classification moved from a name-based check
+to an id-based one (a custom exercise can share a canonical row's
+display name, which the name-based check let mask a genuine removal),
+wrapped in try/catch; the kettlebell exception list is now lazily
+required inside `quickSession.js` so importing it no longer pulls the
+whole corpus into BuildWorkoutScreen's static import graph; and the
+screen now names an unfilled slot in its toast, derives each preset
+chip's selected state from the current kit, and guards the
+remembered-kit read against overwriting a tap that lands before it
+resolves.

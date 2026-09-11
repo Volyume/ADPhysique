@@ -35,39 +35,82 @@ this spec touches the quick session only.
    `src/lib/travelMode.js` and its hand pools are retired (deleted) with
    this landing; nothing else imports it (`01-RECON.md` section 5).
 4. **Eight full-body slots, fixed order** (travel mode's own coverage,
-   kept): quads, hamstrings, chest, back, shoulders (side_delts, then
-   front_delts, then rear_delts: the first muscle with an eligible
-   candidate for the kit), biceps, triceps, abs. The corpus has no
-   bodyweight, kettlebell or suspension row with side_delts as its primary
-   muscle (a lateral raise needs external resistance), so the shoulders
-   slot falls through to front_delts, then rear_delts, rather than sitting
-   unfilled for those three kits. Per slot, candidates are rows with
-   `primaryMuscle` equal to the slot muscle, `equipmentCategory` in
-   kit-categories plus `bodyweight`, not
-   retired, and auto-eligible: `isAutoEligible(name)` from
-   `src/lib/exercise/canonicality.js`, PLUS, only when the kit includes
-   Kettlebells, the names in `KETTLEBELL_NEVER_AUTO_EXCEPTIONS`
-   (`src/lib/exercise/stylePools.js:121`) since the person has said they
-   have one. Never a `NEVER_AUTO` row otherwise. Ranking is a stable total
-   order: (a) kit equipment before bodyweight whenever the kit is
-   non-empty; (b) for quads, hamstrings, chest and back, compound before
-   isolation (`compoundIsolation`); for the other four slots no
-   preference; (c) tier rank (`tierRank(name)`: staple before common
-   before the rest); (d) difficulty ascending, null last (a quick session
-   is accessible); (e) name ascending. First candidate wins; a chosen name
-   is excluded from every later slot. A slot with no candidate is left
-   unfilled and reported (`unfilled`), never padded with an off-kit move.
+   kept): quads, hamstrings, chest, back, shoulders (side_delts,
+   front_delts and rear_delts pooled together and ranked as ONE group -
+   see the ranking order below, amended twice after the fresh-eyes review
+   of the first landing), biceps, triceps, abs. The corpus has no
+   bodyweight, kettlebell or suspension row with side_delts as its
+   primary muscle (a lateral raise needs external resistance), so pooling
+   the three shoulder muscles and ranking across the whole pool is what
+   keeps the slot filled for those three kits, rather than a single fixed
+   muscle sitting unfilled. Per slot, candidates are rows with
+   `primaryMuscle` equal to the slot muscle (every muscle in the group,
+   for the shoulders slot), `equipmentCategory` in kit-categories plus
+   `bodyweight`, not retired, and auto-eligible: `isAutoEligible(name)`
+   from `src/lib/exercise/canonicality.js`, PLUS, only when the kit
+   includes Kettlebells, the names in `KETTLEBELL_NEVER_AUTO_EXCEPTIONS`
+   (`src/lib/exercise/stylePools.js`, lazily required inside
+   `quickSession.js` so a static import of it never pulls the whole
+   corpus into every screen that imports the module) since the person has
+   said they have one. Never a `NEVER_AUTO` row otherwise. Ranking is a
+   stable total order, AMENDED TWICE after the fresh-eyes review of the
+   first landing (46961f5), FINAL ORDER: (0) a row admitted only through
+   the kettlebell `NEVER_AUTO` exception sorts LAST, after every
+   ordinarily-eligible row; (1) kit equipment before bodyweight whenever
+   the kit is non-empty; (1b) a rep-based row before a timed hold
+   (`exerciseType === 'duration'`: a carry, a plank), so a press or a curl
+   is chosen ahead of a carry whenever the kit offers one and a hold is
+   only ever the fallback; (2) tier rank - NOT canonicality.js's own
+   `tierRank()`, a LOCAL mapping in `quickSession.js`
+   (`QUICK_SESSION_TIER_ORDER`) built from `autoTier()`'s tier name:
+   staple, then common, then NICHE, then SPECIALIST (specialist last -
+   the reverse of canonicality.js's own staple/common/specialist/niche
+   order; canonicality.js and `tierRank()` are never edited, every other
+   consumer keeps the global order); (3) compound before isolation
+   (`compoundIsolation`) on quads, hamstrings, chest, back AND the
+   shoulders slot, no preference on biceps, triceps or abs; (4) a
+   movement pattern already used by an earlier chosen slot
+   (`row.movementPattern`) sorts after an unused one - a row with no
+   pattern is treated as unused, and this rule is a tiebreak among
+   otherwise-equal candidates only (reached solely when two rows already
+   tie on tier and on the compound preference), never a veto on a second
+   push - a shoulder press after a chest press is ordinary full-body
+   programming; (5) difficulty ascending (`Number.isFinite(difficulty) ?
+   difficulty : Infinity`); (6) `String(name ?? '')` ascending; (7)
+   `String(id ?? '')` ascending as the final tiebreak, so the order is
+   total. First candidate wins; a chosen name is excluded from every
+   later slot. A slot with no eligible candidate across every muscle it
+   covers is left unfilled and reported (`unfilled`), never padded with
+   an off-kit move.
 5. **Prescription** (travel mode's own scheme, shorter rest, higher reps):
    compound 3 x 8-12, rest 90 s; isolation 3 x 12-15, rest 60 s; a
    bodyweight row follows its own class. `restSuggested: true` so the
    screen labels it "Rest (suggested)" and the person edits anything.
-6. **Named, not silent (T1-23 preserved).** The screen runs the generator
-   twice, over the unfiltered library and over the filtered one; for every
-   slot whose filtered winner differs from the unfiltered winner because
-   the unfiltered winner is absent from the filtered library, the drop is
-   classified with `capabilityBlockReason(capabilityState, row)` and the
-   two existing toast lines are shown ("N movement(s) left out for your
-   limitations." / "... for your avoided movements."). The capability
+6. **Named, not silent (T1-23 preserved).** AMENDED TWICE after the
+   fresh-eyes review of the first landing (46961f5). The generator runs
+   ONCE, over the unfiltered library; for every item it would place from
+   that full catalogue, the row's `id` is checked against the set of ids
+   present in the intent-filtered library - a row whose id is absent was
+   removed by the filter, and is classified with
+   `capabilityBlockReason(capabilityState, row)` (wrapped in try/catch; a
+   throw counts as a preference drop, matching the screen's own fail-safe
+   before this landing) before the two existing toast lines are shown ("N
+   movement(s) left out for your limitations." / "... for your avoided
+   movements."), now joined by a third when a slot is unfilled ("Nothing
+   fitted your kit for {labels}."). Two things this history fixes, in
+   order: first, running the generator a SECOND time over the filtered
+   library and comparing per-slot winners over-counted, because the
+   chosen-name exclusion cascades - filtering out one slot's winner can
+   free up a row that would otherwise have won a LATER slot, changing
+   that later slot's own winner too even though nothing in its own
+   candidate pool was filtered, and a per-slot comparison read that
+   knock-on reshuffle as a second drop; checking id membership directly
+   against the filtered library sidesteps this because it never asks
+   "who wins now", only "is this specific row still there". Second,
+   matching by NAME rather than `id` had its own hole: a custom, free-text
+   exercise can share a canonical row's display name, and matching by
+   name let the surviving custom row mask the canonical row's real
+   removal - ids are unique per row; names are not. The capability
    preflight before generation stays exactly as it is (T1-21).
 7. **Sheet.** Title "Quick full-body session". Copy: "Pick what you have to
    hand and Volyume fills this workout with a full-body session for it,
