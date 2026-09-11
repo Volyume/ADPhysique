@@ -350,11 +350,13 @@ obeys the privacy guard: no `firstName`, `email`, `age`, `dateOfBirth`)
    name field, `PrivacyReceipt`, the four rules card (the `RULES` list
    moves to `src/lib/community/rulesSummary.js` and Join imports it too),
    and a "Community rules" secondary link to `CommunityRules`.
-6. Actions: primary "Join Community" (never greyed out, the D146 rule: a
-   tap with a gap marks the step attempted and surfaces the first missing
-   answer, `surfaceGaps` pattern: handle, then name; the gym is never a
-   gap); secondary "Skip for now" (a tap needs nothing). Each sets
-   `communityJoin` and advances
+6. Actions: primary "Join Community" (never greyed out, the D146 rule;
+   NOTHING is compulsory, founder rulings 2026-09-11: an empty handle is
+   suggested by the server at join time, an empty name falls back to the
+   handle, the gym is never a gap; the one gap left is a handle the
+   person typed that is invalid or already taken, surfaced with the
+   `surfaceGaps` pattern); secondary "Skip for now" (a tap needs nothing).
+   Each sets `communityJoin` and advances
    to step 6. Under founder answer B this row becomes the one notice line
    and the step's Continue; nothing else changes.
 7. Minor: `isMinorAnswer(age)` (`parseInt < 18`, the same parse the
@@ -416,8 +418,12 @@ the Home intro card, the widget, every board and feed.
   chosen. You can add one any time from Community."
 - Picked gym caption: "Only the gym you choose. Never your location."
 - Community group label: "Your Community profile"; hint: "Ready to go.
-  Change either now or any time from Edit profile."
-- Handle line states: as Join (`HANDLE_HINT`, available, taken, offline).
+  Both optional: change either now, leave them, or edit them any time
+  from Edit profile." (the first cut read "Ready to go. Change either now
+  or any time from Edit profile.")
+- Handle line states: as Join (available, taken, offline), except the
+  empty state, which reads "Leave it blank and Volyume picks one for
+  you." (founder 2026-09-11, "both are optional").
 - Actions: "Join Community", "Skip for now" (the onboarding step; the
   Join screen's own gym "Not now" is unchanged).
 - Edit profile handle hint: "Letters, numbers and underscores. You can

@@ -385,7 +385,9 @@ lanes reported (community model; onboarding and identity). Lead spec
 (edit gate), CR-15 in `40-DECISIONS.md`, D158 in the register. Rulings:
 step 5 "Your gym" after Training week; the gym OPTIONAL (founder ruling
 2026-09-11 "the gym can't be compulsory": a venue, an explicit "I don't
-train at a gym", or nothing; landed after the review batch); the profile pre-filled (handle suggested
+train at a gym", or nothing; landed after the review batch; then "both
+are optional": the handle and the name too, an empty handle suggested at
+join time and an empty name falling back to the handle); the profile pre-filled (handle suggested
 server-side from the email local part, given-name and `athlete`
 fallbacks; name from the first name) and created by ONE explicit tap
 beside "Skip for now" (Q1 open); under 18 no step (CR-08); the join at

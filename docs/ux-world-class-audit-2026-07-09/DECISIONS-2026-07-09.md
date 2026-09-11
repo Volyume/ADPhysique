@@ -6521,8 +6521,11 @@ onboarding step 5, "Your gym", after Training week; the gym is optional
 explicit "I don't train at a gym", or nothing); the profile is pre-filled (a
 handle the server derives from the email local part, with the sign-in
 given name and a neutral base as fallbacks, and the first name as the
-display name) and created by ONE explicit tap, "Join Community" beside
-"Skip for now", nothing pre-decided; under 18 the step does not exist (CR-08:
+display name; both optional too, founder ruling the same day, "both are
+optional": an empty handle is suggested at join time and an empty name
+falls back to the handle) and created by ONE explicit tap, "Join
+Community" beside "Skip for now", nothing pre-decided; under 18 the step
+does not exist (CR-08:
 minors excluded everywhere, and the server's minor check fails open
 before the date of birth has synced); the join runs at completion
 through the existing `community_upsert_profile`, so the consent row and

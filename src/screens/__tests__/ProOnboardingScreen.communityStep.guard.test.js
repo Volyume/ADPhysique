@@ -94,14 +94,20 @@ describe('nothing on the step is pre-decided', () => {
     const v = SRC.slice(SRC.indexOf('function validateStep5('), SRC.indexOf('function advanceFrom5(intent)'));
     expect(v).not.toMatch(/gymChoice|gymVenue|errs\.gym/);
     expect(SRC).not.toMatch(/errs\.gym/);
-    expect(SRC).toMatch(/surfaceGaps\(errs, \['handle', 'name'\], 'group5'/);
+    expect(SRC).toMatch(/surfaceGaps\(errs, \['handle'\], 'group5'/);
   });
 
-  test('a join needs a handle the server has not refused and a name; "Skip for now" needs nothing', () => {
+  test('the handle and the name are optional too (founder 2026-09-11, "both are optional"): only a typed handle that cannot work is a gap', () => {
     const v = SRC.slice(SRC.indexOf('function validateStep5('), SRC.indexOf('function advanceFrom5(intent)'));
-    expect(v).toMatch(/if \(join && communityJoin !== 'existing'\) \{/);
-    expect(v).toContain("if (communityHandleState === 'taken') errs.handle = 'That handle is taken. Try another.';");
-    expect(v).toContain("if (!communityDisplayName.trim()) errs.name = 'Add the name people will see.';");
+    // A join with an empty handle proceeds (the server suggests one at join
+    // time); an empty name proceeds (it falls back to the handle).
+    expect(v).toMatch(/if \(join && communityJoin !== 'existing' && communityHandle\.trim\(\)\) \{/);
+    expect(v).not.toMatch(/errs\.name|communityDisplayName|Choose a handle|checking/);
+    expect(v).toContain("if (communityHandleState === 'invalid') errs.handle = HANDLE_HINT;");
+    expect(v).toContain("else if (communityHandleState === 'taken') errs.handle = 'That handle is taken. Try another.';");
+    // The empty field says so, and the completion hands a null handle on.
+    expect(STEP5).toContain("idle: 'Leave it blank and Volyume picks one for you.',");
+    expect(COMPLETION).toContain("const chosenHandle = communityHandle.trim().toLowerCase() || null;");
   });
 });
 

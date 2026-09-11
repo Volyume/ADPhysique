@@ -1252,21 +1252,20 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   // ── Step 5, Your gym: gates (CR-15 / D158) ─────────────────────────────
-  // The gym is OPTIONAL (founder ruling 2026-09-11: "the gym can't be
-  // compulsory"): a venue, an explicit "none", or nothing at all, and
-  // either action proceeds without it. "Join Community" needs a handle the
-  // server has not refused and a name people will see; "Skip for now"
-  // needs nothing. Neither button greys out (the D146 rule): a tap
-  // surfaces the gaps.
+  // NOTHING on this step is compulsory (founder rulings 2026-09-11: "the
+  // gym can't be compulsory", then "both are optional" for the handle and
+  // the name). The gym is a venue, an explicit "none", or nothing. A join
+  // with an empty handle is given one by the server at join time
+  // (performCommunityJoin suggests when null); an empty name falls back to
+  // the handle. The only gap left is a handle the person TYPED that cannot
+  // work: an invalid shape, or one already taken, both of which the server
+  // would refuse. Neither button greys out (the D146 rule): a tap surfaces
+  // that one gap.
   function validateStep5({ join = joinAttempted } = {}) {
     const errs = {};
-    if (join && communityJoin !== 'existing') {
-      const h = communityHandle.trim().toLowerCase();
-      if (!h) errs.handle = 'Choose a handle: 3 to 20 letters, numbers or underscores.';
-      else if (communityHandleState === 'invalid') errs.handle = HANDLE_HINT;
+    if (join && communityJoin !== 'existing' && communityHandle.trim()) {
+      if (communityHandleState === 'invalid') errs.handle = HANDLE_HINT;
       else if (communityHandleState === 'taken') errs.handle = 'That handle is taken. Try another.';
-      else if (communityHandleState === 'checking') errs.handle = 'Checking that handle. Try again in a moment.';
-      if (!communityDisplayName.trim()) errs.name = 'Add the name people will see.';
     }
     return errs;
   }
@@ -1277,7 +1276,7 @@ export default function ProOnboardingScreen({ navigation }) {
     setJoinAttempted(join);
     const errs = validateStep5({ join });
     if (Object.keys(errs).length) {
-      surfaceGaps(errs, ['handle', 'name'], 'group5', { handle: communityHandleRef, name: communityNameRef }, setAttempted5);
+      surfaceGaps(errs, ['handle'], 'group5', { handle: communityHandleRef }, setAttempted5);
       return;
     }
     // An existing member's answer is recorded as such: nothing is created
@@ -2591,7 +2590,7 @@ export default function ProOnboardingScreen({ navigation }) {
     const handleLine = communityJoin === 'existing'
       ? `You're already in Community as @${communityHandle}. A gym chosen above goes on your profile.`
       : ({
-        idle: HANDLE_HINT,
+        idle: 'Leave it blank and Volyume picks one for you.',
         invalid: HANDLE_HINT,
         checking: 'Checking that handle.',
         available: 'Available.',
@@ -2672,7 +2671,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <QuestionGroup
               icon="people-outline"
               title="Your Community profile"
-              sub={communityJoin === 'existing' ? null : 'Ready to go. Change either now or any time from Edit profile.'}
+              sub={communityJoin === 'existing' ? null : 'Ready to go. Both optional: change either now, leave them, or edit them any time from Edit profile.'}
             >
               {communityJoin === 'existing' ? (
                 <View style={styles.sectionLast}>
