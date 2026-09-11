@@ -129,7 +129,7 @@ All claims carry file:line evidence. Verified against `src/`, `supabase/`, and `
 | Deload week prediction | `mesocycle.predictDeloadWeek` | ✅ |
 | Auto deload-week detection + amber banner on Home | `algorithms.shouldDeload` + HomeScreen | ✅ |
 | Block-end reflection card | `BlockReflectionScreen.js` | ✅ |
-| Travel-mode plan generation (bands / bodyweight / hotel gym) | `travelMode.generateTravelPlan` | ✅ |
+| Quick session from an equipment inventory (replaced travel mode, D156, 2026-09-11) | `quickSession.buildQuickSession` | ✅ |
 | Why-this-exercise card | `whyThisTemplates.getExerciseWhyThis` | ✅ |
 | Coach Builder periodisation (Foundation / Building / Peak / Deload) | `planEngine.buildWeeklyPlan` | ✅ |
 

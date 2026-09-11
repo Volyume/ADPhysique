@@ -194,7 +194,7 @@ Per `IDENTITY_AND_OWNERSHIP_LOCKED.md`:
 - Year of Lifts unlock (one-shot at 365-day mark): `YearOfLiftsScreen`.
 - Strength standards: `strengthStandards.js` (with parallel `algorithms.getStrengthStandard`, drift to resolve).
 - Plan auto-generation + swap engine: `planAutoGen.js`, `swapEngine.js`.
-- Travel mode: `lib/travelMode.js` + `BuildWorkoutScreen` integration.
+- Quick session (replaced travel mode on 2026-09-11, D156): `lib/quickSession.js` + `lib/quickSessionKit.js` + the `BuildWorkoutScreen` equipment sheet.
 
 ### 4.4 Engine / Precision Coaching
 

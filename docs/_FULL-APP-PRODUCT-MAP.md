@@ -70,12 +70,15 @@
 > 2. **Three corrections Campaign 3 flagged for this map's next touch**
 >    (`docs/discoverability-audit-2026-08-10/CONTROL-GAPS-EVIDENCE.md:765-768`),
 >    all re-verified on 2026-08-10:
->    - **U6 travel mode is LIVE and reachable, not unreachable.** This map at
->      `:10505-10509` says no screen, route or Settings row invokes
->      `src/lib/travelMode.js`. It does:
->      `src/screens/BuildWorkoutScreen.js:246` renders a "Travel or hotel gym"
->      chip that opens the travel modal, and `:200` calls `generateTravelPlan`.
->      Read U6 as LIVE.
+>    - **U6 travel mode: RETIRED on 2026-09-11 (D156), so read U6 as
+>      HISTORICAL.** The 2026-08-10 re-verification found it live (a
+>      "Travel or hotel gym" chip on BuildWorkoutScreen calling
+>      `generateTravelPlan`). That module, `src/lib/travelMode.js`, is now
+>      deleted: the Create workout screen's quick fill is a quick session
+>      built from the real corpus over an equipment inventory
+>      (`src/lib/quickSession.js`; the last kit is remembered per account
+>      by `src/lib/quickSessionKit.js`). Ruling D156 in the decisions
+>      register; spec `docs/quick-session-equipment-2026-09-11/10-SPEC.md`.
 >    - **The quiet-hours entry point is stale wherever this map repeats the
 >      "You -> Diary preferences" location.** The live editor is
 >      Settings -> Notifications and reminders
@@ -1721,16 +1724,16 @@ Entries are alphabetical by file name.
 - **Status:** LIVE (free).
 - **Entry points:** `volyume://workout/start` deep link; `HomeChangeWorkoutSheet.js` `navigate('BuildWorkout')`; `ExerciseDetailScreen.js` and `CoachReviewScreen.js` via `navigateCrossTab(..., 'HomeTab', 'BuildWorkout')`.
 - **Purpose:** Compose an ad-hoc workout and start it without a plan.
-- **Primary content:** exercise list being built, per-exercise sets / reps / rest steppers, travel-mode toggle ("Travel / hotel gym", `lib/travelMode`).
+- **Primary content:** exercise list being built, per-exercise sets / reps / rest steppers, quick-session fill from an equipment inventory (two presets, "Full gym" and "Nothing, bodyweight only", plus six kit chips; `lib/quickSession`, the last kit remembered per account by `lib/quickSessionKit`; D156, 2026-09-11, which retired `lib/travelMode`).
 - **Primary actions:** "Add exercise" (`ExercisePickerModal`), "Create workout" / "Start without a plan" → `navigation.replace('ActiveWorkout')`.
 - **Secondary actions:** rest suggestion (`lib/restSuggest`), cancel.
-- **Conditional content:** travel mode trims the plan; `Platform.OS === 'ios'` keyboard behaviour.
+- **Conditional content:** the quick session fills one exercise per fixed full-body slot from the library rows that fit the chosen kit, naming any slot nothing fitted and any exercise set aside rather than dropping it silently; `Platform.OS === 'ios'` keyboard behaviour.
 - **Empty state:** the builder starts empty by design with the "Add exercise" affordance.
 - **Loading state:** none (picker loads its own list).
 - **Error state:** toast; `logError`.
 - **Terminal state:** replaces into ActiveWorkout, so back does not return to the builder.
 - **Relevant settings:** default rest timer.
-- **Engine/data deps:** `lib/database`, `lib/algorithms`, `lib/restSuggest`, `lib/travelMode`, `lib/parseDecimalInput`.
+- **Engine/data deps:** `lib/database`, `lib/algorithms`, `lib/restSuggest`, `lib/quickSession`, `lib/quickSessionKit`, `lib/exercise/intent`, `lib/exercise/generation`, `lib/parseDecimalInput`.
 - **Where next:** ActiveWorkout.
 - **Implementation refs:** `src/screens/BuildWorkoutScreen.js`; registration `RootNavigator.js:451`.
 
@@ -3664,7 +3667,7 @@ listed under UNCERTAINTIES.
 | Manual builder | `src/screens/ManualBuilderScreen.js`, `src/screens/BuildWorkoutScreen.js` | **LIVE** |
 | Library plans (seeded) | `src/lib/seedRoutines.js` → `LIBRARY_PLANS` (33), `seedRoutinesIfNeeded(userId)`, seed key `@volyume_routines_seeded_v12` | **LIVE** |
 | Exercise library seed | `src/lib/seedExercises.js` (1,497 lines) | **LIVE** |
-| Travel plan generator | `src/lib/travelMode.js` → `generateTravelPlan` | **LIVE-CONDITIONAL** — only reachable from `src/screens/BuildWorkoutScreen.js` |
+| Quick session | `src/lib/quickSession.js` → `buildQuickSession`, `explainQuickSessionDrops`, `QUICK_KIT_KINDS`, `KIT_PRESETS`, `QUICK_SESSION_SLOTS`; kit persistence `src/lib/quickSessionKit.js` → `readQuickKit`, `writeQuickKit` | **LIVE** (BuildWorkoutScreen only; replaced `src/lib/travelMode.js`, retired 2026-09-11 under D156) |
 
 ### A1.2 Profile → engine input mapping
 
@@ -3840,7 +3843,7 @@ reminders (`src/lib/notifications/trainingReminders.js`, out of lane).
 | Session adjustments | `src/lib/algorithms.js` → `computeSessionAdjustments(...)`, `buildSessionAdjustmentInput(...)`; orchestrated by `src/lib/sessionAdjustments.js` → `computeAndLogSessionAdjustments({userId, workout, exercises, now})` | See DECISION RULE 5 | **LIVE** |
 | Readiness tweak | `src/lib/sessionAdjustments.js` → `READINESS_RULES`, `getReadinessTweak`, `applyReadinessToSets`, `applyReadinessToLoad`, `applyReadinessToTargets` | See DECISION RULE 4 | **LIVE** |
 | Time crunch | `src/lib/mesocycle.js` → `applyTimeCrunch(exercises, targetMinutes, estimateFn, options)` | Step 1 rest ×0.70; Step 2 drop isolation exercises (compounds protected) until the estimate fits; Step 3 (`maxSetsPerExercise` / `maxExercises`, COMP-013 starter sessions) runs INSTEAD of Step 2 and is budget-independent. | **LIVE** (`ActiveWorkoutScreen`) |
-| Travel plan | `src/lib/travelMode.js` → `generateTravelPlan`, `TRAVEL_EQUIPMENT_OPTIONS` | Deterministic (`pickExercise` always takes candidate index 0). Days clamped to 2..5. Full-body / upper-lower / PPL builders. | **LIVE-CONDITIONAL** (BuildWorkoutScreen only) |
+| Quick session | `src/lib/quickSession.js` → `buildQuickSession({ library, kit })`, `explainQuickSessionDrops` | Pure and deterministic: one exercise per fixed full-body slot (quads, hamstrings, chest, back, a shoulders group pooled across side / front / rear delts, biceps, triceps, abs) from the real corpus restricted to the chosen kit, bodyweight always in. Stable ranking: kettlebell exception-admitted rows last, kit before bodyweight, rep-based before timed hold, local tier order STAPLE / COMMON / NICHE / SPECIALIST, compound first on quads / hamstrings / chest / back / shoulders, unused movement pattern, difficulty, name, id. Unfilled slots are returned, never padded. | **LIVE** (BuildWorkoutScreen only; replaced the travel plan generator, D156, 2026-09-11) |
 
 **DECISION RULE 4 — Pre-session readiness tweak.**
 Classification: **PROPOSAL** (the intent sheet is an explicit user answer; the
@@ -10653,11 +10656,13 @@ timer. The only related setting found is "Rest finished alert", which governs th
 OS notification, not the in-app beeps (its copy says "In-app cues are
 unaffected"). I found no mute setting for the in-app sound.
 
-**U6 -- `src/lib/travelMode.js` reachability.** It is a complete, pure travel-plan
-generator (bodyweight/dumbbell/hotel-gym/band pools, 295 lines) but I found no
-screen, navigation route, or Settings row that invokes it in this sweep. It looks
-like PLANNED-DOCUMENTED-ONLY or LEGACY-UNREACHABLE, but I did not exhaustively
-grep every call site and will not assert it.
+**U6 -- `src/lib/travelMode.js` reachability.** RESOLVED. At this sweep it was a
+complete, pure travel-plan generator (bodyweight/dumbbell/hotel-gym/band pools,
+295 lines) whose one call site, BuildWorkoutScreen's "Travel or hotel gym" chip,
+the sweep missed (corrected 2026-08-10, see the preamble). On 2026-09-11 the
+module was retired under D156: the same screen's quick fill is now a quick
+session built from the real corpus over an equipment inventory
+(`src/lib/quickSession.js`). Nothing references `travelMode.js` any more.
 
 **U7 -- Progress-scan "hide exact numbers" default.** It defaults to `true`
 (`progressScanPreferences.js:34-42`) and is read by `CoachOutputScreen.js:1493`,

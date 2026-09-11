@@ -323,6 +323,67 @@ product-wide for Today and the widget; the two rulings have never
 been reconciled. Recovery for C-172: re-dispatch the same brief over
 `git checkout -- <lane files>`; agents never commit.
 
+## FOUNDER TASK CARDS (2026-09-11): ONE SHARED EQUIPMENT LIST; TRAVEL-MODE DOC HYGIENE — BOTH LANDED, COMPLETE
+
+Card 1 (founder, chat): one shared, ordered equipment answer list used by
+`ProOnboardingScreen.js` and `PlanUpdateScreen.js`, Kettlebells and Bands
+behaving identically on both (the `generationEquipmentFor` mapping, the
+library install rather than generation, the same copy), a source-level
+guard pinning both screens to the shared list. CURRENT STATE (was):
+Adjust training carried a private six-answer copy, so a kettlebell or
+band owner lost the honest F-16 answer there. LANDED 89454f9 (lead,
+hands-on): `src/lib/equipmentOptions.js` (eight answers, frozen); both
+screens import it; Adjust training's kit path stores the mapped profile,
+installs through `installLibraryPlanForKit` with a new optional
+`confirm` hook that runs the D139 mid-block confirm once the plan is
+known and before any write (a no is silent, FF-002 kept), shows the
+shared offer line under the picker and the shared installed line on
+success, and names the button for it; the F-15 flatten notice is a
+rebuild disclosure and is not shown for a kit answer. Guard
+`equipmentOptions.shared.guard.test.js`; the onboarding kit guard, the
+C1 error-copy guard and the style-lock guard re-anchored. Settled tree:
+lint exit 0; `Test Suites: 1 skipped, 1293 passed, 1293 of 1294`,
+`Tests: 16 skipped, 19978 passed, 19994`. OBSERVATION (not in the
+card's scope, founder to rule): `ProGoalSetupScreen.js` still carries
+its own six-answer copy; giving it the shared eight would need the same
+library-install branch there, since its rebuild path generates.
+Card 2 (founder, chat): docs and comment hygiene after the travel-mode
+retirement (D156). LANDED (this commit): the product map (preamble U6
+correction, BuildWorkoutScreen entry, both engine tables, U6 sweep
+note), the code-truth survey (module list, BuildWorkoutScreen entry,
+the travelMode section replaced by quickSession + quickSessionKit),
+`GAP_ANALYSIS.md`, `HANDOFF.md`, root `ARCHITECTURE.md` (a live doc
+outside the card's named scope, whose travelMode section was wrong
+even before the retirement), and the stale comment above the own-profile
+effect in `CommunityProfileScreen.js` (the card does carry `c_*` fields
+since 165/172; the owner's view reads live local counters instead).
+Dated audit records keep their references. No em dash added.
+
+## COMMUNITY ACCOUNT AND GYM AT ONBOARDING (founder order, 2026-09-11) — RECON IN FLIGHT; SPEC NEXT; FOUNDER FORKS GO TO CHAT
+
+Founder order (chat, verbatim): "we need the gym selection on onboarding
+so that it's passed through to community and people can connect to
+others on community right away without people having to sign up. I want
+a user account created for community automatically using their username
+/ email beginning and that having them join their gym automatically in
+community when they onboard but they have the option to change their
+user / display name." Bounds the lead carries into the spec (Section 2):
+the Article 9 consent gate is never weakened or reordered; the minors
+gate stays closed; data minimisation (a handle derived from an email
+local part can expose part of the address to every viewer; Apple private
+relay addresses are random); consent recorded at join; RPC-only
+community tables; every cloud change additive and founder-phrased. Two
+read-only recon lanes (Sonnet) dispatched: R-C (community profile
+creation, handle rules, minors/consent gates, gym model, visibility,
+edit/leave, cloud shape, pinned tests, risks) and R-O (onboarding steps
+and completion sequence, DOB/age, identity and email exposure,
+navigation and first-run flag, profile persistence and sync, any gym
+concept, reusable input patterns, pinned tests, risks). Recovery path:
+re-dispatch the same brief; no files written by the lanes. NEXT: lead
+spec in `docs/communities-revamp-2026-09-10/` (numbered file), forks
+that touch GDPR delivered to the founder in chat as multiple-choice
+questions with work continuing on unblocked lanes.
+
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
 Founder-reported (chat, screenshots): gym finder found no gyms within 50

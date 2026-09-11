@@ -111,7 +111,7 @@ Used by Phase 2 to audit every doc in the repo line by line.
 - [x] swapEngine.js
 - [x] sync.js
 - [x] syncQueue.js
-- [x] travelMode.js
+- [x] travelMode.js (RETIRED 2026-09-11 under D156 and deleted; replaced by quickSession.js + quickSessionKit.js, see that section below)
 - [x] units.js
 - [x] weeklyCoach.js (already covered in screens-phase deep read)
 - [x] wellbeing.js
@@ -396,7 +396,7 @@ A live list of FLAGs found during the survey, copied here for easy doc-audit cro
 
 ## BuildWorkoutScreen.js (626 lines)
 
-**Purpose:** Pre-workout setup. Pick a routine / travel-mode plan, then start the live workout.
+**Purpose:** Pre-workout setup. Compose an ad-hoc workout, or fill it with a quick session from an equipment inventory (D156, 2026-09-11), then start the live workout.
 
 **Exports:** default `BuildWorkoutScreen` (line ~20 by `useAppStore` context).
 
@@ -404,9 +404,9 @@ A live list of FLAGs found during the survey, copied here for easy doc-audit cro
 
 **DB reads:** `getAllExercises`.
 
-**DB writes:** `createWorkout(user.id)` (lines 82, 107) — two call sites (routine path + travel-mode path).
+**DB writes:** `createWorkout(user.id)` (lines 182, 214) — two call sites (`handleStartTraining` with the built list, `handleSkip` for a blank workout).
 
-**Imports from src/lib:** `database` (`getAllExercises`, `createWorkout`), `algorithms.MUSCLE_DISPLAY_NAMES`, `travelMode.generateTravelPlan`, `errorLog.logError`.
+**Imports from src/lib:** `database` (`getAllExercises`, `createWorkout`, `getActiveBlock`, `uid`), `exercise/intent.loadExerciseIntentState`, `exercise/generation.filterLibraryForGeneration`, `algorithms.MUSCLE_DISPLAY_NAMES`, `restSuggest.suggestRestSeconds`, `parseDecimalInput`, `quickSession` (`buildQuickSession`, `explainQuickSessionDrops`, `QUICK_KIT_KINDS`, `KIT_PRESETS`), `quickSessionKit` (`readQuickKit`, `writeQuickKit`), `errorLog.logError`, `haptics`.
 
 **Navigation:** `navigation.replace('ActiveWorkout')` (lines 96, 109) — two paths.
 
@@ -2482,15 +2482,18 @@ A live list of FLAGs found during the survey, copied here for easy doc-audit cro
 
 ---
 
-## travelMode.js (295 lines)
+## quickSession.js (432 lines) + quickSessionKit.js (50 lines)
 
-**Purpose:** Generates a travel-friendly workout based on available equipment (bands, bodyweight, etc.).
+**Purpose:** Quick full-body session from what the person has to hand (D156, 2026-09-11). Pure and deterministic: one exercise per fixed full-body slot from the library rows that fit an equipment kit, bodyweight always included; unfilled slots are returned, never padded. Replaced `travelMode.js` (295 lines of hand-authored equipment pools), which is deleted.
 
-**Public exports (2):**
-- `generateTravelPlan({ ... })` (line 175)
-- `TRAVEL_EQUIPMENT_OPTIONS` constant (line 291)
+**Public exports (quickSession.js, 5):**
+- `QUICK_KIT_KINDS` (line 113), `KIT_PRESETS` (line 129), `QUICK_SESSION_SLOTS` (line 146)
+- `buildQuickSession({ library, kit })` (line 324) → `{ items, unfilled }`
+- `explainQuickSessionDrops({ all, filtered, kit, capabilityState })` (line 409)
 
-**Consumers:** `BuildWorkoutScreen.js:12`.
+**Public exports (quickSessionKit.js, 2):** `readQuickKit(uid)`, `writeQuickKit(uid, kit)` (the last kit, remembered per account on device).
+
+**Consumers:** `BuildWorkoutScreen.js:24-27`.
 
 ---
 

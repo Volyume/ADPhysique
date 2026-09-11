@@ -1572,11 +1572,11 @@ Used in: `ActiveWorkoutScreen` (exercise swap modal).
 
 ---
 
-### travelMode (`src/lib/travelMode.js`)
+### quickSession (`src/lib/quickSession.js`, `src/lib/quickSessionKit.js`)
 
-Filters and re-weights exercises for bodyweight/minimal equipment constraints.
+Quick full-body session from an equipment inventory (D156, 2026-09-11; replaced `travelMode.js`, now deleted). Pure and deterministic: one exercise per fixed full-body slot from the library rows that fit the chosen kit, bodyweight always included; unfilled slots are returned, never padded. `quickSessionKit.js` remembers the last kit per account on device.
 
-Used in: `planEngine.js` for bodyweight/home_gym equipment selections.
+Used in: `BuildWorkoutScreen` (the quick session sheet on Create workout).
 
 ---
 

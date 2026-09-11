@@ -74,6 +74,18 @@ the widget count RPC switch landed; the strip's PR cell is live; ruling
 B (D157) keeps the streak in Community. Open: nothing on the lead side
 for these campaigns; the founder builds when they choose ("I'll build
 when all is done"). Board sections carry the detail.
+2026-09-11 (evening): two founder task cards landed (board section
+"FOUNDER TASK CARDS"): one shared equipment answer list for first run
+and Adjust training with the kit answers behaving identically on both
+(89454f9; settled tree 1293 suites / 19978 tests), then the travel-mode
+doc and comment hygiene (this commit). NEW FOUNDER ORDER (chat): gym
+selection at onboarding passed through to Community; a Community
+account created automatically from the username / email local part;
+auto-joined to their gym at onboarding; handle and display name
+changeable. Two read-only recon lanes in flight (board section
+"COMMUNITY ACCOUNT AND GYM AT ONBOARDING"); lead spec next; GDPR forks
+(handle from an email local part, consent at join, minors) go to the
+founder in chat before any of that lands.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 

@@ -137,11 +137,15 @@ export default function CommunityProfileScreen({ navigation, route }) {
   const viewable = !!data?.viewable;
 
   // Progress strip (design 60 §4, D4): own profile only, and only when
-  // sharing consistency. Device-computed -- there is no server read for a
-  // caller's own raw counters (`_community_profile_card` never carries
-  // them, blueprint 60 §1's counters are board inputs, not profile
-  // fields), so this reads the same local `trainingConsistency.js` the
-  // Hub's You line uses.
+  // sharing consistency. Device-computed from the same local
+  // `trainingConsistency.js` the Hub's You line uses, NOT read back off
+  // the card: since migrate_165 (the counters) and migrate_172 (the PR
+  // count) the card does carry `c_*` fields, but they are the last
+  // PUBLISHED snapshot (community_update_training_profile), gated for
+  // viewers, and can lag the device until the next publish. The owner's
+  // own view shows the live local figures instead, with the migrate_172
+  // share_sessions gate applied below; another person's strip reads the
+  // card's published fields (`othersCounters`).
   useEffect(() => {
     if (!isMe || !card?.user_id) { setProgress(null); return undefined; }
     let alive = true;
