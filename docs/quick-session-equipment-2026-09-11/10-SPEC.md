@@ -35,9 +35,15 @@ this spec touches the quick session only.
    `src/lib/travelMode.js` and its hand pools are retired (deleted) with
    this landing; nothing else imports it (`01-RECON.md` section 5).
 4. **Eight full-body slots, fixed order** (travel mode's own coverage,
-   kept): quads, hamstrings, chest, back, side_delts, biceps, triceps, abs.
-   Per slot, candidates are rows with `primaryMuscle` equal to the slot
-   muscle, `equipmentCategory` in kit-categories plus `bodyweight`, not
+   kept): quads, hamstrings, chest, back, shoulders (side_delts, then
+   front_delts, then rear_delts: the first muscle with an eligible
+   candidate for the kit), biceps, triceps, abs. The corpus has no
+   bodyweight, kettlebell or suspension row with side_delts as its primary
+   muscle (a lateral raise needs external resistance), so the shoulders
+   slot falls through to front_delts, then rear_delts, rather than sitting
+   unfilled for those three kits. Per slot, candidates are rows with
+   `primaryMuscle` equal to the slot muscle, `equipmentCategory` in
+   kit-categories plus `bodyweight`, not
    retired, and auto-eligible: `isAutoEligible(name)` from
    `src/lib/exercise/canonicality.js`, PLUS, only when the kit includes
    Kettlebells, the names in `KETTLEBELL_NEVER_AUTO_EXCEPTIONS`

@@ -156,6 +156,18 @@ describe('Chip', () => {
     expect(nodes.some(n => n.props.accessibilityState?.selected === true)).toBe(false);
   });
 
+  // D156 (quick full-body session, lead ruling 2026-09-11): a multi-select
+  // checkbox group needs the same {checked} shape as a radio group, not
+  // {selected} - checkbox and radio both carry `checked`.
+  test('uses checked state for checkbox multi-select groups', () => {
+    let tree;
+    act(() => { tree = create(<Chip label="Kettlebells" accessibilityRole="checkbox" selected onPress={() => {}} />); });
+    const nodes = tree.root.findAllByProps({ accessibilityRole: 'checkbox' });
+    expect(nodes.length).toBeGreaterThan(0);
+    expect(nodes.some(n => n.props.accessibilityState?.checked === true)).toBe(true);
+    expect(nodes.some(n => n.props.accessibilityState?.selected === true)).toBe(false);
+  });
+
   test('supports explicit accessibility labels and label style overrides', () => {
     let tree;
     act(() => {

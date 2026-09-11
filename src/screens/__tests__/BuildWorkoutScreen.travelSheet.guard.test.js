@@ -1,23 +1,54 @@
+/**
+ * RE-POINTED (D156, 2026-09-11): the quick full-body session widened from
+ * three hand-authored travel presets (single-select radio: bodyweight /
+ * dumbbells / hotel gym) to a real equipment INVENTORY (multi-select
+ * checkboxes over six corpus equipment kinds, plus two presets: Full gym
+ * and Nothing, bodyweight only). src/lib/travelMode.js is deleted;
+ * applyTravelMode is renamed applyQuickSession. What this guard pins is
+ * unchanged in kind, only in shape: shared BottomSheet/Chip controls, a
+ * neutral quick-fill row positioned after "Add exercise" and below the
+ * blank-workout path, and a committing button that says what it does.
+ * Added: the multi-select checkbox contract (was single-select radio) and
+ * the two-preset row ruling 7 adds.
+ */
 import fs from 'fs';
 import path from 'path';
 
 const source = fs.readFileSync(path.join(__dirname, '..', 'BuildWorkoutScreen.js'), 'utf8');
 
-describe('BuildWorkoutScreen travel equipment sheet guard', () => {
-  test('uses shared BottomSheet and Chip controls for travel mode equipment', () => {
+describe('BuildWorkoutScreen quick session equipment sheet guard', () => {
+  test('uses shared BottomSheet and Chip controls, as a multi-select checkbox group', () => {
     expect(source).toMatch(/import BottomSheet from '\.\.\/components\/BottomSheet';/);
     expect(source).toMatch(/import Chip from '\.\.\/components\/Chip';/);
     expect(source).toMatch(
       /<BottomSheet[\s\S]*visible=\{showTravelModal\}[\s\S]*onClose=\{\(\) => setShowTravelModal\(false\)\}[\s\S]*accessibilityLabel="Quick session equipment picker"/,
     );
-    // Haptics rollout (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md):
-    // the equipment pick now fires haptics.selection() before setTravelEquipment,
-    // so the onPress body is a block rather than a bare call.
+    // Multi-select: each kind chip is a checkbox (never radio - a person
+    // can have more than one kind of equipment to hand), toggling its own
+    // id in/out of the quickKit array, haptics.selection() on toggle
+    // (Haptics rollout, docs/ux-world-class-audit-2026-07-09/
+    // DECISIONS-2026-07-09.md).
     expect(source).toMatch(
-      /<Chip[\s\S]*selected=\{travelEquipment === opt\.id\}[\s\S]*accessibilityRole="radio"[\s\S]*onPress=\{\(\) => \{ haptics\.selection\(\); setTravelEquipment\(opt\.id\); \}\}/,
+      /<Chip[\s\S]*selected=\{checked\}[\s\S]*accessibilityRole="checkbox"[\s\S]*onPress=\{\(\) => \{\s*haptics\.selection\(\);\s*setQuickKit\(prev => \(prev\.includes\(kind\.id\)/,
     );
+    expect(source).not.toMatch(/accessibilityRole="radio"/);
     expect(source).not.toMatch(/styles\.travelOverlay/);
     expect(source).not.toMatch(/styles\.travelOpt[\],)]/);
+  });
+
+  test('ruling 7: a preset row of two Chips (Full gym; Nothing, bodyweight only) ahead of the six kind chips', () => {
+    expect(source).toMatch(/import \{[\s\S]*KIT_PRESETS[\s\S]*\} from '\.\.\/lib\/quickSession';/);
+    expect(source).toMatch(/<View style=\{styles\.kitPresetRow\}>\s*\{KIT_PRESETS\.map\(preset =>/);
+    const presetAt = source.indexOf('styles.kitPresetRow');
+    const kindsAt = source.indexOf('QUICK_KIT_KINDS.map(kind =>');
+    expect(presetAt).toBeGreaterThan(-1);
+    expect(kindsAt).toBeGreaterThan(presetAt);
+  });
+
+  test('ruling 7: the exact sheet copy, including the always-bodyweight sentence', () => {
+    expect(source).toContain(
+      'Pick what you have to hand and Volyume fills this workout with a full-body session for it, without changing your plan. Bodyweight moves are always included. Change anything before you start, or close this and add your own exercises.',
+    );
   });
 
   test('keeps the quick-fill row neutral rather than an amber text link, and below the blank path', () => {
@@ -44,7 +75,7 @@ describe('BuildWorkoutScreen travel equipment sheet guard', () => {
     expect(listAt).toBeLessThan(rowAt);
     // The sheet's committing button never borrows the screen's own title:
     // it says what it does, and says "replace" when it would replace.
-    expect(source).toMatch(/title=\{exercises\.length > 0 \? 'Replace with session' : 'Fill workout'\}[\s\S]{0,400}onPress=\{applyTravelMode\}/);
+    expect(source).toMatch(/title=\{exercises\.length > 0 \? 'Replace with session' : 'Fill workout'\}[\s\S]{0,400}onPress=\{applyQuickSession\}/);
     expect(source).not.toMatch(/Travel \/ hotel gym/);
   });
 });

@@ -21,7 +21,10 @@ import { filterLibraryForGeneration } from '../lib/exercise/generation';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { suggestRestSeconds } from '../lib/restSuggest';
 import { parseDecimalInput, parseIntegerInput } from '../lib/parseDecimalInput';
-import { generateTravelPlan } from '../lib/travelMode';
+import {
+  buildQuickSession, explainQuickSessionDrops, QUICK_KIT_KINDS, KIT_PRESETS,
+} from '../lib/quickSession';
+import { readQuickKit, writeQuickKit } from '../lib/quickSessionKit';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -57,7 +60,16 @@ export default function BuildWorkoutScreen({ navigation }) {
   const [allExercises, setAllExercises] = useState([]);
   const [starting, setStarting] = useState(false);
   const [showTravelModal, setShowTravelModal] = useState(false);
-  const [travelEquipment, setTravelEquipment] = useState('bodyweight');
+  // D156: an equipment INVENTORY (which kinds the person has to hand
+  // today), not a single-select profile - replaces travelEquipment.
+  const [quickKit, setQuickKit] = useState([]);
+  // Ruling 8: read the remembered kit on sheet open (not on screen mount),
+  // shape-checked and never throwing - first use resolves to the empty
+  // kit (bodyweight only).
+  useEffect(() => {
+    if (!showTravelModal || !user?.id) return;
+    readQuickKit(user.id).then(setQuickKit).catch(() => {});
+  }, [showTravelModal, user?.id]);
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
   // to keep the exercise-row map below cheap to re-render.
   const t = useTheme();
@@ -202,13 +214,16 @@ export default function BuildWorkoutScreen({ navigation }) {
     }
   }
 
-  async function applyTravelMode() {
+  async function applyQuickSession() {
     setShowTravelModal(false);
-    // CC27 (section 9.6) / D112 R3 (closes audit T1-21): travel mode
-    // BUILDS a session, so it takes the same capability pre-flight as
-    // every other generator - an unreadable capability state is the
-    // user's explicit call, never a silent fail-open into movements
-    // they cannot do.
+    // Ruling 8: written on "Fill workout"/"Replace with session", keyed to
+    // the button press itself (best-effort, never blocks the build below).
+    if (user?.id) writeQuickKit(user.id, quickKit).catch(() => {});
+    // CC27 (section 9.6) / D112 R3 (closes audit T1-21): the quick session
+    // BUILDS a session, so it takes the same capability pre-flight as every
+    // other generator - an unreadable capability state is the user's
+    // explicit call, never a silent fail-open into movements they cannot
+    // do.
     if (user?.id) {
       // eslint-disable-next-line global-require
       const { capabilityPreflight, offerCapabilityPreflightChoice } = require('../lib/capability/preflight');
@@ -225,12 +240,13 @@ export default function BuildWorkoutScreen({ navigation }) {
     }
     const all = allExercises.length > 0 ? allExercises : await getAllExercises();
     if (allExercises.length === 0) setAllExercises(all);
-    // C9 Work 7: travel mode BUILDS a session, so it is generation and must
-    // respect exercise intent like every other generator. It resolves the
-    // engine's exercise NAMES against the library, so the intent filter is
-    // applied to the library before the match - a set-aside exercise then
-    // simply has nothing to match against and the slot is dropped rather
-    // than silently reinstated.
+    // D156 ruling 3: the quick session BUILDS a session, so it is
+    // generation and must respect exercise intent like every other
+    // generator. The generator reads real library rows directly (never a
+    // name to be matched later), so the intent filter is applied to the
+    // library BEFORE generation - a set-aside exercise then simply is not a
+    // candidate, and its slot falls to the next candidate or is reported
+    // unfilled, never silently reinstated.
     let library = all;
     // D112 R5 (closes audit T1-23): carried out of the try block so the
     // drop-classification pass below can read it too - the exact same
@@ -242,54 +258,26 @@ export default function BuildWorkoutScreen({ navigation }) {
       capabilityState = state?.capability ?? null;
       library = filterLibraryForGeneration(all, state).library;
     } catch (_) { /* additive: an intent read failure leaves the library whole */ }
-    const plan = generateTravelPlan({ equipment: travelEquipment, daysPerWeek: 4, splitType: 'full_body' });
-    const session = plan.sessions[0];
-    // D112 R5 (closes audit T1-23): named, not silent. Counts by class -
-    // capabilityBlockReason checked first, matching generationBlockReason's
-    // own precedence (section 4.1), so a movement that fails both reads as
-    // the capability reason and is never double counted.
-    let capabilityDrops = 0;
-    let preferenceDrops = 0;
-    const newItems = session.exercises.map(ex => {
-      const nameLower = ex.exerciseName.toLowerCase();
-      const findIn = (list) => list.find(e => e.name.toLowerCase() === nameLower)
-        ?? list.find(e => e.name.toLowerCase().includes(nameLower.split(' ')[0]));
-      const match = findIn(library);
-      // Present in the catalogue but gone from the filtered library means
-      // the user set it aside. Drop the slot rather than reinstating it
-      // through the unmatched-name placeholder below, which would put the
-      // exercise back under its own name.
-      if (!match) {
-        const fullMatch = findIn(all);
-        if (fullMatch) {
-          try {
-            // eslint-disable-next-line global-require
-            const { capabilityBlockReason } = require('../lib/capability/resolve');
-            if (capabilityBlockReason(capabilityState, fullMatch)) capabilityDrops += 1;
-            else preferenceDrops += 1;
-          } catch (_) { preferenceDrops += 1; }
-          return null;
-        }
-      }
-      const exercise = match ?? {
-        id: `travel-${Date.now()}-${Math.random()}`,
-        name: ex.exerciseName,
-        primaryMuscle: '',
-        equipment: travelEquipment,
-      };
-      return {
-        key: `${exercise.id}-${Date.now()}-${Math.random()}`,
-        exercise,
-        sets: ex.sets,
-        repsMin: ex.repsMin,
-        repsMax: ex.repsMax,
-        restSeconds: ex.restSec,
-        startingWeight: 0,
-      };
+    const { items } = buildQuickSession({ library, kit: quickKit });
+    const newItems = items.map(({ exercise, sets, repsMin, repsMax, restSeconds, restSuggested }) => ({
+      key: `${exercise.id}-${Date.now()}-${Math.random()}`,
+      exercise,
+      sets,
+      repsMin,
+      repsMax,
+      restSeconds,
+      restSuggested,
+      startingWeight: 0,
+    }));
+    setExercises(newItems);
+    // D112 R5 (closes audit T1-23): named, not silent. One line per
+    // non-zero class, via the screen's toast - classification itself now
+    // lives in explainQuickSessionDrops (D156 ruling 6), which runs the
+    // generator over `all` and `library` and reports exactly what the
+    // filter removed.
+    const { capabilityDrops, preferenceDrops } = explainQuickSessionDrops({
+      all, filtered: library, kit: quickKit, capabilityState,
     });
-    setExercises(newItems.filter(Boolean));
-    // D112 R5 (closes audit T1-23): one line per non-zero class, via the
-    // screen's toast. No behaviour change to the filtering itself above.
     const dropLines = [];
     if (capabilityDrops > 0) {
       dropLines.push(`${capabilityDrops === 1 ? '1 movement' : `${capabilityDrops} movements`} left out for your limitations.`);
@@ -491,7 +479,9 @@ export default function BuildWorkoutScreen({ navigation }) {
       </View>
       </KeyboardAvoidingView>
 
-      {/* Travel Mode equipment picker */}
+      {/* Quick full-body session equipment picker (D156: an inventory over
+          the corpus's real equipment kinds, replacing the three
+          hand-authored travel presets). */}
       <BottomSheet
         visible={showTravelModal}
         onClose={() => setShowTravelModal(false)}
@@ -499,27 +489,41 @@ export default function BuildWorkoutScreen({ navigation }) {
       >
         <Text style={[styles.travelTitle, live.travelTitle]}>Quick full-body session</Text>
         <Text style={[styles.travelSub, live.travelSub]}>
-          {'Pick what you have to hand and Volyume fills this workout with a full-body session for it, without changing your plan. Change anything before you start, or close this and add your own exercises.'}
+          {'Pick what you have to hand and Volyume fills this workout with a full-body session for it, without changing your plan. Bodyweight moves are always included. Change anything before you start, or close this and add your own exercises.'}
           {exercises.length > 0
             ? ` This replaces the ${exercises.length === 1 ? 'exercise' : `${exercises.length} exercises`} you have added.`
             : ''}
         </Text>
-        <View style={styles.travelOptions} accessibilityRole="radiogroup" accessibilityLabel="Available equipment">
-          {[
-            { id: 'bodyweight', label: 'Bodyweight only', icon: 'body-outline' },
-            { id: 'dumbbells',  label: 'Dumbbells',       icon: 'barbell-outline' },
-            { id: 'hotel_gym',  label: 'Hotel gym',        icon: 'fitness-outline' },
-          ].map(opt => (
+        <View style={styles.kitPresetRow}>
+          {KIT_PRESETS.map(preset => (
             <Chip
-              key={opt.id}
-              label={opt.label}
-              icon={opt.icon}
-              selected={travelEquipment === opt.id}
-              accessibilityRole="radio"
-              onPress={() => { haptics.selection(); setTravelEquipment(opt.id); }}
-              style={styles.travelOptionChip}
+              key={preset.id}
+              label={preset.label}
+              accessibilityLabel={preset.label}
+              onPress={() => { haptics.selection(); setQuickKit(preset.kit); }}
             />
           ))}
+        </View>
+        <View style={styles.travelOptions} accessibilityLabel="Available equipment">
+          {QUICK_KIT_KINDS.map(kind => {
+            const checked = quickKit.includes(kind.id);
+            return (
+              <Chip
+                key={kind.id}
+                label={kind.label}
+                icon={kind.icon}
+                selected={checked}
+                accessibilityRole="checkbox"
+                onPress={() => {
+                  haptics.selection();
+                  setQuickKit(prev => (prev.includes(kind.id)
+                    ? prev.filter(id => id !== kind.id)
+                    : [...prev, kind.id]));
+                }}
+                style={styles.travelOptionChip}
+              />
+            );
+          })}
         </View>
         <View style={styles.travelBtns}>
           <Button
@@ -533,7 +537,7 @@ export default function BuildWorkoutScreen({ navigation }) {
             variant="emphatic"
             title={exercises.length > 0 ? 'Replace with session' : 'Fill workout'}
             style={styles.travelAction}
-            onPress={applyTravelMode}
+            onPress={applyQuickSession}
             accessibilityLabel={exercises.length > 0 ? 'Replace the added exercises with a quick session' : 'Fill this workout with a quick session'}
           />
         </View>
@@ -690,6 +694,10 @@ const styles = StyleSheet.create({
   quickFillText: { ...type.label, color: colors.textSecondary, flex: 1 },
   travelTitle: { ...type.title, color: colors.textPrimary },
   travelSub: { ...type.bodySm, color: colors.textSecondary },
+  // D156 ruling 7: the two presets sit in their own row above the six kind
+  // chips, side by side rather than stretched full-width like the kind
+  // list below.
+  kitPresetRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   travelOptions: { gap: spacing.sm },
   travelOptionChip: { alignSelf: 'stretch', borderRadius: radius.md },
   travelBtns: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },

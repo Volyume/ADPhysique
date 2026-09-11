@@ -41,7 +41,17 @@ export default function Chip({
   // CP-10 stage 1: live theme (src/hooks/useTheme.js) instead of the static
   // colors/type imports, so Chip re-renders correctly on a theme change.
   const t = useTheme();
-  const accessibilityState = accessibilityRole === 'radio'
+  // D156 (quick full-body session, 2026-09-11; kept on lead ruling): a
+  // multi-select chip group needs the same {checked} shape a single-select
+  // radio chip already gets, not {selected} - 'checkbox' is exclusive/
+  // binary state exactly like 'radio', just not mutually-exclusive across
+  // the group. checkbox and radio both carry `checked`, the two RN roles
+  // whose accessibility state is meant to say whether they are ticked, not
+  // merely highlighted. No existing caller passes
+  // accessibilityRole="checkbox" to Chip today (checked here 2026-09-11),
+  // so this is additive: 'radio' and every other role keep their exact
+  // prior accessibilityState.
+  const accessibilityState = (accessibilityRole === 'radio' || accessibilityRole === 'checkbox')
     ? { checked: selected, disabled }
     : { selected, disabled };
 

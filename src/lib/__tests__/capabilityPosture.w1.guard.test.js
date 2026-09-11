@@ -60,9 +60,13 @@ describe('T1-09 - blockAdvisor adopts the fail-safe capability read', () => {
 });
 
 describe('T1-21 - pre-flight on the paths that were missing it', () => {
-  test('travel mode takes the capability pre-flight before building', () => {
+  // RENAMED (D156, 2026-09-11): applyTravelMode -> applyQuickSession (the
+  // quick full-body session widened from three travel presets to a real
+  // equipment inventory; src/lib/travelMode.js is deleted). The preflight
+  // contract this pins is unchanged.
+  test('the quick full-body session takes the capability pre-flight before building', () => {
     const src = read('screens/BuildWorkoutScreen.js');
-    const fn = src.match(/async function applyTravelMode[\s\S]{0,1200}/)?.[0] ?? '';
+    const fn = src.match(/async function applyQuickSession[\s\S]{0,1200}/)?.[0] ?? '';
     expect(fn).toMatch(/capabilityPreflight/);
     expect(fn).toMatch(/offerCapabilityPreflightChoice/);
   });

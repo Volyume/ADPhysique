@@ -381,18 +381,22 @@ describe('when exclusions leave a slot unfillable, the plan says so', () => {
 describe('no builder or generator can reinstate a set-aside exercise', () => {
   const read = (p) => require('fs').readFileSync(require('path').resolve(__dirname, '../../../', p), 'utf8');
 
-  test('travel mode filters the library before resolving exercise names', () => {
+  // RE-POINTED (D156, 2026-09-11): travel mode's hand-authored pools and
+  // its name-matching (findIn/fullMatch/return null; placeholder) are gone
+  // - src/lib/travelMode.js is deleted and applyTravelMode is renamed
+  // applyQuickSession. The invariant this test exists to pin is unchanged:
+  // the library is filtered BEFORE generation, and the session actually
+  // applied is built from the filtered library, never the full catalogue -
+  // buildQuickSession only ever reads the rows it is handed, so a
+  // set-aside exercise is simply not a candidate, with no placeholder path
+  // that could reinstate it.
+  test('the quick full-body session filters the library before generating, and never reinstates a dropped exercise', () => {
     const SRC = read('screens/BuildWorkoutScreen.js');
-    const fn = SRC.slice(SRC.indexOf('async function applyTravelMode'), SRC.indexOf('function formatRest'));
+    const fn = SRC.slice(SRC.indexOf('async function applyQuickSession'), SRC.indexOf('function formatRest'));
     expect(fn).toMatch(/filterLibraryForGeneration\(all, state\)\.library/);
-    // And a name that survives only in the UNFILTERED catalogue is dropped,
-    // never rebuilt through the unmatched-name placeholder. CC33 W3 (audit
-    // T1-23) expanded the one-line drop into a classify-then-drop block so
-    // the toast can name each lane's count - the pinned law is unchanged:
-    // a full-catalogue-only match still ends in `return null;`, and the
-    // placeholder is only reachable when findIn(all) found nothing.
-    expect(fn).toMatch(/const fullMatch = findIn\(all\);\s*\n\s*if \(fullMatch\) \{[\s\S]{0,700}?return null;\s*\n\s*\}/);
-    expect(fn).toMatch(/newItems\.filter\(Boolean\)/);
+    expect(fn).toMatch(/buildQuickSession\(\{ library, kit: quickKit \}\)/);
+    expect(fn).not.toMatch(/buildQuickSession\(\{\s*library:\s*all/);
+    expect(fn).toMatch(/setExercises\(newItems\)/);
   });
 
   test('initial plan generation filters the library and guards name resolution', () => {
