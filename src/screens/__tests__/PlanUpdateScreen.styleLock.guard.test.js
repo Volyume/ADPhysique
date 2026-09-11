@@ -104,7 +104,11 @@ describe('F-15: circuit rounds are not flattened silently', () => {
   });
 
   test('it is shown on the screen before the preview is ever opened', () => {
-    expect(source).toMatch(/\{hasCircuitGroups \? \(\s*<Text[^>]*>\{CIRCUIT_FLATTEN_NOTICE\}<\/Text>/);
+    // `!libraryKit`: a Kettlebells/Bands answer replaces the plan outright
+    // through the library (F-16 REVISED point 1, its own line on the form)
+    // and never rebuilds, so the rebuild wording is not shown for it. For
+    // every generating answer the disclosure stands exactly as before.
+    expect(source).toMatch(/\{hasCircuitGroups && !libraryKit \? \(\s*<Text[^>]*>\{CIRCUIT_FLATTEN_NOTICE\}<\/Text>/);
   });
 
   test('and answered explicitly before anything is written', () => {

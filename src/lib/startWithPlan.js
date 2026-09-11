@@ -257,13 +257,27 @@ export function pickLibraryPlanForKit({ kit, daysPerWeek, experience } = {}, pla
   return scored[0].plan;
 }
 
+/** The word the copy uses for a kit: 'kettlebell' | 'band'. */
+export function libraryKitWord(kit) {
+  return kit === 'kettlebell' ? 'kettlebell' : 'band';
+}
+
 /**
  * The ONE line the athlete is shown when a kit answer installed a library
  * plan. It never claims the plan was generated for them.
  */
 export function libraryKitInstalledLine(kit, planName) {
-  const kitWord = kit === 'kettlebell' ? 'kettlebell' : 'band';
-  return `Volyume has ${kitWord} plans built for this kit. ${planHeadingName(planName)} fits your week.`;
+  return `Volyume has ${libraryKitWord(kit)} plans built for this kit. ${planHeadingName(planName)} fits your week.`;
+}
+
+/**
+ * The line a screen shows BEFORE a kit answer is acted on, wherever the
+ * screen's own copy would otherwise promise a rebuild (Adjust training). It
+ * opens with the same sentence as the installed line above, and says what
+ * happens to the current plan.
+ */
+export function libraryKitOfferLine(kit) {
+  return `Volyume has ${libraryKitWord(kit)} plans built for this kit. The one that fits your week is added in place of your current plan, so there is nothing to rebuild.`;
 }
 
 /**
@@ -272,16 +286,29 @@ export function libraryKitInstalledLine(kit, planName) {
  * so the athlete lands on an active plan AND a running block exactly as a
  * generated plan would leave them.
  *
+ * `confirm` (optional): asked ONCE the plan is known and BEFORE anything is
+ * written, with `{ plan, planName }`. A falsy answer returns
+ * `{ ok: false, error: 'cancelled' }` with nothing copied or activated. This
+ * is how a screen that is REPLACING an active plan (Adjust training) runs the
+ * D139 mid-block confirm at the same point every other plan-replacing path
+ * does; first run has no active plan and passes nothing.
+ *
  * @returns {Promise<{ok: true, programmeId: string, planName: string,
  *   libraryPlanId: string} | {ok: false, error: string}>}
  */
-export async function installLibraryPlanForKit(userId, { kit, daysPerWeek, experience } = {}) {
+export async function installLibraryPlanForKit(userId, {
+  kit, daysPerWeek, experience, confirm = null,
+} = {}) {
   if (!userId) return { ok: false, error: 'no_user' };
   if (!kit) return { ok: false, error: 'no_kit' };
   try {
     const plans = await getLibraryPlans();
     const pick = pickLibraryPlanForKit({ kit, daysPerWeek, experience }, plans);
     if (!pick?.id) return { ok: false, error: 'no_library_plan_for_kit' };
+    if (typeof confirm === 'function') {
+      const proceed = await confirm({ plan: pick, planName: planHeadingName(pick.name) });
+      if (!proceed) return { ok: false, error: 'cancelled' };
+    }
     const copy = await copyPlanFromLibrary(pick.id, userId);
     if (!copy?.id) return { ok: false, error: 'library_copy_failed' };
     await activatePlanWithBlock(userId, copy.id, planHeadingName(pick.name));

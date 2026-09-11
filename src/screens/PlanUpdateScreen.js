@@ -40,7 +40,16 @@ import { diffPlans, summariseProspectivePlan, keepsBlockOnRebuild } from '../lib
 // (Today and Train's no-plan empty states, and a goal/phase change), so all
 // four say the same things in the same order before anything is written.
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
-import { readActivePlanSummary } from '../lib/startWithPlan';
+// F-16 REVISED, parity with first run: 'Kettlebells' and 'Bands' are answers
+// that install a library plan and never generate, and are stored as the
+// equipment PROFILE generationEquipmentFor maps them to. Same helpers, same
+// copy as ProOnboardingScreen, so the two screens cannot drift.
+import {
+  readActivePlanSummary, installLibraryPlanForKit, libraryKitForEquipment,
+  generationEquipmentFor, libraryKitInstalledLine, libraryKitOfferLine, libraryKitWord,
+} from '../lib/startWithPlan';
+// The equipment answers themselves live in ONE shared list with onboarding.
+import { EQUIPMENT_OPTIONS } from '../lib/equipmentOptions';
 import { confirmPlanSwitchMidBlock, readActiveBlockStatus } from '../lib/planSwitch';
 
 // Training setup options, mirror the lists in ProOnboardingScreen and
@@ -63,15 +72,6 @@ const SESSION_LENGTH_OPTIONS = [
   { label: '60 min', value: 60 },
   { label: '75 min', value: 75 },
   { label: '90 min', value: 90 },
-];
-
-const EQUIPMENT_OPTIONS = [
-  { value: 'full_gym',        label: 'Full gym',          sub: 'Barbells, cables, machines, dumbbells' },
-  { value: 'machines_cables', label: 'Machines and cables', sub: 'No free barbells' },
-  { value: 'dumbbells_only',  label: 'Dumbbells only',    sub: 'Adjustable or fixed dumbbells' },
-  { value: 'barbell_plates',  label: 'Barbell and plates', sub: 'Power rack or squat stand setup' },
-  { value: 'home_gym',        label: 'Home gym',          sub: 'Mixed equipment at home' },
-  { value: 'bodyweight',      label: 'Bodyweight',        sub: 'No equipment needed' },
 ];
 
 const RECOVERY_OPTIONS = [
@@ -148,6 +148,9 @@ export default function PlanUpdateScreen({ navigation }) {
 
   const styleLock = planKind?.styleLock ?? null;
   const hasCircuitGroups = !!planKind?.hasCircuit;
+  // F-16 REVISED point 1: non-null means the chosen answer installs a
+  // LIBRARY plan and never reaches the generator (see handleInstallKitPlan).
+  const libraryKit = libraryKitForEquipment(equipment);
 
   const weakPointsApplicable = GOALS_WITH_WEAK_POINTS.includes(selectedGoal);
 
@@ -176,7 +179,13 @@ export default function PlanUpdateScreen({ navigation }) {
       experience,
       daysPerWeek,
       sessionLengthMinutes,
-      equipment,
+      // F-16 REVISED: stored as an equipment PROFILE, never as the raw
+      // 'kettlebells'/'bands' answer. Every engine (planEngine.filterPool,
+      // swapEngine.rankSwaps) does a bare membership test against the
+      // closed six-value profile vocabulary, so an unknown string would
+      // empty the pool rather than filter it. A pass-through for the six
+      // ordinary answers, exactly as onboarding stores it.
+      equipment: generationEquipmentFor(equipment),
       recoveryRating,
     };
   }
@@ -396,6 +405,62 @@ export default function PlanUpdateScreen({ navigation }) {
     navigation.goBack();
   }
 
+  // F-16 REVISED, parity with first run: a kit answer installs the library
+  // plan that fits the week, through the Plan Library's own copy + activate
+  // path (installLibraryPlanForKit), and never generates. There is no
+  // generated plan to dry-run or diff, so for these two answers this replaces
+  // the review sheet; every other answer still goes through
+  // handleRebuildPress above.
+  async function handleInstallKitPlan() {
+    if (previewing || saving || !libraryKit) return;
+    // Belt and braces, as handleRebuildPress: a style plan never renders
+    // this form.
+    if (styleLock) return;
+    setSaving(true);
+    const updatedProfile = buildUpdatedProfile();
+    let planResult = { ok: false, error: 'not attempted' };
+    try {
+      planResult = await installLibraryPlanForKit(user.id, {
+        kit: libraryKit,
+        daysPerWeek,
+        experience,
+        // D139: the same mid-block confirm every plan-replacing path runs,
+        // asked once the plan is known and BEFORE anything is written. A no
+        // leaves the active plan, the block and the setup exactly as they
+        // were (FF-002: nothing is saved until the plan is in place).
+        confirm: ({ planName }) => confirmPlanSwitchMidBlock(user.id, { newPlanName: planName }),
+      });
+    } catch (e) {
+      // C1: the real exception is logged; planResult.error is never shown.
+      logError('PlanUpdateScreen.installKitPlan', e, { userId: user?.id });
+      planResult = { ok: false, error: e?.message ?? 'unknown' };
+    }
+    if (!planResult.ok) {
+      setSaving(false);
+      // The athlete's own no at the confirm is not a failure.
+      if (planResult.error === 'cancelled') return;
+      logWarn('PlanUpdateScreen.installKitPlan', planResult.error ?? 'unknown', { userId: user?.id });
+      toast.show(REBUILD_FAILED_MESSAGE, { variant: 'error', duration: 5000 });
+      return;
+    }
+    // FF-002 (unchanged invariant): the setup becomes canonical only once
+    // the plan is active, so a failed install can never split-brain.
+    try {
+      await saveLocalProfile(user.id, updatedProfile);
+    } catch (_) {}
+    setSaving(false);
+    // The ONE line first run shows for the same answer: it names the plan
+    // and never claims it was generated.
+    toast.show(libraryKitInstalledLine(libraryKit, planResult.planName), { variant: 'success', duration: 5000 });
+    navigation.goBack();
+  }
+
+  // The primary action names what it does: a review of a rebuild for the
+  // six profile answers, the library install for the two kit answers.
+  const primaryLabel = libraryKit
+    ? `Add the ${libraryKitWord(libraryKit)} plan`
+    : 'Review my plan changes';
+
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Adjust training" />
@@ -514,6 +579,12 @@ export default function PlanUpdateScreen({ navigation }) {
           onChange={setEquipment}
           placeholder="Select your equipment"
         />
+        {/* F-16 REVISED: said as soon as a kit answer is chosen, because the
+            copy at the top of this form and the button below otherwise
+            promise a rebuild, and these two answers never rebuild. */}
+        {libraryKit ? (
+          <Text style={[styles.sectionSub, live.sectionSub]}>{libraryKitOfferLine(libraryKit)}</Text>
+        ) : null}
 
         {/* ── Recovery ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
@@ -529,17 +600,19 @@ export default function PlanUpdateScreen({ navigation }) {
 
         {/* F-15 (evidence A3): the circuit grouping is not carried across a
             rebuild. Said here, before the preview is even opened, and again
-            as an explicit answer before anything is written. */}
-        {hasCircuitGroups ? (
+            as an explicit answer before anything is written. A kit answer
+            replaces the plan outright rather than rebuilding it (its own
+            line above says so), so the rebuild wording is not shown for it. */}
+        {hasCircuitGroups && !libraryKit ? (
           <Text style={[styles.circuitNotice, live.circuitNotice]}>{CIRCUIT_FLATTEN_NOTICE}</Text>
         ) : null}
 
         <Button
-          title="Review my plan changes"
-          onPress={handleRebuildPress}
-          loading={previewing}
+          title={primaryLabel}
+          onPress={libraryKit ? handleInstallKitPlan : handleRebuildPress}
+          loading={libraryKit ? saving : previewing}
           disabled={previewing || saving}
-          accessibilityLabel="Review my plan changes"
+          accessibilityLabel={primaryLabel}
           style={styles.saveBtn}
         />
         </>

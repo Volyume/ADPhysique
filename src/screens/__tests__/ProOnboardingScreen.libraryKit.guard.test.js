@@ -34,12 +34,23 @@ const startWithPlanSource = fs.readFileSync(
   path.join(__dirname, '..', '..', 'lib', 'startWithPlan.js'), 'utf8',
 );
 
-const equipmentBlock = source.slice(
-  source.indexOf('const EQUIPMENT_OPTIONS = ['),
-  source.indexOf('const RECOVERY_OPTIONS = ['),
+// The answers moved out of the screen into the ONE shared list every
+// equipment question renders (src/lib/equipmentOptions.js), so the entries
+// are read from there and the screen is pinned to importing it.
+const equipmentSource = fs.readFileSync(
+  path.join(__dirname, '..', '..', 'lib', 'equipmentOptions.js'), 'utf8',
+);
+const equipmentBlock = equipmentSource.slice(
+  equipmentSource.indexOf('export const EQUIPMENT_OPTIONS = Object.freeze(['),
 );
 
 describe('F-16 REVISED: the equipment step offers Kettlebells and Bands', () => {
+  test('the step renders the shared list, not a private copy', () => {
+    expect(source).toMatch(/import \{ EQUIPMENT_OPTIONS \} from '\.\.\/lib\/equipmentOptions'/);
+    expect(source).toMatch(/options=\{EQUIPMENT_OPTIONS\}/);
+    expect(source).not.toMatch(/const EQUIPMENT_OPTIONS = \[/);
+  });
+
   test('both answers exist, with the copy the ruling names', () => {
     expect(equipmentBlock).toMatch(/value: 'kettlebells',\s*label: 'Kettlebells',\s*sub: 'One or two kettlebells, no other weights'/);
     expect(equipmentBlock).toMatch(/value: 'bands',\s*label: 'Bands',\s*sub: 'Resistance bands, no weights'/);

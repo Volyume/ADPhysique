@@ -30,8 +30,10 @@ describe('PlanUpdateScreen rebuild-failure copy (C1 pin)', () => {
 
   test('every rebuild-failure toast uses the single fixed calm message', () => {
     const failureToastCount = (source.match(/toast\.show\(REBUILD_FAILED_MESSAGE,/g) || []).length;
-    // handleRebuildPress: !dry.ok + catch; handleConfirmRebuild: !planResult.ok.
-    expect(failureToastCount).toBe(3);
+    // handleRebuildPress: !dry.ok + catch; handleConfirmRebuild: !planResult.ok;
+    // handleInstallKitPlan (F-16 REVISED, the Kettlebells/Bands library
+    // install): !planResult.ok.
+    expect(failureToastCount).toBe(4);
   });
 
   test('the fixed message is calm, has no interpolation, and reassures the setup is unchanged', () => {
@@ -47,5 +49,7 @@ describe('PlanUpdateScreen rebuild-failure copy (C1 pin)', () => {
     expect(source).toMatch(/logError\('PlanUpdateScreen\.reviewRebuild', e,/);
     expect(source).toMatch(/logError\('PlanUpdateScreen\.confirmRebuild', e,/);
     expect(source).toMatch(/logWarn\('PlanUpdateScreen\.confirmRebuild', planResult\.error/);
+    expect(source).toMatch(/logError\('PlanUpdateScreen\.installKitPlan', e,/);
+    expect(source).toMatch(/logWarn\('PlanUpdateScreen\.installKitPlan', planResult\.error/);
   });
 });

@@ -55,7 +55,7 @@ const {
 const { generateAndSavePlan } = require('../planAutoGen');
 const {
   pickLibraryPlanForKit, libraryKitForEquipment, generationEquipmentFor,
-  libraryKitInstalledLine, installLibraryPlanForKit,
+  libraryKitInstalledLine, installLibraryPlanForKit, libraryKitOfferLine, libraryKitWord,
 } = require('../startWithPlan');
 
 // The real library, with the ids a seeded row would carry.
@@ -217,5 +217,77 @@ describe('installLibraryPlanForKit', () => {
   test('no user and no kit are refusals, not silent no-ops that report success', async () => {
     expect((await installLibraryPlanForKit(null, { kit: 'band' })).ok).toBe(false);
     expect((await installLibraryPlanForKit('u1', {})).ok).toBe(false);
+  });
+
+  // Adjust training (PlanUpdateScreen) REPLACES an active plan, so it runs
+  // the D139 mid-block confirm through this hook: asked once the plan is
+  // known, before anything is written.
+  describe('the optional confirm (D139, Adjust training)', () => {
+    test('is asked with the chosen plan and its heading name, before any write', async () => {
+      getLibraryPlans.mockResolvedValueOnce(SEEDED);
+      const seen = [];
+      const confirm = jest.fn(async () => {
+        seen.push({ copied: copyPlanFromLibrary.mock.calls.length, activated: activatePlanWithBlock.mock.calls.length });
+        return true;
+      });
+      const res = await installLibraryPlanForKit('u1', { kit: 'band', daysPerWeek: 4, experience: 'intermediate', confirm });
+      expect(res.ok).toBe(true);
+      expect(confirm).toHaveBeenCalledTimes(1);
+      const [args] = confirm.mock.calls[0];
+      expect(args.plan.name).toBe('Upper/Lower: Bands');
+      expect(args.planName).toBe('Upper/Lower: Bands');
+      // Nothing had been copied or activated when the question was asked.
+      expect(seen).toEqual([{ copied: 0, activated: 0 }]);
+      expect(copyPlanFromLibrary).toHaveBeenCalledTimes(1);
+      expect(activatePlanWithBlock).toHaveBeenCalledTimes(1);
+    });
+
+    test('a no writes nothing and is reported as cancelled, not as a failure code', async () => {
+      getLibraryPlans.mockResolvedValueOnce(SEEDED);
+      const res = await installLibraryPlanForKit('u1', {
+        kit: 'kettlebell', daysPerWeek: 3, experience: 'beginner', confirm: async () => false,
+      });
+      expect(res).toEqual({ ok: false, error: 'cancelled' });
+      expect(copyPlanFromLibrary).not.toHaveBeenCalled();
+      expect(activatePlanWithBlock).not.toHaveBeenCalled();
+    });
+
+    test('is never asked when there is no plan to install', async () => {
+      getLibraryPlans.mockResolvedValueOnce([]);
+      const confirm = jest.fn(async () => true);
+      const res = await installLibraryPlanForKit('u1', { kit: 'kettlebell', daysPerWeek: 3, experience: 'beginner', confirm });
+      expect(res.error).toBe('no_library_plan_for_kit');
+      expect(confirm).not.toHaveBeenCalled();
+    });
+
+    test('omitting it installs exactly as before (first run passes nothing)', async () => {
+      getLibraryPlans.mockResolvedValueOnce(SEEDED);
+      const res = await installLibraryPlanForKit('u1', { kit: 'band', daysPerWeek: 4, experience: 'intermediate' });
+      expect(res.ok).toBe(true);
+      expect(activatePlanWithBlock).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe('libraryKitOfferLine (the line Adjust training shows before the install)', () => {
+  test('opens with the same sentence as the installed line and says the current plan is replaced', () => {
+    for (const kit of ['kettlebell', 'band']) {
+      const offer = libraryKitOfferLine(kit);
+      const installed = libraryKitInstalledLine(kit, 'Plan');
+      const firstSentence = installed.slice(0, installed.indexOf('.') + 1);
+      expect(offer.startsWith(firstSentence)).toBe(true);
+      expect(offer).toMatch(/in place of your current plan/);
+      expect(offer).toMatch(/nothing to rebuild/);
+      expect(offer).not.toMatch(/built you|generated|created for you/i);
+      expect(offer).not.toContain('—');
+      expect(offer).not.toMatch(/customize|program\b|optimize/i);
+    }
+  });
+
+  test('the kit word is the one both lines use', () => {
+    expect(libraryKitWord('kettlebell')).toBe('kettlebell');
+    expect(libraryKitWord('band')).toBe('band');
+    expect(libraryKitInstalledLine('kettlebell', 'Plan')).toContain('kettlebell plans');
+    expect(libraryKitOfferLine('band')).toContain('band plans');
   });
 });
