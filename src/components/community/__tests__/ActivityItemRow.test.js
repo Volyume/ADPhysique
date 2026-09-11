@@ -22,7 +22,7 @@ jest.mock('../../../store/useAppStore', () => ({
 }));
 
 import ActivityItemRow, { activityItemLines } from '../ActivityItemRow';
-import { resolveTheme } from '../../../styles/theme';
+import { resolveTheme, hitSlop } from '../../../styles/theme';
 
 const THEME = resolveTheme({
   theme: undefined, largerText: undefined, higherContrast: undefined, colorBlindSafe: undefined,
@@ -213,6 +213,23 @@ describe('ActivityItemRow rendering', () => {
     )[0];
     act(() => { avatarButton.props.onPress(); });
     expect(onOpenPerson).toHaveBeenCalledWith(AUTHOR);
+  });
+
+  // F10 (fresh-eyes review): the 32 dp author-avatar target had no
+  // hitSlop. Fixed to the same theme token the Respect glyph beside it
+  // already uses, so the two targets now match.
+  test('the author-avatar target carries the same hitSlop as the Respect glyph', () => {
+    const tree = render({
+      item: item('pr', { exerciseName: 'Bench press', weight: 100, reps: 5 }),
+      onOpenPerson: jest.fn(),
+      onRespect: jest.fn(),
+    });
+    const avatarButton = tree.root.findAll(
+      (n) => n.props?.accessibilityLabel === "Open Sam Rees's profile",
+    )[0];
+    const heart = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Give this respect')[0];
+    expect(avatarButton.props.hitSlop).toEqual(hitSlop);
+    expect(avatarButton.props.hitSlop).toEqual(heart.props.hitSlop);
   });
 
   test('opens the item on press', () => {

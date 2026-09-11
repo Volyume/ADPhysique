@@ -377,3 +377,71 @@ export async function publishConsistencyOnForeground(userId, { nowMs = Date.now(
   } catch (_e) { /* best effort: worst case, publishes again next foreground */ }
   return out;
 }
+
+/**
+ * F4 fix (fresh-eyes review): `saveSharing` on
+ * `CommunityTrainingProfileScreen.js` writes the new "Share what I did"
+ * settings locally and calls `publishSharingSettings` once. Withdrawing
+ * consent (turning it off, optionally removing what was already shared)
+ * must never be lost to one failed call, so a device-side pending flag
+ * marks that a publish is owed and this module -- never the screen --
+ * owns retrying it.
+ */
+export const SHARING_PUBLISH_PENDING_PREFIX = '@volyume_community_sharing_pending_';
+
+function sharingPublishPendingKey(uid) {
+  return `${SHARING_PUBLISH_PENDING_PREFIX}${uid ?? 'unknown'}`;
+}
+
+/**
+ * Set or clear the "a `publishSharingSettings` call is owed" flag.
+ * Called from `saveSharing`: set on a failed publish, cleared on a
+ * successful one (from there directly, or from a later retry here).
+ *
+ * @param {string} uid
+ * @param {boolean} pending
+ */
+export async function setSharingPublishPending(uid, pending, { removeShared = false } = {}) {
+  if (!uid) return;
+  try {
+    // Lead review 2026-09-11: the flag carries the REMOVAL intent too. A
+    // failed "turn off and remove what I already shared" must retry the
+    // removal, not only the turn-off, or the items the person asked to take
+    // down stay live until they happen to ask again.
+    if (pending) await AsyncStorage.setItem(sharingPublishPendingKey(uid), JSON.stringify({ removeShared: !!removeShared }));
+    else await AsyncStorage.removeItem(sharingPublishPendingKey(uid));
+  } catch (_e) { /* best effort: worst case an extra retry, or one missed until next failure */ }
+}
+
+/**
+ * The Hub's foreground effect (same trigger as `publishConsistencyOnForeground`
+ * and `flushPendingAmbientItems`): when a previous `publishSharingSettings`
+ * call left the pending flag set, retry it with whatever "Share what I
+ * did" settings are currently saved on device (`readShareSettings` --
+ * already minor-clamped by the screen before it wrote them). Clears the
+ * flag on success; leaves it set on a further failure so the next
+ * foreground tries again. A no-op, cheaply, when nothing is pending.
+ *
+ * @param {string} userId
+ * @returns {Promise<{sent: boolean, reason: (string|null)}>}
+ */
+export async function retryPendingSharingPublish(userId) {
+  const uid = userId ?? currentUserId();
+  if (!uid) return { sent: false, reason: 'no_user' };
+  let pending = null;
+  try {
+    pending = await AsyncStorage.getItem(sharingPublishPendingKey(uid));
+  } catch (_e) { /* unreadable: treat as nothing pending, a further failure re-sets it */ }
+  if (!pending) return { sent: false, reason: 'nothing_pending' };
+  // The stored intent: a JSON object since the lead review; a bare '1' from
+  // an earlier build reads as "no removal owed".
+  let removeShared = false;
+  try {
+    const parsed = JSON.parse(pending);
+    removeShared = !!(parsed && typeof parsed === 'object' && parsed.removeShared);
+  } catch (_e) { removeShared = false; }
+  const share = await readShareSettings(uid);
+  const out = await publishSharingSettings(uid, share, { removeShared });
+  if (out?.sent) await setSharingPublishPending(uid, false);
+  return out;
+}

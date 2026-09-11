@@ -54,6 +54,7 @@ import {
   syncTrainingProfile, publishConsistency, publishSharingSettings, shareablePayload, previewLine,
   SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS,
   COMMUNITY_DISCIPLINE_KEYS, COMMUNITY_DISCIPLINE_LABELS, MAX_DISCIPLINES_PER_PROFILE,
+  listMyGroups,
 } from '../lib/community';
 import { bandRows, NOT_ENOUGH_LINE, NOTHING_SHARED_LINE } from './CommunityTrainingProfileScreen';
 
@@ -89,7 +90,11 @@ const REFUSALS = {
 export default function CommunityJoinScreen({ navigation, route }) {
   const t = useTheme();
   const toast = useToast();
-  const { me, refresh } = useCommunityMe();
+  // F12 fix: `loading` (renamed `meLoading`) gates the "Under 18" copy
+  // below -- `emptyMe()` now defaults `is_minor` to true (unknown means
+  // minor until the server says otherwise), so an adult's FIRST render,
+  // before this resolves, must not show minor-specific copy about them.
+  const { me, loading: meLoading, refresh } = useCommunityMe();
   const next = route?.params?.next ?? null;
 
   const [handle, setHandle] = useState('');
@@ -147,6 +152,12 @@ export default function CommunityJoinScreen({ navigation, route }) {
   const [tpLoading, setTpLoading] = useState(true);
   const uid = currentUserId();
 
+  // F5 fix: same as the Training profile screen -- "My groups" is a
+  // doomed, silent choice with no groups to post to. Starts enabled and
+  // fails open to enabled on a read failure; only a positive empty list
+  // disables it.
+  const [hasGroups, setHasGroups] = useState(true);
+
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -169,6 +180,19 @@ export default function CommunityJoinScreen({ navigation, route }) {
     })();
     return () => { alive = false; };
   }, [uid]);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const mine = await listMyGroups();
+        if (alive) setHasGroups(mine.length > 0);
+      } catch (_e) {
+        if (alive) setHasGroups(true);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
 
   async function toggleBand(key, next) {
     const settings = { ...tpShare, [key]: next };
@@ -484,7 +508,10 @@ export default function CommunityJoinScreen({ navigation, route }) {
               ? 'Anyone signed in can follow you and see what you post.'
               : 'You approve every follower before they see what you post.'}
           </Text>
-          {isMinor ? (
+          {/* F12 fix: never shown until `me` has genuinely loaded --
+              `isMinor` alone defaults true (unknown means minor) and
+              would otherwise flash this at an adult on first render. */}
+          {!meLoading && isMinor ? (
             <Text style={[styles.hint, { ...t.type.caption, color: t.colors.textSecondary }]}>
               Under 18: your profile is followers-only and does not appear in search.
             </Text>
@@ -544,17 +571,28 @@ export default function CommunityJoinScreen({ navigation, route }) {
                         Shared with people who follow you.
                       </Text>
                     ) : (
-                      <View style={styles.chipRow} accessibilityLabel="Who sees what you did">
-                        {SESSIONS_AUDIENCE_VALUES.map((value) => (
-                          <Chip
-                            key={value}
-                            label={SESSIONS_AUDIENCE_LABELS[value]}
-                            selected={tpShare.sessions_audience === value}
-                            onPress={() => toggleBand('sessions_audience', value)}
-                            accessibilityRole="radio"
-                          />
-                        ))}
-                      </View>
+                      <>
+                        <View style={styles.chipRow} accessibilityLabel="Who sees what you did">
+                          {SESSIONS_AUDIENCE_VALUES.map((value) => (
+                            <Chip
+                              key={value}
+                              label={SESSIONS_AUDIENCE_LABELS[value]}
+                              selected={tpShare.sessions_audience === value}
+                              onPress={() => toggleBand('sessions_audience', value)}
+                              accessibilityRole="radio"
+                              disabled={value === 'groups' && !hasGroups}
+                            />
+                          ))}
+                        </View>
+                        {/* F5 fix: "My groups" with nobody to post to is
+                            a doomed, silent choice -- say so rather than
+                            letting it look like a working option. */}
+                        {hasGroups ? null : (
+                          <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+                            You are not in any groups yet.
+                          </Text>
+                        )}
+                      </>
                     )
                   ) : null}
                 </Fragment>

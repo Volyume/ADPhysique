@@ -358,6 +358,75 @@ describe('no Community file reads personal data', () => {
 });
 
 /**
+ * F7 (fresh-eyes review): a Community SCREEN reaching straight into
+ * `src/lib/database.js` bypasses the whole `src/lib/community` privacy
+ * boundary the tests above police file-by-file (trainingProfile.js,
+ * trainingConsistency.js, posts.js) -- a screen has no equivalent
+ * itemised-import test of its own, so `CommunityGroupScreen.js` had
+ * quietly grown a lazy `getAllWorkouts` require (SELECT w.*, private
+ * notes included) to take a single id. Fixed to an id-only read
+ * (`getLatestCompletedWorkoutId`); this is that screen's own itemised
+ * exception, same convention as the three lib files above, rather than
+ * a blanket ban with a silent gap. A sweep at the time of this fix found
+ * no OTHER Community screen reaching database.js at all.
+ */
+describe('no Community SCREEN reaches src/lib/database.js except one named, narrow exception', () => {
+  // The only screen allowed near the device layer, and exactly the
+  // functions it may take from it. Any other screen wanting one joins
+  // this list explicitly, in the same lead-reviewed change that adds it
+  // -- never silently.
+  const SCREEN_DB_EXCEPTIONS = {
+    'CommunityGroupScreen.js': ['getLatestCompletedWorkoutId'],
+  };
+
+  function communityScreenFiles() {
+    return fs.existsSync(SCREEN_DIR)
+      ? fs.readdirSync(SCREEN_DIR).filter((f) => f.startsWith('Community') && f.endsWith('.js'))
+      : [];
+  }
+
+  test('there are Community screens to guard', () => {
+    expect(communityScreenFiles().length).toBeGreaterThan(0);
+  });
+
+  test.each(communityScreenFiles())('%s', (file) => {
+    const source = code(fs.readFileSync(path.join(SCREEN_DIR, file), 'utf8'));
+    const staticImportRefs = source.match(/from\s*'\.\.\/lib\/database'/g) ?? [];
+    const lazyRequireRefs = source.match(/require\(['"]\.\.\/lib\/database['"]\)/g) ?? [];
+    const allowed = SCREEN_DB_EXCEPTIONS[file];
+
+    if (!allowed) {
+      expect(staticImportRefs).toEqual([]);
+      expect(lazyRequireRefs).toEqual([]);
+      return;
+    }
+    // The named exception: exactly the allowed functions, lazily
+    // required (never a static top-level import -- that would pull the
+    // device layer into every screen bundling this one, not only the
+    // one call site that needs it).
+    expect(staticImportRefs).toEqual([]);
+    expect(lazyRequireRefs).toHaveLength(1);
+    const destructure = /const \{\s*([^}]*)\s*\} = require\('\.\.\/lib\/database'\);/.exec(source);
+    expect(destructure).toBeTruthy();
+    const named = destructure[1].split(',').map((s) => s.trim()).filter(Boolean);
+    expect(named.sort()).toEqual([...allowed].sort());
+  });
+
+  test('getLatestCompletedWorkoutId itself is an id-only SELECT, never w.* (private notes excluded by construction)', () => {
+    const dbSource = fs.readFileSync(path.join(ROOT, 'src/lib/database.js'), 'utf8');
+    const fnMatch = /export async function getLatestCompletedWorkoutId\([\s\S]*?\n\}/.exec(dbSource);
+    expect(fnMatch).toBeTruthy();
+    const body = fnMatch[0];
+    expect(body).toMatch(/SELECT id FROM workouts/);
+    expect(body).toMatch(/is_completed = 1/);
+    expect(body).toMatch(/ORDER BY started_at DESC/);
+    expect(body).toMatch(/LIMIT 1/);
+    expect(body).not.toMatch(/SELECT w\.\*/);
+    expect(body).not.toMatch(/rowToCamel/);
+  });
+});
+
+/**
  * GD-13 (gym database blueprint `docs/gym-database-2026-09-06/
  * 20-BLUEPRINT.md`): "A person's gym is a chosen fact... there is no
  * inference from sessions, no check-ins, no live presence." The half of

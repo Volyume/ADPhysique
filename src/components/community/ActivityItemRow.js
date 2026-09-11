@@ -160,6 +160,7 @@ export default function ActivityItemRow({
           style={styles.avatarWrap}
           onPress={() => onOpenPerson?.(author)}
           disabled={!onOpenPerson}
+          hitSlop={hitSlop}
           accessibilityRole="button"
           accessibilityLabel={author?.display_name ? `Open ${author.display_name}'s profile` : 'Open profile'}
         >

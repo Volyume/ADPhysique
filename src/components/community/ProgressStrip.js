@@ -64,12 +64,18 @@ export default function ProgressStrip({ counters, onPress }) {
   const streak = Number(counters.c_weeks_streak) || 0;
   const consistent = Number(counters.c_consistent_weeks_12w) || 0;
 
+  // F9 fix: rendered without onPress (another person's profile has no
+  // per-person board to open -- see CommunityProfileScreen.js), this is
+  // presentational only. Both the role and the label's call-to-action
+  // must say so, never announce a tap that does nothing.
+  const suffix = onPress ? ' See boards' : '';
+
   return (
     <Pressable
       onPress={onPress}
       style={[styles.strip, { backgroundColor: t.colors.surface2 }]}
-      accessibilityRole="button"
-      accessibilityLabel={`${sessions} sessions this week, ${streak} week streak, ${consistent} consistent weeks in the last 12. See boards`}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={`${sessions} sessions this week, ${streak} week streak, ${consistent} consistent weeks in the last 12.${suffix}`}
     >
       <View style={styles.cellsRow}>
         <Cell t={t} value={sessions} label={sessions === 1 ? 'session this week' : 'sessions this week'} />

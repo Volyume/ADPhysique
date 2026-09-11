@@ -243,13 +243,19 @@ export default function CommunityHubScreen({ navigation, route }) {
   useEffect(() => {
     if (!consistencyUid) return undefined;
     // eslint-disable-next-line global-require
-    const { publishConsistencyOnForeground, flushPendingAmbientItems } = require('../lib/community');
+    const {
+      publishConsistencyOnForeground, flushPendingAmbientItems, retryPendingSharingPublish,
+    } = require('../lib/community');
     publishConsistencyOnForeground(consistencyUid).catch(() => {});
     flushPendingAmbientItems(consistencyUid).catch(() => {});
+    // F4 fix: retry a "Share what I did" publish left owed by a failed
+    // `saveSharing` call, on the same foreground trigger.
+    retryPendingSharingPublish(consistencyUid).catch(() => {});
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         publishConsistencyOnForeground(consistencyUid).catch(() => {});
         flushPendingAmbientItems(consistencyUid).catch(() => {});
+        retryPendingSharingPublish(consistencyUid).catch(() => {});
       }
     });
     return () => sub.remove();

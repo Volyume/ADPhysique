@@ -360,7 +360,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           weight: p.weight,
           reps: p.reps,
           units: p.units,
-          previousBest: p.previousValue ?? null,
+          // F2: detectPR's previousValue is type-dependent (algorithms.js)
+          // -- an e1RM for 1rm_estimate, a rep count for
+          // most_reps_at_weight -- and only a weight for heaviest_weight.
+          // ActivityItemRow renders this figure as a weight, so only pass
+          // it through for the one PR type where that is true.
+          previousBest: p.type === 'heaviest_weight' ? (p.previousValue ?? null) : null,
           date: startedAt ?? endedAt ?? Date.now(),
         }));
         const out = await publishAmbientItems({

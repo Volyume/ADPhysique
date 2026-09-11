@@ -10,11 +10,16 @@
  *  - the cursor carried onward is the SERVER's string. Rebuilding one
  *    from `created_at` is refused by `_community_cursor_parts` as
  *    `invalid_input`, so nothing here mints its own;
- *  - reading Discover never requires a Community profile (SD-04). Without
- *    one, `community_dimensions_me` is not called at all: it raises
- *    `no_profile`;
- *  - one failing section never empties Discover. The reads are settled
- *    independently, and a rejected optional section is simply empty;
+ *  - reading Discover never requires a Community profile (SD-04);
+ *    `community_dimensions_me` is never called by Discover at all any
+ *    more (F18 fix, fresh-eyes review of the Community client phases
+ *    0-3: `myDimensions()` and the `joined`-gated branch that reached it
+ *    were dead code -- the one real caller always paired
+ *    `segment: 'discover'` with `joined: false`, the opposite of what
+ *    the branch needed, so it and the function are both removed rather
+ *    than kept unreachable);
+ *  - a failing STORIES read is the only way Discover empties; nothing
+ *    else it reads can fail any more;
  *  - `community_suggested_people` is never called by `loadHub` at all
  *    (spec 1.3, community-product-audit-2026-09-07 section 1.3): the hub
  *    never rendered `people`, so the read was removed rather than kept
@@ -23,8 +28,7 @@
  *
  * Programme-sharing (publish/discover/search/adapt) was removed from
  * Community entirely (`docs/community-product-audit-2026-09-07/
- * 40-GAP-CLOSURE.md` §2): `loadHub`'s Discover half is now posts and
- * dimensions only.
+ * 40-GAP-CLOSURE.md` §2): `loadHub`'s Discover half is posts only now.
  */
 
 jest.mock('../transport', () => ({ callCommunity: jest.fn() }));
@@ -34,7 +38,7 @@ jest.mock('../../dayKey', () => ({ localDayKey: jest.fn(() => '2026-09-10') }));
 const { callCommunity } = require('../transport');
 const {
   loadHub, loadFeed, listComments, clearCachedHub,
-  myDimensions, loadHubSummary, loadDimensionRecent,
+  loadHubSummary, loadDimensionRecent,
   createPost, setPostNote,
 } = require('../feed');
 const { loadActivity } = require('../activity');
@@ -106,7 +110,7 @@ describe('Discover without a Community profile (SD-04)', () => {
       community_discover_posts: POST_PAGE,
     });
 
-    const hub = await loadHub('discover', { joined: false });
+    const hub = await loadHub('discover', {});
 
     const called = callCommunity.mock.calls.map(([name]) => name);
     expect(called).not.toContain('community_dimensions_me');
@@ -116,49 +120,40 @@ describe('Discover without a Community profile (SD-04)', () => {
     expect(hub.error).toBeNull();
   });
 
-  test('community_suggested_people is never called by loadHub, joined or not (spec 1.3)', async () => {
+  // F18 (fresh-eyes review): `community_dimensions_me` (`myDimensions()`)
+  // is gone from this path entirely, not merely conditional on `joined`
+  // -- the only real caller (`CommunityHubScreen.js`) always paired
+  // `segment: 'discover'` with `joined: false`, so `loadHub('discover',
+  // { joined: true })` was a combination nothing ever requested, and the
+  // dead branch behind it is removed along with `myDimensions` itself.
+  test('community_dimensions_me and community_suggested_people are never called by loadHub at all (spec 1.3)', async () => {
     server({
       community_discover_posts: POST_PAGE,
-      community_dimensions_me: { dimensions: [] },
     });
 
-    await loadHub('discover', { joined: false });
-    await loadHub('discover', { joined: true });
+    await loadHub('discover', {});
 
-    expect(callCommunity.mock.calls.map(([name]) => name))
-      .not.toContain('community_suggested_people');
+    const called = callCommunity.mock.calls.map(([name]) => name);
+    expect(called).not.toContain('community_dimensions_me');
+    expect(called).not.toContain('community_suggested_people');
   });
 
   test('the paging cursor is the stories cursor the server minted', async () => {
     server({
       community_discover_posts: POST_PAGE,
     });
-    const hub = await loadHub('discover', { joined: false });
+    const hub = await loadHub('discover', {});
     expect(hub.cursor).toBe(POST_PAGE.cursor);
   });
 });
 
 describe('one failing section never empties Discover', () => {
-  test('a refused dimensions read leaves the stories standing', async () => {
-    server({
-      community_discover_posts: POST_PAGE,
-      community_dimensions_me: refusal('no_profile'),
-    });
-
-    const hub = await loadHub('discover', { joined: true });
-
-    expect(hub.posts).toEqual(POST_PAGE.posts);
-    expect(hub.people).toEqual([]);
-    expect(hub.dimensions).toEqual([]);
-  });
-
   test('a refused stories read is a failure', async () => {
     server({
       community_discover_posts: refusal('offline'),
-      community_dimensions_me: { dimensions: [] },
     });
 
-    const hub = await loadHub('discover', { joined: true });
+    const hub = await loadHub('discover', {});
 
     expect(hub.error).toBe('offline');
     expect(hub.fromCache).toBe(false);
@@ -168,15 +163,13 @@ describe('one failing section never empties Discover', () => {
   test('with something read earlier, offline shows that instead of nothing', async () => {
     server({
       community_discover_posts: POST_PAGE,
-      community_dimensions_me: { dimensions: [] },
     });
-    await loadHub('discover', { joined: true });
+    await loadHub('discover', {});
 
     server({
       community_discover_posts: refusal('offline'),
-      community_dimensions_me: refusal('offline'),
     });
-    const hub = await loadHub('discover', { joined: true });
+    const hub = await loadHub('discover', {});
 
     expect(hub.fromCache).toBe(true);
     expect(hub.error).toBe('offline');
@@ -188,25 +181,11 @@ describe('paging Discover', () => {
   test('pages the stories only, and asks for nothing else again', async () => {
     server({ community_discover_posts: { posts: [{ post: { id: 'p2' } }], cursor: 'next' } });
 
-    const page = await loadHub('discover', { cursor: 'c0', joined: true });
+    const page = await loadHub('discover', { cursor: 'c0' });
 
     expect(callCommunity.mock.calls.map(([name]) => name)).toEqual(['community_discover_posts']);
     expect(page.posts).toHaveLength(1);
     expect(page.cursor).toBe('next');
-  });
-});
-
-// ─── Communities revamp 2026-09-10 (task 4): _today on
-// community_dimensions_me, community_hub_summary, community_dimension_
-// recent -- all through the existing transport and error handling. ─────
-describe('myDimensions sends the caller\'s own local day (22-MIGRATION-170A-CONTRACT.md, lead ruling 1)', () => {
-  test('_today is the client\'s own localDayKey(), never left for the server to guess', async () => {
-    server({ community_dimensions_me: { dimensions: [{ kind: 'gym', key: 'g1' }] } });
-
-    const page = await myDimensions();
-
-    expect(callCommunity).toHaveBeenCalledWith('community_dimensions_me', { _today: '2026-09-10' });
-    expect(page.dimensions).toEqual([{ kind: 'gym', key: 'g1' }]);
   });
 });
 

@@ -78,8 +78,10 @@ jest.mock('../../lib/community', () => ({
   writeShareSettings: jest.fn(() => Promise.resolve()),
   syncTrainingProfile: jest.fn(() => Promise.resolve({ sent: true, reason: null, payload: null })),
   publishSharingSettings: jest.fn(() => Promise.resolve({ sent: true, reason: null })),
+  setSharingPublishPending: jest.fn(() => Promise.resolve()),
   publishConsistency: jest.fn(() => Promise.resolve({ sent: true, reason: null, payload: null })),
   setPartner: jest.fn(() => Promise.resolve()),
+  listMyGroups: jest.fn(() => Promise.resolve([])),
 }));
 
 const mockAppAlert = jest.fn();
@@ -87,7 +89,7 @@ jest.mock('../../components/AppAlert', () => ({ appAlert: (...args) => mockAppAl
 
 import {
   TP_DEFAULT_SHARE, loadTrainingProfile, readShareSettings, writeShareSettings, syncTrainingProfile,
-  publishSharingSettings, setPartner,
+  publishSharingSettings, setSharingPublishPending, setPartner, listMyGroups,
 } from '../../lib/community';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityTrainingProfileScreen, {
@@ -337,6 +339,86 @@ describe('share what I did (phase 3 spec section 1)', () => {
     expect(tree.root.findAll((n) => n.props?.label === 'Everyone' && n.props?.onPress)).toHaveLength(0);
     expect(flattenText(tree.toJSON())).toContain('Shared with people who follow you.');
   });
+
+  // F4 (fresh-eyes review): a failed publishSharingSettings call must
+  // never silently lose the change -- it marks a retry as owed
+  // (`setSharingPublishPending`, retried from the Hub's foreground
+  // effect) rather than doing nothing further.
+  test('a failed publish turning it ON marks the retry as owed, wording unchanged ("will share")', async () => {
+    publishSharingSettings.mockResolvedValueOnce({ sent: false, reason: 'offline' });
+    const { tree } = await mount();
+    const shareSwitch = switchFor(tree, 'Share share what i did');
+
+    await act(async () => { shareSwitch.props.onValueChange(true); });
+    await flush();
+
+    expect(setSharingPublishPending).toHaveBeenCalledWith('u1', true, { removeShared: false });
+    expect(mockToastShow).toHaveBeenCalledWith('Saved on this device. It will share when you are back online.');
+  });
+
+  test('a failed publish turning it OFF marks the retry as owed and reads "will apply", never "will share"', async () => {
+    readShareSettings.mockResolvedValue({ ...TP_DEFAULT_SHARE, share_sessions: true });
+    publishSharingSettings.mockResolvedValueOnce({ sent: false, reason: 'offline' });
+    const { tree } = await mount();
+    const shareSwitch = switchFor(tree, 'Share share what i did');
+    await act(async () => { shareSwitch.props.onValueChange(false); });
+    await flush();
+    const [, , buttons] = mockAppAlert.mock.calls[0];
+    await act(async () => { buttons.find((b) => b.text === 'Keep').onPress(); });
+    await flush();
+
+    expect(setSharingPublishPending).toHaveBeenCalledWith('u1', true, { removeShared: false });
+    expect(mockToastShow).toHaveBeenCalledWith('Saved on this device. It will apply when you are back online.');
+    expect(mockToastShow).not.toHaveBeenCalledWith('Saved on this device. It will share when you are back online.');
+  });
+
+  test('a successful publish clears any previously owed retry flag', async () => {
+    const { tree } = await mount();
+    const shareSwitch = switchFor(tree, 'Share share what i did');
+
+    await act(async () => { shareSwitch.props.onValueChange(true); });
+    await flush();
+
+    expect(setSharingPublishPending).toHaveBeenCalledWith('u1', false);
+  });
+});
+
+// F5 (fresh-eyes review): "My groups" with nobody to post to is a doomed,
+// silent choice (`ambient.js` skips with skipped:'no_groups').
+describe('the "My groups" audience chip: disabled with nothing to post to (F5)', () => {
+  async function openAudienceChips(tree) {
+    const shareSwitch = switchFor(tree, 'Share share what i did');
+    await act(async () => { shareSwitch.props.onValueChange(true); });
+    await flush();
+  }
+
+  test('with no groups, the chip is disabled and says why', async () => {
+    const { tree } = await mount();
+    await openAudienceChips(tree);
+
+    const myGroups = tree.root.findAll((n) => n.props?.label === 'My groups' && n.props?.onPress)[0];
+    expect(myGroups.props.disabled).toBe(true);
+    expect(flattenText(tree.toJSON())).toContain('You are not in any groups yet.');
+  });
+
+  test('with a group, the chip is enabled and the line is absent', async () => {
+    listMyGroups.mockResolvedValueOnce([{ group: { id: 'g1' }, role: 'member', state: 'member' }]);
+    const { tree } = await mount();
+    await openAudienceChips(tree);
+
+    const myGroups = tree.root.findAll((n) => n.props?.label === 'My groups' && n.props?.onPress)[0];
+    expect(myGroups.props.disabled).toBe(false);
+    expect(flattenText(tree.toJSON())).not.toContain('You are not in any groups yet.');
+  });
+
+  test('a read failure fails open: never blocks the choice on a network error', async () => {
+    listMyGroups.mockRejectedValueOnce(new Error('offline'));
+    const { tree } = await mount();
+    await openAudienceChips(tree);
+
+    const myGroups = tree.root.findAll((n) => n.props?.label === 'My groups' && n.props?.onPress)[0];
+    expect(myGroups.props.disabled).toBe(false);
+  });
 });
 
 describe('a minor never sees the age band row (SD-32, exactly as Join filters it)', () => {
@@ -370,6 +452,24 @@ describe('a minor and the partner section (SD-32, product review 2026-09-06 find
 
     expect(switchFor(tree, 'Open to training together')).toBeUndefined();
     expect(flattenText(tree.toJSON())).toContain('Training partner matching opens at 18.');
+  });
+
+  // F12 (fresh-eyes review): `emptyMe()` now defaults `is_minor` to true
+  // (unknown means minor), so `useCommunityMe`'s own `loading` must gate
+  // this copy -- an adult's identity still loading must never flash it.
+  test('F12: while the identity is still loading, the "opens at 18" line never shows, even though is_minor defaults true', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { ...ME, is_minor: true },
+      loading: true,
+      error: null,
+      refresh: jest.fn(() => Promise.resolve()),
+    });
+    const { tree } = await mount();
+
+    expect(flattenText(tree.toJSON())).not.toContain('Training partner matching opens at 18.');
+    // Nor the adult switch section either -- nothing at all renders for
+    // this row until the identity load resolves.
+    expect(switchFor(tree, 'Open to training together')).toBeUndefined();
   });
 });
 

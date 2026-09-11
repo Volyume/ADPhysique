@@ -298,8 +298,15 @@ describe('exactly three auto audiences, built from the one closed set', () => {
 describe('the once-only offer (source-pinned on WorkoutSummaryScreen.js, matching this screen\'s own established guard-test convention: a full render harness is fragile against its real data loads)', () => {
   const SOURCE = fs.readFileSync(path.join(__dirname, '../screens/WorkoutSummaryScreen.js'), 'utf8');
 
-  test('the offer is gated on having not been seen before', () => {
-    expect(SOURCE).toMatch(/hasSeenSessionShareOffer/);
+  // F17 (fresh-eyes review): the old assertion (`toMatch(/hasSeenSessionShareOffer/)`
+  // with no anchoring) passes on the IMPORT line alone -- it would still
+  // pass with the actual gate check deleted from the effect below, as
+  // long as the name stayed imported. Pin the call site instead, inside
+  // the specific effect that decides the offer.
+  test('the offer is gated on having not been seen before (the call site inside the effect, not merely the import)', () => {
+    const effectMatch = /useEffect\(\(\) => \{[\s\S]*?\}, \[readOnly, shareOfferEligible, user\?\.id\]\);/.exec(SOURCE);
+    expect(effectMatch).toBeTruthy();
+    expect(effectMatch[0]).toMatch(/const seen = await hasSeenSessionShareOffer\(user\.id\);/);
   });
 
   test('both the accept and the decline path record the offer as seen', () => {
@@ -332,5 +339,132 @@ describe('the once-only offer (source-pinned on WorkoutSummaryScreen.js, matchin
 
   test('the offer copy never claims to show more than day-level facts', () => {
     expect(SOURCE).toMatch(/Show people who follow you which days you trained\? Never your weight, food or photos\./);
+  });
+});
+
+// F2 (fresh-eyes review): detectPR's previousValue is type-dependent
+// (algorithms.js: an e1RM for 1rm_estimate, a rep count for
+// most_reps_at_weight, and only ever a weight for heaviest_weight).
+// ActivityItemRow renders `previousBest` as a weight unconditionally, so
+// the map from detectedPRs to the ambient prList must only carry it
+// through for that one PR type, never a bare pass-through.
+describe('F2: the prList map only carries previousBest for heaviest_weight PRs (source-pinned on WorkoutSummaryScreen.js)', () => {
+  const SOURCE = fs.readFileSync(path.join(__dirname, '../screens/WorkoutSummaryScreen.js'), 'utf8');
+
+  test('previousBest is gated on p.type === \'heaviest_weight\', not a bare pass-through of previousValue', () => {
+    const mapMatch = /const prList = \(detectedPRs \|\| \[\]\)\.map\(\(p\) => \(\{[\s\S]*?\}\)\);/.exec(SOURCE);
+    expect(mapMatch).toBeTruthy();
+    const body = mapMatch[0];
+    expect(body).toMatch(/previousBest:\s*p\.type === 'heaviest_weight' \? \(p\.previousValue \?\? null\) : null/);
+  });
+});
+
+// F3 (fresh-eyes review): "Respect everyone who trained today" must never
+// count the viewer's own row -- a lone trainer training alone must not see
+// "Respect given to 0 people" with the row disabled for the rest of the day.
+describe('F3: RespectAllRow.hasTrainedToday excludes the viewer\'s own row (source-pinned)', () => {
+  test.each([
+    ['src/screens/CommunityDimensionScreen.js', /hasTrainedToday=\{displayRows\.some\(\(row\) => row\.trainedToday && !row\.isYou\)\}/],
+    ['src/screens/CommunityGroupScreen.js', /hasTrainedToday=\{displayMembers\.some\(\(row\) => row\.trainedToday && !row\.isYou\)\}/],
+  ])('%s passes hasTrainedToday gated on !row.isYou', (rel, pattern) => {
+    const source = fs.readFileSync(path.join(__dirname, '../..', rel), 'utf8');
+    expect(source).toMatch(pattern);
+  });
+});
+
+// F4 (fresh-eyes review): a failed publishSharingSettings call (withdrawing
+// or granting "Share what I did") must retry, not vanish. The retry rides
+// the Hub's existing foreground trigger (the same one already used for
+// publishConsistencyOnForeground and flushPendingAmbientItems) and the
+// retry mechanics themselves stay in src/lib/community, never the screen.
+describe('F4: a pending sharing-settings publish is retried from the Hub foreground effect, never re-implemented in the screen', () => {
+  test('source: retryPendingSharingPublish rides the same trigger as flushPendingAmbientItems (mount + AppState listener)', () => {
+    const hub = fs.readFileSync(path.join(__dirname, '../screens/CommunityHubScreen.js'), 'utf8');
+    expect(hub.match(/retryPendingSharingPublish\(consistencyUid\)/g)).toHaveLength(2);
+  });
+
+  test('source: CommunityTrainingProfileScreen.js sets/clears the pending flag through the lib, never touches AsyncStorage itself', () => {
+    const screen = fs.readFileSync(path.join(__dirname, '../screens/CommunityTrainingProfileScreen.js'), 'utf8');
+    expect(screen).not.toMatch(/AsyncStorage/);
+    expect(screen).toMatch(/setSharingPublishPending\(uid, false\)/);
+    // Lead review 2026-09-11: the pending flag carries the removal intent,
+    // so a failed "remove what I already shared" retries the removal too.
+    expect(screen).toMatch(/setSharingPublishPending\(uid, true, \{ removeShared \}\)/);
+  });
+
+  test('source: the off path\'s toast reads "will apply", never "will share"', () => {
+    const screen = fs.readFileSync(path.join(__dirname, '../screens/CommunityTrainingProfileScreen.js'), 'utf8');
+    const fnMatch = /async function saveSharing\([\s\S]*?\n {2}\}\n/.exec(screen);
+    expect(fnMatch).toBeTruthy();
+    expect(fnMatch[0]).toMatch(/Saved on this device\. It will apply when you are back online\./);
+  });
+});
+
+// F5 (fresh-eyes review): "My groups" with nobody to post to is a doomed,
+// silent choice (`ambient.js` skips with skipped:'no_groups'). Both
+// screens offering the audience chip must disable it and say so, and a
+// network error reading the groups list must never block the choice.
+describe('F5: the "My groups" chip is disabled with nothing to post to, never a silent no-op (source-pinned)', () => {
+  test.each([
+    'src/screens/CommunityTrainingProfileScreen.js',
+    'src/screens/CommunityJoinScreen.js',
+  ])('%s disables the groups chip on !hasGroups, explains why, and fails open on a read failure', (rel) => {
+    const source = fs.readFileSync(path.join(__dirname, '../..', rel), 'utf8');
+    expect(source).toMatch(/disabled=\{value === 'groups' && !hasGroups\}/);
+    expect(source).toMatch(/You are not in any groups yet\./);
+    expect(source).toMatch(/const \[hasGroups, setHasGroups\] = useState\(true\)/);
+    const effectMatch = /useEffect\(\(\) => \{[^]*?listMyGroups\(\)[^]*?\}\)\(\);[^]*?\}, \[\]\);/.exec(source);
+    expect(effectMatch).toBeTruthy();
+    expect(effectMatch[0]).toMatch(/setHasGroups\(mine\.length > 0\)/);
+    expect(effectMatch[0]).toMatch(/catch[^]*?setHasGroups\(true\)/);
+    expect(effectMatch[0]).not.toMatch(/catch[^]*?setHasGroups\(false\)/);
+  });
+});
+
+// F13 (fresh-eyes review): a minor must never be offered "Everyone" as a
+// post audience, same posture as the Training profile audience row.
+describe('F13: CommunityComposeScreen drops the Everyone chip for a minor (source-pinned)', () => {
+  const SOURCE = fs.readFileSync(path.join(__dirname, '../screens/CommunityComposeScreen.js'), 'utf8');
+
+  test('the rendered chip list is filtered by isMinor, never the raw closed set', () => {
+    expect(SOURCE).toMatch(/const visibilityOptions = isMinor \? VISIBILITY_OPTIONS\.filter\(\(opt\) => opt\.value !== 'public'\) : VISIBILITY_OPTIONS;/);
+    expect(SOURCE).toMatch(/\{visibilityOptions\.map\(\(opt\) => \(/);
+    expect(SOURCE).not.toMatch(/\{VISIBILITY_OPTIONS\.map\(\(opt\) => \(/);
+  });
+
+  test('isMinor is set from the loaded `me`, defaulting to minor (unknown means minor) before it loads', () => {
+    expect(SOURCE).toMatch(/const \[isMinor, setIsMinor\] = useState\(true\)/);
+    expect(SOURCE).toMatch(/setIsMinor\(!!me\.is_minor\)/);
+  });
+});
+
+// F12 (fresh-eyes review): emptyMe() failed open (is_minor: false) --
+// unknown must mean minor until the server says otherwise. Every
+// consumer that can render before `me` has loaded was then audited so an
+// ADULT never sees minor-specific COPY during that window: functional
+// hides (a missing chip, a missing button, a collapsed section) are fine
+// and expected -- only literal minor-facing text needed a loaded-state
+// gate, on CommunityJoinScreen.js and CommunityTrainingProfileScreen.js.
+// CommunityComposeScreen.js's own audience section (F13, just above) is
+// already safe by construction: `isMinor` there is set in the SAME
+// `load()` call that also gates the whole section behind `loading`.
+describe('F12: emptyMe().is_minor defaults to true, and the two screens with literal minor-facing copy gate it on the loaded state (source-pinned)', () => {
+  test('emptyMe() fails closed: unknown means minor', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../lib/community/profile.js'), 'utf8');
+    const fnMatch = /export function emptyMe\(\)[\s\S]*?\n\}/.exec(source);
+    expect(fnMatch).toBeTruthy();
+    expect(fnMatch[0]).toMatch(/is_minor:\s*true/);
+  });
+
+  test('CommunityJoinScreen.js: the "Under 18" line requires !meLoading, not isMinor alone', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../screens/CommunityJoinScreen.js'), 'utf8');
+    expect(source).toMatch(/loading:\s*meLoading/);
+    expect(source).toMatch(/\{!meLoading && isMinor \? \(/);
+  });
+
+  test('CommunityTrainingProfileScreen.js: the "opens at 18" section requires !meLoading, not isMinor alone', () => {
+    const source = fs.readFileSync(path.join(__dirname, '../screens/CommunityTrainingProfileScreen.js'), 'utf8');
+    expect(source).toMatch(/loading:\s*meLoading/);
+    expect(source).toMatch(/\{meLoading \? null : isMinor \? \(/);
   });
 });

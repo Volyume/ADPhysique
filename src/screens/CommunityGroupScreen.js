@@ -156,25 +156,24 @@ export default function CommunityGroupScreen({ navigation, route }) {
   // workout with the group", top of ACTIVITY, members only. Opens Compose
   // on the caller's own most recently completed workout with this group
   // preselected as the audience (the manual audience chooser task 3
-  // built). The read is narrow and stays on-device: only an id is taken
-  // from it, never any training detail rendered or sent from this screen.
+  // built). F7 fix: the read is an id-only SELECT
+  // (`getLatestCompletedWorkoutId`), never the full workout row (private
+  // notes included) that `getAllWorkouts` would have carried for a
+  // single id this screen never renders.
   const [sharingWorkout, setSharingWorkout] = useState(false);
   async function shareWorkoutWithGroup() {
     if (sharingWorkout || !me?.profile?.user_id) return;
     setSharingWorkout(true);
     try {
       // eslint-disable-next-line global-require
-      const { getAllWorkouts } = require('../lib/database');
-      const workouts = await getAllWorkouts(me.profile.user_id);
-      const latest = (workouts ?? [])
-        .filter((w) => w.isCompleted)
-        .sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0))[0];
-      if (!latest?.id) {
+      const { getLatestCompletedWorkoutId } = require('../lib/database');
+      const latestId = await getLatestCompletedWorkoutId(me.profile.user_id);
+      if (!latestId) {
         toast.show('Finish a workout first, then share it here.');
         return;
       }
       navigation.navigate('CommunityCompose', {
-        kind: 'session', workoutId: latest.id, presetGroupId: groupId,
+        kind: 'session', workoutId: latestId, presetGroupId: groupId,
       });
     } catch (_e) {
       toast.show('Could not open that just now.', { variant: 'error' });
@@ -419,7 +418,7 @@ export default function CommunityGroupScreen({ navigation, route }) {
                   <RespectAllRow
                     scope="group"
                     scopeKey={groupId}
-                    hasTrainedToday={displayMembers.some((row) => row.trainedToday)}
+                    hasTrainedToday={displayMembers.some((row) => row.trainedToday && !row.isYou)}
                   />
                   <Eyebrow>ACTIVITY</Eyebrow>
                   {/* Phase 3, lead ruling: top of ACTIVITY, members only. */}

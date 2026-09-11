@@ -16,14 +16,26 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { callCommunity } from './transport';
+import { currentUserId } from './profile';
 import { todayLocalKey } from '../dayKey';
 
 const GIVEN_PREFIX = '@volyume_community_respect_given_';
 
-/** @param {string} scope one of `community_respect_all`'s scopes
- * @param {string|null} scopeKey */
-export function respectGivenKey(scope, scopeKey) {
-  return `${GIVEN_PREFIX}${scope}_${scopeKey ?? 'own'}`;
+/**
+ * F14 fix (fresh-eyes review): scoped by account id, uid FIRST after the
+ * prefix, so leaveCommunity can find and remove every key for one
+ * account with a single prefix scan regardless of scope/scopeKey. Before
+ * this the key carried no identity at all: a second person signing in on
+ * the same device inherited (or, giving Respect themselves, overwrote)
+ * the first account's "already given today" state for the same scope.
+ * Old, unscoped keys are simply dead -- nothing reads them any more.
+ *
+ * @param {string} scope one of `community_respect_all`'s scopes
+ * @param {string|null} scopeKey
+ * @param {string|null} [uid] defaults to the signed-in account */
+export function respectGivenKey(scope, scopeKey, uid = null) {
+  const account = uid ?? currentUserId() ?? 'unknown';
+  return `${GIVEN_PREFIX}${account}_${scope}_${scopeKey ?? 'own'}`;
 }
 
 /**
@@ -31,11 +43,12 @@ export function respectGivenKey(scope, scopeKey) {
  * `null` when none is on record (or the store could not be read, so the
  * row simply behaves as never-given rather than stuck disabled).
  *
+ * @param {string|null} [uid] defaults to the signed-in account
  * @returns {Promise<{day: string, given: number}|null>}
  */
-export async function lastRespectGivenState(scope, scopeKey) {
+export async function lastRespectGivenState(scope, scopeKey, uid = null) {
   try {
-    const raw = await AsyncStorage.getItem(respectGivenKey(scope, scopeKey));
+    const raw = await AsyncStorage.getItem(respectGivenKey(scope, scopeKey, uid));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     return parsed && typeof parsed === 'object' && typeof parsed.day === 'string' ? parsed : null;
@@ -44,10 +57,14 @@ export async function lastRespectGivenState(scope, scopeKey) {
   }
 }
 
-/** @param {number} given the count `community_respect_all` returned */
-export async function recordRespectGiven(scope, scopeKey, day, given) {
+/** @param {number} given the count `community_respect_all` returned
+ * @param {string|null} [uid] defaults to the signed-in account */
+export async function recordRespectGiven(scope, scopeKey, day, given, uid = null) {
   try {
-    await AsyncStorage.setItem(respectGivenKey(scope, scopeKey), JSON.stringify({ day, given: Number(given) || 0 }));
+    await AsyncStorage.setItem(
+      respectGivenKey(scope, scopeKey, uid),
+      JSON.stringify({ day, given: Number(given) || 0 }),
+    );
   } catch (_e) { /* best effort: worst case the row re-enables a day early */ }
 }
 
@@ -67,4 +84,24 @@ export async function respectAll({ scope, scopeKey = null, today = null } = {}) 
     _scope: scope, _scope_key: scopeKey, _today: today || todayLocalKey(),
   });
   return { given: Number.isFinite(Number(data?.given)) ? Number(data.given) : 0 };
+}
+
+/**
+ * F11 fix: leaving Community must not leave the device still believing
+ * Respect was already given today for this account, on every scope it
+ * ever touched. `respectGivenKey` puts the uid straight after the prefix
+ * for exactly this: one prefix scan, one batched remove, never a
+ * per-scope enumeration this module would have to keep in step with
+ * every screen that renders `RespectAllRow`.
+ *
+ * @param {string} uid
+ */
+export async function clearRespectGivenState(uid) {
+  if (!uid) return;
+  try {
+    const prefix = `${GIVEN_PREFIX}${uid}_`;
+    const keys = await AsyncStorage.getAllKeys();
+    const mine = keys.filter((k) => k.startsWith(prefix));
+    if (mine.length) await AsyncStorage.multiRemove(mine);
+  } catch (_e) { /* best effort */ }
 }

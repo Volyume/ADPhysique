@@ -42,7 +42,15 @@ export function emptyMe() {
     pending_requests: 0,
     unseen_activity: 0,
     is_moderator: false,
-    is_minor: false,
+    // F12 fix (fresh-eyes review): unknown means minor until the server
+    // says otherwise -- failing open here would let every minor-gated
+    // surface (an "everyone" audience, the Training profile age band and
+    // partner section, physique cohorts) show adult behaviour for
+    // however long `me` takes to load, or whenever it cannot be read at
+    // all. Every consumer that can render before `me` has loaded was
+    // audited for the reverse risk (minor-specific copy shown to an
+    // adult mid-load) -- see the review notes on each.
+    is_minor: true,
     rules_version: COMMUNITY_RULES_VERSION,
     // Discovery campaign (blueprint section 11). The counts and the
     // training profile bands start EMPTY: an unreadable `me` must never
@@ -227,6 +235,25 @@ export async function leaveCommunity() {
       await require('../widgets/friends').clearCachedFriends(uid);
       // eslint-disable-next-line global-require
       await require('../widgets/writer').writeWidgetSnapshot(uid, { refreshFriends: false });
+    } catch (_e) { /* best-effort */ }
+    // F11 fix (fresh-eyes review): the rest of Community's device caches
+    // go too, so nothing left behind after leaving still reads as this
+    // account's state (a cached Hub, a stale training-profile throttle,
+    // a queued ambient item that would otherwise flush under the NEXT
+    // account to sign in, or an "already given Respect today" flag).
+    // Lazy requires throughout: feed.js, trainingProfile.js, ambient.js
+    // and respect.js all import `currentUserId`/`readCachedMe` from this
+    // module, so a static import back into any of them would cycle.
+    // Best-effort: leaving has already succeeded above.
+    try {
+      // eslint-disable-next-line global-require
+      await require('./feed').clearCachedHub(uid);
+      // eslint-disable-next-line global-require
+      await require('./trainingProfile').clearTrainingProfileState(uid);
+      // eslint-disable-next-line global-require
+      await require('./ambient').clearPendingAmbientItems();
+      // eslint-disable-next-line global-require
+      await require('./respect').clearRespectGivenState(uid);
     } catch (_e) { /* best-effort */ }
     return out;
   } catch (e) {

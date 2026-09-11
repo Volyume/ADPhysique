@@ -98,7 +98,7 @@ function listPage(data, key) {
  *   fromCache: boolean, error: (string|null)}>} never throws.
  */
 export async function loadHub(segment = 'following', {
-  cursor = null, limit = DEFAULT_PAGE_SIZE, userId = null, joined = true,
+  cursor = null, limit = DEFAULT_PAGE_SIZE, userId = null,
 } = {}) {
   const uid = userId ?? currentUserId();
   const empty = {
@@ -115,7 +115,14 @@ export async function loadHub(segment = 'following', {
       }
       const settled = await Promise.allSettled([
         loadDiscoverPosts({ limit }),
-        joined ? myDimensions() : Promise.resolve({ dimensions: [] }),
+        // F18 fix (fresh-eyes review): this used to read `myDimensions()`
+        // when `joined` was true, but the one real caller
+        // (`CommunityHubScreen.js`) always ties `segment: 'discover'` to
+        // `joined: false` (they come from the same ternary) -- so that
+        // branch needed `loadHub('discover', { joined: true })`, a
+        // combination nothing ever requested. `community_hub_summary`
+        // is the Hub's own cohort read now; Discover is posts only.
+        Promise.resolve({ dimensions: [] }),
       ]);
       const [posts, dimensions] = settled;
       // Discover IS the stories. If the read did not answer there is
@@ -165,28 +172,11 @@ export async function suggestedPeople({ limit = 10 } = {}) {
 }
 
 /**
- * @returns {Promise<{dimensions: Array, cursor: (string|null)}>}
- *
- * `_today` (communities revamp 2026-09-10, `22-MIGRATION-170A-CONTRACT.md`
- * "community_dimensions_me... SIGNATURE CHANGED"): only the client knows
- * the caller's real LOCAL day, so it is always sent from here, the same
- * way `boards.js`'s `loadBoard` always sends its own `_today`. A NULL or
- * absent value is accepted server-side (the UK-local fallback, "a safety
- * net for shipped builds, never the intended path"), so this is additive
- * for every caller of this function, not a breaking change.
- */
-export async function myDimensions() {
-  return listPage(
-    await callCommunity('community_dimensions_me', { _today: localDayKey() }),
-    'dimensions',
-  );
-}
-
-/**
  * The Hub summary: one call for PEOPLE and GROUPS instead of one per
  * cohort (blueprint section 9's Hub, `21-PHASE1-SPEC.md` section 5,
  * `22-MIGRATION-170A-CONTRACT.md` "community_hub_summary"). `_today` is
- * sent for the same reason `myDimensions` sends it above.
+ * always sent from here: only the client knows the caller's real LOCAL
+ * day, the same reason `boards.js`'s `loadBoard` always sends its own.
  *
  * @returns {Promise<{cohorts: Array, groups: Array}>}
  */

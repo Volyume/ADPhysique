@@ -60,8 +60,9 @@ const {
   computeConsistency, consistencyGateState, sessionShareGateState,
   publishConsistency, publishSharingSettings, loadConsistency,
   NO_PLAN_CONSISTENT_THRESHOLD,
+  setSharingPublishPending, retryPendingSharingPublish,
 } = require('../trainingConsistency');
-const { shareablePayload, TP_DEFAULT_SHARE } = require('../trainingProfile');
+const { shareablePayload, TP_DEFAULT_SHARE, writeShareSettings } = require('../trainingProfile');
 
 // Monday 2026-09-07 06:00 local. Every fixed-clock test below is expressed
 // relative to this so the week/month boundaries in the assertions are
@@ -326,6 +327,83 @@ describe('publishSharingSettings: share_sessions/sessions_audience/c_planned_per
     mockCallCommunity.mockRejectedValueOnce(Object.assign(new Error('offline'), { code: 'offline' }));
     const out = await publishSharingSettings('u1', { share_sessions: true, sessions_audience: 'followers' });
     expect(out).toEqual({ sent: false, reason: 'offline' });
+  });
+});
+
+// F4 (fresh-eyes review): CommunityTrainingProfileScreen.saveSharing marks
+// a publish as owed on failure; this is the retry half, exercised against
+// the real module (only transport/database/profile/photoSuppression and
+// AsyncStorage are mocked).
+describe('setSharingPublishPending / retryPendingSharingPublish (F4 fix): a failed publish is retried, never lost', () => {
+  test('nothing pending: a no-op, no RPC call', async () => {
+    const out = await retryPendingSharingPublish('u1');
+    expect(out).toEqual({ sent: false, reason: 'nothing_pending' });
+    expect(mockCallCommunity).not.toHaveBeenCalled();
+  });
+
+  test('pending: retries with the currently-saved settings and clears the flag on success', async () => {
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, share_sessions: true, sessions_audience: 'everyone' });
+    await setSharingPublishPending('u1', true);
+
+    const out = await retryPendingSharingPublish('u1');
+
+    expect(out.sent).toBe(true);
+    expect(mockCallCommunity).toHaveBeenCalledWith('community_upsert_profile', expect.objectContaining({
+      _p: expect.objectContaining({ share_sessions: true, sessions_audience: 'everyone' }),
+    }));
+    // Cleared: a further retry finds nothing owed, and sends nothing again.
+    mockCallCommunity.mockClear();
+    const again = await retryPendingSharingPublish('u1');
+    expect(again).toEqual({ sent: false, reason: 'nothing_pending' });
+    expect(mockCallCommunity).not.toHaveBeenCalled();
+  });
+
+  test('a further failure keeps the flag set, so the next foreground tries again', async () => {
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, share_sessions: false, sessions_audience: 'followers' });
+    await setSharingPublishPending('u1', true);
+    mockCallCommunity.mockRejectedValueOnce(Object.assign(new Error('offline'), { code: 'offline' }));
+
+    const out = await retryPendingSharingPublish('u1');
+    expect(out.sent).toBe(false);
+
+    const again = await retryPendingSharingPublish('u1');
+    expect(again.sent).toBe(true);
+  });
+
+  // Lead review 2026-09-11: the removal intent survives the failure. A
+  // failed "turn off and remove what I already shared" retries WITH the
+  // removal, never as a bare turn-off.
+  test('a pending removal retries with _remove_shared true', async () => {
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, share_sessions: false, sessions_audience: 'followers' });
+    await setSharingPublishPending('u1', true, { removeShared: true });
+    const out = await retryPendingSharingPublish('u1');
+    expect(out.sent).toBe(true);
+    expect(mockCallCommunity).toHaveBeenCalledWith('community_upsert_profile', expect.objectContaining({
+      _remove_shared: true,
+    }));
+  });
+
+  test('a pending turn-off without removal retries with _remove_shared false, and a legacy bare flag too', async () => {
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, share_sessions: false, sessions_audience: 'followers' });
+    await setSharingPublishPending('u1', true);
+    await retryPendingSharingPublish('u1');
+    expect(mockCallCommunity).toHaveBeenCalledWith('community_upsert_profile', expect.objectContaining({
+      _remove_shared: false,
+    }));
+    mockCallCommunity.mockClear();
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    await AsyncStorage.setItem('@volyume_community_sharing_pending_u1', '1');
+    await retryPendingSharingPublish('u1');
+    expect(mockCallCommunity).toHaveBeenCalledWith('community_upsert_profile', expect.objectContaining({
+      _remove_shared: false,
+    }));
+  });
+
+  test('setSharingPublishPending(uid, false) clears an owed retry directly', async () => {
+    await setSharingPublishPending('u1', true);
+    await setSharingPublishPending('u1', false);
+    const out = await retryPendingSharingPublish('u1');
+    expect(out).toEqual({ sent: false, reason: 'nothing_pending' });
   });
 });
 

@@ -42,9 +42,9 @@ import {
   TP_DAYS, TP_TIME_BANDS, TP_SESSIONS_BANDS, TP_EXPERIENCE_BANDS, TP_AGE_BANDS,
   TP_DEFAULT_SHARE, dayListLabel, timeBandsLabel, previewLine, shareablePayload,
   loadTrainingProfile, readShareSettings, writeShareSettings, syncTrainingProfile,
-  publishConsistency, publishSharingSettings,
+  publishConsistency, publishSharingSettings, setSharingPublishPending,
   SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS,
-  setPartner,
+  setPartner, listMyGroups,
 } from '../lib/community';
 
 /** What a band says when there is not enough training behind it yet. */
@@ -105,7 +105,11 @@ export function bandRows(bands, me) {
 export default function CommunityTrainingProfileScreen({ navigation }) {
   const t = useTheme();
   const toast = useToast();
-  const { me, refresh } = useCommunityMe();
+  // F12 fix: `loading` (renamed `meLoading`) gates the "opens at 18" copy
+  // below -- `emptyMe()` now defaults `is_minor` to true (unknown means
+  // minor until the server says otherwise), so an adult's FIRST render,
+  // before this resolves, must not show minor-specific copy about them.
+  const { me, loading: meLoading, refresh } = useCommunityMe();
   const uid = me?.profile?.user_id ?? null;
   const isMinor = !!me?.is_minor;
 
@@ -119,6 +123,13 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
   const [partnerBands, setPartnerBands] = useState([]);
   const [sameGymOnly, setSameGymOnly] = useState(false);
   const [partnerReady, setPartnerReady] = useState(false);
+
+  // F5 fix: "My groups" is a doomed choice with no groups to post to
+  // (`ambient.js` skips silently). Defaults to true (enabled) until the
+  // fetch resolves, and fails back to true on a read failure -- a choice
+  // is never blocked on a network error, only disabled once the person
+  // is positively known to have no groups.
+  const [hasGroups, setHasGroups] = useState(true);
 
   const load = useCallback(async () => {
     if (!uid) return;
@@ -152,6 +163,23 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
     setSameGymOnly(!!prefs.same_gym_only);
     setPartnerReady(true);
   }, [me, partnerReady]);
+
+  // F5 fix: fetch the person's groups once on mount, purely to know
+  // whether "My groups" is a real choice. Never blocks the row on a
+  // network error (fail open to enabled -- see `hasGroups`'s initial
+  // value above).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const mine = await listMyGroups();
+        if (!cancelled) setHasGroups(mine.length > 0);
+      } catch (_e) {
+        if (!cancelled) setHasGroups(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const shared = shareablePayload(bands ?? {}, share);
   // Spec 1.3: the preview includes the age band exactly when the toggle
@@ -204,9 +232,19 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
       setShare(prevSettings);
       await writeShareSettings(uid, prevSettings);
       navigation.navigate('CommunityRules', { mustAccept: true });
-    } else if (!out?.sent) {
-      toast.show('Saved on this device. It will share when you are back online.');
+      return;
     }
+    if (out?.sent) {
+      await setSharingPublishPending(uid, false);
+      return;
+    }
+    // F4 fix: withdrawing (or granting) "Share what I did" must never be
+    // lost to one failed call -- mark it owed so the Hub's foreground
+    // effect retries `publishSharingSettings` for us (`trainingConsistency.js`).
+    await setSharingPublishPending(uid, true, { removeShared });
+    toast.show(clamped.share_sessions
+      ? 'Saved on this device. It will share when you are back online.'
+      : 'Saved on this device. It will apply when you are back online.');
   }
 
   function toggleShareSessions(next) {
@@ -353,17 +391,28 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
                             Shared with people who follow you.
                           </Text>
                         ) : (
-                          <View style={styles.chips} accessibilityLabel="Who sees what you did">
-                            {SESSIONS_AUDIENCE_VALUES.map((value) => (
-                              <Chip
-                                key={value}
-                                label={SESSIONS_AUDIENCE_LABELS[value]}
-                                selected={share.sessions_audience === value}
-                                onPress={() => setSessionsAudience(value)}
-                                accessibilityRole="radio"
-                              />
-                            ))}
-                          </View>
+                          <>
+                            <View style={styles.chips} accessibilityLabel="Who sees what you did">
+                              {SESSIONS_AUDIENCE_VALUES.map((value) => (
+                                <Chip
+                                  key={value}
+                                  label={SESSIONS_AUDIENCE_LABELS[value]}
+                                  selected={share.sessions_audience === value}
+                                  onPress={() => setSessionsAudience(value)}
+                                  accessibilityRole="radio"
+                                  disabled={value === 'groups' && !hasGroups}
+                                />
+                              ))}
+                            </View>
+                            {/* F5 fix: "My groups" with nobody to post to
+                                is a doomed, silent choice -- say so rather
+                                than letting it look like a working option. */}
+                            {hasGroups ? null : (
+                              <Text style={[styles.hint, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+                                You are not in any groups yet.
+                              </Text>
+                            )}
+                          </>
                         )
                       ) : null}
                     </Fragment>
@@ -382,7 +431,11 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
           </>
         )}
 
-        {isMinor ? (
+        {/* F12 fix: nothing here until `me` has genuinely loaded --
+            `isMinor` alone defaults true (unknown means minor) and would
+            otherwise flash the "opens at 18" copy at an adult on first
+            render. */}
+        {meLoading ? null : isMinor ? (
           <View style={styles.section}>
             <SectionLabel tone="muted">Open to training together</SectionLabel>
             <Text style={[styles.bandValue, { ...t.type.bodySm, color: t.colors.textSecondary }]}>

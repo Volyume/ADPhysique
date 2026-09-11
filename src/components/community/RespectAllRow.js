@@ -28,27 +28,40 @@ import { Text, Pressable, StyleSheet } from 'react-native';
 import { spacing, type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { lastRespectGivenState, recordRespectGiven, respectAll } from '../../lib/community/respect';
+import { currentUserId } from '../../lib/community/profile';
 import { todayLocalKey } from '../../lib/dayKey';
 
 export default function RespectAllRow({ scope, scopeKey = null, hasTrainedToday, style }) {
   const t = useTheme();
+  // F14 fix: the device record is scoped by account id, so a second
+  // person signing in on the same device never inherits (or overwrites)
+  // this one's "already given today" state for the same scope.
+  const uid = currentUserId();
   const [ready, setReady] = useState(false);
-  const [given, setGiven] = useState(null);
+  // The raw device record ({day, given} | null), never the derived
+  // "given today or not" -- see `given` below (F20 fix).
+  const [lastGiven, setLastGiven] = useState(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      const state = await lastRespectGivenState(scope, scopeKey);
+      const state = await lastRespectGivenState(scope, scopeKey, uid);
       if (!alive) return;
-      setGiven(state && state.day === todayLocalKey() ? Number(state.given) || 0 : null);
+      setLastGiven(state);
       setReady(true);
     })();
     return () => { alive = false; };
-  }, [scope, scopeKey]);
+  }, [scope, scopeKey, uid]);
 
   if (!ready || !hasTrainedToday) return null;
 
+  // F20 fix: "was this given TODAY" is read fresh on every render,
+  // never frozen into state at the effect's mount-time resolution -- a
+  // session left open past midnight must not keep reading as
+  // already-given on the next render (pull-to-refresh, navigating back,
+  // any parent re-render), only a stale local clock ever thought so.
+  const given = lastGiven && lastGiven.day === todayLocalKey() ? (Number(lastGiven.given) || 0) : null;
   const disabled = given != null || busy;
 
   async function press() {
@@ -56,8 +69,9 @@ export default function RespectAllRow({ scope, scopeKey = null, hasTrainedToday,
     setBusy(true);
     try {
       const out = await respectAll({ scope, scopeKey });
-      await recordRespectGiven(scope, scopeKey, todayLocalKey(), out.given);
-      setGiven(out.given);
+      const day = todayLocalKey();
+      await recordRespectGiven(scope, scopeKey, day, out.given, uid);
+      setLastGiven({ day, given: out.given });
     } catch (_e) {
       // A failed bulk Respect is not worth interrupting anyone for: the
       // row simply stays enabled to try again.

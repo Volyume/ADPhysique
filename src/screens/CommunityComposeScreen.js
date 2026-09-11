@@ -81,6 +81,12 @@ export default function CommunityComposeScreen({ navigation, route }) {
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
+  // F12/F13 fix: unknown means minor until `load()` says otherwise (the
+  // same posture `emptyMe()` now takes) -- but this screen already gates
+  // its whole audience section behind `loading`, so the default here
+  // never actually renders; it only matters that `isMinor` is never read
+  // before `load()` has set it from the real `me`.
+  const [isMinor, setIsMinor] = useState(true);
   const [payload, setPayload] = useState(noteMode ? (params.payload ?? null) : null);
   const [caption, setCaption] = useState('');
   const [visibility, setVisibility] = useState('followers');
@@ -104,6 +110,7 @@ export default function CommunityComposeScreen({ navigation, route }) {
       return;
     }
     setProfile(me.profile);
+    setIsMinor(!!me.is_minor);
     if (noteMode) {
       // The payload came from the caller (the row already exists); a
       // manual compose is the only path that needs to build one.
@@ -190,6 +197,12 @@ export default function CommunityComposeScreen({ navigation, route }) {
     ? { id: 'preview', kind, payload, caption: caption.trim() || null, reaction_count: 0, comment_count: 0, created_at: Date.now() }
     : null;
 
+  // F13 fix (fresh-eyes review): a minor never gets an "Everyone"
+  // audience, same posture as the Training profile audience row
+  // (HARD BOUND, belt and braces -- the server also refuses it).
+  // Followers and this person's own groups stay offered.
+  const visibilityOptions = isMinor ? VISIBILITY_OPTIONS.filter((opt) => opt.value !== 'public') : VISIBILITY_OPTIONS;
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title={noteMode ? 'Add a note' : 'Post to Community'} />
@@ -234,7 +247,7 @@ export default function CommunityComposeScreen({ navigation, route }) {
             <View style={styles.field}>
               <SectionLabel tone="muted">Who can see it</SectionLabel>
               <View style={styles.chipRow} accessibilityLabel="Who can see it">
-                {VISIBILITY_OPTIONS.map((opt) => (
+                {visibilityOptions.map((opt) => (
                   <Chip
                     key={opt.value}
                     label={opt.label}

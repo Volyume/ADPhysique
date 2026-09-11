@@ -74,6 +74,9 @@ jest.mock('../../lib/community', () => ({
   publishConsistencyOnForeground: jest.fn(() => Promise.resolve({ sent: false, reason: null, payload: null })),
   // Phase 3: the same foreground trigger drains any queued ambient items.
   flushPendingAmbientItems: jest.fn(() => Promise.resolve({ flushed: 0, dropped: 0, remaining: 0 })),
+  // F4 fix (fresh-eyes review): the same foreground trigger retries a
+  // pending "Share what I did" publish left owed by a failed save.
+  retryPendingSharingPublish: jest.fn(() => Promise.resolve({ sent: false, reason: 'nothing_pending' })),
   // Moderated-person notice (40-GAP-CLOSURE.md §1): best-effort, covered
   // directly in profile.moderatedStatus.test.js; resolved to the neutral
   // shape here so it never affects the states this file is about.

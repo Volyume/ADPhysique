@@ -111,4 +111,35 @@ describe('ProgressStrip', () => {
     act(() => { tree.root.findByProps({ accessibilityRole: 'button' }).props.onPress(); });
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  // F9 (fresh-eyes review): rendered without onPress (another person's
+  // profile has no per-person board to open), the strip is
+  // presentational only -- neither the role nor the label may announce
+  // a tap that does nothing.
+  describe('without onPress (F9): no button role, no "See boards" suffix', () => {
+    test('accessibilityRole is not "button"', () => {
+      const tree = render({
+        counters: { c_sessions_week: 2, c_weeks_streak: 1, c_consistent_weeks_12w: 0 },
+      });
+      expect(tree.root.findAllByProps({ accessibilityRole: 'button' })).toHaveLength(0);
+    });
+
+    test('the accessibility label carries the figures but never "See boards"', () => {
+      const tree = render({
+        counters: { c_sessions_week: 2, c_weeks_streak: 1, c_consistent_weeks_12w: 0 },
+      });
+      const strip = tree.root.findAll((n) => typeof n.props?.accessibilityLabel === 'string')[0];
+      expect(strip.props.accessibilityLabel).toContain('2 sessions this week');
+      expect(strip.props.accessibilityLabel).not.toContain('See boards');
+    });
+  });
+
+  test('with onPress: the role is "button" and the label ends "See boards"', () => {
+    const tree = render({
+      counters: { c_sessions_week: 2, c_weeks_streak: 1, c_consistent_weeks_12w: 0 },
+      onPress: jest.fn(),
+    });
+    const strip = tree.root.findByProps({ accessibilityRole: 'button' });
+    expect(strip.props.accessibilityLabel).toContain('See boards');
+  });
 });

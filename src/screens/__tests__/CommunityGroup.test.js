@@ -44,8 +44,13 @@ jest.mock('../../hooks/useCommunityMe', () => ({ __esModule: true, default: jest
 jest.mock('../../components/community/RespectAllRow', () => () => null);
 
 // Phase 3, lead ruling: "Share a workout with the group" reads the
-// caller's own most recently completed workout id, on device only.
-jest.mock('../../lib/database', () => ({ getAllWorkouts: jest.fn() }));
+// caller's own most recently completed workout id, on device only. F7
+// fix: an id-only read (`getLatestCompletedWorkoutId`), never the full
+// workout row `getAllWorkouts` carried (private notes included) for a
+// single id this screen never renders -- see
+// `database.getLatestCompletedWorkoutId.test.js` for the SQL-level
+// filter/order behaviour this mock now stands in for.
+jest.mock('../../lib/database', () => ({ getLatestCompletedWorkoutId: jest.fn() }));
 
 jest.mock('../../lib/community', () => ({
   getGroup: jest.fn(),
@@ -72,7 +77,7 @@ jest.mock('../../lib/community', () => ({
 import {
   getGroup, joinGroup, leaveGroup, closeGroup, loadGroupFeed, loadBoard,
 } from '../../lib/community';
-import { getAllWorkouts } from '../../lib/database';
+import { getLatestCompletedWorkoutId } from '../../lib/database';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityGroupScreen from '../CommunityGroupScreen';
 
@@ -111,7 +116,7 @@ beforeEach(() => {
   loadGroupFeed.mockResolvedValue({ rows: [], cursor: null });
   joinGroup.mockResolvedValue({ state: 'member' });
   leaveGroup.mockResolvedValue({ left: true });
-  getAllWorkouts.mockResolvedValue([]);
+  getLatestCompletedWorkoutId.mockResolvedValue(null);
 });
 
 test('a non-member sees Join; joining calls joinGroup and reloads', async () => {
@@ -251,16 +256,13 @@ describe('Share a workout with the group', () => {
 
   test('tapping it opens Compose on the caller\'s latest completed workout, this group preselected', async () => {
     getGroup.mockResolvedValue({ ...OPEN_GROUP, myRole: 'member', myState: 'member' });
-    getAllWorkouts.mockResolvedValue([
-      { id: 'w-old', isCompleted: 1, startedAt: 1000 },
-      { id: 'w-new', isCompleted: 1, startedAt: 5000 },
-      { id: 'w-unfinished', isCompleted: 0, startedAt: 9000 },
-    ]);
+    getLatestCompletedWorkoutId.mockResolvedValue('w-new');
     const { tree, navigation } = await mount();
 
     await act(async () => { byLabel(tree, 'Share a workout with the group').props.onPress(); });
     await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); });
 
+    expect(getLatestCompletedWorkoutId).toHaveBeenCalledWith('u1');
     expect(navigation.navigate).toHaveBeenCalledWith('CommunityCompose', {
       kind: 'session', workoutId: 'w-new', presetGroupId: 'g1',
     });
@@ -268,7 +270,7 @@ describe('Share a workout with the group', () => {
 
   test('no completed workout at all: a calm toast, never a dead-end navigation', async () => {
     getGroup.mockResolvedValue({ ...OPEN_GROUP, myRole: 'member', myState: 'member' });
-    getAllWorkouts.mockResolvedValue([{ id: 'w1', isCompleted: 0, startedAt: 1000 }]);
+    getLatestCompletedWorkoutId.mockResolvedValue(null);
     const { tree, navigation } = await mount();
 
     await act(async () => { byLabel(tree, 'Share a workout with the group').props.onPress(); });

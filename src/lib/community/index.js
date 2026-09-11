@@ -44,7 +44,7 @@ export {
 
 export {
   buildPrPayload, buildSessionPayload, buildBlockPayload,
-  buildMilestonePayload, buildProgrammePayload,
+  buildMilestonePayload,
 } from './posts';
 
 export {
@@ -61,7 +61,7 @@ export {
 export {
   HUB_CACHE_PREFIX, hubCacheKey, clearCachedHub, loadHub, loadFeed,
   loadDiscoverPosts, searchPeople, suggestedPeople,
-  myDimensions, loadDimension, loadHubSummary, loadDimensionRecent,
+  loadDimension, loadHubSummary, loadDimensionRecent,
   createPost, deletePost, getPost, reactToPost, setPostNote,
   addComment, deleteComment, listComments,
 } from './feed';
@@ -97,6 +97,7 @@ export {
   computeConsistency, loadConsistency, consistencyGateState, sessionShareGateState,
   publishConsistency, publishSharingSettings,
   CONSISTENCY_WEEK_KEY_PREFIX, publishConsistencyOnForeground,
+  SHARING_PUBLISH_PENDING_PREFIX, setSharingPublishPending, retryPendingSharingPublish,
 } from './trainingConsistency';
 
 export {
@@ -107,6 +108,7 @@ export {
 
 export {
   respectGivenKey, lastRespectGivenState, recordRespectGiven, respectAll,
+  clearRespectGivenState,
 } from './respect';
 
 export {

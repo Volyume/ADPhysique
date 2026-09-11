@@ -3620,6 +3620,26 @@ export async function getCompletedWorkoutStartTimestamps(userId) {
   return rows.map((r) => r.started_at);
 }
 
+// F7 fix (fresh-eyes review, Community client): callers that only need to
+// NAME the caller's most recent completed workout (never render or send
+// anything from it) get an id-only read, same style as
+// getCompletedWorkoutStartTimestamps above -- one column, no join, no
+// rowToCamel. `CommunityGroupScreen.shareWorkoutWithGroup` used
+// getAllWorkouts for this (SELECT w.*, private notes included) to take a
+// single id; that call is replaced with this one.
+export async function getLatestCompletedWorkoutId(userId) {
+  if (!userId) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    `SELECT id FROM workouts
+     WHERE user_id = ? AND is_completed = 1
+     ORDER BY started_at DESC
+     LIMIT 1`,
+    [userId],
+  );
+  return row?.id ?? null;
+}
+
 // Workout History renders a bounded recent page. Keep this separate from
 // getAllWorkouts because analytics, sync and coach flows still need full
 // history reads.

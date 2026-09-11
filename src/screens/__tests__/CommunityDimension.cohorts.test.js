@@ -302,7 +302,7 @@ describe('the seven physique-division pages: the Beat row and the calm-mode rest
     const text = texts(tree.toJSON());
 
     expect(text).toContain('Support with eating and body image: Beat');
-    expect(text).toContain('This page is resting while calm mode is on.');
+    expect(text).toContain('This page is resting just now.');
     expect(text).not.toContain('TRAINED THIS WEEK');
     expect(text).not.toContain('RECENT');
     expect(text).not.toContain('This month and consistency');

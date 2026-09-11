@@ -557,7 +557,7 @@ export default function CommunityDimensionScreen({ navigation, route }) {
         <View style={styles.gateWrap}>
           <BeatSignpostRow />
           <Text style={[styles.gateLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-            This page is resting while calm mode is on.
+            This page is resting just now.
           </Text>
         </View>
       </SafeAreaView>
@@ -656,7 +656,7 @@ export default function CommunityDimensionScreen({ navigation, route }) {
                   <RespectAllRow
                     scope={kind}
                     scopeKey={boardScopeKey}
-                    hasTrainedToday={displayRows.some((row) => row.trainedToday)}
+                    hasTrainedToday={displayRows.some((row) => row.trainedToday && !row.isYou)}
                   />
                 ) : null}
                 <Pressable

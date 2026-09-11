@@ -116,10 +116,12 @@ jest.mock('../../lib/community', () => ({
   publishConsistency: jest.fn(() => Promise.resolve({ sent: true, reason: null, payload: null })),
   publishSharingSettings: jest.fn(() => Promise.resolve({ sent: true, reason: null })),
   setPartner: jest.fn(() => Promise.resolve()),
+  listMyGroups: jest.fn(() => Promise.resolve([])),
 }));
 
 import {
   checkHandle, upsertProfile, COMMUNITY_RULES_VERSION, syncTrainingProfile, publishSharingSettings,
+  listMyGroups,
 } from '../../lib/community';
 import { search as searchGyms, setGyms, get as getGym } from '../../lib/gyms';
 import useCommunityMe from '../../hooks/useCommunityMe';
@@ -327,6 +329,44 @@ describe('the training profile step (SD-22)', () => {
 
     expect(publishSharingSettings).not.toHaveBeenCalled();
   });
+
+  // F5 (fresh-eyes review): "My groups" with nobody to post to is a
+  // doomed, silent choice (`ambient.js` skips with skipped:'no_groups').
+  async function openAudienceChips(tree) {
+    const shareSwitch = tree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Share share what i did' && typeof n.props?.onValueChange === 'function',
+    )[0];
+    await act(async () => { shareSwitch.props.onValueChange(true); });
+    await flush();
+  }
+
+  test('with no groups (the default for a fresh joiner), "My groups" is disabled and says why', async () => {
+    const { tree } = await mount();
+    await openAudienceChips(tree);
+
+    const myGroups = tree.root.findAll((n) => n.props?.label === 'My groups' && n.props?.onPress)[0];
+    expect(myGroups.props.disabled).toBe(true);
+    expect(flattenText(tree.toJSON())).toContain('You are not in any groups yet.');
+  });
+
+  test('with a group, "My groups" is enabled and the line is absent', async () => {
+    listMyGroups.mockResolvedValueOnce([{ group: { id: 'g1' }, role: 'member', state: 'member' }]);
+    const { tree } = await mount();
+    await openAudienceChips(tree);
+
+    const myGroups = tree.root.findAll((n) => n.props?.label === 'My groups' && n.props?.onPress)[0];
+    expect(myGroups.props.disabled).toBe(false);
+    expect(flattenText(tree.toJSON())).not.toContain('You are not in any groups yet.');
+  });
+
+  test('a read failure fails open: never blocks the choice on a network error', async () => {
+    listMyGroups.mockRejectedValueOnce(new Error('offline'));
+    const { tree } = await mount();
+    await openAudienceChips(tree);
+
+    const myGroups = tree.root.findAll((n) => n.props?.label === 'My groups' && n.props?.onPress)[0];
+    expect(myGroups.props.disabled).toBe(false);
+  });
 });
 
 describe('the rules and the under-18 rule', () => {
@@ -348,6 +388,19 @@ describe('the rules and the under-18 rule', () => {
 
     expect(flattenText(tree.toJSON()))
       .toContain('Under 18: your profile is followers-only and does not appear in search.');
+  });
+
+  // F12 (fresh-eyes review): `emptyMe()` now defaults `is_minor` to true
+  // (unknown means minor), so `useCommunityMe`'s own `loading` must gate
+  // this copy -- an adult's identity still loading must never flash it.
+  test('F12: while the identity is still loading, the under-18 line never shows, even though is_minor defaults true', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: null, is_minor: true }, loading: true, error: null, refresh: jest.fn(),
+    });
+    const { tree } = await mount();
+
+    expect(flattenText(tree.toJSON()))
+      .not.toContain('Under 18: your profile is followers-only and does not appear in search.');
   });
 });
 

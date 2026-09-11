@@ -79,6 +79,21 @@ describe('manual post: the audience chooser', () => {
     expect(chip(tree, 'Followers').props.selected).toBe(true);
   });
 
+  // F13 (fresh-eyes review): a minor never gets "Everyone" as a post
+  // audience, same posture as the Training profile audience row.
+  test('F13: a minor sees Followers but never Everyone', async () => {
+    loadMe.mockResolvedValue({ me: { profile: { user_id: 'u1', handle: 'rowan_lifts' }, is_minor: true } });
+    const { tree } = await mount({ kind: 'session', workoutId: 'w1' });
+    expect(chip(tree, 'Followers')).toBeTruthy();
+    expect(chip(tree, 'Everyone')).toBeFalsy();
+  });
+
+  test('F13: an adult still sees Everyone', async () => {
+    loadMe.mockResolvedValue({ me: { profile: { user_id: 'u1', handle: 'rowan_lifts' }, is_minor: false } });
+    const { tree } = await mount({ kind: 'session', workoutId: 'w1' });
+    expect(chip(tree, 'Everyone')).toBeTruthy();
+  });
+
   test('the caller\'s own groups render as additional chips', async () => {
     listMyGroups.mockResolvedValue([
       { group: { id: 'g1', name: 'Iron Collective' } },
