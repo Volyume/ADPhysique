@@ -359,7 +359,7 @@ effect in `CommunityProfileScreen.js` (the card does carry `c_*` fields
 since 165/172; the owner's view reads live local counters instead).
 Dated audit records keep their references. No em dash added.
 
-## COMMUNITY ACCOUNT AND GYM AT ONBOARDING (founder order, 2026-09-11) — RECON IN FLIGHT; SPEC NEXT; FOUNDER FORKS GO TO CHAT
+## COMMUNITY ACCOUNT AND GYM AT ONBOARDING (founder order, 2026-09-11) — SPEC WRITTEN (CR-15, D158); MIGRATION 173 WRITTEN, REVIEWED, FIXED (NOT APPLIED, GATED ON Q2); STEP 5 BUILT BY THE LEAD; LIB LANE LANDING; FOUNDER QUESTIONS Q1 TO Q5 IN CHAT
 
 Founder order (chat, verbatim): "we need the gym selection on onboarding
 so that it's passed through to community and people can connect to
@@ -379,10 +379,48 @@ edit/leave, cloud shape, pinned tests, risks) and R-O (onboarding steps
 and completion sequence, DOB/age, identity and email exposure,
 navigation and first-run flag, profile persistence and sync, any gym
 concept, reusable input patterns, pinned tests, risks). Recovery path:
-re-dispatch the same brief; no files written by the lanes. NEXT: lead
-spec in `docs/communities-revamp-2026-09-10/` (numbered file), forks
-that touch GDPR delivered to the founder in chat as multiple-choice
-questions with work continuing on unblocked lanes.
+re-dispatch the same brief; no files written by the lanes. DONE: both
+lanes reported (community model; onboarding and identity). Lead spec
+`docs/communities-revamp-2026-09-10/25-ONBOARDING-COMMUNITY-SPEC.md`
+(edit gate), CR-15 in `40-DECISIONS.md`, D158 in the register. Rulings:
+step 5 "Your gym" after Training week; the gym an answer with an explicit
+"I don't train at a gym"; the profile pre-filled (handle suggested
+server-side from the email local part, given-name and `athlete`
+fallbacks; name from the first name) and created by ONE explicit tap
+beside "Skip for now" (Q1 open); under 18 no step (CR-08); the join at
+completion through the existing upsert (consent row unchanged), queued
+offline 14 days; "Not now" pre-fills the Join screen; handle change on
+Edit profile under the 30-day cooldown. Migration 173
+(`community_handle_suggestion()` + two pure helpers, no table changes)
+WRITTEN with guard `migrate173.rpcOnly.guard.test.js`, README row and
+status block, matrix target; Opus hostile review: HOLDS on security,
+determinism, bounds and data flow; four FIX FIRST items landed
+(NULL-proof search_path and sanitiser checks, the honest header line on
+the local part, four guard gaps). NOT APPLIED: gated on the founder's Q2
+answer, then the phrase; apply BEFORE the next build (the client half
+calls the RPC). Lead built section 4.3 hands-on: `ProOnboardingScreen.js`
+gains step 5 (eight steps, every later step renumbered, the draft
+ceiling moved to 7, every header carries the minor skip, the join runs
+after the plan block and before clearDraft inside its own try),
+`RootNavigator.js` registers CommunityGymAdd and CommunityRules in the
+onboarding stack; guard `ProOnboardingScreen.communityStep.guard.test.js`;
+five existing pins re-anchored (keyboard dismiss, gaps, build card,
+campaign 5, sex gate); onboarding suites 16 / 308 green. Lane OJ-1
+(Sonnet) LANDED: `suggestHandle`, `onboardingJoin.js` (the one join
+path, the 14-day queue, the "Not now" choice), `rulesSummary.js`, the
+Join screen pre-fill, the Edit-profile handle field under the 30-day
+cooldown, App.js and Hub retry hooks, `leaveCommunity` clearing both
+records, tests (lane suites 24 / 1443 green). Lead review of its diff
+added four things with their tests: a profile that already exists is
+never written over (cache-first read before any write), an empty name
+falls back to the suggested handle (a retry could otherwise refuse
+forever), one join per account at a time (three drain points can
+overlap), and the pending record carries the minimal venue so the Join
+screen never renders a nameless gym row. NEXT: full run, per-feature
+commits, merge; Opus fresh-eyes review of the landing; founder answers
+Q1 to Q5 (chat); on Q2 and the phrase, 173 through the connector. Founder observation carried (not in this order):
+`_community_rules_version()` still returns 2 while the client accepts 3
+(the v3 rules text never triggers a re-accept server-side), Q4.
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 

@@ -6507,3 +6507,38 @@ progress strip and the consistency board window show `c_weeks_streak`
 construct for Today and the home-screen widget. The founder chose B: keep
 it in Community only, as design 60 intended; Today and the widget stay
 without it. No code change.
+
+## D158
+
+**Community at onboarding: your gym, a ready profile, one tap (lead
+ruling under D33 on the founder order of 2026-09-11; two forks OPEN to
+the founder).** The founder ordered gym selection at onboarding passed
+through to Community, a Community account created automatically from the
+username or email local part, the person joined to their gym
+automatically, and the handle and display name changeable. Ruled: a new
+onboarding step 5, "Your gym", after Training week; the gym is an answer
+with an explicit "I don't train at a gym"; the profile is pre-filled (a
+handle the server derives from the email local part, with the sign-in
+given name and a neutral base as fallbacks, and the first name as the
+display name) and created by ONE explicit tap, "Join Community" beside
+"Skip for now", nothing pre-decided; under 18 the step does not exist (CR-08:
+minors excluded everywhere, and the server's minor check fails open
+before the date of birth has synced); the join runs at completion
+through the existing `community_upsert_profile`, so the consent row and
+the rules acceptance are exactly today's, and queues offline with a
+14-day expiry; a "Not now" leaves the Join screen pre-filled; the handle
+becomes changeable from Edit profile under the server's existing 30-day
+cooldown (the first change of a suggested handle is free); one additive
+migration, 173, adds `community_handle_suggestion()` and brings the SQL
+reserved-word list up to the client's 78. The email is never sent to or
+read by the client's Community code: `email` and `firstName` are on the
+refusal list and the privacy source guard forbids them, so derivation
+happens inside a SECURITY DEFINER function reading `auth.users`
+(precedent migrate_071, 095, 108). OPEN to the founder, delivered in
+chat: Q1 whether the join stays an explicit one-tap act (ICO: a
+pre-ticked box, inactivity or bundled acceptance is not consent; privacy
+by default) or becomes fully automatic under a recorded change of legal
+basis; Q2 whether the handle may be built from the email local part
+(shown and editable first) or from the given name only. Spec:
+`docs/communities-revamp-2026-09-10/25-ONBOARDING-COMMUNITY-SPEC.md`;
+campaign row CR-15.

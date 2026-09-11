@@ -82,10 +82,14 @@ doc and comment hygiene (this commit). NEW FOUNDER ORDER (chat): gym
 selection at onboarding passed through to Community; a Community
 account created automatically from the username / email local part;
 auto-joined to their gym at onboarding; handle and display name
-changeable. Two read-only recon lanes in flight (board section
-"COMMUNITY ACCOUNT AND GYM AT ONBOARDING"); lead spec next; GDPR forks
-(handle from an email local part, consent at join, minors) go to the
-founder in chat before any of that lands.
+changeable. Recon landed; lead spec `docs/communities-revamp-2026-09-10/
+25-ONBOARDING-COMMUNITY-SPEC.md` (CR-15, D158); migration 173 written,
+hostile-reviewed and fixed, NOT applied (gated on founder Q2 and the
+phrase; apply before the next build); step 5 "Your gym" built by the
+lead with its guard; lib lane OJ-1 landing; founder questions Q1 to Q5
+delivered in chat (consent shape, handle from the email local part, the
+minor check failing open, the rules-version parity finding, the goal
+setup screen's equipment list). Board section carries the detail.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 
