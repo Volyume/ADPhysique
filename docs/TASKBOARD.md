@@ -437,7 +437,54 @@ N7 recorded as known (two one-round-trip races); N9 noted (funnel step
 numbers shift). Settled tree after the fixes: lint exit 0, `Test Suites:
 1 skipped, 1297 passed`, `Tests: 16 skipped, 20092 passed`. NEXT:
 founder answers Q1 to Q5 (chat); on Q2 and the phrase, 173 through the
-connector BEFORE the next build; no build until the founder says. Founder observation carried (not in this order):
+connector BEFORE the next build; no build until the founder says.
+FOUNDER (chat, later 2026-09-11): "answer all the questions yourself
+based entirely on what brings the best app. Never on quick or easy. The
+best app. Also run against production." RULED D159: Q1 A (built); Q2
+name-first (173 amended: `_hint` from the onboarding step, the profile
+first name, the provider name, the leading letters of the address last,
+never the full local part); Q3 fail-closed under-18 check (174 part 1)
+with the client pushing the body profile row before every profile write
+and forcing it before the join (`pushUserBodyProfileNow`,
+`ensureBodyProfilePushed`); Q4 rules version 3 (174 part 2); Q5
+`ProGoalSetupScreen` extended to the shared eight answers with the
+library route, built hands-on by the lead after the Sonnet lane hit the
+session rate limit (imports only; completed, install-before-any-write,
+receipt line shared, guard extended and proven to fail on the old
+source). Production read-only count before 174: one member,
+with a cloud date of birth; none flagged minor; one on rules version 2;
+server rules version 2; 12 of 22 profiles carry a first name.
+HOSTILE REVIEW OJ-REV-SQL-2 (Opus) of the 173 amendment + 174: FIX
+FIRST, all landed: F1 batch order (174 BEFORE 173: the client on main
+sends rules version 3 on every profile write and the server's gate is
+exact equality, so until 174 every profile create and edit failed
+`invalid_input` and 173's join would have died at the create); F2 the
+173 header's oracle paragraph re-ruled for `_hint` (the bound is the
+rail alone, 30 an hour); F3 a profile is never CREATED without the cloud
+body-profile row (a failed forced push queues the onboarding join with
+its original decision time; the Join screen's create refuses with
+`unavailable`; edits and re-consents still run) because a profile
+created without it is stored followers-only and the server's merge
+re-supplies that stored value on every later write; F4 README status
+blocks 160 to 165 said NOT APPLIED while the rows said applied (headings
+corrected); F5 `community_get_me` recomputes is_minor on every hub open
+(named in the header, spec and register); F6 the exact-equality rules
+gate recorded as a constraint for the next bump (kept exact: an old
+build cannot consent to a text it cannot show); F7 `_pushUserBodyProfile`
+returns false for no row; F8 the privacy toast reads the stored
+visibility; F9 guard gaps closed (173 source wrappers, 174 pins on 170's
+minor-to-followers rule, the exact gate and 161's self-heal); F10 the
+zero-argument name in 173's rollback; F11 posture recorded.
+APPLIED TO PRODUCTION 2026-09-11 22:34 UTC through the connector under
+the checksum protocol: 174 first (one chunk md5 `0e2c53a3...` / 9,129
+bytes), then 173 (two chunks, whole `7010e656...` / 20,348 bytes), each
+re-checked inside the executing DO block, both acceptance blocks passed,
+read-only verification clean (rules version 3, unknown reads as minor,
+the one `(text)` signature, grants right, all 157 community functions
+pinned, none anon-executable), `claude_schema_migrations` rows in, the
+scratch table dropped. Record: `supabase/README.md` 173/174 blocks.
+NO BUILD started (founder: "I'll build when all is done").
+Founder observation carried (not in this order):
 `_community_rules_version()` still returns 2 while the client accepts 3
 (the v3 rules text never triggers a re-accept server-side), Q4.
 

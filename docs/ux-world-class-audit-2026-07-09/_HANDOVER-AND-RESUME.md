@@ -93,7 +93,19 @@ count, the privacy guard now forbidding `email` in Community code);
 settled tree 1297 suites / 20092 tests. Founder questions Q1 to Q5
 delivered in chat (consent shape, handle from the email local part, the
 minor check failing open, the rules-version parity finding, the goal
-setup screen's equipment list). Board section carries the detail.
+setup screen's equipment list). FOUNDER (later): "answer all the
+questions yourself based entirely on what brings the best app ... Also
+run against production." RULED D159 (register): Q1 A explicit one-tap
+join; Q2 handle name-first, email only as leading letters last (173
+amended); Q3 the under-18 check fails closed (174) with the client
+pushing the body profile row first and never creating without it; Q4
+rules version 3 (174); Q5 the goal-setup screen shares the eight
+answers with the library route (built hands-on after the Sonnet lane
+hit the session limit). Opus hostile review OJ-REV-SQL-2: FIX FIRST,
+eleven findings, all landed (board). 174 then 173 APPLIED 2026-09-11
+22:34 UTC through the connector under the checksum protocol (record:
+`supabase/README.md`). No build started. Board section carries the
+detail.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 
