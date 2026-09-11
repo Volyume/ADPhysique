@@ -50,6 +50,11 @@ describe('friends.js: never the local database, never a person', () => {
     expect(friendsCode).not.toMatch(/from\s+['"]\.\.\/database['"]/);
   });
 
+  test('migration 171: asks the count RPC, never the board page of cards', () => {
+    expect(friendsCode).not.toMatch(/loadBoard|community_board|community\/boards/);
+    expect(friendsCode).toMatch(/callCommunity\('community_friends_trained_today'/);
+  });
+
   test('never references a handle, name or avatar field in code', () => {
     expect(friendsCode).not.toMatch(/\bhandle\b/i);
     expect(friendsCode).not.toMatch(/\bavatar\w*/i);

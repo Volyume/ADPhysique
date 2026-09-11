@@ -27,10 +27,12 @@ trainedToday, isYou, rank }` (server contract migrate_165 + 170).
    avatar, no gym, nothing that identifies who. The snapshot's new block
    carries exactly three keys: `dayKey`, `count`, `label`.
 2. **"Friends" = the people you follow** who share consistency and
-   trained today: the `following` scope of `community_board` (the same
-   set as the Hub's Following board and feed), excluding the caller's own
-   row (`isYou`). Consent is the server's (only people sharing consistency
-   appear on a board), so nothing new is disclosed by this surface.
+   trained today: the Following board's eligibility, excluding the caller.
+   AMENDED 2026-09-11 (fresh-eyes review finding 9, migration 171 applied):
+   the count comes from `community_friends_trained_today(_today)`, one
+   integer computed server-side with exactly that eligibility, never a
+   page of profile cards loaded on device. Consent is the server's, so
+   nothing new is disclosed by this surface.
 3. **Presence, never absence.** The line appears only when the count is
    1 or more. Zero, unknown, stale, offline, not joined, no consent: no
    line at all. Never "no friends trained today", never a dash.

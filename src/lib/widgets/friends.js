@@ -6,9 +6,9 @@
  * ONE question, "how many people I follow trained today", as a plain
  * integer. It never reads or carries a handle, a display name, an avatar,
  * a gym or anything else that could identify who. Consent is the server's
- * -- `community_board`'s `following` scope only ever returns people who
- * already share consistency with the caller (`src/lib/community/boards.js`
- * header), so nothing new is disclosed by counting its rows.
+ * -- `community_friends_trained_today` (migrate_171) counts with exactly
+ * the Following board's eligibility, server-side, and returns the integer
+ * alone, so nothing new is disclosed and no card ever reaches this module.
  *
  * Offline-first stays intact (spec section 1 rule 6): `gatherWidgetInputs`
  * (writer.js) reads ONLY the small local cache this module maintains
@@ -26,7 +26,7 @@
  * ever reaches this module's catch.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { loadBoard } from '../community/boards';
+import { callCommunity } from '../community/transport';
 import { readCachedMe, hasProfile } from '../community/profile';
 import { todayLocalKey } from '../dayKey';
 
@@ -42,17 +42,20 @@ export function friendsCacheKey(uid) {
 }
 
 /**
- * Pure: how many of these board rows are a followed person who trained
- * today (never the caller's own row). Clamped so a hostile/huge payload
- * can never inflate the widget's number past three digits.
+ * Clamp the server's count to what the widget may show. Pure. Migration
+ * 171 (applied 2026-09-11) moved the counting server-side: the RPC
+ * returns one integer computed with exactly the Following board's
+ * eligibility, the caller excluded; before that the client loaded a page
+ * of profile cards to derive the same number (fresh-eyes review of phase
+ * 4, finding 9: data minimisation).
  *
- * @param {Array} rows `loadBoard`'s `rows` ({card, trainedToday, isYou, ...})
+ * @param {*} value the RPC's answer
  * @returns {number} 0..999
  */
-export function countFriendsTrainedToday(rows) {
-  const list = Array.isArray(rows) ? rows : [];
-  const n = list.filter((row) => row && row.trainedToday && !row.isYou).length;
-  return Math.max(0, Math.min(999, n));
+export function clampFriendsCount(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.min(999, Math.trunc(n)));
 }
 
 /**
@@ -95,12 +98,14 @@ export async function fetchFriendsTrainedToday(uid) {
     if (!hasProfile(me)) return null;
 
     // Review 2026-09-11 finding 3: ONE clock read. The server evaluates
-    // "trained today" against the `today` this call sends, and the cache
+    // "trained today" against the `_today` this call sends, and the cache
     // is stamped with that same key, so a request that straddles local
-    // midnight can never label yesterday's count as today's.
+    // midnight can never label yesterday's count as today's. Migration
+    // 171: a count-only RPC, never a page of cards, and no board rate rail
+    // spent on it.
     const today = todayLocalKey();
-    const { rows } = await loadBoard({ scope: 'following', window: 'week', limit: 50, today });
-    const count = countFriendsTrainedToday(rows);
+    const data = await callCommunity('community_friends_trained_today', { _today: today });
+    const count = clampFriendsCount(data);
     const cache = { dayKey: today, count, fetchedAt: Date.now() };
     await AsyncStorage.setItem(friendsCacheKey(uid), JSON.stringify(cache));
     return cache;

@@ -6497,3 +6497,13 @@ screen now names an unfilled slot in its toast, derives each preset
 chip's selected state from the current kit, and guards the
 remembered-kit read against overwriting a tap that lands before it
 resolves.
+
+## D157
+
+**The weeks streak stays in Community (founder answer B, 2026-09-11).**
+Surfaced by the lead after the phases 0 to 3 review: the Community
+progress strip and the consistency board window show `c_weeks_streak`
+(design 60), while the Today truth repair rejected the weekly run/streak
+construct for Today and the home-screen widget. The founder chose B: keep
+it in Community only, as design 60 intended; Today and the widget stay
+without it. No code change.
