@@ -889,7 +889,9 @@ describe('the file is registered in the tracker', () => {
   const README = fs.readFileSync(path.join(ROOT, 'supabase', 'README.md'), 'utf8');
 
   test('supabase/README.md carries the status entry and a ledger row', () => {
-    expect(README).toContain('170 WRITTEN, NOT APPLIED');
+    // Applied to production 2026-09-10 (MCP path, checksum-verified); the
+    // tracker must carry the applied status, never the pre-apply wording.
+    expect(README).toContain('170 APPLIED 2026-09-10');
     expect(README).toContain('| 170 | `migrate_170_community_connection.sql` |');
   });
 
