@@ -67,11 +67,25 @@ describe('RPC-only security posture', () => {
   test('the acceptance block proves STABLE, not VOLATILE', () => {
     expect(CODE).toMatch(/provolatile = 's'/);
   });
+
+  // Review 2026-09-11 (171, finding 4): a text regex over this file cannot
+  // see a write performed by a CALLED helper (_community_add_activity
+  // INSERTs, _community_auto_hide UPDATEs), which would reproduce the
+  // migrate_167 failure at runtime while every other case here stayed
+  // green. So the call graph is allow-listed: only the three read-only
+  // helpers the board itself uses may appear.
+  test('calls only the three read-only helpers (the call graph is allow-listed)', () => {
+    const calls = [...FN.matchAll(/public\._community_(\w+)\s*\(/g)].map((m) => m[1]);
+    expect(calls.length).toBeGreaterThan(0);
+    const allowed = new Set(['caller', 'require_profile', 'is_blocked']);
+    expect(calls.filter((c) => !allowed.has(c))).toEqual([]);
+  });
 });
 
 describe('the _today contract (migrate_170)', () => {
-  test('a supplied day is validated as YYYY-MM-DD and refused when malformed', () => {
-    expect(FN).toMatch(/_today !~ '\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$'/);
+  test('a supplied day is trimmed, validated as YYYY-MM-DD and refused when malformed', () => {
+    expect(FN).toContain("v_today := nullif(btrim(coalesce(_today, '')), '');");
+    expect(FN).toMatch(/v_today !~ '\^\\d\{4\}-\\d\{2\}-\\d\{2\}\$'/);
     expect(FN).toMatch(/RAISE EXCEPTION USING message = 'invalid_input'/);
   });
 
@@ -89,6 +103,7 @@ describe("community_board's following arm, to the letter, minus the caller", () 
     ['consent: sharing consistency', /p\.share_consistency = true/],
     ['counters published inside fourteen days', /p\.c_updated_at >= now\(\) - interval '14 days'/],
     ['the day-level test', /p\.c_last_trained_day = v_today/],
+    ['the board\'s NULL-metric drop, week window', /p\.c_sessions_week IS NOT NULL/],
     ['blocked in either direction excluded', /NOT public\._community_is_blocked\(v_uid, p\.user_id\)/],
     ['an accepted follow from the caller', /f\.follower_id = v_uid AND f\.followee_id = p\.user_id AND f\.state = 'accepted'/],
   ])('%s', (_name, re) => {
@@ -103,10 +118,32 @@ describe("community_board's following arm, to the letter, minus the caller", () 
     expect(FN).toMatch(/least\(coalesce\(v_n, 0\), 999\)/);
   });
 
-  test('returns an integer and nothing else (never a card)', () => {
+  test('returns an integer (RETURNS integer is the guarantee; no card helper is called)', () => {
     expect(FN).toMatch(/RETURNS integer/);
     expect(FN).not.toMatch(/_community_profile_card/);
-    expect(FN).not.toMatch(/\bhandle\b/);
+  });
+
+  // Review 2026-09-11 (171, finding 5): the arm is read from the APPLIED
+  // migrate_170 text rather than restated here, so a later migration that
+  // adds a term to the board's following arm fails this case instead of
+  // letting 171 silently over-count.
+  test("every predicate line of migrate_170's following arm appears in 171", () => {
+    const sql170 = fs.readFileSync(path.join(ROOT, 'supabase', 'migrate_170_community_connection.sql'), 'utf8');
+    const boardAt = sql170.indexOf('CREATE OR REPLACE FUNCTION public.community_board(');
+    expect(boardAt).toBeGreaterThan(-1);
+    const from = sql170.indexOf('FROM public.community_profiles p', boardAt);
+    const to = sql170.indexOf("OR (_scope = 'gym'", from);
+    expect(from).toBeGreaterThan(-1);
+    expect(to).toBeGreaterThan(from);
+    const arm = sql170.slice(from, to).split('\n');
+    const predicates = arm
+      .filter((l) => /^\s*(WHERE|AND)\s+(p\.|NOT public\._community_is_blocked)/.test(l))
+      .map((l) => l.trim().replace(/^(WHERE|AND)\s+/, ''));
+    const follow = arm.find((l) => l.includes("f.follower_id = v_uid AND f.followee_id = p.user_id AND f.state = 'accepted'"));
+    expect(predicates.length).toBeGreaterThanOrEqual(5);
+    expect(follow).toBeTruthy();
+    for (const predicate of predicates) expect(FN).toContain(predicate);
+    expect(FN).toContain(follow.trim().replace(/\)+$/, '').replace(/^WHERE\s+/, ''));
   });
 });
 

@@ -22,7 +22,9 @@
 --                    consistency, with counters published inside the last
 --                    fourteen days, not blocked in either direction, whose
 --                    `c_last_trained_day` equals the supplied day; the
---                    caller's own row is never counted. Nothing is
+--                    caller's own row is never counted, and a row whose
+--                    week metric is NULL is dropped as the board drops it.
+--                    Nothing is
 --                    disclosed that the caller's own Following board does
 --                    not already show; this function shows LESS (a count).
 --                    Capped at 999, the client's own clamp.
@@ -49,6 +51,7 @@
 --                    idempotent, and the acceptance block is read-only.
 -- Rollback:          DROP FUNCTION public.community_friends_trained_today(text);
 --                    the client's board path is unaffected by the drop.
+-- Transaction:       no explicit BEGIN/COMMIT; the runner supplies one.
 -- Depends on:        160 (community_profiles, community_follows,
 --                    _community_caller, _community_is_blocked,
 --                    _community_require_profile), 165 (the c_* consistency
@@ -70,12 +73,15 @@ DECLARE
   v_today text;
   v_n     integer := 0;
 BEGIN
-  -- migrate_170's _today contract: validated when supplied, UK-local day
-  -- when absent, never now()::date.
-  IF _today IS NOT NULL AND _today !~ '^\d{4}-\d{2}-\d{2}$' THEN
+  -- migrate_170's _today contract, in its exact shape (community_hub_summary,
+  -- community_dimensions_me): trimmed, an empty or absent day falls back to
+  -- the UK-local day, a malformed one is refused, never now()::date.
+  v_today := nullif(btrim(coalesce(_today, '')), '');
+  IF v_today IS NULL THEN
+    v_today := to_char(timezone('Europe/London', now()), 'YYYY-MM-DD');
+  ELSIF v_today !~ '^\d{4}-\d{2}-\d{2}$' THEN
     RAISE EXCEPTION USING message = 'invalid_input';
   END IF;
-  v_today := coalesce(_today, to_char(timezone('Europe/London', now()), 'YYYY-MM-DD'));
 
   -- The same gate the board applies: a joined, unsuspended profile.
   v_me := public._community_require_profile(v_uid, false);
@@ -94,6 +100,10 @@ BEGIN
     AND p.c_updated_at >= now() - interval '14 days'
     AND p.c_last_trained_day IS NOT NULL
     AND p.c_last_trained_day = v_today
+    -- The board drops any gathered row whose window metric is NULL
+    -- (migrate_170, `IF v_row.metric IS NULL THEN CONTINUE`); the widget
+    -- reads the week window, so the same row is dropped here.
+    AND p.c_sessions_week IS NOT NULL
     AND NOT public._community_is_blocked(v_uid, p.user_id)
     AND EXISTS (
       SELECT 1 FROM public.community_follows f
