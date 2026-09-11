@@ -214,7 +214,7 @@ predates these fixes: a second build needs the founder's explicit go
 review in flight; then the founder's phrase, the apply through the
 connector, and the client switch to the RPC. The connector is the cloud route (founder ruling 2026-09-11 above).
 
-## QUICK FULL-BODY SESSION: WIDEN TO THE APP'S EQUIPMENT (founder decision A, 2026-09-11) — SPEC LANDED, BUILD IN FLIGHT
+## QUICK FULL-BODY SESSION: WIDEN TO THE APP'S EQUIPMENT (founder decision A, 2026-09-11) — LANDED and MERGED to main (46961f5)
 
 Founder report (chat, screenshots, 2026-09-11): the blank workout screen
 opened on a "Travel / hotel gym" row whose sheet forced three equipment
@@ -229,9 +229,22 @@ capability preflight the screen already applies. Lane R-A (Sonnet)
 recon LANDED as `docs/quick-session-equipment-2026-09-11/01-RECON.md`;
 lead spec `10-SPEC.md` (edit gate) with ruling D156 (equipment
 INVENTORY, corpus-driven, pure, eight slots, T1-23 preserved,
-travelMode.js retired). Build lane B-A (Sonnet) in flight; Opus review
-before landing. Recovery: re-dispatch the same brief over
-`git checkout -- <lane files>`; agents never commit.
+travelMode.js retired). Lane B-A (Sonnet) BUILT it; two STOPs ruled by
+the lead: the shoulders slot is an ordered muscle group (side, then
+front, then rear delts: the corpus has no bodyweight, kettlebell or
+suspension row with side_delts primary), and Chip's checkbox role
+carries the checked accessibility state. Lead review added the exact
+drop count (unfiltered winners absent from the filtered library, not a
+per-slot comparison that a cascade could over-count). LANDED 46961f5:
+`src/lib/quickSession.js` (pure, deterministic, corpus-driven),
+`quickSessionKit.js` (remembered kit per account), the sheet as an
+inventory with two presets and six kinds, `travelMode.js` deleted,
+real-corpus tests (every kit fills all eight slots; kettlebells only
+gives Kettlebell Goblet Squat, Deadlift, Floor Press, Row, Halo and
+three bodyweight fills; bands only is all band work). Lane suites 9 /
+740 green, lint clean on the lane's files; the full run follows the
+Community fix lane's landing. Opus review of this landing: still owed
+before the next build (standing law); queued behind C-FIX.
 
 ## COMMUNITIES REVAMP: FRESH-EYES REVIEW OF PHASES 0 TO 3 — RETURNED FIX FIRST; F1 LANDED; FIX LANE IN FLIGHT
 
