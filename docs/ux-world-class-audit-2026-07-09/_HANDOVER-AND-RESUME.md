@@ -59,6 +59,13 @@ pre-existing iOS widget decode failure without an active plan); finding
 9 becomes migration 171 (count-only RPC, written 3bd68dc, review in
 flight), founder-gated. #3576 SUCCEEDED but predates the fixes; a second
 build needs the founder's go. Founder ruling: the token is not rotated; the connector is the cloud route, never ask again.
+2026-09-11 (later): founder-reported blank-workout defect fixed
+(ff693b4); founder decision A built and landed as D156, the quick
+session as an equipment inventory over the real corpus (46961f5);
+the fresh-eyes review of Community phases 0 to 3 ran (FIX FIRST), its
+blocker landed (997b5cd), the fix lane for the rest in flight;
+migrations 171 and 172 written and guarded, waiting on the founder's
+phrase as one batch. Board sections carry the detail.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 
