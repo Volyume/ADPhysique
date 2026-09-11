@@ -233,15 +233,28 @@ travelMode.js retired). Build lane B-A (Sonnet) in flight; Opus review
 before landing. Recovery: re-dispatch the same brief over
 `git checkout -- <lane files>`; agents never commit.
 
-## COMMUNITIES REVAMP: FRESH-EYES REVIEW OF PHASES 0 TO 3 (standing law, never run) — IN FLIGHT
+## COMMUNITIES REVAMP: FRESH-EYES REVIEW OF PHASES 0 TO 3 — RETURNED FIX FIRST; F1 LANDED; FIX LANE IN FLIGHT
 
-The blueprint's section 11 requires an Opus fresh-eyes review after
-phase 1 and after phase 3; only the SQL parts and phase 4 were reviewed.
-Lane REV-03 (Opus, read-only) reviews the shipped client of phases 0 to
-3 against the blueprint and specs (safety floor, consent, presentation
-law, copy, privacy, correctness, tests, drift). Findings are fixed by the
-lead or a Sonnet lane, then lint, full test run, merge. Migration 171
-still waits only on the founder's phrase; the client switch follows it.
+Lane REV-03 (Opus, read-only, 2026-09-11) returned FIX FIRST: F1 BLOCKER
+(queued ambient items flushed without the calm / ED gate; the server
+cannot see either) LANDED by the lead (997b5cd): the flush takes the
+account id, drops the queue unsent when sharing is off, holds it while
+the gate is closed, sends nothing without an id; both callers pass the
+id; the reconnect edge in App.js drains the queue (the recorded
+foreground-only limitation is closed); pinned by behaviour and source.
+F2 to F21 (wrong "was" figure on auto PR moments, Respect-everyone
+counting the viewer, lost sharing withdrawal offline, silent "My groups"
+with zero groups, resting-page copy, a screen reading whole workout rows
+for one id, strip role and suffix, a 32 dp target, caches surviving
+leave, is_minor failing open, Everyone offered to a minor in compose,
+unscoped respect key, guard completeness, a dangling export, a vacuous
+pin, a dead read path, a mount-time day key) go to lane C-FIX (Sonnet)
+with lead rulings in the brief; F21 ruled no change (the Find people row
+is content). F8 (blueprint section 4 "3 PRs in 4 weeks" on the strip,
+never built in schema or client) needs an additive cloud counter: it
+joins the founder's next cloud batch with 171 (migration 172 to be
+written), client after the apply. Recovery for C-FIX: re-dispatch the
+same brief over `git checkout -- <lane files>`; agents never commit.
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
