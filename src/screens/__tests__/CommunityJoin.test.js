@@ -117,11 +117,22 @@ jest.mock('../../lib/community', () => ({
   publishSharingSettings: jest.fn(() => Promise.resolve({ sent: true, reason: null })),
   setPartner: jest.fn(() => Promise.resolve()),
   listMyGroups: jest.fn(() => Promise.resolve([])),
+  // Communities revamp 2026-09-10 (onboarding join, spec section 4.4).
+  COMMUNITY_RULES_SUMMARY: [
+    'Training talk only.',
+    'Be decent to people.',
+    'No body-shaming, no diet or calorie talk.',
+    'Report what breaks this.',
+  ],
+  suggestHandle: jest.fn(),
+  readOnboardingChoice: jest.fn(),
+  readPendingJoin: jest.fn(),
+  clearPendingJoin: jest.fn(),
 }));
 
 import {
   checkHandle, upsertProfile, COMMUNITY_RULES_VERSION, syncTrainingProfile, publishSharingSettings,
-  listMyGroups,
+  listMyGroups, suggestHandle, readOnboardingChoice, readPendingJoin, clearPendingJoin,
 } from '../../lib/community';
 import { search as searchGyms, setGyms, get as getGym } from '../../lib/gyms';
 import useCommunityMe from '../../hooks/useCommunityMe';
@@ -174,6 +185,14 @@ beforeEach(() => {
   searchGyms.mockResolvedValue({ venues: [], recognisedPostcode: null, centroid: null });
   setGyms.mockResolvedValue({});
   getGym.mockResolvedValue(null);
+  // Communities revamp 2026-09-10 (spec section 4.4). Defaults preserve
+  // every pre-existing test's behaviour above (a rejected suggestion and
+  // nothing pending/remembered): the mount effect below does nothing
+  // observable unless a test overrides one of these.
+  suggestHandle.mockRejectedValue(Object.assign(new Error('unavailable'), { code: 'unavailable' }));
+  readOnboardingChoice.mockResolvedValue(null);
+  readPendingJoin.mockResolvedValue(null);
+  clearPendingJoin.mockResolvedValue(undefined);
   useCommunityMe.mockReturnValue({
     me: { profile: null, is_minor: false }, loading: false, error: null, refresh: jest.fn(),
   });
@@ -631,5 +650,99 @@ describe('the discipline picker', () => {
 
     await act(async () => { chip(tree, 'Bodybuilding').props.onPress(); });
     expect(chip(tree, 'Bodybuilding').props.selected).toBe(false);
+  });
+});
+
+// ─── Communities revamp 2026-09-10 (onboarding join, spec section 4.4):
+// the server suggestion, the "Not now" onboarding choice, and pending-
+// join precedence, all on mount. ───────────────────────────────────────
+describe('the handle suggestion on mount', () => {
+  test('a resolved suggestion fills the handle and runs the SAME live check a typed one gets', async () => {
+    suggestHandle.mockResolvedValueOnce({ handle: 'suggested_one', source: 'email' });
+    const { tree } = await mount();
+    await flush(); // the cascaded live-check debounce, on top of mount()'s own flush
+
+    expect(field(tree, 'Handle').props.value).toBe('suggested_one');
+    expect(checkHandle).toHaveBeenCalledWith('suggested_one');
+    expect(flattenText(tree.toJSON())).toContain('Available');
+  });
+
+  test('a failure leaves the field empty with the shape hint, exactly as before this order', async () => {
+    // The beforeEach default already rejects; named explicitly so the
+    // "unchanged behaviour" half of spec 4.4 has its own test.
+    const { tree } = await mount();
+
+    expect(field(tree, 'Handle').props.value).toBe('');
+    expect(checkHandle).not.toHaveBeenCalled();
+    expect(flattenText(tree.toJSON())).toContain('Use 3 to 20 letters, numbers or underscores.');
+  });
+
+  test('a handle already typed before the suggestion resolves is never overwritten', async () => {
+    let resolveSuggestion;
+    suggestHandle.mockReturnValueOnce(new Promise((resolve) => { resolveSuggestion = resolve; }));
+    const { tree } = await mount();
+
+    await type(tree, 'Handle', 'my_own_handle');
+    resolveSuggestion({ handle: 'suggested_one', source: 'email' });
+    await flush();
+
+    expect(field(tree, 'Handle').props.value).toBe('my_own_handle');
+  });
+});
+
+describe('the "Not now" onboarding choice pre-fill', () => {
+  test('pre-selects the gym (picked state) and the name, when both were remembered', async () => {
+    readOnboardingChoice.mockResolvedValueOnce({
+      gym: { id: 'g1', display_name: 'PureGym Motherwell', name: 'PureGym Motherwell', town: 'Motherwell', outward: 'ML1' },
+      displayName: 'Rowan',
+    });
+    const { tree } = await mount();
+
+    expect(flattenText(tree.toJSON())).toContain('Your main gym');
+    expect(flattenText(tree.toJSON())).toContain('PureGym Motherwell');
+    expect(field(tree, 'Display name').props.value).toBe('Rowan');
+  });
+
+  test('a null gym (chose "I don\'t train at a gym") never forces the picked state', async () => {
+    readOnboardingChoice.mockResolvedValueOnce({ gym: null, displayName: 'Rowan' });
+    const { tree } = await mount();
+
+    expect(flattenText(tree.toJSON())).not.toContain('Your main gym');
+    expect(field(tree, 'Display name').props.value).toBe('Rowan');
+  });
+
+  test('no remembered choice leaves the gym step at its default', async () => {
+    const { tree } = await mount();
+    expect(flattenText(tree.toJSON())).not.toContain('Your main gym');
+  });
+});
+
+describe('a pending join pre-fills instead, and supersedes the queue', () => {
+  test('pre-fills handle, name and gym from the pending join, and never asks for a suggestion or the onboarding choice', async () => {
+    readPendingJoin.mockResolvedValueOnce({
+      handle: 'queued_handle', displayName: 'Queued Name', gymId: 'g9', decidedAt: Date.now(),
+    });
+    const { tree } = await mount();
+    await flush(); // the cascaded live-check debounce for the pre-filled handle
+
+    expect(field(tree, 'Handle').props.value).toBe('queued_handle');
+    expect(field(tree, 'Display name').props.value).toBe('Queued Name');
+    expect(flattenText(tree.toJSON())).toContain('Your main gym');
+    expect(suggestHandle).not.toHaveBeenCalled();
+    expect(readOnboardingChoice).not.toHaveBeenCalled();
+  });
+
+  test('a successful create clears the pending join: this screen supersedes it', async () => {
+    readPendingJoin.mockResolvedValueOnce({
+      handle: 'queued_handle', displayName: 'Queued Name', gymId: null, decidedAt: Date.now(),
+    });
+    const { tree } = await mount();
+    await flush(); // let the pre-filled handle's live check settle to 'available'
+
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledTimes(1);
+    expect(clearPendingJoin).toHaveBeenCalledWith('u1');
   });
 });

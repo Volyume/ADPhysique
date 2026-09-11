@@ -1,17 +1,24 @@
 /**
  * profile.leaveCommunity.guard.test.js - F11 (fresh-eyes review of the
- * Community client, phases 0-3).
+ * Community client, phases 0-3); extended for the onboarding join
+ * (communities revamp 2026-09-10, `docs/communities-revamp-2026-09-10/
+ * 25-ONBOARDING-COMMUNITY-SPEC.md` section 4.2: "`leaveCommunity`
+ * (profile.js) also clears the pending join and the onboarding choice --
+ * a person who leaves must never be re-joined by a stale queue").
  *
  * What this suite pins: `leaveCommunity` clears every device cache the
  * account leaves behind, not only `me` and the widget friends count --
  * the cached Hub (`clearCachedHub`), the training-profile throttle
  * (`clearTrainingProfileState`), any queued ambient item
- * (`clearPendingAmbientItems`), and this account's "already given
- * Respect today" flags (`clearRespectGivenState`) -- each behind a lazy
- * require. Source-level, not behavioural: `feed.js`, `trainingProfile.js`,
- * `ambient.js` and `respect.js` all import `currentUserId`/`readCachedMe`
- * from `profile.js`, so a static import back into any of them would
- * cycle -- a behavioural test with the four modules mocked would never
+ * (`clearPendingAmbientItems`), this account's "already given Respect
+ * today" flags (`clearRespectGivenState`), and now the onboarding
+ * join's own pending join and "Not now" choice (`clearPendingJoin`,
+ * `clearOnboardingChoice`) -- each behind a lazy require. Source-level,
+ * not behavioural: `feed.js`, `trainingProfile.js`, `ambient.js`,
+ * `respect.js` AND `onboardingJoin.js` all import from `profile.js`
+ * (the latter needs `upsertProfile`/`loadMe`/`hasProfile`/
+ * `suggestHandle`), so a static import back into any of them would
+ * cycle -- a behavioural test with the five modules mocked would never
  * catch a regression back to a static import at the top of the file.
  */
 
@@ -82,5 +89,39 @@ describe('leaveCommunity clears every Community device cache (F11)', () => {
     // The pending-ambient-items queue is device-global, not per user
     // (`ambient.js`'s own PENDING_ITEMS_KEY), so it takes no argument.
     expect(body).toMatch(/clearPendingAmbientItems\(\)/);
+  });
+});
+
+describe('leaveCommunity also clears the onboarding join queue (spec section 4.2)', () => {
+  const body = fnBody(SOURCE, 'leaveCommunity');
+
+  test('clears the pending join, lazily (onboardingJoin.js would cycle: it imports upsertProfile/loadMe/hasProfile/suggestHandle from this module)', () => {
+    expect(body).toMatch(/require\('\.\/onboardingJoin'\)\.clearPendingJoin\(uid\)/);
+  });
+
+  test('clears the "Not now" onboarding choice too, lazily', () => {
+    expect(body).toMatch(/require\('\.\/onboardingJoin'\)\.clearOnboardingChoice\(uid\)/);
+  });
+
+  test('no static-import equivalent is used instead', () => {
+    expect(body).not.toMatch(/from '\.\/onboardingJoin'/);
+  });
+
+  test('both new clears are in their own try/catch, distinct from the widget and F11 blocks: one failed clear must not skip the others', () => {
+    const tryBlocks = body.match(/try \{[\s\S]*?\} catch \(_e\) \{ \/\* best-effort \*\/ \}/g) ?? [];
+    const joinBlock = tryBlocks.find((b) => b.includes('clearPendingJoin'));
+    expect(joinBlock).toBeTruthy();
+    expect(joinBlock).toMatch(/clearOnboardingChoice/);
+    const widgetBlock = tryBlocks.find((b) => b.includes('clearCachedFriends'));
+    const f11Block = tryBlocks.find((b) => b.includes('clearCachedHub'));
+    expect(joinBlock).not.toBe(widgetBlock);
+    expect(joinBlock).not.toBe(f11Block);
+  });
+
+  test('community_leave itself has already run before either new clear (both sit after the `out` read)', () => {
+    const leaveCallIdx = body.indexOf("callCommunity('community_leave'");
+    const pendingClearIdx = body.indexOf("require('./onboardingJoin').clearPendingJoin(uid)");
+    expect(leaveCallIdx).toBeGreaterThan(-1);
+    expect(pendingClearIdx).toBeGreaterThan(leaveCallIdx);
   });
 });

@@ -261,6 +261,20 @@ export default function CommunityHubScreen({ navigation, route }) {
     return () => sub.remove();
   }, [consistencyUid]);
 
+  // Communities revamp 2026-09-10 (onboarding join, spec section 4.2,
+  // ruling h): opening Community is one of the three drain points for a
+  // join that could not run when it was decided (the other two are the
+  // App.js reconnect edge and the daily sync trigger). Deliberately its
+  // own effect, independent of `consistencyUid` above: that one requires
+  // an existing Community profile, and the whole point here is to catch
+  // someone who does NOT have one yet. Mount only; best effort.
+  useEffect(() => {
+    // eslint-disable-next-line global-require
+    const { retryPendingJoin, currentUserId } = require('../lib/community');
+    const pendingUid = currentUserId();
+    if (pendingUid) retryPendingJoin(pendingUid).catch(() => { /* best effort: drained again next open */ });
+  }, []);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {

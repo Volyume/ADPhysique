@@ -218,6 +218,24 @@ export async function checkHandle(handle) {
   return callCommunity('community_check_handle', { _h: String(handle ?? '').trim().toLowerCase() });
 }
 
+/**
+ * A server-suggested handle, derived from the account's sign-in email
+ * (never sent or seen by this client -- migrate_173,
+ * `docs/communities-revamp-2026-09-10/25-ONBOARDING-COMMUNITY-SPEC.md`
+ * section 4.1). Used to pre-fill the onboarding "Your gym" step and the
+ * Join screen so a handle is never a blank field to think about.
+ *
+ * @returns {Promise<{handle: string, source: string}>} `source` is
+ *   'email', 'name', 'fallback' or 'existing' (the caller already has a
+ *   profile and got their own handle back). The onboarding step branches
+ *   on 'existing' alone (it then creates nothing); no screen ever shows
+ *   or stores the source. A refusal arrives as the CommunityError the
+ *   transport maps, for the caller to handle.
+ */
+export async function suggestHandle() {
+  return callCommunity('community_handle_suggestion');
+}
+
 /** Leave Community: withdraws consent and deletes everything the user
  * authored. The cache goes with it. */
 export async function leaveCommunity() {
@@ -254,6 +272,20 @@ export async function leaveCommunity() {
       await require('./ambient').clearPendingAmbientItems();
       // eslint-disable-next-line global-require
       await require('./respect').clearRespectGivenState(uid);
+    } catch (_e) { /* best-effort */ }
+    // Onboarding join (communities revamp 2026-09-10, spec section 4.2):
+    // a person who leaves must never be re-joined by a stale queue -- the
+    // pending join and the "Not now" onboarding choice both go too. Lazy
+    // require: onboardingJoin.js imports `upsertProfile`/`loadMe`/
+    // `hasProfile`/`suggestHandle` from this module, so a static import
+    // back into it would cycle. Its own try/catch, distinct from the F11
+    // block above: one failed clear here must not skip the others, or the
+    // other way round.
+    try {
+      // eslint-disable-next-line global-require
+      await require('./onboardingJoin').clearPendingJoin(uid);
+      // eslint-disable-next-line global-require
+      await require('./onboardingJoin').clearOnboardingChoice(uid);
     } catch (_e) { /* best-effort */ }
     return out;
   } catch (e) {

@@ -25,9 +25,19 @@
  *
  * Leaving Community is here too, as the destructive action it is: it
  * withdraws the consent and deletes everything the user authored.
+ *
+ * The handle is editable here too (communities revamp 2026-09-10,
+ * founder order 2026-09-11: "the option to change their user / display
+ * name"), live-checked exactly as the Join screen checks a new one, and
+ * carried on Save only when it actually changed -- an untouched save
+ * still sends no `handle` key at all, the same partial-update contract
+ * every other field on this screen already relies on. The server's own
+ * 30-day cooldown (`HANDLE_CHANGE_DAYS`) applies from the first genuine
+ * change; an auto-suggested handle nobody has chosen yet has never
+ * started that clock.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -53,10 +63,23 @@ import {
   upsertProfile, leaveCommunity, COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS,
   COMMUNITY_SETTINGS, MAX_STYLES_PER_PROFILE, DISPLAY_NAME_MAX, BIO_MAX,
   setPlace, COMMUNITY_DISCIPLINE_KEYS, COMMUNITY_DISCIPLINE_LABELS,
-  MAX_DISCIPLINES_PER_PROFILE,
+  MAX_DISCIPLINES_PER_PROFILE, isValidHandle, checkHandle, HANDLE_CHANGE_DAYS,
 } from '../lib/community';
 
 const MAX_OTHER_GYMS = 3;
+
+// Same debounce the Join screen's own handle check uses.
+const HANDLE_DEBOUNCE_MS = 250;
+
+const HANDLE_HINT = `Letters, numbers and underscores. You can change your handle once every ${HANDLE_CHANGE_DAYS} days.`;
+const NOT_ALLOWED_HINT = `You changed your handle less than ${HANDLE_CHANGE_DAYS} days ago.`;
+// The two "a check that could not run" lines, same wording as the Join
+// screen's own (`CommunityJoinScreen.js`). Duplicated rather than
+// cross-imported: the established pattern here (each screen owns its
+// own small copy set, e.g. the REFUSALS map below already repeats
+// several of Join's lines verbatim).
+const HANDLE_OFFLINE_HINT = 'Could not check that handle. You are offline.';
+const HANDLE_UNAVAILABLE_HINT = 'Could not check that handle just now. Try again.';
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
@@ -65,6 +88,7 @@ const REFUSALS = {
   content_not_allowed: 'That wording is not allowed here. Try different words.',
   rate_limited: 'That is a lot of changes for one day. Try again tomorrow.',
   invalid_input: 'Check what you have typed, then try again.',
+  not_allowed: NOT_ALLOWED_HINT,
 };
 
 export default function CommunityEditProfileScreen({ navigation }) {
@@ -73,6 +97,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
   const { me, loading: meLoading, refresh } = useCommunityMe();
   const profile = me?.profile ?? null;
 
+  const [handle, setHandle] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [bio, setBio] = useState('');
   const [preset, setPreset] = useState(AVATAR_PRESETS[0].key);
@@ -113,11 +138,20 @@ export default function CommunityEditProfileScreen({ navigation }) {
   const [visibility, setVisibility] = useState('public');
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
+  // Handle change (communities revamp 2026-09-10): the same state shape
+  // Join uses for its own live check ('idle' | 'invalid' | 'checking' |
+  // 'available' | 'taken' | 'unknown'), but measured against whether the
+  // typed handle differs from the PROFILE's current one rather than
+  // whether it is merely well-formed and free.
+  const [handleState, setHandleState] = useState('idle');
+  const [handleCheckFailure, setHandleCheckFailure] = useState(null);
+  const handleCheckRef = useRef(0);
 
   // Prefill once the cached profile arrives, and only once: re-running it
   // on every payload refresh would overwrite what the user is typing.
   useEffect(() => {
     if (ready || !profile) return;
+    setHandle(profile.handle ?? '');
     setDisplayName(profile.display_name ?? '');
     setBio(profile.bio ?? '');
     setPreset(profile.avatar_preset ?? AVATAR_PRESETS[0].key);
@@ -136,6 +170,58 @@ export default function CommunityEditProfileScreen({ navigation }) {
     setVisibility(profile.visibility ?? 'public');
     setReady(true);
   }, [profile, ready]);
+
+  // Live-checked exactly as the Join screen checks a NEW handle: shape
+  // first (nothing asked of the server until it is right), then
+  // availability -- but only once the typed value actually differs from
+  // the profile's own, so re-saving without touching it never asks
+  // anything of the server at all. Gated on `ready`: before the prefill
+  // above has run, `handle` and `profile.handle` cannot yet be compared.
+  useEffect(() => {
+    if (!ready) return undefined;
+    const trimmed = handle.trim().toLowerCase();
+    const original = (profile?.handle ?? '').toLowerCase();
+    if (trimmed === original) { setHandleCheckFailure(null); setHandleState('idle'); return undefined; }
+    if (!isValidHandle(trimmed)) { setHandleCheckFailure(null); setHandleState('invalid'); return undefined; }
+    setHandleCheckFailure(null);
+    setHandleState('checking');
+    const seq = handleCheckRef.current + 1;
+    handleCheckRef.current = seq;
+    const timer = setTimeout(async () => {
+      try {
+        const free = await checkHandle(trimmed);
+        // Request-id guard: a slower earlier check must not overwrite a
+        // newer answer (the Join screen's own pattern).
+        if (handleCheckRef.current !== seq) return;
+        setHandleCheckFailure(null);
+        setHandleState(free ? 'available' : 'taken');
+      } catch (e) {
+        if (handleCheckRef.current !== seq) return;
+        setHandleCheckFailure(e?.code === 'offline' ? 'offline' : 'unavailable');
+        setHandleState('unknown');
+      }
+    }, HANDLE_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [handle, profile, ready]);
+
+  const handleLine = {
+    idle: HANDLE_HINT,
+    invalid: HANDLE_HINT,
+    checking: 'Checking',
+    available: 'Available',
+    taken: 'Taken',
+    unknown: handleCheckFailure === 'offline' ? HANDLE_OFFLINE_HINT : HANDLE_UNAVAILABLE_HINT,
+  }[handleState];
+
+  const handleTone = handleState === 'available'
+    ? t.colors.success
+    : (handleState === 'taken' || handleState === 'invalid' ? t.colors.error : t.colors.textMuted);
+
+  // Save disabled while a CHANGED handle is 'taken' or 'invalid'
+  // (spec 4.4); 'unknown' (a check that could not run) never blocks it,
+  // same posture as Join -- `save()` itself is what knows the truth, and
+  // its refusals say what actually happened.
+  const handleBlocksSave = handleState === 'taken' || handleState === 'invalid';
 
   // The other gyms are stored as bare ids on the profile; a display name
   // needs its own read, best effort (a gym that fails to load is simply
@@ -195,7 +281,14 @@ export default function CommunityEditProfileScreen({ navigation }) {
     if (busy) return;
     setBusy(true);
     try {
+      const trimmedHandle = handle.trim().toLowerCase();
+      // Sent only when it actually differs from the profile's own
+      // (spec 4.4): an unchanged save must carry no `handle` key at all,
+      // the same partial-update contract every other field here relies
+      // on (`CommunityEditProfile.test.js`).
+      const handleChanged = trimmedHandle !== (profile?.handle ?? '').toLowerCase();
       await upsertProfile({
+        ...(handleChanged ? { handle: trimmedHandle } : {}),
         display_name: displayName.trim(),
         bio: bio.trim() || null,
         avatar_preset: preset,
@@ -224,7 +317,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
       setBusy(false);
     }
   }, [
-    busy, displayName, bio, preset, styleKeys, disciplineKeys, goal, setting, visibility,
+    busy, handle, profile, displayName, bio, preset, styleKeys, disciplineKeys, goal, setting, visibility,
     primaryGym, otherGyms, placeDirty, placeQuery, refresh, toast, navigation,
   ]);
 
@@ -288,6 +381,19 @@ export default function CommunityEditProfileScreen({ navigation }) {
               </Pressable>
             ))}
           </View>
+        </View>
+
+        <View style={styles.field}>
+          <TextField
+            label="Handle"
+            value={handle}
+            onChangeText={(v) => setHandle(v.replace(/\s/g, '').toLowerCase())}
+            autoCapitalize="none"
+            autoCorrect={false}
+            size="sm"
+            accessibilityLabel="Handle"
+          />
+          <Text style={[styles.hint, { ...t.type.caption, color: handleTone }]}>{handleLine}</Text>
         </View>
 
         <TextField
@@ -510,6 +616,7 @@ export default function CommunityEditProfileScreen({ navigation }) {
         <Button
           variant="primary"
           title="Save"
+          disabled={handleBlocksSave}
           loading={busy}
           onPress={save}
           accessibilityLabel="Save profile"

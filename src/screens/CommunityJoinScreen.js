@@ -54,7 +54,8 @@ import {
   syncTrainingProfile, publishConsistency, publishSharingSettings, shareablePayload, previewLine,
   SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS,
   COMMUNITY_DISCIPLINE_KEYS, COMMUNITY_DISCIPLINE_LABELS, MAX_DISCIPLINES_PER_PROFILE,
-  listMyGroups,
+  listMyGroups, COMMUNITY_RULES_SUMMARY,
+  suggestHandle, readOnboardingChoice, readPendingJoin, clearPendingJoin,
 } from '../lib/community';
 import { bandRows, NOT_ENOUGH_LINE, NOTHING_SHARED_LINE } from './CommunityTrainingProfileScreen';
 
@@ -66,13 +67,6 @@ const HANDLE_DEBOUNCE_MS = 250;
 // same finder as the main gym), the same cap CommunityEditProfileScreen
 // uses for the identical field.
 const MAX_OTHER_GYMS = 3;
-
-const RULES = [
-  'Training talk only.',
-  'Be decent to people.',
-  'No body-shaming, no diet or calorie talk.',
-  'Report what breaks this.',
-];
 
 const HANDLE_HINT = 'Use 3 to 20 letters, numbers or underscores.';
 export const HANDLE_OFFLINE_HINT = 'Could not check that handle. You are offline.';
@@ -194,6 +188,48 @@ export default function CommunityJoinScreen({ navigation, route }) {
     return () => { alive = false; };
   }, []);
 
+  // Communities revamp 2026-09-10 (onboarding join, spec section 4.4): a
+  // pending join from a failed onboarding completion pre-fills the
+  // handle, name and gym here instead of anything below, and is cleared
+  // the moment this screen's own "Create profile" succeeds (this screen
+  // supersedes the queue). With nothing pending, a person who chose
+  // "Not now" at onboarding gets their gym and name back, and an empty
+  // handle is offered a server suggestion that runs through the SAME
+  // live check as a typed one -- a failure here simply leaves the field
+  // exactly as it was.
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const pending = await readPendingJoin(uid);
+      if (!alive) return;
+      if (pending) {
+        if (pending.handle) setHandle(pending.handle);
+        if (pending.displayName) setDisplayName(pending.displayName);
+        if (pending.gymId) { setPrimaryGym(pending.gym ?? { id: pending.gymId }); setGymStep('picked'); }
+        return;
+      }
+      const choice = await readOnboardingChoice(uid);
+      if (!alive) return;
+      if (choice?.gym) { setPrimaryGym(choice.gym); setGymStep('picked'); }
+      if (choice?.displayName) setDisplayName(choice.displayName);
+      if (!handle) {
+        try {
+          const suggestion = await suggestHandle();
+          // Functional form, deliberately: the request is in flight for a
+          // moment, and a handle the person typed WHILE it was must never
+          // be overwritten by a now-stale suggestion (the same guard
+          // ProOnboardingScreen's identical suggestion effect uses).
+          if (alive && suggestion?.handle) setHandle((h) => (h ? h : suggestion.handle));
+        } catch (_e) { /* failure: unchanged behaviour, the field stays as it was */ }
+      }
+    })();
+    return () => { alive = false; };
+    // Mount only, deliberately: `handle` is read for its value AT MOUNT
+    // (always '' on a fresh screen); re-running this whenever it changes
+    // would fight the person's own typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid]);
+
   async function toggleBand(key, next) {
     const settings = { ...tpShare, [key]: next };
     setTpShare(settings);
@@ -286,6 +322,10 @@ export default function CommunityJoinScreen({ navigation, route }) {
         setGyms(primaryGym.id, otherGyms.map((g) => g.id)).catch(() => { /* can be added later */ });
       }
       await refresh(true);
+      // This screen supersedes any pending join once its own create has
+      // won (spec section 4.4): best effort, the create itself has
+      // already succeeded above.
+      clearPendingJoin(uid).catch(() => { /* best effort */ });
       toast.show('Your profile is live');
       if (next?.screen) navigation.replace(next.screen, next.params ?? {});
       else navigation.goBack();
@@ -613,7 +653,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
           <Text style={[styles.blockTitle, { ...t.type.captionStrong, color: t.colors.textPrimary }]}>
             Four rules
           </Text>
-          {RULES.map((line) => (
+          {COMMUNITY_RULES_SUMMARY.map((line) => (
             <Text key={line} style={[styles.rule, { ...t.type.caption, color: t.colors.textSecondary }]}>
               {line}
             </Text>

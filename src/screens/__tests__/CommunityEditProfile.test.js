@@ -8,9 +8,18 @@
  * 2026-09-06 findings 1-2). What this suite pins is the client half of
  * that contract, because getting it wrong is silent and total:
  *
- *   1. Neither screen sends a `handle`. Neither offers a handle field, and
- *      a save that carried one would either rename the profile or be
- *      refused as `handle_invalid` for a field the user cannot see.
+ *   1. RE-ANCHORED (communities revamp 2026-09-10, founder order
+ *      2026-09-11: "the option to change their user / display name";
+ *      `docs/communities-revamp-2026-09-10/25-ONBOARDING-COMMUNITY-SPEC.md`
+ *      section 4.4). The OLD pin here was "neither screen sends a
+ *      handle" -- that changes DELIBERATELY for CommunityEditProfileScreen
+ *      only: it now offers a Handle field, live-checked exactly as Join
+ *      checks a new one, and Save carries a `handle` key ONLY when the
+ *      typed value differs from the profile's own; an untouched save
+ *      still sends none, the same partial-update contract every other
+ *      field here relies on. CommunityPrivacyScreen has no handle field
+ *      and is unaffected; its own "sends only { visibility }" pin below
+ *      stands unchanged.
  *   2. A refusal is spoken calmly, names nothing the user did not do, and
  *      nothing is claimed to have happened (no toast of success, no
  *      goBack).
@@ -68,6 +77,13 @@ jest.mock('../../lib/community', () => ({
   setConnectFrom: jest.fn(),
   setPlace: jest.fn(() => Promise.resolve({ kind: 'none', label: null, lat: null, lng: null })),
   CONNECT_FROM_VALUES: { anyone: 'Anyone', followers: 'People who follow me', nobody: 'Nobody' },
+  // Communities revamp 2026-09-10 (spec section 4.4): the handle field.
+  // The real shape rule, not a stand-in (same rule CommunityJoin.test.js
+  // uses for its own Join-screen suite): 3 to 20 lowercase letters,
+  // digits or underscores, no leading or trailing underscore.
+  isValidHandle: (h) => /^[a-z0-9_]{3,20}$/.test(h) && !h.startsWith('_') && !h.endsWith('_'),
+  checkHandle: jest.fn(),
+  HANDLE_CHANGE_DAYS: 30,
 }));
 
 // GD-14 (gym database blueprint `docs/gym-database-2026-09-06/
@@ -104,7 +120,7 @@ jest.mock('../../lib/deviceLocation', () => ({
   getApproximatePosition: jest.fn(),
 }));
 
-import { upsertProfile, relationships, setConnectFrom, setPlace } from '../../lib/community';
+import { upsertProfile, relationships, setConnectFrom, setPlace, checkHandle } from '../../lib/community';
 import { setGyms, placeCentroid, get as getGymModule } from '../../lib/gyms';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityEditProfileScreen from '../CommunityEditProfileScreen';
@@ -166,6 +182,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   upsertProfile.mockResolvedValue({ ...PROFILE });
   relationships.mockResolvedValue({ blocked: [], muted: [] });
+  checkHandle.mockResolvedValue(true);
   setPlace.mockResolvedValue({ kind: 'town', label: 'Motherwell', lat: 55.79, lng: -3.99 });
   placeCentroid.mockResolvedValue({ kind: 'town', label: 'Motherwell', lat: 55.79, lng: -3.99 });
   useCommunityMe.mockReturnValue({
@@ -179,7 +196,7 @@ beforeEach(() => {
 afterEach(() => { jest.useRealTimers(); });
 
 describe('Edit profile saves the fields it owns', () => {
-  test('the save carries no handle, and no handle field is on the screen', async () => {
+  test('an untouched handle sends no `handle` key, the same partial-update contract as every other field', async () => {
     const { tree, navigation } = await mount(CommunityEditProfileScreen);
 
     await act(async () => { field(tree, 'Bio').props.onChangeText('Now with more squats.'); });
@@ -194,7 +211,6 @@ describe('Edit profile saves the fields it owns', () => {
       bio: 'Now with more squats.',
       visibility: 'public',
     }));
-    expect(field(tree, 'Handle')).toBeUndefined();
     expect(sent).not.toHaveProperty('gym_label');
     // GD-14: the gym is saved through community_set_gyms, not this call.
     // The fixture profile has no gym_id (a legacy free-text label), so
@@ -234,6 +250,101 @@ describe('Edit profile saves the fields it owns', () => {
       'That is a lot of changes for one day. Try again tomorrow.',
       expect.objectContaining({ variant: 'error' }),
     );
+  });
+});
+
+// ─── Communities revamp 2026-09-10 (spec section 4.4; founder order
+// 2026-09-11): the Handle field, live-checked exactly as Join checks a
+// NEW one, but measured against the profile's OWN handle rather than
+// against "well-formed and free" alone. ────────────────────────────────
+describe('the handle field', () => {
+  test('is on the screen now, pre-filled from the profile, with the cooldown hint', async () => {
+    const { tree } = await mount(CommunityEditProfileScreen);
+
+    expect(field(tree, 'Handle').props.value).toBe('rowan_lifts');
+    expect(flattenText(tree.toJSON()))
+      .toContain('Letters, numbers and underscores. You can change your handle once every 30 days.');
+  });
+
+  test('re-typing the SAME handle asks the server nothing, and Save stays enabled', async () => {
+    const { tree } = await mount(CommunityEditProfileScreen);
+
+    await act(async () => { field(tree, 'Handle').props.onChangeText('rowan_lifts'); });
+    await flush();
+
+    expect(checkHandle).not.toHaveBeenCalled();
+    expect(byLabel(tree, 'Save profile').props.disabled).toBe(false);
+  });
+
+  test('a handle of the wrong shape never reaches the server, and Save is disabled', async () => {
+    const { tree } = await mount(CommunityEditProfileScreen);
+
+    await act(async () => { field(tree, 'Handle').props.onChangeText('ro'); });
+    await flush();
+
+    expect(checkHandle).not.toHaveBeenCalled();
+    expect(byLabel(tree, 'Save profile').props.disabled).toBe(true);
+  });
+
+  test('a free new handle reads Available, live-checked against the server', async () => {
+    const { tree } = await mount(CommunityEditProfileScreen);
+
+    await act(async () => { field(tree, 'Handle').props.onChangeText('New_Handle'); });
+    await flush();
+
+    expect(checkHandle).toHaveBeenCalledWith('new_handle'); // lowercased and stripped
+    expect(flattenText(tree.toJSON())).toContain('Available');
+    expect(byLabel(tree, 'Save profile').props.disabled).toBe(false);
+  });
+
+  test('a taken handle disables Save until it changes again', async () => {
+    checkHandle.mockResolvedValue(false);
+    const { tree } = await mount(CommunityEditProfileScreen);
+
+    await act(async () => { field(tree, 'Handle').props.onChangeText('new_handle'); });
+    await flush();
+
+    expect(flattenText(tree.toJSON())).toContain('Taken');
+    expect(byLabel(tree, 'Save profile').props.disabled).toBe(true);
+  });
+
+  test('a check that cannot run never blocks Save (same posture as Join)', async () => {
+    checkHandle.mockRejectedValue(Object.assign(new Error('offline'), { code: 'offline' }));
+    const { tree } = await mount(CommunityEditProfileScreen);
+
+    await act(async () => { field(tree, 'Handle').props.onChangeText('new_handle'); });
+    await flush();
+
+    expect(flattenText(tree.toJSON())).toContain('Could not check that handle. You are offline.');
+    expect(byLabel(tree, 'Save profile').props.disabled).toBe(false);
+  });
+
+  test('a changed, available handle is sent on Save', async () => {
+    const { tree } = await mount(CommunityEditProfileScreen);
+
+    await act(async () => { field(tree, 'Handle').props.onChangeText('new_handle'); });
+    await flush();
+    await act(async () => { byLabel(tree, 'Save profile').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledWith(expect.objectContaining({ handle: 'new_handle' }));
+  });
+
+  test('not_allowed (the server\'s 30-day cooldown) is named plainly, and nothing is claimed to have happened', async () => {
+    upsertProfile.mockRejectedValueOnce(Object.assign(new Error('not_allowed'), { code: 'not_allowed' }));
+    const { tree, navigation } = await mount(CommunityEditProfileScreen);
+
+    await act(async () => { field(tree, 'Handle').props.onChangeText('new_handle'); });
+    await flush();
+    await act(async () => { byLabel(tree, 'Save profile').props.onPress(); });
+    await flush();
+
+    expect(mockToastShow).toHaveBeenCalledWith(
+      'You changed your handle less than 30 days ago.',
+      expect.objectContaining({ variant: 'error' }),
+    );
+    expect(mockToastShow).not.toHaveBeenCalledWith('Profile saved');
+    expect(navigation.goBack).not.toHaveBeenCalled();
   });
 });
 

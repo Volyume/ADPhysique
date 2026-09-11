@@ -51,12 +51,25 @@ export {
   ME_CACHE_PREFIX, meCacheKey, currentUserId, emptyMe, readCachedMe,
   clearCachedMe, loadMe, refreshMe, hasProfile, hasUnseen, hasUnreadMessages,
   upsertProfile, acceptRules,
-  checkHandle, leaveCommunity, getProfile, follow, unfollow,
+  checkHandle, suggestHandle, leaveCommunity, getProfile, follow, unfollow,
   respondToFollow, removeFollower, listFollows, listFollowers,
   setShowGym, setShowPlace, blockUser, unblockUser,
   muteUser, unmuteUser, relationships, setPlace,
   myStatus, isModeratedStatus, setCommunityQuietHours,
 } from './profile';
+
+// ─── Onboarding join (communities revamp 2026-09-10, spec section 4.2;
+// founder order 2026-09-11, rulings CR-15 / D158) ───────────────────────
+
+export {
+  ONBOARDING_CHOICE_PREFIX, PENDING_JOIN_PREFIX, PENDING_JOIN_MAX_AGE_MS,
+  onboardingChoiceKey, pendingJoinKey,
+  rememberOnboardingChoice, readOnboardingChoice, clearOnboardingChoice,
+  writePendingJoin, readPendingJoin, clearPendingJoin,
+  performCommunityJoin, retryPendingJoin,
+} from './onboardingJoin';
+
+export { COMMUNITY_RULES_SUMMARY } from './rulesSummary';
 
 export {
   HUB_CACHE_PREFIX, hubCacheKey, clearCachedHub, loadHub, loadFeed,

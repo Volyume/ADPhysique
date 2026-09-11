@@ -130,6 +130,16 @@ TaskManager.defineTask(VOLYUME_DAILY_SYNC, async () => {
       // eslint-disable-next-line global-require
       await require('./src/lib/widgets/writer').writeWidgetSnapshot(supabaseUserId).catch(() => {});
     } catch (_) {}
+    // Communities revamp 2026-09-10 (onboarding join, spec section 4.2,
+    // ruling h): the daily sync trigger is one of the three drain points
+    // for a join that could not run when it was decided. AWAITED, same
+    // shape and reason as the widget write above: returning from this
+    // headless task ends it, so an un-awaited call would be suspended
+    // before it finishes.
+    try {
+      // eslint-disable-next-line global-require
+      await require('./src/lib/community').retryPendingJoin(supabaseUserId).catch(() => {});
+    } catch (_) {}
     return 'newData';
   } catch (e) {
     try { logError('VOLYUME_DAILY_SYNC', e); } catch (_) {}
@@ -1006,6 +1016,12 @@ export default function App() {
               if (!uid) return;
               // eslint-disable-next-line global-require
               require('./src/lib/community').flushPendingAmbientItems(uid).catch(() => {});
+              // Communities revamp 2026-09-10 (onboarding join, spec
+              // section 4.2, ruling h): the reconnect edge is one of the
+              // three drain points for a join that could not run when it
+              // was decided.
+              // eslint-disable-next-line global-require
+              require('./src/lib/community').retryPendingJoin(uid).catch(() => {});
             }).catch(() => {});
           } catch (_) {}
         }

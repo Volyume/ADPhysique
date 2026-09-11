@@ -83,6 +83,11 @@ jest.mock('../../lib/community', () => ({
   myStatus: jest.fn(() => Promise.resolve({ status: null, reason_class: null, since: null })),
   isModeratedStatus: (status) => status === 'restricted' || status === 'suspended',
   REPORT_REASONS: {},
+  // Communities revamp 2026-09-10 (onboarding join, spec section 4.2,
+  // ruling h): opening Community drains a pending join, on mount,
+  // independent of whether a profile exists yet.
+  currentUserId: () => 'u1',
+  retryPendingJoin: jest.fn(() => Promise.resolve({ ok: false, queued: false })),
 }));
 
 import {
