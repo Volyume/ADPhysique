@@ -58,8 +58,7 @@ phase 4: FIX FIRST, ten findings, eight fixed and landed (including a
 pre-existing iOS widget decode failure without an active plan); finding
 9 becomes migration 171 (count-only RPC, written 3bd68dc, review in
 flight), founder-gated. #3576 SUCCEEDED but predates the fixes; a second
-build needs the founder's go. Founder-side: rotate
-the repo's Supabase token.
+build needs the founder's go. Founder ruling: the token is not rotated; the connector is the cloud route, never ask again.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 

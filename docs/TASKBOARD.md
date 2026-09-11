@@ -170,9 +170,7 @@ migrate_170 writers VOLATILE, 22 community tables RLS on with no
 anon/authenticated grant, old overloads gone). `community-notify` v3
 deployed through the MCP path 2026-09-11 05:19 UTC (`verify_jwt` on;
 deployed source diffed against the repo: identical). Full record:
-`supabase/README.md` 170 status block. Founder-side, open: rotate the
-repo secret `SUPABASE_ACCESS_TOKEN` (the workflow route is broken until
-then). Founder 2026-09-11: "No walk needed continue" (the device walks
+`supabase/README.md` 170 status block. FOUNDER RULING 2026-09-11 (standing): the repo's Supabase token is NOT rotated and is never asked for again. Cloud migrations and edge-function deploys run through the Claude session's Supabase connector (MCP), under the same production phrase and the checksum protocol recorded in the `supabase/README.md` 170 status block; `apply-named-sql.yml` and `deploy-functions.yml` are not the route. Founder 2026-09-11: "No walk needed continue" (the device walks
 are not a gate; the checklists stay in chat for whenever the founder
 wants them). PHASE 4 (widget "a friend trained today", CR-13 Q6): edit
 gate `docs/communities-revamp-2026-09-10/24-PHASE4-SPEC.md`; lane P4
@@ -214,8 +212,7 @@ path stands until then. Build #3576 SUCCEEDED (completed 06:23 UTC; APK and AAB 
 predates these fixes: a second build needs the founder's explicit go
 (builds cost money). Migration 171 WRITTEN (3bd68dc), guarded, hostile
 review in flight; then the founder's phrase, the apply through the
-connector, and the client switch to the RPC. Founder-side still open:
-rotate the repo secret `SUPABASE_ACCESS_TOKEN`.
+connector, and the client switch to the RPC. The connector is the cloud route (founder ruling 2026-09-11 above).
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 

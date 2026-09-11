@@ -84,3 +84,7 @@ Auth check pattern:
   if (!authHeader) return new Response(JSON.stringify({ error: 'Unauthorised' }), { status: 401 })
   const { data: { user }, error } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
   if (error || !user) return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401 })
+
+## Cloud route (founder ruling 2026-09-11, standing)
+
+FOUNDER RULING 2026-09-11 (standing): the repo's Supabase token is NOT rotated and is never asked for again. Cloud migrations and edge-function deploys run through the Claude session's Supabase connector (MCP), under the same production phrase and the checksum protocol recorded in the `supabase/README.md` 170 status block; `apply-named-sql.yml` and `deploy-functions.yml` are not the route.
