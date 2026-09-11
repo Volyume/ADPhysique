@@ -866,6 +866,13 @@ function ProOnboardingStack() {
       <Stack.Screen name="HowYouTrainAdd" component={HowYouTrainAddScreen} options={{ headerShown: false }} />
       <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
+      {/* CR-15 / D158 (25-ONBOARDING-COMMUNITY-SPEC.md 4.3 step 9): the
+          "Your gym" step's finder offers "Can't find your gym? Add it" and
+          the profile block links the Community rules. Same fault, same fix
+          as HowYouTrain above: without an in-stack registration those taps
+          would die in silence. Both are copied unguarded from HomeStack. */}
+      <Stack.Screen name="CommunityGymAdd" component={CommunityGymAddScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CommunityRules" component={CommunityRulesScreen} options={{ headerShown: false }} />
       {/* CC33 T1-20: HowYouTrain's preference cross-reference row links to
           AvoidedMovements (transitive closure; its only outbound link is
           HowYouTrain, already above). */}

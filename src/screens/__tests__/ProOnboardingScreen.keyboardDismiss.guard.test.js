@@ -20,16 +20,19 @@ describe('ProOnboardingScreen puts the keyboard away on its own', () => {
     expect(SRC).toMatch(/import \{[^}]*\bKeyboard\b[^}]*\} from 'react-native'/);
   });
 
-  test.each(['advanceFrom2', 'advanceFrom3', 'advanceFrom4', 'advanceFrom5', 'advanceFrom6'])(
+  // CR-15 (2026-09-11): step 5 "Your gym" joined the wizard, so the steps
+  // after Training week moved up by one; advanceFrom5 takes the tapped
+  // intent ("join" or "later") as its one argument.
+  test.each(['advanceFrom2', 'advanceFrom3', 'advanceFrom4', 'advanceFrom5', 'advanceFrom6', 'advanceFrom7'])(
     '%s dismisses the keyboard before anything else',
     (fn) => {
-      const re = new RegExp(`function ${fn}\\(\\) \\{\\s*Keyboard\\.dismiss\\(\\);`);
+      const re = new RegExp(`function ${fn}\\([a-z]*\\) \\{\\s*Keyboard\\.dismiss\\(\\);`);
       expect(SRC).toMatch(re);
     },
   );
 
-  test('advanceFrom7 and goBack dismiss it too', () => {
-    expect(SRC).toMatch(/async function advanceFrom7\(\) \{\s*Keyboard\.dismiss\(\);/);
+  test('advanceFrom8 and goBack dismiss it too', () => {
+    expect(SRC).toMatch(/async function advanceFrom8\(\) \{\s*Keyboard\.dismiss\(\);/);
     expect(SRC).toMatch(/function goBack\(\) \{\s*if \(step === 1\) return;\s*Keyboard\.dismiss\(\);/);
   });
 

@@ -56,7 +56,10 @@ describe('ProOnboarding refuses to progress without a valid sex', () => {
     expect(src).toMatch(/const\s+ACCEPTED_SEX_VALUES\s*=\s*SEX_OPTIONS\.map\(\(o\) => o\.value\)/);
     expect(src).toMatch(/const sexValid = ACCEPTED_SEX_VALUES\.includes\(a\.sex\);/);
     expect(src).toMatch(/if \(sexValid\) setSex\(a\.sex\);/);
-    expect(src).toMatch(/setStep\(\(s\) => Math\.max\(s, sexValid \? draft\.step : Math\.min\(draft\.step, 2\)\)\);/);
+    // CR-15 (2026-09-11): the restored step first steps a minor over the
+    // gym step (`resumeStep`); the sex clamp is unchanged and still last.
+    expect(src).toMatch(/const resumeStep = isMinorAnswer\(a\.age\) && draft\.step === 5 \? 4 : draft\.step;/);
+    expect(src).toMatch(/setStep\(\(s\) => Math\.max\(s, sexValid \? resumeStep : Math\.min\(resumeStep, 2\)\)\);/);
     // And the picker itself renders from the same set, so the accepted values
     // cannot drift from what the UI offers.
     expect(src).toMatch(/options=\{SEX_OPTIONS\}/);

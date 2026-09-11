@@ -38,7 +38,9 @@ describe('ProOnboardingScreen premium polish guards', () => {
   });
 
   test('step chrome components stay outside the screen render so Android inputs keep focus', () => {
-    expect(SOURCE).toContain('function ProOnboardingHeader({ step, title, sub, onBack })');
+    // CR-15 (2026-09-11): `skipGym` rides the header so the visible count
+    // is right for a person under 18, whose gym step does not exist.
+    expect(SOURCE).toContain('function ProOnboardingHeader({ step, title, sub, onBack, skipGym = false })');
     expect(SOURCE).toContain('function QuestionGroup({ icon, title, sub, children })');
 
     const screenBody = SOURCE.slice(SOURCE.indexOf('export default function ProOnboardingScreen'));

@@ -16,6 +16,17 @@ import * as haptics from '../lib/haptics';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import Dropdown from '../components/Dropdown';
+// CR-15 / D158: the "Your gym" step reuses Community's own pieces so this
+// step and the Join screen can never say different things. The email is
+// never read here: the handle comes from the server's own suggestion.
+import GymPicker from '../components/community/GymPicker';
+import GymDetailSheet from '../components/community/GymDetailSheet';
+import PrivacyReceipt from '../components/community/PrivacyReceipt';
+import { venueLine } from '../lib/gyms';
+import {
+  isValidHandle, checkHandle, suggestHandle, performCommunityJoin, rememberOnboardingChoice,
+  COMMUNITY_RULES_SUMMARY, DISPLAY_NAME_MAX,
+} from '../lib/community';
 import OAuthButtons from '../components/auth/OAuthButtons';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -95,8 +106,12 @@ const PROTEIN_SHORT = {
 // Training week and Targets - the pinned-contract change done under the
 // sexGate suite's guards (its step-2 pins are untouched). TOTAL_STEPS
 // moved from 6 to 7; every step after Training week shifted up by one.
-const TOTAL_STEPS = 7;
-const STEP_LABELS = ['Account', 'Baseline', 'Body composition', 'Training week', 'Injuries & limitations', 'Targets', 'Check-in rhythm'];
+// CR-15 / D158 (docs/communities-revamp-2026-09-10/25-ONBOARDING-COMMUNITY-
+// SPEC.md section 4.3): step 5, "Your gym", between Training week and
+// Injuries. TOTAL_STEPS moved from 7 to 8; every step after Training week
+// shifted up by one. Under 18 the step does not exist (isMinorAnswer).
+const TOTAL_STEPS = 8;
+const STEP_LABELS = ['Account', 'Baseline', 'Body composition', 'Training week', 'Your gym', 'Injuries & limitations', 'Targets', 'Check-in rhythm'];
 const STEP_OUTCOMES = {
   1: [
     { icon: 'shield-checkmark-outline', label: 'Secure sign-in' },
@@ -116,15 +131,19 @@ const STEP_OUTCOMES = {
     { icon: 'fitness-outline', label: 'Exercise pool' },
   ],
   5: [
+    { icon: 'location-outline', label: 'Your gym' },
+    { icon: 'people-outline', label: 'People who train there' },
+  ],
+  6: [
     { icon: 'body-outline', label: 'Built around you' },
     { icon: 'checkmark-circle-outline', label: 'Optional, skip freely' },
   ],
-  6: [
+  7: [
     { icon: 'flag-outline', label: 'Goal phase' },
     { icon: 'body-outline', label: 'Muscle priorities' },
     { icon: 'restaurant-outline', label: 'Nutrition target' },
   ],
-  7: [
+  8: [
     { icon: 'pulse-outline', label: 'Recovery guardrails' },
     { icon: 'notifications-outline', label: 'Check-in rhythm' },
   ],
@@ -220,6 +239,12 @@ const RECOVERY_OPTIONS = [
   { value: 'good',    label: 'Good',    sub: 'Sleeping well, low stress, nutrition on point' },
 ];
 
+// Step 5 handle line (CR-15): the Join screen's own states and words.
+const HANDLE_HINT = 'Use 3 to 20 letters, numbers or underscores.';
+const HANDLE_OFFLINE_HINT = 'Could not check that handle. You are offline.';
+const HANDLE_UNAVAILABLE_HINT = 'Could not check that handle just now.';
+const HANDLE_CHECK_DEBOUNCE_MS = 400;
+
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 // Review B finding 6: the canonical editor (CoachingRemindersScreen
 // HOURS_MORNING) offers 5am to 12pm; onboarding offering later hours
@@ -244,17 +269,30 @@ function fmt12(h) {
 // before this stack renders (and no producer of user.isLocal exists), so the
 // visible steps are renumbered 1..5. The internal `step` state is untouched:
 // gates, draft clamps and the sex gate all keep their numbering.
-const displayStepOf = (step) => (step > 1
-  ? { n: step - 1, total: TOTAL_STEPS - 1 }
-  : { n: step, total: TOTAL_STEPS });
+// CR-15 / D158: under 18 the "Your gym" step (5) does not exist, so the
+// visible count drops by one more and every step after it shifts down.
+const displayStepOf = (step, skipGym = false) => {
+  if (step <= 1) return { n: step, total: TOTAL_STEPS };
+  if (skipGym) return { n: step >= 6 ? step - 2 : step - 1, total: TOTAL_STEPS - 2 };
+  return { n: step - 1, total: TOTAL_STEPS - 1 };
+};
 
-function ProOnboardingProgressBar({ step }) {
+// The one age test the wizard makes for Community (CR-08; CR-15 ruling f):
+// an age under 18, or an age that cannot be read, means no Community step.
+// The age itself is validated 13 to 100 at step 2; this only asks "adult?"
+// and fails closed.
+export function isMinorAnswer(age) {
+  const n = parseInt(age, 10);
+  return !Number.isFinite(n) || n < 18;
+}
+
+function ProOnboardingProgressBar({ step, skipGym = false }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   // Endowed Progress Effect: the bar opens with a small amount already filled
   // rather than empty, so step 1 doesn't read as "0% done, long way to go".
   const BASE = 0.12;
-  const d = displayStepOf(step);
+  const d = displayStepOf(step, skipGym);
   const advanced = d.total > 1 ? (d.n - 1) / (d.total - 1) : 1;
   const filled = Math.round((BASE + (1 - BASE) * advanced) * 100);
   return (
@@ -264,7 +302,7 @@ function ProOnboardingProgressBar({ step }) {
   );
 }
 
-function ProOnboardingHeader({ step, title, sub, onBack }) {
+function ProOnboardingHeader({ step, title, sub, onBack, skipGym = false }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const stepLabel = STEP_LABELS[step - 1] || 'Setup';
@@ -285,8 +323,8 @@ function ProOnboardingHeader({ step, title, sub, onBack }) {
         ) : null}
         <VolyumeIcon size={22} />
       </View>
-      <ProOnboardingProgressBar step={step} />
-      <Text style={[styles.stepCount, live.stepCount]}>Step {displayStepOf(step).n} of {displayStepOf(step).total} - {stepLabel}</Text>
+      <ProOnboardingProgressBar step={step} skipGym={skipGym} />
+      <Text style={[styles.stepCount, live.stepCount]}>Step {displayStepOf(step, skipGym).n} of {displayStepOf(step, skipGym).total} - {stepLabel}</Text>
       <Text style={[styles.stepTitle, live.stepTitle]}>{title}</Text>
       {sub ? <Text style={[styles.stepSub, live.stepSub]}>{sub}</Text> : null}
       {outcomes.length ? (
@@ -446,8 +484,29 @@ export default function ProOnboardingScreen({ navigation }) {
   const fieldY = useRef({});
   const [attempted2, setAttempted2] = useState(false);
   const [attempted4, setAttempted4] = useState(false);
-  const [attempted6, setAttempted6] = useState(false);
   const [attempted7, setAttempted7] = useState(false);
+  const [attempted8, setAttempted8] = useState(false);
+  // ── Step 5, Your gym (CR-15 / D158; 25-ONBOARDING-COMMUNITY-SPEC.md 4.3) ──
+  // Two answers: the gym (a venue, or an explicit "none") and whether to join
+  // Community now ("Join Community" beside "Skip for now") with the profile
+  // below already filled in. Nothing here is a default: `gymChoice` and
+  // `communityJoin` start null and only a tap sets them.
+  const [gymVenue, setGymVenue] = useState(null);       // { id, display_name, town, outward, brand } | null
+  const [gymChoice, setGymChoice] = useState(null);     // null | 'picked' | 'none'
+  const [pendingGym, setPendingGym] = useState(null);   // a tapped venue awaiting GymDetailSheet
+  const [communityHandle, setCommunityHandle] = useState('');
+  // 'idle' | 'invalid' | 'checking' | 'available' | 'taken' | 'unknown'
+  const [communityHandleState, setCommunityHandleState] = useState('idle');
+  const [communityHandleFailure, setCommunityHandleFailure] = useState(null);
+  const [communityDisplayName, setCommunityDisplayName] = useState('');
+  const [communityJoin, setCommunityJoin] = useState(null); // null | 'join' | 'later' | 'existing'
+  const [attempted5, setAttempted5] = useState(false);
+  const [joinAttempted, setJoinAttempted] = useState(false);
+  const communityHandleRef = useRef(null);
+  const communityNameRef = useRef(null);
+  const handleCheckRef = useRef(0);
+  const suggestedRef = useRef(false);
+  const namePrefilledRef = useRef(false);
 
   function markY(key) {
     return (e) => { fieldY.current[key] = e.nativeEvent.layout.y; };
@@ -494,12 +553,12 @@ export default function ProOnboardingScreen({ navigation }) {
     if (!equipment) errs.equipment = 'Choose your equipment.';
     return errs;
   }
-  function validateStep6() {
+  function validateStep7() {
     const errs = {};
     if (!trainingPhase) errs.phase = 'Choose what you are focused on.';
     return errs;
   }
-  function validateStep7() {
+  function validateStep8() {
     const errs = {};
     if (!recoveryRating) errs.recovery = 'Choose your recovery level.';
     return errs;
@@ -597,6 +656,9 @@ export default function ProOnboardingScreen({ navigation }) {
   const [sex, setSex] = useState(null);
   // OB-5: age starts empty too (see the body-weight note above).
   const [age, setAge] = useState('');
+  // CR-15 ruling f: under 18 there is no Community step (fails closed on an
+  // unreadable age; the age is validated 13 to 100 at step 2 either way).
+  const skipGymStep = isMinorAnswer(age);
   // ONBOARD-001 (audit): height starts BLANK and joins sex / body weight / age
   // as an explicit-entry field. The old '175' cm / 5 ft 9 in seed was a real,
   // plausible height that validated untouched, so calorie / FFM / BMR targets
@@ -625,7 +687,7 @@ export default function ProOnboardingScreen({ navigation }) {
   // user could sail through step 5 without their real choice ever
   // registering - the exact silent default the onboarding-enforcement law
   // (CLAUDE.md Section 2) forbids for required fields. No default: the
-  // advanceFrom6 gate now genuinely blocks until a phase is chosen. Quiz
+  // advanceFrom7 gate now genuinely blocks until a phase is chosen. Quiz
   // answers and saved drafts still prefill - both are explicit choices.
   const [trainingPhase, setTrainingPhase] = useState(null);
   // Weak points the user wants to bring up (UI labels, max 3). Division-scoped:
@@ -880,6 +942,20 @@ export default function ProOnboardingScreen({ navigation }) {
       str(a.recoveryRating, setRecoveryRating);
       num(a.morningHour, setMorningHour);
       num(a.checkinDay, setCheckinDay);
+      // CR-15: the step 5 answers, restored as typed values only.
+      if (a.gymVenue && typeof a.gymVenue === 'object' && typeof a.gymVenue.id === 'string') {
+        setGymVenue({
+          id: a.gymVenue.id,
+          display_name: typeof a.gymVenue.display_name === 'string' ? a.gymVenue.display_name : '',
+          town: typeof a.gymVenue.town === 'string' ? a.gymVenue.town : null,
+          outward: typeof a.gymVenue.outward === 'string' ? a.gymVenue.outward : null,
+          brand: typeof a.gymVenue.brand === 'string' ? a.gymVenue.brand : null,
+        });
+      }
+      if (a.gymChoice === 'picked' || a.gymChoice === 'none') setGymChoice(a.gymChoice);
+      str(a.communityHandle, setCommunityHandle);
+      str(a.communityDisplayName, setCommunityDisplayName);
+      if (a.communityJoin === 'join' || a.communityJoin === 'later' || a.communityJoin === 'existing') setCommunityJoin(a.communityJoin);
       // The account step is behind a restored draft by definition.
       setAccountCreated(true);
       // F11 seam: a draft persisted past step 2 whose sex is not an accepted
@@ -887,13 +963,16 @@ export default function ProOnboardingScreen({ navigation }) {
       // gate, sex drives the sacred ED floor, and step 2's canContinue is
       // the only thing enforcing it. Clamp the restored step to 2 until the
       // draft carries a valid explicit choice.
-      setStep((s) => Math.max(s, sexValid ? draft.step : Math.min(draft.step, 2)));
+      // CR-15 ruling f: a draft parked on the gym step by a minor (an age
+      // edited back under 18, or a stale draft) resumes on Training week.
+      const resumeStep = isMinorAnswer(a.age) && draft.step === 5 ? 4 : draft.step;
+      setStep((s) => Math.max(s, sexValid ? resumeStep : Math.min(resumeStep, 2)));
     }).catch(() => { draftLoadedRef.current = true; /* fresh start, same as no draft */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   // Debounced draft save on any answer/step change while the wizard is live.
-  // Skips step 1 (auth-owned) and the final submission (advanceFrom7 clears
+  // Skips step 1 (auth-owned) and the final submission (advanceFrom8 clears
   // the draft; a queued save after that would resurrect it).
   const draftTimerRef = useRef(null);
   useEffect(() => {
@@ -905,6 +984,7 @@ export default function ProOnboardingScreen({ navigation }) {
       heightIn, experience, sessionLengthMinutes, daysPerWeek, equipment,
       trainingGoal, trainingPhase, planWeakPoints, proteinOverride,
       recoveryRating, morningHour, checkinDay,
+      gymVenue, gymChoice, communityHandle, communityDisplayName, communityJoin,
     };
     if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
     draftTimerRef.current = setTimeout(() => {
@@ -917,6 +997,7 @@ export default function ProOnboardingScreen({ navigation }) {
     heightFt, heightIn, experience, sessionLengthMinutes, daysPerWeek,
     equipment, trainingGoal, trainingPhase, planWeakPoints, proteinOverride,
     recoveryRating, morningHour, checkinDay,
+    gymVenue, gymChoice, communityHandle, communityDisplayName, communityJoin,
   ]);
 
   // ── Step transition helpers ──────────────────────────────────────────────────
@@ -930,7 +1011,8 @@ export default function ProOnboardingScreen({ navigation }) {
     // re-edited schedule skip the check it was never run against.
     setFitAccepted(false);
     setFitReview(null);
-    setStep(s => s - 1);
+    // CR-15 ruling f: a minor steps straight over the Community step.
+    setStep(s => (s === 6 && skipGymStep ? 4 : s - 1));
   }
 
   // C5-P1-04 / C5-P30-01 (D96): the whole six-step wizard is ONE registered
@@ -1042,6 +1124,66 @@ export default function ProOnboardingScreen({ navigation }) {
   // once", so a seen-set makes it once per wizard run. No new event, no new
   // payload field, no catalogue or allow-list change.
   const emittedStepsRef = useRef(new Set());
+  // CR-15: the server's suggestion, asked once, the first time step 5 shows.
+  // An existing member gets their own handle back and no second profile is
+  // ever created; a failure leaves the field empty for the person to type.
+  useEffect(() => {
+    if (step !== 5 || skipGymStep || suggestedRef.current) return undefined;
+    suggestedRef.current = true;
+    let alive = true;
+    suggestHandle().then((res) => {
+      if (!alive || !res?.handle) return;
+      if (res.source === 'existing') {
+        setCommunityJoin('existing');
+        setCommunityHandle(res.handle);
+        setCommunityHandleState('available');
+        return;
+      }
+      setCommunityHandle((h) => (h ? h : res.handle));
+      setCommunityDisplayName((n) => (n || firstName.trim() ? n : res.handle));
+    }).catch(() => { /* offline or unavailable: the field stays empty, a typed handle still works */ });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, skipGymStep]);
+
+  // The name is pre-filled once from the first name given at step 2 (RA-4:
+  // optional), then owned by the person.
+  useEffect(() => {
+    if (step !== 5 || namePrefilledRef.current) return;
+    namePrefilledRef.current = true;
+    if (!communityDisplayName && firstName.trim()) setCommunityDisplayName(firstName.trim().slice(0, DISPLAY_NAME_MAX));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  // Live handle check, the Join screen's own shape: shape first (nothing is
+  // asked of the server until the shape is right), then availability. A
+  // check that cannot run says so and never blocks the tap.
+  useEffect(() => {
+    if (step !== 5) return undefined;
+    const trimmed = communityHandle.trim().toLowerCase();
+    if (!trimmed) { setCommunityHandleFailure(null); setCommunityHandleState('idle'); return undefined; }
+    if (!isValidHandle(trimmed)) { setCommunityHandleFailure(null); setCommunityHandleState('invalid'); return undefined; }
+    if (communityJoin === 'existing') { setCommunityHandleState('available'); return undefined; }
+    setCommunityHandleFailure(null);
+    setCommunityHandleState('checking');
+    const seq = handleCheckRef.current + 1;
+    handleCheckRef.current = seq;
+    const timer = setTimeout(async () => {
+      try {
+        const free = await checkHandle(trimmed);
+        if (handleCheckRef.current !== seq) return;
+        setCommunityHandleFailure(null);
+        setCommunityHandleState(free ? 'available' : 'taken');
+      } catch (e) {
+        if (handleCheckRef.current !== seq) return;
+        setCommunityHandleFailure(e?.code === 'offline' ? 'offline' : 'unavailable');
+        setCommunityHandleState('unknown');
+      }
+    }, HANDLE_CHECK_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [communityHandle, step]);
+
   function emitStepDone(n) {
     if (!user?.id) return;
     if (emittedStepsRef.current.has(n)) return;
@@ -1104,7 +1246,43 @@ export default function ProOnboardingScreen({ navigation }) {
       return;
     }
     emitStepDone(4);
-    setStep(5);
+    // CR-15 ruling f: under 18 there is no Community step.
+    setStep(skipGymStep ? 6 : 5);
+  }
+
+  // ── Step 5, Your gym: gates (CR-15 / D158) ─────────────────────────────
+  // The gym is the required answer on this step (a venue, or an explicit
+  // "none"). "Join Community" additionally needs a handle the server has
+  // not refused and a name people will see; "Not now" needs only the gym.
+  // Neither button greys out (the D146 rule): a tap surfaces the gaps.
+  function validateStep5({ join = joinAttempted } = {}) {
+    const errs = {};
+    if (!gymChoice) errs.gym = "Choose your gym, or say you don't train at one.";
+    if (join && communityJoin !== 'existing') {
+      const h = communityHandle.trim().toLowerCase();
+      if (!h) errs.handle = 'Choose a handle: 3 to 20 letters, numbers or underscores.';
+      else if (communityHandleState === 'invalid') errs.handle = HANDLE_HINT;
+      else if (communityHandleState === 'taken') errs.handle = 'That handle is taken. Try another.';
+      else if (communityHandleState === 'checking') errs.handle = 'Checking that handle. Try again in a moment.';
+      if (!communityDisplayName.trim()) errs.name = 'Add the name people will see.';
+    }
+    return errs;
+  }
+
+  function advanceFrom5(intent) {
+    Keyboard.dismiss();
+    const join = intent === 'join';
+    setJoinAttempted(join);
+    const errs = validateStep5({ join });
+    if (Object.keys(errs).length) {
+      surfaceGaps(errs, ['gym', 'handle', 'name'], 'group5', { handle: communityHandleRef, name: communityNameRef }, setAttempted5);
+      return;
+    }
+    // An existing member's answer is recorded as such: nothing is created
+    // or rewritten for them at completion.
+    if (communityJoin !== 'existing') setCommunityJoin(join ? 'join' : 'later');
+    emitStepDone(5);
+    setStep(6);
   }
 
   // CC28 (section 11.2): the capability step is OPTIONAL and one-tap
@@ -1112,17 +1290,17 @@ export default function ProOnboardingScreen({ navigation }) {
   // cards, durability, readback) is the shared Injuries & limitations surface;
   // this step only offers the entry choice, so the two paths cannot
   // drift (section 12: "Add flows = the onboarding cards").
-  function advanceFrom5() {
-    Keyboard.dismiss();
-    emitStepDone(5);
-    setStep(6);
-  }
-
   function advanceFrom6() {
     Keyboard.dismiss();
-    const errs = validateStep6();
+    emitStepDone(6);
+    setStep(7);
+  }
+
+  function advanceFrom7() {
+    Keyboard.dismiss();
+    const errs = validateStep7();
     if (Object.keys(errs).length) {
-      surfaceGaps(errs, ['phase'], 'group6', null, setAttempted6);
+      surfaceGaps(errs, ['phase'], 'group7', null, setAttempted7);
       return;
     }
     // The "aggressive cuts" goal-lock interstitial was removed from
@@ -1132,8 +1310,8 @@ export default function ProOnboardingScreen({ navigation }) {
     // now keeps the standard ED-pattern threshold (the more protective
     // 2-signal setting); the advanced opt-in still lives on the Goal lock
     // screen under Coach for anyone who wants it.
-    emitStepDone(6);
-    setStep(7);
+    emitStepDone(7);
+    setStep(8);
   }
 
   // The four honest stage lines, mapped to real _generatePlanInner phases.
@@ -1233,7 +1411,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   // The reminder half of finishing setup: the preference blob, the SQLite
   // mirror, the OS permission prompt and the day-0 schedules. Extracted from
-  // advanceFrom7 under C5-P27-02 (D96) so it can run BEFORE the build
+  // advanceFrom8 under C5-P27-02 (D96) so it can run BEFORE the build
   // animation; the body and its order are otherwise unchanged.
   async function applyReminderPreferences() {
     // Flat schema: CoachingReminders, WeeklyCheckIn and the Coach tab
@@ -1387,7 +1565,7 @@ export default function ProOnboardingScreen({ navigation }) {
   useEffect(() => {
     if (!fitResumeRef.current || !fitAccepted || fitReview) return;
     fitResumeRef.current = false;
-    advanceFrom7();
+    advanceFrom8();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitAccepted, fitReview, daysPerWeek, sessionLengthMinutes]);
 
@@ -1414,11 +1592,11 @@ export default function ProOnboardingScreen({ navigation }) {
     fitResumeRef.current = true;
   }
 
-  async function advanceFrom7() {
+  async function advanceFrom8() {
     Keyboard.dismiss();
-    const errs7 = validateStep7();
-    if (Object.keys(errs7).length) {
-      surfaceGaps(errs7, ['recovery'], 'group7', null, setAttempted7);
+    const errs8 = validateStep8();
+    if (Object.keys(errs8).length) {
+      surfaceGaps(errs8, ['recovery'], 'group8', null, setAttempted8);
       return;
     }
     // Schedule fit, checked ONCE, with every answer in hand. A schedule that
@@ -1852,6 +2030,32 @@ export default function ProOnboardingScreen({ navigation }) {
           }
         }
       }
+      // CR-15 / D158 (25-ONBOARDING-COMMUNITY-SPEC.md 4.3 step 8): the
+      // Community answer from step 5, acted on only now that the profile
+      // and the body profile are written. Best effort and queued offline
+      // (performCommunityJoin never throws); it never changes the sequence,
+      // the payoff or the alert path, and a minor never reaches it.
+      if (user?.id && !skipGymStep) {
+        try {
+          if (communityJoin === 'join') {
+            const chosenHandle = communityHandle.trim().toLowerCase() || null;
+            await performCommunityJoin(user.id, {
+              handle: chosenHandle,
+              displayName: communityDisplayName.trim() || chosenHandle,
+              gymId: gymVenue?.id ?? null,
+              gym: gymVenue,
+            });
+          } else if (communityJoin === 'later') {
+            await rememberOnboardingChoice(user.id, {
+              gym: gymVenue,
+              displayName: communityDisplayName.trim() || null,
+            });
+          }
+        } catch (e) {
+          // eslint-disable-next-line global-require
+          try { require('../lib/errorLog').logError('ProOnboardingScreen.communityJoin', e, { userId: user.id }); } catch (_) {}
+        }
+      }
     } catch (e) {
       // D88: never surface a raw exception message (the FR-2/EP-18 pattern
       // this catch-all had missed). It is logged instead, so the diagnostic
@@ -1916,7 +2120,7 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step}
+              step={step} skipGym={skipGymStep}
               title="Set up your account safely"
               sub="Sign in once so your plan, weight history and coaching updates can be restored if you change device."
             />
@@ -1964,7 +2168,7 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step}
+              step={step} skipGym={skipGymStep}
               title="Set your starting baseline"
               sub="These details let the app set a safe starting baseline without guessing."
             />
@@ -2195,7 +2399,7 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step}
+              step={step} skipGym={skipGymStep}
               title="Add your starting body composition"
               sub="An honest estimate sharpens your first plan. Skip this if you are not sure."
               onBack={goBack}
@@ -2286,7 +2490,7 @@ export default function ProOnboardingScreen({ navigation }) {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step}
+              step={step} skipGym={skipGymStep}
               title="Shape your training week"
               sub="The plan should fit your real week, not the week you wish you had."
               onBack={goBack}
@@ -2369,17 +2573,225 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 5, Injuries & limitations (CC28, section 11.2) ───────────────────
+  // ── Step 5, Your gym (CR-15 / D158; 25-ONBOARDING-COMMUNITY-SPEC.md 4.3) ──
+  // Two answers, nothing pre-decided: the gym (a venue or an explicit
+  // "none"), and whether to join Community now with the profile below
+  // already filled in. Under 18 this step never renders (advanceFrom4 skips
+  // it, goBack steps over it). The email is never read here.
+
+  if (step === 5) {
+    const errors5 = attempted5 ? validateStep5() : {};
+    const handleLine = communityJoin === 'existing'
+      ? `You're already in Community as @${communityHandle}.`
+      : ({
+        idle: HANDLE_HINT,
+        invalid: HANDLE_HINT,
+        checking: 'Checking that handle.',
+        available: 'Available.',
+        taken: 'That handle is taken. Try another.',
+        unknown: communityHandleFailure === 'offline' ? HANDLE_OFFLINE_HINT : HANDLE_UNAVAILABLE_HINT,
+      })[communityHandleState];
+    const handleTone = communityHandleState === 'available' || communityJoin === 'existing'
+      ? t.colors.success
+      : (communityHandleState === 'taken' || communityHandleState === 'invalid' ? t.colors.error : t.colors.textMuted);
+    const gymLine = gymVenue ? venueLine(gymVenue) : null;
+
+    return (
+      <SafeAreaView key="step-5" style={[styles.safe, live.safe]}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+            <ProOnboardingHeader
+              step={step} skipGym={skipGymStep}
+              title="Where do you train?"
+              sub="Pick your gym and Volyume connects you with the people who train there. Only training facts are ever shared: never your body, your food or your location."
+              onBack={goBack}
+            />
+
+            <View onLayout={markY('group5')}>
+            <QuestionGroup icon="location-outline">
+              <View style={styles.sectionLast} onLayout={markY('gym')}>
+                {gymChoice === 'picked' && gymLine ? (
+                  <>
+                    <Text style={[styles.fieldLabel, live.fieldLabel]}>Your gym</Text>
+                    <View style={[styles.gymRow, live.gymRow]}>
+                      <View style={styles.gymRowBody}>
+                        <Text style={[styles.gymRowName, live.gymRowName]} numberOfLines={1}>{gymLine.primary}</Text>
+                        {gymLine.secondary ? (
+                          <Text style={[styles.fieldHint, live.fieldHint]} numberOfLines={1}>{gymLine.secondary}</Text>
+                        ) : null}
+                      </View>
+                      <Button
+                        variant="tertiary"
+                        size="sm"
+                        fullWidth={false}
+                        title="Change gym"
+                        onPress={() => setGymChoice(null)}
+                        accessibilityLabel="Change gym"
+                      />
+                    </View>
+                    <Text style={[styles.fieldHint, live.fieldHint]}>Only the gym you choose. Never your location.</Text>
+                  </>
+                ) : gymChoice === 'none' ? (
+                  <>
+                    <Text style={[styles.fieldLabel, live.fieldLabel]}>Your gym</Text>
+                    <Text style={[styles.fieldHint, live.fieldHint]}>No gym chosen. You can add one any time from Community.</Text>
+                    <Button
+                      variant="tertiary"
+                      size="sm"
+                      fullWidth={false}
+                      title="Choose a gym"
+                      onPress={() => setGymChoice(null)}
+                      accessibilityLabel="Choose a gym"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <GymPicker
+                      navigation={navigation}
+                      onSelect={(venue) => setPendingGym(venue)}
+                      accessibilityLabel="Find your gym"
+                    />
+                    <Button
+                      variant="secondary"
+                      title="I don't train at a gym"
+                      onPress={() => { setGymVenue(null); setGymChoice('none'); }}
+                      accessibilityLabel="I don't train at a gym"
+                    />
+                  </>
+                )}
+                <FieldError message={errors5.gym} />
+              </View>
+            </QuestionGroup>
+
+            <QuestionGroup
+              icon="people-outline"
+              title="Your Community profile"
+              sub={communityJoin === 'existing' ? null : 'Ready to go. Change either now or any time from Edit profile.'}
+            >
+              {communityJoin === 'existing' ? (
+                <View style={styles.sectionLast}>
+                  <Text style={[styles.fieldHint, live.fieldHint]}>{handleLine}</Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.section} onLayout={markY('handle')}>
+                    <Text style={[styles.fieldLabel, live.fieldLabel]}>Handle</Text>
+                    <TextField
+                      ref={communityHandleRef}
+                      value={communityHandle}
+                      onChangeText={(v) => setCommunityHandle(v.replace(/\s/g, '').toLowerCase())}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      accessibilityLabel="Handle"
+                      error={errors5.handle}
+                    />
+                    <Text style={[styles.fieldHint, { color: handleTone }]}>{handleLine}</Text>
+                    <FieldError message={errors5.handle} />
+                  </View>
+                  <View style={styles.sectionLast} onLayout={markY('name')}>
+                    <Text style={[styles.fieldLabel, live.fieldLabel]}>Name</Text>
+                    <TextField
+                      ref={communityNameRef}
+                      value={communityDisplayName}
+                      onChangeText={(v) => setCommunityDisplayName(v.slice(0, DISPLAY_NAME_MAX))}
+                      accessibilityLabel="Display name"
+                      error={errors5.name}
+                    />
+                    <FieldError message={errors5.name} />
+                  </View>
+                </>
+              )}
+            </QuestionGroup>
+            </View>
+
+            {communityJoin === 'existing' ? null : (
+              <>
+                <PrivacyReceipt />
+                <View style={[styles.rulesCard, live.rulesCard]}>
+                  <Text style={[styles.fieldLabel, live.fieldLabel]}>Four rules</Text>
+                  {COMMUNITY_RULES_SUMMARY.map((line) => (
+                    <Text key={line} style={[styles.ruleLine, live.ruleLine]}>{line}</Text>
+                  ))}
+                </View>
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  fullWidth={false}
+                  title="Community rules"
+                  onPress={() => navigation.navigate('CommunityRules')}
+                  accessibilityLabel="Read the Community rules"
+                />
+              </>
+            )}
+
+            {communityJoin === 'existing' ? (
+              <Button
+                title="Continue"
+                trailingIcon="arrow-forward"
+                style={styles.primaryBtn}
+                onPress={() => advanceFrom5('continue')}
+                textStyle={[styles.primaryBtnText, live.primaryBtnText]}
+                accessibilityLabel="Continue"
+              />
+            ) : (
+              <>
+                <Button
+                  title="Join Community"
+                  trailingIcon="arrow-forward"
+                  style={styles.primaryBtn}
+                  onPress={() => advanceFrom5('join')}
+                  textStyle={[styles.primaryBtnText, live.primaryBtnText]}
+                  accessibilityLabel="Join Community"
+                />
+                <View style={styles.secondaryAction}>
+                  {/* NOT "Not now": that phrase is reserved on this screen by
+                      the R8-3/R9 guard for the button that DECLINES a
+                      capability change (HowYouTrainScreen.capabilityFlows.
+                      guard.test.js). The wizard's own skip word, as on the
+                      injuries step; the gym and name are kept for the Join
+                      screen either way. */}
+                  <Button
+                    title="Skip for now"
+                    variant="secondary"
+                    onPress={() => advanceFrom5('later')}
+                    accessibilityLabel="Skip for now"
+                  />
+                </View>
+              </>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+        <GymDetailSheet
+          visible={!!pendingGym}
+          venue={pendingGym}
+          onClose={() => setPendingGym(null)}
+          onConfirm={(venue) => {
+            setGymVenue({
+              id: venue.id,
+              display_name: venue.display_name ?? venue.name ?? '',
+              town: venue.town ?? null,
+              outward: venue.outward ?? null,
+              brand: venue.brand ?? null,
+            });
+            setGymChoice('picked');
+            setPendingGym(null);
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // ── Step 6, Injuries & limitations (CC28, section 11.2) ───────────────────
   // OPTIONAL, one-tap skippable, skip is first-class. The full add flow
   // (consent moment, functional cards, durability, readback) is the shared
   // Injuries & limitations surface, so the two entry points can never drift.
 
-  if (step === 5) {
+  if (step === 6) {
     return (
-      <SafeAreaView key="step-5" style={[styles.safe, live.safe]}>
+      <SafeAreaView key="step-6" style={[styles.safe, live.safe]}>
         <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
           <ProOnboardingHeader
-            step={step}
+            step={step} skipGym={skipGymStep}
             title="Anything Volyume should build around?"
             sub="If you have an injury, pain, a long-term health condition or a disability, set it up now and every plan starts compatible. Plenty of people train seated, one-sided or without overhead work. If not, skip straight past."
             onBack={goBack}
@@ -2406,7 +2818,7 @@ export default function ProOnboardingScreen({ navigation }) {
               <Button
                 title="Skip for now"
                 variant="secondary"
-                onPress={advanceFrom5}
+                onPress={advanceFrom6}
               />
             </View>
           </QuestionGroup>
@@ -2419,21 +2831,21 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 6, Goal ────────────────────────────────────────────────────────────
+  // ── Step 7, Goal ────────────────────────────────────────────────────────────
 
-  if (step === 6) {
+  if (step === 7) {
     const goalOptions = PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }));
-    const errors6 = attempted6 ? validateStep6() : {};
+    const errors7 = attempted7 ? validateStep7() : {};
 
     // A3 (audit 04 §4): preview and final save share the canonical resolver.
     // The preview is read-only and never creates a revalidation marker.
 
     return (
-      <SafeAreaView key="step-5-goal" style={[styles.safe, live.safe]}>
+      <SafeAreaView key="step-7-goal" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step}
+              step={step} skipGym={skipGymStep}
               title="Set your training focus"
               sub="Your goal sets the calorie direction, training bias and nutrition target."
               onBack={goBack}
@@ -2458,7 +2870,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   options={TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.detail }))}
                   onChange={setTrainingPhase}
                   placeholder="Choose your focus"
-                  error={errors6.phase}
+                  error={errors7.phase}
                 />
                 {provisionalKcal ? (
                   <Text style={[styles.provisionalKcal, live.provisionalKcal]}>
@@ -2565,7 +2977,7 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
             </QuestionGroup>
 
-            {errors6.phase ? (
+            {errors7.phase ? (
               <Text style={[styles.continueHint, live.continueHint]}>Still needed: your focus.</Text>
             ) : null}
 
@@ -2573,7 +2985,7 @@ export default function ProOnboardingScreen({ navigation }) {
               title="Continue"
               trailingIcon="arrow-forward"
               style={styles.primaryBtn}
-              onPress={advanceFrom6}
+              onPress={advanceFrom7}
               textStyle={[styles.primaryBtnText, live.primaryBtnText]}
               accessibilityLabel="Continue"
             />
@@ -2583,10 +2995,10 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 7, Recovery & reminders ───────────────────────────────────────────
+  // ── Step 8, Recovery & reminders ───────────────────────────────────────────
 
-  if (step === 7) {
-    const errors7 = attempted7 ? validateStep7() : {};
+  if (step === 8) {
+    const errors8 = attempted8 ? validateStep8() : {};
 
     // ── Plan fit ────────────────────────────────────────────────────────────
     // Shown only when the athlete's schedule cannot carry the plan we would
@@ -2601,10 +3013,10 @@ export default function ProOnboardingScreen({ navigation }) {
       const moreCopy = moreSessions ? alternativeCopy(moreSessions) : null;
 
       return (
-        <SafeAreaView key="step-6-fit" style={[styles.safe, live.safe]}>
+        <SafeAreaView key="step-8-fit" style={[styles.safe, live.safe]}>
           <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
-              step={step}
+              step={step} skipGym={skipGymStep}
               title="Plan fit"
               sub="Here is how your week looks against the plan we would build for you."
               onBack={() => setFitReview(null)}
@@ -2713,7 +3125,7 @@ export default function ProOnboardingScreen({ navigation }) {
       const planLine2 = [payoff?.splitName, payoff?.days ? `${payoff.days} days` : null].filter(Boolean).join(' · ');
       const planLine3 = payoff ? `${payoff.buildWeeks} build weeks + 1 recovery week` : '';
       return (
-        <SafeAreaView key="step-6-building" style={[styles.safe, live.safe]}>
+        <SafeAreaView key="step-8-building" style={[styles.safe, live.safe]}>
           <View style={styles.seqScroll}>
             <Animated.View style={[styles.seqWrap, { opacity: sequenceFade }]}>
               <View style={styles.brandRow}>
@@ -2783,10 +3195,10 @@ export default function ProOnboardingScreen({ navigation }) {
     }
 
     return (
-      <SafeAreaView key="step-6" style={[styles.safe, live.safe]}>
+      <SafeAreaView key="step-8" style={[styles.safe, live.safe]}>
         <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
           <ProOnboardingHeader
-            step={step}
+            step={step} skipGym={skipGymStep}
             title="Recovery and reminders"
             // C5-P36-02 (D96): this screen stated one idea four times in a
             // single scroll - this sub, the coach card, the field hint and a
@@ -2833,7 +3245,7 @@ export default function ProOnboardingScreen({ navigation }) {
               options={RECOVERY_OPTIONS}
               onChange={setRecoveryRating}
               placeholder="Select your recovery"
-              error={errors7.recovery}
+              error={errors8.recovery}
             />
             </View>
           </View>
@@ -2953,7 +3365,7 @@ export default function ProOnboardingScreen({ navigation }) {
             </View>
           </View>
 
-          {errors7.recovery ? (
+          {errors8.recovery ? (
             <Text style={[styles.continueHint, live.continueHint]}>Still needed: your recovery level.</Text>
           ) : null}
 
@@ -2961,7 +3373,7 @@ export default function ProOnboardingScreen({ navigation }) {
             title="Continue"
             trailingIcon="arrow-forward"
             style={[styles.primaryBtn, (busy || fitBusy) && styles.primaryBtnDisabled]}
-            onPress={!busy && !fitBusy ? advanceFrom7 : undefined}
+            onPress={!busy && !fitBusy ? advanceFrom8 : undefined}
             disabled={busy || fitBusy}
             loading={busy || fitBusy}
             textStyle={[styles.primaryBtnText, live.primaryBtnText]}
@@ -3075,6 +3487,22 @@ const styles = StyleSheet.create({
   // Sections / inputs
   section: { marginBottom: spacing.xl },
   sectionLast: { marginBottom: 0 },
+  // Step 5, Your gym (CR-15): the picked-gym row, the four-rules card and
+  // the second action, all on theme tokens.
+  gymRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    padding: spacing.md, borderRadius: radius.md, borderWidth: 1,
+    backgroundColor: colors.surface, borderColor: colors.borderSubtle,
+    marginBottom: spacing.sm,
+  },
+  gymRowBody: { flex: 1, minWidth: 0 },
+  gymRowName: { ...type.bodyStrong, color: colors.textPrimary },
+  rulesCard: {
+    padding: spacing.md, borderRadius: radius.md, gap: spacing.xs,
+    backgroundColor: colors.surface2, marginBottom: spacing.md,
+  },
+  ruleLine: { ...type.caption, color: colors.textSecondary },
+  secondaryAction: { marginTop: spacing.md },
   questionGroup: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
@@ -3276,6 +3704,10 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
+    gymRow: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    gymRowName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    rulesCard: { backgroundColor: t.colors.surface2 },
+    ruleLine: { ...t.type.caption, color: t.colors.textSecondary },
     progressTrack: { backgroundColor: t.colors.border },
     progressFill: { backgroundColor: t.colors.primary },
     stepCount: { ...t.type.num('caption'), color: t.colors.textMuted },

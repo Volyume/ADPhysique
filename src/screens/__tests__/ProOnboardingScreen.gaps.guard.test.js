@@ -30,12 +30,15 @@ describe('the field primitives carry an inline error state', () => {
 
 describe('every gated step surfaces its gaps the same way', () => {
   test.each([
+    // CR-15 (2026-09-11): step 5 "Your gym" joined the wizard (its validator
+    // takes the tapped intent), and the steps after it moved up by one.
     ['advanceFrom2', 'validateStep2', "'group2'", 'setAttempted2'],
     ['advanceFrom4', 'validateStep4', "'group4'", 'setAttempted4'],
-    ['advanceFrom6', 'validateStep6', "'group6'", 'setAttempted6'],
+    ['advanceFrom5', 'validateStep5', "'group5'", 'setAttempted5'],
     ['advanceFrom7', 'validateStep7', "'group7'", 'setAttempted7'],
+    ['advanceFrom8', 'validateStep8', "'group8'", 'setAttempted8'],
   ])('%s validates, surfaces and returns before advancing', (fn, validator, group, setter) => {
-    const re = new RegExp(`function ${fn}\\(\\) \\{[\\s\\S]{0,900}?${validator}\\(\\);[\\s\\S]{0,400}?surfaceGaps\\([\\s\\S]{0,200}?${group}[\\s\\S]{0,400}?${setter}\\);\\s*return;`);
+    const re = new RegExp(`function ${fn}\\([a-z]*\\) \\{[\\s\\S]{0,900}?${validator}\\([^)]*\\);[\\s\\S]{0,400}?surfaceGaps\\([\\s\\S]{0,200}?${group}[\\s\\S]{0,400}?${setter}\\);\\s*return;`);
     expect(SRC).toMatch(re);
   });
 
@@ -45,20 +48,25 @@ describe('every gated step surfaces its gaps the same way', () => {
     expect(SRC).toMatch(/if \(ref\?\.current\?\.focus\) setTimeout\(\(\) => ref\.current\?\.focus\?\.\(\), 260\);/);
   });
 
-  test('Continue is never disabled by a gap on steps 2, 4 and 6', () => {
+  test('Continue is never disabled by a gap on steps 2, 4, 5 and 7', () => {
     expect(SRC).not.toMatch(/disabled=\{!canContinue\}/);
     expect(SRC).not.toMatch(/onPress=\{canContinue \? advanceFrom/);
-    for (const fn of ['advanceFrom2', 'advanceFrom4', 'advanceFrom6']) {
+    for (const fn of ['advanceFrom2', 'advanceFrom4', 'advanceFrom7']) {
       expect(SRC).toContain(`onPress={${fn}}`);
     }
+    // Step 5's two actions carry their intent and are never gated either.
+    expect(SRC).toContain("onPress={() => advanceFrom5('join')}");
+    expect(SRC).toContain("onPress={() => advanceFrom5('later')}");
+    expect(SRC).not.toMatch(/disabled=\{[^}]*\}\s*[^>]*accessibilityLabel="(Join Community|Skip for now)"/);
   });
 
   test('the line under Continue names what is still needed, and nothing is red before the first attempt', () => {
     expect(SRC).toMatch(/return `Still needed: \$\{names\.join\(', '\)\}\.`;/);
     expect(SRC).toMatch(/const errors2 = attempted2 \? validateStep2\(\) : \{\};/);
     expect(SRC).toMatch(/const errors4 = attempted4 \? validateStep4\(\) : \{\};/);
-    expect(SRC).toMatch(/const errors6 = attempted6 \? validateStep6\(\) : \{\};/);
+    expect(SRC).toMatch(/const errors5 = attempted5 \? validateStep5\(\) : \{\};/);
     expect(SRC).toMatch(/const errors7 = attempted7 \? validateStep7\(\) : \{\};/);
+    expect(SRC).toMatch(/const errors8 = attempted8 \? validateStep8\(\) : \{\};/);
   });
 
   test('the late bounce-back to the baseline step highlights the gaps on arrival', () => {

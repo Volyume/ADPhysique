@@ -66,7 +66,7 @@ describe('completion is a payoff in place, from real plan state', () => {
     expect(payoff).not.toMatch(/Log your weight|Coach reminders|Targets saved|Calm/);
   });
   test('success stays on the card; failure still goes to the completion screen', () => {
-    const fn = SRC.slice(SRC.indexOf('async function advanceFrom7'), SRC.indexOf('// ── Step 1, Create account'));
+    const fn = SRC.slice(SRC.indexOf('async function advanceFrom8'), SRC.indexOf('// ── Step 1, Create account'));
     expect((fn.match(/navigation\.replace\('ProSetupComplete'\)/g) || []).length).toBe(1);
     expect(fn).toMatch(/if \(planFailed\) \{[\s\S]{0,300}navigation\.replace\('ProSetupComplete'\);/);
     expect(fn).toMatch(/await revealPayoff\(\{/);

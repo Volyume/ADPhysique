@@ -31,8 +31,10 @@ const BUILD_KEY_PFX = '@volyume_pro_onboarding_build_';
 // L04-6: the wizard grew from 5 to 6 steps (Step 2's body-composition
 // QuestionGroup became its own step), so the persistable ceiling moved with
 // it, otherwise a draft saved on the new final step would fail to persist.
+// CR-15 / D158 (2026-09-11): the wizard grew from 7 to 8 steps ("Your gym"
+// between Training week and Injuries), so the ceiling moved with it again.
 const MIN_STEP = 2;
-const MAX_STEP = 6;
+const MAX_STEP = 7;
 
 export const DRAFT_DEBOUNCE_MS = 600;
 
