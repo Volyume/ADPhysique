@@ -6447,3 +6447,24 @@ activity, eyebrow sections, avatar presence, amber on signals only,
 skeleton first loads), one additive migration 170, four build phases all
 in scope. Founder forks Q1 to Q8 in blueprint section 12, delivered in
 chat. Safety lane 11 can only tighten CR-08.
+
+## D156
+
+**Quick full-body session from what you have to hand (lead ruling under
+D33 on founder decision A, 2026-09-11).** The Create workout screen's
+quick-fill (formerly three travel presets behind a hand-written name pool)
+becomes an equipment INVENTORY: a multi-select over the corpus's real
+equipment kinds (Dumbbells, Kettlebells, Bands, Barbell and plates, Cables
+and machines, Suspension trainer), bodyweight always included, "Full gym"
+and "Nothing, bodyweight only" presets, the last choice remembered per
+account on device. Generation is corpus-driven, pure and deterministic
+(kit before bodyweight, compound first on the four big muscles, tier,
+difficulty, name), auto-eligibility from canonicality with the kettlebell
+exceptions admitted only when the person says they have a kettlebell,
+eight fixed full-body slots, travel mode's shorter-rest prescription, the
+T1-23 "named, not silent" drop lines preserved by a two-run comparison,
+`travelMode.js` retired. Relation to earlier rulings: F-16 REVISED and
+D154 concern weekly plan generation and are untouched; the quick session
+is the explicit inventory D154 named as the right mechanism, scoped to one
+session. Spec: `docs/quick-session-equipment-2026-09-11/10-SPEC.md`;
+recon: `01-RECON.md` in the same folder.

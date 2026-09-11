@@ -214,7 +214,7 @@ predates these fixes: a second build needs the founder's explicit go
 review in flight; then the founder's phrase, the apply through the
 connector, and the client switch to the RPC. The connector is the cloud route (founder ruling 2026-09-11 above).
 
-## QUICK FULL-BODY SESSION: WIDEN TO THE APP'S EQUIPMENT (founder decision A, 2026-09-11) — RECON IN FLIGHT
+## QUICK FULL-BODY SESSION: WIDEN TO THE APP'S EQUIPMENT (founder decision A, 2026-09-11) — SPEC LANDED, BUILD IN FLIGHT
 
 Founder report (chat, screenshots, 2026-09-11): the blank workout screen
 opened on a "Travel / hotel gym" row whose sheet forced three equipment
@@ -225,11 +225,13 @@ Founder then chose option A: widen the quick-session generator
 (`src/lib/travelMode.js`, three presets) to the app's real equipment
 taxonomy (bands, kettlebells, barbell-only, machines-only, full gym and
 the rest), deterministic and pure, respecting the intent filter and the
-capability preflight the screen already applies. Lane R-A (Sonnet,
-read-only recon: taxonomy, engine equipment profiles, single-session
-primitives, the travel generator, pinned tests, rulings) in flight; the
-lead writes the spec from its report; build lane (Sonnet) follows; Opus
-review before landing. Recovery: re-dispatch the same brief.
+capability preflight the screen already applies. Lane R-A (Sonnet)
+recon LANDED as `docs/quick-session-equipment-2026-09-11/01-RECON.md`;
+lead spec `10-SPEC.md` (edit gate) with ruling D156 (equipment
+INVENTORY, corpus-driven, pure, eight slots, T1-23 preserved,
+travelMode.js retired). Build lane B-A (Sonnet) in flight; Opus review
+before landing. Recovery: re-dispatch the same brief over
+`git checkout -- <lane files>`; agents never commit.
 
 ## COMMUNITIES REVAMP: FRESH-EYES REVIEW OF PHASES 0 TO 3 (standing law, never run) — IN FLIGHT
 
