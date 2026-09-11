@@ -214,7 +214,7 @@ predates these fixes: a second build needs the founder's explicit go
 review in flight; then the founder's phrase, the apply through the
 connector, and the client switch to the RPC. The connector is the cloud route (founder ruling 2026-09-11 above).
 
-## QUICK FULL-BODY SESSION: WIDEN TO THE APP'S EQUIPMENT (founder decision A, 2026-09-11) — LANDED and MERGED to main (46961f5)
+## QUICK FULL-BODY SESSION: WIDEN TO THE APP'S EQUIPMENT (founder decision A, 2026-09-11) — LANDED, REVIEWED, FIXES LANDED (46961f5, then the review batch); COMPLETE
 
 Founder report (chat, screenshots, 2026-09-11): the blank workout screen
 opened on a "Travel / hotel gym" row whose sheet forced three equipment
@@ -254,10 +254,21 @@ id; the exception list lazy-required so the screen's import graph no
 longer loads the corpus; unfilled slots named in the toast; presets
 show a derived selected state; the remembered kit never overwrites a
 tap; property pins replace row-name pins; spec ruling 4 and 6 and
-D156 amended. Lane in flight; landing follows lead review and the
-full run. Recovery: re-dispatch the brief plus the review rulings.
+D156 amended. Two further lead rulings from the lane's reports: the
+pattern rule is a tiebreak after the compound preference (a shoulder
+press after a chest press is ordinary programming); the quick session
+ranks specialist after niche (a single-leg RDL, not a Nordic curl, for
+someone with only their bodyweight); and a rep-based row before a
+timed hold (a kettlebell press, not an overhead carry). LANDED on
+main; settled tree lint exit 0, `Test Suites: 1 skipped, 1292 passed,
+1292 of 1293`, `Tests: 16 skipped, 19954 passed, 19970`. Real-corpus
+picks after the fixes: full gym is Hack Squat, RDL, Incline Machine
+Press, Lat Pulldown, Machine Shoulder Press, Cable Curl, Pushdown,
+Cable Crunch; kettlebells only is Goblet Squat, KB RDL, KB Floor Press,
+KB Row, a KB press, two bodyweight fills, KB Around-the-World.
+COMPLETE; device checklist in the spec section 4.
 
-## COMMUNITIES REVAMP: FRESH-EYES REVIEW OF PHASES 0 TO 3 — RETURNED FIX FIRST; ALL FINDINGS LANDED (997b5cd, 1ec8262); 172 CLIENT HALF IN FLIGHT
+## COMMUNITIES REVAMP: FRESH-EYES REVIEW OF PHASES 0 TO 3 — ALL FINDINGS LANDED (997b5cd, 1ec8262); 172 CLIENT HALF LANDED (3b27383); CLOUD BATCH 171 + 172 WAITS ON THE PHRASE
 
 Lane REV-03 (Opus, read-only, 2026-09-11) returned FIX FIRST: F1 BLOCKER
 (queued ambient items flushed without the calm / ED gate; the server
@@ -288,7 +299,14 @@ Lane C-172 (Sonnet) builds the client half now (28-day PR count
 through the same e1RM method as the weekly tally, carried with the
 counters, a fourth strip cell only when the card carries a number);
 it works before the apply because the card returns null until then.
-Observation for the founder (mention, not fix): the Community strip
+C-172 LANDED (3b27383): the weekly PR tally now delegates to a
+windowed count (behaviour unchanged, pinned), the 28-day count rides
+with the counters under their gate, the strip's fourth cell renders
+only for a number, the owner's own view follows the share-what-I-did
+gate; lane suites 73 / 3015 green, full run green after. NEXT (founder):
+the phrase for the 171 + 172 batch through the connector, then the
+client switch to `community_friends_trained_today` (171) and the
+strip's PR cell goes live (172). Observation for the founder (mention, not fix): the Community strip
 and boards show a "weeks streak" (`c_weeks_streak`, design 60) while
 the Today truth repair rejected the weekly run/streak construct
 product-wide for Today and the widget; the two rulings have never
