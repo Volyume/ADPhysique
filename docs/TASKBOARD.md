@@ -246,7 +246,7 @@ three bodyweight fills; bands only is all band work). Lane suites 9 /
 Community fix lane's landing. Opus review of this landing: still owed
 before the next build (standing law); queued behind C-FIX.
 
-## COMMUNITIES REVAMP: FRESH-EYES REVIEW OF PHASES 0 TO 3 — RETURNED FIX FIRST; F1 LANDED; FIX LANE IN FLIGHT
+## COMMUNITIES REVAMP: FRESH-EYES REVIEW OF PHASES 0 TO 3 — RETURNED FIX FIRST; ALL FINDINGS LANDED (997b5cd, 1ec8262); 172 CLIENT HALF IN FLIGHT
 
 Lane REV-03 (Opus, read-only, 2026-09-11) returned FIX FIRST: F1 BLOCKER
 (queued ambient items flushed without the calm / ED gate; the server
@@ -266,8 +266,23 @@ with lead rulings in the brief; F21 ruled no change (the Find people row
 is content). F8 (blueprint section 4 "3 PRs in 4 weeks" on the strip,
 never built in schema or client) needs an additive cloud counter: it
 joins the founder's next cloud batch with 171 (migration 172 to be
-written), client after the apply. Recovery for C-FIX: re-dispatch the
-same brief over `git checkout -- <lane files>`; agents never commit.
+written), client after the apply. C-FIX LANDED (1ec8262, 31 files):
+every finding as ruled; the lead added the removal intent to the
+pending sharing flag (a failed "remove what I already shared" now
+retries the removal, not only the turn-off). Settled tree: lint exit
+0; `Test Suites: 1 skipped, 1291 passed, 1291 of 1292`, `Tests: 16
+skipped, 19916 passed, 19932`. Migration 172 WRITTEN (818bd7b), guard
+proves the byte-for-byte carry-forward of both re-issued functions.
+Lane C-172 (Sonnet) builds the client half now (28-day PR count
+through the same e1RM method as the weekly tally, carried with the
+counters, a fourth strip cell only when the card carries a number);
+it works before the apply because the card returns null until then.
+Observation for the founder (mention, not fix): the Community strip
+and boards show a "weeks streak" (`c_weeks_streak`, design 60) while
+the Today truth repair rejected the weekly run/streak construct
+product-wide for Today and the widget; the two rulings have never
+been reconciled. Recovery for C-172: re-dispatch the same brief over
+`git checkout -- <lane files>`; agents never commit.
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
