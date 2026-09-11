@@ -16,6 +16,13 @@
  * MAX of the eight values, so the tallest bar is always full height; a
  * zero week draws as a hairline rather than nothing, so eight weeks of
  * silence still reads as eight bars, not an empty strip.
+ *
+ * migrate_172 (blueprint section 4, CR-05): a fourth cell, "N PRs in 4
+ * weeks", renders only once `counters.c_prs_4w` is a real number -- absent
+ * (undefined) until the migration is applied server-side, and null for a
+ * profile owner who shares consistency but not what they did (the extra
+ * gate this one counter alone carries: SD rulings, "a PR is a moment,
+ * never a table" -- a count only, no exercise, no weight, no reps).
  */
 
 import { View, Text, StyleSheet, Pressable } from 'react-native';
@@ -63,24 +70,34 @@ export default function ProgressStrip({ counters, onPress }) {
   const sessions = Number(counters.c_sessions_week) || 0;
   const streak = Number(counters.c_weeks_streak) || 0;
   const consistent = Number(counters.c_consistent_weeks_12w) || 0;
+  // migrate_172: shown only for a genuine number -- `Number.isFinite` (not
+  // a truthy/`|| 0` coercion like the three cells above) so a real 0 still
+  // renders as a cell, and null/undefined (not yet applied, or the owner
+  // does not share what they did) renders no fourth cell at all.
+  const hasPrs = Number.isFinite(counters.c_prs_4w);
+  const prs = hasPrs ? counters.c_prs_4w : 0;
 
   // F9 fix: rendered without onPress (another person's profile has no
   // per-person board to open -- see CommunityProfileScreen.js), this is
   // presentational only. Both the role and the label's call-to-action
   // must say so, never announce a tap that does nothing.
   const suffix = onPress ? ' See boards' : '';
+  const prsClause = hasPrs ? `, ${prs} PRs in the last four weeks` : '';
 
   return (
     <Pressable
       onPress={onPress}
       style={[styles.strip, { backgroundColor: t.colors.surface2 }]}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={`${sessions} sessions this week, ${streak} week streak, ${consistent} consistent weeks in the last 12.${suffix}`}
+      accessibilityLabel={`${sessions} sessions this week, ${streak} week streak, ${consistent} consistent weeks in the last 12${prsClause}.${suffix}`}
     >
       <View style={styles.cellsRow}>
         <Cell t={t} value={sessions} label={sessions === 1 ? 'session this week' : 'sessions this week'} />
         <Cell t={t} value={streak} label={streak === 1 ? 'week streak' : 'weeks streak'} />
-        <Cell t={t} value={consistent} label="consistent (12w)" isLast />
+        <Cell t={t} value={consistent} label="consistent (12w)" isLast={!hasPrs} />
+        {hasPrs ? (
+          <Cell t={t} value={prs} label={prs === 1 ? 'PR (4w)' : 'PRs (4w)'} isLast />
+        ) : null}
       </View>
       <WeeksHistoryBars t={t} history={counters.c_weeks_history} />
     </Pressable>

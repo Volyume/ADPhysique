@@ -13,9 +13,12 @@
  *    eight counters. No I/O, no store, no clock of its own (`now` is
  *    injected).
  *  - `publishConsistency` is the I/O half. SD-30: the ONLY device reads
- *    are completed-workout start timestamps and the active plan's days
- *    per week (`getRoutinesForPlan` row count) - nothing about the body,
- *    food, Progress Scan, injuries, coaching or check-ins.
+ *    are completed-workout start timestamps, the active plan's days per
+ *    week (`getRoutinesForPlan` row count), and (migrate_172, blueprint
+ *    section 4 CR-05) the PR count over the last 28 days via
+ *    `getPRCountInWindow` - a COUNT only, never the exercise, weight or
+ *    reps behind it. Nothing about the body, food, Progress Scan,
+ *    injuries, coaching or check-ins.
  *
  * ED gate: reuses the app's one canonical suppression composition
  * (`isPhotoSuppressed`/`derivePhotoSuppression` in
@@ -36,7 +39,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  getCompletedWorkoutStartTimestamps, getActivePlan, getRoutinesForPlan,
+  getCompletedWorkoutStartTimestamps, getActivePlan, getRoutinesForPlan, getPRCountInWindow,
 } from '../database';
 import { callCommunity } from './transport';
 import { currentUserId, readCachedMe } from './profile';
@@ -60,6 +63,12 @@ export const CONSISTENT_WINDOW_WEEKS = 12;
 
 /** Weeks of history the profile-strip mini bars cover (design 60 §4, D4). */
 export const WEEKS_HISTORY_LEN = 8;
+
+/** Days the strip's PR count looks back (migrate_172, blueprint section 4
+ * CR-05): "N PRs in 4 weeks", read over `[now - PR_WINDOW_DAYS, now)`. */
+export const PR_WINDOW_DAYS = 28;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function toTimestamps(workouts) {
   return (Array.isArray(workouts) ? workouts : [])
@@ -191,9 +200,10 @@ export function computeConsistency({
 }
 
 /**
- * Read the device and derive. The only two device reads are completed-
- * workout start timestamps and the active plan's routine count (its
- * days per week) - SD-30.
+ * Read the device and derive. The device reads are completed-workout
+ * start timestamps, the active plan's routine count (its days per week),
+ * and (migrate_172) the PR count over the trailing `PR_WINDOW_DAYS` days -
+ * SD-30.
  *
  * @param {string} userId
  * @param {{nowMs?: number}} [opts]
@@ -202,13 +212,21 @@ export function computeConsistency({
  *   `daysPerWeek` read this function already derives for
  *   `c_planned_pct_4w`, carried alongside rather than folded into
  *   `computeConsistency` itself, so that pure function's own pinned
- *   return shape is untouched. Null without a plan.
+ *   return shape is untouched. Null without a plan. Also carries
+ *   `c_prs_4w` (migrate_172, blueprint section 4 CR-05) the same way: PRs
+ *   over the last `PR_WINDOW_DAYS` days, read through `getPRCountInWindow`
+ *   with EXACTLY the method `getWeeklyPRCount` uses for a week (ruling 1).
+ *   Null -- never a bare zero -- when that read fails.
  */
 export async function loadConsistency(userId, { nowMs = Date.now() } = {}) {
   const uid = userId ?? currentUserId();
-  const [workouts, activePlan] = await Promise.all([
+  const [workouts, activePlan, prCount] = await Promise.all([
     getCompletedWorkoutStartTimestamps(uid).catch(() => []),
     getActivePlan(uid).catch(() => null),
+    // migrate_172: a count only -- no exercise, weight or reps ever leaves
+    // this read. A failure answers null, never zero, the same "a failed
+    // read is not a real zero" posture the other two reads above take.
+    getPRCountInWindow(uid, nowMs - PR_WINDOW_DAYS * DAY_MS, nowMs).catch(() => null),
   ]);
   let daysPerWeek = null;
   if (activePlan?.id) {
@@ -221,7 +239,7 @@ export async function loadConsistency(userId, { nowMs = Date.now() } = {}) {
     }
   }
   const counters = computeConsistency({ workouts, plan: { daysPerWeek }, now: nowMs });
-  return { ...counters, c_planned_per_week: daysPerWeek };
+  return { ...counters, c_planned_per_week: daysPerWeek, c_prs_4w: prCount };
 }
 
 /**

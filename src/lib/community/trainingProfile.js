@@ -573,7 +573,8 @@ export async function loadTrainingProfile(userId, { nowMs = Date.now(), windowWe
  *   `community_upsert_profile`'s new keys); `c_planned_per_week` only
  *   when consistency sharing is allowed (see the field's own comment
  *   below), so a caller who does not share consistency at all never
- *   reveals their plan's shape either.
+ *   reveals their plan's shape either. `c_prs_4w` (migrate_172) rides
+ *   alongside the other counters, under the same gate.
  */
 export function shareablePayload(bands = {}, share = TP_DEFAULT_SHARE, {
   consistencyCounters = null, consistencyGated = false,
@@ -633,6 +634,12 @@ export function shareablePayload(bands = {}, share = TP_DEFAULT_SHARE, {
       : (Number.isFinite(Number(consistencyCounters.c_planned_per_week))
         ? Math.max(0, Math.min(14, Math.trunc(Number(consistencyCounters.c_planned_per_week))))
         : null);
+    // migrate_172 (blueprint section 4, CR-05): "N PRs in 4 weeks" on the
+    // progress strip. Exactly the same gate as every counter above -- a
+    // count only, computed device-side by `getPRCountInWindow`
+    // (trainingConsistency.js's `loadConsistency`); nothing about the
+    // exercise, weight or reps behind it ever reaches this payload.
+    payload.c_prs_4w = consistencyCounters?.c_prs_4w ?? null;
   }
   return payload;
 }

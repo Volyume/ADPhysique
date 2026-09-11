@@ -9,7 +9,12 @@
  *  - the 8-week mini bars read `counters.c_weeks_history`: one bar per
  *    entry, height proportional to the max of the eight, and a zero week
  *    still draws a (hairline) bar rather than nothing;
- *  - a missing/malformed history never crashes the strip.
+ *  - a missing/malformed history never crashes the strip;
+ *  - migrate_172 (blueprint section 4, CR-05): a fourth cell, PRs in the
+ *    last 4 weeks, shown only when `counters.c_prs_4w` is a real number
+ *    (a genuine 0 included), absent for null/undefined, singular label
+ *    at exactly 1, and the accessibility label gains the PR clause only
+ *    in that case.
  */
 import { create, act } from 'react-test-renderer';
 
@@ -141,5 +146,86 @@ describe('ProgressStrip', () => {
     });
     const strip = tree.root.findByProps({ accessibilityRole: 'button' });
     expect(strip.props.accessibilityLabel).toContain('See boards');
+  });
+
+  // migrate_172 (blueprint section 4, CR-05): the fourth cell, "N PRs in
+  // the last four weeks" -- shown only for a genuine number.
+  describe('the fourth cell: PRs in the last 4 weeks', () => {
+    test('absent when c_prs_4w is undefined (pre-172, or the owner does not share what they did)', () => {
+      const tree = render({
+        counters: { c_sessions_week: 2, c_weeks_streak: 1, c_consistent_weeks_12w: 0 },
+      });
+      expect(texts(tree).join(' | ')).not.toContain('PR');
+    });
+
+    test('absent when c_prs_4w is explicitly null', () => {
+      const tree = render({
+        counters: {
+          c_sessions_week: 2, c_weeks_streak: 1, c_consistent_weeks_12w: 0, c_prs_4w: null,
+        },
+      });
+      expect(texts(tree).join(' | ')).not.toContain('PR');
+    });
+
+    test('shown with the plural label for a count other than 1', () => {
+      const tree = render({
+        counters: {
+          c_sessions_week: 2, c_weeks_streak: 1, c_consistent_weeks_12w: 0, c_prs_4w: 3,
+        },
+      });
+      const all = texts(tree).join(' | ');
+      expect(all).toContain('3');
+      expect(all).toContain('PRs (4w)');
+    });
+
+    test('shown with the singular label at exactly 1', () => {
+      const tree = render({
+        counters: {
+          c_sessions_week: 2, c_weeks_streak: 1, c_consistent_weeks_12w: 0, c_prs_4w: 1,
+        },
+      });
+      const all = texts(tree).join(' | ');
+      expect(all).toContain('PR (4w)');
+      expect(all).not.toContain('PRs (4w)');
+    });
+
+    test('a genuine zero still renders a cell: 0 is a real count, not "no data"', () => {
+      const tree = render({
+        counters: {
+          c_sessions_week: 2, c_weeks_streak: 1, c_consistent_weeks_12w: 0, c_prs_4w: 0,
+        },
+      });
+      expect(texts(tree).join(' | ')).toContain('PRs (4w)');
+    });
+
+    test('the accessibility label gains ", N PRs in the last four weeks" only when the count is finite', () => {
+      const withPrs = render({
+        counters: {
+          c_sessions_week: 2, c_weeks_streak: 1, c_consistent_weeks_12w: 0, c_prs_4w: 3,
+        },
+      });
+      const withPrsLabel = withPrs.root
+        .findAll((n) => typeof n.props?.accessibilityLabel === 'string')[0].props.accessibilityLabel;
+      expect(withPrsLabel).toContain('3 PRs in the last four weeks');
+
+      const without = render({
+        counters: { c_sessions_week: 2, c_weeks_streak: 1, c_consistent_weeks_12w: 0 },
+      });
+      const withoutLabel = without.root
+        .findAll((n) => typeof n.props?.accessibilityLabel === 'string')[0].props.accessibilityLabel;
+      expect(withoutLabel).not.toContain('PRs in the last four weeks');
+    });
+
+    test('the PR clause sits before the trailing "See boards" suffix, which still ends the label', () => {
+      const tree = render({
+        counters: {
+          c_sessions_week: 2, c_weeks_streak: 1, c_consistent_weeks_12w: 0, c_prs_4w: 3,
+        },
+        onPress: jest.fn(),
+      });
+      const label = tree.root.findByProps({ accessibilityRole: 'button' }).props.accessibilityLabel;
+      expect(label.indexOf('3 PRs in the last four weeks')).toBeLessThan(label.indexOf('See boards'));
+      expect(label.endsWith('See boards')).toBe(true);
+    });
   });
 });

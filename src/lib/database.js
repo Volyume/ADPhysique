@@ -8849,18 +8849,23 @@ export async function getFirstWorkoutDateOnOrAfter(userId, sinceMs) {
 // so the rows are fetched raw and reduced with calculate1RM in JS instead --
 // correctness over keeping it in one query, per the audit's own ruling.
 // calculate1RM and detectPR themselves are UNCHANGED (do not alter them).
-export async function getWeeklyPRCount(userId, weekStart) {
-  // Same data-window guard as getWeeklySessionStats: coerce a Date to
-  // epoch-ms and reject a non-finite window rather than silently miscount PRs.
-  const weekStartMs = coerceWeekStartMs(weekStart, 'getWeeklyPRCount');
+//
+// migrate_172 (client half, blueprint section 4 CR-05 "N PRs in 4 weeks" on
+// the Community progress strip): this logic is now shared by TWO windows --
+// a calendar week (getWeeklyPRCount, below) and a rolling 28 days
+// (getPRCountInWindow, used by trainingConsistency.js's loadConsistency) --
+// so it lives here, taking the window's raw bounds directly, with
+// getWeeklyPRCount reduced to computing a week's bounds and delegating.
+// Behaviour is byte-identical to the pre-172 getWeeklyPRCount: same query,
+// same calculate1RM reduction, same 0.1% margin.
+export async function getPRCountInWindow(userId, sinceMs, untilMs) {
   const d = await db();
-  const weekEnd = localWeekEndMs(weekStartMs); // LS-06: DST-correct week end, not fixed 168h
 
   // distance/duration reuse the weight column, so they must never enter an
   // e1RM (weight-based) comparison or they manufacture phantom PRs. LEFT JOIN
   // keeps unknown/unmatched exercises as weight_reps (counted) on both sides.
   // Warm-up sets excluded, matching the prior implementation's scope.
-  const weekRows = await d.getAllAsync(
+  const windowRows = await d.getAllAsync(
     `SELECT ws.exercise_id AS exerciseId, ws.weight AS weight, ws.actual_reps AS reps
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
@@ -8871,9 +8876,9 @@ export async function getWeeklyPRCount(userId, weekStart) {
        AND ws.weight IS NOT NULL AND ws.weight > 0
        AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
        AND COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
-    [userId, weekStartMs, weekEnd],
+    [userId, sinceMs, untilMs],
   );
-  if (!weekRows.length) return 0;
+  if (!windowRows.length) return 0;
 
   const priorRows = await d.getAllAsync(
     `SELECT ws.exercise_id AS exerciseId, ws.weight AS weight, ws.actual_reps AS reps
@@ -8886,13 +8891,13 @@ export async function getWeeklyPRCount(userId, weekStart) {
        AND ws.weight IS NOT NULL AND ws.weight > 0
        AND (ws.set_type IS NULL OR ws.set_type != 'warmup')
        AND COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
-    [userId, weekStartMs],
+    [userId, sinceMs],
   );
 
-  const bestThisWeek = new Map();
-  for (const r of weekRows) {
+  const bestInWindow = new Map();
+  for (const r of windowRows) {
     const e1rm = calculate1RM(r.weight, r.reps);
-    if (e1rm > (bestThisWeek.get(r.exerciseId) ?? 0)) bestThisWeek.set(r.exerciseId, e1rm);
+    if (e1rm > (bestInWindow.get(r.exerciseId) ?? 0)) bestInWindow.set(r.exerciseId, e1rm);
   }
   const bestPrior = new Map();
   for (const r of priorRows) {
@@ -8901,7 +8906,7 @@ export async function getWeeklyPRCount(userId, weekStart) {
   }
 
   let prCount = 0;
-  for (const [exerciseId, wkE1rm] of bestThisWeek) {
+  for (const [exerciseId, wkE1rm] of bestInWindow) {
     const priorE1rm = bestPrior.get(exerciseId) ?? 0;
     // Same 0.1% margin as detectPR (algorithms.js): a PR must clear the
     // prior best, not just tie or nudge it by rounding noise. A PR also
@@ -8911,6 +8916,17 @@ export async function getWeeklyPRCount(userId, weekStart) {
     if (priorE1rm > 0 && wkE1rm > priorE1rm * 1.001) prCount += 1;
   }
   return prCount;
+}
+
+// The calendar-week tally the weekly recap/check-in cards show. Delegates to
+// getPRCountInWindow (migrate_172) for the actual query/reduction, so the
+// two windows can never diverge in method -- only in the bounds passed.
+export async function getWeeklyPRCount(userId, weekStart) {
+  // Same data-window guard as getWeeklySessionStats: coerce a Date to
+  // epoch-ms and reject a non-finite window rather than silently miscount PRs.
+  const weekStartMs = coerceWeekStartMs(weekStart, 'getWeeklyPRCount');
+  const weekEnd = localWeekEndMs(weekStartMs); // LS-06: DST-correct week end, not fixed 168h
+  return getPRCountInWindow(userId, weekStartMs, weekEnd);
 }
 
 // The standout lift of a given week, for the "Great Week" recap share card.

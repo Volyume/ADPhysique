@@ -150,7 +150,16 @@ export default function CommunityProfileScreen({ navigation, route }) {
       if (!share?.consistency) { setProgress(null); return; }
       try {
         const counters = await loadConsistency(card.user_id);
-        if (alive) setProgress(counters);
+        // migrate_172 (blueprint section 4, CR-05): the PR count needs
+        // "Share what I did" as well as "Share my consistency" -- the
+        // same `share_sessions` gate `_community_profile_card` applies to
+        // this same account's own card (migrate_172 SQL: v_show_consistency
+        // AND share_sessions), applied here so the owner's own view never
+        // shows a figure nobody else sharing that profile could ever see.
+        // Every other counter on the strip stays gated on share.consistency
+        // alone, unchanged.
+        const next = share.share_sessions ? counters : { ...counters, c_prs_4w: null };
+        if (alive) setProgress(next);
       } catch (_e) {
         if (alive) setProgress(null);
       }

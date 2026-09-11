@@ -69,7 +69,16 @@ describe('ALGO-002: planned sessions come from the active plan', () => {
 });
 
 describe('ALGO-003: PR detection uses estimated 1RM', () => {
-  const body = fnBody(DB, 'export async function getWeeklyPRCount');
+  // RE-ANCHORED 2026-09-11 (migrate_172 client half): the query/reduction
+  // this guard pins moved out of getWeeklyPRCount and into
+  // getPRCountInWindow, which getWeeklyPRCount now delegates to (byte-
+  // identical behaviour, pinned by weeklyPRCount.formulaConsistency.test.js
+  // and prCountInWindow.test.js) so a rolling 28-day window
+  // (trainingConsistency.js's loadConsistency, Community progress strip)
+  // can share the exact same method as the calendar-week tally. The guard
+  // follows the logic to its new home rather than a thin wrapper that no
+  // longer contains any of it.
+  const body = fnBody(DB, 'export async function getPRCountInWindow');
   // RE-ANCHORED 2026-07-30 (cross-surface audit X4). This used to pin the
   // raw Epley SQL (`wk_e1rm`, `1.0 + COALESCE(ws.actual_reps, 1) / 30.0`), but
   // that formula was the DEFECT: it disagreed with the blended

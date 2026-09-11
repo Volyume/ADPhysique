@@ -41,6 +41,12 @@ jest.mock('../../database', () => ({
   getCompletedWorkoutStartTimestamps: jest.fn(async () => []),
   getActivePlan: jest.fn(async () => null),
   getRoutinesForPlan: jest.fn(async () => []),
+  // migrate_172 (blueprint section 4, CR-05): loadConsistency's third
+  // read, the PR count over the trailing 28 days. Defaults to 0 (a real,
+  // present count) so every pre-existing test below -- none of which
+  // cares about PRs -- sees a finite value rather than tripping the
+  // "read failed" null path by accident.
+  getPRCountInWindow: jest.fn(async () => 0),
   // `loadTrainingProfile` (trainingProfile.js) also reads these two;
   // publishConsistency composes that function, so they need a stub too.
   getWorkoutSetsSince: jest.fn(async () => []),
@@ -54,12 +60,12 @@ jest.mock('../../../hooks/usePhotoSuppression', () => ({
 
 const db = require('../../database');
 const {
-  getCompletedWorkoutStartTimestamps, getActivePlan, getRoutinesForPlan,
+  getCompletedWorkoutStartTimestamps, getActivePlan, getRoutinesForPlan, getPRCountInWindow,
 } = db;
 const {
   computeConsistency, consistencyGateState, sessionShareGateState,
   publishConsistency, publishSharingSettings, loadConsistency,
-  NO_PLAN_CONSISTENT_THRESHOLD,
+  NO_PLAN_CONSISTENT_THRESHOLD, PR_WINDOW_DAYS,
   setSharingPublishPending, retryPendingSharingPublish,
 } = require('../trainingConsistency');
 const { shareablePayload, TP_DEFAULT_SHARE, writeShareSettings } = require('../trainingProfile');
@@ -84,6 +90,7 @@ beforeEach(() => {
   getCompletedWorkoutStartTimestamps.mockClear();
   getActivePlan.mockReset().mockResolvedValue(null);
   getRoutinesForPlan.mockReset().mockResolvedValue([]);
+  getPRCountInWindow.mockReset().mockResolvedValue(0);
 });
 
 describe('computeConsistency: week/month boundaries', () => {
@@ -291,6 +298,32 @@ describe('loadConsistency: c_planned_per_week rides alongside the eight counters
     getRoutinesForPlan.mockResolvedValue([{ id: 'r1' }, { id: 'r2' }, { id: 'r3' }]);
     const out = await loadConsistency('u1', { nowMs: MON });
     expect(out.c_planned_per_week).toBe(3);
+  });
+});
+
+describe('loadConsistency: c_prs_4w rides alongside the other counters (migrate_172, CR-05)', () => {
+  test('carries whatever getPRCountInWindow answers', async () => {
+    getPRCountInWindow.mockResolvedValue(3);
+    const out = await loadConsistency('u1', { nowMs: MON });
+    expect(out.c_prs_4w).toBe(3);
+  });
+
+  test('a genuine zero is carried as 0, not null', async () => {
+    getPRCountInWindow.mockResolvedValue(0);
+    const out = await loadConsistency('u1', { nowMs: MON });
+    expect(out.c_prs_4w).toBe(0);
+  });
+
+  test('a thrown read yields null, never a zero', async () => {
+    getPRCountInWindow.mockRejectedValue(new Error('sqlite busy'));
+    const out = await loadConsistency('u1', { nowMs: MON });
+    expect(out.c_prs_4w).toBeNull();
+  });
+
+  test('reads the trailing PR_WINDOW_DAYS window ending now, the same userId as the other reads', async () => {
+    expect(PR_WINDOW_DAYS).toBe(28);
+    await loadConsistency('u1', { nowMs: MON });
+    expect(getPRCountInWindow).toHaveBeenCalledWith('u1', MON - 28 * 24 * 60 * 60 * 1000, MON);
   });
 });
 

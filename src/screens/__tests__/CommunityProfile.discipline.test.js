@@ -192,6 +192,23 @@ describe('the progress strip on someone else\'s profile', () => {
 
     expect(text).not.toContain('sessions this week');
   });
+
+  // migrate_172 (blueprint section 4, CR-05): the card carries c_prs_4w
+  // under its own extra gate (share_consistency AND share_sessions), so
+  // the client's only job for a viewer is to render it when present.
+  test('the PR count shows when the card carries it', async () => {
+    getProfile.mockResolvedValue({ card: { ...OTHER_CARD, ...COUNTERS, c_prs_4w: 3 }, viewable: true, posts: [] });
+    const { text } = await mount();
+
+    expect(text).toContain('PRs (4w)');
+  });
+
+  test('no PR cell when the card carries the other counters but not c_prs_4w (share_sessions off)', async () => {
+    getProfile.mockResolvedValue({ card: { ...OTHER_CARD, ...COUNTERS }, viewable: true, posts: [] });
+    const { text } = await mount();
+
+    expect(text).not.toContain('PR');
+  });
 });
 
 describe('the owner\'s own profile keeps the device path', () => {
@@ -204,6 +221,37 @@ describe('the owner\'s own profile keeps the device path', () => {
     const { text } = await mount();
 
     expect(loadConsistency).toHaveBeenCalledWith('u1');
+    expect(text).toContain('sessions this week');
+  });
+
+  // migrate_172: the PR figure alone needs "Share what I did" too, even on
+  // the owner's own view (the same share_sessions gate the SQL applies to
+  // this account's own card) -- every other counter on the strip stays
+  // gated on share.consistency alone.
+  test('the PR count shows on the owner\'s own profile when they also share what they did', async () => {
+    const OWN_CARD = { ...OTHER_CARD, user_id: 'u1', handle: 'rowan' };
+    getProfile.mockResolvedValue({ card: OWN_CARD, viewable: true, posts: [] });
+    readShareSettings.mockResolvedValue({ consistency: true, share_sessions: true });
+    loadConsistency.mockResolvedValue({
+      c_sessions_week: 5, c_weeks_streak: 2, c_consistent_weeks_12w: 1, c_prs_4w: 4,
+    });
+
+    const { text } = await mount();
+
+    expect(text).toContain('PRs (4w)');
+  });
+
+  test('the PR count is hidden on the owner\'s own profile when they share consistency but not what they did', async () => {
+    const OWN_CARD = { ...OTHER_CARD, user_id: 'u1', handle: 'rowan' };
+    getProfile.mockResolvedValue({ card: OWN_CARD, viewable: true, posts: [] });
+    readShareSettings.mockResolvedValue({ consistency: true, share_sessions: false });
+    loadConsistency.mockResolvedValue({
+      c_sessions_week: 5, c_weeks_streak: 2, c_consistent_weeks_12w: 1, c_prs_4w: 4,
+    });
+
+    const { text } = await mount();
+
+    expect(text).not.toContain('PR');
     expect(text).toContain('sessions this week');
   });
 });

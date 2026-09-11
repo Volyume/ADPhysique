@@ -202,12 +202,22 @@ const TRAINING_PROFILE_DB_READS = [
  * active plan's days per week"). `getRoutinesForPlan`'s row COUNT is
  * the days-per-week figure; nothing about a routine's exercises is
  * read from it here.
+ *
+ * migrate_172 (blueprint section 4, CR-05) widens this by one, deliberately
+ * and reviewed here: `getPRCountInWindow` answers a COUNT of personal
+ * records over a rolling 28 days (the exact calculate1RM-based method
+ * `getWeeklyPRCount` uses for a week, database.js), never the exercise,
+ * weight or reps behind it -- so it carries no more risk than the PR
+ * moments the activity feed already shows for anyone who shares what they
+ * did, and stays inside SD-30's "nothing about the body, food, Progress
+ * Scan, injuries, coaching or check-ins" boundary.
  */
 const TRAINING_CONSISTENCY_FILE = path.join(LIB_DIR, 'trainingConsistency.js');
 const TRAINING_CONSISTENCY_DB_READS = [
   'getCompletedWorkoutStartTimestamps',
   'getActivePlan',
   'getRoutinesForPlan',
+  'getPRCountInWindow',
 ];
 
 /**
@@ -305,7 +315,7 @@ describe('no Community file reads personal data', () => {
     expect(source).not.toMatch(/require\(['"][^'"]*database['"]\)/);
   });
 
-  test('trainingConsistency.js reads only the three device functions section 1 allows', () => {
+  test('trainingConsistency.js reads only the four device functions section 1 and migrate_172 allow', () => {
     const source = code(fs.readFileSync(TRAINING_CONSISTENCY_FILE, 'utf8'));
     const imports = source.match(/import\s*\{[^}]*\}\s*from\s*'\.\.\/database';/g) ?? [];
     expect(imports).toHaveLength(1);
@@ -646,5 +656,78 @@ describe('the closed sets are the same on both sides', () => {
     // preview line would show one person a band worded two ways.
     for (const label of Object.values(TP_TIME_BANDS)) expect(sql161).toContain(`'${label}'`);
     for (const label of Object.values(TP_SESSIONS_BANDS)) expect(sql161).toContain(`'${label}'`);
+  });
+});
+
+/**
+ * migrate_172 (blueprint section 4, CR-05; lead ruling 5). The nine
+ * migrate_165/170 consistency counters (`trainingConsistency.js`,
+ * `shareablePayload` in `trainingProfile.js`) travel under one closed
+ * allow-list: whatever `shareablePayload` emits with a `c_` prefix when
+ * `share_consistency` is on. `c_prs_4w` joins that set here -- pinned
+ * alongside the rest, not on its own, so the allow-list stays a single
+ * source of truth for "every counter key this payload builder may ever
+ * emit" rather than one more one-off assertion. The second half of the
+ * pin is the thing a PR count could tempt a future edit to add "just
+ * alongside" it: SD rulings ("a PR is a moment, never a table") and the
+ * migrate_172 SQL header both say a count is ALL that travels, so the
+ * payload builder is asserted to never carry the exercise, weight or reps
+ * a PR is made of.
+ */
+describe('consistency counters travel under one allow-list, PR count included (migrate_172)', () => {
+  const { shareablePayload, TP_DEFAULT_SHARE } = require('../lib/community/trainingProfile');
+
+  // The closed set of `c_`-prefixed keys `shareablePayload` may ever emit
+  // when share_consistency is true (trainingProfile.js, mirrored
+  // server-side by `community_update_training_profile` in migrate_165 and
+  // re-issued in migrate_172 with c_prs_4w added).
+  const COUNTER_ALLOW_LIST = [
+    'c_sessions_week', 'c_sessions_month', 'c_weeks_streak', 'c_planned_pct_4w',
+    'c_consistent_weeks_12w', 'c_trained_days_week', 'c_last_trained_day',
+    'c_weeks_history', 'c_updated_at', 'c_planned_per_week', 'c_prs_4w',
+  ];
+
+  function fakeCounters() {
+    return {
+      c_sessions_week: 3,
+      c_sessions_month: 10,
+      c_weeks_streak: 2,
+      c_planned_pct_4w: 75,
+      c_consistent_weeks_12w: 6,
+      c_trained_days_week: ['mon', 'wed'],
+      c_last_trained_day: '2026-09-08',
+      c_weeks_history: [1, 2, 1, 2, 3, 1, 2, 3],
+      c_updated_at: 1700000000000,
+      c_planned_per_week: 4,
+      c_prs_4w: 3,
+    };
+  }
+
+  test('every c_-prefixed key shareablePayload can emit is on the allow-list, c_prs_4w included', () => {
+    const payload = shareablePayload({}, { ...TP_DEFAULT_SHARE, consistency: true }, {
+      consistencyCounters: fakeCounters(), consistencyGated: false,
+    });
+    const counterKeys = Object.keys(payload).filter((k) => k.startsWith('c_'));
+    expect(counterKeys.sort()).toEqual([...COUNTER_ALLOW_LIST].sort());
+  });
+
+  test('the payload builder never emits a PR detail alongside the count: no exercise, weight or reps', () => {
+    const payload = shareablePayload({}, { ...TP_DEFAULT_SHARE, consistency: true }, {
+      consistencyCounters: fakeCounters(), consistencyGated: false,
+    });
+    expect(payload.c_prs_4w).toBe(3);
+    for (const forbidden of ['pr_exercise', 'exerciseName', 'weight', 'reps']) {
+      expect(Object.prototype.hasOwnProperty.call(payload, forbidden)).toBe(false);
+    }
+    // Belt and braces: not even buried in a nested value or a differently-cased key.
+    expect(JSON.stringify(payload)).not.toMatch(/\bpr_exercise\b|\bexerciseName\b|\bweight\b|\breps\b/i);
+  });
+
+  test('c_prs_4w never travels when consistency sharing is off, the same as every other counter', () => {
+    const payload = shareablePayload({}, { ...TP_DEFAULT_SHARE, consistency: false }, {
+      consistencyCounters: fakeCounters(), consistencyGated: false,
+    });
+    expect(payload).not.toHaveProperty('c_prs_4w');
+    expect(payload.share_consistency).toBe(false);
   });
 });
