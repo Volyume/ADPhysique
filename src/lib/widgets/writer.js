@@ -93,7 +93,7 @@ export async function gatherWidgetInputs(userId) {
   // when the cache is for TODAY, so a widget left untouched overnight never
   // shows yesterday's count as today's; the network refresh that KEEPS this
   // cache current is a separate, best-effort stage in writeWidgetSnapshot.
-  const cachedFriends = await readCachedFriends();
+  const cachedFriends = await readCachedFriends(userId);
   const friends = (cachedFriends && cachedFriends.dayKey === todayLocalKey())
     ? { dayKey: cachedFriends.dayKey, count: cachedFriends.count }
     : null;
@@ -106,9 +106,30 @@ export async function gatherWidgetInputs(userId) {
     nextSession,
     consistency: { completed: stats?.completed ?? 0, planned },
     friends,
+    // Review 2026-09-11 finding 6a: the second stage below reads this to
+    // skip a network call while today's count is fresh enough.
+    friendsFetchedAt: (cachedFriends && cachedFriends.dayKey === todayLocalKey())
+      ? cachedFriends.fetchedAt
+      : null,
     edFlagOpen: !!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing),
   };
 }
+
+// Review 2026-09-11 finding 6a: how long today's fetched count is trusted
+// before the writer asks the board again. Backgrounding is the most
+// frequent trigger, and community_board is rate-railed per call, so
+// ordinary app-switching must not spend that budget on a number that
+// changes a handful of times a day. Fifteen minutes, the same window the
+// message push collapse uses.
+export const FRIENDS_REFRESH_MIN_MS = 15 * 60 * 1000;
+
+// Review 2026-09-11 finding 6b: writes are serialised. Two overlapping
+// calls (a workout finish followed by a backgrounding) each gathered their
+// own inputs before the network wait, and whichever resolved LAST won, so
+// an older local session count could be persisted over a newer one. Each
+// call now runs after the previous one has fully settled and gathers
+// fresh inputs of its own; a failed run never blocks the next.
+let writeChain = Promise.resolve();
 
 /**
  * Gather, build and persist the widget snapshot. Best-effort: never throws.
@@ -118,7 +139,13 @@ export async function gatherWidgetInputs(userId) {
  * @param {{refreshFriends?: boolean}} [opts] CR-14: `refreshFriends`
  *   (default true) runs the second stage below; pass false to skip it.
  */
-export async function writeWidgetSnapshot(userId, { refreshFriends = true } = {}) {
+export function writeWidgetSnapshot(userId, { refreshFriends = true } = {}) {
+  const run = writeChain.then(() => writeWidgetSnapshotNow(userId, { refreshFriends }));
+  writeChain = run.catch(() => {});
+  return run;
+}
+
+async function writeWidgetSnapshotNow(userId, { refreshFriends = true } = {}) {
   let inputs = null;
   let snapshot;
   try {
@@ -140,7 +167,9 @@ export async function writeWidgetSnapshot(userId, { refreshFriends = true } = {}
   // Lead review 2026-09-11: never under calm mode or an open ED flag. The
   // count is withheld there (spec rule 4), so the call would buy nothing,
   // and the phase 2 cohort pages set the pattern: no fetch under the gate.
-  if (refreshFriends && inputs && !inputs.edFlagOpen) {
+  const fetchedRecently = Number.isFinite(inputs?.friendsFetchedAt)
+    && (Date.now() - inputs.friendsFetchedAt) < FRIENDS_REFRESH_MIN_MS;
+  if (refreshFriends && inputs && !inputs.edFlagOpen && !fetchedRecently) {
     try {
       const fetched = await fetchFriendsTrainedToday(userId);
       const fetchedCount = fetched ? fetched.count : null;

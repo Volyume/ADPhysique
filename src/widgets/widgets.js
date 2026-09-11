@@ -72,7 +72,7 @@ function Shell({ eyebrow, friends, children }) {
           <FlexWidget style={{
             width: 6, height: 6, borderRadius: 3, backgroundColor: AMBER, marginRight: 6,
           }} />
-          <TextWidget text={friends.label} style={{ fontSize: 12, color: MUTED }} maxLines={1} />
+          <TextWidget text={friends.label} style={{ fontSize: 12, color: MUTED }} maxLines={1} truncate="END" />
         </FlexWidget>
       ) : null}
     </FlexWidget>

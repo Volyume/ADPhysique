@@ -27,7 +27,7 @@ const db = require('../../database');
 const { persistWidgetSnapshot } = require('../storage');
 const { readCachedFriends, fetchFriendsTrainedToday } = require('../friends');
 const { todayLocalKey } = require('../../dayKey');
-const { gatherWidgetInputs, writeWidgetSnapshot } = require('../writer');
+const { gatherWidgetInputs, writeWidgetSnapshot, FRIENDS_REFRESH_MIN_MS } = require('../writer');
 
 
 beforeEach(() => {
@@ -189,6 +189,7 @@ describe('writeWidgetSnapshot: the friends refresh stage (CR-14)', () => {
     fetchFriendsTrainedToday.mockResolvedValue(null);
     const snap = await writeWidgetSnapshot('u1');
     expect(snap.nextSession.name).toBe('Push');
+    expect(snap.friends).toBeNull();
     expect(persistWidgetSnapshot).toHaveBeenCalledTimes(1);
   });
 
@@ -196,7 +197,71 @@ describe('writeWidgetSnapshot: the friends refresh stage (CR-14)', () => {
     fetchFriendsTrainedToday.mockRejectedValue(new Error('offline'));
     const snap = await writeWidgetSnapshot('u1');
     expect(snap.nextSession.name).toBe('Push');
+    expect(snap.friends).toBeNull();
     expect(persistWidgetSnapshot).toHaveBeenCalledTimes(1);
+  });
+
+  // Review 2026-09-11 finding 7: the ED flag READ FAILURE is the fail-closed
+  // hinge for the count and for the network stage. Pinned so a later edit
+  // of that catch to `null` cannot pass silently.
+  test('an ED flag read failure withholds the count and never runs the network stage', async () => {
+    db.getOpenEdPatternFlag.mockRejectedValue(new Error('db down'));
+    readCachedFriends.mockResolvedValue({ dayKey: todayLocalKey(), count: 2, fetchedAt: 0 });
+    fetchFriendsTrainedToday.mockResolvedValue({ dayKey: todayLocalKey(), count: 5, fetchedAt: Date.now() });
+    const inputs = await gatherWidgetInputs('u1');
+    expect(inputs.edFlagOpen).toBe(true);
+    const snap = await writeWidgetSnapshot('u1');
+    expect(snap.friends).toBeNull();
+    expect(fetchFriendsTrainedToday).not.toHaveBeenCalled();
+  });
+
+  // Review 2026-09-11 finding 6a: today's count fetched under fifteen
+  // minutes ago is trusted; older, it is refreshed. Backgrounding is the
+  // most frequent trigger and the board is rate-railed per call.
+  test('a count fetched under fifteen minutes ago skips the network stage', async () => {
+    readCachedFriends.mockResolvedValue({ dayKey: todayLocalKey(), count: 2, fetchedAt: Date.now() - 5 * 60 * 1000 });
+    const snap = await writeWidgetSnapshot('u1');
+    expect(fetchFriendsTrainedToday).not.toHaveBeenCalled();
+    expect(snap.friends.count).toBe(2);
+  });
+
+  test('a count fetched more than fifteen minutes ago is refreshed', async () => {
+    readCachedFriends.mockResolvedValue({ dayKey: todayLocalKey(), count: 2, fetchedAt: Date.now() - FRIENDS_REFRESH_MIN_MS - 1000 });
+    fetchFriendsTrainedToday.mockResolvedValue({ dayKey: todayLocalKey(), count: 3, fetchedAt: Date.now() });
+    const snap = await writeWidgetSnapshot('u1');
+    expect(fetchFriendsTrainedToday).toHaveBeenCalledWith('u1');
+    expect(snap.friends.count).toBe(3);
+  });
+
+  test('a stale (yesterday) cache never counts as recently fetched', async () => {
+    readCachedFriends.mockResolvedValue({ dayKey: '2020-01-01', count: 2, fetchedAt: Date.now() });
+    await writeWidgetSnapshot('u1');
+    expect(fetchFriendsTrainedToday).toHaveBeenCalledWith('u1');
+  });
+
+  // Review 2026-09-11 finding 6b: overlapping writes are serialised, so the
+  // second call gathers its inputs only after the first has fully settled
+  // and an older count can never be persisted over a newer one.
+  test('overlapping calls are serialised: the second gathers after the first persists', async () => {
+    let release = null;
+    persistWidgetSnapshot.mockImplementationOnce(() => new Promise((resolve) => { release = resolve; }));
+    const first = writeWidgetSnapshot('u1');
+    const second = writeWidgetSnapshot('u1');
+    for (let i = 0; i < 50 && !release; i += 1) await Promise.resolve(); // eslint-disable-line no-await-in-loop
+    expect(release).not.toBeNull();
+    expect(db.getActivePlan).toHaveBeenCalledTimes(1);
+    release(true);
+    await first;
+    await second;
+    expect(db.getActivePlan).toHaveBeenCalledTimes(2);
+    expect(persistWidgetSnapshot).toHaveBeenCalledTimes(2);
+  });
+
+  test('a failed run never blocks the next one', async () => {
+    db.getActivePlan.mockRejectedValueOnce(new Error('sqlite closed'));
+    await writeWidgetSnapshot('u1');
+    const snap = await writeWidgetSnapshot('u1');
+    expect(snap.nextSession.name).toBe('Push');
   });
 
   test('a changed count persists a second snapshot carrying it', async () => {

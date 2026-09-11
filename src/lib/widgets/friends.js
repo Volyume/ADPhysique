@@ -33,6 +33,15 @@ import { todayLocalKey } from '../dayKey';
 export const FRIENDS_CACHE_KEY = '@volyume_widget_friends_v1';
 
 /**
+ * The cache key for one account (review 2026-09-11 finding 5: namespaced
+ * by user id, like profile.js's meCacheKey, so a second account on the
+ * same device can never read the first account's count).
+ */
+export function friendsCacheKey(uid) {
+  return `${FRIENDS_CACHE_KEY}:${uid}`;
+}
+
+/**
  * Pure: how many of these board rows are a followed person who trained
  * today (never the caller's own row). Clamped so a hostile/huge payload
  * can never inflate the widget's number past three digits.
@@ -47,13 +56,15 @@ export function countFriendsTrainedToday(rows) {
 }
 
 /**
- * Read the small local cache. Shape-checked, never throws.
+ * Read the small local cache for this account. Shape-checked, never throws.
  *
+ * @param {string} uid
  * @returns {Promise<{dayKey: string, count: number, fetchedAt: number}|null>}
  */
-export async function readCachedFriends() {
+export async function readCachedFriends(uid) {
   try {
-    const raw = await AsyncStorage.getItem(FRIENDS_CACHE_KEY);
+    if (!uid) return null;
+    const raw = await AsyncStorage.getItem(friendsCacheKey(uid));
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
@@ -83,10 +94,15 @@ export async function fetchFriendsTrainedToday(uid) {
     const me = await readCachedMe(uid);
     if (!hasProfile(me)) return null;
 
-    const { rows } = await loadBoard({ scope: 'following', window: 'week', limit: 50 });
+    // Review 2026-09-11 finding 3: ONE clock read. The server evaluates
+    // "trained today" against the `today` this call sends, and the cache
+    // is stamped with that same key, so a request that straddles local
+    // midnight can never label yesterday's count as today's.
+    const today = todayLocalKey();
+    const { rows } = await loadBoard({ scope: 'following', window: 'week', limit: 50, today });
     const count = countFriendsTrainedToday(rows);
-    const cache = { dayKey: todayLocalKey(), count, fetchedAt: Date.now() };
-    await AsyncStorage.setItem(FRIENDS_CACHE_KEY, JSON.stringify(cache));
+    const cache = { dayKey: today, count, fetchedAt: Date.now() };
+    await AsyncStorage.setItem(friendsCacheKey(uid), JSON.stringify(cache));
     return cache;
   } catch (_e) {
     // Offline, a CommunityError of any code, or an unexpected throw: this
@@ -94,4 +110,17 @@ export async function fetchFriendsTrainedToday(uid) {
     // cache. transport.js already logs whatever is genuinely unexpected.
     return null;
   }
+}
+
+/**
+ * Forget this account's count (review 2026-09-11 finding 5): called when
+ * the person leaves Community, so a home screen never keeps publishing a
+ * count on behalf of someone who has withdrawn. Never throws.
+ *
+ * @param {string} uid
+ */
+export async function clearCachedFriends(uid) {
+  try {
+    if (uid) await AsyncStorage.removeItem(friendsCacheKey(uid));
+  } catch (_e) { /* best-effort */ }
 }

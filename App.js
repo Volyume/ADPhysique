@@ -118,12 +118,17 @@ TaskManager.defineTask(VOLYUME_DAILY_SYNC, async () => {
     await syncAll({ userId: supabaseUserId, localUserId: supabaseUserId, triggeredBy: 'periodic' });
     // CR-14 (communities-revamp-2026-09-10/24-PHASE4-SPEC.md section 2):
     // best-effort widget refresh, same shape as the AppState backgrounding
-    // hook below (lazy require, one call, swallow any failure), so a widget
-    // left alone for a day still refreshes its friends count at most twice
-    // a day when the OS runs this task.
+    // hook below (lazy require, one call, swallow any failure). AWAITED
+    // (review 2026-09-11 finding 4): returning from this task ends it, so
+    // an un-awaited write was suspended before its reads finished. What
+    // this headless run delivers is the LOCAL refresh (next session, the
+    // week's count, and a friends line that lapses when the day changes);
+    // the friends count itself is not fetched here, because the store's
+    // health consent is unresolved in a process that never mounted the app
+    // and the Community gate fails closed on that, exactly as it should.
     try {
       // eslint-disable-next-line global-require
-      require('./src/lib/widgets/writer').writeWidgetSnapshot(supabaseUserId).catch(() => {});
+      await require('./src/lib/widgets/writer').writeWidgetSnapshot(supabaseUserId).catch(() => {});
     } catch (_) {}
     return 'newData';
   } catch (e) {

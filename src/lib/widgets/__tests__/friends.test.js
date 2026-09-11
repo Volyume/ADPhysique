@@ -14,7 +14,7 @@
  */
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
-  default: { getItem: jest.fn(), setItem: jest.fn() },
+  default: { getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn() },
 }));
 jest.mock('../../community/boards', () => ({ loadBoard: jest.fn() }));
 jest.mock('../../community/profile', () => ({ readCachedMe: jest.fn(), hasProfile: jest.fn() }));
@@ -24,7 +24,8 @@ const { loadBoard } = require('../../community/boards');
 const { readCachedMe, hasProfile } = require('../../community/profile');
 const { todayLocalKey } = require('../../dayKey');
 const {
-  FRIENDS_CACHE_KEY, countFriendsTrainedToday, readCachedFriends, fetchFriendsTrainedToday,
+  FRIENDS_CACHE_KEY, friendsCacheKey, countFriendsTrainedToday, readCachedFriends,
+  fetchFriendsTrainedToday, clearCachedFriends,
 } = require('../friends');
 
 beforeEach(() => {
@@ -96,32 +97,55 @@ describe('fetchFriendsTrainedToday: a success', () => {
       ],
     });
     const out = await fetchFriendsTrainedToday('u1');
-    expect(loadBoard).toHaveBeenCalledWith({ scope: 'following', window: 'week', limit: 50 });
+    // Review 2026-09-11 finding 3: the SAME day key goes to the server and
+    // onto the cache, from one clock read, so a call straddling midnight can
+    // never stamp yesterday's server answer as today's.
+    expect(loadBoard).toHaveBeenCalledWith({
+      scope: 'following', window: 'week', limit: 50, today: todayLocalKey(),
+    });
     expect(out).toEqual({ dayKey: todayLocalKey(), count: 2, fetchedAt: expect.any(Number) });
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith(FRIENDS_CACHE_KEY, JSON.stringify(out));
+    // Finding 5: the cache is namespaced by account.
+    expect(friendsCacheKey('u1')).toBe(`${FRIENDS_CACHE_KEY}:u1`);
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(friendsCacheKey('u1'), JSON.stringify(out));
   });
 });
 
 describe('readCachedFriends', () => {
   test('a well-shaped cache entry is returned as-is', async () => {
     AsyncStorage.getItem.mockResolvedValue(JSON.stringify({ dayKey: '2026-09-11', count: 3, fetchedAt: 123 }));
-    expect(await readCachedFriends()).toEqual({ dayKey: '2026-09-11', count: 3, fetchedAt: 123 });
+    expect(await readCachedFriends('u1')).toEqual({ dayKey: '2026-09-11', count: 3, fetchedAt: 123 });
   });
 
   test('missing, malformed or hostile cache content never throws and returns null', async () => {
     AsyncStorage.getItem.mockResolvedValue(null);
-    expect(await readCachedFriends()).toBeNull();
+    expect(await readCachedFriends('u1')).toBeNull();
 
     AsyncStorage.getItem.mockResolvedValue('not json');
-    expect(await readCachedFriends()).toBeNull();
+    expect(await readCachedFriends('u1')).toBeNull();
 
     AsyncStorage.getItem.mockResolvedValue(JSON.stringify({ dayKey: 4, count: 'x' }));
-    expect(await readCachedFriends()).toBeNull();
+    expect(await readCachedFriends('u1')).toBeNull();
 
     AsyncStorage.getItem.mockResolvedValue(JSON.stringify([1, 2, 3]));
-    expect(await readCachedFriends()).toBeNull();
+    expect(await readCachedFriends('u1')).toBeNull();
 
     AsyncStorage.getItem.mockRejectedValue(new Error('fs down'));
-    expect(await readCachedFriends()).toBeNull();
+    expect(await readCachedFriends('u1')).toBeNull();
+  });
+});
+
+describe('clearCachedFriends (review 2026-09-11 finding 5)', () => {
+  test('removes this account\'s key only and never throws', async () => {
+    await clearCachedFriends('u1');
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith(friendsCacheKey('u1'));
+    AsyncStorage.removeItem.mockRejectedValueOnce(new Error('fs down'));
+    await expect(clearCachedFriends('u1')).resolves.toBeUndefined();
+    await clearCachedFriends(null);
+    expect(AsyncStorage.removeItem).toHaveBeenCalledTimes(2);
+  });
+
+  test('readCachedFriends without an account id reads nothing', async () => {
+    expect(await readCachedFriends(null)).toBeNull();
+    expect(AsyncStorage.getItem).not.toHaveBeenCalled();
   });
 });

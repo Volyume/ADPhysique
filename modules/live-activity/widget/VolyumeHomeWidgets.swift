@@ -49,7 +49,13 @@ private struct VolyumeNextSessionData: Decodable {
 
 private struct VolyumeConsistencyData: Decodable {
   let completed: Int
-  let planned: Int
+  // Review 2026-09-11 finding 1: OPTIONAL. snapshot.js publishes
+  // `planned: null` whenever there is no active plan (C6 RD6-9: no invented
+  // denominator), and a non-optional Int made the synthesised decoder throw
+  // on that null, which took the WHOLE snapshot down: both iOS home widgets
+  // rendered their placeholder for anyone without a plan. Rendered below
+  // exactly as src/widgets/widgets.js does: "N of M" with a plan, "N" without.
+  let planned: Int?
   // Founder ruling (Today truth repair): the weekly run/streak construct is
   // rejected product-wide and snapshot.js no longer publishes streakWeeks.
   // Kept as an OPTIONAL rather than deleted so an older widget binary paired
@@ -97,7 +103,12 @@ private func loadVolyumeWidgetSnapshot() -> VolyumeWidgetSnapshotData? {
 private func todayLocalDayKey() -> String {
   let formatter = DateFormatter()
   formatter.dateFormat = "yyyy-MM-dd"
-  formatter.calendar = Calendar.current
+  // Review 2026-09-11 finding 2: ALWAYS the Gregorian calendar. The JS key
+  // (dayKey.js, Date.getFullYear and friends) is proleptic Gregorian
+  // whatever the device is set to; Calendar.current on a device set to the
+  // Buddhist or Japanese calendar would stamp a different year and the two
+  // keys would never match, hiding the line for good.
+  formatter.calendar = Calendar(identifier: .gregorian)
   formatter.timeZone = TimeZone.current
   formatter.locale = Locale(identifier: "en_US_POSIX")
   return formatter.string(from: Date())
@@ -278,10 +289,10 @@ private struct ConsistencyHomeContent: View {
     if let c = snapshot?.consistency {
       VStack(alignment: .leading, spacing: 6) {
         Eyebrow(text: "THIS WEEK")
-        Text("\(c.completed) of \(c.planned)")
+        Text(c.planned.map { "\(c.completed) of \($0)" } ?? "\(c.completed)")
           .font(.system(size: 26, weight: .bold))
           .foregroundColor(TEXT)
-        SessionDots(completed: c.completed, planned: c.planned)
+        SessionDots(completed: c.completed, planned: c.planned ?? 0)
         // Founder ruling (Today truth repair): the "N weeks running" line is
         // REMOVED here exactly as in src/widgets/widgets.js, so the two
         // implementations of this widget stay identical.
@@ -317,7 +328,7 @@ private struct ConsistencyAccessoryContent: View {
     if let c = snapshot?.consistency {
       VStack(alignment: .leading, spacing: 2) {
         Text("This week").font(.caption2)
-        Text("\(c.completed) of \(c.planned) sessions")
+        Text(c.planned.map { "\(c.completed) of \($0) sessions" } ?? "\(c.completed) sessions")
           .font(.system(size: 15, weight: .semibold))
           .widgetAccentable()
           .lineLimit(1)

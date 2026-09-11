@@ -215,7 +215,19 @@ export async function checkHandle(handle) {
 export async function leaveCommunity() {
   try {
     const out = await callCommunity('community_leave', {});
-    await clearCachedMe(currentUserId());
+    const uid = currentUserId();
+    await clearCachedMe(uid);
+    // CR-14, review 2026-09-11 finding 5: the home-screen widget's friends
+    // count goes too, and the snapshot is rewritten at once (no network
+    // stage), so a home screen never keeps publishing a count on behalf
+    // of someone who has just left. Lazy requires: friends.js imports this
+    // module. Best-effort: leaving has already succeeded above.
+    try {
+      // eslint-disable-next-line global-require
+      await require('../widgets/friends').clearCachedFriends(uid);
+      // eslint-disable-next-line global-require
+      await require('../widgets/writer').writeWidgetSnapshot(uid, { refreshFriends: false });
+    } catch (_e) { /* best-effort */ }
     return out;
   } catch (e) {
     logError('Community.leaveCommunity', e, { code: e?.code ?? null });
