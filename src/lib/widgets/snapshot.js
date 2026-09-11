@@ -18,6 +18,13 @@
  * and a `now`, so it is fully unit-testable; the gather + persist live in the
  * thin writer below, behind a storage adapter that swaps to the native
  * App-Group / SharedPreferences bridge at EAS-build time (see writeWidgetSnapshot).
+ *
+ * CR-14 (`docs/communities-revamp-2026-09-10/24-PHASE4-SPEC.md`): the
+ * snapshot also carries an optional `friends` block, a same-day COUNT of
+ * followed people who trained today. Presence, never a person: no handle,
+ * name, avatar, gym or anything that identifies who, and no line at all
+ * unless the count is 1 or more for today. Suppressed under the same calm
+ * mode / open ED flag rule as the consistency block above.
  */
 
 export const WIDGET_SNAPSHOT_VERSION = 1;
@@ -30,17 +37,30 @@ function trim(s, max) {
   return s == null ? null : String(s).trim().slice(0, max) || null;
 }
 
+// CR-14 (`docs/communities-revamp-2026-09-10/24-PHASE4-SPEC.md` section 2):
+// the friends block's own `dayKey` must be a real YYYY-MM-DD key, the same
+// format `todayLocalKey()` (src/lib/dayKey.js) produces, so a malformed
+// cache entry can never reach the renderers.
+const DAY_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
  * Build the versioned widget snapshot from already-shaped inputs. Pure.
  *
  * @param {object}  input
  * @param {?object} input.nextSession  { name, dayLabel?, weekInBlock?: {week,total} } | null
  * @param {?object} input.consistency  { completed, planned } | null
- * @param {boolean} input.edFlagOpen   true => suppress the consistency block entirely
+ * @param {?object} input.friends      { dayKey, count } | null (CR-14: a
+ *   same-day count of followed people who trained today, never a person --
+ *   source: src/lib/widgets/friends.js)
+ * @param {boolean} input.edFlagOpen   true => suppress the consistency AND
+ *   friends blocks entirely (spec section 1 rule 4: the same social-
+ *   comparison suppression as calm mode / an open ED flag applies everywhere)
  * @param {number}  input.now          epoch ms stamped onto the snapshot
- * @returns {{ v:number, nextSession:?object, consistency:?object, computedAt:number }}
+ * @returns {{ v:number, nextSession:?object, consistency:?object, friends:?object, computedAt:number }}
  */
-export function buildWidgetSnapshot({ nextSession = null, consistency = null, edFlagOpen = false, now = Date.now() } = {}) {
+export function buildWidgetSnapshot({
+  nextSession = null, consistency = null, friends = null, edFlagOpen = false, now = Date.now(),
+} = {}) {
   const ns = nextSession && trim(nextSession.name, 40)
     ? {
       name: trim(nextSession.name, 40),
@@ -76,10 +96,26 @@ export function buildWidgetSnapshot({ nextSession = null, consistency = null, ed
       })
     : null;
 
+  // CR-14 (spec section 1 rules 1, 3, 4, 5): presence, never absence -- a
+  // count only appears for TODAY, with a real (>=1) figure, and never
+  // under calm mode / an open ED flag. `friends` carries exactly
+  // `dayKey`, `count` and `label`: never a name, handle or avatar (the
+  // caller already reduced its input to a bare count before it gets here).
+  const friendsDayKeyOk = typeof friends?.dayKey === 'string' && DAY_KEY_RE.test(friends.dayKey);
+  const friendsCount = friendsDayKeyOk ? clampInt(friends.count) : 0;
+  const fr = (!edFlagOpen && friendsDayKeyOk && friendsCount >= 1)
+    ? {
+      dayKey: friends.dayKey,
+      count: friendsCount,
+      label: friendsCount === 1 ? '1 friend trained today' : `${friendsCount} friends trained today`,
+    }
+    : null;
+
   return {
     v: WIDGET_SNAPSHOT_VERSION,
     nextSession: ns,
     consistency: cons,
+    friends: fr,
     computedAt: Number.isFinite(now) ? now : Date.now(),
   };
 }

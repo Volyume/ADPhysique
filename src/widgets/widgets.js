@@ -44,7 +44,12 @@ const MUTED = '#9E9E9E';
 // is handled natively (RNWidgetProvider.java:54 -> openApp) and never reaches
 // the JS task handler, so widgetTaskHandler keeps its render-only behaviour.
 // Shell is the root of BOTH widgets, so one declaration covers both.
-function Shell({ eyebrow, children }) {
+//
+// CR-14 (24-PHASE4-SPEC.md section 2): an optional `friends` prop renders a
+// row below `children` -- 6 dp amber presence dot + the "N friends trained
+// today" line, MUTED text (amber on the signal only, D148). Callers decide
+// WHETHER to pass it; Shell itself does no suppression or day-matching.
+function Shell({ eyebrow, friends, children }) {
   return (
     <FlexWidget
       clickAction="OPEN_APP"
@@ -62,14 +67,32 @@ function Shell({ eyebrow, children }) {
         <TextWidget text={eyebrow} style={{ fontSize: 11, color: MUTED, letterSpacing: 1 }} />
       </FlexWidget>
       {children}
+      {friends ? (
+        <FlexWidget style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+          <FlexWidget style={{
+            width: 6, height: 6, borderRadius: 3, backgroundColor: AMBER, marginRight: 6,
+          }} />
+          <TextWidget text={friends.label} style={{ fontSize: 12, color: MUTED }} maxLines={1} />
+        </FlexWidget>
+      ) : null}
     </FlexWidget>
   );
 }
 
-export function NextSessionWidget({ snapshot }) {
+// CR-14 size ruling (lead, from app.json): NextSession is 3 cells wide,
+// 180 x 110 dp minimum, resizable, and has the room (brand row + name +
+// week + one line under 110 dp); WeeklyConsistency is 2 cells, 110 x 110 dp
+// minimum, resizeMode none, and a 23-character line neither fits its width
+// in one row nor its height under the count, the dots and the "sessions"
+// caption. So the friends line renders on NextSessionWidget ONLY --
+// WeeklyConsistencyWidget's own "THIS WEEK" tree below never receives it;
+// its ED-suppressed fallback renders the NextSession tree, which then
+// carries the line as any NextSession render does.
+export function NextSessionWidget({ snapshot, todayKey }) {
   const ns = snapshot?.nextSession;
+  const friends = (snapshot?.friends && snapshot.friends.dayKey === todayKey) ? snapshot.friends : null;
   return (
-    <Shell eyebrow="NEXT SESSION">
+    <Shell eyebrow="NEXT SESSION" friends={friends}>
       {ns ? (
         <FlexWidget style={{ flexDirection: 'column' }}>
           <TextWidget text={ns.name} style={{ fontSize: 20, fontWeight: 'bold', color: TEXT }} />
@@ -113,10 +136,12 @@ function SessionDots({ completed, planned }) {
   );
 }
 
-export function WeeklyConsistencyWidget({ snapshot }) {
+export function WeeklyConsistencyWidget({ snapshot, todayKey }) {
   const c = snapshot?.consistency;
-  // Suppressed (ED flag) or no data -> neutral next-session content.
-  if (!c) return <NextSessionWidget snapshot={snapshot} />;
+  // Suppressed (ED flag) or no data -> neutral next-session content, which
+  // then carries the friends line itself (NextSessionWidget's own logic
+  // above) -- this widget's OWN "THIS WEEK" tree below stays unchanged.
+  if (!c) return <NextSessionWidget snapshot={snapshot} todayKey={todayKey} />;
   return (
     <Shell eyebrow="THIS WEEK">
       <FlexWidget style={{ flexDirection: 'column' }}>

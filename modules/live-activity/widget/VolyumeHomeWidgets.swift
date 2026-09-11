@@ -30,6 +30,13 @@ import WidgetKit
  * COMP-018 ED-flag fallback to neutral next-session content) already
  * happened in snapshot.js before the JSON reached here — this file only
  * decides "does a consistency block exist in the JSON, yes/no."
+ *
+ * CR-14 (docs/communities-revamp-2026-09-10/24-PHASE4-SPEC.md): the
+ * snapshot also carries an optional friends block, a same-day COUNT of
+ * followed people who trained today. Presence, never a person: no handle,
+ * name, avatar, gym or anything that identifies who, and this file decodes
+ * only dayKey, count and label for it. The lock-screen accessory view is
+ * unchanged.
  */
 
 // MARK: - Snapshot model (mirrors src/lib/widgets/snapshot.js's JSON shape)
@@ -53,10 +60,19 @@ private struct VolyumeConsistencyData: Decodable {
   let label: String
 }
 
+// CR-14: a friend-trained-today COUNT, never a person -- no handle, name
+// or avatar exists anywhere in this payload or this file.
+private struct VolyumeFriendsData: Decodable {
+  let dayKey: String
+  let count: Int
+  let label: String
+}
+
 private struct VolyumeWidgetSnapshotData: Decodable {
   let v: Int
   let nextSession: VolyumeNextSessionData?
   let consistency: VolyumeConsistencyData?
+  let friends: VolyumeFriendsData?
   let computedAt: Double
 }
 
@@ -72,6 +88,19 @@ private func loadVolyumeWidgetSnapshot() -> VolyumeWidgetSnapshotData? {
     let data = json.data(using: .utf8)
   else { return nil }
   return try? JSONDecoder().decode(VolyumeWidgetSnapshotData.self, from: data)
+}
+
+// CR-14: mirrors src/lib/dayKey.js's todayLocalKey() -- the device's own
+// local calendar day, formatted YYYY-MM-DD, so a widget left untouched
+// overnight compares the friends block's dayKey against the day it is
+// rendering on, not the day the JSON was written.
+private func todayLocalDayKey() -> String {
+  let formatter = DateFormatter()
+  formatter.dateFormat = "yyyy-MM-dd"
+  formatter.calendar = Calendar.current
+  formatter.timeZone = TimeZone.current
+  formatter.locale = Locale(identifier: "en_US_POSIX")
+  return formatter.string(from: Date())
 }
 
 // MARK: - Timeline
@@ -151,10 +180,29 @@ private struct SessionDots: View {
   }
 }
 
+// CR-14: "N friend(s) trained today" -- count only, never a person. Amber
+// on the signal only (D148): the dot carries the colour, the text stays
+// MUTED. Rendered at the foot of the next-session and consistency home
+// contents (before their Spacer), never the lock-screen accessory view.
+private struct FriendsLine: View {
+  let label: String
+  var body: some View {
+    HStack(spacing: 6) {
+      Circle().fill(AMBER).frame(width: 6, height: 6)
+      Text(label)
+        .font(.system(size: 12))
+        .foregroundColor(MUTED)
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+    }
+  }
+}
+
 // MARK: - Next-session content (home screen: systemSmall / systemMedium)
 
 private struct NextSessionHomeContent: View {
   let nextSession: VolyumeNextSessionData?
+  let friends: VolyumeFriendsData?
 
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -183,6 +231,11 @@ private struct NextSessionHomeContent: View {
           .font(.system(size: 14))
           .foregroundColor(MUTED)
       }
+      // CR-14: today's friend count, only when the cached block is for
+      // TODAY on this device (mirrors the Android NextSessionWidget rule).
+      if let f = friends, f.dayKey == todayLocalDayKey() {
+        FriendsLine(label: f.label)
+      }
       Spacer(minLength: 0)
     }
     .padding(14)
@@ -194,7 +247,7 @@ private struct NextSessionHomeContent: View {
 private struct VolyumeNextSessionEntryView: View {
   let entry: VolyumeWidgetEntry
   var body: some View {
-    NextSessionHomeContent(nextSession: entry.snapshot?.nextSession)
+    NextSessionHomeContent(nextSession: entry.snapshot?.nextSession, friends: entry.snapshot?.friends)
   }
 }
 
@@ -235,13 +288,20 @@ private struct ConsistencyHomeContent: View {
         Text("sessions")
           .font(.system(size: 12))
           .foregroundColor(MUTED)
+        // CR-14: SwiftUI lays the systemSmall family out itself (unlike the
+        // fixed-size Android RemoteViews WeeklyConsistencyWidget), so this
+        // tree has the room to carry the line too -- both home contents
+        // carry it on iOS, deliberately unlike the Android-only restriction.
+        if let f = snapshot?.friends, f.dayKey == todayLocalDayKey() {
+          FriendsLine(label: f.label)
+        }
         Spacer(minLength: 0)
       }
       .padding(14)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       .background(SURFACE)
     } else {
-      NextSessionHomeContent(nextSession: snapshot?.nextSession)
+      NextSessionHomeContent(nextSession: snapshot?.nextSession, friends: snapshot?.friends)
     }
   }
 }

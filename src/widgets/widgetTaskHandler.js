@@ -12,6 +12,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WIDGET_SNAPSHOT_ASYNC_KEY } from '../lib/widgets/storage';
 import { emptyWidgetSnapshot } from '../lib/widgets/snapshot';
+import { todayLocalKey } from '../lib/dayKey';
 import { NextSessionWidget, WeeklyConsistencyWidget } from './widgets';
 
 async function loadSnapshot() {
@@ -25,14 +26,18 @@ async function loadSnapshot() {
 export async function widgetTaskHandler(props) {
   const widgetInfo = props.widgetInfo;
   const snapshot = await loadSnapshot();
+  // CR-14: the device-local day, compared against the friends block's own
+  // dayKey at render time so a widget left untouched overnight never shows
+  // yesterday's count as today's (24-PHASE4-SPEC.md section 1 rule 5).
+  const todayKey = todayLocalKey();
 
   switch (widgetInfo.widgetName) {
     case 'WeeklyConsistency':
-      props.renderWidget(<WeeklyConsistencyWidget snapshot={snapshot} />);
+      props.renderWidget(<WeeklyConsistencyWidget snapshot={snapshot} todayKey={todayKey} />);
       break;
     case 'NextSession':
     default:
-      props.renderWidget(<NextSessionWidget snapshot={snapshot} />);
+      props.renderWidget(<NextSessionWidget snapshot={snapshot} todayKey={todayKey} />);
       break;
   }
 }

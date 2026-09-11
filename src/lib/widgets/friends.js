@@ -1,0 +1,97 @@
+/**
+ * CR-14 (`docs/communities-revamp-2026-09-10/24-PHASE4-SPEC.md` section 2)
+ * -- the "a friend trained today" count feeder for the home-screen widget.
+ *
+ * Presence, never a person (spec section 1 rule 1): this module answers
+ * ONE question, "how many people I follow trained today", as a plain
+ * integer. It never reads or carries a handle, a display name, an avatar,
+ * a gym or anything else that could identify who. Consent is the server's
+ * -- `community_board`'s `following` scope only ever returns people who
+ * already share consistency with the caller (`src/lib/community/boards.js`
+ * header), so nothing new is disclosed by counting its rows.
+ *
+ * Offline-first stays intact (spec section 1 rule 6): `gatherWidgetInputs`
+ * (writer.js) reads ONLY the small local cache this module maintains
+ * (`readCachedFriends`), never the network, on every snapshot write. The
+ * network read (`fetchFriendsTrainedToday`) is a separate, best-effort
+ * SECOND stage writer.js runs after the local-only snapshot is already
+ * persisted, and it is guarded (spec rule 7): it never calls the Community
+ * board RPC for someone who has not joined Community (no cached profile),
+ * so this surface adds no new RPC and no migration.
+ *
+ * A failure of any kind -- offline, a `CommunityError` of any code, no
+ * profile -- is swallowed and answers null. Nothing is logged at error
+ * level for an expected refusal here: `src/lib/community/transport.js`
+ * already classifies and logs whatever is genuinely unexpected before it
+ * ever reaches this module's catch.
+ */
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { loadBoard } from '../community/boards';
+import { readCachedMe, hasProfile } from '../community/profile';
+import { todayLocalKey } from '../dayKey';
+
+export const FRIENDS_CACHE_KEY = '@volyume_widget_friends_v1';
+
+/**
+ * Pure: how many of these board rows are a followed person who trained
+ * today (never the caller's own row). Clamped so a hostile/huge payload
+ * can never inflate the widget's number past three digits.
+ *
+ * @param {Array} rows `loadBoard`'s `rows` ({card, trainedToday, isYou, ...})
+ * @returns {number} 0..999
+ */
+export function countFriendsTrainedToday(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  const n = list.filter((row) => row && row.trainedToday && !row.isYou).length;
+  return Math.max(0, Math.min(999, n));
+}
+
+/**
+ * Read the small local cache. Shape-checked, never throws.
+ *
+ * @returns {Promise<{dayKey: string, count: number, fetchedAt: number}|null>}
+ */
+export async function readCachedFriends() {
+  try {
+    const raw = await AsyncStorage.getItem(FRIENDS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (typeof parsed.dayKey !== 'string') return null;
+    if (!Number.isFinite(Number(parsed.count))) return null;
+    if (!Number.isFinite(Number(parsed.fetchedAt))) return null;
+    return { dayKey: parsed.dayKey, count: Number(parsed.count), fetchedAt: Number(parsed.fetchedAt) };
+  } catch (_e) {
+    return null; // a cache miss/corruption is never an error the user hears about
+  }
+}
+
+/**
+ * The network stage (spec section 1 rules 6-7): fetch, count and cache
+ * today's friends-trained-today figure. Best-effort -- returns null on
+ * ANY failure (offline, no profile, a `CommunityError` of any code, an
+ * unexpected throw) and leaves the existing cache untouched in that case.
+ *
+ * @param {string} uid
+ * @returns {Promise<{dayKey: string, count: number, fetchedAt: number}|null>}
+ */
+export async function fetchFriendsTrainedToday(uid) {
+  try {
+    if (!uid) return null;
+    // Guard 7: never a Community RPC for someone who has not joined --
+    // the cached `me` is a local, no-network read (profile.js).
+    const me = await readCachedMe(uid);
+    if (!hasProfile(me)) return null;
+
+    const { rows } = await loadBoard({ scope: 'following', window: 'week', limit: 50 });
+    const count = countFriendsTrainedToday(rows);
+    const cache = { dayKey: todayLocalKey(), count, fetchedAt: Date.now() };
+    await AsyncStorage.setItem(FRIENDS_CACHE_KEY, JSON.stringify(cache));
+    return cache;
+  } catch (_e) {
+    // Offline, a CommunityError of any code, or an unexpected throw: this
+    // stage is best-effort and must never surface a failure or touch the
+    // cache. transport.js already logs whatever is genuinely unexpected.
+    return null;
+  }
+}

@@ -51,6 +51,7 @@ Document map (filled as the campaign runs):
 - `11-research-safety-cohorts.md`   Safety, data-protection and platform-policy deltas of cohorts, PR visibility, workout sharing, encouragement (Sonnet, web)
 - `20-BLUEPRINT.md`                 Lead synthesis and design ruling: vision, IA, surfaces, data, phased build, verification (Fable, hands-on)
 - `40-DECISIONS.md`                 CR-nn rulings with rationale; pointer entry in the main register
+- `24-PHASE4-SPEC.md`               Phase 4 spec (lead): the home-screen widget's friend-trained-today count; the edit gate for lane P4
 
 Agent window: two agents at a time (standing rule); all research agents
 are READ-ONLY on the tree and write only their own numbered file here.
