@@ -56,8 +56,9 @@ guard moved to the applied wording. Android build #3576 dispatched from
 main (`eba113d`) 2026-09-11 05:59 UTC. Fresh-eyes review (Opus) of
 phase 4: FIX FIRST, ten findings, eight fixed and landed (including a
 pre-existing iOS widget decode failure without an active plan); finding
-9 becomes migration 171 (count-only RPC), founder-gated. #3576 predates
-the fixes; a second build needs the founder's go. Founder-side: rotate
+9 becomes migration 171 (count-only RPC, written 3bd68dc, review in
+flight), founder-gated. #3576 SUCCEEDED but predates the fixes; a second
+build needs the founder's go. Founder-side: rotate
 the repo's Supabase token.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★

@@ -210,9 +210,12 @@ Finding 9 (data minimisation: the board returns up to fifty profile
 cards to derive one integer) is ruled under D33 as a follow-up
 migration 171, a count-only RPC `community_friends_trained_today`, to be
 written, hostile-reviewed and applied on the founder's phrase; the board
-path stands until then. Build #3576 predates these fixes: a second build
-needs the founder's explicit go (builds cost money). NEXT: write 171;
-founder-side still open: rotate the repo secret `SUPABASE_ACCESS_TOKEN`.
+path stands until then. Build #3576 SUCCEEDED (completed 06:23 UTC; APK and AAB on the run) but
+predates these fixes: a second build needs the founder's explicit go
+(builds cost money). Migration 171 WRITTEN (3bd68dc), guarded, hostile
+review in flight; then the founder's phrase, the apply through the
+connector, and the client switch to the RPC. Founder-side still open:
+rotate the repo secret `SUPABASE_ACCESS_TOKEN`.
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
