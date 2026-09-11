@@ -35,8 +35,9 @@ Bounds that bind every ruling below (CLAUDE.md section 2; CR-08):
   headed, guarded, hostile-reviewed, applied only on "run against
   production" through the connector (standing ruling 2026-09-11).
 - Onboarding enforcement: no defaults, no tap-through on a required
-  answer. The gym and the join decision are ANSWERS with an explicit
-  "none" and "not now", never a pre-ticked box.
+  answer. The join decision is an ANSWER with an explicit "skip", never a
+  pre-ticked box. The gym is OPTIONAL (founder ruling 2026-09-11: "the
+  gym can't be compulsory"): a venue, an explicit "none", or nothing.
 
 ## 1. Current state (verified 2026-09-11, file:line)
 
@@ -91,9 +92,10 @@ Bounds that bind every ruling below (CLAUDE.md section 2; CR-08):
 
 1. Onboarding gains step 5, "Your gym", between Training week and
    Injuries and limitations (steps 5 to 7 become 6 to 8;
-   `TOTAL_STEPS = 8`). An adult answers two things there: which gym they
-   train at (GymPicker, or "I don't train at a gym"), and whether to join
-   Community now, with their profile already filled in: a handle
+   `TOTAL_STEPS = 8`). An adult may say which gym they train at
+   (GymPicker, or "I don't train at a gym"; optional, founder ruling
+   2026-09-11) and decides whether to join Community now, with their
+   profile already filled in: a handle
    suggested by the server from their email local part, their name from
    the first name they gave (or the handle), the four rules, the privacy
    receipt. Two explicit actions: "Join Community" and "Skip for now"
@@ -153,11 +155,14 @@ c. **Fallbacks when the email is unusable** (Apple private relay
 d. **Display name pre-fill:** the first name the person typed at step 2
    when present, else the suggested handle. Editable on the step
    (`DISPLAY_NAME_MAX`), on Edit profile as today.
-e. **The gym is an answer with an explicit "none".** The step's GymPicker
-   (search, near me, add a gym) and a tertiary "I don't train at a gym".
-   No default. A picked gym is confirmed through GymDetailSheet exactly as
-   on Join. A person who joins gets `community_set_gyms(gym_id, [])`; a
-   person who chooses "Skip for now" keeps the gym on device for the Join
+e. **The gym is optional** (founder ruling 2026-09-11, "the gym can't be
+   compulsory", superseding the first cut's required answer). The step's
+   GymPicker (search, near me, add a gym) and a tertiary "I don't train
+   at a gym"; no default, no gap: either action proceeds with a venue,
+   an explicit "none", or nothing chosen. A picked gym is confirmed
+   through GymDetailSheet exactly as on Join. A person who joins gets
+   `community_set_gyms(gym_id, [])` only when a gym was picked; a person
+   who chooses "Skip for now" keeps a picked gym on device for the Join
    screen to pre-select.
 f. **Under 18: no Community step at onboarding.** The age is already
    answered at step 2; `advanceFrom4` skips to step 6 for an age under 18,
@@ -347,8 +352,8 @@ obeys the privacy guard: no `firstName`, `email`, `age`, `dateOfBirth`)
    and a "Community rules" secondary link to `CommunityRules`.
 6. Actions: primary "Join Community" (never greyed out, the D146 rule: a
    tap with a gap marks the step attempted and surfaces the first missing
-   answer, `surfaceGaps` pattern: gym, then handle, then name); secondary
-   "Skip for now" (a tap needs only the gym answered). Each sets
+   answer, `surfaceGaps` pattern: handle, then name; the gym is never a
+   gap); secondary "Skip for now" (a tap needs nothing). Each sets
    `communityJoin` and advances
    to step 6. Under founder answer B this row becomes the one notice line
    and the step's Continue; nothing else changes.
@@ -404,9 +409,9 @@ the Home intro card, the widget, every board and feed.
 ## 5. Copy (British English, no em dash, Community's voice)
 
 - Step title: "Where do you train?"
-- Step sub: "Pick your gym and Volyume connects you with the people who
-  train there. Only training facts are ever shared: never your body, your
-  food or your location."
+- Step sub: "Optional: pick your gym and Volyume connects you with the
+  people who train there. Only training facts are ever shared: never your
+  body, your food or your location."
 - Gym none row: "I don't train at a gym"; after choosing it: "No gym
   chosen. You can add one any time from Community."
 - Picked gym caption: "Only the gym you choose. Never your location."
@@ -459,7 +464,7 @@ disabled Create during its check (fresh-eyes review N1, held).
 1. New account, age 30, Google sign-in: after Training week the step
    "Where do you train?" shows a suggested handle from the email local
    part and the first name as the name. Expected: both editable; "Join
-   Community" disabled until a gym or "I don't train at a gym" is chosen.
+   Community" works with no gym chosen at all (the gym is optional).
 2. Search a gym by postcode, confirm it, tap "Join Community", finish
    setup. Expected: the plan payoff as before; Community opens on your
    profile with the gym shown; the Home intro card never appears.

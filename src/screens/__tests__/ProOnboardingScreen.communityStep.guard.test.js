@@ -87,14 +87,17 @@ describe('nothing on the step is pre-decided', () => {
     expect(STEP5).not.toMatch(/Switch|checked=\{true\}|defaultChecked/);
   });
 
-  test('the gym is an answer with an explicit "none", and a gap surfaces rather than defaults', () => {
+  test('the gym is optional (founder 2026-09-11): never a gap, either action proceeds without it, and an explicit "none" still exists', () => {
     expect(STEP5).toContain(`title="I don't train at a gym"`);
     expect(STEP5).toContain("onPress={() => { setGymVenue(null); setGymChoice('none'); }}");
-    expect(SRC).toMatch(/if \(!gymChoice\) errs\.gym = "Choose your gym, or say you don't train at one\.";/);
-    expect(SRC).toMatch(/surfaceGaps\(errs, \['gym', 'handle', 'name'\], 'group5'/);
+    expect(STEP5).toContain('sub="Optional: pick your gym');
+    const v = SRC.slice(SRC.indexOf('function validateStep5('), SRC.indexOf('function advanceFrom5(intent)'));
+    expect(v).not.toMatch(/gymChoice|gymVenue|errs\.gym/);
+    expect(SRC).not.toMatch(/errs\.gym/);
+    expect(SRC).toMatch(/surfaceGaps\(errs, \['handle', 'name'\], 'group5'/);
   });
 
-  test('a join needs a handle the server has not refused and a name; "Not now" needs only the gym', () => {
+  test('a join needs a handle the server has not refused and a name; "Skip for now" needs nothing', () => {
     const v = SRC.slice(SRC.indexOf('function validateStep5('), SRC.indexOf('function advanceFrom5(intent)'));
     expect(v).toMatch(/if \(join && communityJoin !== 'existing'\) \{/);
     expect(v).toContain("if (communityHandleState === 'taken') errs.handle = 'That handle is taken. Try another.';");
@@ -124,10 +127,8 @@ describe('the join runs at completion, explicitly, and never blocks the wizard',
     expect(block).toContain('await applyOnboardingGym(user.id, gymVenue.id);');
   });
 
-  test('a gap line is rendered once per field: TextField owns it from `error`', () => {
-    expect(STEP5).not.toContain('<FieldError message={errors5.handle} />');
-    expect(STEP5).not.toContain('<FieldError message={errors5.name} />');
-    expect(STEP5).toContain('<FieldError message={errors5.gym} />');
+  test('a gap line is rendered once per field: TextField owns it from `error`, and the gym has none', () => {
+    expect(STEP5).not.toMatch(/<FieldError message=\{errors5\./);
   });
 
   test('the profile is created through the shared lib path (the upsert that records consent), never a private RPC', () => {

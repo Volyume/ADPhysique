@@ -487,10 +487,11 @@ export default function ProOnboardingScreen({ navigation }) {
   const [attempted7, setAttempted7] = useState(false);
   const [attempted8, setAttempted8] = useState(false);
   // ── Step 5, Your gym (CR-15 / D158; 25-ONBOARDING-COMMUNITY-SPEC.md 4.3) ──
-  // Two answers: the gym (a venue, or an explicit "none") and whether to join
-  // Community now ("Join Community" beside "Skip for now") with the profile
-  // below already filled in. Nothing here is a default: `gymChoice` and
-  // `communityJoin` start null and only a tap sets them.
+  // Two answers: the gym (OPTIONAL, founder ruling 2026-09-11: a venue, an
+  // explicit "none", or nothing) and whether to join Community now ("Join
+  // Community" beside "Skip for now") with the profile below already
+  // filled in. Nothing here is a default: `gymChoice` and `communityJoin`
+  // start null and only a tap sets them.
   const [gymVenue, setGymVenue] = useState(null);       // { id, display_name, town, outward, brand } | null
   const [gymChoice, setGymChoice] = useState(null);     // null | 'picked' | 'none'
   const [pendingGym, setPendingGym] = useState(null);   // a tapped venue awaiting GymDetailSheet
@@ -1251,13 +1252,14 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   // ── Step 5, Your gym: gates (CR-15 / D158) ─────────────────────────────
-  // The gym is the required answer on this step (a venue, or an explicit
-  // "none"). "Join Community" additionally needs a handle the server has
-  // not refused and a name people will see; "Not now" needs only the gym.
-  // Neither button greys out (the D146 rule): a tap surfaces the gaps.
+  // The gym is OPTIONAL (founder ruling 2026-09-11: "the gym can't be
+  // compulsory"): a venue, an explicit "none", or nothing at all, and
+  // either action proceeds without it. "Join Community" needs a handle the
+  // server has not refused and a name people will see; "Skip for now"
+  // needs nothing. Neither button greys out (the D146 rule): a tap
+  // surfaces the gaps.
   function validateStep5({ join = joinAttempted } = {}) {
     const errs = {};
-    if (!gymChoice) errs.gym = "Choose your gym, or say you don't train at one.";
     if (join && communityJoin !== 'existing') {
       const h = communityHandle.trim().toLowerCase();
       if (!h) errs.handle = 'Choose a handle: 3 to 20 letters, numbers or underscores.';
@@ -1275,7 +1277,7 @@ export default function ProOnboardingScreen({ navigation }) {
     setJoinAttempted(join);
     const errs = validateStep5({ join });
     if (Object.keys(errs).length) {
-      surfaceGaps(errs, ['gym', 'handle', 'name'], 'group5', { handle: communityHandleRef, name: communityNameRef }, setAttempted5);
+      surfaceGaps(errs, ['handle', 'name'], 'group5', { handle: communityHandleRef, name: communityNameRef }, setAttempted5);
       return;
     }
     // An existing member's answer is recorded as such: nothing is created
@@ -2608,13 +2610,13 @@ export default function ProOnboardingScreen({ navigation }) {
             <ProOnboardingHeader
               step={step} skipGym={skipGymStep}
               title="Where do you train?"
-              sub="Pick your gym and Volyume connects you with the people who train there. Only training facts are ever shared: never your body, your food or your location."
+              sub="Optional: pick your gym and Volyume connects you with the people who train there. Only training facts are ever shared: never your body, your food or your location."
               onBack={goBack}
             />
 
             <View onLayout={markY('group5')}>
             <QuestionGroup icon="location-outline">
-              <View style={styles.sectionLast} onLayout={markY('gym')}>
+              <View style={styles.sectionLast}>
                 {gymChoice === 'picked' && gymLine ? (
                   <>
                     <Text style={[styles.fieldLabel, live.fieldLabel]}>Your gym</Text>
@@ -2664,7 +2666,6 @@ export default function ProOnboardingScreen({ navigation }) {
                     />
                   </>
                 )}
-                <FieldError message={errors5.gym} />
               </View>
             </QuestionGroup>
 

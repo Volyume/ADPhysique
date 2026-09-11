@@ -6516,8 +6516,9 @@ the founder).** The founder ordered gym selection at onboarding passed
 through to Community, a Community account created automatically from the
 username or email local part, the person joined to their gym
 automatically, and the handle and display name changeable. Ruled: a new
-onboarding step 5, "Your gym", after Training week; the gym is an answer
-with an explicit "I don't train at a gym"; the profile is pre-filled (a
+onboarding step 5, "Your gym", after Training week; the gym is optional
+(founder ruling the same day, "the gym can't be compulsory": a venue, an
+explicit "I don't train at a gym", or nothing); the profile is pre-filled (a
 handle the server derives from the email local part, with the sign-in
 given name and a neutral base as fallbacks, and the first name as the
 display name) and created by ONE explicit tap, "Join Community" beside
