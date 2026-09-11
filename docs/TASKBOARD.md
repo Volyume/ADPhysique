@@ -243,8 +243,19 @@ real-corpus tests (every kit fills all eight slots; kettlebells only
 gives Kettlebell Goblet Squat, Deadlift, Floor Press, Row, Halo and
 three bodyweight fills; bands only is all band work). Lane suites 9 /
 740 green, lint clean on the lane's files; the full run follows the
-Community fix lane's landing. Opus review of this landing: still owed
-before the next build (standing law); queued behind C-FIX.
+Community fix lane's landing (done: full run green at 1ec8262). Opus
+fresh-eyes review of the landing (2026-09-11): FIX FIRST. Lead rulings
+sent back to lane B-A: duration rows keep their own seconds (a plank
+was being given 12 to 15 "reps" that the logger reads as seconds);
+ranking order becomes exception-last, kit-first, tier, unused pattern,
+compound-first (shoulders included), difficulty, name, id; the
+shoulders group ranks across all three muscles; drops counted by row
+id; the exception list lazy-required so the screen's import graph no
+longer loads the corpus; unfilled slots named in the toast; presets
+show a derived selected state; the remembered kit never overwrites a
+tap; property pins replace row-name pins; spec ruling 4 and 6 and
+D156 amended. Lane in flight; landing follows lead review and the
+full run. Recovery: re-dispatch the brief plus the review rulings.
 
 ## COMMUNITIES REVAMP: FRESH-EYES REVIEW OF PHASES 0 TO 3 — RETURNED FIX FIRST; ALL FINDINGS LANDED (997b5cd, 1ec8262); 172 CLIENT HALF IN FLIGHT
 
