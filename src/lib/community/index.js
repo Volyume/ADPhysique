@@ -66,7 +66,7 @@ export {
   onboardingChoiceKey, pendingJoinKey,
   rememberOnboardingChoice, readOnboardingChoice, clearOnboardingChoice,
   writePendingJoin, readPendingJoin, clearPendingJoin,
-  performCommunityJoin, retryPendingJoin,
+  performCommunityJoin, retryPendingJoin, applyOnboardingGym,
 } from './onboardingJoin';
 
 export { COMMUNITY_RULES_SUMMARY } from './rulesSummary';

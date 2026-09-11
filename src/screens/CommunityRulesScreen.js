@@ -129,7 +129,10 @@ export const COMMUNITY_RULES_TEXT = {
     body:
       'Questions about these rules, or anything Community-related you '
       + 'would rather raise directly:',
-    email: 'support@volyume.app',
+    // `address`, not `email`: the privacy source guard forbids the word in
+    // every Community file's code (the handle is derived server-side from
+    // the sign-in email, migrate_173); the address itself is copy.
+    address: 'support@volyume.app',
   },
   version: {
     number: COMMUNITY_RULES_VERSION,
@@ -254,9 +257,9 @@ export default function CommunityRulesScreen({ navigation, route }) {
             variant="secondary"
             size="sm"
             fullWidth={false}
-            title={text.contact.email}
-            onPress={() => Linking.openURL(`mailto:${text.contact.email}`).catch(() => {})}
-            accessibilityLabel={`Email ${text.contact.email}`}
+            title={text.contact.address}
+            onPress={() => Linking.openURL(`mailto:${text.contact.address}`).catch(() => {})}
+            accessibilityLabel={`Email ${text.contact.address}`}
           />
         </View>
 

@@ -183,8 +183,17 @@ h. **Offline and refusals queue, never lose, the choice.** A join that
    or `invalid_input` (a server-side rule the client did not know) is
    stored with the handle cleared so the retry suggests afresh. A pending
    join older than 14 days is dropped unsent (the person's wish may have
-   moved on; the Join screen is one tap away). The Join screen supersedes
-   any pending join.
+   moved on; the Join screen is one tap away); a failed retry keeps the
+   ORIGINAL decision time, so the expiry is real. The Join screen
+   supersedes any pending join. Known and unmitigated (fresh-eyes review
+   2026-09-11, N7): a drain in flight while the Join screen's own create
+   succeeds can land its update over the typed handle, and a leave while
+   a drain is in flight can re-create the profile; both need the same
+   account acting in two places inside one network round trip.
+   An EXISTING member who reaches the step (a re-run wizard on a new
+   device) is told so; a gym they pick goes on their profile with their
+   other gyms kept (`applyOnboardingGym`), "none" leaves the profile
+   alone, and nothing else is written for them.
 i. **Existing accounts** (already onboarded, no profile) are not prompted
    by this order; the Join screen pre-fill (section 4.4) gives them the
    same one tap, and the existing Home intro card after the first session
@@ -345,8 +354,9 @@ obeys the privacy guard: no `firstName`, `email`, `age`, `dateOfBirth`)
    and the step's Continue; nothing else changes.
 7. Minor: `isMinorAnswer(age)` (`parseInt < 18`, the same parse the
    validators use). `advanceFrom4` goes to step 6; `goBack` at step 6
-   returns to step 4; `displayStepOf(step, minor)` counts seven visible
-   steps and shifts the shown index for steps 6 to 8; the draft resume
+   returns to step 4; `displayStepOf(step, minor)` counts six visible
+   steps (step 1 is hidden for every real account, and the gym step is
+   gone) and shifts the shown index for steps 6 to 8; the draft resume
    clamps a minor's step 5 to 4. No copy about age appears anywhere on
    the step.
 8. Completion (`advanceFrom8`, the renamed `advanceFrom7`): after the plan
@@ -406,8 +416,16 @@ the Home intro card, the widget, every board and feed.
 - Actions: "Join Community", "Skip for now" (the onboarding step; the
   Join screen's own gym "Not now" is unchanged).
 - Edit profile handle hint: "Letters, numbers and underscores. You can
-  change your handle once every 30 days."
+  change your handle once every 30 days."; on an invalid shape: "Use 3
+  to 20 letters, numbers or underscores."
 - Edit profile refusal: "You changed your handle less than 30 days ago."
+
+Notes for whoever reads the onboarding funnel: `onboarding_step_completed`
+step numbers 5 to 8 shift by one from this landing (5 is now "Your gym",
+emitted by adults only). A tap on "Join Community" while the live handle
+check is still running surfaces "Checking that handle. Try again in a
+moment." rather than joining blind, the same posture as the Join screen's
+disabled Create during its check (fresh-eyes review N1, held).
 
 ## 6. Tests (written to fail)
 
@@ -449,7 +467,7 @@ the Home intro card, the widget, every board and feed.
    the offline hint; typing a handle and joining still completes setup;
    once online the profile appears without any action (reconnect edge).
 4. New account, age 16. Expected: no gym step; the progress bar shows
-   seven steps; Community later shows the Join screen with its under-18
+   six steps; Community later shows the Join screen with its under-18
    note.
 5. "Skip for now" on the step with a gym chosen, then open Community and tap
    Join. Expected: handle suggested, gym pre-selected, name pre-filled.

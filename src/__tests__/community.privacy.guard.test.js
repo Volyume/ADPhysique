@@ -131,6 +131,10 @@ const FORBIDDEN_READS = [
   /\bscoff\b/i,
   /\bfirst_name\b/i,
   /\bfirstName\b/,
+  // Community at onboarding (2026-09-11, fresh-eyes review N8): the handle
+  // is derived from the sign-in email SERVER-SIDE (migrate_173), so no
+  // Community source may read the address at all.
+  /\bemail\b/i,
   /\bdate_of_birth\b/i,
   /\bdateOfBirth\b/,
   /\bweekly_?[Cc]oach\b/,

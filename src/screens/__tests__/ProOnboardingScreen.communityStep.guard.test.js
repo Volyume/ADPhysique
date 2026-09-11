@@ -118,10 +118,20 @@ describe('the join runs at completion, explicitly, and never blocks the wizard',
     expect(block).toMatch(/^\s*try \{/m);
     expect(block).toContain("} else if (communityJoin === 'later') {");
     expect(block).toContain('await rememberOnboardingChoice(user.id, {');
+    // An existing member's gym answer is applied with their other gyms
+    // kept, and only when they actually picked one (review F2).
+    expect(block).toContain("} else if (communityJoin === 'existing' && gymChoice === 'picked' && gymVenue?.id) {");
+    expect(block).toContain('await applyOnboardingGym(user.id, gymVenue.id);');
+  });
+
+  test('a gap line is rendered once per field: TextField owns it from `error`', () => {
+    expect(STEP5).not.toContain('<FieldError message={errors5.handle} />');
+    expect(STEP5).not.toContain('<FieldError message={errors5.name} />');
+    expect(STEP5).toContain('<FieldError message={errors5.gym} />');
   });
 
   test('the profile is created through the shared lib path (the upsert that records consent), never a private RPC', () => {
-    expect(SRC).toMatch(/import \{\s*isValidHandle, checkHandle, suggestHandle, performCommunityJoin, rememberOnboardingChoice,\s*COMMUNITY_RULES_SUMMARY, DISPLAY_NAME_MAX,\s*\} from '\.\.\/lib\/community';/);
+    expect(SRC).toMatch(/import \{\s*isValidHandle, checkHandle, suggestHandle, performCommunityJoin, rememberOnboardingChoice,\s*applyOnboardingGym, COMMUNITY_RULES_SUMMARY, DISPLAY_NAME_MAX,\s*\} from '\.\.\/lib\/community';/);
     expect(CODE).not.toMatch(/callCommunity|community_upsert_profile|community_set_gyms|community_handle_suggestion/);
   });
 });

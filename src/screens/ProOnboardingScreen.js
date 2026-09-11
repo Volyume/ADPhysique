@@ -25,7 +25,7 @@ import PrivacyReceipt from '../components/community/PrivacyReceipt';
 import { venueLine } from '../lib/gyms';
 import {
   isValidHandle, checkHandle, suggestHandle, performCommunityJoin, rememberOnboardingChoice,
-  COMMUNITY_RULES_SUMMARY, DISPLAY_NAME_MAX,
+  applyOnboardingGym, COMMUNITY_RULES_SUMMARY, DISPLAY_NAME_MAX,
 } from '../lib/community';
 import OAuthButtons from '../components/auth/OAuthButtons';
 import useAppStore from '../store/useAppStore';
@@ -2050,6 +2050,11 @@ export default function ProOnboardingScreen({ navigation }) {
               gym: gymVenue,
               displayName: communityDisplayName.trim() || null,
             });
+          } else if (communityJoin === 'existing' && gymChoice === 'picked' && gymVenue?.id) {
+            // An existing member re-running the wizard: the gym they chose
+            // goes on their profile with their other gyms kept; "none"
+            // leaves their profile alone (fresh-eyes review F2, lead ruling).
+            await applyOnboardingGym(user.id, gymVenue.id);
           }
         } catch (e) {
           // eslint-disable-next-line global-require
@@ -2582,7 +2587,7 @@ export default function ProOnboardingScreen({ navigation }) {
   if (step === 5) {
     const errors5 = attempted5 ? validateStep5() : {};
     const handleLine = communityJoin === 'existing'
-      ? `You're already in Community as @${communityHandle}.`
+      ? `You're already in Community as @${communityHandle}. A gym chosen above goes on your profile.`
       : ({
         idle: HANDLE_HINT,
         invalid: HANDLE_HINT,
@@ -2685,8 +2690,9 @@ export default function ProOnboardingScreen({ navigation }) {
                       accessibilityLabel="Handle"
                       error={errors5.handle}
                     />
-                    <Text style={[styles.fieldHint, { color: handleTone }]}>{handleLine}</Text>
-                    <FieldError message={errors5.handle} />
+                    {/* TextField renders the gap line itself from `error`
+                        (the step 2 convention): only the live line here. */}
+                    <Text style={[styles.fieldHint, live.fieldHint, { color: handleTone }]}>{handleLine}</Text>
                   </View>
                   <View style={styles.sectionLast} onLayout={markY('name')}>
                     <Text style={[styles.fieldLabel, live.fieldLabel]}>Name</Text>
@@ -2697,7 +2703,6 @@ export default function ProOnboardingScreen({ navigation }) {
                       accessibilityLabel="Display name"
                       error={errors5.name}
                     />
-                    <FieldError message={errors5.name} />
                   </View>
                 </>
               )}

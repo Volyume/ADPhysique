@@ -720,16 +720,34 @@ describe('the "Not now" onboarding choice pre-fill', () => {
 describe('a pending join pre-fills instead, and supersedes the queue', () => {
   test('pre-fills handle, name and gym from the pending join, and never asks for a suggestion or the onboarding choice', async () => {
     readPendingJoin.mockResolvedValueOnce({
-      handle: 'queued_handle', displayName: 'Queued Name', gymId: 'g9', decidedAt: Date.now(),
+      handle: 'queued_handle',
+      displayName: 'Queued Name',
+      gymId: 'g9',
+      gym: { id: 'g9', display_name: 'Iron Works', town: 'Leith', outward: 'EH6', brand: null },
+      decidedAt: Date.now(),
     });
     const { tree } = await mount();
     await flush(); // the cascaded live-check debounce for the pre-filled handle
 
     expect(field(tree, 'Handle').props.value).toBe('queued_handle');
     expect(field(tree, 'Display name').props.value).toBe('Queued Name');
-    expect(flattenText(tree.toJSON())).toContain('Your main gym');
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Your main gym');
+    // The venue's own name, never a nameless row (fresh-eyes review N3).
+    expect(text).toContain('Iron Works');
     expect(suggestHandle).not.toHaveBeenCalled();
     expect(readOnboardingChoice).not.toHaveBeenCalled();
+  });
+
+  test('a pending join carrying only a gym id leaves the finder open rather than rendering a nameless gym row', async () => {
+    readPendingJoin.mockResolvedValueOnce({
+      handle: 'queued_handle', displayName: 'Queued Name', gymId: 'g9', gym: null, decidedAt: Date.now(),
+    });
+    const { tree } = await mount();
+    await flush();
+
+    expect(field(tree, 'Handle').props.value).toBe('queued_handle');
+    expect(flattenText(tree.toJSON())).not.toContain('Your main gym');
   });
 
   test('a successful create clears the pending join: this screen supersedes it', async () => {

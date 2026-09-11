@@ -85,8 +85,12 @@ auto-joined to their gym at onboarding; handle and display name
 changeable. Recon landed; lead spec `docs/communities-revamp-2026-09-10/
 25-ONBOARDING-COMMUNITY-SPEC.md` (CR-15, D158); migration 173 written,
 hostile-reviewed and fixed, NOT applied (gated on founder Q2 and the
-phrase; apply before the next build); step 5 "Your gym" built by the
-lead with its guard; lib lane OJ-1 landing; founder questions Q1 to Q5
+phrase; apply before the next build); step 5 "Your gym" and the lib
+lane landed and merged (four commits from 7d12d75), then the Opus
+fresh-eyes review's blocker and fixes landed on top (the queued join's
+expiry, the double gap line, an existing member's gym, the minor step
+count, the privacy guard now forbidding `email` in Community code);
+settled tree 1297 suites / 20092 tests. Founder questions Q1 to Q5
 delivered in chat (consent shape, handle from the email local part, the
 minor check failing open, the rules-version parity finding, the goal
 setup screen's equipment list). Board section carries the detail.

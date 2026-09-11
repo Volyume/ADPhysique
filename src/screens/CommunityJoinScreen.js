@@ -55,7 +55,7 @@ import {
   SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS,
   COMMUNITY_DISCIPLINE_KEYS, COMMUNITY_DISCIPLINE_LABELS, MAX_DISCIPLINES_PER_PROFILE,
   listMyGroups, COMMUNITY_RULES_SUMMARY,
-  suggestHandle, readOnboardingChoice, readPendingJoin, clearPendingJoin,
+  suggestHandle, readOnboardingChoice, clearOnboardingChoice, readPendingJoin, clearPendingJoin,
 } from '../lib/community';
 import { bandRows, NOT_ENOUGH_LINE, NOTHING_SHARED_LINE } from './CommunityTrainingProfileScreen';
 
@@ -205,7 +205,9 @@ export default function CommunityJoinScreen({ navigation, route }) {
       if (pending) {
         if (pending.handle) setHandle(pending.handle);
         if (pending.displayName) setDisplayName(pending.displayName);
-        if (pending.gymId) { setPrimaryGym(pending.gym ?? { id: pending.gymId }); setGymStep('picked'); }
+        // Only a venue with its name pre-selects: an id alone would
+        // render a nameless gym row (fresh-eyes review N3).
+        if (pending.gymId && pending.gym) { setPrimaryGym(pending.gym); setGymStep('picked'); }
         return;
       }
       const choice = await readOnboardingChoice(uid);
@@ -326,6 +328,9 @@ export default function CommunityJoinScreen({ navigation, route }) {
       // won (spec section 4.4): best effort, the create itself has
       // already succeeded above.
       clearPendingJoin(uid).catch(() => { /* best effort */ });
+      // And the remembered "Skip for now" choice, which has no expiry of
+      // its own (fresh-eyes review N4).
+      clearOnboardingChoice(uid).catch(() => { /* best effort */ });
       toast.show('Your profile is live');
       if (next?.screen) navigation.replace(next.screen, next.params ?? {});
       else navigation.goBack();

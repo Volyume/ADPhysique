@@ -202,11 +202,16 @@ export default function CommunityEditProfileScreen({ navigation }) {
       }
     }, HANDLE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [handle, profile, ready]);
+    // `profile?.handle`, not `profile`: a `me` refresh gives the profile a
+    // fresh identity and would re-check an unsaved handle each time (N6).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [handle, profile?.handle, ready]);
 
   const handleLine = {
     idle: HANDLE_HINT,
-    invalid: HANDLE_HINT,
+    // The shape rule, stated (fresh-eyes review N5): Save greys out on an
+    // invalid handle, and the line must say why.
+    invalid: 'Use 3 to 20 letters, numbers or underscores.',
     checking: 'Checking',
     available: 'Available',
     taken: 'Taken',

@@ -49,7 +49,7 @@ describe('buildDraft / parseDraft round-trip', () => {
     expect(parsed).toEqual({ step: 3, answers });
   });
 
-  test('only wizard steps 2-6 are persistable (step 1 is auth-owned)', () => {
+  test('only wizard steps 2-7 are persistable (step 1 is auth-owned)', () => {
     expect(buildDraft(1, answers)).toBeNull();
     expect(buildDraft(0, answers)).toBeNull();
     // CR-15: the wizard is eight steps; 7 is now the last persistable step.
@@ -57,7 +57,7 @@ describe('buildDraft / parseDraft round-trip', () => {
     expect(buildDraft(8, answers)).toBeNull();
     expect(buildDraft('nope', answers)).toBeNull();
     expect(buildDraft(2.5, answers)).toBeNull();
-    for (const step of [2, 3, 4, 5, 6]) {
+    for (const step of [2, 3, 4, 5, 6, 7]) {
       expect(buildDraft(step, answers)?.step).toBe(step);
     }
   });

@@ -259,17 +259,17 @@ async function classifyRefusal(uid, error, pending) {
  * @returns {Promise<{ok: boolean, queued: boolean, error: (string|null)}>}
  */
 export async function performCommunityJoin(uid, {
-  handle = null, displayName = null, gymId = null, gym = null,
+  handle = null, displayName = null, gymId = null, gym = null, decidedAt = null,
 } = {}) {
   if (!uid) return { ok: false, queued: false, error: 'not_signed_in' };
   if (inFlight.has(uid)) return inFlight.get(uid);
-  const run = performCommunityJoinOnce(uid, { handle, displayName, gymId, gym })
+  const run = performCommunityJoinOnce(uid, { handle, displayName, gymId, gym, decidedAt })
     .finally(() => { inFlight.delete(uid); });
   inFlight.set(uid, run);
   return run;
 }
 
-async function performCommunityJoinOnce(uid, { handle, displayName, gymId, gym }) {
+async function performCommunityJoinOnce(uid, { handle, displayName, gymId, gym, decidedAt }) {
   // Never write over a profile that already exists (lead review
   // 2026-09-11). The onboarding step skips an existing member, but a
   // retry from the queue, a race with the Join screen, or a re-run
@@ -305,7 +305,41 @@ async function performCommunityJoinOnce(uid, { handle, displayName, gymId, gym }
     return { ok: true, queued: false, error: null };
   }
 
-  return classifyRefusal(uid, error, { handle, displayName, gymId, gym });
+  // The ORIGINAL decision time rides every re-queue (fresh-eyes review
+  // 2026-09-11, B1): a failed retry that re-stamped it would make the
+  // 14-day expiry unreachable, and the daily sync's headless drain fails
+  // closed on an unresolved consent read every single day.
+  return classifyRefusal(uid, error, {
+    handle, displayName, gymId, gym, ...(Number.isFinite(decidedAt) ? { decidedAt } : {}),
+  });
+}
+
+/**
+ * An EXISTING member who answered the onboarding gym question (a re-run
+ * wizard on a new device): apply the gym while keeping every other gym
+ * they already listed (lead ruling under D33, fresh-eyes review
+ * 2026-09-11, F2). The plain `setGyms(gymId, [])` a new profile uses
+ * would wipe them. Never throws; nothing is written for a caller with
+ * no profile or no gym.
+ *
+ * @param {string} uid
+ * @param {string|null} gymId
+ * @returns {Promise<boolean>} true when the gym was applied
+ */
+export async function applyOnboardingGym(uid, gymId) {
+  if (!uid || !gymId) return false;
+  try {
+    const { me } = await loadMe({ force: true, userId: uid });
+    if (!hasProfile(me)) return false;
+    const current = me?.profile?.other_gym_ids;
+    const others = (Array.isArray(current) ? current : [])
+      .filter((id) => typeof id === 'string' && id !== gymId);
+    await setGyms(gymId, others);
+    await loadMe({ force: true, userId: uid });
+    return true;
+  } catch (_e) {
+    return false; // best effort: the gym can be set from Edit profile
+  }
 }
 
 /**
@@ -320,6 +354,10 @@ export async function retryPendingJoin(uid) {
   const pending = await readPendingJoin(uid);
   if (!pending) return { ok: false, queued: false };
   return performCommunityJoin(uid, {
-    handle: pending.handle, displayName: pending.displayName, gymId: pending.gymId, gym: pending.gym,
+    handle: pending.handle,
+    displayName: pending.displayName,
+    gymId: pending.gymId,
+    gym: pending.gym,
+    decidedAt: pending.decidedAt,
   });
 }

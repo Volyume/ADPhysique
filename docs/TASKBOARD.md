@@ -416,9 +416,25 @@ never written over (cache-first read before any write), an empty name
 falls back to the suggested handle (a retry could otherwise refuse
 forever), one join per account at a time (three drain points can
 overlap), and the pending record carries the minimal venue so the Join
-screen never renders a nameless gym row. NEXT: full run, per-feature
-commits, merge; Opus fresh-eyes review of the landing; founder answers
-Q1 to Q5 (chat); on Q2 and the phrase, 173 through the connector. Founder observation carried (not in this order):
+screen never renders a nameless gym row. LANDED on main (7d12d75,
+6c2ce2a, 2906364, 91950b2): settled tree lint exit 0, `Test Suites: 1
+skipped, 1297 passed`, `Tests: 16 skipped, 20085 passed`. Opus
+fresh-eyes review (OJ-REV): FIX FIRST, all landed (next commit): B1 a
+failed retry re-stamped the queued join's decision time, so the 14-day
+expiry could never fire and the daily sync's fail-closed consent read
+kept it immortal (the original time now rides every re-queue, pinned);
+F1 a gap line rendered twice under each text field; F2 an existing
+member's gym answer was dropped (lead ruling: applied with their other
+gyms kept, "none" leaves the profile alone); F3 the spec said seven
+visible steps for a minor, the code says six (spec corrected); N2 to N6
+and N8 (the privacy source guard now forbids the word email in every
+Community file; the rules screen's contact key renamed), N10; N1 held
+(a tap during the live check surfaces a line, as Join disables Create);
+N7 recorded as known (two one-round-trip races); N9 noted (funnel step
+numbers shift). Settled tree after the fixes: lint exit 0, `Test Suites:
+1 skipped, 1297 passed`, `Tests: 16 skipped, 20092 passed`. NEXT:
+founder answers Q1 to Q5 (chat); on Q2 and the phrase, 173 through the
+connector BEFORE the next build; no build until the founder says. Founder observation carried (not in this order):
 `_community_rules_version()` still returns 2 while the client accepts 3
 (the v3 rules text never triggers a re-accept server-side), Q4.
 

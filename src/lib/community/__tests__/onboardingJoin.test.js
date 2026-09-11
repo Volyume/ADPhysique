@@ -47,7 +47,7 @@ jest.mock('../../gyms', () => ({ setGyms: jest.fn() }));
 const { upsertProfile, loadMe, suggestHandle } = require('../profile');
 const { setGyms } = require('../../gyms');
 const {
-  performCommunityJoin, retryPendingJoin,
+  performCommunityJoin, retryPendingJoin, applyOnboardingGym,
   rememberOnboardingChoice, readOnboardingChoice, clearOnboardingChoice,
   writePendingJoin, readPendingJoin, clearPendingJoin,
   PENDING_JOIN_MAX_AGE_MS, onboardingChoiceKey, pendingJoinKey,
@@ -256,6 +256,51 @@ describe('performCommunityJoin: lead review 2026-09-11 (existing profile, empty 
     upsertProfile.mockRejectedValue(communityError('unavailable'));
     await retryPendingJoin('u1');
     expect((await readPendingJoin('u1')).gym).toEqual({ id: 'g1', display_name: 'Iron Works', town: 'Leith', outward: 'EH6', brand: null });
+  });
+});
+
+describe('the decision time survives every failed retry (fresh-eyes review B1)', () => {
+  test('a re-queued join keeps its ORIGINAL decidedAt, so the 14-day expiry can actually fire', async () => {
+    const decidedAt = Date.now() - 10 * 24 * 60 * 60 * 1000;
+    await writePendingJoin('u1', { handle: 'rowan_lifts', displayName: 'Rowan', gymId: null, decidedAt });
+    upsertProfile.mockRejectedValue(communityError('health_consent_unresolved'));
+    await retryPendingJoin('u1');
+    await retryPendingJoin('u1');
+    expect((await readPendingJoin('u1')).decidedAt).toBe(decidedAt);
+    // Five days later it is stale, and the next drain sends nothing.
+    upsertProfile.mockClear();
+    expect(await readPendingJoin('u1', { nowMs: decidedAt + PENDING_JOIN_MAX_AGE_MS + 1 })).toBeNull();
+    expect(await retryPendingJoin('u1')).toEqual({ ok: false, queued: false });
+    expect(upsertProfile).not.toHaveBeenCalled();
+  });
+
+  test('a first attempt straight from the wizard stamps now, exactly as before', async () => {
+    const before = Date.now();
+    upsertProfile.mockRejectedValue(communityError('offline'));
+    await performCommunityJoin('u1', { handle: 'rowan_lifts', displayName: 'Rowan', gymId: null });
+    expect((await readPendingJoin('u1')).decidedAt).toBeGreaterThanOrEqual(before);
+  });
+});
+
+describe('applyOnboardingGym: an existing member keeps their other gyms (fresh-eyes review F2)', () => {
+  test('sets the answered gym as primary and carries the other gyms across, minus a duplicate', async () => {
+    loadMe.mockResolvedValue({ me: { profile: { handle: 'rowan_lifts', other_gym_ids: ['g2', 'g1', 'g3'] } }, fromCache: false, error: null });
+    expect(await applyOnboardingGym('u1', 'g1')).toBe(true);
+    expect(setGyms).toHaveBeenCalledWith('g1', ['g2', 'g3']);
+    expect(loadMe).toHaveBeenCalledWith({ force: true, userId: 'u1' });
+  });
+
+  test('never writes for a caller with no profile, no gym, or no uid', async () => {
+    expect(await applyOnboardingGym('u1', 'g1')).toBe(false); // NO_PROFILE_ME
+    expect(await applyOnboardingGym('u1', null)).toBe(false);
+    expect(await applyOnboardingGym(null, 'g1')).toBe(false);
+    expect(setGyms).not.toHaveBeenCalled();
+  });
+
+  test('a failed set is best effort: false, never a throw', async () => {
+    loadMe.mockResolvedValue({ me: HAS_PROFILE_ME, fromCache: false, error: null });
+    setGyms.mockRejectedValue(communityError('unavailable'));
+    expect(await applyOnboardingGym('u1', 'g1')).toBe(false);
   });
 });
 
