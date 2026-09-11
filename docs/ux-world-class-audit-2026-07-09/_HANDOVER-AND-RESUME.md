@@ -53,9 +53,12 @@ count-only "N friends trained today" widget line (edit gate
 `24-PHASE4-SPEC.md`, CR-14), lead-reviewed with a no-fetch-under-the-gate
 rule added; settled tree lint clean, 1287 suites green after the 170
 guard moved to the applied wording. Android build #3576 dispatched from
-main (`eba113d`) 2026-09-11 05:59 UTC. All four phases and the cloud are
-live; the founder walks from #3576 whenever they choose. Founder-side:
-rotate the repo's Supabase token.
+main (`eba113d`) 2026-09-11 05:59 UTC. Fresh-eyes review (Opus) of
+phase 4: FIX FIRST, ten findings, eight fixed and landed (including a
+pre-existing iOS widget decode failure without an active plan); finding
+9 becomes migration 171 (count-only RPC), founder-gated. #3576 predates
+the fixes; a second build needs the founder's go. Founder-side: rotate
+the repo's Supabase token.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 

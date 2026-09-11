@@ -193,11 +193,26 @@ skipped, 1286 passed, 1287 of 1288`, `Tests: 1 failed, 16 skipped,
 pinning the README's pre-apply wording, updated to the applied entry
 and re-run green (266/266). Android build #3576 dispatched from main
 (`eba113d`) 2026-09-11 05:59 UTC, the first build carrying phases 0 to
-4 and the live migration 170. NEXT: the founder installs #3576 when
-they want the walks (phase 0 to 4 checklists are in chat); founder-side
-still open: rotate the repo secret `SUPABASE_ACCESS_TOKEN`. Campaign
-work is complete; the fresh-eyes review of phase 4 against the
-blueprint is the only open lead item (Opus, small).
+4 and the live migration 170. FRESH-EYES REVIEW of phase 4 (Opus,
+2026-09-11) returned FIX FIRST with ten findings; the lead fixed eight
+in one commit (the pre-existing iOS decode failure on `planned: null`
+that blanked both iOS home widgets for anyone without a plan; the iOS
+day key pinned to the Gregorian calendar; one clock read for the
+server's today and the cache stamp; the cache namespaced by account and
+cleared on leaving Community with the widget rewritten; serialised
+writes; a fifteen-minute trust window so app-switching never spends the
+board's rate budget; the background task awaits the writer, with the
+honest note that the friends fetch fails closed there under the
+unresolved consent gate; the ED read-failure path pinned; ellipsis on
+the Android line). Settled tree: lint exit 0; `Test Suites: 1 skipped,
+1287 passed, 1287 of 1288`, `Tests: 16 skipped, 19701 passed, 19717`.
+Finding 9 (data minimisation: the board returns up to fifty profile
+cards to derive one integer) is ruled under D33 as a follow-up
+migration 171, a count-only RPC `community_friends_trained_today`, to be
+written, hostile-reviewed and applied on the founder's phrase; the board
+path stands until then. Build #3576 predates these fixes: a second build
+needs the founder's explicit go (builds cost money). NEXT: write 171;
+founder-side still open: rotate the repo secret `SUPABASE_ACCESS_TOKEN`.
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
