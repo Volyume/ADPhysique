@@ -48,9 +48,14 @@ founder: "You have the connector"; the lead APPLIED 170 (A, A2, B)
 through the Supabase MCP connection under a checksum protocol (record:
 `supabase/README.md` 170 status block) and redeployed `community-notify`
 as v3 (deployed source identical to the repo). Founder 2026-09-11: "No
-walk needed continue". NEXT: phase 4, the widget line "a friend trained
-today" (edit gate `24-PHASE4-SPEC.md`, lane P4 Sonnet), then one Android
-build from main. Founder-side: rotate the repo's Supabase token.
+walk needed continue". PHASE 4 LANDED and MERGED to main (b5b7df8): the
+count-only "N friends trained today" widget line (edit gate
+`24-PHASE4-SPEC.md`, CR-14), lead-reviewed with a no-fetch-under-the-gate
+rule added; settled tree lint clean, 1287 suites green after the 170
+guard moved to the applied wording. Android build #3576 dispatched from
+main (`eba113d`) 2026-09-11 05:59 UTC. All four phases and the cloud are
+live; the founder walks from #3576 whenever they choose. Founder-side:
+rotate the repo's Supabase token.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 

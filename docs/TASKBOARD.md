@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## COMMUNITIES REVAMP (2026-09-10, founder prompt) — PHASES 0 to 3 LANDED and MERGED to main; MIGRATION 170 (A, A2, B) APPLIED to production 2026-09-10 (MCP path) and community-notify v3 DEPLOYED; PHASE 4 WIDGET IN BUILD
+## COMMUNITIES REVAMP (2026-09-10, founder prompt) — ALL FOUR BUILD PHASES (0 to 4) LANDED and MERGED to main; MIGRATION 170 (A, A2, B) APPLIED to production 2026-09-10 (MCP path); community-notify v3 DEPLOYED; ANDROID BUILD #3576 DISPATCHED from main 2026-09-11
 
 Founder brief in chat (2026-09-10): Community was spec'd on plan sharing,
 which is the wrong foundation; the purpose is connecting (gym, age group,
@@ -176,9 +176,28 @@ then). Founder 2026-09-11: "No walk needed continue" (the device walks
 are not a gate; the checklists stay in chat for whenever the founder
 wants them). PHASE 4 (widget "a friend trained today", CR-13 Q6): edit
 gate `docs/communities-revamp-2026-09-10/24-PHASE4-SPEC.md`; lane P4
-(Sonnet) builds it; recovery path: re-dispatch the same brief over
-`git checkout -- <lane files>`; agents never commit. THEN one Android
-build from main (phases 0 to 4 together, one paid run rather than two).
+(Sonnet) built it. PHASE 4 LANDED and MERGED to main (commit b5b7df8,
+lead-reviewed): a count-only "N friends trained today" line from the
+following board, cached on device, refreshed as a best-effort second
+stage of the widget writer (never for a person who has not joined
+Community, never under calm mode or an open ED flag: the lead added the
+no-fetch-under-the-gate rule and its two tests), today-only at render
+time on both platforms, Android line on the NextSession widget only
+(size ruling), iOS on both home contents, a source guard pinning that
+the friends block carries only dayKey, count and label. Lead ruling on
+the lane's one STOP: the snapshot always carries `friends` (null when
+absent), like its siblings; the pinned empty-shape assertion extended.
+Settled tree: `npm run lint` exit 0; full run `Test Suites: 1 failed, 1
+skipped, 1286 passed, 1287 of 1288`, `Tests: 1 failed, 16 skipped,
+19692 passed, 19709`, the one failure being `migrate170.rpcOnly.guard`
+pinning the README's pre-apply wording, updated to the applied entry
+and re-run green (266/266). Android build #3576 dispatched from main
+(`eba113d`) 2026-09-11 05:59 UTC, the first build carrying phases 0 to
+4 and the live migration 170. NEXT: the founder installs #3576 when
+they want the walks (phase 0 to 4 checklists are in chat); founder-side
+still open: rotate the repo secret `SUPABASE_ACCESS_TOKEN`. Campaign
+work is complete; the fresh-eyes review of phase 4 against the
+blueprint is the only open lead item (Opus, small).
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
