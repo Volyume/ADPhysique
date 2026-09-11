@@ -993,6 +993,21 @@ export default function App() {
         const connected = !!state?.isConnected;
         if (prevConnected === false && connected === true) {
           callSyncAll('network');
+          // Communities revamp phase 3, closing the recorded "foreground-only
+          // flush" limitation (fresh-eyes review 2026-09-11, item 6): the
+          // ambient items queued while offline drain on the SAME reconnect
+          // edge, from this already-hardened listener rather than a second
+          // one inside a screen. The flush consults the sharing and calm /
+          // ED gate itself before sending anything.
+          try {
+            const sb = getSupabaseClient();
+            sb?.auth.getSession().then(({ data: { session: s } = {} } = {}) => {
+              const uid = s?.user?.id;
+              if (!uid) return;
+              // eslint-disable-next-line global-require
+              require('./src/lib/community').flushPendingAmbientItems(uid).catch(() => {});
+            }).catch(() => {});
+          } catch (_) {}
         }
         prevConnected = connected;
       });

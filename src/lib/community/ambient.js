@@ -187,18 +187,37 @@ export async function publishAmbientItems({
 }
 
 /**
- * Flush every queued item through the same call. A terminal refusal
- * drops its item silently (no toast: this is an ambient background
- * convenience, never a user-facing failure); a retryable one keeps it
- * queued for the next foreground or reconnect. Idempotent throughout:
- * re-sending an item already delivered returns the existing row
- * (`client_ref`), never a duplicate.
+ * Flush every queued item through the same call, behind the same gate as
+ * publishAmbientItems (sharing on, and neither calm mode nor an open ED
+ * flag). A terminal refusal drops its item silently (no toast: this is an
+ * ambient background convenience, never a user-facing failure); a
+ * retryable one keeps it queued for the next foreground or reconnect.
+ * Idempotent throughout: re-sending an item already delivered returns the
+ * existing row (`client_ref`), never a duplicate.
  *
+ * @param {string} userId the account the queue belongs to (fail closed
+ *   without it)
  * @returns {Promise<{flushed: number, dropped: number, remaining: number}>}
  */
-export async function flushPendingAmbientItems() {
+export async function flushPendingAmbientItems(userId) {
   const items = await readPending();
   if (!items.length) return { flushed: 0, dropped: 0, remaining: 0 };
+  // Fresh-eyes review 2026-09-11 (F1, BLOCKER): the SAME gate
+  // publishAmbientItems consults, consulted again at flush time. An item
+  // was queued while sharing was on and the gate allowed; since then the
+  // person may have turned sharing off, or calm mode or an open ED flag
+  // may have arrived, and the server can know neither (both are
+  // device-local). Sharing off: consent withdrawn, the queue is dropped,
+  // nothing is sent. Gated: everything stays queued, nothing is sent,
+  // nothing is dropped. No account id: fail closed, nothing is sent.
+  if (!userId) return { flushed: 0, dropped: 0, remaining: items.length };
+  const share = await readShareSettings(userId);
+  if (!share.share_sessions) {
+    await writePending([]);
+    return { flushed: 0, dropped: items.length, remaining: 0 };
+  }
+  const { allowed } = await sessionShareGateState(userId, share.share_sessions);
+  if (!allowed) return { flushed: 0, dropped: 0, remaining: items.length };
   const stillPending = [];
   let flushed = 0;
   let dropped = 0;

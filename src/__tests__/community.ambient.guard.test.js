@@ -180,7 +180,7 @@ describe('publishAmbientItems and flushPendingAmbientItems: retry vs. drop', () 
     createPost.mockRejectedValueOnce(Object.assign(new Error('offline'), { code: 'offline' }));
     await publishAmbientItems({ userId: 'u1', workoutId: 'w1' });
     createPost.mockResolvedValueOnce({ id: 'p2' });
-    const out = await flushPendingAmbientItems();
+    const out = await flushPendingAmbientItems('u1');
     expect(out).toEqual({ flushed: 1, dropped: 0, remaining: 0 });
     expect(JSON.parse(mockStore.get(PENDING_ITEMS_KEY))).toEqual([]);
   });
@@ -194,10 +194,73 @@ describe('publishAmbientItems and flushPendingAmbientItems: retry vs. drop', () 
     createPost
       .mockRejectedValueOnce(Object.assign(new Error('not_allowed'), { code: 'not_allowed' }))
       .mockResolvedValueOnce({ id: 'p3' });
-    const out = await flushPendingAmbientItems();
+    const out = await flushPendingAmbientItems('u1');
     expect(out.dropped).toBe(1);
     expect(out.flushed).toBe(1);
     expect(out.remaining).toBe(0);
+  });
+});
+
+// Fresh-eyes review 2026-09-11 (F1, BLOCKER): the flush consults the SAME
+// gate as publishAmbientItems, at flush time. Written to FAIL against the
+// shipped code, which re-sent every queued item ungated: an item queued
+// offline with sharing on, then calm mode or an open ED flag, published
+// on the next Community open. Sharing withdrawn drops the queue; the gate
+// holds it; no account id sends nothing.
+describe('flushPendingAmbientItems: the gate at flush time (review F1)', () => {
+  async function queueOne() {
+    createPost.mockRejectedValueOnce(Object.assign(new Error('offline'), { code: 'offline' }));
+    await publishAmbientItems({ userId: 'u1', workoutId: 'w1' });
+    createPost.mockClear();
+  }
+
+  test('calm mode or an open ED flag: nothing is sent, everything stays queued', async () => {
+    await queueOne();
+    sessionShareGateState.mockResolvedValue({ allowed: false, gated: true });
+    const out = await flushPendingAmbientItems('u1');
+    expect(createPost).not.toHaveBeenCalled();
+    expect(out).toEqual({ flushed: 0, dropped: 0, remaining: 1 });
+    expect(JSON.parse(mockStore.get(PENDING_ITEMS_KEY))).toHaveLength(1);
+  });
+
+  test('sharing turned off since queueing: consent withdrawn, the queue is dropped unsent', async () => {
+    await queueOne();
+    readShareSettings.mockResolvedValue({ share_sessions: false, sessions_audience: 'followers' });
+    const out = await flushPendingAmbientItems('u1');
+    expect(createPost).not.toHaveBeenCalled();
+    expect(out).toEqual({ flushed: 0, dropped: 1, remaining: 0 });
+    expect(JSON.parse(mockStore.get(PENDING_ITEMS_KEY))).toEqual([]);
+  });
+
+  test('no account id: fail closed, nothing is sent and nothing is dropped', async () => {
+    await queueOne();
+    const out = await flushPendingAmbientItems();
+    expect(createPost).not.toHaveBeenCalled();
+    expect(out).toEqual({ flushed: 0, dropped: 0, remaining: 1 });
+  });
+
+  test('source: the gate is consulted before any send, and every caller passes the account id', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const ambient = fs.readFileSync(path.join(__dirname, '../lib/community/ambient.js'), 'utf8');
+    const flushAt = ambient.indexOf('export async function flushPendingAmbientItems(userId)');
+    expect(flushAt).toBeGreaterThan(-1);
+    const body = ambient.slice(flushAt, ambient.indexOf('export async function clearPendingAmbientItems', flushAt));
+    expect(body.indexOf('sessionShareGateState(')).toBeGreaterThan(-1);
+    expect(body.indexOf('sessionShareGateState(')).toBeLessThan(body.indexOf('sendAutoItem('));
+    expect(body.indexOf('readShareSettings(')).toBeLessThan(body.indexOf('sendAutoItem('));
+    const hub = fs.readFileSync(path.join(__dirname, '../screens/CommunityHubScreen.js'), 'utf8');
+    const summary = fs.readFileSync(path.join(__dirname, '../screens/WorkoutSummaryScreen.js'), 'utf8');
+    const app = fs.readFileSync(path.join(__dirname, '../../App.js'), 'utf8');
+    expect(hub).not.toMatch(/flushPendingAmbientItems\(\)/);
+    expect(summary).not.toMatch(/flushPendingAmbientItems\(\)/);
+    expect(hub.match(/flushPendingAmbientItems\(consistencyUid\)/g)).toHaveLength(2);
+    expect(summary).toMatch(/flushPendingAmbientItems\(user\.id\)/);
+    // The reconnect edge drains the queue too (the recorded foreground-only
+    // limitation is closed), through the app's hardened NetInfo listener.
+    const edgeAt = app.indexOf("callSyncAll('network')");
+    expect(edgeAt).toBeGreaterThan(-1);
+    expect(app.slice(edgeAt, edgeAt + 1200)).toMatch(/flushPendingAmbientItems\(uid\)/);
   });
 });
 

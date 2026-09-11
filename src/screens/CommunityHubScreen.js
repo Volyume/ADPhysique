@@ -245,11 +245,11 @@ export default function CommunityHubScreen({ navigation, route }) {
     // eslint-disable-next-line global-require
     const { publishConsistencyOnForeground, flushPendingAmbientItems } = require('../lib/community');
     publishConsistencyOnForeground(consistencyUid).catch(() => {});
-    flushPendingAmbientItems().catch(() => {});
+    flushPendingAmbientItems(consistencyUid).catch(() => {});
     const sub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
         publishConsistencyOnForeground(consistencyUid).catch(() => {});
-        flushPendingAmbientItems().catch(() => {});
+        flushPendingAmbientItems(consistencyUid).catch(() => {});
       }
     });
     return () => sub.remove();

@@ -352,7 +352,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     (async () => {
       try {
         const share = await readShareSettings(user.id);
-        flushPendingAmbientItems().catch(() => {});
+        flushPendingAmbientItems(user.id).catch(() => {});
         if (!share.share_sessions) return;
         const prList = (detectedPRs || []).map((p) => ({
           exerciseId: p.exerciseId,
