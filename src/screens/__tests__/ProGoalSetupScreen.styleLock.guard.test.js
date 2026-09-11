@@ -58,7 +58,10 @@ describe('F-16 REVISED point 3: a goal change never regenerates a style plan', (
   });
 
   test('the block-replacing confirm is skipped, because nothing is replaced', () => {
-    expect(source).toMatch(/if \(!styleLock\) \{\s*\n\s*const proceed = await confirmPlanSwitchMidBlock/);
+    // A kit answer (libraryKit) asks its own confirm at the install, naming
+    // the plan (equipmentOptions.shared.guard.test.js); a locked plan never
+    // reaches either.
+    expect(source).toMatch(/if \(!styleLock && !libraryKit\) \{\s*\n\s*const proceed = await confirmPlanSwitchMidBlock/);
   });
 
   test('goal, phase, protein and nutrition still save, unconditionally', () => {
@@ -123,7 +126,9 @@ describe('F-15 here too: circuit rounds are not flattened silently', () => {
     expect(disclosureAt).toBeGreaterThan(-1);
     expect(disclosureAt).toBeLessThan(writeAt);
     expect(save).toMatch(/if \(!acceptsFlatten\) return;/);
-    expect(source).toMatch(/\{hasCircuitGroups \? \(/);
+    // A kit answer replaces the plan outright, so the rebuild wording is
+    // not shown for it (its own offer line says what happens).
+    expect(source).toMatch(/\{hasCircuitGroups && !libraryKit \? \(/);
   });
 });
 

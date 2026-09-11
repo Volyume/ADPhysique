@@ -1,8 +1,9 @@
 /**
  * The ONE ordered list of equipment answers, shared by every screen that
  * asks the question (ProOnboardingScreen at first run, PlanUpdateScreen
- * under Adjust training), so no two screens can offer different answers or
- * different wording for the same answer. Pure data: no I/O, nothing derived.
+ * under Adjust training, ProGoalSetupScreen under Update goal and phase),
+ * so no two screens can offer different answers or different wording for
+ * the same answer. Pure data: no I/O, nothing derived.
  *
  * The first six values ARE the engine's closed equipment-profile vocabulary
  * (planEngine.filterPool and swapEngine.rankSwaps do a bare membership test

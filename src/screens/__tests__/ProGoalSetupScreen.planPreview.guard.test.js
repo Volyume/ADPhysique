@@ -15,7 +15,9 @@ const source = fs.readFileSync(path.join(__dirname, '..', 'ProGoalSetupScreen.js
 
 describe('ProGoalSetupScreen previews the rebuild', () => {
   test('the rebuild goes through the shared prepare / sheet / commit steps', () => {
-    expect(source).toMatch(/import \{ prepareStartWithPlan, commitStartWithPlan \} from '\.\.\/lib\/startWithPlan'/);
+    // The import widened for the F-16 REVISED kit parity (2026-09-11); the
+    // prepare / commit pair is still what the generating path runs.
+    expect(source).toMatch(/import \{\s*\n\s*prepareStartWithPlan, commitStartWithPlan,[^}]*\} from '\.\.\/lib\/startWithPlan'/);
     expect(source).toMatch(/prepareStartWithPlan\(user\.id, updatedProfile, \{\s*\n\s*mode: 'goal',/);
     expect(source).toMatch(/<PlanPreviewSheet/);
     expect(source).toMatch(/confirmLabel="Confirm and rebuild"/);

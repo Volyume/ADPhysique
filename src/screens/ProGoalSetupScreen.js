@@ -21,6 +21,7 @@ import Chip from '../components/Chip';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
+import { logError, logWarn } from '../lib/errorLog';
 import {
   PHYSIQUE_GOALS,
   TRAINING_PHASES,
@@ -43,7 +44,20 @@ import { formatBodyWeightShort } from '../lib/units';
 // prepareStartWithPlan owns the capability pre-flight this path already took
 // (CC27 section 9.6) plus the READ-ONLY dry run; commitStartWithPlan is the
 // generation, run only after the athlete confirms in PlanPreviewSheet.
-import { prepareStartWithPlan, commitStartWithPlan } from '../lib/startWithPlan';
+// F-16 REVISED, parity with first run and Adjust training (founder ruling
+// 2026-09-11): 'Kettlebells' and 'Bands' are answers that install a library
+// plan and never generate, and are stored as the equipment PROFILE
+// generationEquipmentFor maps them to. Same helpers, same copy as
+// ProOnboardingScreen and PlanUpdateScreen, so the three screens cannot drift
+// (the installed line itself is shown by GoalChangeSummary, this screen's
+// receipt).
+import {
+  prepareStartWithPlan, commitStartWithPlan, installLibraryPlanForKit, libraryKitForEquipment,
+  generationEquipmentFor, libraryKitOfferLine, libraryKitWord,
+} from '../lib/startWithPlan';
+// The equipment answers themselves live in ONE shared list with onboarding
+// and Adjust training.
+import { EQUIPMENT_OPTIONS } from '../lib/equipmentOptions';
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 // F-16 REVISED point 3 / F-15 (docs/final-certification-2026-09-05/
@@ -82,14 +96,9 @@ const SESSION_LENGTH_OPTIONS = [
   { label: '90 min', value: 90 },
 ];
 
-const EQUIPMENT_OPTIONS = [
-  { value: 'full_gym',        label: 'Full gym',          sub: 'Barbells, cables, machines, dumbbells' },
-  { value: 'machines_cables', label: 'Machines and cables', sub: 'No free barbells' },
-  { value: 'dumbbells_only',  label: 'Dumbbells only',    sub: 'Adjustable or fixed dumbbells' },
-  { value: 'barbell_plates',  label: 'Barbell and plates', sub: 'Power rack or squat stand setup' },
-  { value: 'home_gym',        label: 'Home gym',          sub: 'Mixed equipment at home' },
-  { value: 'bodyweight',      label: 'Bodyweight',        sub: 'No equipment needed' },
-];
+// The equipment answers are NOT listed here: they come from the ONE shared
+// list (src/lib/equipmentOptions.js, imported above), so this screen cannot
+// drift from first run or Adjust training.
 
 const RECOVERY_OPTIONS = [
   { value: 'poor',    label: 'Poor',    sub: 'Often sore, disrupted sleep, high life stress' },
@@ -106,6 +115,13 @@ function capabilityBlockedNote(n) {
   return n === 1
     ? "1 movement clashed with an injury or limitation you've set, so your plan works without it."
     : `${n} movements clashed with your injuries or limitations, so your plan works without them.`;
+}
+
+// F-16 REVISED: the calm line when a kit answer's library install did not
+// finish. Nothing was written (the install runs before any save), so the
+// athlete's answers are still on the form and the plan is as it was.
+function kitInstallFailedLine(kit) {
+  return `Couldn't add the ${libraryKitWord(kit)} plan, so nothing was changed. Try again, or choose a ${libraryKitWord(kit)} plan in the Plan Library.`;
 }
 
 export default function ProGoalSetupScreen({ navigation }) {
@@ -144,6 +160,10 @@ export default function ProGoalSetupScreen({ navigation }) {
   const [planPreview, setPlanPreview] = useState(null);
   const [planCommitting, setPlanCommitting] = useState(false);
   const planPreviewResolveRef = useRef(null);
+  // One save at a time. The ref is the guard (state lags a render, so two
+  // quick taps would both read it as idle); the state drives the spinner.
+  const savingRef = useRef(false);
+  const [saving, setSaving] = useState(false);
   const [proteinApproach, setProteinApproach] = useState(
     userProfile?.proteinApproach
     ?? (ADVANCED_PROTEIN_GOALS.includes(userProfile?.trainingGoal) ? 'advanced' : 'optimised')
@@ -217,6 +237,10 @@ export default function ProGoalSetupScreen({ navigation }) {
   }, [user?.id]);
   const styleLock = planKind?.styleLock ?? null;
   const hasCircuitGroups = !!planKind?.hasCircuit;
+  // F-16 REVISED: non-null for the two kit answers, which install a LIBRARY
+  // plan in place of the active one and never generate. A style plan never
+  // renders the equipment field, so under a lock this is always null.
+  const libraryKit = styleLock ? null : libraryKitForEquipment(equipment);
 
   // The weight the targets are actually built from: the smoothed morning-weight
   // trend if there's history, otherwise the profile value. Read-only here, the
@@ -268,6 +292,18 @@ export default function ProGoalSetupScreen({ navigation }) {
   const DEFICIT_PHASES = ['cut'];
 
   async function handleSave() {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      await runSave();
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  }
+
+  async function runSave() {
     if (!canSave) return;
 
     // B4: validate the optional show date up front so nothing half-saves.
@@ -287,7 +323,10 @@ export default function ProGoalSetupScreen({ navigation }) {
     // F-16 REVISED point 3: a style-locked plan is NOT rebuilt by this save,
     // so no block is replaced and there is nothing to confirm. The goal,
     // phase, protein approach and nutrition targets below all still save.
-    if (!styleLock) {
+    // F-16 REVISED: a kit answer (libraryKit) replaces the plan outright and
+    // asks its own confirm below, naming the plan, at the point every other
+    // plan-replacing path asks it. The rebuild wording here is not its case.
+    if (!styleLock && !libraryKit) {
       const proceed = await confirmPlanSwitchMidBlock(user?.id, { mode: 'rebuild' });
       if (!proceed) return;
 
@@ -303,6 +342,38 @@ export default function ProGoalSetupScreen({ navigation }) {
         });
         if (!acceptsFlatten) return;
       }
+    }
+
+    // F-16 REVISED, parity with first run and Adjust training: 'Kettlebells'
+    // and 'Bands' install the library plan that fits the week and never
+    // reach the generator. It runs FIRST, before anything is written, with
+    // the D139 mid-block confirm asked once the plan is known: a no, or a
+    // failed install, leaves the goal, the targets and the plan exactly as
+    // they were (FF-002, nothing half-saves) and the athlete stays on the
+    // form with their answers intact.
+    let installedPlan = null;
+    if (!styleLock && libraryKit) {
+      let install = { ok: false, error: 'not attempted' };
+      try {
+        install = await installLibraryPlanForKit(user?.id, {
+          kit: libraryKit,
+          daysPerWeek,
+          experience,
+          confirm: ({ planName }) => confirmPlanSwitchMidBlock(user?.id, { newPlanName: planName }),
+        });
+      } catch (e) {
+        // The real exception is logged; install.error is never shown.
+        logError('ProGoalSetupScreen.installKitPlan', e, { userId: user?.id });
+        install = { ok: false, error: e?.message ?? 'unknown' };
+      }
+      if (!install.ok) {
+        // The athlete's own no at the confirm is not a failure.
+        if (install.error === 'cancelled') return;
+        logWarn('ProGoalSetupScreen.installKitPlan', install.error ?? 'unknown', { userId: user?.id });
+        toast.show(kitInstallFailedLine(libraryKit), { variant: 'error', duration: 5000 });
+        return;
+      }
+      installedPlan = { kit: libraryKit, planName: install.planName ?? null };
     }
 
     const goalPhase = phaseToCoachingKey(selectedPhase);
@@ -379,7 +450,10 @@ export default function ProGoalSetupScreen({ navigation }) {
       experience,
       daysPerWeek,
       sessionLengthMinutes,
-      equipment,
+      // F-16 REVISED: the equipment PROFILE (a kit answer maps to the profile
+      // its library plan is nearest to), never the raw answer, which the
+      // engines' bare membership test would reject.
+      equipment: generationEquipmentFor(equipment),
       recoveryRating,
     };
 
@@ -549,6 +623,10 @@ export default function ProGoalSetupScreen({ navigation }) {
       // Not a failure, so no warning toast and no retry instruction: the
       // summary below says so in its own words.
       planResult = { ok: false, error: 'style_locked' };
+    } else if (installedPlan) {
+      // F-16 REVISED: the library plan is already active (installed above,
+      // before any write), so there is nothing to preview or generate.
+      planResult = { ok: true, planName: installedPlan.planName };
     } else {
     const prep = await prepareStartWithPlan(user.id, updatedProfile, {
       mode: 'goal',
@@ -580,6 +658,8 @@ export default function ProGoalSetupScreen({ navigation }) {
     }
     if (styleLock) {
       // Nothing to say beyond the summary: this is the intended outcome.
+    } else if (installedPlan) {
+      // The summary carries the one shared line for the plan that was added.
     } else if (previewDeclined) {
       // The athlete chose not to rebuild. That is a valid answer, so it gets
       // no warning: the change summary below already reports the plan as not
@@ -625,8 +705,20 @@ export default function ProGoalSetupScreen({ navigation }) {
       // summary can say the plan was kept on purpose.
       planKeptReason: styleLock ? 'style_lock' : null,
       planStyleLabel: styleLock?.label ?? null,
+      // F-16 REVISED: a kit answer installed a library plan. Named, so the
+      // summary shows the shared installed line and never claims a plan was
+      // built for them.
+      planInstalledKit: installedPlan?.kit ?? null,
+      planInstalledName: installedPlan?.planName ?? null,
     });
   }
+
+  // The primary action names what it does: a review of a rebuild for the
+  // six profile answers, the library install for the two kit answers. Same
+  // words as Adjust training.
+  const primaryLabel = libraryKit
+    ? `Add the ${libraryKitWord(libraryKit)} plan`
+    : 'Review my plan changes';
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
@@ -787,6 +879,12 @@ export default function ProGoalSetupScreen({ navigation }) {
           onChange={setEquipment}
           placeholder="Select your equipment"
         />
+        {/* F-16 REVISED: said as soon as a kit answer is chosen, because the
+            copy on this screen and the button below otherwise promise a
+            rebuild, and these two answers never rebuild. */}
+        {libraryKit ? (
+          <Text style={[styles.sectionSub, live.sectionSub]}>{libraryKitOfferLine(libraryKit)}</Text>
+        ) : null}
 
         {/* ── Recovery ── */}
         <SectionLabel style={styles.sectionLabelSpaced}>Recovery</SectionLabel>
@@ -802,8 +900,10 @@ export default function ProGoalSetupScreen({ navigation }) {
 
         {/* F-15 (evidence A3): the circuit grouping is not carried across a
             rebuild. Said here, before save is even pressed, and answered
-            explicitly before anything is written. */}
-        {hasCircuitGroups ? (
+            explicitly before anything is written. A kit answer replaces the
+            plan outright rather than rebuilding it (its own line above says
+            so), so the rebuild wording is not shown for it. */}
+        {hasCircuitGroups && !libraryKit ? (
           <Text style={[styles.sectionSub, live.sectionSub, styles.sectionLabelSpaced]}>
             {CIRCUIT_FLATTEN_NOTICE}
           </Text>
@@ -882,10 +982,11 @@ export default function ProGoalSetupScreen({ navigation }) {
         </View>
 
         <Button
-          title="Review my plan changes"
+          title={primaryLabel}
           onPress={handleSave}
-          disabled={!canSave}
-          accessibilityLabel="Review my plan changes"
+          loading={saving}
+          disabled={!canSave || saving}
+          accessibilityLabel={primaryLabel}
         />
       </ScrollView>
       </KeyboardAvoidingView>

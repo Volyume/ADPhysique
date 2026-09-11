@@ -11,6 +11,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 import { getOpenEdPatternFlag } from '../lib/database';
+// F-16 REVISED (parity, 2026-09-11): the ONE line shown when a kit answer
+// installed a library plan, shared with first run and Adjust training.
+import { libraryKitInstalledLine } from '../lib/startWithPlan';
 import useAppStore from '../store/useAppStore';
 
 // ─── Reasoning helpers ────────────────────────────────────────────────────────
@@ -152,6 +155,11 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
     // instruction ("Start with a plan") would have GENERATED over the very
     // plan being protected.
     planKeptReason = null, planStyleLabel = null,
+    // F-16 REVISED (parity, 2026-09-11): a kit answer on the goal screen
+    // installed the library plan that fits the week, in place of the active
+    // plan. The receipt shows the one shared installed line and never claims
+    // a plan was built for them.
+    planInstalledKit = null, planInstalledName = null,
   } = route.params || {};
   const planKeptOnPurpose = planKeptReason === 'style_lock';
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
@@ -311,6 +319,8 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
             <Text style={[styles.nextText, live.nextText]}>
               {planKeptOnPurpose
                 ? `Your ${planStyleLabel ?? 'library'} plan stays as it is, so your next session is unchanged. To train differently, choose another ${planStyleLabel ?? 'library'} plan in the Plan Library.`
+                : planInstalledKit
+                  ? `${libraryKitInstalledLine(planInstalledKit, planInstalledName)} It is now your active plan and your next session comes from it. Review the full plan from Train.`
                 : planRerolled
                   ? 'A fresh plan has been built for your new goal and is now your active plan. Your next session comes from it. Review the full plan from Train.'
                   : 'Your goal is saved, but the training plan didn\'t rebuild this time. Open Train and choose "Start with a plan" to retry.'}

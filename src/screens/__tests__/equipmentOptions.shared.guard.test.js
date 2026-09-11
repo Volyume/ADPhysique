@@ -2,7 +2,10 @@
  * equipmentOptions.shared.guard.test.js — founder task 2026-09-11: ONE shared,
  * ordered equipment answer list for first run (ProOnboardingScreen) and
  * Adjust training (PlanUpdateScreen), with Kettlebells and Bands behaving
- * identically on both.
+ * identically on both; extended the same day (D159 Q5, lead ruling on the
+ * founder's delegation) to the goal and phase screen (ProGoalSetupScreen),
+ * which carried its own six-answer copy and rebuilt through the generator
+ * for every answer.
  *
  * What this suite pins and why. Adjust training carried its own six-answer
  * copy of the list, so a kettlebell or band owner who had the honest answer
@@ -35,6 +38,8 @@ import { EQUIPMENT_OPTIONS } from '../../lib/equipmentOptions';
 const read = (...segs) => fs.readFileSync(path.join(__dirname, '..', ...segs), 'utf8');
 const onboarding = read('ProOnboardingScreen.js');
 const planUpdate = read('PlanUpdateScreen.js');
+const goalSetup = read('ProGoalSetupScreen.js');
+const goalSummary = read('GoalChangeSummaryScreen.js');
 
 const EXPECTED_ORDER = [
   ['full_gym', 'Full gym'],
@@ -81,10 +86,11 @@ describe('the shared equipment list', () => {
   });
 });
 
-describe('both screens render the shared list and nothing else', () => {
+describe('every screen that asks renders the shared list and nothing else', () => {
   test.each([
     ['ProOnboardingScreen.js', onboarding],
     ['PlanUpdateScreen.js', planUpdate],
+    ['ProGoalSetupScreen.js', goalSetup],
   ])('%s imports the shared list and passes it to its picker', (_file, source) => {
     expect(source).toMatch(/import \{ EQUIPMENT_OPTIONS \} from '\.\.\/lib\/equipmentOptions'/);
     expect(source).toMatch(/options=\{EQUIPMENT_OPTIONS\}/);
@@ -163,5 +169,116 @@ describe('Adjust training treats a kit answer exactly as first run does', () => 
     expect(planUpdate).toMatch(/const dry = await generatePlanDryRun\(user\.id, updatedProfile\);/);
     expect(planUpdate).toMatch(/confirmPlanSwitchMidBlock\(user\.id, \{ mode: 'rebuild', keepBlock \}\)/);
     expect(planUpdate).toMatch(/generateAndSavePlan\(user\.id, updatedProfile, \{ keepBlock \}\)/);
+  });
+});
+
+describe('the goal and phase screen treats a kit answer exactly as first run and Adjust training do', () => {
+  // The kit install sits between the up-front confirm block and the first
+  // line of the profile build, so this slice IS the kit path.
+  const kitBlock = goalSetup.slice(
+    goalSetup.indexOf('let installedPlan = null;'),
+    goalSetup.indexOf('const goalPhase = phaseToCoachingKey(selectedPhase);'),
+  );
+  const save = goalSetup.slice(goalSetup.indexOf('async function handleSave()'));
+
+  test('the kit is resolved from the answer with the shared helper, never under a style lock', () => {
+    expect(goalSetup).toMatch(/const libraryKit = styleLock \? null : libraryKitForEquipment\(equipment\);/);
+  });
+
+  test('the saved profile stores the mapped equipment PROFILE, never the raw answer', () => {
+    const profileBuild = save.slice(
+      save.indexOf('const updatedProfile = {'),
+      save.indexOf('// Recalculate nutrition.'),
+    );
+    expect(profileBuild).toMatch(/equipment: generationEquipmentFor\(equipment\),/);
+    expect(profileBuild).not.toMatch(/^\s+equipment,\s*$/m);
+  });
+
+  test('the kit path calls the library install and never the generator', () => {
+    expect(kitBlock.length).toBeGreaterThan(0);
+    expect(kitBlock).toMatch(/if \(!styleLock && libraryKit\) \{/);
+    expect(kitBlock).toMatch(/installLibraryPlanForKit\(user\?\.id, \{/);
+    expect(kitBlock).toMatch(/kit: libraryKit,/);
+    expect(kitBlock).not.toMatch(/prepareStartWithPlan|commitStartWithPlan|generateAndSavePlan|generatePlanDryRun|capabilityPreflight/);
+  });
+
+  test('the kit path runs the D139 mid-block confirm through the install hook, naming the plan, and a no is silent', () => {
+    expect(kitBlock).toMatch(/confirm: \(\{ planName \}\) => confirmPlanSwitchMidBlock\(user\?\.id, \{ newPlanName: planName \}\)/);
+    expect(kitBlock).toMatch(/if \(install\.error === 'cancelled'\) return;/);
+    // The generic rebuild-worded confirm is not the kit answer's case.
+    expect(save).toMatch(/if \(!styleLock && !libraryKit\) \{\s*\n\s*const proceed = await confirmPlanSwitchMidBlock\(user\?\.id, \{ mode: 'rebuild' \}\)/);
+  });
+
+  test('FF-002: the install runs BEFORE anything is written, so a no or a failure leaves everything as it was', () => {
+    const installAt = save.indexOf('installLibraryPlanForKit(user?.id, {');
+    expect(installAt).toBeGreaterThan(-1);
+    for (const write of [
+      'await AsyncStorage.setItem(NUTRITION_KEY, JSON.stringify(nextTargets));',
+      'await saveNutritionTargets(user.id, nextTargets);',
+      'await saveLocalProfile(user.id, updatedProfile);',
+      'await setPeakWeekShowDate(user.id, trimmedShowDate || null);',
+    ]) {
+      const at = save.indexOf(write);
+      expect(at).toBeGreaterThan(installAt);
+    }
+    // The failure branch returns before the profile build.
+    const failAt = kitBlock.indexOf('if (!install.ok) {');
+    expect(failAt).toBeGreaterThan(-1);
+    expect(kitBlock.slice(failAt)).toMatch(/toast\.show\(kitInstallFailedLine\(libraryKit\), \{ variant: 'error', duration: 5000 \}\);\s*\n\s*return;/);
+  });
+
+  test('a failed install says so calmly, with the reason logged, and names the route that can add the plan', () => {
+    expect(kitBlock).toMatch(/logError\('ProGoalSetupScreen\.installKitPlan', e, \{ userId: user\?\.id \}\);/);
+    expect(kitBlock).toMatch(/logWarn\('ProGoalSetupScreen\.installKitPlan', install\.error \?\? 'unknown', \{ userId: user\?\.id \}\);/);
+    expect(goalSetup).toMatch(/function kitInstallFailedLine\(kit\) \{\s*\n\s*return `Couldn't add the \$\{libraryKitWord\(kit\)\} plan, so nothing was changed\. Try again, or choose a \$\{libraryKitWord\(kit\)\} plan in the Plan Library\.`;/);
+    expect(goalSetup).not.toMatch(/Couldn't add the [^`]*—/);
+  });
+
+  test('an installed plan reaches the plan slot as done: nothing to preview, nothing to generate', () => {
+    expect(save).toMatch(/\} else if \(installedPlan\) \{\s*\n(\s*\/\/[^\n]*\n)*\s*planResult = \{ ok: true, planName: installedPlan\.planName \};/);
+    const installedBranch = save.slice(
+      save.indexOf('} else if (installedPlan) {'),
+      save.indexOf('const prep = await prepareStartWithPlan('),
+    );
+    expect(installedBranch).not.toMatch(/prepareStartWithPlan|commitStartWithPlan/);
+    // No failure or capability toast for the installed plan: the receipt
+    // carries the line.
+    expect(save).toMatch(/\} else if \(installedPlan\) \{\s*\n\s*\/\/ The summary carries the one shared line/);
+  });
+
+  test('the receipt shows the shared installed line and never claims a plan was built for them', () => {
+    expect(goalSetup).toMatch(/planInstalledKit: installedPlan\?\.kit \?\? null,/);
+    expect(goalSetup).toMatch(/planInstalledName: installedPlan\?\.planName \?\? null,/);
+    expect(goalSummary).toMatch(/planInstalledKit = null, planInstalledName = null,/);
+    expect(goalSummary).toMatch(/import \{ libraryKitInstalledLine \} from '\.\.\/lib\/startWithPlan'/);
+    const installedAt = goalSummary.indexOf(': planInstalledKit');
+    const rerolledAt = goalSummary.indexOf(': planRerolled');
+    expect(installedAt).toBeGreaterThan(-1);
+    // Read BEFORE planRerolled, which would otherwise call it "built for you".
+    expect(installedAt).toBeLessThan(rerolledAt);
+    const branch = goalSummary.slice(installedAt, rerolledAt);
+    expect(branch).toMatch(/\$\{libraryKitInstalledLine\(planInstalledKit, planInstalledName\)\} It is now your active plan and your next session comes from it\. Review the full plan from Train\./);
+    expect(branch).not.toMatch(/built for your new goal|rebuild this time|Start with a plan/);
+  });
+
+  test('the form says what a kit answer does as soon as it is chosen, in the shared words, and hides the rebuild wording', () => {
+    expect(goalSetup).toMatch(/\{libraryKit \? \(\s*<Text[^>]*>\{libraryKitOfferLine\(libraryKit\)\}<\/Text>/);
+    expect(goalSetup).not.toMatch(/plans built for this kit/);
+    expect(goalSetup).toMatch(/\{hasCircuitGroups && !libraryKit \? \(/);
+  });
+
+  test('the primary action routes by answer, names what it does, and runs once at a time', () => {
+    expect(goalSetup).toMatch(/\? `Add the \$\{libraryKitWord\(libraryKit\)\} plan`\s*: 'Review my plan changes'/);
+    expect(goalSetup).toMatch(/title=\{primaryLabel\}/);
+    expect(goalSetup).toMatch(/accessibilityLabel=\{primaryLabel\}/);
+    expect(goalSetup).toMatch(/loading=\{saving\}/);
+    expect(goalSetup).toMatch(/disabled=\{!canSave \|\| saving\}/);
+    expect(save).toMatch(/if \(savingRef\.current\) return;\s*\n\s*savingRef\.current = true;/);
+  });
+
+  test('the generating path is untouched: prepare, sheet and commit stand', () => {
+    expect(goalSetup).toMatch(/prepareStartWithPlan\(user\.id, updatedProfile, \{\s*\n\s*mode: 'goal',/);
+    expect(goalSetup).toMatch(/confirmLabel="Confirm and rebuild"/);
+    expect(goalSetup).toMatch(/planResult = await commitStartWithPlan\(user\.id, updatedProfile\);/);
   });
 });
