@@ -268,7 +268,7 @@ Cable Crunch; kettlebells only is Goblet Squat, KB RDL, KB Floor Press,
 KB Row, a KB press, two bodyweight fills, KB Around-the-World.
 COMPLETE; device checklist in the spec section 4.
 
-## COMMUNITIES REVAMP: FRESH-EYES REVIEW OF PHASES 0 TO 3 — ALL FINDINGS LANDED (997b5cd, 1ec8262); 172 CLIENT HALF LANDED (3b27383); CLOUD BATCH 171 + 172 WAITS ON THE PHRASE
+## COMMUNITIES REVAMP: FRESH-EYES REVIEW OF PHASES 0 TO 3 — ALL FINDINGS LANDED; 171 + 172 APPLIED 2026-09-11 13:00 UTC; CLIENT SWITCHES LANDED; COMPLETE
 
 Lane REV-03 (Opus, read-only, 2026-09-11) returned FIX FIRST: F1 BLOCKER
 (queued ambient items flushed without the calm / ED gate; the server
@@ -306,7 +306,17 @@ only for a number, the owner's own view follows the share-what-I-did
 gate; lane suites 73 / 3015 green, full run green after. NEXT (founder):
 the phrase for the 171 + 172 batch through the connector, then the
 client switch to `community_friends_trained_today` (171) and the
-strip's PR cell goes live (172). Observation for the founder (mention, not fix): the Community strip
+strip's PR cell goes live (172). DONE: founder phrase given 2026-09-11;
+171 and 172 applied through the connector (one and two checksum-verified
+chunks, each file executed inside a DO block that re-checks its md5
+before EXECUTE; both acceptance blocks passed; verified read-only, all
+true; scratch table dropped 13:00:57 UTC; record in `supabase/README.md`);
+the widget switched to `community_friends_trained_today` (guard-pinned)
+and the strip's PR cell is live server-side. Founder rulings the same
+day: B on the streak (D157: stays in Community only); NO build until the
+founder says ("I'll build when all is done"). Settled tree: lint exit 0;
+`Test Suites: 1 skipped, 1292 passed, 1292 of 1293`, `Tests: 16 skipped,
+19954 passed, 19970`. Observation for the founder (ruled B, D157): the Community strip
 and boards show a "weeks streak" (`c_weeks_streak`, design 60) while
 the Today truth repair rejected the weekly run/streak construct
 product-wide for Today and the widget; the two rulings have never

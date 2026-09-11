@@ -68,10 +68,12 @@ migrations 171 and 172 written and guarded, waiting on the founder's
 phrase as one batch. Later the same day: the quick session was
 reviewed (FIX FIRST) and its fixes landed; every Community review
 finding landed (1ec8262) and the client half of 172 landed (3b27383);
-settled tree 1292 suites / 19954 tests green. Open: the founder's
-phrase for 171 + 172, then the two client switches; the "weeks streak"
-reconciliation question; a second Android build on the founder's go.
-Board sections carry the detail.
+settled tree 1292 suites / 19954 tests green. Then: founder phrase
+given; 171 + 172 APPLIED 2026-09-11 13:00 UTC through the connector;
+the widget count RPC switch landed; the strip's PR cell is live; ruling
+B (D157) keeps the streak in Community. Open: nothing on the lead side
+for these campaigns; the founder builds when they choose ("I'll build
+when all is done"). Board sections carry the detail.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 
