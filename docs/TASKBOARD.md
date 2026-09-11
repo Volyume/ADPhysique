@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## COMMUNITIES REVAMP (2026-09-10, founder prompt) — PHASES 0 to 3 LANDED and MERGED to main; MIGRATION 170 (A, A2, B) REVIEWED, APPLY BLOCKED ON A CREDENTIAL (founder phrase given); PHASE 4 WIDGET QUEUED
+## COMMUNITIES REVAMP (2026-09-10, founder prompt) — PHASES 0 to 3 LANDED and MERGED to main; MIGRATION 170 (A, A2, B) APPLIED to production 2026-09-10 (MCP path) and community-notify v3 DEPLOYED; PHASE 4 WIDGET IN BUILD
 
 Founder brief in chat (2026-09-10): Community was spec'd on plan sharing,
 which is the wrong foundation; the purpose is connecting (gym, age group,
@@ -157,17 +157,28 @@ offer switches on consistency sharing only (the higher level needs its
 full wording at the toggle, R3); the group page gains "Share a workout
 with the group"; foreground-only flush of pending items accepted and
 recorded (a reconnect listener threw inside the library under test).
-CLOUD: founder said "Run against production" 17:58 UTC; `apply-named-sql`
-run #11 failed HTTP 401 before any statement (repo secret
-`SUPABASE_ACCESS_TOKEN` no longer accepted); nothing applied. The lead
-declined to hand-transcribe 213 KB of SQL through the MCP route and the
-classifier blocked delegating a production write. FOUNDER ACTION: new
-Supabase personal access token into the repo secret, then say "token
-updated"; the lead re-dispatches run #12 and `deploy-functions.yml`
-(community-notify), verifies read-only, records the apply. THEN one
-Android build from main (phases 0 to 3), THEN the device walks (phase 0
-to 3 checklists in chat). Phase 4 (widget "a friend trained today",
-CR-13) after the walks.
+CLOUD APPLIED: founder said "Run against production" 17:58 UTC;
+`apply-named-sql` run #11 failed HTTP 401 before any statement (repo
+secret `SUPABASE_ACCESS_TOKEN` no longer accepted); founder: "You have
+the connector"; the lead applied 170 (A, A2, B) through the Supabase MCP
+connection under a checksum protocol (scratch table, twelve chunks each
+md5- and byte-verified against the file, each part executed atomically,
+both acceptance blocks passed, bookkeeping row 19:05:22 UTC, scratch
+table dropped), then verified read-only (154 community functions all
+SECURITY DEFINER with pinned search_path, none executable by anon, the
+migrate_170 writers VOLATILE, 22 community tables RLS on with no
+anon/authenticated grant, old overloads gone). `community-notify` v3
+deployed through the MCP path 2026-09-11 05:19 UTC (`verify_jwt` on;
+deployed source diffed against the repo: identical). Full record:
+`supabase/README.md` 170 status block. Founder-side, open: rotate the
+repo secret `SUPABASE_ACCESS_TOKEN` (the workflow route is broken until
+then). Founder 2026-09-11: "No walk needed continue" (the device walks
+are not a gate; the checklists stay in chat for whenever the founder
+wants them). PHASE 4 (widget "a friend trained today", CR-13 Q6): edit
+gate `docs/communities-revamp-2026-09-10/24-PHASE4-SPEC.md`; lane P4
+(Sonnet) builds it; recovery path: re-dispatch the same brief over
+`git checkout -- <lane files>`; agents never commit. THEN one Android
+build from main (phases 0 to 4 together, one paid run rather than two).
 
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
