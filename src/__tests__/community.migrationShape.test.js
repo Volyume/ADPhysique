@@ -7,7 +7,9 @@
  * supabase/README.md then treats that header as the tracker of record. This
  * file is the largest migration in the repository and the first one to create
  * cross-user tables, so the two things most worth failing on are: the header
- * still says WRITTEN, NOT APPLIED (nobody has quietly marked it applied
+ * says APPLIED 2026-09-07 (the heading was corrected 2026-09-11 under
+ * hostile review OJ-REV-SQL-2 F4, after the row and the 170 apply record
+ * had carried the truth for four days; nobody can quietly change it again
  * without the founder's phrase), and every statement is still re-runnable.
  *
  * It is deliberately a SHAPE test. What the migration does is pinned by
@@ -127,7 +129,7 @@ describe('the file is registered in the tracker', () => {
   const README = fs.readFileSync(path.join(ROOT, 'supabase', 'README.md'), 'utf8');
 
   test('supabase/README.md carries the status entry and a ledger row', () => {
-    expect(README).toContain('160 WRITTEN, NOT APPLIED (Community; founder gate)');
+    expect(README).toContain('160 APPLIED 2026-09-07 (Community)');
     expect(README).toContain('| 160 | `migrate_160_community.sql` |');
   });
 });
@@ -262,7 +264,7 @@ describe('161 is registered in the tracker', () => {
 
   test('supabase/README.md carries the status entry and a ledger row', () => {
     expect(README).toContain(
-      '161 WRITTEN, NOT APPLIED (Community connections and messaging; founder gate)',
+      '161 APPLIED 2026-09-07 (Community connections and messaging)',
     );
     expect(README).toContain('| 161 | `migrate_161_community_connections.sql` |');
   });

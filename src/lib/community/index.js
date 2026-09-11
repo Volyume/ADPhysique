@@ -51,7 +51,7 @@ export {
   ME_CACHE_PREFIX, meCacheKey, currentUserId, emptyMe, readCachedMe,
   clearCachedMe, loadMe, refreshMe, hasProfile, hasUnseen, hasUnreadMessages,
   upsertProfile, acceptRules,
-  checkHandle, suggestHandle, leaveCommunity, getProfile, follow, unfollow,
+  checkHandle, suggestHandle, ensureBodyProfilePushed, leaveCommunity, getProfile, follow, unfollow,
   respondToFollow, removeFollower, listFollows, listFollowers,
   setShowGym, setShowPlace, blockUser, unblockUser,
   muteUser, unmuteUser, relationships, setPlace,

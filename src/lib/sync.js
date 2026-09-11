@@ -1449,7 +1449,7 @@ async function _pushExerciseSlotDefaults(sb, supabaseUserId, localUserId) {
 async function _pushUserBodyProfile(sb, supabaseUserId, localUserId) {
   try {
     const p = await getUserBodyProfile(localUserId);
-    if (!p) return;
+    if (!p) return false; // nothing pushed is not a success (D159 contract below)
     const { error } = await sb.from('user_body_profile').upsert({
       user_id: supabaseUserId,
       sex: p.sex ?? null,
@@ -1471,8 +1471,22 @@ async function _pushUserBodyProfile(sb, supabaseUserId, localUserId) {
       // beat every LWW gate. scoff_score is ED-screening data.
       updated_at: new Date(p.updatedAt ?? p.createdAt ?? Date.now()).toISOString(),
     }, { onConflict: 'user_id' });
-    if (error) logPgErr('sync._pushUserBodyProfile', error);
-  } catch (e) { logBulkWarn('sync._pushUserBodyProfile', e?.message); }
+    if (error) { logPgErr('sync._pushUserBodyProfile', error); return false; }
+    return true;
+  } catch (e) { logBulkWarn('sync._pushUserBodyProfile', e?.message); return false; }
+}
+
+/**
+ * Community at onboarding (D159, migrate_174): the server's under-18 check
+ * reads the CLOUD copy of the body profile row and fails closed, so a
+ * Community profile must never be created or rewritten before that row has
+ * been pushed. One row, on demand; true only when the upsert succeeded.
+ * The legacy bulk push above still carries it on every full sync.
+ */
+export async function pushUserBodyProfileNow(supabaseUserId, localUserId = supabaseUserId) {
+  const sb = getClient();
+  if (!sb || !supabaseUserId || !localUserId) return false;
+  return _pushUserBodyProfile(sb, supabaseUserId, localUserId);
 }
 
 async function _pushUserInsights(sb, supabaseUserId, localUserId) {

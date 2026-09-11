@@ -98,9 +98,23 @@ export default function CommunityPrivacyScreen({ navigation }) {
     setVisibility(next);
     setBusy(true);
     try {
-      await upsertProfile({ visibility: next });
+      const card = await upsertProfile({ visibility: next });
       await refresh(true);
-      toast.show(next === 'public' ? 'Anyone can follow you' : 'You approve every follower');
+      // The server has the last word (a minor is followers-only whatever
+      // was asked, migrate_170), so the confirmation reads the STORED value
+      // and never echoes the request (hostile review OJ-REV-SQL-2, F8).
+      const stored = card?.visibility === 'public' || card?.visibility === 'followers'
+        ? card.visibility
+        : next;
+      setVisibility(stored);
+      if (stored === 'public') {
+        toast.show('Anyone can follow you');
+      } else if (next === 'public') {
+        // Asked for public, kept followers-only by the server: said plainly.
+        toast.show('Your profile stays followers only. You approve every follower.');
+      } else {
+        toast.show('You approve every follower');
+      }
     } catch (_e) {
       setVisibility(previous);
       toast.show('Could not change that just now.', { variant: 'error' });

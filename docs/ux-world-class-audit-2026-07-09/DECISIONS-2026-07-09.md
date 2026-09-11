@@ -6546,3 +6546,68 @@ basis; Q2 whether the handle may be built from the email local part
 (shown and editable first) or from the given name only. Spec:
 `docs/communities-revamp-2026-09-10/25-ONBOARDING-COMMUNITY-SPEC.md`;
 campaign row CR-15.
+
+## D159
+
+**Community at onboarding: the five open questions, ruled by the lead on
+the founder's delegation ("answer all the questions yourself based
+entirely on what brings the best app. Never on quick or easy", chat,
+2026-09-11).**
+- Q1 (consent shape): A. One explicit tap, "Join Community" beside "Skip
+  for now", everything pre-filled, nothing pre-ticked. Compliant
+  (consent is an affirmative act; privacy by default) and one tap for the
+  person; a silently created public profile is the kind of surprise that
+  costs trust. Already built.
+- Q2 (handle source): the person's own name first, the email only as a
+  last resort and only its leading letters, never the full local part.
+  `john.smith83@` becomes `john`, not `john_smith83`: a public handle
+  should not publish a full name and a birth year the person never chose
+  to publish; the gym cohort finds people by display name and gym. Order:
+  the name typed at onboarding (the RPC's `_hint`, passed by the step
+  alone), the profile's first name, the provider's given name, the
+  leading letters of the address (never an Apple private relay),
+  `athlete`. Migration 173 amended before apply.
+- Q3 (the under-18 check failing open): tighten. Migration 174 makes an
+  unknown date of birth read as a minor until it arrives, recomputed on
+  every profile write and on every hub open (`community_get_me`
+  self-heals the stored value, migrate_161); the client pushes the body
+  profile row before every profile write and forces it before the
+  onboarding join, and a CREATE never runs without the row (a failed
+  forced push queues the onboarding join with its original decision
+  time; the Join screen's create refuses with `unavailable`), because a
+  profile created without it would be stored followers-only and the
+  server's merge re-supplies that stored value on every later write
+  (hostile review OJ-REV-SQL-2, F3). An edit or a re-consent still runs
+  on a failed push. So an adult is never read as a minor for want of a
+  row that exists on the device. Verified before writing (read-only
+  count): every existing member has a cloud date of birth.
+- Q4 (rules version parity): fix now. Migration 174 makes the server
+  require rules version 3, the version the client accepts and shows, so
+  a member on version 2 re-accepts the rewritten text once through the
+  existing `rules_outdated` path (CR-08). Batch order (OJ-REV-SQL-2, F1):
+  174 runs BEFORE 173, because the client on main already sends version
+  3 on every profile write and the server's gate is exact equality, so
+  until 174 every Community profile create and edit fails and 173's join
+  would die at the create. Constraint recorded, gate deliberately kept
+  EXACT (F6, ruled on the criterion: an old build cannot consent to a
+  rules text it cannot show, so a `>=` gate would record consent that
+  was never given): before the NEXT rules bump, the migration is applied
+  before the build that carries the new constant ships, and the client
+  answers a version-mismatch refusal on a profile write with an update
+  prompt rather than a generic error. Safe today because no shipped
+  build carries Community.
+- Q5 (the Coach goal-setup screen's six-answer equipment list): extend.
+  The screen renders the shared eight answers and takes the library route
+  for a kit answer exactly as Adjust training does (model commit 89454f9).
+  Built hands-on by the lead after the Sonnet lane dispatched for it hit
+  the session rate limit having edited only the imports. One ruling of
+  the build, on the same criterion: the install runs BEFORE anything is
+  written on that screen (its up-front confirm already means "nothing
+  half-saves"), so a no at the confirm or a failed install leaves the
+  goal, the targets and the plan exactly as they were and the answers on
+  the form; the receipt (GoalChangeSummary) shows the one shared
+  installed line and never says a plan was built for them. Pinned in
+  `equipmentOptions.shared.guard.test.js`.
+Founder phrase "run against production" given for the 173 + 174 batch
+the same day; applied through the connector under the checksum
+protocol (record: `supabase/README.md`).

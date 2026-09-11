@@ -1132,7 +1132,10 @@ export default function ProOnboardingScreen({ navigation }) {
     if (step !== 5 || skipGymStep || suggestedRef.current) return undefined;
     suggestedRef.current = true;
     let alive = true;
-    suggestHandle().then((res) => {
+    // The name typed at step 2 rides as the hint (D159 Q2: the person's
+    // own name first; the sign-in address only as a last resort, and only
+    // its leading letters). A blank name sends null.
+    suggestHandle(firstName.trim() || null).then((res) => {
       if (!alive || !res?.handle) return;
       if (res.source === 'existing') {
         setCommunityJoin('existing');

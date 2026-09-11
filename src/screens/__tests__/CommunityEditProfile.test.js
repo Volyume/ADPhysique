@@ -404,7 +404,10 @@ describe('the privacy screen visibility control', () => {
     )[0];
   }
 
-  test('sends only the visibility, and nothing else', async () => {
+  test('sends only the visibility, and nothing else; the confirmation reads the STORED value', async () => {
+    // The returned card carries what the server stored (hostile review
+    // OJ-REV-SQL-2, F8): the toast never echoes the request.
+    upsertProfile.mockResolvedValueOnce({ ...PROFILE, visibility: 'followers' });
     const { tree } = await mount(CommunityPrivacyScreen);
 
     await act(async () => { chip(tree, 'Who can follow you', 'People I approve').props.onPress(); });
@@ -413,6 +416,23 @@ describe('the privacy screen visibility control', () => {
     expect(upsertProfile).toHaveBeenCalledTimes(1);
     expect(upsertProfile).toHaveBeenCalledWith({ visibility: 'followers' });
     expect(mockToastShow).toHaveBeenCalledWith('You approve every follower');
+  });
+
+  test('asked for public but kept followers-only by the server: said plainly, and the control shows the stored value', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: { ...PROFILE, visibility: 'followers' }, is_moderator: false },
+      loading: false, error: null, refresh: jest.fn(),
+    });
+    upsertProfile.mockResolvedValueOnce({ ...PROFILE, visibility: 'followers' });
+    const { tree } = await mount(CommunityPrivacyScreen);
+
+    await act(async () => { chip(tree, 'Who can follow you', 'Anyone').props.onPress(); });
+    await flush();
+
+    expect(upsertProfile).toHaveBeenCalledWith({ visibility: 'public' });
+    expect(mockToastShow).toHaveBeenCalledWith('Your profile stays followers only. You approve every follower.');
+    expect(chip(tree, 'Who can follow you', 'People I approve').props.selected).toBe(true);
+    expect(chip(tree, 'Who can follow you', 'Anyone').props.selected).toBe(false);
   });
 
   test('a refusal puts the control back where it was', async () => {

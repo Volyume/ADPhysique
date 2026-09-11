@@ -506,7 +506,8 @@ describe('the file is registered in the tracker', () => {
   const README = fs.readFileSync(path.join(ROOT, 'supabase', 'README.md'), 'utf8');
 
   test('supabase/README.md carries the status entry and a ledger row', () => {
-    expect(README).toContain('162 WRITTEN, NOT APPLIED');
+    // 2026-09-07 apply; heading corrected 2026-09-11 (hostile review OJ-REV-SQL-2, F4).
+    expect(README).toContain('162 APPLIED 2026-09-07');
     expect(README).toContain('| 162 | `migrate_162_gym_directory.sql` |');
   });
 });

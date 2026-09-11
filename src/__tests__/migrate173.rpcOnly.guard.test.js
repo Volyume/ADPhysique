@@ -15,8 +15,9 @@
  * upsert re-validates on every save) is NOT re-issued, because widening it
  * would refuse every future edit from an existing member whose handle is on
  * it; that the email is read once into a local and never returned, built
- * into the jsonb or raised; and that the tracker and the security matrix
- * know the RPC.
+ * into the jsonb or raised; that the derivation runs name first and takes
+ * only the leading letters of the email as a last resort (D159, Q2); and
+ * that the tracker and the security matrix know the RPC.
  */
 
 const fs = require('fs');
@@ -36,7 +37,7 @@ function fnSpan(text, startMarker) {
 }
 const RESERVED = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public._community_handle_suggest_reserved()');
 const BASE = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public._community_handle_base(_raw text)');
-const RPC = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public.community_handle_suggestion()');
+const RPC = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public.community_handle_suggestion(_hint text DEFAULT NULL)');
 
 describe('house migration shape', () => {
   test('the header carries every mandatory field', () => {
@@ -68,8 +69,8 @@ describe('RPC-only security posture', () => {
   });
 
   test('authenticated may execute the RPC; no client role may execute a helper', () => {
-    expect(SQL).toContain('REVOKE ALL ON FUNCTION public.community_handle_suggestion() FROM PUBLIC, anon;');
-    expect(SQL).toContain('GRANT EXECUTE ON FUNCTION public.community_handle_suggestion() TO authenticated;');
+    expect(SQL).toContain('REVOKE ALL ON FUNCTION public.community_handle_suggestion(text) FROM PUBLIC, anon;');
+    expect(SQL).toContain('GRANT EXECUTE ON FUNCTION public.community_handle_suggestion(text) TO authenticated;');
     expect(SQL).toContain('REVOKE ALL ON FUNCTION public._community_handle_base(text) FROM PUBLIC, anon, authenticated;');
     expect(SQL).toContain('REVOKE ALL ON FUNCTION public._community_handle_suggest_reserved() FROM PUBLIC, anon, authenticated;');
     expect(SQL).not.toMatch(/GRANT [A-Z]+ ON FUNCTION public\._community_handle/);
@@ -104,9 +105,13 @@ describe('the email never leaves the function', () => {
   test('it is read once from auth.users into a local and nulled after the split', () => {
     expect(RPC).toContain('SELECT lower(u.email), u.raw_user_meta_data INTO v_address, v_meta');
     expect(RPC).toContain('FROM auth.users u');
-    expect(RPC).toContain("v_local  := split_part(coalesce(v_address, ''), '@', 1);");
-    expect(RPC).toContain("v_domain := split_part(coalesce(v_address, ''), '@', 2);");
-    expect(RPC).toContain('v_address := NULL;');
+    expect(RPC).toContain("    v_local  := split_part(coalesce(v_address, ''), '@', 1);");
+    expect(RPC).toContain("    v_domain := split_part(coalesce(v_address, ''), '@', 2);");
+    expect(RPC).toContain('    v_address := NULL;');
+    // The local part is used ONCE, for its leading letters only (Q2):
+    // the declaration, the assignment, and that one use.
+    expect((RPC.match(/\bv_local\b/g) || []).length).toBe(3);
+    expect(RPC).toContain("public._community_handle_base(substring(v_local FROM '^[a-z]+'))");
     expect((RPC.match(/\bu\.email\b/g) || []).length).toBe(1);
     // One read of auth.users in the code (the header names it in prose),
     // inside the RPC only, and only after the rail.
@@ -138,13 +143,42 @@ describe('the email never leaves the function', () => {
 });
 
 describe('derivation order and bounds', () => {
-  test('email local part first (never a private relay), then the given name, then athlete', () => {
-    const relay = RPC.indexOf("IF v_domain <> 'privaterelay.appleid.com' THEN");
-    const name = RPC.indexOf("nullif(btrim(coalesce(v_meta ->> 'given_name', '')), '')");
+  test('D159 Q2: the hint, then the profile first name, then the provider name, then the leading letters of the email, then athlete', () => {
+    const hint = RPC.indexOf("v_base := public._community_handle_base(left(coalesce(_hint, ''), 60));");
+    const profileName = RPC.indexOf('FROM public.users_profile up');
+    const signIn = RPC.indexOf('FROM auth.users u');
+    const providerName = RPC.indexOf("nullif(btrim(coalesce(v_meta ->> 'given_name', '')), '')");
+    const emailLetters = RPC.indexOf("IF v_base IS NULL AND v_domain <> 'privaterelay.appleid.com' THEN");
     const fallback = RPC.indexOf("v_base := 'athlete';");
-    expect(relay).toBeGreaterThan(-1);
-    expect(name).toBeGreaterThan(relay);
-    expect(fallback).toBeGreaterThan(name);
+    expect(hint).toBeGreaterThan(-1);
+    expect(profileName).toBeGreaterThan(hint);
+    expect(signIn).toBeGreaterThan(profileName);
+    expect(providerName).toBeGreaterThan(signIn);
+    expect(emailLetters).toBeGreaterThan(providerName);
+    expect(fallback).toBeGreaterThan(emailLetters);
+    // Each later source runs ONLY through its `IF v_base IS NULL THEN`
+    // wrapper (hostile review OJ-REV-SQL-2, F9): the profile-name read sits
+    // inside one opened after the hint's source line, with no END IF
+    // between, and the sign-in read inside one opened after the profile
+    // read.
+    const hintDone = RPC.indexOf("IF v_base IS NOT NULL THEN v_source := 'name'; END IF;", hint);
+    expect(hintDone).toBeGreaterThan(hint);
+    const wrap2 = RPC.lastIndexOf('IF v_base IS NULL THEN', profileName);
+    expect(wrap2).toBeGreaterThan(hintDone);
+    expect(RPC.slice(wrap2, profileName)).not.toContain('END IF;');
+    const before = RPC.slice(0, signIn);
+    expect(before.lastIndexOf('IF v_base IS NULL THEN')).toBeGreaterThan(profileName);
+    expect(RPC.slice(before.lastIndexOf('IF v_base IS NULL THEN'), signIn)).not.toContain('END IF;');
+    // The full local part never becomes a handle: no base call takes v_local whole.
+    expect(RPC).not.toMatch(/_community_handle_base\(v_local\)/);
+  });
+
+  test('a hint is a base to derive from, never stored or echoed', () => {
+    // The parameter, and its one use inside the sanitiser call (comments
+    // stripped: the body names it in prose too).
+    const code = RPC.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+    expect((code.match(/\b_hint\b/g) || []).length).toBe(2);
+    expect(code).not.toMatch(/INSERT|UPDATE/);
   });
 
   test('the collision walk re-validates every candidate, excludes the caller, and is bounded', () => {
@@ -174,11 +208,12 @@ describe('derivation order and bounds', () => {
 describe('the acceptance block proves the shape and tests the sanitiser pure', () => {
   const ACCEPT = SQL.slice(SQL.indexOf('-- ─── Acceptance check'));
   test('presence, volatility, posture, grants and the exclusion words', () => {
-    expect(ACCEPT).toContain("to_regprocedure('public.community_handle_suggestion()') IS NULL");
+    expect(ACCEPT).toContain("to_regprocedure('public.community_handle_suggestion(text)') IS NULL");
+    expect(ACCEPT).toContain("to_regprocedure('public.community_handle_suggestion()') IS NOT NULL");
     expect(ACCEPT).toContain("IF v_vol IS DISTINCT FROM 'v' THEN");
     expect(ACCEPT).toContain("IF v_vol IS DISTINCT FROM 'i' THEN");
     expect(ACCEPT).toContain("'search_path=public, pg_temp' = ANY (p.proconfig)");
-    expect(ACCEPT).toContain("has_function_privilege('anon', 'public.community_handle_suggestion()', 'EXECUTE')");
+    expect(ACCEPT).toContain("has_function_privilege('anon', 'public.community_handle_suggestion(text)', 'EXECUTE')");
     expect(ACCEPT).toContain("ARRAY['app', 'settings', 'login', 'me', 'today'] <@ public._community_handle_suggest_reserved()");
   });
 
@@ -188,6 +223,8 @@ describe('the acceptance block proves the shape and tests the sanitiser pure', (
     expect(ACCEPT).toContain("public._community_handle_base('app') IS NOT NULL");
     expect(ACCEPT).toContain("length(public._community_handle_base('abcdefghijklmnopqrstuvwxyz')) IS DISTINCT FROM 20");
     expect(ACCEPT).toContain("public._community_handle_base('sam.j.parker-1990') IS DISTINCT FROM 'sam_j_parker_1990'");
+    expect(ACCEPT).toContain("public._community_handle_base(substring('sam.j.parker-1990' FROM '^[a-z]+')) IS DISTINCT FROM 'sam'");
+    expect(ACCEPT).toContain("public._community_handle_base(substring('sj.parker' FROM '^[a-z]+')) IS NOT NULL");
     expect(ACCEPT).not.toMatch(/community_profiles|auth\.users/);
   });
 });

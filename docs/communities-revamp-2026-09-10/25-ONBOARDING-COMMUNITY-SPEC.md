@@ -125,9 +125,9 @@ sign-up form; the profile is one tap, and the tap is still theirs.
 ## 3. Rulings (CR-15, register D158). Lead rulings under D33 unless marked OPEN
 
 a. **The join stays an explicit act, one tap, everything pre-filled.**
-   OPEN as founder question Q1 (delivered in chat). Provisional ruling A:
-   the step offers "Join Community" and "Skip for now" with nothing
-   selected.
+   RULED A (D159, 2026-09-11: the founder delegated Q1 to the lead on the
+   "best app" criterion): the step offers "Join Community" and "Skip for
+   now" with nothing selected.
    Why: the profile is visible to other people (a public profile by
    default, the gym on it with `show_gym` true), the repo records the
    `community_visibility` consent at the create call, and ICO guidance on
@@ -138,12 +138,18 @@ a. **The join stays an explicit act, one tap, everything pre-filled.**
    decision, not the lead's. Under B the only change to this spec is
    section 4.3 step 6 (the action row becomes a notice); every other part
    stands.
-b. **Handle source: the email local part, server-side, shown and editable
-   before anything is created.** OPEN as founder question Q2 (data
-   minimisation: `john.smith83@` becomes `john_smith83`, visible to every
-   viewer of a public profile). Provisional ruling: as the founder asked,
-   with the person seeing and able to change it on the step (and later).
-   Derivation order and rules in section 4.1.
+b. **Handle source: the person's own name first; the email only as a
+   last resort, and only its leading letters.** RULED (D159 Q2, the
+   founder's delegation on the "best app" criterion, superseding the first
+   cut's email-local-part order). `john.smith83@` becomes `john`, never
+   `john_smith83`: a public handle should not publish a full name and a
+   birth year the person never chose to publish, and the gym cohort finds
+   people by display name and gym, not by handle. Order: the name typed
+   at step 2 (passed by the onboarding step as the RPC's `_hint`), the
+   profile's first name, the sign-in provider's given name, the leading
+   letters of the sign-in address (never from an Apple private relay),
+   `athlete`. Still shown and editable before anything is created.
+   Derivation rules in section 4.1.
 c. **Fallbacks when the email is unusable** (Apple private relay
    `@privaterelay.appleid.com`, a local part that sanitises to under three
    characters, a reserved word): the sign-in provider's given name from
@@ -172,9 +178,21 @@ f. **Under 18: no Community step at onboarding.** The age is already
    excludes minors from cohorts, boards and groups; creating a profile for
    every minor who completes onboarding is a wider exposure than today's
    deliberate, adult-skewed opt-in, and the server's minor check fails
-   open when the DOB row has not synced yet (section 1). Founder question
-   Q3 asks whether that fail-open should become fail-closed in a later
-   migration; this order does not depend on it.
+   open when the DOB row has not synced yet (section 1). RULED (D159 Q3):
+   migration 174 turns it fail-closed (an unknown date of birth reads as a
+   minor until it arrives; recomputed on every profile write AND on every
+   hub open, `community_get_me`), and the client pushes the body profile
+   row before every profile write and forces it before the onboarding
+   join (`ensureBodyProfilePushed`, `pushUserBodyProfileNow`). A CREATE
+   never runs without the row (hostile review OJ-REV-SQL-2, F3: a profile
+   created without it is stored followers-only and the server's merge
+   re-supplies that stored value on every later write, so the chosen
+   visibility would be lost silently): a failed forced push queues the
+   onboarding join with its original decision time, and the Join screen's
+   create refuses with `unavailable` so the person retries; an edit or a
+   re-consent still runs on a failed push, because the row is already on
+   the cloud. So an adult is never read as a minor for want of a row that
+   exists on the device, and never created as one either.
 g. **The join runs at completion, never mid-wizard.** In the completion
    sequence after the plan build and before `clearDraft`, so the body
    profile (the DOB) is written first, an abandoned wizard never leaves a
@@ -221,6 +239,17 @@ k. **Reserved words: the suggestion excludes the client's list.**
 l. **Copy is Community's own voice** (section 5): training facts only,
    nothing about the body, no "sign up", no "automatically", British
    English, no em dash.
+m. **The rules version parity finding is fixed in the same batch** (D159
+   Q4): migration 174 makes `_community_rules_version()` return 3, the
+   version the client accepts and the text it shows, so a member who
+   accepted version 2 re-accepts once through the existing
+   `rules_outdated` path. Not part of the founder's order; folded in
+   because it is the founder's own ruling that the rewritten rules are
+   re-accepted once (CR-08).
+n. **The Coach goal-setup screen offers the same eight equipment
+   answers** (D159 Q5): `ProGoalSetupScreen.js` renders the shared list
+   and takes the library route for a kit answer exactly as Adjust
+   training does (commit 89454f9 is the model). Lane Q5.
 
 ## 4. Mechanism
 
@@ -240,17 +269,21 @@ Rollback, Transaction, Depends on 160, 170). Parts:
    collapse repeated `_`; trim `_` both ends; `left(20)` then trim again;
    NULL when the result is shorter than three characters, fails
    `_community_handle_valid`, or is on the suggestion's exclusion list.
-3. `public.community_handle_suggestion() RETURNS jsonb` VOLATILE (it
-   writes the rate rail, migrate_167 lesson), SECURITY DEFINER, pinned
-   search_path, EXECUTE to `authenticated` only. Body: caller via
-   `_community_caller()`; if the caller already has a profile return
-   `{handle: existing, source: 'existing'}` BEFORE the rail (a pre-fill
-   for someone already in never spends rail; the read is the caller's own
-   row); `_community_rate_check(v_uid, 'handle_suggest', 30, 30, interval
-   '1 hour')`; read `email` and
-   `raw_user_meta_data` from `auth.users`; source 1 the local part unless
-   the domain is `privaterelay.appleid.com`; source 2 the given name per
-   ruling c; source 3 `athlete`; then the collision loop: candidate,
+3. `public.community_handle_suggestion(_hint text DEFAULT NULL) RETURNS
+   jsonb` VOLATILE (it writes the rate rail, migrate_167 lesson), SECURITY
+   DEFINER, pinned search_path, EXECUTE to `authenticated` only. Body:
+   caller via `_community_caller()`; if the caller already has a profile
+   return `{handle: existing, source: 'existing'}` BEFORE the rail (a
+   pre-fill for someone already in never spends rail; the read is the
+   caller's own row); `_community_rate_check(v_uid, 'handle_suggest', 30,
+   30, interval '1 hour')`; source 1 the sanitised `_hint` (the name typed
+   at onboarding, capped at 60; never stored); source 2
+   `users_profile.first_name`; only when both gave nothing, the one read
+   of `auth.users` (`email`, `raw_user_meta_data`): source 3 the given
+   name per ruling c, source 4 the leading letters of the local part
+   (`substring(local FROM '^[a-z]+')`) unless the domain is
+   `privaterelay.appleid.com`; source 5 `athlete`; then the collision loop:
+   candidate,
    `left(base, 20 - len(n) - 1) || '_' || n` for n in 2..99 (a trailing
    `_` trimmed after the cut), then `left(base, 15) || '_' || four random
    digits`, at most 120 tries in all before `unavailable`; every candidate

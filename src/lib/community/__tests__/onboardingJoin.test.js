@@ -40,11 +40,14 @@ jest.mock('../profile', () => ({
   upsertProfile: jest.fn(),
   loadMe: jest.fn(),
   suggestHandle: jest.fn(),
+  ensureBodyProfilePushed: jest.fn(async () => true),
   hasProfile: (me) => !!me?.profile?.handle,
 }));
 jest.mock('../../gyms', () => ({ setGyms: jest.fn() }));
 
-const { upsertProfile, loadMe, suggestHandle } = require('../profile');
+const {
+  upsertProfile, loadMe, suggestHandle, ensureBodyProfilePushed,
+} = require('../profile');
 const { setGyms } = require('../../gyms');
 const {
   performCommunityJoin, retryPendingJoin, applyOnboardingGym,
@@ -65,7 +68,52 @@ beforeEach(() => {
   upsertProfile.mockReset().mockResolvedValue({ handle: 'rowan_lifts' });
   loadMe.mockReset().mockResolvedValue({ me: NO_PROFILE_ME, fromCache: false, error: null });
   suggestHandle.mockReset().mockResolvedValue({ handle: 'suggested_1', source: 'email' });
+  ensureBodyProfilePushed.mockReset().mockResolvedValue(true);
   setGyms.mockReset().mockResolvedValue({});
+});
+
+describe('D159: the body profile row is pushed, forced, before the profile is created', () => {
+  test('the forced push runs after the existing-profile check and before the upsert', async () => {
+    const order = [];
+    ensureBodyProfilePushed.mockImplementation(async () => { order.push('push'); return true; });
+    upsertProfile.mockImplementation(async () => { order.push('upsert'); return { handle: 'rowan_lifts' }; });
+    await performCommunityJoin('u1', { handle: 'rowan_lifts', displayName: 'Rowan', gymId: null });
+    expect(ensureBodyProfilePushed).toHaveBeenCalledWith('u1', { force: true });
+    expect(order).toEqual(['push', 'upsert']);
+  });
+
+  test('a failed push never creates: the join is queued with its original decision time, and the retry pushes again first', async () => {
+    // Hostile review OJ-REV-SQL-2, F3: a profile created without the cloud
+    // row is stored followers-only and the server's merge re-supplies that
+    // stored value on every later write, so the chosen visibility would be
+    // lost silently. The create waits for the row.
+    ensureBodyProfilePushed.mockResolvedValue(false);
+    const decidedAt = Date.now() - 60_000;
+    const out = await performCommunityJoin('u1', {
+      handle: 'rowan_lifts', displayName: 'Rowan', gymId: 'g1', gym: { id: 'g1', name: 'Iron Works' }, decidedAt,
+    });
+    expect(out).toEqual({ ok: false, queued: true, error: 'unavailable' });
+    expect(upsertProfile).not.toHaveBeenCalled();
+    await expect(readPendingJoin('u1')).resolves.toEqual(expect.objectContaining({
+      handle: 'rowan_lifts', displayName: 'Rowan', gymId: 'g1', decidedAt,
+    }));
+
+    // The row lands on the retry: pushed (forced) first, then created.
+    const order = [];
+    ensureBodyProfilePushed.mockImplementation(async () => { order.push('push'); return true; });
+    upsertProfile.mockImplementation(async () => { order.push('upsert'); return { handle: 'rowan_lifts' }; });
+    const retry = await retryPendingJoin('u1');
+    expect(retry).toEqual({ ok: true, queued: false, error: null });
+    expect(order).toEqual(['push', 'upsert']);
+    expect(ensureBodyProfilePushed).toHaveBeenLastCalledWith('u1', { force: true });
+    await expect(readPendingJoin('u1')).resolves.toBeNull();
+  });
+
+  test('an existing member never triggers the forced push (nothing is written for them)', async () => {
+    loadMe.mockResolvedValue({ me: HAS_PROFILE_ME, fromCache: true, error: null });
+    await performCommunityJoin('u1', { handle: 'x', displayName: 'X', gymId: null });
+    expect(ensureBodyProfilePushed).not.toHaveBeenCalled();
+  });
 });
 
 describe('performCommunityJoin: the success order', () => {
@@ -233,7 +281,9 @@ describe('performCommunityJoin: lead review 2026-09-11 (existing profile, empty 
     upsertProfile.mockImplementation(() => new Promise((resolve) => { release = resolve; }));
     const a = performCommunityJoin('u1', { handle: 'rowan_lifts', displayName: 'Rowan', gymId: null });
     const b = performCommunityJoin('u1', { handle: 'rowan_lifts', displayName: 'Rowan', gymId: null });
-    await Promise.resolve();
+    // The create sits behind two awaits (the existing-profile read and the
+    // forced body-profile push); wait until it is actually in flight.
+    while (!release) await new Promise((r) => setImmediate(r)); // eslint-disable-line no-await-in-loop
     release({ handle: 'rowan_lifts' });
     const [outA, outB] = await Promise.all([a, b]);
     expect(outA).toEqual({ ok: true, queued: false, error: null });

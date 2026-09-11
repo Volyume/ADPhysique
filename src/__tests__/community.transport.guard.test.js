@@ -143,6 +143,12 @@ describe('client RPC arguments match the migration signatures', () => {
   // are, so its re-issued signatures correctly override the earlier 0-arg
   // ones rather than being reported as a phantom mismatch.
   const MIGRATION_170 = path.join(ROOT, 'supabase/migrate_170_community_connection.sql');
+  // migrate_173 (Community at onboarding, CR-15 / D158 / D159):
+  // `community_handle_suggestion(_hint)`, the server-side handle
+  // suggestion the onboarding step and the Join screen pre-fill. Folded in
+  // the same way, so the client's `{ _hint }` argument is checked against
+  // the declared parameter rather than reported as a phantom.
+  const MIGRATION_173 = path.join(ROOT, 'supabase/migrate_173_community_handle_suggestion.sql');
   const sql160 = fs.existsSync(MIGRATION) ? fs.readFileSync(MIGRATION, 'utf8') : null;
   const sql161 = fs.existsSync(MIGRATION_161) ? fs.readFileSync(MIGRATION_161, 'utf8') : null;
   const sql162 = fs.existsSync(MIGRATION_162) ? fs.readFileSync(MIGRATION_162, 'utf8') : null;
@@ -150,9 +156,10 @@ describe('client RPC arguments match the migration signatures', () => {
   const sql164 = fs.existsSync(MIGRATION_164) ? fs.readFileSync(MIGRATION_164, 'utf8') : null;
   const sql165 = fs.existsSync(MIGRATION_165) ? fs.readFileSync(MIGRATION_165, 'utf8') : null;
   const sql170 = fs.existsSync(MIGRATION_170) ? fs.readFileSync(MIGRATION_170, 'utf8') : null;
-  const sql = [sql160, sql161, sql162, sql163, sql164, sql165, sql170].every((s2) => s2 === null)
+  const sql173 = fs.existsSync(MIGRATION_173) ? fs.readFileSync(MIGRATION_173, 'utf8') : null;
+  const sql = [sql160, sql161, sql162, sql163, sql164, sql165, sql170, sql173].every((s2) => s2 === null)
     ? null
-    : `${sql160 ?? ''}\n${sql161 ?? ''}\n${sql162 ?? ''}\n${sql163 ?? ''}\n${sql164 ?? ''}\n${sql165 ?? ''}\n${sql170 ?? ''}`;
+    : `${sql160 ?? ''}\n${sql161 ?? ''}\n${sql162 ?? ''}\n${sql163 ?? ''}\n${sql164 ?? ''}\n${sql165 ?? ''}\n${sql170 ?? ''}\n${sql173 ?? ''}`;
 
   /**
    * The RPCs migrate_161 must declare (blueprint section 11), listed here
@@ -205,6 +212,7 @@ describe('client RPC arguments match the migration signatures', () => {
   const NAMES_162 = sql162 ? namesIn(sql162) : new Set();
   const NAMES_163 = sql163 ? namesIn(sql163) : new Set();
   const NAMES_170 = sql170 ? namesIn(sql170) : new Set();
+  const NAMES_173 = sql173 ? namesIn(sql173) : new Set();
 
   /** name -> Set of declared parameter names, from the SQL. */
   function declaredParams() {
@@ -322,7 +330,8 @@ describe('client RPC arguments match the migration signatures', () => {
     // nobody is writing a function for.
     const called = [...new Set(callSites().map((s2) => s2.name))];
     const unaccounted = called.filter((name) => !NAMES_160.has(name) && !NAMES_161.has(name)
-      && !NAMES_162.has(name) && !NAMES_163.has(name) && !NAMES_170.has(name) && !RPCS_161.includes(name));
+      && !NAMES_162.has(name) && !NAMES_163.has(name) && !NAMES_170.has(name) && !NAMES_173.has(name)
+      && !RPCS_161.includes(name));
     expect({ unaccounted }).toEqual({ unaccounted: [] });
   });
 });

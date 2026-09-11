@@ -27,7 +27,9 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { upsertProfile, loadMe, hasProfile, suggestHandle } from './profile';
+import {
+  upsertProfile, loadMe, hasProfile, suggestHandle, ensureBodyProfilePushed,
+} from './profile';
 import { setGyms } from '../gyms';
 
 export const ONBOARDING_CHOICE_PREFIX = '@volyume_community_onboarding_choice_';
@@ -281,6 +283,21 @@ async function performCommunityJoinOnce(uid, { handle, displayName, gymId, gym, 
     await clearPendingJoin(uid);
     await clearOnboardingChoice(uid);
     return { ok: true, queued: false, error: null };
+  }
+
+  // D159 (migrate_174): the server's under-18 check fails closed on a
+  // missing body profile row, and a profile CREATED without that row is
+  // stored followers-only, a value the server's merge re-supplies on every
+  // later write (hostile review OJ-REV-SQL-2, F3). So the row is pushed,
+  // forced, and the profile is never created until the push is known to
+  // have landed: a failed push queues the join instead, with the original
+  // decision time, and the retry pushes again first.
+  const pushed = await ensureBodyProfilePushed(uid, { force: true });
+  if (!pushed) {
+    await writePendingJoin(uid, {
+      handle, displayName, gymId, gym, ...(Number.isFinite(decidedAt) ? { decidedAt } : {}),
+    });
+    return { ok: false, queued: true, error: 'unavailable' };
   }
 
   let error = null;

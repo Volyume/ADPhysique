@@ -13,7 +13,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logError } from '../errorLog';
-import { callCommunity } from './transport';
+import { callCommunity, CommunityError } from './transport';
 import { COMMUNITY_RULES_VERSION } from './limits';
 
 export const ME_CACHE_PREFIX = '@volyume_community_me_';
@@ -177,10 +177,23 @@ export function hasUnreadMessages(me) {
  * @returns {Promise<object>} the profile card
  */
 export async function upsertProfile(fields = {}) {
+  const uid = currentUserId();
+  // D159: the under-18 check on the server fails closed; the row it reads
+  // goes first. A CREATE never runs without it (hostile review
+  // OJ-REV-SQL-2, F3): a profile created with the row absent is stored
+  // followers-only, and the server's merge re-supplies that stored value
+  // on every later write, so the person's chosen visibility would not
+  // survive. An EDIT still runs on a failed push: the row is already on
+  // the cloud and every hub open recomputes the check. "Create" is read
+  // from the cached `me` (a member normally has one; a missing cache
+  // reads as no profile, and offline the write would fail the same way).
+  const pushed = await ensureBodyProfilePushed(uid);
+  if (!pushed && !hasProfile(await readCachedMe(uid))) {
+    throw new CommunityError('unavailable', 'body profile row not on the cloud yet');
+  }
   const card = await callCommunity('community_upsert_profile', {
     _p: { ...fields, accept_rules_version: COMMUNITY_RULES_VERSION },
   });
-  const uid = currentUserId();
   const cached = (await readCachedMe(uid)) ?? emptyMe();
   await writeCachedMe(uid, { ...cached, profile: card ?? null });
   return card;
@@ -204,10 +217,13 @@ export async function upsertProfile(fields = {}) {
  * @returns {Promise<object>} the profile card
  */
 export async function acceptRules() {
+  const uid = currentUserId();
+  // D159: a re-consent is a profile write too, and recomputes the under-18
+  // check on the server; the row it reads goes first (best effort).
+  await ensureBodyProfilePushed(uid);
   const card = await callCommunity('community_upsert_profile', {
     _p: { accept_rules_version: COMMUNITY_RULES_VERSION },
   });
-  const uid = currentUserId();
   const cached = (await readCachedMe(uid)) ?? emptyMe();
   await writeCachedMe(uid, { ...cached, profile: card ?? cached.profile ?? null });
   return card;
@@ -219,21 +235,60 @@ export async function checkHandle(handle) {
 }
 
 /**
- * A server-suggested handle, derived from the account's sign-in email
- * (never sent or seen by this client -- migrate_173,
- * `docs/communities-revamp-2026-09-10/25-ONBOARDING-COMMUNITY-SPEC.md`
- * section 4.1). Used to pre-fill the onboarding "Your gym" step and the
- * Join screen so a handle is never a blank field to think about.
+ * A server-suggested handle (migrate_173, `docs/communities-revamp-
+ * 2026-09-10/25-ONBOARDING-COMMUNITY-SPEC.md` section 4.1; D159 Q2): the
+ * person's own name first (the `hint`, which is the name typed at
+ * onboarding step 2 and is passed by the onboarding step alone; then the
+ * name on the account's profile; then the sign-in provider's given name),
+ * the leading letters of the sign-in address only as a last resort, then
+ * a neutral base. All of it derived on the server; this client never
+ * reads the address. Used to pre-fill the onboarding "Your gym" step and
+ * the Join screen so a handle is never a blank field to think about.
  *
+ * @param {string|null} [hint] a name to derive from, sent as the RPC's one
+ *   declared parameter; trimmed and capped, never stored by the server.
  * @returns {Promise<{handle: string, source: string}>} `source` is
- *   'email', 'name', 'fallback' or 'existing' (the caller already has a
+ *   'name', 'email', 'fallback' or 'existing' (the caller already has a
  *   profile and got their own handle back). The onboarding step branches
  *   on 'existing' alone (it then creates nothing); no screen ever shows
  *   or stores the source. A refusal arrives as the CommunityError the
  *   transport maps, for the caller to handle.
  */
-export async function suggestHandle() {
-  return callCommunity('community_handle_suggestion');
+export async function suggestHandle(hint = null) {
+  const cleanHint = typeof hint === 'string' && hint.trim() ? hint.trim().slice(0, 60) : null;
+  return callCommunity('community_handle_suggestion', { _hint: cleanHint });
+}
+
+// D159 (migrate_174): the server's under-18 check reads the cloud copy of
+// the body profile row and fails CLOSED, so every profile write below
+// pushes that row first. Once per account per app session is enough for
+// an edit (the bulk sync carries it too); the onboarding join forces it.
+const bodyProfilePushedFor = new Set();
+
+/**
+ * Push the account's body profile row to the cloud before a Community
+ * profile write, so the server's under-18 check sees the date it needs.
+ * Reports the push's own truth and never throws; what a failed push means
+ * is the caller's call (a CREATE refuses, an edit or a re-consent still
+ * runs: the row is already on the cloud and every hub open recomputes).
+ *
+ * @param {string} uid
+ * @param {{force?: boolean}} [opts] `force` pushes even when this session
+ *   already did.
+ * @returns {Promise<boolean>} true when the row is known to be on the cloud
+ */
+export async function ensureBodyProfilePushed(uid, { force = false } = {}) {
+  if (!uid) return false;
+  if (!force && bodyProfilePushedFor.has(uid)) return true;
+  try {
+    // Lazy require: the legacy sync module is heavy and reaches the store.
+    // eslint-disable-next-line global-require
+    const ok = await require('../sync').pushUserBodyProfileNow(uid, uid);
+    if (ok) bodyProfilePushedFor.add(uid);
+    return !!ok;
+  } catch (_e) {
+    return false; // never throws: the caller decides what a failed push means
+  }
 }
 
 /** Leave Community: withdraws consent and deletes everything the user

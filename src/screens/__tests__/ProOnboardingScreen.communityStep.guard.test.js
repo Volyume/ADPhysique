@@ -171,7 +171,7 @@ describe('the email never enters the step', () => {
     expect(CODE).not.toMatch(/user\?\.email|user\.email|\.email\b/);
     expect(STEP5).not.toMatch(/email|appleIdentity|privaterelay/i);
     // The handle arrives from the server's suggestion, once.
-    expect(SRC).toMatch(/suggestHandle\(\)\.then\(\(res\) => \{/);
+    expect(SRC).toMatch(/suggestHandle\(firstName\.trim\(\) \|\| null\)\.then\(\(res\) => \{/);
     expect(SRC).toMatch(/if \(res\.source === 'existing'\) \{/);
   });
 

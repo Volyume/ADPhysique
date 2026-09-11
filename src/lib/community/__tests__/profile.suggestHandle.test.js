@@ -1,23 +1,23 @@
 /**
  * profile.suggestHandle.test.js - communities revamp 2026-09-10,
  * `docs/communities-revamp-2026-09-10/25-ONBOARDING-COMMUNITY-SPEC.md`
- * section 4.2: "`suggestHandle()`: `callCommunity('community_handle_
- * suggestion')`, no arguments; returns `{handle, source}` or throws the
- * CommunityError the transport maps."
+ * section 4.2, as ruled under D159 Q2: `suggestHandle(hint)` calls
+ * `community_handle_suggestion` with its ONE declared parameter, `_hint`
+ * (the name typed at onboarding, passed by the onboarding step alone;
+ * null everywhere else), and returns `{handle, source}` or throws the
+ * CommunityError the transport maps.
  *
- * What this suite pins: the RPC name, that it is called with NO second
- * argument at all (not even `{}` -- migrate_173 declares the function
- * with zero parameters, and `community.transport.guard.test.js`'s
- * "every argument the client sends is a declared parameter" check only
- * inspects `callCommunity('name', { ... })` call sites, so a stray `{}`
- * here would silently escape that guard rather than being caught by
- * it), the pass-through shape, and that a refusal reaches the caller
- * unchanged rather than being swallowed.
+ * What this suite pins: the RPC name; that the call always carries the
+ * `{ _hint }` object literal (so `community.transport.guard.test.js`'s
+ * "every argument the client sends is a declared parameter" check sees
+ * it); that the hint is trimmed, capped and null when empty; the
+ * pass-through shape; and that a refusal reaches the caller unchanged
+ * rather than being swallowed.
  *
  * `suggestHandle` lives in `profile.js`, which is already walked by
  * `community.privacy.guard.test.js` (it covers every file under
  * `src/lib/community/` by location, this one included) -- the belt-and-
- * braces check below is scoped to just this one new function, in case a
+ * braces check below is scoped to just this one function, in case a
  * future edit widened its body without the whole-file guard catching a
  * partial-word variant.
  */
@@ -45,15 +45,25 @@ beforeEach(() => {
 });
 
 describe('suggestHandle', () => {
-  test('calls community_handle_suggestion with no arguments', async () => {
-    callCommunity.mockResolvedValue({ handle: 'rowan_lifts', source: 'email' });
+  test('calls community_handle_suggestion with its one declared parameter, null when there is no hint', async () => {
+    callCommunity.mockResolvedValue({ handle: 'rowan_lifts', source: 'name' });
 
     await suggestHandle();
 
     expect(callCommunity).toHaveBeenCalledTimes(1);
-    expect(callCommunity).toHaveBeenCalledWith('community_handle_suggestion');
-    // Not even an empty object: the RPC takes zero parameters.
-    expect(callCommunity.mock.calls[0]).toHaveLength(1);
+    expect(callCommunity).toHaveBeenCalledWith('community_handle_suggestion', { _hint: null });
+  });
+
+  test('a hint is trimmed and capped at sixty characters; blank reads as no hint', async () => {
+    callCommunity.mockResolvedValue({ handle: 'rowan', source: 'name' });
+    await suggestHandle('  Rowan  ');
+    expect(callCommunity).toHaveBeenLastCalledWith('community_handle_suggestion', { _hint: 'Rowan' });
+    await suggestHandle('x'.repeat(80));
+    expect(callCommunity).toHaveBeenLastCalledWith('community_handle_suggestion', { _hint: 'x'.repeat(60) });
+    await suggestHandle('   ');
+    expect(callCommunity).toHaveBeenLastCalledWith('community_handle_suggestion', { _hint: null });
+    await suggestHandle(42);
+    expect(callCommunity).toHaveBeenLastCalledWith('community_handle_suggestion', { _hint: null });
   });
 
   test('returns the server shape unchanged', async () => {
