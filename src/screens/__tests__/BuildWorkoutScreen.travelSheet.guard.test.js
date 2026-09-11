@@ -42,8 +42,9 @@ describe('BuildWorkoutScreen travel equipment sheet guard', () => {
     expect(addAt).toBeGreaterThan(-1);
     expect(rowAt).toBeGreaterThan(addAt);
     expect(listAt).toBeLessThan(rowAt);
-    // The sheet's committing button never borrows the screen's own title.
-    expect(source).not.toMatch(/title="Create workout"[\s\S]*onPress=\{applyTravelMode\}/);
+    // The sheet's committing button never borrows the screen's own title:
+    // it says what it does, and says "replace" when it would replace.
+    expect(source).toMatch(/title=\{exercises\.length > 0 \? 'Replace with session' : 'Fill workout'\}[\s\S]{0,400}onPress=\{applyTravelMode\}/);
     expect(source).not.toMatch(/Travel \/ hotel gym/);
   });
 });
