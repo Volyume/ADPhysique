@@ -154,7 +154,7 @@ export default function BuildWorkoutScreen({ navigation }) {
 
   async function handleStartTraining() {
     if (exercises.length === 0) {
-      toast.show('Add at least one exercise, or start empty from the footer.', { variant: 'warning' });
+      toast.show('Add at least one exercise, or start a blank workout from the footer.', { variant: 'warning' });
       return;
     }
     setStarting(true);
@@ -320,14 +320,7 @@ export default function BuildWorkoutScreen({ navigation }) {
           ManualBuilderScreen) keeps the footer above the keyboard. */}
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        <Text style={[styles.subtitle, live.subtitle]}>Choose the exercises you want today. You can adjust sets, reps, rest and starting weight before you train.</Text>
-
-        {/* Travel Mode quick-fill */}
-        <TouchableOpacity style={[styles.travelChip, live.travelChip]} onPress={() => setShowTravelModal(true)} accessibilityRole="button" accessibilityLabel="Travel or hotel gym mode">
-          <Ionicons name="airplane-outline" size={15} color={t.colors.textSecondary} />
-          <Text style={[styles.travelChipText, live.travelChipText]}>Travel / hotel gym</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </TouchableOpacity>
+        <Text style={[styles.subtitle, live.subtitle]}>Start blank and add whatever you want to do today. You can adjust sets, reps, rest and starting weight before you train.</Text>
 
         {exercises.map((item, index) => (
           <View key={item.key} style={[styles.exerciseCard, live.exerciseCard]}>
@@ -453,6 +446,24 @@ export default function BuildWorkoutScreen({ navigation }) {
           accessibilityLabel="Add exercise"
         />
 
+        {/* Founder 2026-09-11: a blank workout is a blank workout. The
+            limited-equipment quick-fill used to sit first, framed as a
+            travel-gym chooser with three equipment choices and a button
+            called "Create workout", so it read as the way to create one.
+            It is an optional shortcut, so it sits below the blank path as
+            a plain row (no box), says what it does, and its sheet says
+            plainly that closing it and adding your own exercises is fine. */}
+        <TouchableOpacity
+          style={styles.quickFillRow}
+          onPress={() => setShowTravelModal(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Fill this workout with a quick full-body session for limited equipment"
+        >
+          <Ionicons name="airplane-outline" size={15} color={t.colors.textSecondary} />
+          <Text style={[styles.quickFillText, live.quickFillText]}>Away from your gym? Fill this with a quick full-body session</Text>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+        </TouchableOpacity>
+
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
 
@@ -460,17 +471,17 @@ export default function BuildWorkoutScreen({ navigation }) {
         {exercises.length === 0 ? (
           <Button
             testID="volyume-btn-start-empty"
-            title="Start without a plan"
+            title="Start blank workout"
             icon="play-skip-forward-outline"
             size="lg"
             loading={starting}
             onPress={handleSkip}
-            accessibilityLabel="Start a workout without a plan"
+            accessibilityLabel="Start a blank workout and add exercises as you go"
           />
         ) : (
           <Button
             testID="volyume-btn-start-training"
-            title={`Start training (${exercises.length})`}
+            title={`Start workout (${exercises.length})`}
             icon="play-circle"
             size="lg"
             loading={starting}
@@ -484,10 +495,15 @@ export default function BuildWorkoutScreen({ navigation }) {
       <BottomSheet
         visible={showTravelModal}
         onClose={() => setShowTravelModal(false)}
-        accessibilityLabel="Travel or hotel gym equipment picker"
+        accessibilityLabel="Quick session equipment picker"
       >
-        <Text style={[styles.travelTitle, live.travelTitle]}>Travel / hotel gym</Text>
-        <Text style={[styles.travelSub, live.travelSub]}>Choose what equipment you've got today. Volyume will build a full-body workout that keeps you moving without changing your plan.</Text>
+        <Text style={[styles.travelTitle, live.travelTitle]}>Quick full-body session</Text>
+        <Text style={[styles.travelSub, live.travelSub]}>
+          {'Pick what you have to hand and Volyume fills this workout with a full-body session for it, without changing your plan. Change anything before you start, or close this and add your own exercises.'}
+          {exercises.length > 0
+            ? ` This replaces the ${exercises.length === 1 ? 'exercise' : `${exercises.length} exercises`} you have added.`
+            : ''}
+        </Text>
         <View style={styles.travelOptions} accessibilityRole="radiogroup" accessibilityLabel="Available equipment">
           {[
             { id: 'bodyweight', label: 'Bodyweight only', icon: 'body-outline' },
@@ -515,10 +531,10 @@ export default function BuildWorkoutScreen({ navigation }) {
           />
           <Button
             variant="emphatic"
-            title="Create workout"
+            title={exercises.length > 0 ? 'Replace with session' : 'Fill workout'}
             style={styles.travelAction}
             onPress={applyTravelMode}
-            accessibilityLabel="Create session"
+            accessibilityLabel={exercises.length > 0 ? 'Replace the added exercises with a quick session' : 'Fill this workout with a quick session'}
           />
         </View>
       </BottomSheet>
@@ -663,14 +679,15 @@ const styles = StyleSheet.create({
   },
 
   // Travel mode chip + modal
-  travelChip: {
+  // Founder 2026-09-11: a plain row, no border and no fill, so the optional
+  // quick-fill never reads as a box you must pass through.
+  quickFillRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    paddingVertical: spacing.sm,
     minHeight: touchTarget.minimum,
-    backgroundColor: colors.surface, alignSelf: 'stretch',
+    alignSelf: 'stretch',
   },
-  travelChipText: { ...type.label, color: colors.textPrimary, flex: 1 },
+  quickFillText: { ...type.label, color: colors.textSecondary, flex: 1 },
   travelTitle: { ...type.title, color: colors.textPrimary },
   travelSub: { ...type.bodySm, color: colors.textSecondary },
   travelOptions: { gap: spacing.sm },
@@ -703,8 +720,7 @@ function buildLiveStyles(t) {
     addBtn: { borderColor: t.colors.primary },
     addBtnText: { fontSize: t.fontSize.md, color: t.colors.primary },
     footer: { borderTopColor: t.colors.border },
-    travelChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    travelChipText: { ...t.type.label, color: t.colors.textPrimary },
+    quickFillText: { ...t.type.label, color: t.colors.textSecondary },
     travelTitle: { ...t.type.title, color: t.colors.textPrimary },
     travelSub: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
