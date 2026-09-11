@@ -214,6 +214,33 @@ predates these fixes: a second build needs the founder's explicit go
 review in flight; then the founder's phrase, the apply through the
 connector, and the client switch to the RPC. The connector is the cloud route (founder ruling 2026-09-11 above).
 
+## QUICK FULL-BODY SESSION: WIDEN TO THE APP'S EQUIPMENT (founder decision A, 2026-09-11) — RECON IN FLIGHT
+
+Founder report (chat, screenshots, 2026-09-11): the blank workout screen
+opened on a "Travel / hotel gym" row whose sheet forced three equipment
+choices behind a button called "Create workout". LANDED (ff693b4): the
+blank path leads; the quick-fill is a plain row below "Add exercise"
+with honest copy and a replace notice; footer "Start blank workout".
+Founder then chose option A: widen the quick-session generator
+(`src/lib/travelMode.js`, three presets) to the app's real equipment
+taxonomy (bands, kettlebells, barbell-only, machines-only, full gym and
+the rest), deterministic and pure, respecting the intent filter and the
+capability preflight the screen already applies. Lane R-A (Sonnet,
+read-only recon: taxonomy, engine equipment profiles, single-session
+primitives, the travel generator, pinned tests, rulings) in flight; the
+lead writes the spec from its report; build lane (Sonnet) follows; Opus
+review before landing. Recovery: re-dispatch the same brief.
+
+## COMMUNITIES REVAMP: FRESH-EYES REVIEW OF PHASES 0 TO 3 (standing law, never run) — IN FLIGHT
+
+The blueprint's section 11 requires an Opus fresh-eyes review after
+phase 1 and after phase 3; only the SQL parts and phase 4 were reviewed.
+Lane REV-03 (Opus, read-only) reviews the shipped client of phases 0 to
+3 against the blueprint and specs (safety floor, consent, presentation
+law, copy, privacy, correctness, tests, drift). Findings are fixed by the
+lead or a Sonnet lane, then lint, full test run, merge. Migration 171
+still waits only on the founder's phrase; the client switch follows it.
+
 ## LIVE PRODUCTION INCIDENT — Sentry VOLYUME-37, gym finder returning zero results / failing outright (2026-09-07) — RESOLVED, migrate_167 APPLIED and VERIFIED
 
 Founder-reported (chat, screenshots): gym finder found no gyms within 50
