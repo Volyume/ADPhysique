@@ -116,9 +116,11 @@ what brings the best product") ruled D160: migration 175 (tolerant gate,
 version accepted stored, 3 restored in the same transaction), the rules
 screen's update prompt, image upload ruled not built, review notes N1
 and N9 built and N7 accepted, the older board headings corrected. 175
-applied through the connector after its hostile review (record:
-`supabase/README.md`). Nothing on the lead side is open for Community;
-the founder builds from main when they choose.
+hostile-reviewed (OJ-REV-SQL-3: APPLY, two hardening notes taken; the
+client's two FIX FIRST items landed) and then applied through the
+connector; the `supabase/README.md` 175 status block is the live record
+of whether that apply has happened. The founder builds from main and
+updates the store apps when they choose.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 

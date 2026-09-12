@@ -504,7 +504,19 @@ built (new dependency and data category, inviolable); N1 built (the Join
 tap waits for the live check); N7 accepted as designed; N9 built as an
 integer `wizard` beside `step`; 155, the App Store id placeholder and the
 one-off gym-search timeout recorded as founder-side facts. Stale headings
-on the four older Community sections corrected.
+on the four older Community sections corrected. Hostile review
+OJ-REV-SQL-3 (Opus): 175 APPLY (the NULL guard and exact-position checks
+taken; the recorded consent version bounded to the published notice,
+ruled); client FIX FIRST landed (the hold gets a step guard and a
+three-second ceiling; the rules screen reads the server on the
+re-consent path, paints no card before that read, never reports a false
+acceptance, and honours the messaging screen's `accept` parameter).
+175 APPLIED to production 2026-09-12 15:05 UTC through the connector
+under the checksum protocol (two chunks, whole file `334c3fe7...` /
+25,236 bytes re-checked inside the executing DO block, acceptance block
+passed, read-only verification clean, version 3 live again). Settled
+tree lint clean. NOTHING on the lead side is open for Community; the
+founder builds from main and updates the store apps when they choose.
 Founder observation carried (not in this order):
 `_community_rules_version()` still returns 2 while the client accepts 3
 (the v3 rules text never triggers a re-accept server-side), Q4.

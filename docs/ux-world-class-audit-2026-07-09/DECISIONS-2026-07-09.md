@@ -6648,15 +6648,29 @@ Stopgap 14:33 UTC 2026-09-12: `_community_rules_version()` back to 2.
    that need the current text stay gated. Why plus one: the one
    realistic process gap (a build carrying a new constant shipping
    before its migration, which happened on 2026-09-10) becomes harmless
-   instead of refusing every profile write. Part 2 restores version 3
-   in the same transaction, so there is never a moment a build is
-   refused. Guard-proved byte-for-byte re-issue of 170's function.
+   instead of refusing every profile write. The version RECORDED is
+   bounded to the one the server has published (hostile review
+   OJ-REV-SQL-3 F5, ruled: a consent row must be evidence of a notice
+   that existed; a build one version ahead is accepted, recorded at the
+   current version, and re-accepts once when its migration lands). Part
+   2 restores version 3 in the same transaction, so there is never a
+   moment a build is refused. Guard-proved byte-for-byte re-issue of
+   170's function; the acceptance block reads the live body with exact
+   string positions and guards every lookup against a NULL (F6, F9).
 2. **The client asks for an update instead of looping.** When
    `community_get_me` reports a server version ahead of the text the
    build carries (`rulesTextBehindServer`), the rules screen's
    re-consent card becomes "Update Volyume to continue" with no accept
-   button (accepting the old text cannot satisfy the server). The
-   ordinary re-consent card is unchanged.
+   button (accepting the old text cannot satisfy the server). On the
+   re-consent path the screen reads the server (a forced refresh, a
+   consent moment is not answered from a cache), shows no card until
+   that read has answered (the empty payload seeds the client's own
+   version, so a card painted before the read cannot be trusted), and
+   after an accept re-reads the server and never reports "Rules
+   accepted" while still behind (OJ-REV-SQL-3 F2). The messaging
+   screen's `accept: true` parameter is honoured alongside
+   `mustAccept`, so a refusal on message send lands on a card, not on a
+   dead explanation (F4). The ordinary re-consent card is unchanged.
 3. **Image upload for posts and avatars (SD-12, founder-side item 3):
    NOT built, ruled here.** It needs an image-moderation processor with
    an EU-residency check and a data-processing agreement: a new
@@ -6669,6 +6683,14 @@ Stopgap 14:33 UTC 2026-09-12: `_community_rules_version()` back to 2.
    line stands) and then applies the same validation a fresh tap gets;
    before, the tap went through on an unverified handle and a taken
    one was silently replaced at completion by the server's suggestion.
+   Hardened under OJ-REV-SQL-3 F1: leaving the step spends the held tap
+   (joining is a consent act and never fires from a tap the person
+   walked away from), and a check that cannot answer never holds the
+   tap beyond three seconds, after which it goes through exactly as it
+   did before the hold (the check itself has no timeout, D141).
+   Recorded, not changed (F11, pre-existing): clearing the field during
+   a check lets the late answer land, and a held tap then resumes with
+   an empty handle, which is the "handle optional" path.
 5. **Review note N7 (two one-round-trip races): accepted as designed.**
    The queued join against a manual Join-screen create, and a suggested
    handle against a concurrent taker, each resolve in one extra round
@@ -6680,9 +6702,19 @@ Stopgap 14:33 UTC 2026-09-12: `_community_rules_version()` back to 2.
    reader never compares a step 6 of one wizard with a step 6 of the
    other; integer-only, per the Campaign 1 privacy law.
 7. **Left as founder-side facts, not build items:** migration 155 waits
-   for the last pre-Community binary to leave users' hands (iOS
-   1.3.5+64 was still active on two devices in the last seven days);
-   the three link pages carry the App Store id placeholder until the
-   iOS app is on the store; the single gym-search statement timeout of
+   for the store apps to move to a build without Partners (the founder
+   updates the stores when this is finished; iOS 1.3.5+64, a
+   pre-Community build, was still active in the last seven days); the
+   three link pages carry the App Store id placeholder until the iOS
+   app is on the store; the single gym-search statement timeout of
    2026-09-10 (one user, one search, 11.5 s) has not recurred in
-   fourteen days and is watched, not fixed.
+   fourteen days and is watched, not fixed. Recorded from the review
+   (F8), unchanged: `community_leave` stamps the withdrawal row with the
+   version in force, which is the notice a withdrawal is against.
+8. **Hostile review OJ-REV-SQL-3 (Opus) of 175 and the client half:**
+   the SQL APPLY with two hardening notes (F6 the NULL guard, F9 exact
+   string positions) taken, the consent bound (F5) ruled as above; the
+   client FIX FIRST items F1 and F2 landed, F3 (the handover claimed
+   the apply early) corrected, F4 (the messaging parameter) built, F7
+   (174's header) recorded, F10 (an absent `wizard` is wizard 1)
+   documented.
