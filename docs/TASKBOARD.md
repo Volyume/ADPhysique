@@ -484,6 +484,27 @@ the one `(text)` signature, grants right, all 157 community functions
 pinned, none anon-executable), `claude_schema_migrations` rows in, the
 scratch table dropped. Record: `supabase/README.md` 173/174 blocks.
 NO BUILD started (founder: "I'll build when all is done").
+2026-09-12: the founder asked whether Community was done; the lead's
+check found a LIVE EXPOSURE it had created: 174 moved the server's rules
+version to 3 while every Community build on the founder's own devices
+(iOS 2.0.0+65, Android 3573 to 3575; the store apps carry Community only
+from the next published build) sends 2 to an exact-equality gate, so
+every profile create and edit from them was refused (the review's "no
+shipped build carries Community" was checked against the Play build
+only, and the lead accepted it unchecked). No profile write reached the
+server in the window.
+Founder: "Just finish everything so it is ready when I build ...
+decisions ... make them in what brings the best product." RULED D160:
+stopgap rollback of the version to 2 at 14:33 UTC; migration 175 (the
+gate tolerates an older client, records the version actually accepted,
+restores 3 in the same transaction; guard-proved re-issue of 170's
+function); the rules screen asks for an app update instead of looping
+when the server is ahead of the build's text; image upload ruled NOT
+built (new dependency and data category, inviolable); N1 built (the Join
+tap waits for the live check); N7 accepted as designed; N9 built as an
+integer `wizard` beside `step`; 155, the App Store id placeholder and the
+one-off gym-search timeout recorded as founder-side facts. Stale headings
+on the four older Community sections corrected.
 Founder observation carried (not in this order):
 `_community_rules_version()` still returns 2 while the client accepts 3
 (the v3 rules text never triggers a re-accept server-side), Q4.
@@ -699,7 +720,7 @@ pipeline run (not this build): `data/gyms/postcode-sectors.v1.csv`
 row `CA13 3` has a corrupt centroid (North Sea, not Cumbria); Ravenscraig
 duplicate pair and the Shetland pony stud misclass (report 06 §4).
 
-## COMMUNITY VISUAL REFINEMENT (2026-09-07, founder prompt 1) — LANDED on `claude/volyume-social-discovery-h7dknu` (a5aab73, fac2451); MERGE PENDING the settled-tree run
+## COMMUNITY VISUAL REFINEMENT (2026-09-07, founder prompt 1) — LANDED and MERGED to main (Android build 3573 carries it; heading corrected 2026-09-12)
 
 Founder brief in chat: visual only; bring every Community surface into
 the current Volyume language (D148 tiers, amber as accent); no product,
@@ -720,7 +741,7 @@ new; a build go is still needed to see it on device (section 3).
 
 ---
 
-## UK GYM MASTER DATABASE (2026-09-06, third workstream) — BUILT on `claude/volyume-social-discovery-h7dknu`; 162 RE-REVIEW + RECORDS 30/40/50 IN FLIGHT; NOT YET MERGED
+## UK GYM MASTER DATABASE (2026-09-06, third workstream) — BUILT, MERGED to main; 162 APPLIED 2026-09-07 with the seed (heading corrected 2026-09-12)
 
 Founder brief in chat: a national canonical gym and fitness-venue
 directory under Community (onboarding gym, primary and other gyms, people
@@ -761,7 +782,7 @@ Then merge to main. Founder items: section 3 (gym block).
 
 ---
 
-## COMMUNITY: DISCOVERY, CONNECTIONS AND MESSAGING (2026-09-06, second campaign) — LANDED on `claude/volyume-social-discovery-h7dknu` (records `50`/`60` updated 9b72a0c); MERGE PENDING with the gym workstream; CLOUD 161 WRITTEN NOT APPLIED
+## COMMUNITY: DISCOVERY, CONNECTIONS AND MESSAGING (2026-09-06, second campaign) — LANDED and MERGED to main; CLOUD 161 APPLIED 2026-09-07 (heading corrected 2026-09-12)
 
 Founder addition to the Community brief (in chat): best-in-class people
 discovery, a Follow / Connect / Message relationship model, training
@@ -786,7 +807,7 @@ finding's status line). Remaining: settled-tree lint/tsc/tests, update
 
 ---
 
-## COMMUNITY REPLACES PARTNERS (2026-09-06) — LANDED on `claude/volyume-social-discovery-h7dknu`, merged to main; CLOUD 160 WRITTEN NOT APPLIED
+## COMMUNITY REPLACES PARTNERS (2026-09-06) — LANDED, merged to main; CLOUD 160 APPLIED 2026-09-07 (heading corrected 2026-09-12)
 
 Founder brief in chat 2026-09-06 (one autonomous end-to-end task). Campaign
 folder `docs/social-discovery-2026-09-06/` (README = document map;
@@ -3098,10 +3119,13 @@ conditional on the decision; recorded here so they are visible, not lost._
   fails as "unavailable" and the screens show their calm error state with
   Try again (the Volyume library tiles still render). (2) Give the go for
   an Android build from main, then walk the sixteen-step device checklist
-  in `30-BLUEPRINT.md` section 12 with two test accounts. (3) Decide on
-  image upload (posts and photo avatars): it needs an image-moderation
-  processor with an EU residency check and a data-processing agreement,
-  which is a new dependency and a new data category; not built (SD-12).
+  in `30-BLUEPRINT.md` section 12 with two test accounts. (3) Image
+  upload (posts and photo avatars): RULED NOT BUILT under D160
+  (2026-09-12): it needs an image-moderation processor with an EU
+  residency check and a data-processing agreement, a new dependency and
+  a new data category, both Section 2 inviolables the delegation does not
+  transfer; closed as ruled, reopenable only by a founder decision that
+  names the dependency (SD-12).
   (4) Migration 155 becomes applicable once a build WITHOUT Partners is
   in users' hands (README note). Also: the three link pages carry the App
   Store id placeholder until the iOS app is on the store.

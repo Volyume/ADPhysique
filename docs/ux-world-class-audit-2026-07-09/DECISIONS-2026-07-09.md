@@ -6611,3 +6611,78 @@ entirely on what brings the best app. Never on quick or easy", chat,
 Founder phrase "run against production" given for the 173 + 174 batch
 the same day; applied through the connector under the checksum
 protocol (record: `supabase/README.md`).
+
+## D160 (2026-09-12) - Community finished for the build: the rules gate tolerates an older client; every held Community item ruled
+
+Founder (chat, 2026-09-12, after the lead surfaced a live exposure and
+three ways out as a question): "What the fuck is this nonsense. Just
+finish everything so it is ready when I build. You're passing the buck
+here. And decisions yet again make them in what brings the best
+product." Ruled by the lead on that delegation; the production
+statements below run as the completion of the batch the founder's
+phrase of 2026-09-11 authorised, under this order.
+
+The exposure, corrected on the record: migration 174 moved the server's
+rules version to 3 at 22:34 UTC on 2026-09-11 while every Community
+build on the founder's own devices (iOS 2.0.0+65 from `6c5d080`;
+Android 3573 to 3575; the store apps carry Community only from the
+next published build, founder 2026-09-12: "I am the tester") sends
+version 2 to an exact-equality gate, so every Community profile create
+and edit from those builds was refused with `invalid_input`. The
+hostile review had called the constraint safe because "no shipped build
+carries Community", checked against the Play build only; the lead
+accepted that without checking the builds actually installed. No
+profile write reached the server in the window (rate-rail count).
+Stopgap 14:33 UTC 2026-09-12: `_community_rules_version()` back to 2.
+
+1. **The gate tolerates an older client (migration 175).**
+   `community_upsert_profile` accepts `accept_rules_version` from 1 up to
+   the server's version plus one, and the create path stores the version
+   the person ACTUALLY accepted (profile row and consent log), never the
+   server's. `_community_require_rules` is unchanged, so a profile whose
+   accepted version is below the current one is still asked for the
+   current rules on connect, message and training-profile share; a
+   re-consent at an older version than the one stored changes nothing.
+   Why not a plain `>=`: an old build cannot consent to a text it cannot
+   show, so consent is recorded at the version accepted and the acts
+   that need the current text stay gated. Why plus one: the one
+   realistic process gap (a build carrying a new constant shipping
+   before its migration, which happened on 2026-09-10) becomes harmless
+   instead of refusing every profile write. Part 2 restores version 3
+   in the same transaction, so there is never a moment a build is
+   refused. Guard-proved byte-for-byte re-issue of 170's function.
+2. **The client asks for an update instead of looping.** When
+   `community_get_me` reports a server version ahead of the text the
+   build carries (`rulesTextBehindServer`), the rules screen's
+   re-consent card becomes "Update Volyume to continue" with no accept
+   button (accepting the old text cannot satisfy the server). The
+   ordinary re-consent card is unchanged.
+3. **Image upload for posts and avatars (SD-12, founder-side item 3):
+   NOT built, ruled here.** It needs an image-moderation processor with
+   an EU-residency check and a data-processing agreement: a new
+   dependency and a new data category, both Section 2 inviolables that
+   the delegation does not transfer. Closed as ruled, not parked; a
+   future founder decision can reopen it with the dependency named.
+4. **Review note N1 (a Join tap during the live handle check): built.**
+   The onboarding step holds the tap until the check settles (the
+   button shows its spinner, the field's own "Checking that handle."
+   line stands) and then applies the same validation a fresh tap gets;
+   before, the tap went through on an unverified handle and a taken
+   one was silently replaced at completion by the server's suggestion.
+5. **Review note N7 (two one-round-trip races): accepted as designed.**
+   The queued join against a manual Join-screen create, and a suggested
+   handle against a concurrent taker, each resolve in one extra round
+   trip through the existing-profile pre-check, the in-flight de-dupe
+   and the single `handle_taken` re-suggest. No change.
+6. **Review note N9 (funnel step numbers shifted by the gym step):
+   built as an integer.** `onboarding_step_completed` carries
+   `wizard: 2` beside `step` (1 was the seven-step wizard), so a funnel
+   reader never compares a step 6 of one wizard with a step 6 of the
+   other; integer-only, per the Campaign 1 privacy law.
+7. **Left as founder-side facts, not build items:** migration 155 waits
+   for the last pre-Community binary to leave users' hands (iOS
+   1.3.5+64 was still active on two devices in the last seven days);
+   the three link pages carry the App Store id placeholder until the
+   iOS app is on the store; the single gym-search statement timeout of
+   2026-09-10 (one user, one search, 11.5 s) has not recurred in
+   fourteen days and is watched, not fixed.

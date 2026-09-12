@@ -105,7 +105,20 @@ hit the session limit). Opus hostile review OJ-REV-SQL-2: FIX FIRST,
 eleven findings, all landed (board). 174 then 173 APPLIED 2026-09-11
 22:34 UTC through the connector under the checksum protocol (record:
 `supabase/README.md`). No build started. Board section carries the
-detail.
+detail. 2026-09-12: the founder asked whether Community was done; the
+lead found a live exposure it had created (174's version 3 against an
+exact-equality gate while every Community build on the founder's own
+devices sends 2; the store apps get Community with the next published
+build), rolled the
+version back to 2 as a stopgap, and on the founder's order ("just finish
+everything so it is ready when I build ... decisions ... make them in
+what brings the best product") ruled D160: migration 175 (tolerant gate,
+version accepted stored, 3 restored in the same transaction), the rules
+screen's update prompt, image upload ruled not built, review notes N1
+and N9 built and N7 accepted, the older board headings corrected. 175
+applied through the connector after its hostile review (record:
+`supabase/README.md`). Nothing on the lead side is open for Community;
+the founder builds from main when they choose.
 ===============================================================================
 ## ★ 2026-09-07 — COMMUNITY: AUDIT, GAP CLOSURE, PROGRAMME-SHARING REMOVED, PROGRESS BOARDS AND GROUPS; CLOUD LIVE ★
 
