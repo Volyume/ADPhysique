@@ -359,7 +359,7 @@ effect in `CommunityProfileScreen.js` (the card does carry `c_*` fields
 since 165/172; the owner's view reads live local counters instead).
 Dated audit records keep their references. No em dash added.
 
-## COMMUNITY ACCOUNT AND GYM AT ONBOARDING (founder order, 2026-09-11) — SPEC WRITTEN (CR-15, D158); MIGRATION 173 WRITTEN, REVIEWED, FIXED (NOT APPLIED, GATED ON Q2); STEP 5 BUILT BY THE LEAD; LIB LANE LANDING; FOUNDER QUESTIONS Q1 TO Q5 IN CHAT
+## COMMUNITY ACCOUNT AND GYM AT ONBOARDING (founder order, 2026-09-11) — LANDED and MERGED to main (4d613f7); D159 RULED; MIGRATIONS 174 THEN 173 APPLIED to production 2026-09-11 22:34 UTC; HOSTILE REVIEW OJ-REV-SQL-2 CLOSED; NO BUILD STARTED (founder builds when all is done)
 
 Founder order (chat, verbatim): "we need the gym selection on onboarding
 so that it's passed through to community and people can connect to
