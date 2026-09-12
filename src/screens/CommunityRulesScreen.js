@@ -22,7 +22,7 @@
  * touched) and returns the person to what they were doing to retry it.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BackHeader from '../components/BackHeader';
@@ -32,8 +32,7 @@ import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import { colors, spacing, type } from '../styles/theme';
-import { COMMUNITY_RULES_VERSION, acceptRules, rulesTextBehindServer } from '../lib/community';
-import useCommunityMe from '../hooks/useCommunityMe';
+import { COMMUNITY_RULES_VERSION, acceptRules, loadMe, rulesTextBehindServer } from '../lib/community';
 
 // Community Rules v3, from docs/community-safety/COMMUNITY-RULES.md.
 // Keep this block in step with that document.
@@ -161,17 +160,45 @@ export default function CommunityRulesScreen({ navigation, route }) {
   const t = useTheme();
   const toast = useToast();
   const text = COMMUNITY_RULES_TEXT;
-  const mustAccept = !!route?.params?.mustAccept;
-  const { me } = useCommunityMe();
-  const behindServer = rulesTextBehindServer(me);
+  // `mustAccept` from five surfaces; `accept` from the messaging screen
+  // (D160, hostile review OJ-REV-SQL-3 F4): one re-consent path for both.
+  const mustAccept = !!(route?.params?.mustAccept || route?.params?.accept);
   const [busy, setBusy] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  // A consent moment is answered by the SERVER, never by the cache: the
+  // empty payload seeds this build's own version, so a card painted before
+  // the server has answered cannot be trusted (F2). `serverMe` is the
+  // server's answer; unreachable falls back to the accept card, whose own
+  // failure path is honest ("Could not do that just now").
+  const [serverMe, setServerMe] = useState(null);
+  const [serverUnreachable, setServerUnreachable] = useState(false);
+  const [behindAfterAccept, setBehindAfterAccept] = useState(false);
+  useEffect(() => {
+    if (!mustAccept) return undefined;
+    let alive = true;
+    loadMe({ force: true }).then((out) => {
+      if (!alive) return;
+      setServerUnreachable(!!out?.error);
+      setServerMe(out?.error ? null : (out?.me ?? null));
+    }).catch(() => { if (alive) setServerUnreachable(true); });
+    return () => { alive = false; };
+  }, [mustAccept]);
+  const behindServer = behindAfterAccept || rulesTextBehindServer(serverMe);
+  const serverAnswered = serverMe !== null || serverUnreachable;
 
   async function accept() {
     if (busy) return;
     setBusy(true);
     try {
       await acceptRules();
+      // The server records the version this build carries; if that is
+      // still behind what it requires, nothing was resolved and saying
+      // "accepted" would be false (F2). Read it back before claiming.
+      const { me: fresh, error } = await loadMe({ force: true });
+      if (!error && rulesTextBehindServer(fresh)) {
+        setBehindAfterAccept(true);
+        return;
+      }
       setAccepted(true);
       toast.show('Rules accepted');
       navigation?.goBack?.();
@@ -196,7 +223,7 @@ export default function CommunityRulesScreen({ navigation, route }) {
             </Text>
           </Card>
         ) : null}
-        {mustAccept && !accepted && !behindServer ? (
+        {mustAccept && !accepted && serverAnswered && !behindServer ? (
           <Card style={styles.block}>
             <Text style={[styles.ruleHeading, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
               The rules have changed
