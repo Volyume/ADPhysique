@@ -32,7 +32,8 @@ import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import { colors, spacing, type } from '../styles/theme';
-import { COMMUNITY_RULES_VERSION, acceptRules } from '../lib/community';
+import { COMMUNITY_RULES_VERSION, acceptRules, rulesTextBehindServer } from '../lib/community';
+import useCommunityMe from '../hooks/useCommunityMe';
 
 // Community Rules v3, from docs/community-safety/COMMUNITY-RULES.md.
 // Keep this block in step with that document.
@@ -149,12 +150,20 @@ export const COMMUNITY_RULES_TEXT = {
 // version bump; first acceptance happens on Join), so the label says so.
 export const ACCEPT_UPDATED_RULES_LABEL = 'Accept the updated rules';
 export const RULES_OUTDATED_LINE = 'The Community rules have changed. Accept them below to carry on.';
+// D160 (migrate_175): the server's rules version is ahead of the text this
+// build carries. Accepting the text shown here cannot satisfy it (the server
+// records the version actually accepted), so the one honest action is an
+// update; the rules below are still readable.
+export const RULES_UPDATE_APP_HEADING = 'Update Volyume to continue';
+export const RULES_UPDATE_APP_LINE = 'The Community rules have changed and this version of Volyume does not carry the new text yet. Update Volyume from the store, then accept the rules here.';
 
 export default function CommunityRulesScreen({ navigation, route }) {
   const t = useTheme();
   const toast = useToast();
   const text = COMMUNITY_RULES_TEXT;
   const mustAccept = !!route?.params?.mustAccept;
+  const { me } = useCommunityMe();
+  const behindServer = rulesTextBehindServer(me);
   const [busy, setBusy] = useState(false);
   const [accepted, setAccepted] = useState(false);
 
@@ -177,7 +186,17 @@ export default function CommunityRulesScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title={text.title} />
       <ScrollView contentContainerStyle={styles.content}>
-        {mustAccept && !accepted ? (
+        {mustAccept && !accepted && behindServer ? (
+          <Card style={styles.block}>
+            <Text style={[styles.ruleHeading, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
+              {RULES_UPDATE_APP_HEADING}
+            </Text>
+            <Text style={[styles.body, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+              {RULES_UPDATE_APP_LINE}
+            </Text>
+          </Card>
+        ) : null}
+        {mustAccept && !accepted && !behindServer ? (
           <Card style={styles.block}>
             <Text style={[styles.ruleHeading, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
               The rules have changed

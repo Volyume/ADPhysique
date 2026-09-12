@@ -150,6 +150,25 @@ export function hasProfile(me) {
 }
 
 /**
+ * Is the rules text this build carries OLDER than the version the server
+ * now requires? `community_get_me` reports the server's current version as
+ * `rules_version` (and what this profile accepted as
+ * `accepted_rules_version`). When the server is ahead of
+ * COMMUNITY_RULES_VERSION, accepting the text on this build cannot satisfy
+ * it (migrate_175 records the version actually accepted, and the acts that
+ * need the current text stay gated), so the rules screen asks for an app
+ * update instead of offering an accept button that would loop (D160).
+ * Pure; an absent or malformed value reads as "not behind".
+ *
+ * @param {object|null} me the `me` payload
+ * @returns {boolean}
+ */
+export function rulesTextBehindServer(me) {
+  const required = Number(me?.rules_version);
+  return Number.isInteger(required) && required > COMMUNITY_RULES_VERSION;
+}
+
+/**
  * The unseen dot on the Today header: activity, a follow request, a
  * connection request or an unread message. One dot for all four, because
  * the header action is one destination and the dot only means "there is
