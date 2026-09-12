@@ -207,7 +207,11 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // content, weight or steps. first_* fire once per user via the durable
   // telemetry_firsts table (trackFirst). Server allow-list:
   // supabase/migrate_099_funnel_telemetry.sql.
-  //   onboarding_step_completed  payload: { step } — a forward wizard advance
+  //   onboarding_step_completed  payload: { step, wizard } — a forward wizard
+  //                              advance; `wizard` (integer) is the step
+  //                              numbering in force (2 since the gym step,
+  //                              2026-09-11), so funnels never compare step
+  //                              numbers across the two wizards (D160)
   //   first_plan_generated       first-ever plan generation (once)
   //   first_workout_logged       first-ever completed workout (once).
   //                              C8 (2026-07-11) payload: { first_touch_source }

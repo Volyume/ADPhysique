@@ -111,6 +111,13 @@ const PROTEIN_SHORT = {
 // Injuries. TOTAL_STEPS moved from 7 to 8; every step after Training week
 // shifted up by one. Under 18 the step does not exist (isMinorAnswer).
 const TOTAL_STEPS = 8;
+// The wizard's step numbering, for the activation funnel
+// (`onboarding_step_completed`): 1 was the seven-step wizard; 2 is the
+// eight-step wizard with "Your gym" at step 5 (CR-15, 2026-09-11), which
+// moved every later step's number by one. An integer beside `step`, so a
+// funnel reader never compares a step 6 of one wizard with a step 6 of the
+// other (D160; integer-only payload, the Campaign 1 privacy law).
+const ONBOARDING_WIZARD_VERSION = 2;
 const STEP_LABELS = ['Account', 'Baseline', 'Body composition', 'Training week', 'Your gym', 'Injuries & limitations', 'Targets', 'Check-in rhythm'];
 const STEP_OUTCOMES = {
   1: [
@@ -506,6 +513,11 @@ export default function ProOnboardingScreen({ navigation }) {
   const communityHandleRef = useRef(null);
   const communityNameRef = useRef(null);
   const handleCheckRef = useRef(0);
+  // A Join tap that lands while the live handle check is still running waits
+  // for its answer (the Join screen disables Create for the same moment)
+  // rather than creating with an unverified handle or refusing a person for
+  // typing quickly; the effect below resumes the tap the moment it settles.
+  const [joinHeldForCheck, setJoinHeldForCheck] = useState(false);
   const suggestedRef = useRef(false);
   const namePrefilledRef = useRef(false);
 
@@ -1188,6 +1200,15 @@ export default function ProOnboardingScreen({ navigation }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [communityHandle, step]);
 
+  // The held Join tap resumes as soon as the live check settles, with the
+  // same validation a fresh tap gets (taken or invalid still stops it).
+  useEffect(() => {
+    if (!joinHeldForCheck || communityHandleState === 'checking') return;
+    setJoinHeldForCheck(false);
+    advanceFrom5('join');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [joinHeldForCheck, communityHandleState]);
+
   function emitStepDone(n) {
     if (!user?.id) return;
     if (emittedStepsRef.current.has(n)) return;
@@ -1195,7 +1216,7 @@ export default function ProOnboardingScreen({ navigation }) {
     try {
       // eslint-disable-next-line global-require
       const { track } = require('../lib/engineTelemetry');
-      track(user.id, 'onboarding_step_completed', { step: n }).catch(() => {});
+      track(user.id, 'onboarding_step_completed', { step: n, wizard: ONBOARDING_WIZARD_VERSION }).catch(() => {});
     } catch (_) { /* tolerate */ }
   }
 
@@ -1277,6 +1298,11 @@ export default function ProOnboardingScreen({ navigation }) {
     Keyboard.dismiss();
     const join = intent === 'join';
     setJoinAttempted(join);
+    if (join && communityJoin !== 'existing' && communityHandle.trim() && communityHandleState === 'checking') {
+      // The live check has the answer that decides this tap: hold it.
+      setJoinHeldForCheck(true);
+      return;
+    }
     const errs = validateStep5({ join });
     if (Object.keys(errs).length) {
       surfaceGaps(errs, ['handle'], 'group5', { handle: communityHandleRef }, setAttempted5);
@@ -2747,6 +2773,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   title="Join Community"
                   trailingIcon="arrow-forward"
                   style={styles.primaryBtn}
+                  loading={joinHeldForCheck}
                   onPress={() => advanceFrom5('join')}
                   textStyle={[styles.primaryBtnText, live.primaryBtnText]}
                   accessibilityLabel="Join Community"

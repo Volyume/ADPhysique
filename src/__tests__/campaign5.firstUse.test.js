@@ -1477,11 +1477,15 @@ describe('ANALYTICS: the existing onboarding events fire once (C5-P38-05, D96)',
     expect(src).toMatch(/function emitStepDone\(n\) \{\s*\n\s*if \(!user\?\.id\) return;\s*\n\s*if \(emittedStepsRef\.current\.has\(n\)\) return;\s*\n\s*emittedStepsRef\.current\.add\(n\);/);
   });
 
-  test('no new event and no new payload field rides this fix', () => {
+  test('no new event rides this fix; the payload stays integer-only', () => {
     const src = read('screens/ProOnboardingScreen.js');
     const events = [...src.matchAll(/track\(user\.id, '([a-z_]+)'/g)].map(m => m[1]);
     expect(new Set(events)).toEqual(new Set(['onboarding_step_completed']));
-    expect(src).toContain("track(user.id, 'onboarding_step_completed', { step: n })");
+    // D160 (2026-09-12): `wizard` (an integer) rides beside `step`, because
+    // the gym step (CR-15) moved every later step's number by one and a
+    // funnel must never compare step numbers across the two wizards.
+    expect(src).toContain("track(user.id, 'onboarding_step_completed', { step: n, wizard: ONBOARDING_WIZARD_VERSION })");
+    expect(src).toMatch(/const ONBOARDING_WIZARD_VERSION = 2;/);
     // Still an integer-only payload, per the Campaign 1 privacy law.
     expect(read('lib/telemetry/events.js')).toContain('onboarding_step_completed');
   });

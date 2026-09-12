@@ -111,6 +111,31 @@ describe('nothing on the step is pre-decided', () => {
   });
 });
 
+describe('D160 (2026-09-12): the two review notes the lead had held, now built', () => {
+  const fn = SRC.slice(SRC.indexOf('function advanceFrom5(intent)'), SRC.indexOf('// CC28 (section 11.2): the capability step is OPTIONAL'));
+
+  test('N1: a Join tap during the live handle check waits for its answer, then gets the same validation', () => {
+    expect(SRC).toContain('const [joinHeldForCheck, setJoinHeldForCheck] = useState(false);');
+    // The hold comes BEFORE validation, only for a typed handle still being checked.
+    const holdAt = fn.indexOf("if (join && communityJoin !== 'existing' && communityHandle.trim() && communityHandleState === 'checking') {");
+    const validateAt = fn.indexOf('const errs = validateStep5({ join });');
+    expect(holdAt).toBeGreaterThan(-1);
+    expect(holdAt).toBeLessThan(validateAt);
+    expect(fn.slice(holdAt, validateAt)).toMatch(/setJoinHeldForCheck\(true\);\s*\n\s*return;/);
+    // The held tap resumes once the check settles, through the ordinary path.
+    expect(SRC).toMatch(/if \(!joinHeldForCheck \|\| communityHandleState === 'checking'\) return;\s*\n\s*setJoinHeldForCheck\(false\);\s*\n\s*advanceFrom5\('join'\);/);
+    // The button shows the wait; it is never disabled (the R-guard above).
+    expect(STEP5).toContain('loading={joinHeldForCheck}');
+    // The field's own line already says what is happening.
+    expect(STEP5).toContain("checking: 'Checking that handle.',");
+  });
+
+  test('N9: the funnel event carries the wizard numbering as an integer beside the step', () => {
+    expect(SRC).toMatch(/const ONBOARDING_WIZARD_VERSION = 2;/);
+    expect(SRC).toContain("track(user.id, 'onboarding_step_completed', { step: n, wizard: ONBOARDING_WIZARD_VERSION })");
+  });
+});
+
 describe('the join runs at completion, explicitly, and never blocks the wizard', () => {
   test('only for an explicit join, after the plan block and before the draft is cleared', () => {
     const joinAt = COMPLETION.indexOf("if (communityJoin === 'join') {");
