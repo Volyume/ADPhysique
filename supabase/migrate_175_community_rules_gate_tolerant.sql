@@ -21,7 +21,7 @@
 --
 --                    Part 1 re-issues `community_upsert_profile(jsonb,
 --                    boolean)` byte-for-byte from migrate_170 lines 2597-2902
---                    with four marked changes, proved by
+--                    with the marked changes, proved by
 --                    src/__tests__/migrate175.rpcOnly.guard.test.js: the two
 --                    equality gates become a range (1 up to the server's
 --                    version plus one; an older client is accepted, a client
@@ -53,15 +53,28 @@
 --                    text stay gated. Why plus one: the one realistic process
 --                    gap (a build carrying a new constant shipping before its
 --                    migration, as happened on 2026-09-10) is harmless
---                    instead of refusing every profile write.
+--                    instead of refusing every profile write. Why the record
+--                    is bounded to the published version (hostile review
+--                    OJ-REV-SQL-3, F5): a consent row must be EVIDENCE, and a
+--                    row naming a notice the server had not published at
+--                    that time is not; so a build one version ahead is
+--                    accepted but recorded at the current version, and
+--                    re-accepts once when its migration lands.
 --
 -- Applied locally:   n/a (cloud-only objects; nothing in database.js)
--- Applied remotely:  NOT YET - runs under the founder's order of 2026-09-12
---                    ("just finish everything so it is ready when I build"),
---                    completing the batch the founder's exact phrase
---                    "run against production" (2026-09-11) authorised;
---                    Claude-run through the Supabase connector under the
---                    checksum protocol (supabase/README.md status block).
+-- Applied remotely:  YES - 2026-09-12 15:05 UTC, under the founder's order
+--                    of 2026-09-12 ("just finish everything so it is ready
+--                    when I build"), completing the batch the founder's exact
+--                    phrase "run against production" (2026-09-11) authorised;
+--                    hostile-reviewed first (OJ-REV-SQL-3: APPLY); Claude-run
+--                    through the Supabase connector under the checksum
+--                    protocol (supabase/README.md status block): two chunks
+--                    verified md5 6255e96d70bee59436d97d293cb9bcd3 / 12,864
+--                    and 1e173672e927a734b8bfde4132f0e36c / 12,372 bytes,
+--                    whole file 334c3fe7a8fcd6623f1fa4c1b9eb0f74 / 25,236 (the
+--                    file as applied, before this line was updated),
+--                    re-checked inside the executing DO block; acceptance
+--                    block passed; verified read-only afterwards.
 -- Safe to re-run:    YES - CREATE OR REPLACE FUNCTION, REVOKE/GRANT are
 --                    idempotent, and the acceptance block is read-only.
 -- Rollback:          re-issue `community_upsert_profile(jsonb, boolean)` from
@@ -76,7 +89,7 @@
 --                    ruling this restores).
 
 -- ─── Part 1: the tolerant gate ───────────────────────────────────────────────
--- migrate_170 lines 2597-2902 carried forward byte-for-byte; the four marked
+-- migrate_170 lines 2597-2902 carried forward byte-for-byte; the marked
 -- migrate_175 changes are the ONLY differences (guard-proved).
 
 CREATE OR REPLACE FUNCTION public.community_upsert_profile(_p jsonb, _remove_shared boolean DEFAULT false)
@@ -307,6 +320,11 @@ BEGIN
     IF v_accept < 1 OR v_accept > public._community_rules_version() + 1 THEN
       RAISE EXCEPTION USING message = 'invalid_input';
     END IF;
+    -- migrate_175: the record attests only to a notice the server has
+    -- published (UK GDPR Article 7 evidence): a build one version ahead is
+    -- accepted above but recorded at the current version, and re-accepts
+    -- once when its migration lands.
+    v_accept := least(v_accept, public._community_rules_version());
 
     INSERT INTO public.community_profiles (
       user_id, handle, display_name, avatar_preset, bio, styles, discipline_keys,
@@ -359,6 +377,7 @@ BEGIN
       IF v_accept < 1 OR v_accept > public._community_rules_version() + 1 THEN
         RAISE EXCEPTION USING message = 'invalid_input';
       END IF;
+      v_accept := least(v_accept, public._community_rules_version()); -- migrate_175: as above
       IF coalesce(v_existing.rules_version, 0) < v_accept THEN
         UPDATE public.community_profiles SET rules_version = v_accept WHERE user_id = v_uid;
         INSERT INTO public.consent_log
@@ -455,22 +474,30 @@ BEGIN
     RAISE EXCEPTION 'acceptance failed: community_upsert_profile is executable by anon';
   END IF;
 
-  -- The live body carries the tolerant range twice (create and re-consent)
-  -- and the exact-equality gate nowhere.
+  -- The live body carries the tolerant range twice (create and re-consent),
+  -- the published-notice bound twice, and the exact-equality gate nowhere.
+  -- strpos, not LIKE: an underscore is a LIKE wildcard, and these checks
+  -- must say exactly what they mean.
   v_def := pg_get_functiondef(to_regprocedure('public.community_upsert_profile(jsonb, boolean)'));
   IF (SELECT count(*) FROM regexp_matches(v_def, 'v_accept > public\._community_rules_version\(\) \+ 1', 'g')) <> 2 THEN
     RAISE EXCEPTION 'acceptance failed: the tolerant gate is not present exactly twice';
   END IF;
-  IF v_def LIKE '%v_accept IS DISTINCT FROM public._community_rules_version()%' THEN
+  IF (SELECT count(*) FROM regexp_matches(v_def, 'v_accept := least\(v_accept, public\._community_rules_version\(\)\);', 'g')) <> 2 THEN
+    RAISE EXCEPTION 'acceptance failed: the published-notice bound is not present exactly twice';
+  END IF;
+  IF strpos(v_def, 'v_accept IS DISTINCT FROM public._community_rules_version()') > 0 THEN
     RAISE EXCEPTION 'acceptance failed: the exact-equality gate is still present';
   END IF;
-  IF v_def NOT LIKE '%''active'', v_accept, now(),%' THEN
+  IF strpos(v_def, '''active'', v_accept, now(),') = 0 THEN
     RAISE EXCEPTION 'acceptance failed: the create path does not store the version accepted';
   END IF;
 
   -- The act-level gate is untouched and still compares against the current version.
+  IF to_regprocedure('public._community_require_rules(public.community_profiles)') IS NULL THEN
+    RAISE EXCEPTION 'acceptance failed: _community_require_rules(public.community_profiles) missing';
+  END IF;
   v_def := pg_get_functiondef(to_regprocedure('public._community_require_rules(public.community_profiles)'));
-  IF v_def NOT LIKE '%< public._community_rules_version()%' THEN
+  IF strpos(v_def, '< public._community_rules_version()') = 0 THEN
     RAISE EXCEPTION 'acceptance failed: _community_require_rules no longer gates on the current version';
   END IF;
 

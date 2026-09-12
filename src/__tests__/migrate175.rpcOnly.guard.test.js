@@ -6,16 +6,20 @@
  * WHAT THIS SUITE PINS, and why every case is written to FAIL: the file is
  * WRITTEN, NOT APPLIED until it runs, so only source can check it. Part 1:
  * `community_upsert_profile(jsonb, boolean)` is migrate_170 lines 2597-2902
- * byte-for-byte once the four marked migrate_175 changes are reverted, so a
+ * byte-for-byte once the marked migrate_175 changes are reverted, so a
  * hand-edited carry-forward can never silently change a profile field; the
  * two exact-equality rules gates became the tolerant range (1 up to the
- * server's version plus one) and nothing else about consent moved; the
- * create path stores the version the person actually accepted, in the
- * profile row and in the consent log. Part 2: the rules version is 3 again,
- * in the same file, and the client's own constant agrees. The act-level
- * gate (`_community_require_rules`) is NOT re-issued here, so an old build
- * is still asked for the current rules on the acts that need them. The
- * acceptance block cannot be fooled by a NULL and reads the LIVE body.
+ * server's version plus one); the version RECORDED is bounded to the one the
+ * server has published (hostile review OJ-REV-SQL-3 F5: a consent row must
+ * be evidence of a notice that existed), on create and on re-consent; and
+ * the create path stores that version in the profile row and in the consent
+ * log. Part 2: the rules version is 3 again, in the same file, and the
+ * client's own constant agrees. The act-level gate
+ * (`_community_require_rules`) is NOT re-issued here, so an old build is
+ * still asked for the current rules on the acts that need them. The
+ * acceptance block reads the LIVE body with exact string positions (never
+ * LIKE, whose underscore is a wildcard) and guards every lookup against a
+ * NULL.
  */
 
 const fs = require('fs');
@@ -37,8 +41,8 @@ function fnSpan(text, startMarker, endMarker = 'END $$;') {
 const UPSERT = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public.community_upsert_profile(_p jsonb, _remove_shared boolean DEFAULT false)');
 const RULES = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public._community_rules_version()', '$$;');
 
-/** The four marked changes: [new text in 175, original text in 170]. Each
- * must be present exactly once; reverting all four must give 170's function
+/** The marked changes: [text in 175, original text in 170]. Each must be
+ * present exactly once; reverting all of them must give 170's function
  * byte-for-byte. */
 const REPLACEMENTS = [
   [
@@ -50,7 +54,12 @@ const REPLACEMENTS = [
     + '    -- shipped before its migration). Anything else is malformed.\n'
     + '    IF v_accept < 1 OR v_accept > public._community_rules_version() + 1 THEN\n'
     + "      RAISE EXCEPTION USING message = 'invalid_input';\n"
-    + '    END IF;\n',
+    + '    END IF;\n'
+    + '    -- migrate_175: the record attests only to a notice the server has\n'
+    + '    -- published (UK GDPR Article 7 evidence): a build one version ahead is\n'
+    + '    -- accepted above but recorded at the current version, and re-accepts\n'
+    + '    -- once when its migration lands.\n'
+    + '    v_accept := least(v_accept, public._community_rules_version());\n',
     "    v_accept := (_p ->> 'accept_rules_version')::int;\n"
     + '    IF v_accept IS DISTINCT FROM public._community_rules_version() THEN\n'
     + "      RAISE EXCEPTION USING message = 'invalid_input';\n"
@@ -72,7 +81,8 @@ const REPLACEMENTS = [
     + '      -- at an older version than the one already stored changes nothing.\n'
     + '      IF v_accept < 1 OR v_accept > public._community_rules_version() + 1 THEN\n'
     + "        RAISE EXCEPTION USING message = 'invalid_input';\n"
-    + '      END IF;\n',
+    + '      END IF;\n'
+    + '      v_accept := least(v_accept, public._community_rules_version()); -- migrate_175: as above\n',
     "      v_accept := (_p ->> 'accept_rules_version')::int;\n"
     + '      IF v_accept IS DISTINCT FROM public._community_rules_version() THEN\n'
     + "        RAISE EXCEPTION USING message = 'invalid_input';\n"
@@ -104,8 +114,8 @@ describe('house migration shape', () => {
   });
 });
 
-describe('Part 1: migrate_170 lines 2597-2902 plus the four marked changes only', () => {
-  test('reverting the four changes gives the source function byte-for-byte', () => {
+describe('Part 1: migrate_170 lines 2597-2902 plus the marked changes only', () => {
+  test('reverting the marked changes gives the source function byte-for-byte', () => {
     const source = SRC170.slice(2596, 2902).join('\n').trimEnd();
     expect(reverted(UPSERT).trimEnd()).toBe(source);
     expect(UPSERT).not.toBe(source);
@@ -114,6 +124,16 @@ describe('Part 1: migrate_170 lines 2597-2902 plus the four marked changes only'
   test('the tolerant range replaces the exact gate on create and on re-consent', () => {
     expect((UPSERT.match(/IF v_accept < 1 OR v_accept > public\._community_rules_version\(\) \+ 1 THEN/g) || []).length).toBe(2);
     expect(UPSERT).not.toMatch(/IS DISTINCT FROM public\._community_rules_version\(\)/);
+  });
+
+  test('the version recorded is bounded to the one the server has published, on both paths, after each gate', () => {
+    expect((UPSERT.match(/v_accept := least\(v_accept, public\._community_rules_version\(\)\);/g) || []).length).toBe(2);
+    for (const gateAt of [UPSERT.indexOf('IF v_accept < 1 OR'), UPSERT.lastIndexOf('IF v_accept < 1 OR')]) {
+      const boundAt = UPSERT.indexOf('v_accept := least(v_accept, public._community_rules_version());', gateAt);
+      expect(boundAt).toBeGreaterThan(gateAt);
+      // Nothing is written between the gate and the bound.
+      expect(UPSERT.slice(gateAt, boundAt)).not.toMatch(/INSERT|UPDATE/);
+    }
   });
 
   test('the create path stores the version the person actually accepted, in the row and in the consent log', () => {
@@ -145,7 +165,7 @@ describe('Part 2: the rules version is 3 again, and the client agrees', () => {
   });
 });
 
-describe('the acceptance block reads the live body and cannot be fooled by a NULL', () => {
+describe('the acceptance block reads the live body exactly and guards every lookup', () => {
   const ACCEPT = SQL.slice(SQL.indexOf('-- ─── Acceptance check'));
   test('presence, single overload, volatility, posture, grants', () => {
     expect(ACCEPT).toContain("to_regprocedure('public.community_upsert_profile(jsonb, boolean)') IS NULL");
@@ -156,16 +176,22 @@ describe('the acceptance block reads the live body and cannot be fooled by a NUL
     expect(ACCEPT).toContain("has_function_privilege('anon', 'public.community_upsert_profile(jsonb, boolean)', 'EXECUTE')");
   });
 
-  test('the live body carries the tolerant gate twice, the exact gate nowhere, and stores the accepted version', () => {
+  test('the live body: tolerant gate twice, published bound twice, exact gate nowhere, accepted version stored', () => {
     expect(ACCEPT).toContain("v_def := pg_get_functiondef(to_regprocedure('public.community_upsert_profile(jsonb, boolean)'));");
     expect(ACCEPT).toContain("'v_accept > public\\._community_rules_version\\(\\) \\+ 1', 'g')) <> 2 THEN");
-    expect(ACCEPT).toContain("v_def LIKE '%v_accept IS DISTINCT FROM public._community_rules_version()%'");
-    expect(ACCEPT).toContain("v_def NOT LIKE '%''active'', v_accept, now(),%'");
+    expect(ACCEPT).toContain("'v_accept := least\\(v_accept, public\\._community_rules_version\\(\\)\\);', 'g')) <> 2 THEN");
+    expect(ACCEPT).toContain("strpos(v_def, 'v_accept IS DISTINCT FROM public._community_rules_version()') > 0");
+    expect(ACCEPT).toContain("strpos(v_def, '''active'', v_accept, now(),') = 0");
+    // No LIKE pattern anywhere: its underscore is a wildcard.
+    expect(ACCEPT).not.toMatch(/\bLIKE '/);
   });
 
-  test('the act-level gate is checked live, and the version is 3', () => {
-    expect(ACCEPT).toContain("pg_get_functiondef(to_regprocedure('public._community_require_rules(public.community_profiles)'))");
-    expect(ACCEPT).toContain("v_def NOT LIKE '%< public._community_rules_version()%'");
+  test('the act-level gate is looked up with a NULL guard, checked live, and the version is 3', () => {
+    const guardAt = ACCEPT.indexOf("IF to_regprocedure('public._community_require_rules(public.community_profiles)') IS NULL THEN");
+    const defAt = ACCEPT.indexOf("v_def := pg_get_functiondef(to_regprocedure('public._community_require_rules(public.community_profiles)'));");
+    expect(guardAt).toBeGreaterThan(-1);
+    expect(defAt).toBeGreaterThan(guardAt);
+    expect(ACCEPT).toContain("strpos(v_def, '< public._community_rules_version()') = 0");
     expect(ACCEPT).toContain('IF public._community_rules_version() IS DISTINCT FROM 3 THEN');
   });
 });

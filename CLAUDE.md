@@ -12,12 +12,11 @@ are paying. Every change affects them. Work accordingly.
 > was REVERTED on the founder's device verdict — never re-propose it.
 > Cloud migrations are CLAUDE-RUN, gated on the founder's exact phrase
 > "run against production" per batch (`supabase/README`); applied through
-> `migrate_174` (2026-09-11; 175 written 2026-09-12 under D160 and
-> applying the same day, the README status block is the live record)
-> except **155**, which waits for the store apps to move to a build
-> without Partners (README status block). Only **049** is HELD (059 is
-> applied; its `meal_[0-9]+` CHECK is live); 150 is RETIRED. This line
-> is updated at every apply (founder order 2026-09-12).
+> `migrate_175` (2026-09-12 15:05 UTC; the README status block is the
+> live record) except **155**, which waits for the store apps to move to
+> a build without Partners (README status block). Only **049** is HELD
+> (059 is applied; its `meal_[0-9]+` CHECK is live); 150 is RETIRED. This
+> line is updated at every apply (founder order 2026-09-12).
 > Decision delegation (D33) and the full
 > operating model are PERMANENT law — Section 4, D40 block. The decisions
 > register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`.

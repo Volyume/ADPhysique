@@ -61,8 +61,16 @@
 --                    the client must answer a version-mismatch refusal on
 --                    a profile write with an update prompt rather than a
 --                    generic error (an old build cannot show a text it does
---                    not carry). This batch is safe because no shipped build
---                    carries Community.
+--                    not carry). The sentence this paragraph first ended
+--                    with, "safe because no shipped build carries Community",
+--                    was WRONG (D160): the Community builds on the founder's
+--                    own devices sent version 2, so this file's version 3
+--                    refused every profile write from them. Part 2 was
+--                    ROLLED BACK to `SELECT 2` as a stopgap at 14:33 UTC on
+--                    2026-09-12 and is SUPERSEDED by migrate_175, which makes
+--                    the gate tolerant and restores 3 in one transaction. Do
+--                    not re-run this file on its own: it would restore 3
+--                    against the exact gate.
 --
 -- Applied locally:   n/a (cloud-only objects; nothing in database.js)
 -- Applied remotely:  YES - 2026-09-11 22:34 UTC, FIRST in the batch (before
