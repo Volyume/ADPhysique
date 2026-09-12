@@ -210,8 +210,10 @@ export const TELEMETRY_EVENTS = Object.freeze([
   //   onboarding_step_completed  payload: { step, wizard } — a forward wizard
   //                              advance; `wizard` (integer) is the step
   //                              numbering in force (2 since the gym step,
-  //                              2026-09-11), so funnels never compare step
-  //                              numbers across the two wizards (D160)
+  //                              2026-09-11; an ABSENT key is wizard 1, the
+  //                              seven-step wizard, which never sent one), so
+  //                              funnels never compare step numbers across
+  //                              the two wizards (D160)
   //   first_plan_generated       first-ever plan generation (once)
   //   first_workout_logged       first-ever completed workout (once).
   //                              C8 (2026-07-11) payload: { first_touch_source }

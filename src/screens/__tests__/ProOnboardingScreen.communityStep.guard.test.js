@@ -122,8 +122,17 @@ describe('D160 (2026-09-12): the two review notes the lead had held, now built',
     expect(holdAt).toBeGreaterThan(-1);
     expect(holdAt).toBeLessThan(validateAt);
     expect(fn.slice(holdAt, validateAt)).toMatch(/setJoinHeldForCheck\(true\);\s*\n\s*return;/);
-    // The held tap resumes once the check settles, through the ordinary path.
-    expect(SRC).toMatch(/if \(!joinHeldForCheck \|\| communityHandleState === 'checking'\) return;\s*\n\s*setJoinHeldForCheck\(false\);\s*\n\s*advanceFrom5\('join'\);/);
+    // The held tap resumes once the check settles, through the ordinary path;
+    // leaving the step spends it (joining is a consent act, never fired
+    // from a tap the person walked away from); a check that cannot answer
+    // never holds it beyond the bound (hostile review OJ-REV-SQL-3, F1).
+    expect(SRC).toMatch(/const HANDLE_CHECK_HOLD_MAX_MS = 3000;/);
+    const resume = SRC.slice(SRC.indexOf('if (!joinHeldForCheck) return undefined;'), SRC.indexOf('}, [joinHeldForCheck, communityHandleState, step]);'));
+    expect(resume.length).toBeGreaterThan(0);
+    expect(resume).toMatch(/if \(step !== 5\) \{ setJoinHeldForCheck\(false\); return undefined; \}/);
+    expect(resume).toMatch(/if \(communityHandleState !== 'checking'\) \{\s*\n\s*setJoinHeldForCheck\(false\);\s*\n\s*advanceFrom5\('join'\);/);
+    expect(resume).toMatch(/setTimeout\(\(\) => \{\s*\n\s*setJoinHeldForCheck\(false\);\s*\n\s*advanceFrom5\('join'\);\s*\n\s*\}, HANDLE_CHECK_HOLD_MAX_MS\);/);
+    expect(resume).toMatch(/return \(\) => clearTimeout\(timer\);/);
     // The button shows the wait; it is never disabled (the R-guard above).
     expect(STEP5).toContain('loading={joinHeldForCheck}');
     // The field's own line already says what is happening.

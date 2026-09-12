@@ -251,6 +251,11 @@ const HANDLE_HINT = 'Use 3 to 20 letters, numbers or underscores.';
 const HANDLE_OFFLINE_HINT = 'Could not check that handle. You are offline.';
 const HANDLE_UNAVAILABLE_HINT = 'Could not check that handle just now.';
 const HANDLE_CHECK_DEBOUNCE_MS = 400;
+// The longest a Join tap waits for a live handle check that has not
+// answered (D160, hostile review OJ-REV-SQL-3 F1): the check has no timeout
+// of its own, so a hung request must never hold the tap for ever (D141).
+// After the bound the tap goes through exactly as it did before the hold.
+const HANDLE_CHECK_HOLD_MAX_MS = 3000;
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 // Review B finding 6: the canonical editor (CoachingRemindersScreen
@@ -1202,12 +1207,24 @@ export default function ProOnboardingScreen({ navigation }) {
 
   // The held Join tap resumes as soon as the live check settles, with the
   // same validation a fresh tap gets (taken or invalid still stops it).
+  // Leaving the step spends the tap: joining is a consent act and never
+  // fires from a tap the person walked away from. A check that cannot
+  // answer never holds the tap beyond HANDLE_CHECK_HOLD_MAX_MS.
   useEffect(() => {
-    if (!joinHeldForCheck || communityHandleState === 'checking') return;
-    setJoinHeldForCheck(false);
-    advanceFrom5('join');
+    if (!joinHeldForCheck) return undefined;
+    if (step !== 5) { setJoinHeldForCheck(false); return undefined; }
+    if (communityHandleState !== 'checking') {
+      setJoinHeldForCheck(false);
+      advanceFrom5('join');
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      setJoinHeldForCheck(false);
+      advanceFrom5('join');
+    }, HANDLE_CHECK_HOLD_MAX_MS);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [joinHeldForCheck, communityHandleState]);
+  }, [joinHeldForCheck, communityHandleState, step]);
 
   function emitStepDone(n) {
     if (!user?.id) return;
