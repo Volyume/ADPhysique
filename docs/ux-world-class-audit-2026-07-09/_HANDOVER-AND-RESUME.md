@@ -15,6 +15,10 @@ link on both platforms); the real App Store id on the share pages. Review
 (Opus): FIX FIRST, every finding landed (board section). Settled tree lint clean, 1310 suites / 20277 tests green (1 suite and 16 tests skipped, as before). Production proof with the
 founder's two accounts: the real RPCs run as each account, follow / cohort counts / host card / group create, invite link, accept by token, leave, close all correct; one finding, migration 176 written (closed groups leave the lists), waits for the phrase; test rows removed. Device checklist: spec section 4. No
 build started. Board section "COMMUNITY EARLY DAYS (2026-09-13)".
+VERSION: 2.1.0 (founder order 2026-09-13, "bump the version as well as iOS
+won't accept the one you have set now"; `app.json`, `package.json` and the
+lock's root entry, as 6c5d080 did for 2.0.0; build numbers untouched: iOS is
+EAS remote autoIncrement, Android is the workflow run number).
 ===============================================================================
 ## ★ 2026-09-13 — SENTRY TRIAGE: FIFTEEN ISSUES, THREE MECHANISMS FIXED, ALL RESOLVED ★
 

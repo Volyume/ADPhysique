@@ -83,6 +83,10 @@ Two-account production proof (the founder's own accounts, real RPCs run
 as each): as `alland`: `community_hub_summary` returned the Volt Gym cohort with `allan` as the one other member and the `allan` card with `relationship.following` `none`; `community_follow` returned `accepted` and the card then read `accepted`; `community_dimension` gym count 1 for each account (others only, as the client now says "You and 1 other"); as `allan`: `community_group_create` (invite-only) and `community_group_invite_link` returned a 14-day token; as `alland`: `community_group_accept_invite(token)` made them a member, `community_group_get` read `member_count` 2 with `together_planned_week` 4 / `together_sessions_week` 2 from real counters, the Hub summary listed the group with both of you; `community_group_leave` then `community_group_close` worked; FINDING: the closed group stayed in the creator's Hub summary (migration 176, written); the test group's rows were deleted afterwards so nothing of it remains; the follow `alland` -> `allan` was left in place (it is the intended state)..
 Device checklist: spec section 4 (five steps, two phones). No build
 started; the founder builds from main.
+VERSION BUMPED to 2.1.0 on the founder's order (iOS refused a build at
+2.0.0): `app.json` expo.version, `package.json`, the lock's root entry.
+Build numbers untouched (iOS: EAS remote autoIncrement; Android: the
+workflow's run number).
 
 ## SENTRY TRIAGE (2026-09-13, founder order "Check sentry and resolve all issues. App is fine") — FIFTEEN UNRESOLVED ISSUES TRIAGED; THREE MECHANISMS FIXED ON MAIN; ALL FIFTEEN RESOLVED IN SENTRY WITH REASONS
 
