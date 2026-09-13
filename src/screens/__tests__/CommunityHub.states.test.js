@@ -48,6 +48,15 @@ jest.mock('../../hooks/useCommunityMe', () => ({
 }));
 
 jest.mock('../../lib/community', () => ({
+  // Early days (26-EARLY-DAYS-SPEC.md): the pure helpers are the real
+  // ones; the host read defaults to "did not answer" (offline) so every
+  // state below sees the Hub exactly as before, and the tests that care
+  // about the HOST row resolve a card themselves.
+  ...jest.requireActual('../../lib/community/earlyDays'),
+  getProfile: jest.fn(() => Promise.reject(Object.assign(new Error('offline'), { code: 'offline' }))),
+  follow: jest.fn(() => Promise.resolve({ state: 'accepted' })),
+  readHostDismissed: jest.fn(() => Promise.resolve(false)),
+  writeHostDismissed: jest.fn(() => Promise.resolve()),
   loadHub: jest.fn(),
   hasProfile: (me) => !!me?.profile?.handle,
   hasUnseen: () => false,
@@ -90,11 +99,13 @@ jest.mock('../../lib/community', () => ({
   retryPendingJoin: jest.fn(() => Promise.resolve({ ok: false, queued: false })),
 }));
 
+import { Share } from 'react-native';
 import {
-  loadHub, loadHubSummary, reactToPost, consistencyGateState, loadConsistency,
+  loadHub, loadHubSummary, reactToPost, consistencyGateState, loadConsistency, getProfile, follow,
+  readHostDismissed, writeHostDismissed, COMMUNITY_HOST_USER_ID,
 } from '../../lib/community';
 import useCommunityMe from '../../hooks/useCommunityMe';
-import CommunityHubScreen from '../CommunityHubScreen';
+import CommunityHubScreen, { _resetHostCacheForTests } from '../CommunityHubScreen';
 
 const ME_WITH_PROFILE = {
   profile: { user_id: 'u1', handle: 'rowan_lifts', display_name: 'Rowan M', visibility: 'public' },
@@ -225,6 +236,8 @@ async function render(params = {}) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  _resetHostCacheForTests();
+  readHostDismissed.mockResolvedValue(false);
   loadHub.mockResolvedValue(emptyHub());
   loadHubSummary.mockResolvedValue({ cohorts: [], groups: [] });
   consistencyGateState.mockResolvedValue({ allowed: false, gated: false, isMinor: false });
@@ -497,5 +510,205 @@ describe('state 6: a legacy partner link', () => {
   test('no card without a legacy code', async () => {
     const { text } = await render();
     expect(text).not.toContain('Partner invites have moved');
+  });
+});
+
+// ─── Early days (26-EARLY-DAYS-SPEC.md, CR-16 / D162) ─────────────────
+
+describe('early days: the PEOPLE zero state (spec 1.1)', () => {
+  beforeEach(() => {
+    loadHubSummary.mockResolvedValue({ cohorts: [], groups: [] });
+  });
+
+  test('with a gym: the first-here line and the invite, and Find people still there', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { ...ME_WITH_PROFILE, profile: { ...ME_WITH_PROFILE.profile, gym_label: 'Volt Gym' } },
+      loading: false, error: null, refresh: jest.fn(),
+    });
+    const { text } = await render();
+    expect(text).toContain('You are the first here from Volt Gym.');
+    expect(text).toContain('Invite a gym mate');
+    expect(text).toContain('Find people');
+  });
+
+  test('without a gym: one of the first, and a training partner', async () => {
+    useCommunityMe.mockReturnValue({ me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn() });
+    const { text } = await render();
+    expect(text).toContain('You are one of the first here.');
+    expect(text).toContain('Invite a training partner');
+  });
+
+  test('the invite opens the share sheet with the member\'s own link and gym, nothing else', async () => {
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    useCommunityMe.mockReturnValue({
+      me: { ...ME_WITH_PROFILE, profile: { ...ME_WITH_PROFILE.profile, gym_label: 'Volt Gym' } },
+      loading: false, error: null, refresh: jest.fn(),
+    });
+    const { partTrees } = await render();
+    const invite = partTrees[0].root.findAll((n) => n.props?.accessibilityLabel === 'Invite someone to Volyume' && n.props?.onPress)[0];
+    expect(invite).toBeTruthy();
+    await act(async () => { invite.props.onPress(); });
+    await flush();
+    expect(share).toHaveBeenCalledWith({
+      message: 'Join me on Volyume. I train at Volt Gym. https://volyume.app/u/?h=rowan_lifts',
+    });
+    share.mockRestore();
+  });
+
+  test('a dismissed share sheet is silent', async () => {
+    const share = jest.spyOn(Share, 'share').mockRejectedValue(new Error('dismissed'));
+    useCommunityMe.mockReturnValue({ me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn() });
+    const { partTrees } = await render();
+    const invite = partTrees[0].root.findAll((n) => n.props?.accessibilityLabel === 'Invite someone to Volyume' && n.props?.onPress)[0];
+    await act(async () => { invite.props.onPress(); });
+    await flush();
+    expect(share).toHaveBeenCalledTimes(1);
+    share.mockRestore();
+  });
+
+  test('with cohorts the zero state never renders', async () => {
+    useCommunityMe.mockReturnValue({ me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn() });
+    loadHubSummary.mockResolvedValue({ cohorts: [cohort()], groups: [] });
+    const { text } = await render();
+    expect(text).not.toContain('first here');
+    expect(text).not.toContain('Invite a');
+  });
+
+  // Review blocker 2: the line is a statement of fact. A read that did not
+  // answer, or a summary whose only cohort is a style (not a Hub row but
+  // people all the same), must never say "first here".
+  test('a failed summary read shows no zero state: nothing is claimed', async () => {
+    useCommunityMe.mockReturnValue({ me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn() });
+    loadHubSummary.mockRejectedValue(Object.assign(new Error('offline'), { code: 'offline' }));
+    const { text } = await render();
+    expect(text).not.toContain('first here');
+    expect(text).not.toContain('Invite a');
+    expect(text).toContain('Find people');
+  });
+
+  test('a summary whose only cohort is a style shows no zero state', async () => {
+    useCommunityMe.mockReturnValue({ me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn() });
+    loadHubSummary.mockResolvedValue({ cohorts: [cohort({ kind: 'style', key: 'strength', label: 'Strength' })], groups: [] });
+    const { text } = await render();
+    expect(text).not.toContain('first here');
+  });
+
+  test('never before joining', async () => {
+    const { text } = await render();
+    expect(text).not.toContain('first here');
+    expect(text).not.toContain('Invite a');
+  });
+});
+
+describe('early days: the HOST row (spec 1.2)', () => {
+  const hostCard = (over = {}) => card({
+    user_id: COMMUNITY_HOST_USER_ID, handle: 'allan', display_name: 'Allan', gym_label: 'Volt Gym', show_gym: true, ...over,
+  });
+
+  beforeEach(() => {
+    useCommunityMe.mockReturnValue({ me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn() });
+  });
+
+  test('reads the host by the one constant handle, and shows the row with a Follow', async () => {
+    getProfile.mockResolvedValue({ card: hostCard(), viewable: true });
+    const { text } = await render();
+    expect(getProfile).toHaveBeenCalledWith({ handle: 'allan' });
+    expect(text).toContain('HOST');
+    expect(text).toContain('Allan');
+    expect(text).toContain('Built Volyume · Volt Gym');
+    expect(text).toContain('Follow');
+  });
+
+  test('hidden for the host, when already following, when blocked, and when the read did not answer', async () => {
+    getProfile.mockResolvedValue({ card: hostCard({ user_id: 'u1' }), viewable: true });
+    expect((await render()).text).not.toContain('HOST');
+    _resetHostCacheForTests();
+
+    // A re-claimed handle on another account is a stranger, never the host.
+    getProfile.mockResolvedValue({ card: hostCard({ user_id: 'someone-else' }), viewable: true });
+    expect((await render()).text).not.toContain('HOST');
+    _resetHostCacheForTests();
+
+    getProfile.mockResolvedValue({ card: hostCard({ relationship: { following: 'accepted', followed_by: false, muted: false, blocked: false } }), viewable: true });
+    expect((await render()).text).not.toContain('HOST');
+    _resetHostCacheForTests();
+
+    getProfile.mockResolvedValue({ card: hostCard({ relationship: { following: 'none', followed_by: false, muted: false, blocked: true } }), viewable: true });
+    expect((await render()).text).not.toContain('HOST');
+    _resetHostCacheForTests();
+
+    getProfile.mockRejectedValue(Object.assign(new Error('offline'), { code: 'offline' }));
+    expect((await render()).text).not.toContain('HOST');
+  });
+
+  test('never before joining: no read at all', async () => {
+    useCommunityMe.mockReturnValue({ me: { profile: null }, loading: false, error: null, refresh: jest.fn() });
+    await render();
+    expect(getProfile).not.toHaveBeenCalled();
+  });
+
+  test('Follow follows the host, drops the row, and reloads the feed', async () => {
+    getProfile.mockResolvedValue({ card: hostCard(), viewable: true });
+    const { tree, partTrees } = await render();
+    const button = partTrees[0].root.findAll((n) => n.props?.accessibilityLabel === 'Follow Allan' && n.props?.onPress)[0];
+    expect(button).toBeTruthy();
+    expect(loadHub).toHaveBeenCalledTimes(1);
+
+    await act(async () => { button.props.onPress(); });
+    await flush();
+
+    expect(follow).toHaveBeenCalledWith(COMMUNITY_HOST_USER_ID);
+    expect(loadHub).toHaveBeenCalledTimes(2);
+    expect(renderList(tree).text).not.toContain('HOST');
+  });
+
+  test('a followers-only host: the toast says Requested, and the row still goes', async () => {
+    const { useToast } = require('../../components/Toast');
+    const show = jest.fn();
+    const spy = jest.spyOn(require('../../components/Toast'), 'useToast').mockReturnValue({ show });
+    follow.mockResolvedValueOnce({ state: 'requested' });
+    getProfile.mockResolvedValue({ card: hostCard(), viewable: true });
+    const { tree, partTrees } = await render();
+    const button = partTrees[0].root.findAll((n) => n.props?.accessibilityLabel === 'Follow Allan' && n.props?.onPress)[0];
+    await act(async () => { button.props.onPress(); });
+    await flush();
+    expect(show).toHaveBeenCalledWith('Requested.');
+    expect(renderList(tree).text).not.toContain('HOST');
+    spy.mockRestore();
+    expect(typeof useToast).toBe('function');
+  });
+
+  test('"Not now" drops the row, remembers it for this reader, and the next mount never reads the host', async () => {
+    getProfile.mockResolvedValue({ card: hostCard(), viewable: true });
+    const { tree, partTrees } = await render();
+    const notNow = partTrees[0].root.findAll((n) => n.props?.accessibilityLabel === 'Not now' && n.props?.onPress)[0];
+    expect(notNow).toBeTruthy();
+    await act(async () => { notNow.props.onPress(); });
+    await flush();
+    expect(writeHostDismissed).toHaveBeenCalledWith('u1');
+    expect(renderList(tree).text).not.toContain('HOST');
+
+    getProfile.mockClear();
+    readHostDismissed.mockResolvedValue(true);
+    _resetHostCacheForTests();
+    expect((await render()).text).not.toContain('HOST');
+    expect(getProfile).not.toHaveBeenCalled();
+  });
+
+  test('once the row hid by rule, the same session never reads the host again', async () => {
+    getProfile.mockResolvedValue({ card: hostCard({ relationship: { following: 'accepted', followed_by: false, muted: false, blocked: false } }), viewable: true });
+    await render();
+    expect(getProfile).toHaveBeenCalledTimes(1);
+    await render();
+    expect(getProfile).toHaveBeenCalledTimes(1);
+  });
+
+  test('the row opens the host\'s profile by handle', async () => {
+    getProfile.mockResolvedValue({ card: hostCard(), viewable: true });
+    const { navigation, partTrees } = await render();
+    const row = partTrees[0].root.findAll((n) => typeof n.props?.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('Allan. Built Volyume') && n.props?.onPress)[0];
+    expect(row).toBeTruthy();
+    await act(async () => { row.props.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityProfile', { handle: 'allan' });
   });
 });

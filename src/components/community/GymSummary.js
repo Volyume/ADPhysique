@@ -51,7 +51,7 @@ export function summaryLines(summary) {
   return out;
 }
 
-export default function GymSummary({ summary, label = null }) {
+export default function GymSummary({ summary, label = null, countLine = null }) {
   const t = useTheme();
   if (!summary) return null;
 
@@ -66,7 +66,10 @@ export default function GymSummary({ summary, label = null }) {
         {title}
       </Text>
       <Text style={[styles.count, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-        {memberLine(summary.count)}
+        {/* `countLine` (26-EARLY-DAYS-SPEC.md 1.3): the summary's count
+            excludes the caller, so the page passes an honest line for a
+            gym the reader belongs to ("Just you so far"). */}
+        {countLine || memberLine(summary.count)}
       </Text>
       {lines.map((line) => (
         <Text key={line} style={[styles.line, { ...t.type.bodySm, color: t.colors.textSecondary }]}>

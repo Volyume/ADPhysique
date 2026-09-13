@@ -33,6 +33,7 @@ const mockToastShow = jest.fn();
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 
 jest.mock('../../lib/community', () => ({
+  ...jest.requireActual('../../lib/community/earlyDays'),
   loadDimension: jest.fn(),
   gymSummary: jest.fn(() => Promise.reject(new Error('no summary in this suite'))),
 }));

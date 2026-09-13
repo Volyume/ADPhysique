@@ -42,7 +42,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, RefreshControl, ActivityIndicator, Pressable, AppState, TouchableOpacity,
+  View, Text, StyleSheet, RefreshControl, ActivityIndicator, Pressable, AppState, TouchableOpacity, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
@@ -64,6 +64,7 @@ import PersonRow from '../components/community/PersonRow';
 import CohortRow from '../components/community/CohortRow';
 import GroupRow from '../components/community/GroupRow';
 import ActivityItemRow from '../components/community/ActivityItemRow';
+import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import {
@@ -73,10 +74,20 @@ import {
   loadHub, hasProfile, hasUnseen, hasUnreadMessages, reactToPost,
   loadHubSummary, metricLabel, loadConsistency, consistencyGateState,
   myStatus, isModeratedStatus, REPORT_REASONS, TP_AGE_BANDS,
+  getProfile, follow, COMMUNITY_HOST_HANDLE, inviteMessage, inviteLabel, firstHereLine,
+  hostRowVisible, hostCaption, readHostDismissed, writeHostDismissed,
 } from '../lib/community';
 import { todayLocalKey } from '../lib/dayKey';
 
 const PAGE = 20;
+
+// The HOST row's read (26-EARLY-DAYS-SPEC.md 1.2) happens once per app
+// session per reader once its answer is "no row": the reader is the host,
+// already follows, or has a block or mute (review note 15). A follow made
+// elsewhere in the session is picked up by the next launch.
+let _hostHiddenForUid = null;
+/** Test seam: the session cache above. */
+export function _resetHostCacheForTests() { _hostHiddenForUid = null; }
 
 /**
  * "3 trained today · 8 members" (task 5; `GroupRow`'s own header comment:
@@ -145,6 +156,13 @@ export default function CommunityHubScreen({ navigation, route }) {
   const [summary, setSummary] = useState(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [status, setStatus] = useState(null);
+  // Early days (26-EARLY-DAYS-SPEC.md 1.2): the founder's real profile,
+  // shown as the host while the reader is not yet following them. Null
+  // means "no row": not joined, the reader is the host, already following,
+  // or the read did not answer (a missing host is never an error).
+  const [host, setHost] = useState(null);
+  const [hostBusy, setHostBusy] = useState(false);
+  const toast = useToast();
   const listRef = useRef(null);
 
   const uid = me?.profile?.user_id ?? null;
@@ -190,6 +208,34 @@ export default function CommunityHubScreen({ navigation, route }) {
       .then((out) => { if (alive) setSummary(out); })
       .catch(() => { if (alive) setSummary(null); })
       .finally(() => { if (alive) setSummaryLoading(false); });
+    return () => { alive = false; };
+  }, [joined, uid]);
+
+  // The HOST row's card (spec 1.2): one read per Hub mount once joined,
+  // best effort, hidden on any failure. `hostRowVisible` owns the rules
+  // (not the host, not following, no block or mute, viewable).
+  useEffect(() => {
+    if (!joined || !uid || _hostHiddenForUid === uid) { setHost(null); return undefined; }
+    let alive = true;
+    (async () => {
+      try {
+        if (await readHostDismissed(uid)) {
+          _hostHiddenForUid = uid;
+          if (alive) setHost(null);
+          return;
+        }
+        const out = await getProfile({ handle: COMMUNITY_HOST_HANDLE });
+        if (!alive) return;
+        const card = out?.card ?? null;
+        const visible = hostRowVisible({ card, viewable: out?.viewable, uid });
+        // A card that answered and hides by rule stays hidden for the
+        // session; a read that did not answer is asked again next mount.
+        if (card && !visible) _hostHiddenForUid = uid;
+        setHost(visible ? card : null);
+      } catch (_e) {
+        if (alive) setHost(null);
+      }
+    })();
     return () => { alive = false; };
   }, [joined, uid]);
 
@@ -299,6 +345,48 @@ export default function CommunityHubScreen({ navigation, route }) {
     }
   }, [hub, paging, joined]);
 
+  // Early days (spec 1.1, 1.5): the member's own invite, from the native
+  // share sheet. A dismissed sheet is silent; nothing else is recorded.
+  const inviteFriend = useCallback(async () => {
+    try {
+      await Share.share({
+        message: inviteMessage({ handle: me?.profile?.handle, gymLabel: me?.profile?.gym_label }),
+      });
+    } catch (_e) { /* the person dismissed the share sheet */ }
+  }, [me]);
+
+  // Follow the host (spec 1.2): instant for a public profile; the row goes
+  // and the feed reloads so the host's shared items land as first content.
+  const followHost = useCallback(async () => {
+    if (!host?.user_id || hostBusy) return;
+    setHostBusy(true);
+    try {
+      const out = await follow(host.user_id);
+      // Honest about what the server did (review fix 9): a followers-only
+      // profile receives a request, and the row goes either way.
+      toast.show(out?.state === 'requested'
+        ? 'Requested.'
+        : `Following ${host.display_name || host.handle || 'the host'}.`);
+      _hostHiddenForUid = uid;
+      setHost(null);
+      await load({ quiet: true });
+    } catch (e) {
+      toast.show(e?.code === 'offline'
+        ? 'You are offline. Try again when you have a connection.'
+        : 'Could not follow just now.', { variant: 'error' });
+    } finally {
+      setHostBusy(false);
+    }
+  }, [host, hostBusy, load, toast, uid]);
+
+  // "Not now" (spec 1.2; review note 14): the row and its read never come
+  // back for this reader on this device.
+  const dismissHost = useCallback(async () => {
+    _hostHiddenForUid = uid;
+    setHost(null);
+    await writeHostDismissed(uid);
+  }, [uid]);
+
   const posts = useMemo(
     () => (hub?.posts ?? []).map(normalisePostRow).filter(Boolean),
     [hub],
@@ -322,6 +410,11 @@ export default function CommunityHubScreen({ navigation, route }) {
     [summary],
   );
   const groups = summary?.groups ?? [];
+  // The zero state is a statement of fact, so it needs a summary that
+  // ANSWERED and carries no cohort at all, style included (review blocker
+  // 2): a failed or rate-limited read shows nothing rather than telling a
+  // member of a full gym that they are the first here.
+  const summaryEmpty = !!summary && Array.isArray(summary.cohorts) && summary.cohorts.length === 0;
 
   const youPerson = joined ? {
     user_id: uid,
@@ -542,7 +635,7 @@ export default function CommunityHubScreen({ navigation, route }) {
               <SkeletonRow />
               <SkeletonRow />
             </>
-          ) : (
+          ) : cohorts.length || !summaryEmpty ? (
             cohorts.map((c) => (
               <CohortRow
                 key={`${c.kind}:${c.key}`}
@@ -554,6 +647,24 @@ export default function CommunityHubScreen({ navigation, route }) {
                 })}
               />
             ))
+          ) : (
+            // Early days (spec 1.1): the summary omits every cohort with
+            // nobody else in it, so an empty PEOPLE means the reader is
+            // the first here. One honest line and one action.
+            <View style={styles.firstHere}>
+              <Text style={[styles.firstHereLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+                {firstHereLine(me?.profile?.gym_label)}
+              </Text>
+              <Button
+                variant="tertiary"
+                size="sm"
+                fullWidth={false}
+                icon="person-add-outline"
+                title={inviteLabel({ gymLabel: me?.profile?.gym_label })}
+                onPress={inviteFriend}
+                accessibilityLabel="Invite someone to Volyume"
+              />
+            </View>
           )}
           <Pressable
             onPress={() => navigation.navigate('CommunityFindPeople')}
@@ -591,6 +702,28 @@ export default function CommunityHubScreen({ navigation, route }) {
               Make a group with friends to see each other&apos;s training weeks.
             </Text>
           )}
+        </>
+      ) : null}
+
+      {joined && host ? (
+        <>
+          <Eyebrow trailing={{ label: 'Not now', onPress: dismissHost }}>HOST</Eyebrow>
+          <PersonRow
+            person={{ ...host, caption: hostCaption(host) }}
+            onPress={() => navigation.navigate('CommunityProfile', { handle: host.handle })}
+            trailing={(
+              <Button
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                title="Follow"
+                loading={hostBusy}
+                disabled={hostBusy}
+                onPress={followHost}
+                accessibilityLabel={`Follow ${host.display_name || host.handle || 'the host'}`}
+              />
+            )}
+          />
         </>
       ) : null}
 
@@ -726,6 +859,8 @@ const styles = StyleSheet.create({
   heroBody: { ...type.bodySm, color: colors.textSecondary },
   heroActions: { flexDirection: 'row', gap: spacing.sm },
   findPeopleRow: { minHeight: 48, justifyContent: 'center', paddingVertical: spacing.sm },
+  firstHere: { gap: spacing.sm, paddingVertical: spacing.sm, alignItems: 'flex-start' },
+  firstHereLine: { ...type.bodySm, color: colors.textSecondary },
   findPeopleLabel: { ...type.label, color: colors.textSecondary },
   groupsEmptyLine: { ...type.bodySm, color: colors.textMuted, paddingVertical: spacing.sm },
   offline: { ...type.caption, color: colors.textMuted, marginBottom: spacing.sm },

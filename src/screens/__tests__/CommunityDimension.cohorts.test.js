@@ -57,6 +57,8 @@ jest.mock('../../hooks/usePhotoSuppression', () => ({
 jest.mock('../../components/community/RespectAllRow', () => () => null);
 
 jest.mock('../../lib/community', () => ({
+  // Early days (26-EARLY-DAYS-SPEC.md 1.3, 1.4): the real pure helpers.
+  ...jest.requireActual('../../lib/community/earlyDays'),
   loadDimension: jest.fn(),
   loadDimensionRecent: jest.fn(() => Promise.resolve({ posts: [], cursor: null })),
   gymSummary: jest.fn(() => Promise.reject(new Error('no summary in this suite'))),
@@ -339,5 +341,104 @@ describe('the seven physique-division pages: the Beat row and the calm-mode rest
     expect(loadDimension).toHaveBeenCalledWith('discipline', 'bodybuilding', expect.any(Object));
     expect(loadBoard).toHaveBeenCalled();
     expect(loadDimensionRecent).toHaveBeenCalled();
+  });
+});
+
+// ─── Early days (26-EARLY-DAYS-SPEC.md 1.3, 1.4) ───────────────────────
+
+describe('early days: the honest count line and the one action', () => {
+  const ownGym = () => useCommunityMe.mockReturnValue({
+    me: { profile: { user_id: 'u1', handle: 'rowan', gym_id: 'v1', gym_label: 'PureGym Leeds' }, tp_age_band: '25_34' },
+  });
+
+  /**
+   * The page's list is a FlashList, mapped in Jest to the manual-mock
+   * FlatList, which renders neither its header element nor its rows; both
+   * are rendered here for real (the Hub suite's own pattern) so the label
+   * line and the section break can be read and pressed.
+   */
+  function readList(tree) {
+    const list = tree.root.findAll((n) => n.type === 'FlatList')[0];
+    const parts = [];
+    const trees = [];
+    const header = list.props.ListHeaderComponent;
+    if (header) {
+      let part = null;
+      act(() => { part = create(header); });
+      trees.push(part);
+      parts.push(texts(part.toJSON()));
+    }
+    for (const item of (list.props.data ?? [])) {
+      let part = null;
+      act(() => { part = create(list.props.renderItem({ item })); });
+      trees.push(part);
+      parts.push(texts(part.toJSON()));
+    }
+    const find = (label) => trees.flatMap((p) => p.root.findAll((n) => n.props?.accessibilityLabel === label && n.props?.onPress))[0];
+    return { text: parts.join(' '), find };
+  }
+
+  test('the reader\'s own gym with nobody else: "Just you so far", the honest line, and the invite', async () => {
+    ownGym();
+    loadDimension.mockResolvedValue({ label: 'PureGym Leeds', people: [], programmes: [], count: 0 });
+    const { tree } = await mount({ kind: 'gym', key: 'gym:v1', label: 'PureGym Leeds' });
+    const { text } = readList(tree);
+    expect(text).toContain('Just you so far');
+    expect(text).not.toContain('0 members');
+    expect(text).toContain('No one else here is sharing yet.');
+    expect(text).toContain('Invite someone from PureGym Leeds');
+  });
+
+  test('the reader\'s own gym with others: "You and N others"', async () => {
+    ownGym();
+    loadDimension.mockResolvedValue({ label: 'PureGym Leeds', people: [], programmes: [], count: 2 });
+    const { tree } = await mount({ kind: 'gym', key: 'gym:v1', label: 'PureGym Leeds' });
+    expect(readList(tree).text).toContain('You and 2 others');
+  });
+
+  test('another gym: the line is unchanged and there is no invite', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: { user_id: 'u1', handle: 'rowan', gym_id: 'v9', gym_label: 'Other Gym' }, tp_age_band: '25_34' },
+    });
+    loadDimension.mockResolvedValue({ label: 'PureGym Leeds', people: [], programmes: [], count: 2 });
+    const { tree } = await mount({ kind: 'gym', key: 'gym:v1', label: 'PureGym Leeds' });
+    const { text } = readList(tree);
+    expect(text).toContain('2 members');
+    expect(text).not.toContain('You and');
+    expect(text).not.toContain('Invite');
+  });
+
+  test('an own discipline page offers a training partner, not a gym mate', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: { user_id: 'u1', handle: 'rowan', discipline_keys: ['powerlifting'] }, tp_age_band: '25_34' },
+    });
+    loadDimension.mockResolvedValue({ label: 'Powerlifting', people: [], programmes: [], count: 0 });
+    const { tree } = await mount({ kind: 'discipline', key: 'powerlifting', label: 'Powerlifting' });
+    const { text } = readList(tree);
+    expect(text).toContain('Just you so far');
+    expect(text).toContain('Invite a training partner');
+  });
+
+  test('an own area page, matched by label (the card carries labels, not keys)', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: { user_id: 'u1', handle: 'rowan', area_label: 'Leeds', gym_label: 'PureGym Leeds' }, tp_age_band: '25_34' },
+    });
+    loadDimension.mockResolvedValue({ label: 'Leeds', people: [], programmes: [], count: 3 });
+    const { tree } = await mount({ kind: 'area', key: 'leeds', label: 'Leeds' });
+    expect(readList(tree).text).toContain('You and 3 others');
+  });
+
+  test('the invite shares the member\'s own link and gym', async () => {
+    const { Share } = require('react-native');
+    const share = jest.spyOn(Share, 'share').mockResolvedValue({ action: 'sharedAction' });
+    ownGym();
+    loadDimension.mockResolvedValue({ label: 'PureGym Leeds', people: [], programmes: [], count: 0 });
+    const { tree } = await mount({ kind: 'gym', key: 'gym:v1', label: 'PureGym Leeds' });
+    const invite = readList(tree).find('Invite someone to Volyume');
+    expect(invite).toBeTruthy();
+    await act(async () => { invite.props.onPress(); });
+    await flush();
+    expect(share).toHaveBeenCalledWith({ message: 'Join me on Volyume. I train at PureGym Leeds. https://volyume.app/u/?h=rowan' });
+    share.mockRestore();
   });
 });

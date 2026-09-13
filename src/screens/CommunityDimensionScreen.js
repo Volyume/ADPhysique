@@ -53,7 +53,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  View, Text, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Linking,
+  View, Text, Pressable, StyleSheet, RefreshControl, ActivityIndicator, Linking, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -86,6 +86,7 @@ import {
 import {
   loadDimension, loadDimensionRecent, gymSummary, loadBoard, metricLabel, reactToPost,
   COMMUNITY_STYLE_KEYS, PHYSIQUE_DISCIPLINE_KEYS, TP_AGE_BANDS,
+  isOwnCohort, cohortCountLine, inviteMessage, inviteLabel,
 } from '../lib/community';
 import {
   report as reportGym, get as getGymVenue, confirmSubmission, isPendingVenue, REPORT_KINDS,
@@ -288,6 +289,22 @@ export default function CommunityDimensionScreen({ navigation, route }) {
   // round trip that would only come back empty.
   const ownAgeBand = me?.tp_age_band ?? null;
   const ageBandLocked = isAgeBand && (!ownAgeBand || key !== ownAgeBand);
+
+  // Early days (26-EARLY-DAYS-SPEC.md 1.3, 1.6): `community_dimension`
+  // counts everyone but the caller, so the label line says "You and N
+  // others" only when the caller is known to belong; otherwise unchanged.
+  const ownCohort = isOwnCohort({
+    kind, key, me, venueId, ownGymByLabel: isOwnGym, label: route?.params?.label ?? paramLabel,
+  });
+
+  // The member's own invite (spec 1.4, 1.5), from the native share sheet.
+  const invite = useCallback(async () => {
+    try {
+      await Share.share({
+        message: inviteMessage({ handle: me?.profile?.handle, gymLabel: me?.profile?.gym_label }),
+      });
+    } catch (_e) { /* the person dismissed the share sheet */ }
+  }, [me]);
 
   const showBoard = isGym
     ? (!!venueId || isOwnGym)
@@ -568,12 +585,19 @@ export default function CommunityDimensionScreen({ navigation, route }) {
     <View style={styles.header}>
       {isPhysique ? <BeatSignpostRow /> : null}
       {isGym && summary && !rosterMode ? (
-        <GymSummary summary={summary} label={label} />
+        <GymSummary
+          summary={summary}
+          label={label}
+          countLine={ownCohort ? cohortCountLine({ own: true, others: summary.count }) : null}
+        />
       ) : (
         <Text style={[styles.label, { ...t.type.label, color: t.colors.textSecondary }]}>
-          {rosterMode
-            ? `${memberCount} ${memberCount === 1 ? 'member' : 'members'} · ${displayRows.filter((r) => r.trainedToday).length} trained today`
-            : `${memberCount} ${memberCount === 1 ? 'member' : 'members'}`}
+          {cohortCountLine({
+            own: ownCohort,
+            others: memberCount,
+            rosterMode,
+            trainedToday: displayRows.filter((r) => r.trainedToday).length,
+          })}
         </Text>
       )}
       {venueId && isPendingVenue(venue) ? (
@@ -646,6 +670,19 @@ export default function CommunityDimensionScreen({ navigation, route }) {
                   <Text style={[styles.coldStart, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
                     No one else here is sharing yet.
                   </Text>
+                ) : null}
+                {/* Early days (spec 1.4): the one action beside the honest
+                    line, only on a cohort the reader belongs to. */}
+                {rosterThin && ownCohort ? (
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    fullWidth={false}
+                    icon="person-add-outline"
+                    title={inviteLabel({ gymLabel: isGym ? label : null, ownGymPage: isGym })}
+                    onPress={invite}
+                    accessibilityLabel="Invite someone to Volyume"
+                  />
                 ) : null}
                 {/* Phase 3 (spec section 5), landing where phase 1 reserved
                     the spot: "Respect everyone who trained today", roster
