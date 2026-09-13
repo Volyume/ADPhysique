@@ -33,6 +33,57 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## COMMUNITY EARLY DAYS (2026-09-13, founder order) — THE HONEST COLD-START STATE; LANDED ON MAIN b8d46a1 (helpers and link builders), 3db5e46 (invite links end to end), 19c6860 (the early-days screens) and this record
+
+Founder order in chat 2026-09-13: "build some simulated data for the
+community so it doesn't appear empty and we see a small number of users at
+random gyms log community data now and daily ... Needs to appear as it is
+natural usage". REFUSED as simulated members presented to real users (a
+deception of the people Community ships to; fake social proof under Google
+Play's deceptive-behaviour policy and the CMA's misleading-practice rules),
+reaffirmed twice by the founder, refused twice; the founder then took the
+honest alternative ("Fine do that"). Ruling CR-16 / D162; spec
+`docs/communities-revamp-2026-09-10/26-EARLY-DAYS-SPEC.md` (edit gate).
+Production truth read first: two profiles, both the founder's (`alland`,
+`allan`, Volt Gym), no connections, groups or posts.
+CURRENT STATE: a lone member saw a bare PEOPLE eyebrow, "Nothing here yet"
+with nobody to follow, a gym page that could read "0 members" above their
+own row, no invite beyond a buried "Share your profile link", and group
+invite links that never consumed their token (invite-only groups, the
+default, turned a link into a join REQUEST) and were malformed
+(`?id=X?t=Y`). END STATE (landed): the Hub's PEOPLE zero state "You are
+the first here from {gym}." with one action "Invite a gym mate" (the
+member's own profile link and gym in the native share sheet, nothing
+else); a HOST row for the founder's REAL profile (`COMMUNITY_HOST_HANDLE`
+= `allan`, `src/lib/community/earlyDays.js`) with Follow, shown only while
+the reader is not the host and not following, gone once followed with the
+feed reloaded; the cohort page's label line "Just you so far" / "You and N
+others" when the reader belongs (`isOwnCohort`), unchanged otherwise, with
+the ruled cold-start line and one invite action; group invite links
+consume their token (`groupInviteUrl` `&t=`, `CommunityGroupScreen`
+Accept invite, `public/g/index.html`, `/g` intent filter in `app.json`,
+`/g/*` in the Apple site association); the four share pages carry the real
+App Store id (`id6777083702`, as the get page already did). ELEVATES
+BECAUSE: the empty period reads as early rather than dead, every early
+member becomes a recruiter at their gym, and the founder's real daily
+activity is the first content anyone sees. No sample members of any kind,
+no server flag, no new dependency; the client depends on no migration.
+Migration 176 (`supabase/migrate_176_community_closed_groups_out_of_lists.sql`,
+guard `migrate176.rpcOnly.guard.test.js`) is WRITTEN, NOT APPLIED: a closed
+group leaves the Hub's GROUPS section and "My groups", and an accepted
+invite returns the count after the join; waits for the founder's phrase.
+Tests: `earlyDays.test.js`, `links.test.js` (invite form and token parse,
+the `g` page), `CommunityHub.states.test.js` (zero state, invite share,
+HOST shown / hidden four ways / Follow reloads), `CommunityDimension.cohorts.test.js`
+(count lines, the action, the share), `CommunityGroup.test.js` (Accept,
+expired, already a member, minor, no token), `community.earlyDays.guard.test.js`
+(app link on both platforms, the page, no placeholder, one host constant).
+Fresh-eyes review (Opus): FIX FIRST (two blockers, seven fixes, six notes), all landed: the HOST row hides on the card's real follow vocabulary (`accepted` / `requested`, never `following`); the PEOPLE zero state renders only on a summary that answered and is empty, style cohorts included (a failed or rate-limited read claims nothing); an invite token names its own group (the page moves to the group joined) and a pending request keeps its Requested button; the Android app link is `/g/` so `/get` is never claimed; the gym summary branch carries the honest count; area cohorts match by label (the card carries labels, not keys); the host is pinned by user id as well as handle (a re-claimed handle is a stranger); the follow toast says Requested when the server queued it; a "Not now" dismissal per reader per device with a session cache so the host read is not repeated; a token that is not a uuid reads as expired without a server call. Noted, not built: the /p prefix also claims /privacy and /partner (pre-existing).. Settled tree: lint clean, 1310 suites / 20277 tests green (1 suite and 16 tests skipped, as before).
+Two-account production proof (the founder's own accounts, real RPCs run
+as each): as `alland`: `community_hub_summary` returned the Volt Gym cohort with `allan` as the one other member and the `allan` card with `relationship.following` `none`; `community_follow` returned `accepted` and the card then read `accepted`; `community_dimension` gym count 1 for each account (others only, as the client now says "You and 1 other"); as `allan`: `community_group_create` (invite-only) and `community_group_invite_link` returned a 14-day token; as `alland`: `community_group_accept_invite(token)` made them a member, `community_group_get` read `member_count` 2 with `together_planned_week` 4 / `together_sessions_week` 2 from real counters, the Hub summary listed the group with both of you; `community_group_leave` then `community_group_close` worked; FINDING: the closed group stayed in the creator's Hub summary (migration 176, written); the test group's rows were deleted afterwards so nothing of it remains; the follow `alland` -> `allan` was left in place (it is the intended state)..
+Device checklist: spec section 4 (five steps, two phones). No build
+started; the founder builds from main.
+
 ## SENTRY TRIAGE (2026-09-13, founder order "Check sentry and resolve all issues. App is fine") — FIFTEEN UNRESOLVED ISSUES TRIAGED; THREE MECHANISMS FIXED ON MAIN; ALL FIFTEEN RESOLVED IN SENTRY WITH REASONS
 
 Founder order in chat 2026-09-13. Org `volyume`, region

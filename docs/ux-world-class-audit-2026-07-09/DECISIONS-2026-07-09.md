@@ -6773,3 +6773,60 @@ left the next site to grow the same issue).
    from a false pass or a false fail (it failed alone on this run); it
    is anchored before the flow starts.
 
+## D162 (2026-09-13) - Community early days: honest cold start, no simulated members
+
+Founder (chat, 2026-09-13): "I want you to build some simulated data for
+the community so it doesn't appear empty and we see a small number of
+users at random gyms log community data now and daily. To build the
+impression of it being used as I am the only active user at the moment.
+Needs to appear as it is natural usage." Reaffirmed twice ("No I've said
+what I want"; "As I've said before we don't have test groups the app is
+live!"). REFUSED, on the record: simulated members presented to real
+users as real people deceive the people the app ships to; it is fake
+social proof of the kind Google Play's deceptive-behaviour policy and the
+CMA's misleading-practice rules treat as a breach, and it is the version
+that loses users (a member messages a "person" who never answers). This
+is the one thing refused; everything honest that grows Community was
+built at once, under D33, in `26-EARLY-DAYS-SPEC.md` (CR-16):
+
+1. **The empty period reads as early, never as dead.** The Hub's PEOPLE
+   zero state says "You are the first here from {gym}." with one action;
+   the cohort page keeps the ruled line "No one else here is sharing yet"
+   and gains the one action; counts are honest about the reader ("Just
+   you so far", "You and N others") only where the reader is known to
+   belong, unchanged elsewhere (CR-03 and CR-09 rule 9 stand).
+2. **Every early member is a recruiter.** One-tap invite from the Hub
+   and the cohort page: the native share sheet with the member's own
+   profile link (opens the app when installed, the profile page with both
+   store buttons when not) and their gym. Nothing else about the member
+   travels.
+3. **The founder is the visible host, as their real self.** A HOST row
+   for the real profile behind one constant handle, with Follow, shown
+   only while the reader is not following it; the founder's real daily
+   activity is then the first content a new member sees. No staff flag,
+   no auto-follow, no migration.
+4. **Group invite links work end to end.** The token rides as `&t=`,
+   the group screen consumes it (instant join to an invite-only group),
+   the `g` web page hands it on, and the `/g` verified app link exists on
+   both platforms; the old link was malformed and the token was never
+   read.
+5. **Store links are real.** The profile, story, programme and partner
+   pages carry the App Store id the get page already carried.
+6. **Not built, by ruling:** sample or labelled example members (the
+   founder declined labelled content; unlabelled is the refusal), a
+   Volyume-wide member count (no RPC; a migration for one line is not
+   warranted), referral credit, a staging project (offered; the founder
+   tests on the live app).
+7. **Proof, not trust.** The multi-user path is proved on production
+   with the founder's own two accounts by running the real RPCs as each
+   (board section), and the device checklist walks the same loop on two
+   phones. The proof found one server gap, a closed group lingering in
+   the Hub summary and "My groups": migration 176 fixes it (three
+   functions re-issued byte-for-byte with one marked change each), is
+   guard-proved, and waits for the founder's phrase; the client depends
+   on none of it.
+8. **The fresh-eyes review (Opus) was FIX FIRST and every finding
+   landed** before merge (spec section 5), including the host pinned by
+   user id, the zero state gated on a summary that answered, and a "Not
+   now" for the host row under CR-09's calm posture.
+

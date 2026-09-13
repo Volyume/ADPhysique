@@ -1,6 +1,21 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-13 (later) — COMMUNITY EARLY DAYS: THE HONEST COLD-START STATE LANDED ★
+
+Founder order: simulated members at real gyms logging daily so Community
+"appears used". Refused twice as a deception of real users; the founder
+took the honest alternative. Spec `docs/communities-revamp-2026-09-10/
+26-EARLY-DAYS-SPEC.md` (CR-16, D162). Landed on main (b8d46a1 (helpers and link builders), 3db5e46 (invite links end to end), 19c6860 (the early-days screens) and this record): the
+Hub's first-here line and one-tap invite; a HOST row for the founder's
+real profile (`COMMUNITY_HOST_HANDLE` = `allan`) with Follow; honest
+cohort counts ("Just you so far", "You and N others"); group invite links
+working end to end (`&t=`, Accept invite, the `g` web page, the `/g` app
+link on both platforms); the real App Store id on the share pages. Review
+(Opus): FIX FIRST, every finding landed (board section). Settled tree lint clean, 1310 suites / 20277 tests green (1 suite and 16 tests skipped, as before). Production proof with the
+founder's two accounts: the real RPCs run as each account, follow / cohort counts / host card / group create, invite link, accept by token, leave, close all correct; one finding, migration 176 written (closed groups leave the lists), waits for the phrase; test rows removed. Device checklist: spec section 4. No
+build started. Board section "COMMUNITY EARLY DAYS (2026-09-13)".
+===============================================================================
 ## ★ 2026-09-13 — SENTRY TRIAGE: FIFTEEN ISSUES, THREE MECHANISMS FIXED, ALL RESOLVED ★
 
 Founder order (chat): "Check sentry and resolve all issues. App is fine".
