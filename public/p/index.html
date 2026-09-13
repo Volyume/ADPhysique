@@ -238,11 +238,9 @@
       document.getElementById('open').setAttribute('href', 'volyume://p/?id=' + encodeURIComponent(id));
 
       if (/iPad|iPhone|iPod/i.test(navigator.userAgent)) {
-        // iOS LAUNCH: replace REPLACE_WITH_APP_STORE_ID once Volyume is
-        // published on iOS (not yet live) — same placeholder as the
-        // partner page.
+        // The same App Store link the get page carries.
         document.getElementById('store')
-          .setAttribute('href', 'https://apps.apple.com/app/idREPLACE_WITH_APP_STORE_ID');
+          .setAttribute('href', 'https://apps.apple.com/gb/app/volyume/id6777083702');
       }
 
       if (!id) { showNotFound(); return; }

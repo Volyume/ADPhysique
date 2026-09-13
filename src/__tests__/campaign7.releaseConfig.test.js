@@ -65,10 +65,13 @@ describe('C7 release-config laws', () => {
   test('the Android https app links are scoped to exactly the paths the AASA claims', () => {
     // SD-16: Community's external link pages (blueprint §8) add /u, /p and
     // /s alongside the existing /partner intent filter, same autoVerify
-    // https/volyume.app shape.
+    // https/volyume.app shape; /g (the group invite page) joined them
+    // 2026-09-13 (26-EARLY-DAYS-SPEC.md 1.7), mirrored in the AASA.
     const https = expo.android.intentFilters.flatMap((f) => f.data ?? []).filter((d) => d.host === 'volyume.app');
     const pathPrefixes = https.map((d) => d.pathPrefix).sort();
-    expect(pathPrefixes).toEqual(['/p', '/partner', '/s', '/u']);
+    // "/g/" with its slash: a bare "/g" is a prefix match and would claim
+    // the public install page at /get as well (review fix 5).
+    expect(pathPrefixes).toEqual(['/g/', '/p', '/partner', '/s', '/u']);
   });
 
   test('package-visibility query actions are BARE names (the plugin prepends the prefix)', () => {

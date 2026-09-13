@@ -16,12 +16,13 @@ describe('Universal Links migration preparation', () => {
       appID: 'K79JA5JUF8.app.volyume',
       // SD-16: Community's external link pages join the existing partner
       // and auth-callback paths -- profile (/u), programme (/p) and story
-      // (/s), each a wildcard prefix over the query-form link.
+      // (/s), each a wildcard prefix over the query-form link; the group
+      // invite page (/g) joined them 2026-09-13 (26-EARLY-DAYS-SPEC.md 1.7).
       paths: expect.arrayContaining([
-        '/partner/*', '/auth/callback', '/auth/callback/', '/u/*', '/p/*', '/s/*',
+        '/partner/*', '/auth/callback', '/auth/callback/', '/u/*', '/p/*', '/s/*', '/g/*',
       ]),
     })]);
-    expect(aasa.applinks.details[0].paths).toHaveLength(6);
+    expect(aasa.applinks.details[0].paths).toHaveLength(7);
   });
 
   test.each([

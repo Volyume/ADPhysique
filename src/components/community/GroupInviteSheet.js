@@ -25,7 +25,7 @@ import TextField from '../TextField';
 import { useToast } from '../Toast';
 import { spacing, type, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
-import { inviteToGroup, createGroupInviteLink, groupUrl } from '../../lib/community';
+import { inviteToGroup, createGroupInviteLink, groupInviteUrl } from '../../lib/community';
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
@@ -70,7 +70,7 @@ export default function GroupInviteSheet({ visible, onClose, groupId, groupName 
       const { token } = await createGroupInviteLink(groupId);
       if (!token) throw new Error('no_token');
       await Share.share({
-        message: `Join ${groupName || 'my group'} on Volyume: ${groupUrl(groupId)}?t=${token}`,
+        message: `Join ${groupName || 'my group'} on Volyume: ${groupInviteUrl(groupId, token)}`,
       });
     } catch (e) {
       if (e?.code) toast.show(REFUSALS[e.code] ?? 'Could not create that link just now.', { variant: 'error' });

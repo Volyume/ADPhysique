@@ -44,7 +44,7 @@ import { colors, spacing, type, radius, hitSlop } from '../styles/theme';
 import { touchTarget } from '../styles/layout';
 import {
   getGroup, joinGroup, leaveGroup, closeGroup, loadGroupFeed, reactToPost,
-  loadBoard, metricLabel, togetherLine,
+  loadBoard, metricLabel, togetherLine, acceptGroupInvite,
 } from '../lib/community';
 
 const PAGE = 20;
@@ -73,6 +73,12 @@ export default function CommunityGroupScreen({ navigation, route }) {
   const toast = useToast();
   const { me } = useCommunityMe();
   const groupId = route?.params?.id ?? route?.params?.scopeKey ?? null;
+  // Early days (26-EARLY-DAYS-SPEC.md 1.7): an invite link carries its
+  // token as `t` (`volyume://g/?id=<id>&t=<token>`), which the linking
+  // config hands over as a route param. Consumed by Accept invite below;
+  // it was never read before, so a link into an invite-only group (the
+  // default) turned into a join REQUEST.
+  const inviteToken = typeof route?.params?.t === 'string' && route.params.t.trim() ? route.params.t.trim() : null;
   const isMinor = !!me?.is_minor;
 
   const [group, setGroup] = useState(null);
@@ -84,6 +90,7 @@ export default function CommunityGroupScreen({ navigation, route }) {
   const [paging, setPaging] = useState(false);
   const [error, setError] = useState(null);
   const [joining, setJoining] = useState(false);
+  const [accepting, setAccepting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -193,6 +200,41 @@ export default function CommunityGroupScreen({ navigation, route }) {
       toast.show(REFUSALS[e?.code] ?? 'Could not join that group just now.', { variant: 'error' });
     } finally {
       setJoining(false);
+    }
+  }
+
+  // Accept an invite link (spec 1.7): the token IS the invitation, so an
+  // invite-only group joins instantly; an expired or unknown token says
+  // so; an existing membership just refreshes.
+  async function doAccept() {
+    if (isMinor || accepting || !inviteToken) return;
+    // A token is a uuid; anything else is a mangled link, said calmly
+    // rather than as a cast error from the server (review note 12).
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(inviteToken)) {
+      toast.show('This invite link has expired.', { variant: 'error' });
+      return;
+    }
+    setAccepting(true);
+    try {
+      const joined = await acceptGroupInvite({ token: inviteToken });
+      toast.show('Joined.');
+      // The token names its own group (review fix 3): if the link's `id`
+      // was for another group, the page moves to the one actually joined.
+      // Either way the token is spent, so the invited block goes.
+      const joinedId = joined?.id ?? groupId;
+      navigation.setParams({ id: joinedId, t: undefined });
+      if (joinedId === groupId) await load();
+    } catch (e) {
+      if (e?.code === 'already_member') {
+        navigation.setParams({ t: undefined });
+        await load();
+      } else {
+        toast.show(e?.code === 'not_found'
+          ? 'This invite link has expired.'
+          : (REFUSALS[e?.code] ?? 'Could not accept that invite just now.'), { variant: 'error' });
+      }
+    } finally {
+      setAccepting(false);
     }
   }
 
@@ -380,7 +422,25 @@ export default function CommunityGroupScreen({ navigation, route }) {
                   ) : null}
                 </View>
               ) : null}
-              {!isMember && !isMinor ? (
+              {!isMember && !isMinor && inviteToken && !isRequested ? (
+                <>
+                  <Text style={[styles.invited, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+                    You have been invited to this group.
+                  </Text>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    fullWidth={false}
+                    title="Accept invite"
+                    loading={accepting}
+                    disabled={accepting}
+                    onPress={doAccept}
+                    accessibilityLabel="Accept the invite to this group"
+                    style={styles.joinBtn}
+                  />
+                </>
+              ) : null}
+              {!isMember && !isMinor && (!inviteToken || isRequested) ? (
                 <Button
                   variant="primary"
                   size="sm"
@@ -494,6 +554,7 @@ const styles = StyleSheet.create({
   label: { ...type.label, color: colors.textSecondary },
   blurb: { ...type.bodySm, color: colors.textSecondary },
   joinBtn: { marginTop: spacing.sm, alignSelf: 'flex-start' },
+  invited: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm },
   // Phase 3: "Together this week" (spec section 4).
   togetherWrap: { gap: spacing.xxs },
   together: { ...type.label, color: colors.textSecondary },

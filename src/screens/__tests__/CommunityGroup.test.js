@@ -72,6 +72,9 @@ jest.mock('../../lib/community', () => ({
   inviteToGroup: jest.fn(),
   createGroupInviteLink: jest.fn(),
   groupUrl: (id) => `https://volyume.app/g/?id=${id}`,
+  groupInviteUrl: (id, t) => `https://volyume.app/g/?id=${id}&t=${t}`,
+  // Early days (26-EARLY-DAYS-SPEC.md 1.7): the invite link's token.
+  acceptGroupInvite: jest.fn(),
 }));
 
 import {
@@ -80,6 +83,14 @@ import {
 import { getLatestCompletedWorkoutId } from '../../lib/database';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityGroupScreen from '../CommunityGroupScreen';
+
+/** Every string in a rendered tree, in order (the invite tests read copy). */
+function texts(node) {
+  if (node == null) return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(texts).join(' ');
+  return texts(node.children);
+}
 
 function byLabel(tree, label) {
   return tree.root.findAll(
@@ -290,4 +301,100 @@ test('closeGroup fires from the menu for an admin', async () => {
   await act(async () => { closeRow.props.onPress(); });
   await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); });
   expect(closeGroup).toHaveBeenCalledWith('g1');
+});
+
+// ─── Early days (26-EARLY-DAYS-SPEC.md 1.7): the invite link's token ───
+
+describe('an invite link into the group', () => {
+  const { acceptGroupInvite } = require('../../lib/community');
+
+  async function mountWithToken({ myState = null, access = 'invite', token = 'tok-1', isMinor = false } = {}) {
+    getGroup.mockResolvedValue({ ...OPEN_GROUP, access, myState });
+    useCommunityMe.mockReturnValue({ me: { profile: { user_id: 'u1' }, is_minor: isMinor } });
+    const navigation = { navigate: jest.fn(), goBack: jest.fn(), setParams: jest.fn() };
+    let tree;
+    await act(async () => {
+      tree = create(<CommunityGroupScreen navigation={navigation} route={{ params: { id: 'g1', t: token } }} />);
+    });
+    await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); });
+    return { tree, navigation };
+  }
+
+  test('a non-member with a token sees the invite and Accept, never the plain Join', async () => {
+    const { tree } = await mountWithToken();
+    const text = texts(tree.toJSON());
+    expect(text).toContain('You have been invited to this group.');
+    expect(byLabel(tree, 'Accept the invite to this group')).toBeTruthy();
+    expect(byLabel(tree, 'Join group')).toBeUndefined();
+  });
+
+  test('Accept consumes the token, says Joined, spends the token in the route, and reloads', async () => {
+    acceptGroupInvite.mockResolvedValue({ ...OPEN_GROUP, access: 'invite', myState: 'member' });
+    const { tree, navigation } = await mountWithToken({ token: '11111111-2222-4333-8444-555555555555' });
+    await act(async () => { byLabel(tree, 'Accept the invite to this group').props.onPress(); });
+    await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); });
+    expect(acceptGroupInvite).toHaveBeenCalledWith({ token: '11111111-2222-4333-8444-555555555555' });
+    expect(mockToastShow).toHaveBeenCalledWith('Joined.');
+    expect(navigation.setParams).toHaveBeenCalledWith({ id: 'g1', t: undefined });
+    expect(getGroup).toHaveBeenCalledTimes(2);
+  });
+
+  // Review fix 3: the token names its own group. A link whose `id` is for
+  // another group must land on the group actually joined, never loop.
+  test('a token for a different group moves the page to the group joined', async () => {
+    acceptGroupInvite.mockResolvedValue({ ...OPEN_GROUP, id: 'g2', name: 'Other crew', access: 'invite', myState: 'member' });
+    const { tree, navigation } = await mountWithToken({ token: '11111111-2222-4333-8444-555555555555' });
+    await act(async () => { byLabel(tree, 'Accept the invite to this group').props.onPress(); });
+    await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); });
+    expect(navigation.setParams).toHaveBeenCalledWith({ id: 'g2', t: undefined });
+    // No reload of g1: the new id's own load effect takes over.
+    expect(getGroup).toHaveBeenCalledTimes(1);
+  });
+
+  // Review fix 4: a pending request plus a token is not a loop; the
+  // Requested state keeps its own (disabled) button.
+  test('a requested member with a token sees Requested, not Accept', async () => {
+    const { tree } = await mountWithToken({ myState: 'requested', token: '11111111-2222-4333-8444-555555555555' });
+    expect(byLabel(tree, 'Accept the invite to this group')).toBeUndefined();
+    expect(byLabel(tree, 'Join requested')).toBeTruthy();
+  });
+
+  // Review note 12: a mangled token is said calmly, never sent as a cast error.
+  test('a token that is not a uuid reads as expired without a server call', async () => {
+    const { tree } = await mountWithToken({ token: 'not-a-token' });
+    await act(async () => { byLabel(tree, 'Accept the invite to this group').props.onPress(); });
+    await act(async () => { for (let i = 0; i < 6; i += 1) await Promise.resolve(); });
+    expect(acceptGroupInvite).not.toHaveBeenCalled();
+    expect(mockToastShow).toHaveBeenCalledWith('This invite link has expired.', { variant: 'error' });
+  });
+
+  test('an expired or unknown token says so calmly', async () => {
+    acceptGroupInvite.mockRejectedValue(Object.assign(new Error('not_found'), { code: 'not_found' }));
+    const { tree } = await mountWithToken({ token: '11111111-2222-4333-8444-555555555555' });
+    await act(async () => { byLabel(tree, 'Accept the invite to this group').props.onPress(); });
+    await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); });
+    expect(mockToastShow).toHaveBeenCalledWith('This invite link has expired.', { variant: 'error' });
+  });
+
+  test('already a member: the page just refreshes', async () => {
+    acceptGroupInvite.mockRejectedValue(Object.assign(new Error('already_member'), { code: 'already_member' }));
+    const { tree } = await mountWithToken({ token: '11111111-2222-4333-8444-555555555555' });
+    await act(async () => { byLabel(tree, 'Accept the invite to this group').props.onPress(); });
+    await act(async () => { for (let i = 0; i < 12; i += 1) await Promise.resolve(); });
+    expect(getGroup).toHaveBeenCalledTimes(2);
+    expect(mockToastShow).not.toHaveBeenCalledWith(expect.stringContaining('expired'), expect.anything());
+  });
+
+  test('a member with a token sees the ordinary page; a minor sees no accept', async () => {
+    const member = await mountWithToken({ myState: 'member' });
+    expect(texts(member.tree.toJSON())).not.toContain('You have been invited');
+    const minor = await mountWithToken({ isMinor: true });
+    expect(byLabel(minor.tree, 'Accept the invite to this group')).toBeUndefined();
+  });
+
+  test('no token: Join exactly as before', async () => {
+    const { tree } = await mount();
+    expect(byLabel(tree, 'Join group')).toBeTruthy();
+    expect(texts(tree.toJSON())).not.toContain('You have been invited');
+  });
 });
