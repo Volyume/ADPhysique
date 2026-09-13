@@ -315,9 +315,13 @@ describe('ambiguous callbacks, replay, and storage failures', () => {
   });
 
   test('clock rollback is rejected', async () => {
+    // Anchored BEFORE the flow starts: the flow records its own Date.now(),
+    // which is at or after this reading, so one millisecond earlier than it
+    // is always a rollback. Read after the flow started, the two could land
+    // in different milliseconds and the "rollback" was no rollback at all.
+    const before = Date.now();
     const nonce = await beginAuthFlow('signup', 'victim@example.com');
-    const now = Date.now();
-    jest.spyOn(Date, 'now').mockReturnValue(now - 1);
+    jest.spyOn(Date, 'now').mockReturnValue(before - 1);
     expect((await consumeAuthFlow(nonce)).reason).toBe('expired');
   });
 
