@@ -86,6 +86,20 @@ const EXPECTED_CODES = new Set([
   'not_connected', 'connect_not_allowed', 'minor_restricted', 'rules_outdated',
 ]);
 
+/**
+ * Is this RPC refusal one the client is expected to handle in copy? Read by
+ * the Supabase instrumentation (src/lib/observability.js) so a deliberate
+ * refusal (`no_profile` for a visitor who has not joined, `handle_taken`,
+ * `rules_outdated` ...) lands as a breadcrumb rather than a Sentry warning:
+ * it is the system working, never a defect (Sentry VOLYUME-36).
+ *
+ * @param {string} message the RAISE message PostgREST returned
+ * @returns {boolean}
+ */
+export function isExpectedCommunityRefusal(message) {
+  return EXPECTED_CODES.has(String(message ?? '').trim());
+}
+
 /** Every Community failure is one of these. `.code` is the contract. */
 export class CommunityError extends Error {
   constructor(code, message) {

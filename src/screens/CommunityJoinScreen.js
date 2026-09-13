@@ -49,7 +49,7 @@ import { AVATAR_PRESETS } from '../lib/profileAvatarPresets';
 import { setGyms, venueLine } from '../lib/gyms';
 import {
   isValidHandle, checkHandle, upsertProfile, DISPLAY_NAME_MAX,
-  COMMUNITY_RULES_VERSION, currentUserId,
+  COMMUNITY_RULES_VERSION, currentUserId, hasProfile,
   TP_DEFAULT_SHARE, loadTrainingProfile, readShareSettings, writeShareSettings,
   syncTrainingProfile, publishConsistency, publishSharingSettings, shareablePayload, previewLine,
   SESSIONS_AUDIENCE_VALUES, SESSIONS_AUDIENCE_LABELS,
@@ -175,8 +175,14 @@ export default function CommunityJoinScreen({ navigation, route }) {
     return () => { alive = false; };
   }, [uid]);
 
+  // A member-only read. For the ordinary visitor to this screen, a person
+  // with no profile yet, the server can only answer no_profile and the
+  // truthful answer is already known: no groups (a group needs a profile).
+  // So the question is asked only once a profile exists (Sentry VOLYUME-36).
+  const joined = hasProfile(me);
   useEffect(() => {
     let alive = true;
+    if (!joined) { setHasGroups(false); return undefined; }
     (async () => {
       try {
         const mine = await listMyGroups();
@@ -186,7 +192,7 @@ export default function CommunityJoinScreen({ navigation, route }) {
       }
     })();
     return () => { alive = false; };
-  }, []);
+  }, [joined]);
 
   // Communities revamp 2026-09-10 (onboarding join, spec section 4.4): a
   // pending join from a failed onboarding completion pre-fills the

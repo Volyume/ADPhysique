@@ -451,6 +451,28 @@ export function instrumentNavigation(navigationRef) {
 // ─── Auto-instrumentation: Supabase client ───────────────────────────────
 
 /**
+ * A Community RPC raising one of the refusal codes the client handles in
+ * copy (P0001 with `no_profile`, `handle_taken`, `rules_outdated` ...) is
+ * the system working, not a defect: the transport already treats those as
+ * expected, but this instrumentation sat one layer below it and turned
+ * every one into a Sentry warning (VOLYUME-36: a visitor on the Join screen,
+ * with no profile yet, produced one on every open). Lazy require: the
+ * transport feeds errorLog, which this module also feeds, so a top-level
+ * import could cycle at init. Any failure here reads as "not expected", so
+ * the warning still fires.
+ */
+function _isExpectedRpcRefusal(err) {
+  if (err?.code !== 'P0001') return false;
+  try {
+    // eslint-disable-next-line global-require
+    const { isExpectedCommunityRefusal } = require('./community/transport');
+    return typeof isExpectedCommunityRefusal === 'function' && isExpectedCommunityRefusal(err?.message);
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
  * Wrap the supabase-js client so every database query emits a
  * breadcrumb with the table and operation. Returns a proxied client
  * that forwards all other methods through. Safe to call multiple
@@ -480,6 +502,12 @@ export function instrumentSupabase(client) {
     // or tokens (per sentryScrub.js); we deliberately don't include
     // raw rows, just metadata.
     const err = value?.error;
+    if (op === 'rpc' && !didThrow && _isExpectedRpcRefusal(err)) {
+      track.breadcrumb(`db.rpc.refused supabase.${table} ${String(err.message).trim()}`, `supabase.${table}`, {
+        durationMs, op, table, refusal: String(err.message).trim(),
+      });
+      return;
+    }
     if (didThrow || err) {
       const extra = {
         durationMs,

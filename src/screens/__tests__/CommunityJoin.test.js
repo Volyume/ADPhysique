@@ -117,6 +117,7 @@ jest.mock('../../lib/community', () => ({
   publishSharingSettings: jest.fn(() => Promise.resolve({ sent: true, reason: null })),
   setPartner: jest.fn(() => Promise.resolve()),
   listMyGroups: jest.fn(() => Promise.resolve([])),
+  hasProfile: (me) => !!me?.profile?.handle,
   // Communities revamp 2026-09-10 (onboarding join, spec section 4.4).
   COMMUNITY_RULES_SUMMARY: [
     'Training talk only.',
@@ -368,17 +369,36 @@ describe('the training profile step (SD-22)', () => {
     expect(flattenText(tree.toJSON())).toContain('You are not in any groups yet.');
   });
 
-  test('with a group, "My groups" is enabled and the line is absent', async () => {
+  // Sentry VOLYUME-36: the groups read is a member-only RPC. A visitor with
+  // no profile (the ordinary case here) can only be answered no_profile,
+  // and the truthful answer is already known, so the question is not asked.
+  test('with no profile yet, the groups read is never attempted', async () => {
+    await mount();
+    expect(listMyGroups).not.toHaveBeenCalled();
+  });
+
+  // A member editing the profile is the one case the read applies to.
+  function asMember() {
+    useCommunityMe.mockReturnValue({
+      me: { profile: { handle: 'rowan_lifts', display_name: 'Rowan M' }, is_minor: false },
+      loading: false, error: null, refresh: jest.fn(),
+    });
+  }
+
+  test('with a profile and a group, "My groups" is enabled and the line is absent', async () => {
+    asMember();
     listMyGroups.mockResolvedValueOnce([{ group: { id: 'g1' }, role: 'member', state: 'member' }]);
     const { tree } = await mount();
     await openAudienceChips(tree);
 
+    expect(listMyGroups).toHaveBeenCalledTimes(1);
     const myGroups = tree.root.findAll((n) => n.props?.label === 'My groups' && n.props?.onPress)[0];
     expect(myGroups.props.disabled).toBe(false);
     expect(flattenText(tree.toJSON())).not.toContain('You are not in any groups yet.');
   });
 
   test('a read failure fails open: never blocks the choice on a network error', async () => {
+    asMember();
     listMyGroups.mockRejectedValueOnce(new Error('offline'));
     const { tree } = await mount();
     await openAudienceChips(tree);

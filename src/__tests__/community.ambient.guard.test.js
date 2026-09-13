@@ -413,11 +413,21 @@ describe('F5: the "My groups" chip is disabled with nothing to post to, never a 
     expect(source).toMatch(/disabled=\{value === 'groups' && !hasGroups\}/);
     expect(source).toMatch(/You are not in any groups yet\./);
     expect(source).toMatch(/const \[hasGroups, setHasGroups\] = useState\(true\)/);
-    const effectMatch = /useEffect\(\(\) => \{[^]*?listMyGroups\(\)[^]*?\}\)\(\);[^]*?\}, \[\]\);/.exec(source);
+    // The Join screen (Sentry VOLYUME-36) asks the member-only question only
+    // once a profile exists, so its effect re-runs on `joined`; the Training
+    // profile screen is member-only already and asks on mount.
+    // Tempered so the match is the groups effect itself, never a span from
+    // an earlier effect (whose own catch would sit before this effect's
+    // deliberate, non-catch setHasGroups(false) for a visitor with no profile).
+    const effectMatch = /useEffect\(\(\) => \{(?:(?!useEffect\()[^])*?listMyGroups\(\)[^]*?\}\)\(\);[^]*?\}, \[(?:joined)?\]\);/.exec(source);
     expect(effectMatch).toBeTruthy();
     expect(effectMatch[0]).toMatch(/setHasGroups\(mine\.length > 0\)/);
     expect(effectMatch[0]).toMatch(/catch[^]*?setHasGroups\(true\)/);
     expect(effectMatch[0]).not.toMatch(/catch[^]*?setHasGroups\(false\)/);
+    if (rel.endsWith('CommunityJoinScreen.js')) {
+      expect(effectMatch[0]).toMatch(/if \(!joined\) \{ setHasGroups\(false\); return undefined; \}/);
+      expect(effectMatch[0].indexOf('if (!joined)')).toBeLessThan(effectMatch[0].indexOf('listMyGroups()'));
+    }
   });
 });
 

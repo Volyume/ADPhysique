@@ -34,7 +34,9 @@ jest.mock('../../../store/useAppStore', () => ({
   default: { getState: jest.fn(() => ({ healthConsent: true })) },
 }));
 
-const { callCommunity, invokeCommunityFunction, CommunityError } = require('../transport');
+const {
+  callCommunity, invokeCommunityFunction, CommunityError, isExpectedCommunityRefusal,
+} = require('../transport');
 
 const rpc = jest.fn();
 const invoke = jest.fn();
@@ -170,5 +172,28 @@ describe('errors', () => {
 
   test('an unknown code cannot be forged into a CommunityError', () => {
     expect(new CommunityError('made_up').code).toBe('unavailable');
+  });
+});
+
+// Sentry VOLYUME-36: the Supabase instrumentation (src/lib/observability.js)
+// asks this before turning a P0001 refusal into a warning. The catalogue is
+// the transport's own EXPECTED_CODES, so the two can never disagree.
+describe('isExpectedCommunityRefusal', () => {
+  test('every catalogued refusal is expected', () => {
+    for (const code of ['no_profile', 'handle_taken', 'rules_outdated', 'not_connected', 'minor_restricted']) {
+      expect(isExpectedCommunityRefusal(code)).toBe(true);
+    }
+  });
+
+  test('tolerates the whitespace a RAISE message can carry', () => {
+    expect(isExpectedCommunityRefusal(' no_profile\n')).toBe(true);
+  });
+
+  test('anything else, including nothing, is not', () => {
+    expect(isExpectedCommunityRefusal('division by zero')).toBe(false);
+    expect(isExpectedCommunityRefusal('permission denied for function community_list_my_groups')).toBe(false);
+    expect(isExpectedCommunityRefusal('')).toBe(false);
+    expect(isExpectedCommunityRefusal(null)).toBe(false);
+    expect(isExpectedCommunityRefusal(undefined)).toBe(false);
   });
 });

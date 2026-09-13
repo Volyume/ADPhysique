@@ -53,6 +53,14 @@ jest.mock('../sentry', () => ({
   addBreadcrumb: jest.fn(),
 }));
 
+// The Community refusal catalogue the instrumentation consults lazily
+// (Sentry VOLYUME-36). The real catalogue is pinned in
+// src/lib/community/__tests__/transport.test.js; here only the contract
+// matters: the message alone decides, and only under P0001.
+jest.mock('../community/transport', () => ({
+  isExpectedCommunityRefusal: (m) => ['no_profile', 'handle_taken', 'rules_outdated'].includes(String(m ?? '').trim()),
+}));
+
 const errorLog = require('../errorLog');
 const {
   instrumentAppState,
@@ -278,6 +286,61 @@ describe('instrumentSupabase (enhanced)', () => {
       table: 'food_sync_push',
       errorCode: '42703',
     });
+  });
+
+  // Sentry VOLYUME-36: a Community RPC refusing with a code the client
+  // handles in copy (a visitor with no profile yet asking for their groups)
+  // is the system working. It lands on the breadcrumb trail, not as a
+  // warning that becomes an issue.
+  test('rpc() refusing with an expected Community code is a breadcrumb, not a warning', async () => {
+    const rpcResult = Promise.resolve({ data: null, error: { code: 'P0001', message: 'no_profile' } });
+    const client = makeClient({ rpc: jest.fn(() => rpcResult) });
+    const wrapped = instrumentSupabase(client);
+
+    const out = await wrapped.rpc('community_list_my_groups', {});
+
+    // The refusal itself still reaches the caller untouched.
+    expect(out.error).toEqual({ code: 'P0001', message: 'no_profile' });
+    expect(errorLog.logWarn.mock.calls.find(([scope]) => scope === 'supabase.community_list_my_groups')).toBeUndefined();
+    const crumb = errorLog.logInfo.mock.calls.find(([scope]) => scope === 'supabase.community_list_my_groups');
+    expect(crumb).toBeTruthy();
+    expect(crumb[1]).toBe('db.rpc.refused supabase.community_list_my_groups no_profile');
+    expect(crumb[2]).toMatchObject({ op: 'rpc', table: 'community_list_my_groups', refusal: 'no_profile' });
+  });
+
+  test('rpc() raising P0001 with a message the client does not catalogue still warns', async () => {
+    const rpcResult = Promise.resolve({ data: null, error: { code: 'P0001', message: 'something unexpected' } });
+    const client = makeClient({ rpc: jest.fn(() => rpcResult) });
+    const wrapped = instrumentSupabase(client);
+
+    await wrapped.rpc('community_post_create', {});
+
+    const warn = errorLog.logWarn.mock.calls.find(([scope]) => scope === 'supabase.community_post_create');
+    expect(warn).toBeTruthy();
+    expect(warn[2]).toMatchObject({ op: 'rpc', errorCode: 'P0001' });
+  });
+
+  test('a catalogued word under any other code still warns: the code is part of the match', async () => {
+    const rpcResult = Promise.resolve({ data: null, error: { code: '42501', message: 'no_profile' } });
+    const client = makeClient({ rpc: jest.fn(() => rpcResult) });
+    const wrapped = instrumentSupabase(client);
+
+    await wrapped.rpc('community_list_my_groups', {});
+
+    const warn = errorLog.logWarn.mock.calls.find(([scope]) => scope === 'supabase.community_list_my_groups');
+    expect(warn).toBeTruthy();
+    expect(warn[2]).toMatchObject({ op: 'rpc', errorCode: '42501' });
+  });
+
+  test('a from() query error is never read as a refusal, whatever it says', async () => {
+    const builder = makeQueryBuilder({ error: { code: 'P0001', message: 'no_profile' } });
+    const client = makeClient({ from: jest.fn(() => builder) });
+    const wrapped = instrumentSupabase(client);
+
+    await wrapped.from('community_profiles').select('*');
+
+    const warn = errorLog.logWarn.mock.calls.find(([scope]) => scope === 'supabase.community_profiles');
+    expect(warn).toBeTruthy();
   });
 
   test('idempotent: instrumenting an already-instrumented client returns it unchanged', () => {
