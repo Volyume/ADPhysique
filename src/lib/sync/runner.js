@@ -134,6 +134,18 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
       return { status: 'skipped', reason: 'no_live_session' };
     }
   }
+  // A database deferred by dbCrypto (the SQLCipher key cannot be read yet: a
+  // background wake before the device's first unlock since boot) would make
+  // every table push and pull throw the same deferral and log it as an error
+  // each (Sentry VOLYUME-2G / 2J). Stand down for the cycle: nothing is lost,
+  // the next foreground trigger syncs normally. The answer is a fresh probe,
+  // never the flag a previous cycle left behind (the device may have been
+  // unlocked since). Fail OPEN, deliberately: only a positive "deferred"
+  // answer skips; a module that cannot be read (a test harness that mocks
+  // the sync surface only) proceeds exactly as before.
+  if (userId && await _dbDeferredNow()) {
+    return { status: 'skipped', reason: 'db_deferred' };
+  }
   if (_runLock) {
     return { status: 'skipped', reason: 'already_running' };
   }
@@ -201,10 +213,17 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
         } catch (_) { /* tolerate */ }
       }
 
+      // The database deferral can surface INSIDE the cycle too (the first
+      // table's open is what discovers it). From that moment the rest of
+      // the cycle is stood down: the table that hit it is not counted as an
+      // error, no crumb fires, and the next foreground trigger syncs.
+      let dbDeferred = false;
       try {
         // 1. Per-table push for migrated tables.
         for (const tableName of MIGRATED_TABLES) {
+          if (dbDeferred) break;
           const result = await pushTable(tableName, { userId, localUserId }).catch((e) => {
+            if (e?.dbCryptoDeferred === true) return { count: 0, errors: 0, skipped: 'db_deferred' };
             erroredCount += 1;
             syncCrumb(`sync.push.${tableName}`, `sync.push.${tableName}.threw`, {
               error: String(e?.message ?? e).slice(0, 200),
@@ -212,6 +231,7 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
             return { count: 0, errors: 1, _err: e };
           });
           pushCountPerTable[tableName] = result?.count ?? 0;
+          if (result?.skipped === 'db_deferred' || await _dbDeferredNow()) { dbDeferred = true; break; }
           if (result?.errors) {
             erroredCount += result.errors;
             // Emit a breadcrumb-level warn so the next real error in
@@ -227,7 +247,7 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
           }
         }
         // 2. Legacy bulk push for everything else.
-        if (typeof sync.bulkUploadLocalData === 'function' && localUserId) {
+        if (!dbDeferred && typeof sync.bulkUploadLocalData === 'function' && localUserId) {
           const upload = await sync.bulkUploadLocalData(userId, localUserId).catch(e => {
             erroredCount += 1;
             syncCrumb('sync.push.legacy', 'sync.push.legacy.threw', {
@@ -270,7 +290,9 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
           // Re-checking here lets the in-flight run drain quickly and cleanly so
           // whenSyncIdle resolves before the wipe touches the DB.
           if (isSignOutWiping()) break;
+          if (dbDeferred) break;
           const result = await pullTable(tableName, { userId, localUserId }).catch((e) => {
+            if (e?.dbCryptoDeferred === true) return { count: 0, errors: 0, skipped: 'db_deferred' };
             erroredCount += 1;
             syncCrumb(`sync.pull.${tableName}`, `sync.pull.${tableName}.threw`, {
               error: String(e?.message ?? e).slice(0, 200),
@@ -278,6 +300,7 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
             return { count: 0, errors: 1, _err: e };
           });
           pullCountPerTable[tableName] = result?.count ?? 0;
+          if (result?.skipped === 'db_deferred' || await _dbDeferredNow()) { dbDeferred = true; break; }
           if (result?.errors) {
             erroredCount += result.errors;
             syncCrumb(`sync.pull.${tableName}`, `sync.pull.${tableName}.errors`, {
@@ -289,7 +312,7 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
         }
         // 4. Legacy bulk pull for everything else. Skip entirely if a sign-out
         // wipe is committing — pulling here would repopulate the DB being wiped.
-        if (!isSignOutWiping() && typeof sync.pullFromCloud === 'function') {
+        if (!dbDeferred && !isSignOutWiping() && typeof sync.pullFromCloud === 'function') {
           const pull = await sync.pullFromCloud(userId).catch(e => {
             erroredCount += 1;
             syncCrumb('sync.pull.legacy', 'sync.pull.legacy.threw', {
@@ -353,6 +376,39 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
     // the same cycle (status 'partial' maps to 'synced' but errors occurred).
     errored_count: erroredCount,
   };
+}
+
+/**
+ * Is the local database deferred by dbCrypto RIGHT NOW? The flag
+ * (src/lib/database.js isDatabaseDeferred) records only the LAST open
+ * attempt, and nothing re-opens the database between a background wake and
+ * the next sync trigger, so a flag alone would stand a run down after the
+ * device had already been unlocked. When the flag is set, the open is
+ * re-tried here: success clears the flag and the cycle runs; a fresh
+ * deferral is the one answer that stands it down.
+ *
+ * Lazy require and fail OPEN: a harness that mocks the sync surface only, a
+ * module that cannot be read, or an open that fails for any OTHER reason
+ * answers "not deferred", so the cycle runs exactly as before and a real
+ * fault stays visible where it always was.
+ */
+async function _dbDeferredNow() {
+  try {
+    // eslint-disable-next-line global-require
+    const database = require('../database');
+    if (typeof database?.isDatabaseDeferred !== 'function' || database.isDatabaseDeferred() !== true) {
+      return false;
+    }
+    if (typeof database.initDatabase !== 'function') return true;
+    try {
+      await database.initDatabase();
+      return false;
+    } catch (e) {
+      return e?.dbCryptoDeferred === true;
+    }
+  } catch (_) {
+    return false;
+  }
 }
 
 /**

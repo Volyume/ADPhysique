@@ -92,8 +92,26 @@ export function isDeletedAccountFkError(err) {
   return code === '23503' && /_user_id_fkey/.test(text);
 }
 
+/**
+ * A database open DEFERRED by dbCrypto (the SQLCipher key cannot be read
+ * yet: a background wake before the device's first unlock since boot). The
+ * expected background-wake state, not a sync failure; the next foreground
+ * launch opens normally (Sentry VOLYUME-2G).
+ */
+export function isDbDeferredError(err) {
+  return err?.dbCryptoDeferred === true || err?.cause?.dbCryptoDeferred === true;
+}
+
 export function logSyncError(scope, err, ctx) {
   try {
+    if (isDbDeferredError(err)) {
+      logInfo(
+        `${scope}.dbDeferred`,
+        'database open deferred (device not yet unlocked since boot); the next foreground launch syncs',
+        ctx,
+      );
+      return;
+    }
     if (isDeletedAccountFkError(err)) {
       logInfo(
         `${scope}.deletedAccountResidual`,

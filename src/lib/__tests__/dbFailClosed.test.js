@@ -239,6 +239,21 @@ describe('state C: existing encrypted database, temporary key failure', () => {
     expect(mockLog.logError).toHaveBeenCalledWith('dbCrypto.keyUnavailable', expect.any(Error), {});
   });
 
+  // Sentry VOLYUME-2G / 2J: the sync layer stands down on a locked-device
+  // deferral instead of logging one error per table, and it recognises the
+  // deferral by this marker. Only the locked path carries it.
+  test('a locked device MARKS the throw as a deferral, so the sync layer can stand down quietly', async () => {
+    mockKeyState = { stored: null, readThrows: true, writeThrows: false, locked: true };
+    await expect(open()).rejects.toMatchObject({ dbCryptoDeferred: true });
+  });
+
+  test('an unexplained key loss is NOT marked: that one must stay visible', async () => {
+    let caught = null;
+    await open().catch((e) => { caught = e; });
+    expect(caught).toBeInstanceOf(Error);
+    expect(caught.dbCryptoDeferred).toBeUndefined();
+  });
+
   test('the throw is recoverable: the next launch with the key opens normally', async () => {
     await expect(open()).rejects.toThrow();
     mockKeyState = { stored: VALID_KEY, readThrows: false, writeThrows: false, locked: false };

@@ -266,10 +266,17 @@ export async function openEncryptedDb(SQLite) {
     const err = new Error('SQLCipher key unavailable and existing DB is not plaintext-readable');
     // Locked-before-first-unlock is the EXPECTED background-wake state for an
     // AFTER_FIRST_UNLOCK key: the next foreground launch opens normally. The
-    // throw is identical either way - only a genuinely unexplained key loss
-    // stays an error, because that one really is serious.
-    if (locked) logInfo('dbCrypto.keyUnavailable.locked', 'device not yet unlocked since boot, deferring DB open');
-    else logError('dbCrypto.keyUnavailable', err, {});
+    // throw is the same error either way, but a locked deferral is MARKED
+    // (as the no-database deferral above is) so the sync layer can recognise
+    // it and stand down quietly instead of logging one error per table
+    // (Sentry VOLYUME-2G / 2J); only a genuinely unexplained key loss stays
+    // an error, because that one really is serious.
+    if (locked) {
+      err.dbCryptoDeferred = true;
+      logInfo('dbCrypto.keyUnavailable.locked', 'device not yet unlocked since boot, deferring DB open');
+    } else {
+      logError('dbCrypto.keyUnavailable', err, {});
+    }
     throw err;
   }
 

@@ -216,6 +216,17 @@ export function _resetSentryThrottleForTests() {
 }
 
 export function logError(scope, error, context) {
+  // A database open DEFERRED by dbCrypto (the SQLCipher key cannot be read
+  // before the device's first unlock since boot: a background wake) is the
+  // expected state, not a defect, wherever it is caught. dbCrypto marks it
+  // and files it as information at the source; every catch site above it
+  // (the sync tables, the queue drain and stats, the navigator bootstrap)
+  // then turned the same rejection back into an error, ten scopes feeding
+  // one Sentry issue (VOLYUME-2G). Classified here, once, so no site can get
+  // it wrong. The unmarked twin, a genuine key loss, stays an error.
+  if (error?.dbCryptoDeferred === true) {
+    return logInfo(`${scope}.dbDeferred`, 'database open deferred until the device is unlocked', context);
+  }
   const safeContext = redactPII(context);
   const entry = buildEntry('error', scope, error, safeContext);
   // eslint-disable-next-line no-console

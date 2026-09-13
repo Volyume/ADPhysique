@@ -5,7 +5,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { StackActions } from '@react-navigation/native';
 import { safeGetStateFromPath } from './safeGetStateFromPath';
 export const navigationRef = createNavigationContainerRef();
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, AppState } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from '../components/Button';
 
@@ -1204,6 +1204,31 @@ export default function RootNavigator() {
   // of this sequence runs; "Try again" on a still-hung open bounds again.
   const DB_INIT_TIMEOUT_MS = 12000;
   const lateDbInitRef = useRef(false);
+  // A database open DEFERRED by dbCrypto (Sentry VOLYUME-2G): the SQLCipher
+  // key cannot be read before the device's first unlock since boot, which
+  // only a background wake can hit. Not a failure, so no failure screen (a
+  // process woken in the background and opened later would otherwise greet
+  // the athlete with "Couldn't open your data" and a Try again for a
+  // condition that has already passed). The open is re-attempted, once, when
+  // the app next comes to the foreground: the device is unlocked by then.
+  const dbDeferredSubRef = useRef(null);
+  const armDbDeferredRetry = useCallback(() => {
+    if (dbDeferredSubRef.current) return;
+    try {
+      dbDeferredSubRef.current = AppState.addEventListener('change', (state) => {
+        if (state !== 'active') return;
+        try { dbDeferredSubRef.current?.remove?.(); } catch (_) { /* best-effort */ }
+        dbDeferredSubRef.current = null;
+        attemptDbInitRef.current?.();
+      });
+    } catch (_) {
+      dbDeferredSubRef.current = null;
+    }
+  }, []);
+  useEffect(() => () => {
+    try { dbDeferredSubRef.current?.remove?.(); } catch (_) { /* best-effort */ }
+    dbDeferredSubRef.current = null;
+  }, []);
   const attemptDbInit = useCallback(async () => {
     try {
       const initPromise = initDatabase();
@@ -1261,6 +1286,12 @@ export default function RootNavigator() {
       setDbInitFailed(false);
       return true;
     } catch (e) {
+      if (e?.dbCryptoDeferred === true) {
+        // eslint-disable-next-line global-require
+        try { require('../lib/errorLog').logInfo('RootNavigator.bootstrap.initDb.deferred', 'database open deferred until the device is unlocked'); } catch (_) {}
+        armDbDeferredRetry();
+        return false;
+      }
       // eslint-disable-next-line global-require
       try { require('../lib/errorLog').logError('RootNavigator.bootstrap.initDb', e); } catch (_) {}
       // Release-gate fix: this used to be the end of it - the failure was
@@ -1275,7 +1306,7 @@ export default function RootNavigator() {
       setDbInitFailed(true);
       return false;
     }
-  }, []);
+  }, [armDbDeferredRetry]);
   // The late-completion hook above needs the latest attemptDbInit without
   // a self-reference inside useCallback.
   const attemptDbInitRef = useRef(null);

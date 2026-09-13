@@ -88,10 +88,12 @@ describe('locked-keychain is one classification everywhere (VOLYUME-2E residue)'
 
   test('dbCrypto keyUnavailable: locked defers at info, genuine loss stays an error, throw identical', () => {
     expect(DBCRYPTO).toMatch(/dbCrypto\.keyUnavailable\.locked/);
-    expect(DBCRYPTO).toMatch(/else logError\('dbCrypto\.keyUnavailable', err, \{\}\);/);
+    expect(DBCRYPTO).toMatch(/\} else \{\s*logError\('dbCrypto\.keyUnavailable', err, \{\}\);/);
     // The throw itself must survive both branches -- callers rely on it to
-    // refuse opening an encrypted DB without its key.
-    expect(DBCRYPTO).toMatch(/if \(locked\) logInfo\([\s\S]{0,220}?\n\s*else logError\('dbCrypto\.keyUnavailable'[\s\S]{0,80}?throw err;/);
+    // refuse opening an encrypted DB without its key. The locked branch
+    // MARKS the same error (Sentry VOLYUME-2G / 2J: the sync layer and the
+    // navigator recognise the deferral by it) and never replaces it.
+    expect(DBCRYPTO).toMatch(/if \(locked\) \{\s*err\.dbCryptoDeferred = true;\s*logInfo\('dbCrypto\.keyUnavailable\.locked'[\s\S]{0,160}?\} else \{\s*logError\('dbCrypto\.keyUnavailable', err, \{\}\);\s*\}\s*throw err;/);
   });
 
   test('a mixed failure is never softened: one non-locked error keeps the error level', () => {

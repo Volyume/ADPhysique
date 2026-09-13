@@ -152,6 +152,19 @@ export async function closeDatabase() {
   _initPromise = null;
 }
 
+// The last init attempt was DEFERRED by dbCrypto (the SQLCipher key cannot be
+// read yet: a background wake before the device's first unlock since boot, or
+// no database and no key). Not a failure: the next foreground launch opens
+// normally. The sync runner reads this to stand down for the cycle instead of
+// letting every table push and pull throw the same deferral and log it as an
+// error each (Sentry VOLYUME-2G / 2J). Cleared the moment an init succeeds.
+let _initDeferredAt = null;
+
+/** True while the database is deferred by dbCrypto (see _initDeferredAt). */
+export function isDatabaseDeferred() {
+  return _initDeferredAt != null;
+}
+
 export function initDatabase() {
   // Gate on the in-flight init FIRST (audit 2026-07-01 race): _db is now only
   // set once _doInit has finished all schema + migrations, so while init is
@@ -159,13 +172,17 @@ export function initDatabase() {
   // makes concurrent callers await a fully-ready DB instead of a half-open one.
   if (_initPromise) return _initPromise;
   if (_db) return Promise.resolve(_db);
-  _initPromise = _doInit().catch(e => {
+  _initPromise = _doInit().then((handle) => {
+    _initDeferredAt = null;
+    return handle;
+  }).catch(e => {
     // Clear state so a retry attempt re-runs init instead of returning
     // a half-open handle. SQLite.openDatabaseAsync sets _db before
     // schema work completes; without this reset the next caller would
     // get a database where some tables were never created.
     _db = null;
     _initPromise = null;
+    _initDeferredAt = e?.dbCryptoDeferred === true ? Date.now() : null;
     throw e;
   });
   return _initPromise;
