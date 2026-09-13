@@ -186,7 +186,7 @@ test('stale workouts schema retries without optional readiness columns and still
 
 // A client that accepts every workouts upsert but rejects every workout_sets
 // upsert, so a workout shell lands while its sets do not.
-function makeSetsFailClient(capturedWorkoutIds) {
+function makeSetsFailClient(capturedWorkoutIds, setsError = { message: 'permission denied', code: '42501' }) {
   const readResult = { data: [], error: null };
   return {
     from: jest.fn((table) => ({
@@ -197,7 +197,7 @@ function makeSetsFailClient(capturedWorkoutIds) {
           return makeChain({ error: null, data: [] });
         }
         if (table === 'workout_sets') {
-          return makeChain({ error: { message: 'permission denied', code: '42501' }, data: null });
+          return makeChain({ error: setsError, data: null });
         }
         return makeChain({ error: null, data: [] });
       }),
@@ -229,6 +229,55 @@ test('a workout_sets chunk failure holds the watermark so the workout retries (L
   // 0, and the watermark jumped to 4000 - losing w-old's sets forever.
   expect(res.errors).toBeGreaterThan(0);
   expect(mockStore[WM_KEY]).toBe('1000');
+});
+
+// Sentry VOLYUME-2P: the per-workout warning carried only its own headline
+// ("workout upload failed"), so the bulk window's cause summary recorded that
+// headline, never the network wording underneath it, and every offline cycle
+// read as "not all network" and reached Sentry as a defect.
+test('a set chunk lost to the network is recorded with its cause, and the window reads all-network', async () => {
+  mockStore[WM_KEY] = '1000';
+  db.getAllWorkouts.mockResolvedValue([{ id: 'w-old', isCompleted: true, updatedAt: 2000 }]);
+  db.getWorkoutSetsForWorkout.mockResolvedValue([{ id: 's1', workoutId: 'w-old', exerciseId: 'e1' }]);
+  getSupabaseClient.mockReturnValue(
+    makeSetsFailClient([], { message: 'TypeError: Network request failed', code: null }),
+  );
+
+  const res = await bulkUploadLocalData('cloud-uid', 'local-uid');
+
+  expect(res.errors).toBeGreaterThan(0);
+  expect(res.allNetwork).toBe(true);
+  expect(res.lastError).toBe('TypeError: Network request failed');
+  const { logWarn } = require('../errorLog');
+  const warn = logWarn.mock.calls.find(
+    ([scope, msg]) => scope === 'sync.bulkUploadLocalData' && msg === 'workout upload failed',
+  );
+  expect(warn).toBeTruthy();
+  expect(warn[2]).toMatchObject({
+    workoutId: 'w-old',
+    cause: 'TypeError: Network request failed',
+    causeCode: null,
+    lastError: 'TypeError: Network request failed',
+    allNetwork: true,
+  });
+});
+
+test('a set chunk the server rejected is recorded with its cause and code, and the window is NOT all-network', async () => {
+  mockStore[WM_KEY] = '1000';
+  db.getAllWorkouts.mockResolvedValue([{ id: 'w-old', isCompleted: true, updatedAt: 2000 }]);
+  db.getWorkoutSetsForWorkout.mockResolvedValue([{ id: 's1', workoutId: 'w-old', exerciseId: 'e1' }]);
+  getSupabaseClient.mockReturnValue(makeSetsFailClient([]));
+
+  const res = await bulkUploadLocalData('cloud-uid', 'local-uid');
+
+  expect(res.errors).toBeGreaterThan(0);
+  expect(res.allNetwork).toBe(false);
+  const { logWarn } = require('../errorLog');
+  const warn = logWarn.mock.calls.find(
+    ([scope, msg]) => scope === 'sync.bulkUploadLocalData' && msg === 'workout upload failed',
+  );
+  expect(warn).toBeTruthy();
+  expect(warn[2]).toMatchObject({ cause: 'permission denied', causeCode: '42501', allNetwork: false });
 });
 
 test('nothing newer than the cursor: no upserts, watermark unchanged', async () => {

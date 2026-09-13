@@ -174,9 +174,13 @@ function missingSchemaColumn(err, table, columns = []) {
 // push-first safety. Routing those catches through here surfaces them too
 // (SYNC-1 re-audit). Gated on _bulkPushTracking so it's a plain warn when a
 // helper runs outside bulkUploadLocalData.
-function logBulkWarn(scope, message, meta) {
+// `cause`, when given, is what the bulk-window cause summary records instead
+// of the headline message: a per-workout "workout upload failed" headline
+// carries no network wording of its own, so recording IT marked every offline
+// cycle as "not all network" and defeated the Sentry noise gate (VOLYUME-2P).
+function logBulkWarn(scope, message, meta, cause = null) {
   if (_bulkPushTracking) _bulkPushErrorCount += 1;
-  _noteBulkError(message);
+  _noteBulkError(typeof cause === 'string' && cause ? cause : message);
   logWarn(scope, message, meta);
 }
 
@@ -587,12 +591,14 @@ async function _upsertSets(sb, supabaseUserId, sets) {
   }));
   // Chunk to avoid hitting Supabase row limits
   let chunkFailures = 0;
+  let lastChunkError = null;
   for (let i = 0; i < rows.length; i += 200) {
     const chunk = rows.slice(i, i + 200);
     const { error } = await sb.from('workout_sets').upsert(chunk, { onConflict: 'user_id,id' });
     if (error) {
       logPgErr('sync._upsertSets', error);
       chunkFailures++;
+      lastChunkError = error;
       // Continue attempting the remaining chunks rather than aborting all
       // remaining work, but record the failure so it is not swallowed.
     }
@@ -604,7 +610,14 @@ async function _upsertSets(sb, supabaseUserId, sets) {
   // watermark-filtered sync then skipped that older workout forever and the
   // missing sets were lost. A throw here holds the watermark so it retries.
   if (chunkFailures > 0) {
-    throw new Error(`sync._upsertSets: ${chunkFailures} workout_sets chunk(s) failed to upsert`);
+    const err = new Error(`sync._upsertSets: ${chunkFailures} workout_sets chunk(s) failed to upsert`);
+    // The PostgREST cause rides with the throw (message and code only, never
+    // a row), so the per-workout warning can say WHY and the Sentry noise
+    // gate can tell an unreachable network from a real rejection
+    // (VOLYUME-2P carried only this headline and read as a defect offline).
+    err.causeMessage = typeof lastChunkError?.message === 'string' ? lastChunkError.message.slice(0, 200) : null;
+    err.causeCode = lastChunkError?.code ?? null;
+    throw err;
   }
 }
 
@@ -817,17 +830,24 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
             // the _pushX helpers. An {error} was already counted via logPgErr
             // inside _upsertWorkout/_upsertSets; the resulting double-count is
             // harmless (errors > 0 is the only thing that matters). (SYNC-1)
+            // The cause is the PostgREST message a chunk upsert carried
+            // (_upsertSets attaches it), else the thrown message itself.
+            const cause = typeof e?.causeMessage === 'string' && e.causeMessage
+              ? e.causeMessage
+              : (typeof e?.message === 'string' ? e.message.slice(0, 200) : null);
             logBulkWarn('sync.bulkUploadLocalData', 'workout upload failed', {
               workoutId: w?.id,
               supabaseUserId,
               error: e?.message,
+              cause,
+              causeCode: e?.causeCode ?? null,
               // Cause summary read AFTER logBulkWarn has folded this failure in
               // is what we want, but the meta is built first, so state this
               // one's own network verdict directly and let lastError carry the
-              // window's running message.
-              lastError: typeof e?.message === 'string' ? e.message.slice(0, 200) : null,
-              allNetwork: isNetworkNoise(e?.message) && _bulkPushAllNetwork,
-            });
+              // cause.
+              lastError: cause,
+              allNetwork: isNetworkNoise(cause) && _bulkPushAllNetwork,
+            }, cause);
           }
         })
       );
