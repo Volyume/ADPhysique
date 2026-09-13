@@ -37,10 +37,18 @@ export {
 } from './limits';
 
 export {
-  WEB_ORIGIN, APP_SCHEME, profileUrl, storyUrl, groupUrl,
-  appProfileUrl, appStoryUrl, appGroupUrl, parseCommunityLink,
+  WEB_ORIGIN, APP_SCHEME, profileUrl, storyUrl, groupUrl, groupInviteUrl,
+  appProfileUrl, appStoryUrl, appGroupUrl, appGroupInviteUrl, parseCommunityLink,
   findHttpsLinks, openMessageLink,
 } from './links';
+
+// ─── Early days (26-EARLY-DAYS-SPEC.md, CR-16 / D162) ─────────────────
+
+export {
+  COMMUNITY_HOST_HANDLE, COMMUNITY_HOST_USER_ID, inviteMessage, inviteLabel, firstHereLine,
+  isOwnCohort, cohortCountLine, hostRowVisible, hostCaption,
+} from './earlyDays';
+export { readHostDismissed, writeHostDismissed, hostDismissalKey } from './hostDismissal';
 
 export {
   buildPrPayload, buildSessionPayload, buildBlockPayload,

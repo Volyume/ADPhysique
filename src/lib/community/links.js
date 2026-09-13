@@ -112,6 +112,21 @@ export function appGroupUrl(id) {
   return `${APP_SCHEME}${PATHS.group}/?id=${encode(id)}`;
 }
 
+/**
+ * `https://volyume.app/g/?id=<groupId>&t=<token>`: a group invite link.
+ * The token rides as a SECOND query parameter (`&`); the earlier share
+ * appended it with a second `?`, which made the group id parse as
+ * `<id>?t=<token>` and the token vanish (26-EARLY-DAYS-SPEC.md 1.7).
+ */
+export function groupInviteUrl(id, token) {
+  return `${groupUrl(id)}&t=${encode(token)}`;
+}
+
+/** `volyume://g/?id=<groupId>&t=<token>` */
+export function appGroupInviteUrl(id, token) {
+  return `${appGroupUrl(id)}&t=${encode(token)}`;
+}
+
 function readQuery(blob) {
   const out = {};
   for (const pair of String(blob || '').split('&')) {
@@ -136,6 +151,7 @@ function readQuery(blob) {
  * @returns {{kind: 'profile', handle: string}
  *   | {kind: 'hub'}
  *   | {kind: 'story', id: string}
+ *   | {kind: 'group', id: string, token?: string}
  *   | null} null for anything that is not one of our addresses.
  */
 export function parseCommunityLink(url) {
@@ -174,7 +190,9 @@ export function parseCommunityLink(url) {
   }
   if (pathPart === PATHS.group) {
     const id = String(params.id ?? '').trim();
-    return id ? { kind: 'group', id } : null;
+    if (!id) return null;
+    const token = String(params.t ?? '').trim();
+    return token ? { kind: 'group', id, token } : { kind: 'group', id };
   }
   return null;
 }

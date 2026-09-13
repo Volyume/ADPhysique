@@ -19,7 +19,7 @@ jest.mock('react-native', () => ({ Linking: { openURL: jest.fn(async () => {}) }
 const {
   WEB_ORIGIN, profileUrl, storyUrl,
   appProfileUrl, appStoryUrl, parseCommunityLink,
-  findHttpsLinks, openMessageLink,
+  findHttpsLinks, openMessageLink, groupInviteUrl, appGroupInviteUrl,
 } = require('../links');
 
 describe('building', () => {
@@ -102,6 +102,15 @@ describe('the static share pages emit exactly what links.js builds', () => {
   const PUBLIC = path.resolve(__dirname, '../../../../public');
   const page = (dir) => fs.readFileSync(path.join(PUBLIC, dir, 'index.html'), 'utf8');
 
+  test('public/g opens the app on the invite form, token and all (26-EARLY-DAYS-SPEC.md 1.7)', () => {
+    expect(appGroupInviteUrl('', '')).toBe('volyume://g/?id=&t=');
+    const g = page('g');
+    expect(g).toContain("'volyume://g/?id=' + encodeURIComponent(id)");
+    expect(g).toContain("'&t=' + encodeURIComponent(token)");
+    // The page fetches nothing: the token is a capability, handed on only.
+    expect(g).not.toMatch(/fetch\(/);
+  });
+
   test.each([
     ['u', appProfileUrl(''), 'h'],
     ['s', appStoryUrl(''), 'id'],
@@ -154,5 +163,25 @@ describe('openMessageLink: https only', () => {
     openMessageLink('volyume://u/?h=sam');
     openMessageLink('http://insecure.example');
     expect(Linking.openURL).not.toHaveBeenCalled();
+  });
+});
+
+describe('group invite links (26-EARLY-DAYS-SPEC.md 1.7)', () => {
+  test('the token rides as a second query parameter, never a second question mark', () => {
+    expect(groupInviteUrl('g1', 'tok')).toBe('https://volyume.app/g/?id=g1&t=tok');
+    expect(appGroupInviteUrl('g1', 'tok')).toBe('volyume://g/?id=g1&t=tok');
+    expect(groupInviteUrl('g1', 'a b')).toBe('https://volyume.app/g/?id=g1&t=a%20b');
+  });
+
+  test('parsing returns the token when present and a plain group link when not', () => {
+    expect(parseCommunityLink('https://volyume.app/g/?id=g1&t=tok')).toEqual({ kind: 'group', id: 'g1', token: 'tok' });
+    expect(parseCommunityLink('volyume://g/?id=g1&t=tok')).toEqual({ kind: 'group', id: 'g1', token: 'tok' });
+    expect(parseCommunityLink('https://volyume.app/g/?id=g1')).toEqual({ kind: 'group', id: 'g1' });
+    expect(parseCommunityLink('https://volyume.app/g/?t=tok')).toBeNull();
+  });
+
+  test('the old malformed form is what a second question mark produced', () => {
+    // Documented so nobody "simplifies" the builder back to it.
+    expect(parseCommunityLink('https://volyume.app/g/?id=g1?t=tok')).toEqual({ kind: 'group', id: 'g1?t=tok' });
   });
 });
