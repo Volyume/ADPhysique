@@ -1,6 +1,26 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-13 — SENTRY TRIAGE: FIFTEEN ISSUES, THREE MECHANISMS FIXED, ALL RESOLVED ★
+
+Founder order (chat): "Check sentry and resolve all issues. App is fine".
+Fifteen unresolved issues in org `volyume` (region `https://de.sentry.io`)
+read one by one; the two database-deferral issues broken down by scope
+over 90 days before any fix was placed (ten catch sites, not one). Three
+mechanisms landed on main (0e89d90 (VOLYUME-36), ca4915c (VOLYUME-2G / 2J), 5882d61 (VOLYUME-2P), 58c09ae (the test race) and this record): expected Community refusals are
+breadcrumbs and the Join screen asks for groups only once a profile
+exists (VOLYUME-36); a database open deferred before the device's first
+unlock is MARKED by dbCrypto, recorded by `database.js`, stands the sync
+cycle down (a fresh re-probe, never a stale flag), is filed as
+information by `logSyncError` and, once for every catch site, by
+`errorLog.logError`, and no longer shows the navigator's failure screen
+(VOLYUME-2G / 2J); the workout upload warning carries the chunk's cause so
+an offline cycle reads as all-network (VOLYUME-2P). Nine issues were
+already fixed on main and three were deliberate; all fifteen resolved in
+Sentry with the reason on the activity feed. Ruling D161 (register).
+Settled tree lint clean, 1307 suites / 20206 tests green (1 suite and 16 tests skipped, as before). No build started. Board section "SENTRY TRIAGE
+(2026-09-13)" carries the detail and the device checklist.
+===============================================================================
 ## ★ 2026-09-10 — COMMUNITIES REVAMP: RESEARCH STAGE LANDED; BUILD GATED ON FOUNDER ANSWERS ★
 
 Founder brief (chat): Community was spec'd on plan sharing, the wrong

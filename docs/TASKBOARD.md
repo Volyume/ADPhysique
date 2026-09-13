@@ -33,6 +33,75 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## SENTRY TRIAGE (2026-09-13, founder order "Check sentry and resolve all issues. App is fine") — FIFTEEN UNRESOLVED ISSUES TRIAGED; THREE MECHANISMS FIXED ON MAIN; ALL FIFTEEN RESOLVED IN SENTRY WITH REASONS
+
+Founder order in chat 2026-09-13. Org `volyume`, region
+`https://de.sentry.io`, fifteen unresolved issues at the time of triage.
+Evidence first: every issue read; the two database-deferral issues broken
+down by scope over 90 days BEFORE any fix was placed (VOLYUME-2G was fed
+from ten catch sites, so a per-site fix would have left the next site to
+grow the same issue). CURRENT STATE: three families of expected conditions
+reached Sentry as defects; the rest were already fixed on main or were
+deliberate refusals. END STATE: each family classified ONCE at its
+mechanism; every issue resolved with its reason on the activity feed.
+ELEVATES BECAUSE: a Sentry stream that carries only defects is the one the
+founder can act on. Ruling D161 (register).
+
+FIXED ON MAIN (this landing, 0e89d90 (VOLYUME-36), ca4915c (VOLYUME-2G / 2J), 5882d61 (VOLYUME-2P), 58c09ae (the test race) and this record):
+- VOLYUME-36 (`db.rpc.failed supabase.community_list_my_groups P0001`, on
+  every open of the Join screen by a visitor with no profile): the
+  Supabase instrumentation consults the Community transport's own refusal
+  catalogue (`isExpectedCommunityRefusal`, P0001 only) and files an
+  expected refusal as a breadcrumb; the Join screen asks for groups only
+  once a profile exists (`hasProfile(me)`).
+- VOLYUME-2G (`SQLCipher key unavailable and existing DB is not
+  plaintext-readable`, 134 events; 90-day scopes: syncQueue.drain 9,
+  RootNavigator.bootstrap.initDb 9, twelve sync-table push scopes 2 to 8
+  each, SignIn.accountBoundary.refused 7 on build 60 only,
+  syncQueue.getQueueStats 5) and VOLYUME-2J (`sync.push.<table>.errors`,
+  202 events, the runner's crumb for the same cycles): a background wake
+  before the device's first unlock since boot cannot read the SQLCipher
+  key. dbCrypto MARKS that deferral (`err.dbCryptoDeferred = true`, the
+  locked path only); `database.js` records it (`isDatabaseDeferred`,
+  cleared by the next successful open); the sync runner re-probes the open
+  (never a stale flag) and stands the whole cycle down with reason
+  `db_deferred`, mid-cycle too, counting no error and emitting no crumb;
+  `logSyncError` and, once for every catch site, `errorLog.logError` file
+  a marked deferral as information; the navigator no longer shows
+  "Couldn't open your data" for a deferral and re-attempts the open when
+  the app next comes to the foreground. The unmarked twin stays an error:
+  one event in 90 days at `dbCrypto.keyUnavailable`, plus one each at
+  `HomeScreen.startWithPlan` and `Article9.consent.startCascade`
+  (foreground scopes, which a pre-first-unlock deferral cannot reach).
+- VOLYUME-2P (`workout upload failed` on a flaky connection): the
+  per-workout warning recorded its own headline as the bulk window's
+  cause, so an offline cycle never read as all-network and reached Sentry
+  as a defect. `_upsertSets` attaches the last chunk's PostgREST message
+  and code (never a row) to its throw; the warning records `cause` and
+  `causeCode`, judges `allNetwork` by the cause, and `logBulkWarn` notes
+  the cause in the window summary.
+ALREADY FIXED ON MAIN, resolved naming the commit: VOLYUME-28 (exercise
+not found; 5775a34, after iOS build 64); 2Z and 31 (wrong password and
+the AuthSheet at info); 3A, 3C, 39, 3B (deleted-account FK residual,
+`isDeletedAccountFkError`); 38 (ON CONFLICT DO UPDATE).
+RESOLVED WITH A REASON, no code: 2D (`db.rpc.failed` family; one
+`gyms_search` 57014 statement timeout on 2026-09-10, not recurred); 1K
+(iOS native crash only on builds up to 1.3.0+57, no symbols, superseded by
+every later build); 3D (a deliberate identity refusal working as
+designed).
+Also landed: the clock-rollback auth test anchored before the flow starts
+(a one-millisecond race in the test, not in the code; it failed alone).
+Settled tree: lint clean, 1307 suites / 20206 tests green (1 suite and 16 tests skipped, as before). No build started (the founder builds from main).
+Device checklist (Android EAS build from main): (1) lock the phone and
+leave it overnight; in the morning open Volyume: expect the normal Today
+screen, never "Couldn't open your data", and no VOLYUME-2G / 2J event in
+Sentry for the night's wakes; (2) signed in with no Community profile,
+open Community > Join: expect no `db.rpc.failed` warning in Sentry (a
+breadcrumb at most); (3) flight mode on, finish a workout, flight mode
+off, reopen: expect the workout to sync on that foreground with no
+`workout upload failed` issue in Sentry. ED-safety: none of this touches
+weight, food or notification behaviour.
+
 ## COMMUNITIES REVAMP (2026-09-10, founder prompt) — ALL FOUR BUILD PHASES (0 to 4) LANDED and MERGED to main; MIGRATION 170 (A, A2, B) APPLIED to production 2026-09-10 (MCP path); community-notify v3 DEPLOYED; ANDROID BUILD #3576 DISPATCHED from main 2026-09-11
 
 Founder brief in chat (2026-09-10): Community was spec'd on plan sharing,

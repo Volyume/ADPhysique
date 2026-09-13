@@ -6718,3 +6718,58 @@ Stopgap 14:33 UTC 2026-09-12: `_community_rules_version()` back to 2.
    the apply early) corrected, F4 (the messaging parameter) built, F7
    (174's header) recorded, F10 (an absent `wizard` is wizard 1)
    documented.
+
+## D161 (2026-09-13) - Sentry triage: an expected condition is classified once, at its mechanism
+
+Founder (chat, 2026-09-13): "Check sentry and resolve all issues. App is
+fine". Ruled by the lead under D33 on the one criterion (the best
+product), evidence first: every one of the fifteen unresolved issues was
+read, and VOLYUME-2G was broken down by scope over 90 days before a fix
+was placed (it was fed from ten catch sites, so a per-site fix would have
+left the next site to grow the same issue).
+
+1. **A deliberate Community refusal is a breadcrumb, never a warning.**
+   The Supabase instrumentation (`src/lib/observability.js`) asks the
+   transport's own catalogue (`isExpectedCommunityRefusal`, the same
+   `EXPECTED_CODES` the client handles in copy), under P0001 only, so
+   the two can never disagree; anything else still warns. The Join
+   screen asks the member-only groups question only once a profile
+   exists: for a visitor the truthful answer (no groups) is already
+   known.
+2. **A database open deferred before the device's first unlock is the
+   expected background-wake state, recognised by a MARKER, never by its
+   message.** dbCrypto sets `err.dbCryptoDeferred = true` on the locked
+   path only; a genuine key loss (the unmarked twin) stays an error
+   everywhere. The classification lives in `errorLog.logError` itself,
+   once, because ten different catch sites had each turned the same
+   rejection back into an error; `logSyncError` keeps its own, more
+   specific, branch.
+3. **The sync runner stands the cycle down on a deferral, from a fresh
+   probe.** The flag `database.js` keeps records only the last open, and
+   nothing re-opens the database between a background wake and the next
+   trigger, so the runner re-tries the open whenever the flag is set:
+   success runs the cycle, a fresh deferral skips it (reason
+   `db_deferred`), any other failure fails OPEN so a real fault stays
+   visible where it always was. Mid-cycle, the table that discovers the
+   deferral is not counted as an error and no crumb fires; the legacy
+   push and pull stand down with it.
+4. **The navigator treats a deferral as "not yet", never as the failure
+   screen.** A process woken in the background and opened later would
+   otherwise greet the athlete with "Couldn't open your data" and a Try
+   again for a condition that had already passed. The open is
+   re-attempted once when the app next comes to the foreground.
+5. **A warning carries its cause.** The per-workout upload warning
+   recorded its own headline as the bulk window's cause, so an offline
+   cycle never read as all-network; `_upsertSets` now attaches the last
+   chunk's PostgREST message and code (never a row) to its throw.
+6. **Resolution discipline.** Every issue resolved carries its reason on
+   the Sentry activity feed: the commit that fixed it, or why no code was
+   needed (2D, one statement timeout not recurred; 1K, a native crash
+   only on builds up to 1.3.0+57 with no symbols; 3D, a refusal working
+   as designed). Nothing was ignored: a regression re-opens the issue
+   and is read again.
+7. **A test race fixed in the test, not the code:** the clock-rollback
+   auth case read its "now" after the flow had started, one millisecond
+   from a false pass or a false fail (it failed alone on this run); it
+   is anchored before the flow starts.
+
