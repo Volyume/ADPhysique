@@ -69,8 +69,27 @@ frozen and live style halves disagreed about a border colour with the live half
 winning. `docs/rules/styling.md` now carries the seven laws and no longer claims
 the app uses system fonts.
 
-NEXT: stage 2, the five daily screens, starting with Today and Progress as
-specified at plan section 4c.
+STAGE 2: **TODAY IS LANDED AND MERGED** (`506cba31`). The session name is the
+one loud element at `type.hero` through `BigNumber`, with the full "6 exercises
+. 18 sets . about 52 min" meta line derived from rows already on the wire. All
+THREE hero branches converted (the lead's own guard caught that two still
+carried the 24px style). Four new sections as rows, not cards: Your week
+(`WeekRibbon` over `computeConsistency`, no second week derivation), Nutrition,
+Progress = total lifted this week (D167), Coach = the engine's real sentence.
+Both safety-bearing sections fail CLOSED, and no third ED read was added
+because the count is pinned at two deliberately. Guard:
+`HomeScreen.todaySpec.guard.test.js`, 21 cases.
+
+Rulings that unblocked it are **D167** (seven forks the recon lanes refused to
+decide). Two things worth carrying forward: the nutrition block initially
+pointed at a tab that does not exist, which no test would have caught; and
+`EvidencePanel.js` had the same frozen-vs-live border disagreement as
+`LoggedSetRow`, now fixed.
+
+NEXT: Progress (`AnalyticsScreen.js`), fully recon'd, with one ruled blocker to
+clear first -- `AnalyticsScreen.stateMatrix.test.js:841-851` forbids the very
+read D166 requires, and D167 ruling 1 replaces that proof-of-absence with the
+mount coverage it was standing in for. Then the logger, the summary, Nutrition.
 ===============================================================================
 ## ★ 2026-09-14 — COMMUNITY LOOK AND FEEL: THE LAYOUT LAW FIXED AND GUARDED ★
 

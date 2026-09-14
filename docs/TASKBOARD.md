@@ -160,7 +160,52 @@ STAGE 1 (the spine) IS LANDED AND MERGED TO MAIN (`f9ec50c3`, `c168c353`):
 - `docs/rules/styling.md` gains the seven laws and the new-component pattern,
   and LOSES the false "System fonts" claim (seven Inter faces ship); the
   h2/h3/title weights recorded there did not match the code either.
-NEXT: stage 2, the five daily screens. Today and Progress are specified by the
+STAGE 2 IN PROGRESS. **TODAY IS LANDED AND MERGED** (`506cba31`), built to the
+founder's section 4c spec and the D166/D167 rulings:
+- The session name is the screen's one loud element at `type.hero` (56) through
+  `BigNumber`, replacing 24px. Meta line is now the full "6 exercises . 18 sets
+  . about 52 min": set count and duration derive from rows an existing effect
+  already fetches (no new read), and the duration uses `estimateWorkoutMinutes`
+  with `PlanLibraryScreen`'s own input chain, so Today agrees with the number
+  shown when the plan was chosen.
+- ALL THREE hero branches converted, not one: the lead's own new guard caught
+  that block-complete and week-complete still carried the 24px style, which
+  would have applied law 1 inconsistently on exactly the days the screen has
+  something else to say. Three retired style keys deleted rather than left dead.
+- FOUR NEW SECTIONS as rows on the canvas (law 2: none is an object): Your week
+  (`WeekRibbon` over `computeConsistency` on workouts the week loader already
+  read -- no second week-boundary derivation, which
+  `weekBoundaryConsistency.guard` exists to prevent); Nutrition against target
+  (two local reads); Progress = **total lifted this week** (D167: already
+  loaded, rendered nowhere; chosen over sessions because the ribbon caption
+  already says sessions); Coach = the engine's actual sentence, previously
+  reachable only behind a "See why" pointer.
+- BOTH SAFETY-BEARING SECTIONS FAIL CLOSED. The nutrition gate leads with
+  `firstReviewFacts && !firstReviewFacts.edFlagOpen` because the obvious
+  `!firstReviewFacts?.edFlagOpen` reads null as NOT suppressed and would show
+  intake figures to a flagged person on a slow read. No third ED read was
+  added: `edFlagFailClosed.guard` pins the count at exactly two and Home
+  already derives the value. The coach sentence comes through
+  `readLatestDecision` (buildDecision WHOLE, lockout branch first) and renders
+  only when the week was really checked in.
+- Guard `src/screens/__tests__/HomeScreen.todaySpec.guard.test.js` (21 cases).
+  `capabilityVisibility.guard` updated deliberately: it pinned the exercise
+  count's old inline JSX; the rule is unchanged and now pinned in the memo,
+  with two new cases beside it.
+- FOUND BY WRITING THE TESTS: the nutrition block pointed at `NutritionTab`,
+  which does not exist (it is `DiaryTab`) -- a dead tap on device that no test
+  would have caught, since the name is a runtime string.
+- Also fixed: `EvidencePanel.js:81` vs `:102` disagreed on a border colour
+  (frozen `borderSubtle`, live `border`, live wins), so the evidence pane drew
+  the bright "wireframe" edge against its own intent.
+NEXT: Progress (`AnalyticsScreen.js`), fully recon'd. One ruled blocker to
+clear first: `AnalyticsScreen.stateMatrix.test.js:841-851` asserts the screen
+contains no `getLatestCoachOutput` and no `/coachDecision/i`, which D166 answer
+1 makes impossible. D167 ruling 1: that guard is a proof-of-absence standing in
+for a mount test (its own header says the two renders "would be byte-identical
+by construction"), which D166 makes false, so it is REPLACED by the mount
+coverage it substituted for, never merely deleted. Then the logger, the workout
+summary and Nutrition.
 founder at plan section 4c and now carry the three answers above.
 ALSO OUTSTANDING: `docs/rules/styling.md:55` says "System fonts" and is wrong
 (seven Inter faces ship); `theme.js:200-201` records that the LIGHT palette
