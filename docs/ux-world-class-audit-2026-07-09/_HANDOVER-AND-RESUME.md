@@ -1,6 +1,25 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-14 — COMMUNITY LOOK AND FEEL: THE LAYOUT LAW FIXED AND GUARDED ★
+
+Founder on two live screenshots: the alignment of the lines, the graph
+under the wrong thing, "meant to look like the rest of the app". Cause:
+Community's pages pay the app's gutter AND its rows paid it again, so
+avatars sat at 32 under eyebrows at 16; dividers were the bright `border`
+inset past each avatar (the treatment `SettingsPrimitives` calls "the
+wireframe look"), with `CohortRow`'s inset varying with the sample count;
+the strip centred eight weeks of bars under one cell and drew zero weeks
+invisibly; a 24 dp avatar was a blob; the skeleton was a different shape
+from the row. All fixed hands-on, with `27-LOOK-AND-FEEL-PASS.md` (CR-17,
+D163) carrying the house rules Community now follows and the ruled fork on
+empty states (the shared box stays for a screen-level empty; a section
+empty is one quiet line). New guard
+`src/__tests__/community.layout.guard.test.js`. Named as not done: seven
+surfaces still render people as cards through wrapper components (its own
+lane), and `SectionLabel` versus `Eyebrow` across eleven screens needs one
+product decision. Board section "COMMUNITY LOOK AND FEEL (2026-09-14)".
+===============================================================================
 ## ★ 2026-09-13 (later) — COMMUNITY EARLY DAYS: THE HONEST COLD-START STATE LANDED ★
 
 Founder order: simulated members at real gyms logging daily so Community

@@ -6830,3 +6830,60 @@ built at once, under D33, in `26-EARLY-DAYS-SPEC.md` (CR-16):
    user id, the zero state gated on a summary that answered, and a "Not
    now" for the host row under CR-09's calm posture.
 
+## D163 (2026-09-14) - Community look and feel: it rejoins the app, and the rules are guarded
+
+Founder, on two live Android screenshots: "I looks shit. Look at the
+alignment of the lines and the graph which isn't even under what it I
+think is meant", then "Do some proper quality look and feel work on the
+entire function. The whole thing is it is meant to jot look AI and is
+meant to look like. The rest of the app. It looks ruvvish". Both points
+were right, and the second is the cause of the first. Ruled by the lead
+under D33; the full analysis, the house rules and the device checklist are
+`docs/communities-revamp-2026-09-10/27-LOOK-AND-FEEL-PASS.md` (CR-17).
+
+1. **The cause was structural, not cosmetic.** Community's pages pay the
+   app's gutter on the scroll container, as every other screen does, and
+   its row components paid it a SECOND time, so avatars sat at 32 dp
+   while the eyebrow above them sat at 16. The rows now carry no gutter of
+   their own, and the reader's own tinted row bleeds to both screen edges
+   through a negative margin instead of indenting itself.
+2. **The divider was the app's own named mistake.** `SettingsPrimitives`
+   records in its own comment that a bright `border` rule between rows is
+   "the wireframe look"; Community drew exactly that, inset past each
+   avatar, with `CohortRow`'s inset varying by up to 56 dp with the number
+   of sample avatars. Separators are now `borderSubtle` hairlines spanning
+   the row, everywhere.
+3. **A chart names what it charts.** The eight-week bars were centred
+   under a three-cell row, so they read as belonging to the middle cell,
+   and a zero week was drawn at hairline width in a colour a shade from
+   its own ground, so eight weeks showed as five bars. They are now a
+   footer band of the whole strip with a caption, eight equal columns and
+   a visible floor.
+4. **A small mark is still a person.** `ProfileAvatarMark` floored its
+   glyph and badge at 20 dp, so a 24 dp avatar was a disc; the floors now
+   scale, the look at 40 dp and above is unchanged, and the preset badge
+   (a picker affordance) renders only where it can be read.
+5. **A placeholder stands in the shape of what replaces it.** Community
+   lists used the shared 36 dp square skeleton against a 32 dp circular
+   row, so every screen jumped sideways on first load. The shared
+   primitive serves 40 other screens with other row shapes and was not
+   touched: Community has its own.
+6. **The empty-state fork, ruled.** The shared `EmptyState` stays for a
+   SCREEN-level empty and for every error, offline, private or blocked
+   state; a SECTION-level empty inside a populated screen is one quiet
+   line. The founder's instruction is that Community look like the rest of
+   the app, so the house primitive is not Community's to redefine, and a
+   bordered poster inside a populated list is what read as generic.
+7. **Guarded, because none of it was.** The presentation guard covered
+   three of the blueprint's ten rules on four of twenty-four screens.
+   `src/__tests__/community.layout.guard.test.js` now pins the gutter, the
+   divider token and shape, the own-row bleed, the bars, the mark's
+   scaling floors, the skeleton shape and the section-empty rule.
+8. **Named as not done:** people still render as cards on seven remaining
+   Community surfaces through wrapper components the guard's `<Card` grep
+   cannot see (its own lane, presentation only), and eleven Community
+   screens still head their sections with `SectionLabel` while four use
+   `Eyebrow`, one weight lighter than the app's heading. That last is a
+   law-vs-house conflict in blueprint rule 3 and needs one decision for
+   the product rather than a patch per screen.
+

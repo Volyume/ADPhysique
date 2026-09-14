@@ -33,6 +33,69 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## COMMUNITY LOOK AND FEEL (2026-09-14, founder order on two live screenshots) — CAUSE FOUND AND FIXED; THE LAYOUT LAW NOW GUARDED
+
+Founder in chat 2026-09-14, on the Hub and a profile from the live app:
+"I looks shit. Look at the alignment of the lines and the graph which
+isn't even under what it I think is meant", then "Do some proper quality
+look and feel work on the entire function. The whole thing is it is meant
+to jot look AI and is meant to look like. The rest of the app. It looks
+ruvvish". Ruling CR-17 / D163; full analysis, house rules, the one ruled
+fork and the device checklist: `docs/communities-revamp-2026-09-10/
+27-LOOK-AND-FEEL-PASS.md`. Opus audit (read-only) against every
+non-Community screen produced the evidence; the lead fixed the primitives
+hands-on.
+CURRENT STATE (what the founder was looking at): Community's pages pay the
+app's gutter on the scroll container, as every other screen does, and
+`PersonRow`, `CohortRow` and `ActivityItemRow` each paid it AGAIN, so
+avatars sat at 32 dp under eyebrows at 16 dp, with four text edges on the
+Hub at once; each row drew a bright `border` hairline inset past its
+avatar, the exact treatment `SettingsPrimitives` names in its own comment
+as "the wireframe look", and `CohortRow`'s inset varied by up to 56 dp
+with the number of sample avatars; the progress strip centred its
+eight-week bars under the middle of a three-cell row and drew a zero week
+at hairline width in a colour a shade from its own ground, so eight weeks
+showed as five bars under "weeks streak"; `ProfileAvatarMark` floored
+glyph and badge at 20 dp, so a 24 dp cohort avatar was a blob; every
+Community list used the shared 36 dp SQUARE skeleton against its own 32 dp
+circular rows, so first load jumped sideways; the Hub's PEOPLE section
+ended in a bare "Find people" text row that read as a heading while GROUPS
+carried its action in the eyebrow; an empty ACTIVITY was a bordered box
+with a 52 dp amber circle, a paragraph and a button repeating that row.
+END STATE (landed): one gutter paid once by the page, rows with no gutter
+of their own, the own row a tinted band bleeding to both edges through a
+negative margin so its avatar stays on the one left edge; `borderSubtle`
+hairlines spanning the row everywhere; the profile header one identity
+column beside the avatar (name, handle, bio, facts, training line); the
+bars a named footer band of the whole strip ("Last 8 weeks", eight equal
+columns, a visible 2 dp floor) with an accessibility label that mentions
+them; the strip in the app's own words ("weeks in a row", "consistent in
+12 weeks", "PRs in 4 weeks"); scaling glyph and badge floors with the look
+at 40 dp and above unchanged and the preset badge only where it can be
+read; `SkeletonPersonRow` in the true row shape; PEOPLE and GROUPS both
+carrying their one action in the eyebrow; section empties one quiet line.
+ELEVATES BECAUSE: the founder can see the app is one product again, and
+the rules are now pinned so the next change cannot quietly undo them.
+RULED (the audit's one open fork, which it correctly refused to decide):
+the shared `EmptyState` stays for a SCREEN-level empty and every error,
+offline, private or blocked state (it is the house primitive on about 40
+non-Community screens); a SECTION-level empty inside a populated screen is
+one quiet line. Neither the primitive nor its other call sites were
+touched.
+Guard: `src/__tests__/community.layout.guard.test.js` pins the gutter, the
+divider token and shape, the own-row bleed, the bars, the mark's scaling
+floors, the skeleton shape and the section-empty rule. The presentation
+guard covered three of the blueprint's ten rules on four of its
+twenty-four screens.
+NOT DONE, named: people still render as cards on seven remaining Community
+surfaces (Find people, People list, Followers, Connections, Search,
+Activity, Conversations) through wrapper components the guard's `<Card`
+grep cannot see, running as its own lane; and eleven Community screens
+still head sections with `SectionLabel` while four use `Eyebrow`, one
+weight lighter than the app's heading, which is a law-vs-house conflict in
+blueprint rule 3 needing one product decision.
+Device checklist: spec section 5 (eight steps). No build started.
+
 ## COMMUNITY EARLY DAYS (2026-09-13, founder order) — THE HONEST COLD-START STATE; LANDED ON MAIN b8d46a1 (helpers and link builders), 3db5e46 (invite links end to end), 19c6860 (the early-days screens) and this record
 
 Founder order in chat 2026-09-13: "build some simulated data for the

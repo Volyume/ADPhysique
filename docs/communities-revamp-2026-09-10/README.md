@@ -54,6 +54,7 @@ Document map (filled as the campaign runs):
 - `24-PHASE4-SPEC.md`               Phase 4 spec (lead): the home-screen widget's friend-trained-today count; the edit gate for lane P4
 - `25-ONBOARDING-COMMUNITY-SPEC.md`: Community at onboarding (founder order 2026-09-11, CR-15, D158): step 5 "Your gym", the pre-filled one-tap profile, migration 173, offline queue, handle change on Edit profile.
 - `26-EARLY-DAYS-SPEC.md`: the honest cold-start state (founder order 2026-09-13, CR-16, D162): the first-here line and invite on the Hub, the HOST row for the founder's real profile, honest cohort counts, group invite links working end to end; no simulated members.
+- `27-LOOK-AND-FEEL-PASS.md`: Community rejoins the app's layout language (founder order 2026-09-14, CR-17, D163): the house rules Community now follows, the one ruled fork on empty states, what is deliberately not done, and the device checklist.
 
 Agent window: two agents at a time (standing rule); all research agents
 are READ-ONLY on the tree and write only their own numbered file here.
