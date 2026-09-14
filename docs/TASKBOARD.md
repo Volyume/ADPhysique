@@ -33,55 +33,111 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## APP-WIDE VISUAL REDESIGN (2026-09-14, founder order) — RESEARCHED AND PLANNED; PROPOSED, NOT RULED; NOTHING BUILT
+## APP-WIDE VISUAL REDESIGN (2026-09-14, founder order) — RESEARCHED AND PLANNED (v2, post-correction); ONE FOUNDER FORK OPEN; NOTHING BUILT
 
-Founder in chat 2026-09-14: "I'd like you to plan a complete app look and feel
-redesign as I don't like what we have and I think it looks far too much like
-it's built by ai", naming Revolut, Things 3, Linear, Flighty, Airbnb, Arc,
-Calm and Duolingo, and asking for research, a plan and image suggestions.
-Folder `docs/design-redesign-2026-09-14/` (README = map). Two read-only Opus
-lanes ran: the references broken into 42 buildable devices plus fourteen
-further products and a 20-item machine-made checklist; and a full audit of the
-current visual system with counts and file:line.
-DIAGNOSIS (evidence, not opinion): the tokens, the font and the contrast
-system are genuinely good; the failure is composition. 73.9% of all typed text
-is 11 or 13 px and FIVE sites in 106 screens exceed 24 px; every block on
-every tab screen is the same width, radius and hairline; `radius.lg` is
-simultaneously the card, the button, the empty state, the tooltip and the tab
-pill; 204 Cards in 65 files plus 85 hand-rolled ones plus 99 identical empty
-states; 683 stock Ionicons, 244 amber-tinted against the app's own rule; and
-the signature device the design doc promises (a Skia glow) was never built.
-DIRECTION ("Instrument"): one loud thing per screen at display scale; rows on
-the canvas, cards reserved for discrete objects; geometry carries meaning
-(control radius separated from card radius, one full-bleed moment per screen).
-Signature devices: the week ribbon (seven cells, same place everywhere, a rest
-day drawn as a rest day, the ED-safe answer to a streak) and the ledger
-(tabular set rows in the display face). Typography: keep Inter, add Archivo
-expanded for the loud thing and figures. Colour: palette unchanged, amber
-rebudgeted to mean only "now". Progression: denominator framing, progress
-advances regardless of outcome, every loss-aversion device refused.
+Founder in chat 2026-09-14, in two parts. (1) "I'd like you to plan a complete
+app look and feel redesign as I don't like what we have and I think it looks
+far too much like it's built by ai", naming Revolut, Things 3, Linear, Flighty,
+Airbnb, Arc, Calm and Duolingo, and asking for research, a plan and image
+suggestions. (2) THE CORRECTION: "And importantly, I wouldn't make it look like
+a fitness app", plus six 2026 trend claims (minimalism, thumb-friendly layouts,
+bottom sheets, restrained glass, tactile depth, purposeful micro-interactions)
+and the Dezzayn screen library.
+Folder `docs/design-redesign-2026-09-14/` (README = map). FOUR read-only Opus
+lanes ran: the references broken into 42 buildable devices plus a 20-item
+machine-made checklist; a full audit of the current visual system with counts
+and file:line; what large products actually SHIPPED in 2025-26 and what of it
+is reachable on RN 0.81 / Expo 54; and the six trend claims tested one at a
+time. `20-DIRECTION-AND-PLAN.md` is at v2 and supersedes v1 in this block.
+DIAGNOSIS (unchanged, measured not argued): the tokens, the font and the
+contrast system are genuinely good; the failure is composition. 73.9% of all
+typed text is 11 or 13 px and FIVE sites in 106 screens exceed 24 px; every
+block on every tab screen is the same width, radius and hairline; `radius.lg`
+is simultaneously the card, the button, the empty state, the tooltip and the
+tab pill; 204 Cards in 65 files plus 85 hand-rolled ones plus 99 identical
+empty states; 683 stock Ionicons, 244 amber-tinted against the app's own rule;
+and the signature device the design doc promises (a Skia glow) was never built.
+SIX CORRECTIONS, two of them the lead's own (plan section 2, each ruled under
+D33): (1) Dezzayn's screens are PAYWALLED ($12/mo) — the index is public, every
+flow and element search is not, so nothing in the folder came from it; (2)
+"2026 is minimalism" is mis-framed — CHI 2026, ten apps built twice and 48
+participants, found the MORE expressive builds 33% faster to first fixation and
+20% faster to completion, and what they varied was hierarchy, so the goal is
+differentiation not less ink; (3) the thumb-zone heat map is not true — its own
+researcher later found people prefer and are most accurate in the MIDDLE of the
+screen, so the instruction survives with a new reason and a usable number, a
+58 dp one-handed target; (4) bottom sheets are RULED for one short choice or
+one value only (35 existing sites), and set editing stays INLINE in the ledger,
+because `@gorhom/bottom-sheet` has open Android defects in exactly the
+keyboard-plus-list case; (5) glass is REFUSED — Apple shipped a Tinted mode in
+iOS 26.1 after ~1.5:1 contrast criticism and Android's VP of product for UX has
+promised a blur-off setting, so a material both platform owners had to make
+optional cannot carry an identity; `expo-blur` is not installed and
+`theme.js:26` already declines it; depth comes from surface-lightness steps and
+hairlines, which the contrast suite already asserts; (6) THE LEAD WITHDRAWS THE
+ARCHIVO TYPEFACE proposed in v1 — it was described as a "scoreboard", which is
+a sports cue and the opposite of the founder's correction. NO NEW FONT. Inter
+and Inter Display (seven faces) already ship and `type.num(role)` already
+exists; the gap was never the typeface.
+THE HONEST ANSWER on "don't look like a fitness app": we currently do. Dark
+ground plus one hot accent IS the category signature (Strava, Whoop), and we
+carry the props too — four flame sites, macro rings, trophy glyphs, literal
+gold/silver/bronze tokens, 244 amber-tinted icons. Precision worth keeping: the
+New Yorker's "AI-made" palette is cream + rusty orange + italic serif, which is
+NOT us; our exposure is narrower, amber spent as decoration rather than meaning.
+FOUR AMBER DISCIPLINES now binding: scarcity (amber means "now" and nothing
+else), no warm ground, no co-occurring tells (no flame/trophy/medal/glow beside
+it), colour earned by data.
+THREE DIRECTIONS, same screen rendered three ways in the founder page, identical
+content and rules, only the world changes: **A Terminal** (near-black `#0D0D0D`
+kept, amber becomes a reading colour, everything structural greyscale; cost
+small-medium, no contrast re-run); **B Ledger** (light first, warm off-white
+`#FAF8F4`, the strongest break with a category that is dark-with-neon almost
+without exception, and our light theme is already built and asserted; cost
+medium); **C Field notebook** (warmer cooler-grey ground `#14151A`, bone text;
+cost medium-large, full contrast re-run). LEAD RECOMMENDATION: A now, with B
+built out properly as the light theme.
+SIX LAWS, identical under all three: one loud thing per screen at 40-72 px;
+rows on the canvas with cards reserved for discrete objects; geometry carries
+meaning (control radius split from card radius, one full-bleed moment); depth
+not glass; motion with a ceiling (feedback <100 ms, settle <400 ms, Reduce
+Motion cross-fades rather than removing feedback, no celebratory animation or
+reward haptics); amber means one thing. Signature devices unchanged: the week
+ribbon (seven cells, same place everywhere, a rest day drawn as a rest day, the
+ED-safe answer to a streak) and the ledger (tabular set rows). Progression:
+denominator framing, progress advances regardless of outcome, every
+loss-aversion device refused.
 REFERENCES REVISED: keep Linear, Things 3, Flighty and one Revolut idea; drop
 Duolingo (loss aversion, ED-forbidden), Calm (wrong context), Airbnb (owned
-photography we do not have), Arc (gestures vs chalky hands); add Whoop,
-Gentler Streak, Strong/Hevy and Garmin as a warning.
+photography we do not have), Arc (gestures vs chalky hands); Whoop and
+Strong/Hevy are now studied as the category to sit OUTSIDE rather than models
+to copy; Gentler Streak replaces Duolingo; Garmin stays as the warning.
 FOUR STAGES, each shippable alone: 1 the spine (three authored components, the
-ribbon, the ledger, the display face, the radius split, the laws written into
-`docs/rules/styling.md` with a guard behind each); 2 the five daily screens;
-3 the long tail and the empty states; 4 the moments.
+ribbon, the ledger, the display step on the EXISTING faces, the radius split,
+laws 1-6 written into `docs/rules/styling.md` with a guard behind each) —
+PALETTE-AGNOSTIC, lands identically under A, B or C, so it does not wait on the
+fork; 2 the five daily screens (the logger matters most: 6,941 lines, largest
+type 20 px); 3 the long tail, the empty states and the category props; 4 the
+moments.
 COST FACTS: 106 screens, 162 components, 256 theme-consuming files, and 189 of
 them write every colour TWICE (frozen StyleSheet plus a per-render `live`
 object) — that needs a position before screen one; 92 test files assert on
 presentation; any palette change must be mirrored by hand into
-`src/widgets/widgets.js` and `src/lib/shareCard/drawShareCard.js`.
-OPEN FOUNDER FORKS (work starts on the answer): (1) the display face, yes or
-Inter everywhere; (2) the rest timer, whose small size is pinned by a guard
-from a founder device verdict; (3) how far, how fast, with the lead
-recommending stages 1 and 2 then a week of living with it.
+`src/widgets/widgets.js` and `src/lib/shareCard/drawShareCard.js`; amber
+computes at 9.59:1 on the current ground, so direction C re-runs the suite.
+OPEN, FOR THE FOUNDER: (1) WHICH DIRECTION, A, B or C — the one genuine fork,
+not lead-ruled because it is an identity choice and because the founder asked
+to be shown options; stage 1 proceeds regardless; (2) the rest timer, whose
+small size is pinned by `loggerVisualArchitecture.guard.test.js:6,58` from a
+founder device verdict — the laws agree with the verdict but it is confirmed
+before stage 2 touches that screen; (3) Dezzayn at $12/mo, optional, nothing
+depends on it.
 ALSO FOUND, outstanding: `docs/rules/styling.md:55` says "System fonts" and is
 wrong (seven Inter faces ship); and `theme.js:200-201` records that the LIGHT
 palette still wants the founder's on-device sign-off, while being live and
-user-selectable today.
-Delivered in chat as a page with the diagnosis, the laws and rendered screens:
+user-selectable today — direction B would make it the primary theme.
+Delivered in chat as a page with the corrections, the three rendered directions
+and the plan (v2):
 https://claude.ai/code/artifact/b97ca3da-d1ad-47ca-9936-38fc00963036
 
 ## COMMUNITY LOOK AND FEEL (2026-09-14, founder order on two live screenshots) — CAUSE FOUND AND FIXED; THE LAYOUT LAW NOW GUARDED

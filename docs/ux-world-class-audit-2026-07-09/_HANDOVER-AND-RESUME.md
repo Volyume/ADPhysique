@@ -1,22 +1,46 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-09-14 (later) — APP-WIDE VISUAL REDESIGN: RESEARCHED AND PLANNED, AWAITING THE FOUNDER ★
+## ★ 2026-09-14 (later) — APP-WIDE VISUAL REDESIGN: RESEARCHED, CORRECTED, PLANNED (v2); ONE FORK OPEN ★
 
 Founder ordered a complete look-and-feel redesign plan ("looks far too much
-like it's built by ai") with eight named references. Two read-only Opus lanes
-landed in `docs/design-redesign-2026-09-14/`; the lead's synthesis is
-`20-DIRECTION-AND-PLAN.md`. Diagnosis: the tokens and the contrast system are
-good, the composition is generic (73.9% of text at 11-13 px, five sites above
-24 px in 106 screens, one radius doing five jobs, 204 cards plus 85
-hand-rolled, 99 identical empty states, no signature device). Direction
-"Instrument": one loud thing per screen, rows on the canvas, geometry carries
-meaning, plus two signature devices (the week ribbon and the ledger) and
-Archivo for figures. Four stages. NOTHING BUILT: three founder forks are open
-(the display face, the pinned small rest timer, how far to go). Board section
-"APP-WIDE VISUAL REDESIGN (2026-09-14)" carries the detail. Two outstanding
-facts found on the way: the styling rules wrongly claim system fonts, and the
-live light palette still has no founder on-device sign-off.
+like it's built by ai") with eight named references, then corrected it: "I
+wouldn't make it look like a fitness app", with six 2026 trend claims and the
+Dezzayn screen library. FOUR read-only Opus lanes landed in
+`docs/design-redesign-2026-09-14/` (references; current-state audit; what
+actually shipped in 2025-26; the six trend claims tested one by one). The
+lead's synthesis is `20-DIRECTION-AND-PLAN.md`, now at **v2, which supersedes
+v1 in the same file**.
+
+Diagnosis (unchanged, measured): the tokens and the contrast system are good,
+the composition is generic (73.9% of text at 11-13 px, five sites above 24 px
+in 106 screens, one radius doing five jobs, 204 cards plus 85 hand-rolled, 99
+identical empty states, no signature device).
+
+Six corrections, two of them the lead's own, all in plan section 2: Dezzayn's
+screens are paywalled so nothing came from it; "2026 is minimalism" is
+mis-framed (CHI 2026 found the MORE expressive builds 33% faster to first
+fixation, and what they varied was hierarchy); the thumb-zone heat map is not
+true (middle of the screen is preferred and most accurate; 58 dp one-handed
+target); bottom sheets ruled for one short choice only, set editing stays
+INLINE because the sheet library has open Android keyboard-plus-list defects;
+glass refused (both platform owners shipped a kill switch within twelve months;
+`expo-blur` is not installed and `theme.js:26` already declines it); and **the
+lead withdrew the Archivo typeface proposed in v1** because "scoreboard" is a
+sports cue, the opposite of the founder's correction. NO NEW FONT.
+
+Direction is now THREE, rendered as the same screen in the founder page: A
+Terminal (near-black kept, amber becomes a reading colour), B Ledger (light
+first, the strongest break with the category), C Field notebook (warmer ground,
+full contrast re-run). Lead recommendation A, with B as the light theme. Six
+shared laws and the two signature devices (week ribbon, ledger) are identical
+under all three.
+
+NOTHING BUILT. ONE founder fork is open (which direction). Stage 1 is
+palette-agnostic and does not wait on it. Board section "APP-WIDE VISUAL
+REDESIGN (2026-09-14)" carries the full detail. Two outstanding facts found on
+the way: the styling rules wrongly claim system fonts, and the live light
+palette still has no founder on-device sign-off.
 ===============================================================================
 ## ★ 2026-09-14 — COMMUNITY LOOK AND FEEL: THE LAYOUT LAW FIXED AND GUARDED ★
 

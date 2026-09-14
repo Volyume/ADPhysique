@@ -6894,3 +6894,110 @@ under D33; the full analysis, the house rules and the device checklist are
    and untouched: the Search screen's Groups tab refreshes with the people
    query, and `DimensionRow` has no consumers left in the app.
 
+
+## D164 (2026-09-14) - App-wide visual redesign: six research rulings, three directions, and the typeface withdrawn
+
+**Authority.** Founder in chat 2026-09-14, twice. First: "I'd like you to plan
+a complete app look and feel redesign as I don't like what we have and I think
+it looks far too much like it's built by ai", naming eight references and
+asking for research, a plan and image suggestions. Then, correcting it: "And
+importantly, I wouldn't make it look like a fitness app. The current 2026
+design trend is actually moving toward minimalism, thumb-friendly layouts,
+bottom sheets, restrained glass effects, tactile depth and purposeful
+micro-interactions rather than simply throwing gradients and cards everywhere",
+plus the Dezzayn screen library. Ruled by the lead under D33 except where
+marked FOUNDER. Full plan: `docs/design-redesign-2026-09-14/20-DIRECTION-AND-PLAN.md`
+(v2, which supersedes v1 in the same file). Evidence: four read-only Opus lanes
+in that folder, files 10 to 13.
+
+**The diagnosis is measured, not argued,** and is unchanged between v1 and v2:
+the tokens, the font and the contrast system are genuinely good; the failure is
+composition. 73.9% of all typed text is 11 or 13 px and five sites in 106
+screens exceed 24 px; `radius.lg` is simultaneously the card, the button, the
+empty state, the tooltip and the tab pill; 204 Cards plus 85 hand-rolled ones
+plus 99 identical empty states; 683 stock Ionicons, 244 amber-tinted against
+the app's own rule; the Skia glow the design doc promises was never built.
+
+**The six rulings.**
+
+1. **Dezzayn is not a source.** Its app index is public (1,130 apps) but every
+   flow and element search resolves to a login, and a public app page gives one
+   paragraph and one cover thumbnail. $12/month. Nothing in the folder came
+   from it; report 12 was sourced from published design-team writing, platform
+   documentation and dated release notes instead. Recorded so no later stage
+   cites screens nobody has seen. Whether to buy it is FOUNDER, and optional.
+
+2. **"2026 is minimalism" is mis-framed, and the correction matters.** A CHI
+   2026 study built ten apps twice, to Google's calmer guidelines and to
+   Material 3 Expressive, and tested 48 participants: the expressive builds
+   were 33% faster to first fixation on the target and 20% faster to
+   completion, and were preferred aesthetically. What varied was size, shape,
+   colour, containment and type, i.e. HIERARCHY. So the goal is differentiation,
+   not less ink, and law 1 (one loud thing per screen) is the evidence-backed
+   fix for the measured defect rather than a stylistic preference. 2026 trend
+   writing is genuinely split and is discounted as the weakest evidence class.
+
+3. **The thumb-zone heat map is not true.** Its own researcher later found
+   people prefer to touch the middle of the screen, are most accurate there,
+   and change grip constantly; NN/g concur. The instruction survives with a
+   different reason (accuracy and reach in the middle two-thirds) and one
+   usable number: a 58 dp one-handed thumb target. The 48 dp minimum stays as
+   the floor; the primary committing control goes above it.
+
+4. **Bottom sheets for one short choice or one value; set editing stays
+   inline.** NN/g: a sheet must not replace page-to-page flows, sheets must not
+   stack, a close affordance is always visible. `@gorhom/bottom-sheet` has open
+   Android defects specifically in the keyboard-plus-list case, which is
+   precisely set entry. The app already uses sheets correctly in 35 places.
+   The ledger is not becoming a sheet.
+
+5. **Depth, not glass.** Apple shipped a Tinted mode in iOS 26.1 after
+   criticism of roughly 1.5:1 contrast, then a transparency slider; Android's
+   VP of product management for UX is on record promising a setting to turn
+   blur off. A material both platform owners had to make optional within twelve
+   months cannot carry a product's identity. `expo-blur` is NOT installed and
+   `src/styles/theme.js:26` already declines it on the Android-first rule;
+   adding it would be a founder-gated new dependency under Section 2. Depth
+   comes from surface-lightness steps and hairlines, which the contrast suite
+   already asserts. No blur, no glow, no depicted material.
+
+6. **The lead withdraws the new typeface.** v1 of the plan proposed Archivo at
+   an expanded width and described it as reading like a scoreboard. A
+   scoreboard is a sports cue, which is the opposite of the founder's
+   correction the following day. The reference set we want to descend from
+   pairs one grotesque with tabular figures and adds a mono only in developer
+   tooling; we already ship Inter and Inter Display (seven faces) and already
+   have `type.num(role)`. The gap was never the typeface. **No new font.**
+
+**The amber budget, four disciplines, binding on every direction.** Scarcity:
+amber marks "now" and nothing else (today's ribbon cell, the set you are on,
+the one committing button, a personal best). No warm ground. No co-occurring
+tells: never beside a flame, a trophy, a medal colour or a glow, all of which
+go in stage 3. Earned by data, never applied because a row needs interest.
+
+**Three directions, and this one is FOUNDER.** A Terminal (near-black kept,
+amber becomes a reading colour, everything structural greyscale; cost small to
+medium, no contrast re-run). B Ledger (light first, warm off-white, the
+strongest break with a category that is dark-with-neon almost without
+exception, and our light theme is already built and asserted; cost medium).
+C Field notebook (warmer cooler-grey ground, bone text; cost medium to large,
+full contrast re-run). Lead recommendation: A now, with B built out properly as
+the light theme. NOT lead-ruled, because it is an identity choice about the
+founder's own product rather than a quality fork, and because the founder
+explicitly asked to be shown options. Stage 1 is palette-agnostic and proceeds
+regardless.
+
+**Rationale for the whole shape (D33 criterion: best product, never effort).**
+The honest answer to the founder's instruction is that we currently DO look
+like a fitness app: a dark ground with one hot accent is the category signature,
+and we carry the props too (four flame sites, macro rings, trophy glyphs,
+literal gold/silver/bronze tokens). The cheapest route would have been a
+repaint. The route chosen is the more expensive one: fix the composition first
+(stage 1 is objects, not colour), because a repaint over the same five tells
+would read as machine-made in a different palette. Nothing here reads or writes
+weight, food or notification behaviour; the ED-safe progression rules
+(denominator framing, progress advances regardless of outcome, no
+loss-aversion device) are carried into every direction, and the week ribbon
+exists partly because it is the honest answer to a streak.
+
+**Not built.** This decision records the plan and the rulings only.
