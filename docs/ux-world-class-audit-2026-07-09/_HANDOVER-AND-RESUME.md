@@ -86,10 +86,21 @@ pointed at a tab that does not exist, which no test would have caught; and
 `EvidencePanel.js` had the same frozen-vs-live border disagreement as
 `LoggedSetRow`, now fixed.
 
-NEXT: Progress (`AnalyticsScreen.js`), fully recon'd, with one ruled blocker to
-clear first -- `AnalyticsScreen.stateMatrix.test.js:841-851` forbids the very
-read D166 requires, and D167 ruling 1 replaces that proof-of-absence with the
-mount coverage it was standing in for. Then the logger, the summary, Nutrition.
+**PROGRESS IS LANDED AND MERGED** (`e5256195`). The decision is its loud
+element through `BigNumber`, above the Answer Block that evidences it, read via
+`readLatestDecision` and shown only for a genuinely checked-in week. The
+state-J source guard that forbade the read was REPLACED by the mount coverage
+it stood in for (three mounted cases, including an ED lockout replacing the
+cheerful sentence). The weight trend graph arrives on the tab for the first
+time: one smoothed line, no axes or fill, rate through `formatBodyWeightRate`.
+Guard: `AnalyticsScreen.progressSpec.guard.test.js`, 16 cases.
+
+NEXT in stage 2: the logger, the workout summary, Nutrition. THE LOGGER IS
+GATED on an unanswered founder question -- `loggerVisualArchitecture.guard.test.js:6,58`
+pins the rest timer small and bans `fontSize: 26` from a founder device
+verdict, and law 1 wants the working weight loud with the timer quiet. The laws
+agree with the verdict, but it is confirmed rather than assumed before that
+screen is touched (plan section 10.2).
 ===============================================================================
 ## ★ 2026-09-14 — COMMUNITY LOOK AND FEEL: THE LAYOUT LAW FIXED AND GUARDED ★
 

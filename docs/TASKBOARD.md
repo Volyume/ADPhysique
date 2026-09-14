@@ -198,13 +198,36 @@ founder's section 4c spec and the D166/D167 rulings:
 - Also fixed: `EvidencePanel.js:81` vs `:102` disagreed on a border colour
   (frozen `borderSubtle`, live `border`, live wins), so the evidence pane drew
   the bright "wireframe" edge against its own intent.
-NEXT: Progress (`AnalyticsScreen.js`), fully recon'd. One ruled blocker to
-clear first: `AnalyticsScreen.stateMatrix.test.js:841-851` asserts the screen
-contains no `getLatestCoachOutput` and no `/coachDecision/i`, which D166 answer
-1 makes impossible. D167 ruling 1: that guard is a proof-of-absence standing in
-for a mount test (its own header says the two renders "would be byte-identical
-by construction"), which D166 makes false, so it is REPLACED by the mount
-coverage it substituted for, never merely deleted. Then the logger, the workout
+**PROGRESS IS LANDED AND MERGED** (`e5256195`):
+- The DECISION is the screen's loud element at `type.hero` through `BigNumber`,
+  above the Answer Block that is its evidence. Read through
+  `readLatestDecision` (buildDecision WHOLE, lockout branch first) and rendered
+  only when the week was genuinely checked in. It was already written by the
+  engine and buried on the Coach tab behind a "See why" pointer.
+- THE STATE-J BLOCKER WAS REPLACED, NOT DELETED (D167 ruling 1). The source
+  guard asserting "no coach-decision read on this screen" was a proof-of-absence
+  standing in for a mount test, on the stated grounds that the two renders
+  "would be byte-identical by construction". D166 makes that false, so state J
+  now has the mount coverage it was substituting for: a decided week, an
+  unchecked-in week (no decision: a computation is not a decision), and an open
+  ED lockout REPLACING the cheerful sentence rather than sitting beside it. One
+  absence assertion became three mounted ones.
+- THE WEIGHT TREND GRAPH ARRIVES. The founder asked for "a restrained graph"
+  and the tab had NO weight chart at all -- it sat one screen deeper in Body
+  metrics, so the screen answering "am I making progress" could not show the
+  shape of the answer. One smoothed line, no axes, grid or fill. Inherits
+  `weightTrend`, which already returns before computing its later states under
+  an open flag; the rate goes through `formatBodyWeightRate` (D167 ruling 7),
+  never the engine's kg-only `deltaLabel`.
+- Neither block is a Card (law 2), which also satisfies the R2/R3 ordering
+  guard's ban on a Card between the Answer Block and the evidence trail.
+- Guard `src/screens/__tests__/AnalyticsScreen.progressSpec.guard.test.js`
+  (16 cases). Writing it caught a bug IN THE GUARD: it stripped comments and
+  then used a comment as a span anchor, so two assertions ran against an empty
+  slice and would have passed whatever the code said.
+- The three pillar rows, the empty states, the recent-sessions list, the volume
+  strip and the nav grid are all untouched and still guard-covered.
+NEXT in stage 2: the logger, the workout summary, Nutrition.
 summary and Nutrition.
 founder at plan section 4c and now carry the three answers above.
 ALSO OUTSTANDING: `docs/rules/styling.md:55` says "System fonts" and is wrong
