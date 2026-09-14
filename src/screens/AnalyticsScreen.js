@@ -29,6 +29,10 @@ import { VOLUME_LANDMARKS, getVolumeStatus, calculateTonnage, buildLoadSemantics
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { localWeekStartMs } from '../lib/dayKey';
 import { computeTrainingPillarSummary, buildVisualPillarCopy } from '../lib/progress/pillars';
+import BigNumber from '../components/BigNumber';
+import VolyumeChart from '../components/VolyumeChart';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
+import { readLatestDecision, decisionAgeCaption } from '../lib/coachLatestDecision';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -126,6 +130,41 @@ export default function AnalyticsScreen({ navigation, route }) {
   // inside the hook); only fetches scan data for a Pro user once suppression
   // is confirmed lifted.
   const visualPillar = useVisualPillar(user?.id, tier);
+
+  // The smoothed series for the trend graph, and the weekly rate beside it.
+  // `formatBodyWeightRate` is the only path with no kg-to-stone-user bug; the
+  // engine's `deltaLabel` is kg-only because its units input is the immutable
+  // gym unit (D167 ruling 7). `showRate` is already false under an open ED
+  // flag, so the rate disappears there without a second condition here.
+  const trendLineData = useMemo(() => (weightTrend.ewmaData ?? [])
+    .map((p) => ({ value: p?.ewma }))
+    .filter((p) => Number.isFinite(p.value)), [weightTrend.ewmaData]);
+  const weightTrendRate = weightTrend.showRate && Number.isFinite(weightTrend.weeklyChange)
+    ? formatBodyWeightRate(weightTrend.weeklyChange, bodyWeightUnits)
+    : null;
+
+  // ── D165/D166 answer 1: the loud element on Progress is the DECISION. ──
+  //
+  // The founder chose it over a bodyweight numeral: "that last thing is the
+  // reason Volyume exists ... Volyume's proposition is: Your data tells you
+  // what to do next." It is also the only version of this screen where the
+  // loudest thing is something only Volyume produces; a bodyweight figure is
+  // a fact any scale gives you.
+  //
+  // `readLatestDecision` takes the sentence from `buildDecision` WHOLE, so the
+  // ED-pattern lockout stays its first branch (D166, binding). It also reports
+  // whether the week was really checked in, which is the app's existing test
+  // for a decision rather than a computation the engine happened to run.
+  const [decision, setDecision] = useState(null);
+  const [trendChartWidth, setTrendChartWidth] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    if (!user?.id) { setDecision(null); return undefined; }
+    readLatestDecision(user.id)
+      .then((d) => { if (alive) setDecision(d); })
+      .catch(() => { if (alive) setDecision(null); });
+    return () => { alive = false; };
+  }, [user?.id]);
 
   // Founder device order 2026-08-17: the lifetime-tonnage landmark Moment
   // (the last survivor of the COMP-018 landmark family) is retired - it sat
@@ -254,6 +293,36 @@ export default function AnalyticsScreen({ navigation, route }) {
         {/* ── Header (R1) ───────────────────────────────────── */}
         <ScreenHeader title="Progress" />
 
+        {/* ── The decision (D165/D166 answer 1). The one loud element on this
+            screen, above the evidence for it. Rows on the canvas, never a
+            Card: a decision is a reading, not an object you can pick up
+            (law 2, as the founder corrected it).
+
+            It renders only when the week was genuinely checked in. An output
+            the engine computed for an unchecked-in week is not a decision --
+            that is the PM-06/D96 divergence `isCompletedCoachDecision` was
+            written to close, and this screen defers to it rather than forming
+            a second opinion. ── */}
+        {!loading && decision?.sentence && decision.isCompleted && (
+          <AnimatedEntrance>
+            <TouchableOpacity
+              style={styles.decisionBlock}
+              onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput'); }}
+              accessibilityRole="button"
+              accessibilityLabel={`This week's decision. ${decision.sentence}. Opens the full decision.`}
+              testID="progress-decision"
+            >
+              <SectionLabel tone="muted">This week&apos;s decision</SectionLabel>
+              <BigNumber value={decision.sentence} />
+              {!!decisionAgeCaption(decision.weeksAgo) && (
+                <Text style={[styles.decisionAge, live.decisionAge]}>
+                  {decisionAgeCaption(decision.weeksAgo)}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </AnimatedEntrance>
+        )}
+
         {/* ── The Answer Block (R2, always): "am I actually making
             progress?" in one glance -- three compact pillar rows inside one
             container, never three hero cards (§26). No share CTA, no
@@ -342,6 +411,48 @@ export default function AnalyticsScreen({ navigation, route }) {
             title="No training trends yet"
             text="Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below."
           />
+        )}
+
+        {/* ── The weight trend (D165, founder spec section 4c: "then a
+            restrained graph"). Progress had no weight chart at all -- it sat
+            one screen deeper in Body metrics -- so the tab that answers "am I
+            making progress?" could not show the shape of the answer.
+
+            Restraint is the point: one smoothed line, no axes, no grid, no
+            fill, the raw series faint behind it. NOT a Card (the R2/R3
+            ordering rule bans one here, and a trend is a reading rather than
+            an object you can pick up, law 2).
+
+            ED-SAFETY: the whole block inherits `weightTrend`, which returns
+            BEFORE computing states 2-4 when the flag is open -- no rate, no
+            maintenance figure, no dot, and direction-only copy. The headline
+            weight and the sparkline survive that branch by the existing
+            contract, which this does not widen. The rate follows the user's
+            own display units through `formatBodyWeightRate`, never the
+            engine's kg-only `deltaLabel` (D167 ruling 7). ── */}
+        {!loading && weightTrend.render && weightTrend.hasSparkline && trendLineData.length >= 2 && (
+          <View style={styles.trendBlock}>
+            <View style={styles.trendHeadRow}>
+              <SectionLabel tone="muted">Bodyweight</SectionLabel>
+              {!!weightTrendRate && (
+                <Text style={[styles.trendRate, live.trendRate]}>{weightTrendRate}</Text>
+              )}
+            </View>
+            <View
+              style={styles.trendChartWrap}
+              onLayout={(e) => setTrendChartWidth(e.nativeEvent.layout.width)}
+            >
+              {trendChartWidth > 0 && (
+                <VolyumeChart
+                  data={trendLineData}
+                  width={trendChartWidth}
+                  height={72}
+                  color={t.colors.primary}
+                  curved
+                />
+              )}
+            </View>
+          </View>
         )}
 
         {/* ── Evidence trail (R3, cond: any sessions exist) ──────── */}
@@ -745,6 +856,12 @@ const styles = StyleSheet.create({
   rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
   // ── Answer Block (R2) ──
+  decisionBlock: { gap: spacing.xs },
+  trendBlock: { gap: spacing.xs },
+  trendHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  trendRate: { ...type.num('bodySm'), color: colors.textSecondary },
+  trendChartWrap: { width: '100%' },
+  decisionAge: { ...type.bodySm, color: colors.textSecondary },
   answerBlock: {},
   answerDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   pillarRow: {
@@ -842,6 +959,8 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
+    decisionAge: { ...t.type.bodySm, color: t.colors.textSecondary },
+    trendRate: { ...t.type.num('bodySm'), color: t.colors.textSecondary },
     answerDivider: { backgroundColor: t.colors.border },
     pillarLabel: { ...t.type.overline, color: t.colors.textMuted },
     pillarState: { ...t.type.bodyStrong, color: t.colors.textPrimary },

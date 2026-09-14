@@ -494,6 +494,7 @@ function scanSummary({
 // ─────────────────────────────────────────────────────────────────────────
 
 const database = require('../../lib/database');
+const { localWeekStartMs } = require('../../lib/dayKey');
 const progressScanStore = require('../../lib/progressScanStore');
 
 let dbOriginals = null;
@@ -837,16 +838,110 @@ describe('State matrix — I: recovery week active (isDeload true)', () => {
   });
 });
 
-// ─── State J — recent programme adjustment (pure/source-level; see header) ─
-describe('State matrix — J: recent programme adjustment (source guard — see file header rationale)', () => {
-  test('AnalyticsScreen reads no coach-decision/adjustment data for landing display', () => {
-    const fs = require('fs');
-    const path = require('path');
-    const src = fs.readFileSync(path.resolve(__dirname, '../AnalyticsScreen.js'), 'utf8');
-    expect(src).not.toMatch(/getLatestCoachOutput/);
-    expect(src).not.toMatch(/coachDecision/i);
-    expect(src).not.toMatch(/adjustments\./);
-    expect(src).not.toMatch(/awaitingDecision/);
+// ─── State J — recent programme adjustment (MOUNTED, two renders) ─────────
+//
+// This block was a source guard asserting the ABSENCE of any coach-decision
+// read on this screen. Its rationale, in this file's own header, was that
+// "mounting a screen with and without a coach decision fixture would produce
+// byte-identical renders by construction" -- so the absence proof stood in for
+// a mount test that could not have told the two apart.
+//
+// D166 (founder, 2026-09-14) makes that sentence false: Progress now opens
+// with the week's decision as its one loud element. State J is therefore a
+// REAL state with two genuinely different renders, and it gets the mount
+// coverage the source guard was substituting for. D167 ruling 1 records this
+// as a replacement rather than a deletion: dropping the assertions without
+// adding these two cases would have been weakening the suite.
+describe('State matrix — J: recent programme adjustment (mounted, both renders)', () => {
+  const DECIDED_WEEK = localWeekStartMs(Date.now());
+
+  test('a checked-in week renders the decision as the loud element, above the Answer Block', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: threeWorkouts,
+        getCompletedWorkoutSets: improvingTrainingSets,
+        getAllExercises: EXERCISES,
+        getLatestCoachOutputMeta: () => Promise.resolve({
+          weekStart: DECIDED_WEEK,
+          output: {
+            whyThisWeek: 'Weight is tracking the target rate. No change needed this week.',
+            heldDecisions: [],
+            adjustments: { calories: null },
+          },
+        }),
+        getLatestCheckin: () => Promise.resolve({ weekStart: DECIDED_WEEK, energyScore: 4 }),
+      },
+    });
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+
+    const block = tree.root.findAll((n) => n.props?.testID === 'progress-decision');
+    expect(block.length).toBeGreaterThan(0);
+    expect(block[0].props.accessibilityLabel).toBe(
+      "This week's decision. Weight is tracking the target rate. No change needed this week.. Opens the full decision.",
+    );
+  });
+
+  test('a week with no check-in renders no decision, because a computation is not one', async () => {
+    // PM-06/D96: an output the engine computed for a week the person never
+    // checked in is not a decision. Home and the Coach tab once disagreed
+    // about this and the one saying "yes" was the one that could be wrong.
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: threeWorkouts,
+        getCompletedWorkoutSets: improvingTrainingSets,
+        getAllExercises: EXERCISES,
+        getLatestCoachOutputMeta: () => Promise.resolve({
+          weekStart: DECIDED_WEEK,
+          output: {
+            whyThisWeek: 'Weight is tracking the target rate. No change needed this week.',
+            heldDecisions: [],
+            adjustments: { calories: null },
+          },
+        }),
+        getLatestCheckin: () => Promise.resolve(null),
+      },
+    });
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+    expect(tree.root.findAll((n) => n.props?.testID === 'progress-decision')).toEqual([]);
+  });
+
+  test('an open ED lockout replaces the decision sentence, never sits beside it', async () => {
+    // The binding condition from D166: the renderer takes `buildDecision`'s
+    // answer whole, and that function puts the lockout FIRST. A screen that
+    // read `whyThisWeek` directly would show the cheerful line instead.
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: threeWorkouts,
+        getCompletedWorkoutSets: improvingTrainingSets,
+        getAllExercises: EXERCISES,
+        getLatestCoachOutputMeta: () => Promise.resolve({
+          weekStart: DECIDED_WEEK,
+          output: {
+            whyThisWeek: 'Weight is tracking the target rate. No change needed this week.',
+            heldDecisions: [{
+              type: 'ed_pattern_lockout',
+              reason: 'Calorie cut held. Multiple safety signals are active. See the held-decision card for details.',
+            }],
+            adjustments: { calories: { change: -150, note: 'Trend is above target.' } },
+          },
+        }),
+        getLatestCheckin: () => Promise.resolve({ weekStart: DECIDED_WEEK, energyScore: 4 }),
+      },
+    });
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+
+    const block = tree.root.findAll((n) => n.props?.testID === 'progress-decision');
+    expect(block.length).toBeGreaterThan(0);
+    const label = block[0].props.accessibilityLabel;
+    expect(label).toContain('Calorie cut held');
+    expect(label).not.toContain('No change needed');
+    expect(label).not.toContain('150');
   });
 });
 
