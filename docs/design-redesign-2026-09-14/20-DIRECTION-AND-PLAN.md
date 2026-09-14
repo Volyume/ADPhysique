@@ -1,4 +1,4 @@
-# 20 — DESIGN DIRECTION AND PLAN (lead, 2026-09-14, v2)
+# 20 — DESIGN DIRECTION AND PLAN (2026-09-14, v3 — DIRECTION RULED)
 
 Authority: founder, in chat 2026-09-14, twice.
 
@@ -13,10 +13,23 @@ thumb-friendly layouts, bottom sheets, restrained glass effects, tactile depth
 and purposeful micro-interactions rather than simply throwing gradients and
 cards everywhere", plus the Dezzayn resource.
 
-**Status: PROPOSAL. Nothing is built.** One founder fork is open (which
-direction, section 4). Everything else is lead-ruled under D33 and recorded as
-**D164** in
+**Status: DIRECTION RULED BY THE FOUNDER (D165). Stage 1 is building.**
+The three directions in v2 are superseded by direction **D — "Ledger, dark"**
+(section 4), ruled by the founder in chat 2026-09-14 along with a screen-level
+specification for Today and Progress and three corrections to the lead's plan.
+The research rulings behind it are **D164**; both are in
 `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`.
+
+**ONE THING IS HELD, and it is held openly rather than quietly reduced:** the
+founder's Progress specification makes bodyweight the single largest element in
+the product and adds a headline body-fat figure. That is ED-adjacent, Section 2
+requires a stop rather than an interpretation, and it is with the founder as a
+question (section 10). Everything else builds meanwhile.
+
+**Version history in this file:** v1 proposed one direction ("Instrument") and a
+new typeface; v2 withdrew the typeface, corrected six research points and
+offered three directions; v3 records the founder's ruling and their additions.
+v1 and v2 are superseded, not deleted, so a later stage can see what changed.
 
 **v2 supersedes v1 of this file.** v1 proposed a single direction called
 "Instrument" and a new typeface. The typeface is withdrawn (section 2.6) and
@@ -165,44 +178,136 @@ spent as decoration rather than as meaning.
 4. **Earned by data.** A colour is applied because a number or a state justifies
    it, never because a row needs visual interest.
 
-## 4. THE ONE FOUNDER FORK: which direction
+## 4. THE RULED DIRECTION: D — "Ledger, dark" (founder, D165)
 
-Three, rendered as the same Today screen in the artifact. Identical content,
-identical structure, identical rules; what changes is the world it lives in.
-None of the three reads as a gym app.
+The founder ranked the three (B five stars, A four and a half, C three and a
+half) and then ruled a hybrid rather than any one of them:
 
-**A — Terminal** (after Linear, Bloomberg, developer tooling). Near-black stays
-(`#0D0D0D`). Amber stops being a reward colour and becomes a reading colour:
-it marks the live thing and nothing else; everything structural is greyscale.
-Cheapest, and furthest from the category despite keeping the brand.
-*Cost: small to medium. No new tokens, no contrast re-run.*
+> "I would NOT choose A exactly as shown. I'd choose a hybrid of A + B, with B's
+> visual language and A's information architecture."
 
-**B — Ledger** (after Stripe, Things 3, Apple Wallet). Light first: warm
-off-white (`#FAF8F4`), near-black ink, hierarchy from weight and space alone.
-The strongest break with a category that is dark-with-neon almost without
-exception, and our light theme already exists and is already contrast-tested.
-Against it: the founder's brief has been dark-first from the start, so this is a
-decision rather than a drift. *Cost: medium. Both palettes already built and
-asserted.*
+With the decisive qualification, which is why this is not simply "B":
 
-**C — Field notebook** (after Things 3, Notion, Arc). A cooler-grey, warmer
-ground (`#14151A`) instead of near-black, bone text instead of white, amber at
-full strength but spent only where it means something. Warmth without heat.
-*Cost: medium to large. New ground means the full contrast suite is recomputed.*
+> "I actually think Dark = primary Volyume identity, Light = alternative theme
+> is stronger. And I'd make the dark theme less 'Terminal' than A. Think: Linear
+> x Things 3 x Apple x high-end performance software rather than: Bloomberg x
+> developer terminal."
 
-**Lead recommendation: A now, with B built out properly as the light theme.** A
-is cheapest, furthest from the category while keeping the brand, and does not
-spend the budget on a repaint. If the founder wants the bolder answer, B is the
-one nobody in this category has taken and we already own half of it.
+**So: B's visual language and restraint, A's information architecture, C's
+warmth in the ground, shipped dark-first with light as the alternative theme.**
+A, B and C as rendered are superseded. D is what gets built.
 
-This one is NOT lead-ruled, because it is an identity choice about the founder's
-own product rather than a quality fork, and because the founder explicitly asked
-to be shown options ("give me some image suggestions ... or if there is any
-better look"). If no answer comes before stage 1 must start, stage 1 proceeds
-regardless: every object in it is palette-agnostic and lands identically under
-all three.
+**The palette, as the founder specified it.**
+- Ground: "very dark charcoal rather than absolute black. Something around:
+  `#111110`". This moves off `#0D0D0D`, so the contrast suite is recomputed —
+  the cost v2 attributed to direction C is now in scope and is accepted.
+- Primary text: "warm off-white rather than pure white".
+- Secondary text: "muted warm grey".
+- Accent: amber, "only when something actually means something".
 
-## 5. The rules underneath, identical in all three directions
+**Why the warmth matters, in the founder's terms.** Volyume should feel
+"premium + intelligent + physical + modern", not "developer tools + financial
+terminal". The austerity of A was read as "Bloomberg terminal for people who
+lift weights" — distinctive, but the wrong brand. Warmth is the correction, and
+it is a ground-and-ink correction rather than a decoration one: nothing in the
+no-gradient, no-glow, no-prop list is relaxed to get it.
+
+**The light theme is not dropped.** B stays as the alternative theme and is
+built out properly rather than left as the half-finished palette it is today
+(`theme.js:200-201` still records that it wants an on-device sign-off).
+
+## 4a. The founder's own statement of the design law
+
+Recorded verbatim, because it supersedes any paraphrase of it and is the thing
+a later stage is checked against:
+
+> "Volyume should not look like a fitness app. It should look like a premium
+> personal performance system. No gamification. No decorative fitness
+> iconography. No gradients. No glow. No gratuitous cards. No neon. No
+> motivational bullshit. Use typography, spacing, hierarchy and data to create
+> visual interest. Amber means now / action / meaningful change. Large
+> typography establishes what matters. Rows establish information. Cards are
+> reserved for genuine objects. Every screen should have one obvious thing that
+> matters most. The interface should tell the user what happened, why it
+> happened and what to do next."
+
+## 4b. Three changes the founder made to the lead's plan
+
+**1. No cryptic minimalism. A number states what it is.** On the bare "9,240"
+under a workout row: "I don't immediately know what 9,240 means ... You don't
+want the minimalist design to become cryptic. That's an important distinction."
+This is now a law (5.7). Restraint is never bought with ambiguity, and removing
+a unit is not restraint.
+
+**2. The card doctrine, corrected.** The lead's page said "all three drop the
+cards", which was wrong as written. The founder:
+
+> "Don't interpret that as 'Cards are bad.' The better principle is: Don't put
+> everything in a card. A card should mean: This thing is an object. A workout
+> might be an object. A set isn't. A macro number probably isn't. A trend isn't
+> necessarily. A button definitely isn't."
+
+Law 2 is restated to this. The test is **objecthood**, not containment, and the
+stage 3 sweep removes cards that fail the test rather than cards as such.
+
+**3. Today is the centre of the product; Progress ends in a decision.** Both
+screens are specified at section 4c, in the founder's own order. The rationale
+is a positioning statement, not a layout preference:
+
+> "Volyume's proposition is: Your data tells you what to do next. So the UI
+> should constantly reinforce that. Not 'Here are 17 metrics.' But: Here's what
+> happened. Here's why. Here's what you should do."
+
+## 4c. The two specified screens
+
+**TODAY** (founder's order and wording):
+
+```
+TODAY
+Tuesday · 15 September
+
+Upper A
+6 exercises · 18 sets · ~52 min
+[ START ]
+
+YOUR WEEK
+M  T  W  T  F  S  S
+[ribbon]
+4 sessions this week
+
+Nutrition
+2,840 / 3,200 kcal
+Protein 218 / 230 g
+
+Progress
++0.4 kg this week
+
+COACH
+Weight and performance are both moving as planned. No change needed.
+```
+
+**PROGRESS** (founder's order and wording):
+
+```
+98.5 kg
++0.4 kg this week
+[restrained graph]
+
+PHYSIQUE      ~11%
+PERFORMANCE   ↑
+TREND         On target
+
+DECISION
+Keep calories unchanged.
+```
+
+Two things about the Progress screen are NOT settled by this section: the
+ED-safety question at section 10, and whether every one of those four facts can
+be sourced from what the engine already computes without inventing a number.
+Both are being established before that screen is built. Nothing here licenses a
+new computation: the coaching engine is deterministic and stays pure.
+
+## 5. The laws (founder-confirmed, and now seven)
 
 **Law 1 — One loud thing per screen.** Exactly one element at display scale
 (40-72 px), always the thing the screen is for: the session on Today, the
@@ -211,10 +316,22 @@ drops so that one thing carries. (Whoop sets its recovery score at ~72 pt for
 arm's-length readability; we top out at 20 px. The CHI 2026 finding at 2.2 is
 the evidence that this saves time rather than merely looking better.)
 
-**Law 2 — Rows on the canvas.** Content sits on the background, separated by
-space and a `borderSubtle` hairline. A `Card` comes to mean one thing: a
-discrete object you can pick up (a plan, a person, a photo). This is Things 3
+The founder restated this as an information hierarchy, and that restatement is
+now the law's definition rather than a gloss on it: **"What am I doing? / What
+do I need to know? / What do I do?"** On Today that is the session name, then
+its meta line, then Start. Every screen answers those three in that order, and
+the first one is the loud thing.
+
+**Law 2 — Rows on the canvas; a card means an object.** Content sits on the
+background, separated by space and a `borderSubtle` hairline. This is Things 3
 and Linear, and it is the fix already proven on Community under CR-17/D163.
+
+The founder corrected the lead's phrasing here and the correction is the law:
+NOT "cards are bad", but **"don't put everything in a card. A card should mean:
+this thing is an object."** The test is objecthood. A workout might be an
+object; a set is not, a macro number probably is not, a trend is not
+necessarily, and a button definitely is not. Stage 3 removes the cards that
+fail that test, not cards as such.
 
 **Law 3 — Geometry carries meaning.** A control is 10 px and never a pill; a
 card stays 16 px; one full-bleed moment is allowed per screen and only one.
@@ -230,6 +347,13 @@ feedback. No celebratory animation and no reward haptics: that is the ED-safety
 rule, and it is also what keeps the app from reading as a game.
 
 **Law 6 — Amber means one thing.** The four disciplines at section 3.
+
+**Law 7 — A number states what it is.** Restraint is never bought with
+ambiguity. Every figure carries its unit and, where the unit alone is not
+enough, its name: "9,240 kg" rather than "9,240". Founder, on exactly that
+figure: "You don't want the minimalist design to become cryptic. That's an
+important distinction." Units follow the user's own preference (kg/lb) as they
+do everywhere else in the app.
 
 **The two signature devices** (the app has none today; built once, reused
 everywhere, which is what makes an app read as authored):
@@ -282,16 +406,23 @@ next starts.
 **Stage 1 — the spine.** Author the three objects everything else is made of
 (the number display, the set row, the primary button), plus the ribbon and the
 ledger. Add the display step to the type scale (existing faces; no new font).
-Split `radius.lg` into a card radius and a control radius. Write laws 1-6 into
+Split `radius.lg` into a card radius and a control radius. Write laws 1-7 into
 `docs/rules/styling.md` with a source guard behind each, exactly as
 `community.layout.guard.test.js` now does. Correct the "System fonts" error in
 the styling rules. Nothing user-visible changes except those objects, everywhere
-they already appear. **Palette-agnostic: lands identically under A, B or C.**
+they already appear.
+
+The ground moves to the founder's charcoal in this stage too, because it is a
+token change and the contrast suite has to be recomputed once rather than twice.
+Stage 1 touches no ED-adjacent surface, so it does not wait on section 10.1.
 
 **Stage 2 — the five screens that matter.** Today, the logger, Progress, the
-workout summary, Nutrition. Recompose each to the laws. The logger matters most
-and is hurt most by the current scale: 6,941 lines, largest type 20 px, on the
-screen you read with a bar in your hands. This is the stage the founder judges.
+workout summary, Nutrition. Today and Progress are specified by the founder at
+section 4c and are built to that specification, in that order; the other three
+are recomposed to the laws. The logger is hurt most by the current scale: 6,941
+lines, largest type 20 px, on the screen you read with a bar in your hands.
+Progress is gated on the section 10.1 answer; the rest of stage 2 is not. This
+is the stage the founder judges.
 
 **Stage 3 — the long tail and the props.** The other hundred screens and the
 empty states: retire the 99 boxed empties to the section rule proven on
@@ -329,15 +460,37 @@ should be extended rather than replaced.
 
 ## 10. Open items for the founder
 
-1. **Which direction** (section 4). Lead recommendation A, with B as the light
-   theme. Stage 1 does not wait on it.
-2. **The rest timer.** `loggerVisualArchitecture.guard.test.js:6,58` pins the
-   rest timer small and bans `fontSize: 26`, recorded from a founder device
-   verdict. Law 1 wants the working weight loud and the timer quiet, which
-   agrees with that verdict, but it is confirmed rather than assumed before
-   stage 2 touches that screen.
-3. **Dezzayn, optional.** $12/month for a standing reference library. Useful for
-   a redesign this size; nothing in the plan depends on it.
+**1. ED-SAFETY: bodyweight as the loudest thing in the product. HELD, not
+reduced.** The specified Progress screen makes `98.5 kg` the single largest
+element on the screen, and adds `PHYSIQUE ~11%` as a headline fact. Today also
+gains `+0.4 kg this week`.
+
+This is not a restyle of something that already exists at that prominence; it
+is a material change in how loudly the product states a person's bodyweight and
+body composition. CLAUDE.md Section 2 says to stop and ask on anything touching
+the ED-safety system rather than interpret, and Section 4 forbids quietly
+shipping a reduced version instead. So the lead is doing neither: the question
+goes to the founder with the evidence attached, and everything else on both
+screens is built meanwhile.
+
+The question is not whether to build the founder's design. It is the narrow one
+of what the screen does for a person the app has already flagged: today the app
+withholds weight-adjacent content under calm mode and under an open ED flag, and
+a 40-72 px bodyweight figure is the loudest possible version of exactly that
+content. The options are put to the founder in chat with what each one costs.
+Nothing about floors, gates, detectors, calm mode or the Beat UK signposting
+changes under any of them.
+
+**2. The rest timer.** `loggerVisualArchitecture.guard.test.js:6,58` pins the
+rest timer small and bans `fontSize: 26`, recorded from a founder device
+verdict. Law 1 wants the working weight loud and the timer quiet, which agrees
+with that verdict, but it is confirmed rather than assumed before stage 2
+touches that screen.
+
+**3. Dezzayn, optional.** $12/month for a standing reference library. Useful for
+a redesign this size; nothing in the plan depends on it.
+
+**Closed by D165:** which direction (answered: D, section 4).
 
 ## 11. Device checklist (when stage 1 lands, not before)
 
@@ -348,6 +501,13 @@ logger is legible from two metres; (3) a long session name at the largest text
 size does not truncate mid-word; (4) Reduce Motion still flattens every new
 transition; (5) the widget and the share card still match the app's palette;
 (6) the primary committing control measures at least 58 dp and sits clear of the
-top corners. ED-safety: nothing in this plan reads or writes weight, food or
-notification behaviour, and the ribbon draws a planned rest day as a rest day
-rather than a gap.
+top corners; (7) every figure on every changed screen carries its unit, in the
+user's own unit preference (law 7); (8) the warm ground reads as charcoal rather
+than black on an OLED panel in gym lighting, and the warm off-white does not
+read as cream.
+
+ED-safety: stage 1 reads and writes no weight, food or notification behaviour,
+and the ribbon draws a planned rest day as a rest day rather than a gap. When
+Progress is built (stage 2), its checklist additionally walks calm mode and an
+open ED flag on that screen specifically, per whatever the founder answers at
+section 10.1.

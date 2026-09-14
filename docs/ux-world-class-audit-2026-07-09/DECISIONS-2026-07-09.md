@@ -7001,3 +7001,98 @@ loss-aversion device) are carried into every direction, and the week ribbon
 exists partly because it is the honest answer to a streak.
 
 **Not built.** This decision records the plan and the rulings only.
+
+## D165 (2026-09-14) - FOUNDER RULES the redesign direction: Ledger, dark. B's visual language, A's information architecture, C's warmth
+
+**Authority.** Founder in chat 2026-09-14, answering the one fork left open by
+D164. This is a FOUNDER ruling, not a lead ruling, and it also adds
+specification the lead did not write. Quoted verbatim throughout because the
+wording is the brief.
+
+**The ruling.** "I would NOT choose A exactly as shown. I'd choose a hybrid of
+A + B, with B's visual language and A's information architecture." Ranking
+given: B five stars, A four and a half, C three and a half. But with a decisive
+qualification: "I actually think Dark = primary Volyume identity, Light =
+alternative theme is stronger. And I'd make the dark theme less 'Terminal' than
+A. Think: Linear x Things 3 x Apple x high-end performance software rather
+than: Bloomberg x developer terminal."
+
+So the built direction is **D — "Ledger, dark"**: B's visual language and
+restraint, A's information architecture, C's warmth in the ground, shipped
+DARK-FIRST with light as the alternative theme. A, B and C as rendered are
+superseded; D is what gets built.
+
+**The palette the founder specified.** Ground "very dark charcoal rather than
+absolute black. Something around: `#111110`". Primary text "warm off-white
+rather than pure white". Secondary text "muted warm grey". Accent: amber, "only
+when something actually means something". Note this moves the ground OFF
+`#0D0D0D`, so the contrast suite is recomputed (the cost D164 attributed to
+direction C).
+
+**What the founder explicitly endorsed and wants kept.**
+
+1. **The absence of category props.** "There is no: dumbbell graphic, muscle
+   illustration, flame, trophy, giant progress ring, neon gradient, motivational
+   quote, 'LET'S GO', cartoonish achievement, giant coloured exercise cards ...
+   It makes the user feel like they're using a serious instrument rather than a
+   fitness toy." Confirms the stage 3 prop removal as a requirement, not a tidy.
+2. **The huge headline, "the bit I'd steal wholesale".** The founder restated
+   law 1 as an information hierarchy: "What am I doing? / What do I need to
+   know? / What do I do?" That ordering is now the law's definition.
+3. **The amber rule**, quoted back: "Amber means one thing: Now ... That makes
+   the colour dramatically more powerful." Unchanged from D164, now
+   founder-confirmed.
+4. **The week ribbon**, "probably my favourite new component ... it communicates
+   behaviour, rather than giving you another dashboard chart."
+
+**Three changes the founder made to the lead's plan.**
+
+1. **No cryptic minimalism. Numbers carry their unit.** On the bare "9,240"
+   under a workout row: "I don't immediately know what 9,240 means ... You don't
+   want the minimalist design to become cryptic. That's an important
+   distinction." RULE: a figure in the product states what it is. Restraint is
+   never bought with ambiguity.
+
+2. **The card doctrine is refined, and the lead's phrasing was wrong.** The
+   page said "all three drop the cards". The founder: "don't interpret that as
+   'Cards are bad.' The better principle is: Don't put everything in a card. A
+   card should mean: This thing is an object. A workout might be an object. A
+   set isn't. A macro number probably isn't. A trend isn't necessarily. A button
+   definitely isn't." Law 2 is restated to this, and the test for a card is now
+   objecthood rather than containment.
+
+3. **Today becomes the centre of the entire product, and Progress ends in a
+   decision.** The founder specified both screens in order. TODAY: date, the
+   session name as the loud thing, its meta line, START, then YOUR WEEK with the
+   ribbon and a session count, then Nutrition, then Progress, then COACH as a
+   plain sentence. PROGRESS: bodyweight as the headline with its weekly delta, a
+   restrained graph, then PHYSIQUE, PERFORMANCE, TREND, and finally DECISION.
+   Rationale in the founder's words: "That last thing is the reason Volyume
+   exists ... Volyume's proposition is: Your data tells you what to do next. So
+   the UI should constantly reinforce that. Not 'Here are 17 metrics.' But:
+   Here's what happened. Here's why. Here's what you should do."
+
+**The founder's own summary of the design law**, recorded verbatim because it
+supersedes any paraphrase: "Volyume should not look like a fitness app. It
+should look like a premium personal performance system. No gamification. No
+decorative fitness iconography. No gradients. No glow. No gratuitous cards. No
+neon. No motivational bullshit. Use typography, spacing, hierarchy and data to
+create visual interest. Amber means now / action / meaningful change. Large
+typography establishes what matters. Rows establish information. Cards are
+reserved for genuine objects. Every screen should have one obvious thing that
+matters most. The interface should tell the user what happened, why it happened
+and what to do next."
+
+**ED-SAFETY: NOT RULED, HELD FOR AN EXPLICIT FOUNDER ANSWER.** The Progress
+specification sets bodyweight as the single largest element on the screen and
+adds a headline body-fat figure. CLAUDE.md Section 2 requires a stop rather
+than an interpretation on anything ED-adjacent, and making a bodyweight number
+the loudest thing in the product is a material change in prominence, not a
+restyle. The lead is NOT deciding this and is NOT quietly shipping a reduced
+version of it. The question goes to the founder with the evidence attached, and
+the rest of the screen is built either way. Nothing in this decision changes a
+floor, a gate, a detector, calm mode or the Beat UK signposting.
+
+**Not built at the time of writing.** This decision records the ruling; stage 1
+(the spine) starts from it and is palette-agnostic, so it proceeds while the
+ED-safety question is open.

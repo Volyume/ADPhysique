@@ -7,12 +7,18 @@ for research, a plan and images. Then, correcting it: "And importantly, I
 wouldn't make it look like a fitness app", with six 2026 trend claims and the
 Dezzayn resource.
 
-STATUS: PROPOSED, NOT BUILT. ONE founder fork is open (which of three
-directions, `20-DIRECTION-AND-PLAN.md` section 4); everything else is
-lead-ruled under D33, recorded in section 2 of that file and in the register as
-**D164**. Stage 1 is
-palette-agnostic and does not wait on the answer. Every CLAUDE.md Section 2
-inviolable binds every stage.
+STATUS: **DIRECTION RULED (D165), STAGE 1 BUILDING.** The founder chose a
+hybrid of the three offered directions -- **D, "Ledger, dark"**: B's visual
+language, A's information architecture, C's warmth, dark-first with light as the
+alternative theme -- and added their own specification for the Today and
+Progress screens plus three corrections to the plan. The six research rulings
+behind it are **D164** (lead, under D33); the founder's ruling is **D165**.
+
+ONE thing is held openly for a founder answer: the specified Progress screen
+makes bodyweight the single largest element in the product, which is ED-adjacent
+and needs an explicit decision rather than an interpretation
+(`20-DIRECTION-AND-PLAN.md` section 10.1). Everything else builds meanwhile.
+Every CLAUDE.md Section 2 inviolable binds every stage.
 
 Map:
 - `10-research-references.md` — the eight named references broken into 42
@@ -33,12 +39,16 @@ Map:
   commentary, each claim marked SOURCE / SHIPPED / EVIDENCE / JUDGEMENT. About
   60% held. Carries a lead correction at the top: the brief wrongly listed
   `expo-blur` as installed (read-only research lane, Opus, web).
-- `20-DIRECTION-AND-PLAN.md` — **v2, the live document.** The diagnosis, the
+- `20-DIRECTION-AND-PLAN.md` — **v3, the live document.** The diagnosis, the
   six research corrections including two of the lead's own, the honest answer
-  to "don't make it look like a fitness app", the three directions, the six
-  laws and two signature devices shared by all of them, the revised reference
-  set, four stages, what must survive, the cost facts and the device checklist.
+  to "don't make it look like a fitness app", the RULED direction D with the
+  founder's palette and their verbatim statement of the design law, their three
+  corrections and their specification of the Today and Progress screens, the
+  seven laws and two signature devices, the revised reference set, four stages,
+  what must survive, the cost facts, the held ED-safety question and the device
+  checklist. v1 and v2 are superseded in place, not deleted, so a later stage
+  can see what changed and why.
 
-Delivered to the founder in chat as a page showing the corrections, the three
-directions rendered as the same screen, and the plan:
+The page that produced the ruling, showing the corrections and the three
+directions rendered as the same screen:
 https://claude.ai/code/artifact/b97ca3da-d1ad-47ca-9936-38fc00963036

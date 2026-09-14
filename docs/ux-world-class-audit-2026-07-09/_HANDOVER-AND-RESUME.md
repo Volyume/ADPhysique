@@ -1,46 +1,50 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-09-14 (later) — APP-WIDE VISUAL REDESIGN: RESEARCHED, CORRECTED, PLANNED (v2); ONE FORK OPEN ★
+## ★ 2026-09-14 (later) — APP-WIDE VISUAL REDESIGN: DIRECTION RULED (D165), STAGE 1 BUILDING ★
 
-Founder ordered a complete look-and-feel redesign plan ("looks far too much
-like it's built by ai") with eight named references, then corrected it: "I
-wouldn't make it look like a fitness app", with six 2026 trend claims and the
-Dezzayn screen library. FOUR read-only Opus lanes landed in
-`docs/design-redesign-2026-09-14/` (references; current-state audit; what
-actually shipped in 2025-26; the six trend claims tested one by one). The
-lead's synthesis is `20-DIRECTION-AND-PLAN.md`, now at **v2, which supersedes
-v1 in the same file**.
+RESUME HERE for the redesign. Live plan:
+`docs/design-redesign-2026-09-14/20-DIRECTION-AND-PLAN.md` **v3**. Research
+files 10-13 in the same folder. Decisions **D164** (six research rulings, lead
+under D33) and **D165** (the founder's direction ruling and their own screen
+specification). Board section "APP-WIDE VISUAL REDESIGN (2026-09-14)".
 
-Diagnosis (unchanged, measured): the tokens and the contrast system are good,
-the composition is generic (73.9% of text at 11-13 px, five sites above 24 px
-in 106 screens, one radius doing five jobs, 204 cards plus 85 hand-rolled, 99
-identical empty states, no signature device).
+How it got here: the founder ordered the redesign ("looks far too much like
+it's built by ai"), then corrected it ("I wouldn't make it look like a fitness
+app"). Four Opus research lanes ran. v2 of the plan withdrew the Archivo
+typeface the lead had proposed (a "scoreboard" is a sports cue, the opposite of
+the correction), corrected five other things including a paywalled Dezzayn and a
+mis-framed minimalism claim, and offered three directions.
 
-Six corrections, two of them the lead's own, all in plan section 2: Dezzayn's
-screens are paywalled so nothing came from it; "2026 is minimalism" is
-mis-framed (CHI 2026 found the MORE expressive builds 33% faster to first
-fixation, and what they varied was hierarchy); the thumb-zone heat map is not
-true (middle of the screen is preferred and most accurate; 58 dp one-handed
-target); bottom sheets ruled for one short choice only, set editing stays
-INLINE because the sheet library has open Android keyboard-plus-list defects;
-glass refused (both platform owners shipped a kill switch within twelve months;
-`expo-blur` is not installed and `theme.js:26` already declines it); and **the
-lead withdrew the Archivo typeface proposed in v1** because "scoreboard" is a
-sports cue, the opposite of the founder's correction. NO NEW FONT.
+THE RULING (D165): **direction D, "Ledger, dark"** — B's visual language and
+restraint, A's information architecture, C's warmth in the ground, DARK-FIRST
+with light as the alternative theme. The founder's decisive line: "Dark =
+primary Volyume identity, Light = alternative theme is stronger. And I'd make
+the dark theme less 'Terminal' than A. Think: Linear x Things 3 x Apple x
+high-end performance software rather than: Bloomberg x developer terminal."
+Ground moves to a warm charcoal around `#111110`, so the contrast suite is
+recomputed. Their own statement of the design law is recorded verbatim at plan
+section 4a and is what a later stage is checked against.
 
-Direction is now THREE, rendered as the same screen in the founder page: A
-Terminal (near-black kept, amber becomes a reading colour), B Ledger (light
-first, the strongest break with the category), C Field notebook (warmer ground,
-full contrast re-run). Lead recommendation A, with B as the light theme. Six
-shared laws and the two signature devices (week ribbon, ledger) are identical
-under all three.
+The founder also changed three things and specified two screens: a number always
+states its unit (no cryptic minimalism); a card means an OBJECT, so the lead's
+"drop the cards" was wrong and the test is objecthood; and Today becomes the
+centre of the product while Progress ends in a DECISION line ("that last thing
+is the reason Volyume exists"). Both screens are specified in their own words at
+plan section 4c.
 
-NOTHING BUILT. ONE founder fork is open (which direction). Stage 1 is
-palette-agnostic and does not wait on it. Board section "APP-WIDE VISUAL
-REDESIGN (2026-09-14)" carries the full detail. Two outstanding facts found on
-the way: the styling rules wrongly claim system fonts, and the live light
-palette still has no founder on-device sign-off.
+HELD OPENLY, needs a founder answer: the specified Progress screen makes
+bodyweight the single largest element in the product and adds a headline
+body-fat figure. That is ED-adjacent and Section 2 requires a stop rather than
+an interpretation; the lead is not ruling it and not shipping a quiet reduction.
+Plan section 10.1. Everything else builds meanwhile.
+
+STAGE 1 (the spine) is the current work and waits on nothing: three authored
+objects, the ribbon, the ledger, the radius split, the display type step on
+existing faces, the charcoal ground, and laws 1-7 into `docs/rules/styling.md`
+with a guard behind each. Two outstanding facts found on the way: the styling
+rules wrongly claim system fonts, and the live light palette still has no
+founder on-device sign-off.
 ===============================================================================
 ## ★ 2026-09-14 — COMMUNITY LOOK AND FEEL: THE LAYOUT LAW FIXED AND GUARDED ★
 
