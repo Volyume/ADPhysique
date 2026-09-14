@@ -7,11 +7,12 @@
  * else the first members: the caller's choice, this row just draws
  * whatever it is given), title `bodyStrong`, `line` in `bodySm`
  * `textSecondary` ("4 trained today . 23 members" or "23 members"),
- * chevron. Hairline below, inset past the stack: `spacing.lg` (the row's
- * own left inset) plus the stack's actual rendered width
- * (`AvatarStack.stackWidth`, so the line lands correctly whether `people`
- * holds zero, one or the full three avatars) plus `spacing.md` (the gap
- * before the text column).
+ * chevron, then the house divider: a `borderSubtle` hairline spanning the
+ * row (its inset used to vary with the number of sample avatars, so two
+ * neighbouring cohort rows drew their lines at different left edges). The
+ * row carries NO gutter of its own: its page already pads by `spacing.lg`,
+ * and a row that padded itself again put this row's avatars at 32 while
+ * the eyebrow above it sat at 16 (founder defect 2026-09-14).
  *
  * Rules obeyed (section 1 preamble; `docs/rules/styling.md`): function
  * component, `useTheme`, tokens only, `StyleSheet.create` at the bottom,
@@ -34,7 +35,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from '../PressableCard';
-import AvatarStack, { stackWidth } from './AvatarStack';
+import AvatarStack from './AvatarStack';
 import {
   spacing, type, colors, iconSize,
 } from '../../styles/theme';
@@ -47,8 +48,6 @@ export default function CohortRow({
   title, line, people, onPress,
 }) {
   const t = useTheme();
-  const inset = spacing.lg + stackWidth(Array.isArray(people) ? people.length : 0, STACK_SIZE, STACK_MAX) + spacing.md;
-
   return (
     <PressableCard
       onPress={onPress}
@@ -70,17 +69,17 @@ export default function CohortRow({
         </View>
         <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
       </View>
-      <View style={[styles.divider, { marginLeft: inset, backgroundColor: t.colors.border }]} />
+      <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
     </PressableCard>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row', alignItems: 'center', minHeight: 64, paddingHorizontal: spacing.lg, gap: spacing.md,
+    flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: spacing.md,
   },
   body: { flex: 1, gap: spacing.xxs },
   title: { ...type.bodyStrong, color: colors.textPrimary },
   line: { ...type.bodySm, color: colors.textSecondary },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });

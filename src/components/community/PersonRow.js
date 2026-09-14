@@ -70,6 +70,9 @@ import { daysLabel } from '../../lib/community';
 
 const AVATAR = 32;
 const RING = 10;
+// The rank column: wide enough for two digits at `label`, right-aligned so
+// 7 and 12 share one edge.
+const RANK_COL = 18;
 const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 export default function PersonRow({
@@ -79,6 +82,14 @@ export default function PersonRow({
   if (!person) return null;
   const name = person.display_name || person.handle || 'Athlete';
   const isOwn = !!person.isYou;
+  // Founder defect 2026-09-14 (stepped left edges): the row carries NO
+  // gutter of its own. Its page already pads by `spacing.lg`, so a row
+  // that padded itself again put avatars at 32 while the eyebrows and
+  // one-line copy beside them sat at 16. The rank column exists only in
+  // a ranked list (a board), where every row carries a rank together, so
+  // it is present exactly when this row has one, and the divider starts
+  // at the text column either way.
+  const ranked = rank != null;
   const hasDays = Array.isArray(days) && days.length > 0;
   const caption = !hasDays && person.caption ? person.caption : null;
 
@@ -95,17 +106,17 @@ export default function PersonRow({
       disabled={!onPress}
       accessibilityRole="button"
       accessibilityLabel={a11yParts.join('. ')}
-      style={isOwn ? { backgroundColor: withAlpha(t.colors.textPrimary, alpha.ghost) } : null}
+      style={isOwn ? [styles.own, { backgroundColor: withAlpha(t.colors.textPrimary, alpha.ghost) }] : null}
     >
       <View style={styles.row}>
         <View style={styles.leading}>
-          <View style={styles.rankSlot}>
-            {rank != null ? (
+          {ranked ? (
+            <View style={styles.rankSlot}>
               <Text style={[styles.rank, { color: t.colors.textMuted }]} numberOfLines={1}>
                 {rank}
               </Text>
-            ) : null}
-          </View>
+            </View>
+          ) : null}
           <View style={styles.avatarWrap}>
             <ProfileAvatarMark presetKey={person.avatar_preset} displayName={name} size={AVATAR} />
             {trainedToday ? (
@@ -135,20 +146,28 @@ export default function PersonRow({
         ) : null}
         {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       </View>
-      <View style={[styles.divider, { backgroundColor: t.colors.border }]} />
+      {/* The reader's own row is a standalone highlighted row, not a
+          member of the list below it, so it carries no divider. */}
+      {isOwn ? null : (
+        <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
+      )}
     </PressableCard>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row', alignItems: 'center', minHeight: 64, paddingRight: spacing.lg, gap: spacing.md,
+    flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: spacing.md,
   },
-  // Rank gutter + avatar, glued together with no gap between them so the
-  // divider's `spacing.lg + 32 + spacing.md` inset lands exactly at the
-  // text column's left edge whether or not a rank is shown.
-  leading: { flexDirection: 'row', alignItems: 'center', width: spacing.lg + AVATAR },
-  rankSlot: { width: spacing.lg, alignItems: 'center' },
+  // Rank column (a board only) + avatar, so the divider's inset lands
+  // exactly at the text column's left edge in either shape.
+  leading: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  rankSlot: { width: RANK_COL, alignItems: 'flex-end' },
+  // The reader's own row is a tinted band, not a floating grey box: the
+  // tint bleeds to both screen edges through a negative margin, and the
+  // page's gutter is paid back as padding, so the avatar stays on exactly
+  // the same left edge as every other avatar on the screen.
+  own: { marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg },
   rank: { ...type.label, color: colors.textMuted },
   avatarWrap: { width: AVATAR, height: AVATAR, position: 'relative' },
   ringDot: {
@@ -160,5 +179,8 @@ const styles = StyleSheet.create({
   caption: { ...type.bodySm, color: colors.textSecondary },
   metric: { color: colors.textPrimary },
   trailing: { marginLeft: spacing.xs },
-  divider: { height: StyleSheet.hairlineWidth, marginLeft: spacing.lg + AVATAR + spacing.md, backgroundColor: colors.border },
+  // The house divider (src/components/SettingsPrimitives.js:153-161): a
+  // `borderSubtle` hairline spanning the row, never a bright `border` line
+  // inset past the avatar, which is the wireframe look.
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });

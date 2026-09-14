@@ -214,14 +214,16 @@ export default function ActivityItemRow({
           <Text style={[styles.comments, { color: t.colors.textMuted }]}>{comments}</Text>
         </View>
       </View>
-      <View style={[styles.divider, { backgroundColor: t.colors.border }]} />
+      <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
     </PressableCard>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: spacing.md,
+    // No gutter of its own: the page pads by `spacing.lg` already
+    // (founder defect 2026-09-14, stepped left edges).
+    flexDirection: 'row', alignItems: 'flex-start', minHeight: 64, paddingVertical: spacing.md, gap: spacing.md,
   },
   avatarWrap: { width: AVATAR, height: AVATAR, position: 'relative' },
   ringDot: {
@@ -235,5 +237,5 @@ const styles = StyleSheet.create({
   note: { ...type.bodySm, color: colors.textPrimary },
   trailing: { alignItems: 'center', gap: spacing.xxs },
   comments: { ...type.caption, color: colors.textMuted },
-  divider: { height: StyleSheet.hairlineWidth, marginLeft: spacing.lg + AVATAR + spacing.md, backgroundColor: colors.border },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });
