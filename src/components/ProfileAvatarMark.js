@@ -42,8 +42,17 @@ export default function ProfileAvatarMark({
     },
     style,
   ];
-  const iconSize = Math.max(20, Math.round(size * 0.38));
-  const badgeSize = Math.max(20, Math.round(size * 0.34));
+  // Founder defect 2026-09-14 ("it looks rubbish"): both of these floored
+  // at 20 dp, so a 24 dp avatar in a cohort stack drew a 20 dp glyph AND a
+  // 20 dp badge inside a 24 dp disc with a 2 dp ring -- an unreadable blob
+  // rather than a person. The floor now scales with the mark, so the look
+  // at 40 dp and above is byte-identical to before and only the small
+  // sizes are fixed. The preset badge is a PICKER affordance (it shows the
+  // category, or the selection tick); on a list row at 32 dp or less it is
+  // decoration covering the glyph, so it renders only where it can be read.
+  const iconSize = Math.max(Math.round(size * 0.38), Math.min(20, Math.round(size * 0.5)));
+  const badgeSize = Math.max(Math.round(size * 0.34), Math.min(20, Math.round(size * 0.42)));
+  const showBadge = selected || editable || size >= 40;
 
   if (avatarUri) {
     return (
@@ -67,13 +76,15 @@ export default function ProfileAvatarMark({
     return (
       <View style={baseStyle}>
         <Ionicons name={preset.icon} size={iconSize} color={accent} />
-        <View style={[styles.badge, live.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: selected ? t.colors.primary : t.colors.surface }]}>
-          <Ionicons
-            name={selected ? 'checkmark' : preset.badgeIcon}
-            size={Math.max(12, Math.round(size * 0.17))}
-            color={selected ? t.colors.onPrimary : accent}
-          />
-        </View>
+        {showBadge ? (
+          <View style={[styles.badge, live.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: selected ? t.colors.primary : t.colors.surface }]}>
+            <Ionicons
+              name={selected ? 'checkmark' : preset.badgeIcon}
+              size={Math.max(10, Math.round(badgeSize * 0.6))}
+              color={selected ? t.colors.onPrimary : accent}
+            />
+          </View>
+        ) : null}
       </View>
     );
   }

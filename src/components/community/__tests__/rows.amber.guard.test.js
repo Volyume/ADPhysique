@@ -133,6 +133,9 @@ const AMBER_COUNTS = [
   ['ProgressStrip.js', 1], // the tallest of the eight weekly-history bars
   ['ReportSheet.js', 0],
   ['SessionSheet.js', 0],
+  // A placeholder in the shape of a PersonRow; it borrows the shared
+  // Skeleton's own tint and carries no colour, so no amber (2026-09-14).
+  ['SkeletonPersonRow.js', 0],
   ['TrainingProfileLine.js', 0],
 ];
 
