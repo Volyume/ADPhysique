@@ -345,7 +345,7 @@ describe('COMP-029 light theme', () => {
     expect(colors.background).toBe('#FAFAF7');
     applyAccessibility({ theme: 'dark' });
     expect(resolvedTheme).toBe('dark');
-    expect(colors.background).toBe('#0D0D0D');
+    expect(colors.background).toBe('#111110');
     applyAccessibility({});
     expect(resolvedTheme).toBe('dark'); // no theme key => dark, no user changes
   });
@@ -438,9 +438,13 @@ describe('COMP-029 light theme', () => {
 
   test('dark theme is unchanged: HC + CVD tables reproduce the prior values', () => {
     applyAccessibility({ higherContrast: true });
-    expect(colors.background).toBe('#0D0D0D');
-    expect(colors.textSecondary).toBe('#D0D0D0');
-    expect(colors.border).toBe('#999999');
+    // D165: the ground is warm charcoal and the HC greys carry the same hue
+    // bias at unchanged luminance. The ratios asserted elsewhere in this file
+    // are what this test is really protecting; these literals just pin that the
+    // HC table is still the one being applied.
+    expect(colors.background).toBe('#111110');
+    expect(colors.textSecondary).toBe('#D5D0C6');
+    expect(colors.border).toBe('#9E9990');
     applyAccessibility({ colorBlindSafe: true });
     expect(colors.success).toBe('#56B4E9');
     expect(colors.error).toBe('#CC79A7');

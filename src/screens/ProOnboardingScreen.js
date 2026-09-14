@@ -3714,7 +3714,7 @@ const styles = StyleSheet.create({
   offerBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
     alignSelf: 'flex-start', backgroundColor: colors.primaryFill,
-    borderRadius: 4, paddingHorizontal: spacing.sm, paddingVertical: 3,
+    borderRadius: radius.xs, paddingHorizontal: spacing.sm, paddingVertical: 3,
   },
   offerBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.onPrimary },
   offerHeadline: { fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 26 },

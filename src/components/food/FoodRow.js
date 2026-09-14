@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, iconSize, fontFamily } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, iconSize, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xxs,
-    borderRadius: 999,
+    borderRadius: radius.full,
     backgroundColor: colors.primaryBg,
     paddingHorizontal: spacing.sm,
     borderWidth: 1,

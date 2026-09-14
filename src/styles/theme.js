@@ -44,13 +44,17 @@ const baseColors = {
   // points below red/green) so layered surfaces read as distinct depths and
   // tie subtly to the amber brand, the way premium dark UIs separate
   // elevation by lightening each layer rather than relying on shadows.
-  background: '#0D0D0D',
+  // D165 (founder, 2026-09-14): the ground is "very dark charcoal rather than
+  // absolute black ... around #111110", with warm off-white ink over it, so the
+  // product reads as a premium instrument rather than a developer terminal.
+  // Every ratio below is recomputed and asserted in theme.test.js.
+  background: '#111110',
   surface: '#191917',          // 1st elevation: cards, sheets
   surfaceElevated: '#222220',  // nested cards / raised tier (new)
   surface2: '#2A2A27',         // inputs, chips, secondary cards
   surface3: '#343431',         // skeletons, fills, highest
-  border: '#6E6E6E',       // 3.81:1 on background, meets WCAG 1.4.11 (3:1 for UI separators)
-  borderLight: '#7A7A7A',  // 4.53:1 on background
+  border: '#757169',       // 3.89:1 on background, meets WCAG 1.4.11 (3:1 for UI separators)
+  borderLight: '#7F7A71',  // 4.43:1 on background
   borderSubtle: '#2E2E2C', // hairline dividers INSIDE a card (low-contrast, not a card edge)
 
   // Primary accent, amber gold. `primary` is the bright amber for small
@@ -117,11 +121,14 @@ const baseColors = {
   onSuccessBg: '#77C27A',
   onErrorBg: '#F88A82',
 
-  // Text hierarchy
-  textPrimary: '#FFFFFF',  // 19.44:1 on bg, AAA
-  textSecondary: '#9E9E9E', // 7.25:1 on bg, AAA body, AA on raised surfaces
-  textMuted: '#9C9C9C',    // 7.08:1 on bg, AAA at body-text bar; >=4.54:1 on every surface (AA)
-  textDisabled: '#727272', // 4.04:1 on bg, disabled state only, no WCAG body-text requirement
+  // Text hierarchy. D165: warm off-white rather than pure white, muted warm
+  // grey beneath it. The hue bias is the same one the surface ladder already
+  // carries (blue channel a few points below red/green), so ink and ground
+  // belong to one family instead of a neutral ramp sitting on a warm ground.
+  textPrimary: '#F2EFE7',  // 16.4:1 on bg, AAA
+  textSecondary: '#A8A196', // 7.38:1 on bg, AAA body, AA on raised surfaces
+  textMuted: '#A59E93',    // 7.12:1 on bg, AAA at body-text bar; >=4.5:1 on every surface (AA)
+  textDisabled: '#78736B', // 4.02:1 on bg, disabled state only, no WCAG body-text requirement
 
   // Tab bar
   tabBar: '#111111',
@@ -250,16 +257,23 @@ const lightColors = {
 };
 
 // Higher-contrast and colour-blind-safe modifier tables, now theme-keyed
-// (blueprint §4b). The dark tables reproduce the previous inline values exactly
-// (zero behavioural change for existing HC/CVD users); the light tables apply
-// the same proportional lift / the same Okabe-Ito hue families darkened for a
-// light surface.
+// (blueprint §4b). The light tables apply the same proportional lift / the same
+// Okabe-Ito hue families darkened for a light surface.
+//
+// D165 (2026-09-14): the dark HC greys carried the same hue bias as the rest of
+// the dark ramp when the ground moved to warm charcoal. Each value keeps its
+// luminance (so every HC contrast ratio is unchanged to two decimal places and
+// every assertion in theme.test.js still holds) and only gains the blue-below-
+// red/green bias the surface ladder has always had. Leaving them neutral would
+// have put a cool grey ramp on a warm ground for exactly the users who can
+// least afford an unconsidered palette. The CVD table is NOT warmed: those are
+// Okabe-Ito hue families chosen for discriminability, not ramp greys.
 const darkHC = {
-  textSecondary: '#D0D0D0',
-  textMuted:     '#C8C8C8',
-  textDisabled:  '#8E8E8E',
-  border:        '#999999',
-  borderLight:   '#AAAAAA',
+  textSecondary: '#D5D0C6',
+  textMuted:     '#CDC8BE',
+  textDisabled:  '#938E85',
+  border:        '#9E9990',
+  borderLight:   '#AFAAA1',
 };
 const lightHC = {
   textSecondary: '#3D3D3B',
@@ -398,6 +412,21 @@ export const radius = {
   lg: 16,    // card radius (MFP-parity premium-feel bump 14 -> 16, 2026-06-29)
   xl: 20,
   full: 999,
+
+  // D165/D166 law 3 (geometry carries meaning). `control` is the radius of
+  // anything you PRESS -- buttons, and the hand-rolled CTAs that copy them.
+  // It exists as a NAMED token rather than a reuse of `md` so that the class a
+  // call site belongs to is legible at the call site, and so that moving the
+  // control class later does not disturb the logger's inputs, which are pinned
+  // at `md` by four separate suites.
+  //
+  // Why this is the FIRST thing the redesign changes: `lg` was simultaneously
+  // the card, the button, the empty state, the tooltip and the tab pill, so a
+  // button and a card were geometrically identical. Until they are different
+  // shapes, nothing else makes the product stop looking machine-made.
+  // `control` deliberately equals `md` in value today; they are separate names
+  // for separate jobs, not an alias.
+  control: 10,
 };
 
 // Helper for perfect circles (avatars, FABs, round icon buttons) so call

@@ -114,8 +114,11 @@ describe('LT-6: gridline contrast', () => {
     expect(r1).toBeGreaterThanOrEqual(3);
     expect(r2).toBeGreaterThanOrEqual(3);
     // Pin the computed values so a token change is a deliberate, visible diff.
-    expect(r1).toBeCloseTo(3.45, 1);
-    expect(r2).toBeCloseTo(3.81, 1);
+    // D165 (2026-09-14): the ground moved to warm charcoal #111110 and `border`
+    // to #757169, which RAISED both ratios (3.45 -> 3.62, 3.81 -> 3.89). This
+    // test did its job: the change was visible rather than silent.
+    expect(r1).toBeCloseTo(3.62, 1);
+    expect(r2).toBeCloseTo(3.89, 1);
   });
 
   test('light: theme.border clears the 3:1 non-text bar against surface AND background', () => {

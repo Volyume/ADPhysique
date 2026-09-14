@@ -1152,7 +1152,7 @@ const styles = StyleSheet.create({
   toggleIconWrap: {
     width: 34,
     height: 34,
-    borderRadius: 9,
+    borderRadius: radius.control,
     backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',

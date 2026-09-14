@@ -27,13 +27,13 @@ import { FlexWidget, TextWidget } from 'react-native-android-widget';
 // audit 03) corrected the amber; the ladder values below mirror theme.js
 // background/surface/surfaceElevated/surface2/borderSubtle exactly.
 const AMBER = '#F5A623';      // theme.js primary
-const INK = '#0D0D0D';        // theme.js background
+const INK = '#111110';        // theme.js background (D165 warm charcoal)
 const SURFACE = '#191917';    // theme.js surface
 const RAISED = '#222220';     // theme.js surfaceElevated
 const CHIP = '#2A2A27';       // theme.js surface2
 const HAIRLINE = '#2E2E2C';   // theme.js borderSubtle
-const TEXT = '#FFFFFF';
-const MUTED = '#9E9E9E';
+const TEXT = '#F2EFE7';       // theme.js textPrimary (D165 warm off-white)
+const MUTED = '#A8A196';      // theme.js textSecondary (D165)
 
 // A1 (route-graph certification 2026-09-05): the widget root carries the
 // library's OPEN_APP click action, so a tap opens Volyume. Without it a

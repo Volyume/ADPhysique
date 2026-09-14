@@ -34,7 +34,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, AccessibilityInfo } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { spacing, fontWeight } from '../../styles/theme';
+import { spacing, fontWeight, circle } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { workoutLoggerSize } from '../../styles/layout';
 import { selection as hapticSelection } from '../../lib/haptics';
@@ -271,8 +271,8 @@ const styles = StyleSheet.create({
   },
   rowSkipped: { opacity: 0.5 },
   marker: { width: 16, alignItems: 'center' },
-  currentDot: { width: 8, height: 8, borderRadius: 4 },
-  upcomingDot: { width: 7, height: 7, borderRadius: 4, borderWidth: 1.5 },
+  currentDot: { width: 8, height: 8, borderRadius: circle(8) },
+  upcomingDot: { width: 7, height: 7, borderRadius: circle(7), borderWidth: 1.5 },
   name: { flex: 1, minWidth: 0 },
   count: { minWidth: 30, textAlign: 'right' },
 });

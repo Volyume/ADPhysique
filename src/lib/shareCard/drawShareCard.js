@@ -38,17 +38,21 @@ const BLUR_NORMAL = 0;
 // hex rule); the values track the brand — amber #F5A623 for data, #FFD700 gold
 // for trophy moments, the near-black tonal background, textPrimary/secondary/muted.
 const PALETTE = {
-  bg0: '#0D0D0D', bg1: '#141413', bg2: '#191917',
+  // D165 (2026-09-14): bg0 tracks theme.js `background`, moved to warm charcoal
+  // #111110; bg1/bg2 are share-card-only tonal steps between it and `surface`.
+  bg0: '#111110', bg1: '#1A1917', bg2: '#191917',
   surface: '#222220', surface2: '#2A2A27',
-  // `border` tracks theme.js `border` (#6E6E6E), chosen for 3:1 WCAG 1.4.11.
-  // It previously held #343431, which is theme.js `surface3` -- a fill colour,
-  // not an outline one. Stat-box and chip outlines were near-invisible in the
-  // exported PNG and disappeared entirely under platform re-compression.
-  border: '#6E6E6E', divider: 'rgba(255,255,255,0.06)',
+  // `border` tracks theme.js `border` (#757169 since D165), chosen for 3:1
+  // WCAG 1.4.11. It previously held #343431, which is theme.js `surface3` -- a
+  // fill colour, not an outline one. Stat-box and chip outlines were
+  // near-invisible in the exported PNG and disappeared entirely under platform
+  // re-compression.
+  border: '#757169', divider: 'rgba(255,255,255,0.06)',
   accent: '#F5A623', gold: '#FFD700',
-  // textSecondary tracks theme.js `textSecondary`; textMuted tracks theme.js
-  // `textMuted` (#9C9C9C) -- it had drifted by a digit to #9B9B9B.
-  text: '#FFFFFF', textSecondary: '#9E9E9E', textMuted: '#9C9C9C',
+  // text/textSecondary/textMuted track theme.js textPrimary/textSecondary/
+  // textMuted, all warmed under D165. textMuted had drifted by a digit to
+  // #9B9B9B once before; it is checked against theme.js, not eyeballed.
+  text: '#F2EFE7', textSecondary: '#A8A196', textMuted: '#A59E93',
 };
 
 // Central number+unit join (P-15, ux-copy-polish audit 2026-07-12 / format.js).
@@ -350,7 +354,10 @@ function drawPhotoScrim(canvas, Skia, W, H, tone) {
 // shared gradient every card used before. Still near-black, still calm --
 // only the tonal lean and one restrained accent geometry (below) differ.
 const BG_THEME = {
-  pr: { stops: ['#17100A', PALETTE.bg0, '#0E0906'], dir: 'diagonal' },
+  // The two literals here were hand-picked against the old #0D0D0D ground and
+  // are lifted by the same amount the ground moved (D165), so the PR card keeps
+  // its warm lean instead of banding against a lighter centre stop.
+  pr: { stops: ['#1B140E', PALETTE.bg0, '#120D0A'], dir: 'diagonal' },
   session: { stops: [PALETTE.bg1, PALETTE.bg0, PALETTE.bg2], dir: 'vertical' },
   milestone: { stops: [PALETTE.bg2, PALETTE.bg0, PALETTE.bg1], dir: 'diagonal' },
   weekly: { stops: [PALETTE.bg1, PALETTE.bg1, PALETTE.bg0], dir: 'vertical' },

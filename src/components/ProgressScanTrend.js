@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, type, iconSize } from '../styles/theme';
+import { colors, spacing, radius, circle, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
     minHeight: touchTarget.minimum,
     paddingVertical: spacing.xs,
   },
-  marker: { width: 14, height: 14, borderRadius: 7 },
+  marker: { width: 14, height: 14, borderRadius: circle(14) },
   markerSolid: { backgroundColor: colors.primary },
   markerHollow: { backgroundColor: 'transparent', borderWidth: 2, borderColor: colors.primary },
   markerUnscored: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' },

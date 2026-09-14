@@ -34,7 +34,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
-import { type, spacing, radius, iconSize } from '../styles/theme';
+import { type, spacing, radius, circle, iconSize } from '../styles/theme';
 import { touchTarget } from '../styles/layout';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -949,7 +949,7 @@ const styles = StyleSheet.create({
   lineText: { ...type.body },
   lineChips: { flexDirection: 'row', gap: spacing.sm },
   doneIconWrap: { alignItems: 'center', marginBottom: spacing.md },
-  doneIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
+  doneIcon: { width: 64, height: 64, borderRadius: circle(64), alignItems: 'center', justifyContent: 'center' },
   footer: { padding: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, gap: spacing.sm },
   retryWrap: { gap: spacing.sm, marginTop: spacing.md },
   footerHint: { ...type.captionTight, textAlign: 'center' },

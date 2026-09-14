@@ -7096,3 +7096,145 @@ floor, a gate, a detector, calm mode or the Beat UK signposting.
 **Not built at the time of writing.** This decision records the ruling; stage 1
 (the spine) starts from it and is palette-agnostic, so it proceeds while the
 ED-safety question is open.
+
+## D166 (2026-09-14) - The three ED-safety answers, and three corrections to the lead's own plan
+
+**Authority.** Founder, answering the questions held open by D165 section 10.1,
+with the evidence from two read-only Opus lanes attached. Recorded the same day.
+
+### Part 1 — the founder's three answers
+
+**1. The loud thing on Progress is the DECISION, not bodyweight.** Progress
+opens with the coaching decision at display scale ("Keep calories unchanged");
+bodyweight and its weekly delta sit below it at their current prominence with
+the graph. Rationale is the founder's own from D165: "that last thing is the
+reason Volyume exists", and "your data tells you what to do next".
+
+Why this is the right answer beyond the safety question: it makes law 1's
+hierarchy ("what am I doing / what do I need to know / what do I do") resolve on
+Progress the same way it resolves on Today, and it is the only version of the
+screen where the loudest element is the thing only Volyume produces. A
+bodyweight numeral is a fact any scale gives you.
+
+**Evidence that made this a real question rather than a hypothetical.** Today
+the largest bodyweight anywhere in the app is 32 px (`BodyMetricsScreen.js:1734`)
+and it sits one screen below Progress; the Progress tab root
+(`AnalyticsScreen.js:97-107`) has no large numeral at all, only a joined
+evidence string. Every written rule about weight governs COLOUR and SUPPRESSION
+(`docs/rules/styling.md:40,166-168`; `src/lib/weightTrend.js:10-14`), and none
+governs SIZE. Building it would have been reading permission into a silence.
+
+**2. PHYSIQUE shows the scan's band and score, not a body-fat percentage.**
+"Lean · 84" rather than "~11%".
+
+This one was partly a factual correction rather than a preference. The scan's
+body-fat estimator exists (`progressScanAnalysis.js:1556-1582`) but is
+deliberately never persisted — `estimate_body_fat_percent` is written literally
+`null` (`progressScanStore.js:379,400`), every result carries
+`'not_body_fat_estimate'` and `'never_authoritative_for_safety_floors'`
+(`progressScanAnalysis.js:996,1841`), and the shipped user copy says outright
+"It is not a body fat measurement, a medical assessment, or a comparison with
+anyone else" (`progressScanResultsContract.js:305-306`). Sourcing "~11%" from
+the scan would have broken a written product law. The only other "~11%"
+available is a figure the user typed, which the app's own confidence table rates
+LOW unless it came from DEXA, calipers or BIA (`nutritionEngine.js:824-826`).
+The band and score are deterministic, already computed, and already behind the
+photo-suppression chain.
+
+**3. Today shows a non-scale progress signal, not "+0.4 kg this week".** The
+scale figure stays on Progress, where someone goes deliberately, rather than
+meeting them every morning on the daily screen.
+
+Today has no weight delta at all today; the only weight on it is 13 px and muted
+inside the suppression chain (`evidencePanel.js:26-31,148-153`). The engine's
+`deltaLabel` already reads exactly "+0.4kg this week"
+(`weeklyCoach.js:1128-1130`), so the number was free and the question was purely
+whether a daily-visited surface should carry it.
+
+**Binding on all three, and on anything built from them:** every new weight- or
+progress-adjacent surface consumes the same fail-closed chain its siblings use,
+`!!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing)` with
+`.catch(() => 'read_failed')`, which is machine-enforced by
+`src/__tests__/edFlagFailClosed.guard.test.js:54-57`. The DECISION line consumes
+`buildDecision()` or `whyThisWeek` WHOLE and never cherry-picks the happy path,
+because `buildDecision` puts `ed_pattern_lockout` first by design
+(`coachResponse.js:214-234`). No floor, gate, detector, calm mode or Beat UK
+signposting changes.
+
+### Part 2 — three corrections to the lead's own plan (lead, under D33)
+
+**1. The week ribbon cannot draw a planned rest day, and the plan said it would.**
+Plan section 5 specified "outlined for a planned rest day", and the lead told
+the founder in chat that this was "the honest, ED-safe answer to a streak,
+because a rest day draws as a rest day, not a gap". That is not buildable and
+should never have been written: the product has NO scheduled-days concept, by a
+founder ruling of 2026-08-03 recorded verbatim at
+`docs/audit/cross-surface-consistency-audit-2026-07-30.md:409-411` — "There are
+no scheduled training days. The app isn't configured for days to be on a set
+schedule of specific rest or training days" — enforced by an absence guard
+(`HomeScreen.trainingDayBanner.guard.test.js:28-46`). The only weekday data that
+exists is a HABIT inference sanctioned for soft reminder copy alone
+(`trainingHabitSchedule.js:1-25`).
+
+**RULED:** the ribbon draws TWO states plus today — trained (filled), not
+trained (empty), today (amber) — which is exactly what `DayDots.js:77-79`
+already does and exactly what `c_trained_days_week` supports. It stays ED-safe
+for a different and still-true reason: it is a record of what happened, shown
+beside denominator framing ("trained 47 of the last 50 weeks"), never a streak
+that breaks and never a red or broken state. No rest-day concept is invented.
+
+**2. "Five sites in 106 screens exceed 24 px" undercounts, and the real number
+is worse for the type system.** Measured against the tree: only TWO sites render
+above 24 px through a type role (`ScreenHeader.js:57` at 32 via `type.h1`, and
+`ProgressGhostCapture.js:798` at 40 via `type.display`, which is the single
+`type.display` call site in the product). A further SIX style keys reach 32 px
+by using the raw `fontSize.xxxl` token directly, and THREE use raw literals
+(96 px and 44 px in `YearOfLiftsScreen.js:904,926`, both carrying a scoped
+eslint-disable and a source comment reading "Theme gap: no display-size + black
+type role exists"; 34 px in `ProSetupCompleteScreen.js:696`).
+
+The diagnosis is unchanged and in fact sharpens: the top of the type scale is
+effectively unused, and where a screen does need to be loud it reaches PAST the
+scale with a raw token or a literal. `fontSize.display` has zero raw call sites;
+`type.micro` has zero call sites. The corrected statement is the one that goes
+into the styling rules.
+
+**3. Negative tracking on the display step is not available without reversing a
+founder decision.** Plan section 6 kept Linear for "negative tracking on display
+sizes only". `letterSpacing.display` is pinned to 0 by
+`src/styles/__tests__/theme.test.js:224-231`, and `docs/rules/styling.md:69-76`
+records the rule as founder-set (D3): no non-zero value is permitted.
+
+**RULED:** take the optical tightening from the typeface instead of the token.
+`InterDisplay-ExtraBold` already ships (`fonts.js:11`) and
+`fontFamily.displayHeavy` already names it with ZERO call sites; display cuts
+are drawn tighter by design, which is the whole reason a display optical size
+exists. This achieves the goal without touching a founder-recorded rule and
+without a question the founder does not need to answer. If a later stage still
+wants true negative tracking, that is a D3 reversal and goes to the founder then.
+
+### Part 3 — defects found by the lanes, in scope, being fixed
+
+- `HomeLastSessionCard.js:31,33` hard-codes "kg lifted" on the Today screen, so
+  a user training in pounds is shown the wrong unit on their own home screen.
+  Directly in law 7's lane; fixed in stage 1.
+- `LoggedSetRow.js:227` vs `:254` disagree: the frozen style sets
+  `borderColor: colors.borderSubtle` and the live override sets
+  `t.colors.border`. The live half wins, so the in-place set editor draws the
+  bright grey edge that `SettingsPrimitives.js` calls "the wireframe look". In
+  the exact component the ledger replaces; fixed in stage 1.
+- `MesocycleBuilderScreen.js:459` hard-codes "(kg moved)" in a chart axis label.
+- The figure the founder objected to ("9,240") must be labelled **"Total
+  lifted"**, never "Volume": the app defines Volume app-wide as a muscle's
+  weekly hard sets (`coachGlossary.js:13-14`), and this exact lens was renamed
+  once already because colliding the two names misled users
+  (`LiftProgressScreen.js:72-78`). The lead's own page had it wrong and is
+  corrected.
+
+**Reported, NOT fixed** (unrelated, per CLAUDE.md section 4): `WeightTrendCard.js`
+has no importer anywhere in the repo while three guard suites pin it;
+`AthleteProfileScreen.js:422-426` renders the user-logged body-fat tile outside
+the `photoSuppressed` gate that the scan tile above it respects;
+`useProgressData.js:293-294` builds its 84-day calendar with fixed 24-hour steps
+rather than `localDayKeysEndingAt`, which is the DST defect the rendering side
+already fixed.

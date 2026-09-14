@@ -142,7 +142,7 @@ export function TrainingCalendar({ values }) {
               <View
                 key={di}
                 style={{
-                  width: SQ, height: SQ, borderRadius: 2,
+                  width: SQ, height: SQ, borderRadius: radius.hair,
                   backgroundColor: trained ? t.colors.primary : t.colors.surface2,
                 }}
               />
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
   calGrid:       { flexDirection: 'row', gap: 3 },
   calCol:        { flex: 1, gap: 3 },
   calLegend:     { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  calDot:        { width: 10, height: 10, borderRadius: 2 },
+  calDot:        { width: 10, height: 10, borderRadius: radius.hair },
   calLegendText: { ...type.caption, color: colors.textMuted },
 
   // ── Session Duration Trend ──
@@ -393,7 +393,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'flex-end', gap: spacing.xxs,
   },
   durationBar: {
-    borderRadius: 3,
+    borderRadius: radius.hair,
   },
   durationBarValue: {
     // R2 (cohesion sweep, 2026-07-11): the per-bar minutes readout is a data

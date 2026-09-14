@@ -296,7 +296,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.lg,
+    // D165/D166 law 3: a control is not a card. This single line applied
+    // `radius.lg` to every variant at every size, which is why a button and a
+    // card were the same shape everywhere in the product. `radius.control` is
+    // the press class; cards keep 16.
+    borderRadius: radius.control,
   },
   contentRow: {
     flexDirection: 'row',

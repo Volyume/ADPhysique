@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: colors.primaryFill, borderRadius: 4,
+    backgroundColor: colors.primaryFill, borderRadius: radius.xs,
   },
   badgeSm: { paddingHorizontal: 5, paddingVertical: spacing.xxs },
   badgeMd: { paddingHorizontal: 7, paddingVertical: 3 },
