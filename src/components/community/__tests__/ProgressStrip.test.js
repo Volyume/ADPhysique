@@ -53,6 +53,9 @@ describe('ProgressStrip', () => {
     expect(tree.toJSON()).toBeNull();
   });
 
+  // Founder look-and-feel pass 2026-09-14: the strip speaks the app's own
+  // vocabulary ("weeks in a row", the Hub's own words for the same figure)
+  // and spells its windows out instead of the cryptic "(12w)" / "(4w)".
   test('renders the three counter cells with correct singular/plural labels', () => {
     const tree = render({
       counters: { c_sessions_week: 1, c_weeks_streak: 6, c_consistent_weeks_12w: 1 },
@@ -61,8 +64,8 @@ describe('ProgressStrip', () => {
     expect(all).toContain('1');
     expect(all).toContain('session this week');
     expect(all).toContain('6');
-    expect(all).toContain('weeks streak');
-    expect(all).toContain('consistent (12w)');
+    expect(all).toContain('weeks in a row');
+    expect(all).toContain('consistent in 12 weeks');
   });
 
   test('c_weeks_history renders one bar per entry', () => {
@@ -175,7 +178,7 @@ describe('ProgressStrip', () => {
       });
       const all = texts(tree).join(' | ');
       expect(all).toContain('3');
-      expect(all).toContain('PRs (4w)');
+      expect(all).toContain('PRs in 4 weeks');
     });
 
     test('shown with the singular label at exactly 1', () => {
@@ -185,8 +188,8 @@ describe('ProgressStrip', () => {
         },
       });
       const all = texts(tree).join(' | ');
-      expect(all).toContain('PR (4w)');
-      expect(all).not.toContain('PRs (4w)');
+      expect(all).toContain('PR in 4 weeks');
+      expect(all).not.toContain('PRs in 4 weeks');
     });
 
     test('a genuine zero still renders a cell: 0 is a real count, not "no data"', () => {
@@ -195,7 +198,7 @@ describe('ProgressStrip', () => {
           c_sessions_week: 2, c_weeks_streak: 1, c_consistent_weeks_12w: 0, c_prs_4w: 0,
         },
       });
-      expect(texts(tree).join(' | ')).toContain('PRs (4w)');
+      expect(texts(tree).join(' | ')).toContain('PRs in 4 weeks');
     });
 
     test('the accessibility label gains ", N PRs in the last four weeks" only when the count is finite', () => {
