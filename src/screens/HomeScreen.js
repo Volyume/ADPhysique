@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform,
 } from 'react-native';
@@ -58,7 +58,7 @@ import {
   getWorkoutSetsForWorkout, getExerciseById, uid,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
   getMorningWeightToday, getMorningWeights, logMorningWeight,
-  getRecentWorkoutFeedback, getLatestCoachOutput,
+  getRecentWorkoutFeedback, getLatestCoachOutput, getNutritionTargets,
   getMorningWeightsLast14Days, getOpenEdPatternFlag,
   getLatestCheckin,
   getAllWeeklyCheckinsForUser,
@@ -88,8 +88,13 @@ import { summariseCircuitGroups, formatCircuitPreviewLine } from '../lib/circuit
 import EvidencePanel from '../components/home/EvidencePanel';
 import { resolveEvidencePanel } from '../lib/home/evidencePanel';
 import { formatBodyWeight } from '../lib/units';
+import { estimateWorkoutMinutes } from '../lib/planEngine';
+import BigNumber from '../components/BigNumber';
+import WeekRibbon from '../components/WeekRibbon';
+import { computeConsistency } from '../lib/community/trainingConsistency';
+import { readLatestDecision, decisionAgeCaption } from '../lib/coachLatestDecision';
 import { formatNumber, formatWithUnit } from '../lib/format';
-import { getRecentIntakeSummary } from '../lib/food/db';
+import { getRecentIntakeSummary, getRollupForDay } from '../lib/food/db';
 // D139: the no-plan "Start with a plan" action previews before it commits.
 // prepareStartWithPlan owns the capability pre-flight (CC27 section 9.6 red-team
 // finding 1: every generation surface runs it first, never a silent fail-open)
@@ -186,9 +191,6 @@ export default function HomeScreen({ navigation, route }) {
     continueIcon: { backgroundColor: withAlpha(t.colors.background, alpha.soft) },
     continueTitle: { ...t.type.bodyStrong, color: t.colors.onPrimary },
     continueSub: { ...t.type.caption, color: withAlpha(t.colors.onPrimary, alpha.half) },
-    workoutName: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
-    workoutMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    heroBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     mesoBriefChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     mesoBriefText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     workoutOptionsText: { color: t.colors.textSecondary },
@@ -312,6 +314,14 @@ export default function HomeScreen({ navigation, route }) {
   // by loadFirstReviewFacts. Null until loaded, so the line never flashes
   // before real data is read.
   const [firstReviewFacts, setFirstReviewFacts] = useState(null);
+  // D165 law: the week ribbon's seven cells, 'mon'..'sun'.
+  const [trainedDaysThisWeek, setTrainedDaysThisWeek] = useState([]);
+  // D166 answer 3 / the founder's Today spec: today's intake against target.
+  const [todayNutrition, setTodayNutrition] = useState(null);
+  // D165: the coaching decision as a SENTENCE, not the pointer line the Today
+  // arbiter shows. Read through `readLatestDecision`, which takes it from
+  // `buildDecision` whole so the ED lockout branch cannot be skipped (D166).
+  const [coachDecision, setCoachDecision] = useState(null);
   // First-load flag, flipped false in loadData. While true, the
   // home screen renders skeleton cards in place of the main cards so
   // the user sees structure instantly on cold launch rather than a
@@ -498,6 +508,8 @@ export default function HomeScreen({ navigation, route }) {
         loadTodayWeight(),
         loadLatestCoachOutput(),
         loadFirstReviewFacts(),
+        loadTodayNutrition(),
+        loadCoachDecision(),
       ]);
       // FOUNDER DECISION (fully free, no tier split): activation-funnel
       // marker for a signed-in user's first successful Home render.
@@ -626,6 +638,48 @@ export default function HomeScreen({ navigation, route }) {
       });
     } catch (_) {
       setFirstReviewFacts(null);
+    }
+  }
+
+  // D165, the founder's Today spec: "Nutrition / 2,840 / 3,200 kcal / Protein
+  // 218 / 230 g". Two local SQLite reads, the same pair the Diary screen uses.
+  //
+  // NO NEW ED READ. This block is food-adjacent and must suppress, but
+  // `edFlagFailClosed.guard` pins `getOpenEdPatternFlag` to EXACTLY two
+  // occurrences in this file, and its header records that the count "follows
+  // the surviving loaders rather than being weakened: it is now pinned
+  // exactly". Home already derives the four-term suppression above and carries
+  // it on `firstReviewFacts.edFlagOpen`; the render reads that. A third read
+  // would have been the lazy path.
+  async function loadTodayNutrition() {
+    try {
+      if (!user?.id) { setTodayNutrition(null); return; }
+      const [rollup, targets] = await Promise.all([
+        getRollupForDay(user.id, localDayKey(Date.now())).catch(() => null),
+        getNutritionTargets(user.id).catch(() => null),
+      ]);
+      if (!targets?.targetKcal) { setTodayNutrition(null); return; }
+      setTodayNutrition({
+        kcal: Math.round(Number(rollup?.kcalTotal) || 0),
+        kcalTarget: Math.round(Number(targets.targetKcal)),
+        protein: Math.round(Number(rollup?.proteinG) || 0),
+        proteinTarget: Math.round(Number(targets.proteinG) || 0),
+      });
+    } catch (_) {
+      setTodayNutrition(null);
+    }
+  }
+
+  // D165: the week's decision as a sentence. `readLatestDecision` takes it
+  // from `buildDecision` WHOLE, so the ED-pattern lockout branch travels with
+  // it (D166); it also reports whether the week was actually checked in, which
+  // is the app's existing test for a real decision rather than a computed one.
+  async function loadCoachDecision() {
+    try {
+      if (!user?.id) { setCoachDecision(null); return; }
+      setCoachDecision(await readLatestDecision(user.id));
+    } catch (_) {
+      setCoachDecision(null);
     }
   }
 
@@ -950,6 +1004,24 @@ export default function HomeScreen({ navigation, route }) {
       const weekSets = recentSets.filter(s => workoutIds.has(s.workoutId) && s.setType !== 'warmup');
       const totalVol = weekSets.reduce((t, s) => t + (s.weight || 0) * (s.actualReps || 0), 0);
       setWeekStats({ sessions: thisWeek.length, sets: weekSets.length, volume: totalVol });
+
+      // D165/D166: the week ribbon's trained days, derived by the SAME pure
+      // function Community uses, over workouts this loader has already read.
+      // Deliberately not a second week derivation on this screen: one exists
+      // above (weekStartMs/weekEndMs) and `weekBoundaryConsistency.guard` is
+      // there precisely to stop a third. It is training-only data, which the
+      // engine documents as never calm-gated ("the base weekly push signal ...
+      // stays unsuppressed like every other training-only surface").
+      try {
+        const counters = computeConsistency({
+          workouts: allWorkouts.filter(w => w.isCompleted).map(w => w.startedAt),
+          plan: null,
+          now: Date.now(),
+        });
+        setTrainedDaysThisWeek(counters.c_trained_days_week ?? []);
+      } catch (_e) {
+        setTrainedDaysThisWeek([]);
+      }
 
 
       const completed = allWorkouts.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
@@ -1672,20 +1744,53 @@ export default function HomeScreen({ navigation, route }) {
   // rounds · 90s between rounds"), or '' when the session has no circuit.
   // Read once per displayed routine; a failed read leaves the count line.
   const [circuitLine, setCircuitLine] = useState('');
+  // D167 law 1: the founder's Today spec reads "6 exercises . 18 sets . about
+  // 52 min". The set count and the duration are derived from the SAME rows
+  // this effect already fetches, so the fuller meta line costs no extra I/O.
+  //
+  // The duration is not a new claim. `estimateWorkoutMinutes` is the engine's
+  // own pure estimator and is already user-facing on plan cards
+  // (PlanLibraryScreen), whose comment records that the figure is "honest
+  // about the plan's actual sets/rest rather than a guess from its name". The
+  // input chain here is that screen's, unchanged: `recommendedSets ?? 3` and
+  // `restSeconds ?? 90`, the same fallback the rest timer documents. A person
+  // who chose this plan was shown this number; Today showing a different one,
+  // or none, would be the inconsistency.
+  const [sessionShape, setSessionShape] = useState({ sets: null, minutes: null });
   const displayRoutineIdForCircuit = displayWorkout?.routine?.id ?? null;
   useEffect(() => {
     let alive = true;
     setCircuitLine('');
+    setSessionShape({ sets: null, minutes: null });
     if (!displayRoutineIdForCircuit) return undefined;
     getRoutineExercisesWithDetails(displayRoutineIdForCircuit)
       .then((rows) => {
         if (!alive) return;
-        const groups = summariseCircuitGroups((rows ?? []).map((r) => r.routineExercise));
+        const res = (rows ?? []).map((r) => r.routineExercise);
+        const groups = summariseCircuitGroups(res);
         setCircuitLine(groups.length ? groups.map(formatCircuitPreviewLine).filter(Boolean).join(' · ') : '');
+        const shape = res.map((re) => ({ sets: re?.recommendedSets ?? 3, restSec: re?.restSeconds ?? 90 }));
+        const sets = shape.reduce((a, e) => a + e.sets, 0);
+        setSessionShape({
+          sets: sets > 0 ? sets : null,
+          minutes: shape.length ? estimateWorkoutMinutes(shape) : null,
+        });
       })
       .catch(() => { /* best effort: the count line stands */ });
     return () => { alive = false; };
   }, [displayRoutineIdForCircuit]);
+
+  // The whole meta line, assembled once. Each part appears only when it is
+  // genuinely known: a failed read leaves the exercise count standing alone
+  // rather than printing a guess beside it.
+  const heroMetaLine = useMemo(() => {
+    const exercises = effectiveSessionCount ?? exerciseCounts[displayWorkout?.routine?.id];
+    const parts = [];
+    if (exercises) parts.push(`${exercises} exercise${exercises === 1 ? '' : 's'}`);
+    if (sessionShape.sets) parts.push(`${sessionShape.sets} sets`);
+    if (sessionShape.minutes) parts.push(`about ${sessionShape.minutes} min`);
+    return parts.length ? parts.join(' · ') : null;
+  }, [effectiveSessionCount, exerciseCounts, displayWorkout?.routine?.id, sessionShape]);
   // ── HERO PRECEDENCE (F-18; evidence B-1, B-2, B-3). Stated once, here,
   // because three regions of this screen used to answer "what is today?"
   // independently and could contradict one another (the Today line said
@@ -2425,9 +2530,10 @@ export default function HomeScreen({ navigation, route }) {
             <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
               Block complete
             </SectionLabel>
-            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={3}>
-              Every week of this block is done
-            </Text>
+            {/* Law 1: on a block-complete day the screen is FOR this fact, so
+                it is the loud thing, exactly as the session name is on a
+                training day. Three hero branches, one treatment. */}
+            <BigNumber value="Every week of this block is done" style={styles.heroName} />
             {readinessChipEl}
             <View style={styles.startWorkoutRow}>
               <View style={styles.startBtnSplit}>
@@ -2479,12 +2585,14 @@ export default function HomeScreen({ navigation, route }) {
             <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
               Week complete
             </SectionLabel>
-            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={3}>
-              Every session done this week
-            </Text>
-            <Text style={[styles.heroBody, live.heroBody]}>
-              {weekCompleteLine(planAllWorkouts[0]?.name)}
-            </Text>
+            {/* Law 1, as above: the week being done IS what this screen is
+                for today, so it carries the scale. Its supporting sentence
+                becomes the caption rather than a separate line. */}
+            <BigNumber
+              value="Every session done this week"
+              caption={weekCompleteLine(planAllWorkouts[0]?.name)}
+              style={styles.heroName}
+            />
             {readinessChipEl}
             <TouchableOpacity
               onPress={() => { haptics.selection(); setShowChangeWorkout(true); }}
@@ -2507,33 +2615,33 @@ export default function HomeScreen({ navigation, route }) {
             <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={2}>
               {recoveryLabel ? `${recoveryLabel} · ${planProgress}` : planProgress}
             </SectionLabel>
-            {/* Campaign 27 Pillar A (D104): workoutName is a session NAME, an
-                identifier, so a clamp stays honest - but two lines truncated
-                real names at large text scale, so it's raised to three. */}
-            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={3}>
-              {/* C18: where a display name repeats inside one programme week
-                  (the bikini Glute Focus split lists "Glutes" twice) the
-                  session is qualified by its programme position, so the
-                  athlete can tell which occurrence this is. A unique name is
-                  left alone. */}
-              {sessionDisplayName(
-                programmePosition?.nextSession && programmePosition.nextSession.routineId === displayWorkout?.routine?.id
-                  ? programmePosition.nextSession
-                  : { name: displayWorkout?.routine?.name ?? '', order: 0 },
-                programmePosition?.sessions ?? [],
-              ) || displayWorkout?.routine?.name}
-            </Text>
-            {/* D112 R2 (closes audit T1-17): the served count, not the base
-                routine's raw row count. effectiveSessionCount is null until
-                resolved (or on a read failure), so the raw exerciseCounts
-                figure (already loaded) shows first rather than nothing. */}
-            {circuitLine ? (
-              <Text style={[styles.workoutMeta, live.workoutMeta]}>{circuitLine}</Text>
-            ) : (effectiveSessionCount ?? exerciseCounts[displayWorkout?.routine?.id]) ? (
-              <Text style={[styles.workoutMeta, live.workoutMeta]}>
-                {effectiveSessionCount ?? exerciseCounts[displayWorkout.routine.id]} exercises
-              </Text>
-            ) : null}
+            {/* D165/D166 law 1: this session IS what the screen is for, so it
+                is the one loud element on it, at type.hero (56) through
+                BigNumber rather than the 24px it was. The founder's hierarchy
+                is "what am I doing / what do I need to know / what do I do",
+                and this is the first of the three.
+
+                Campaign 27 Pillar A (D104): the name is an IDENTIFIER, so a
+                clamp stays honest, but two lines truncated real names at large
+                text scale. BigNumber does not clamp; the name wraps. */}
+            <BigNumber
+              testID="hero-session-name"
+              value={
+                /* C18: where a display name repeats inside one programme week
+                   (the bikini Glute Focus split lists "Glutes" twice) the
+                   session is qualified by its programme position, so the
+                   athlete can tell which occurrence this is. A unique name is
+                   left alone. */
+                sessionDisplayName(
+                  programmePosition?.nextSession && programmePosition.nextSession.routineId === displayWorkout?.routine?.id
+                    ? programmePosition.nextSession
+                    : { name: displayWorkout?.routine?.name ?? '', order: 0 },
+                  programmePosition?.sessions ?? [],
+                ) || displayWorkout?.routine?.name
+              }
+              caption={circuitLine || heroMetaLine}
+              style={styles.heroName}
+            />
             {/* S15#7 readiness aggregate: tells the user where they are in
                 the training block PLUS whatever recovery/soreness/sleep/
                 energy/fatigue signal outranks a plain phase read this week,
@@ -2682,6 +2790,89 @@ export default function HomeScreen({ navigation, route }) {
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </PressableCard>
           </View>
+        )}
+
+        {/* ══ D165/D166, the founder's Today specification (plan section 4c).
+            Four quiet sections under the hero, in their order: the week, then
+            nutrition, then progress, then the coach. Rows on the canvas, not
+            cards: none of these is an object you can pick up (law 2), so none
+            of them is boxed. The one loud thing on this screen is the session
+            name above; everything here is deliberately small so that holds. ══ */}
+
+        {!initialLoading && user?.id && (
+          <View style={styles.todaySection}>
+            <SectionLabel tone="muted">Your week</SectionLabel>
+            <WeekRibbon days={trainedDaysThisWeek} testID="home-week-ribbon" />
+            <Text style={[styles.todayFact, live.todayFact]}>
+              {weekStats.sessions === 0
+                ? 'No sessions yet this week.'
+                : `${weekStats.sessions} session${weekStats.sessions === 1 ? '' : 's'} this week.`}
+            </Text>
+          </View>
+        )}
+
+        {/* Food-adjacent, so it takes the suppression Home already derives
+            (`firstReviewFacts.edFlagOpen`, a four-term chain including SCOFF).
+            An unread or failed derivation counts as suppressed: `!firstReviewFacts`
+            leads the condition, so this fails CLOSED rather than showing intake
+            figures to someone the app has flagged because a read did not land. */}
+        {!initialLoading && user?.id && todayNutrition
+          && firstReviewFacts && !firstReviewFacts.edFlagOpen && (
+          <TouchableOpacity
+            style={styles.todaySection}
+            onPress={() => navigateCrossTab(navigation, 'DiaryTab', 'Diary')}
+            accessibilityRole="button"
+            accessibilityLabel={`Nutrition. ${todayNutrition.kcal} of ${todayNutrition.kcalTarget} calories. Protein ${todayNutrition.protein} of ${todayNutrition.proteinTarget} grams.`}
+          >
+            <SectionLabel tone="muted">Nutrition</SectionLabel>
+            <Text style={[styles.todayValue, live.todayValue]}>
+              {`${formatNumber(todayNutrition.kcal)} / ${formatNumber(todayNutrition.kcalTarget)} kcal`}
+            </Text>
+            {todayNutrition.proteinTarget > 0 && (
+              <Text style={[styles.todayFact, live.todayFact]}>
+                {`Protein ${todayNutrition.protein} / ${todayNutrition.proteinTarget} g`}
+              </Text>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {/* D167 ruling: the non-scale signal is TOTAL LIFTED, never the weekly
+            kg delta (D166 answer 3) and never "sessions", which the ribbon's
+            own caption above already says. "Total lifted", never "Volume" --
+            Volume means a muscle's weekly hard sets app-wide, and this lens
+            was renamed once already because colliding the two misled users. */}
+        {!initialLoading && user?.id && weekStats.volume > 0 && (
+          <View style={styles.todaySection}>
+            <SectionLabel tone="muted">Progress</SectionLabel>
+            <Text style={[styles.todayValue, live.todayValue]}>
+              {`${formatWithUnit(formatNumber(Math.round(weekStats.volume)), units === 'lbs' ? 'lbs' : 'kg')} lifted`}
+            </Text>
+            <Text style={[styles.todayFact, live.todayFact]}>This week.</Text>
+          </View>
+        )}
+
+        {/* The coach's own sentence, which until now was reachable only from
+            the Coach tab behind a "See why" pointer. `readLatestDecision` takes
+            it from `buildDecision` WHOLE, so the ED-pattern lockout is the
+            first branch and cannot be skipped (D166). `isCompleted` is the
+            app's existing test for a real decision rather than a computation
+            the engine happened to run for an unchecked-in week. */}
+        {!initialLoading && coachDecision?.sentence && coachDecision.isCompleted && (
+          <TouchableOpacity
+            style={styles.todaySection}
+            onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput')}
+            accessibilityRole="button"
+            accessibilityLabel={`Coach. ${coachDecision.sentence}`}
+            testID="home-coach-sentence"
+          >
+            <SectionLabel tone="muted">Coach</SectionLabel>
+            <Text style={[styles.todayCoach, live.todayCoach]}>{coachDecision.sentence}</Text>
+            {!!decisionAgeCaption(coachDecision.weeksAgo) && (
+              <Text style={[styles.todayFact, live.todayFact]}>
+                {decisionAgeCaption(coachDecision.weeksAgo)}
+              </Text>
+            )}
+          </TouchableOpacity>
         )}
 
         {/* ── Campaign 26 (founder device order 2026-08-17): the post-hero
@@ -3223,17 +3414,16 @@ const styles = StyleSheet.create({
   },
   // B-5: typography now comes from SectionLabel (tone="muted"); only
   // structural overrides remain local.
+  heroName: { marginTop: spacing.xs },
+  todaySection: { gap: spacing.xs },
+  todayValue: { ...type.num('h3'), color: colors.textPrimary },
+  todayFact: { ...type.bodySm, color: colors.textSecondary },
+  todayCoach: { ...type.body, color: colors.textPrimary },
   heroEyebrow: {},
-  workoutName: {
-    fontSize: fontSize.xxl,
-    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
-    color: colors.textPrimary,
-    lineHeight: 30,
-  },
-  workoutMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
-  // F-18: the hero's one body sentence (week-complete state). A
-  // sentence, so no line clamp - it wraps and the card grows.
-  heroBody: { ...type.bodySm, color: colors.textSecondary },
+  // D167: `workoutName` (24px + a raw lineHeight: 30), `workoutMeta` and
+  // `heroBody` are retired. All three hero branches now carry their one loud
+  // fact through BigNumber at type.hero, with the supporting line as its
+  // caption, so there is nothing left for these keys to style.
   mesoBriefChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs2,
     alignSelf: 'flex-start',

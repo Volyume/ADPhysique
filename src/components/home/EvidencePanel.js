@@ -99,7 +99,12 @@ const styles = StyleSheet.create({
 // values (the CP-10 convention CoachDailyBrief used).
 function buildLiveStyles(t) {
   return {
-    wrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    // D167: this read `t.colors.border` while the frozen half sets
+    // `colors.borderSubtle` twenty lines above. The live half wins at runtime,
+    // so the pane drew the bright control-edge grey against its own intent --
+    // the same two-halves-disagree defect as LoggedSetRow (D166 part 3), and
+    // the reason new components no longer use this pattern at all.
+    wrap: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     title: { ...t.type.caption, color: t.colors.textMuted },
     countdown: { ...t.type.bodySm, color: t.colors.textSecondary },
     rowText: { ...t.type.bodySm, color: t.colors.textSecondary },

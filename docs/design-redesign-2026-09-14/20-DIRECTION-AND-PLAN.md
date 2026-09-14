@@ -280,7 +280,7 @@ Nutrition
 Protein 218 / 230 g
 
 Progress
-+0.4 kg this week
+<a non-scale signal>          <- AMENDED by D166 answer 3, see below
 
 COACH
 Weight and performance are both moving as planned. No change needed.
@@ -301,11 +301,23 @@ DECISION
 Keep calories unchanged.
 ```
 
-Two things about the Progress screen are NOT settled by this section: the
-ED-safety question at section 10, and whether every one of those four facts can
-be sourced from what the engine already computes without inventing a number.
-Both are being established before that screen is built. Nothing here licenses a
-new computation: the coaching engine is deterministic and stays pure.
+**AMENDED BY D166 AND D167 — read this before building either screen.** The
+founder answered the ED-safety questions the same day, and two of the answers
+changed these specs:
+
+- **Today** shows a NON-SCALE progress signal, never "+0.4 kg this week"
+  (D166 answer 3). Ruled to **total lifted this week** under D167.
+- **Progress** opens with the DECISION at `type.hero`, not bodyweight (D166
+  answer 1); bodyweight and its delta sit below with the graph at normal
+  prominence. PHYSIQUE shows the scan's **band and score**, never a body-fat
+  percentage (D166 answer 2), and must consume `buildScoreTierContract` rather
+  than the raw score, because the number is withheld on a low-confidence scan.
+  PERFORMANCE shows the measured strength read the Training pillar already
+  computes, not a word mapped from the engine's internal load signal (D167).
+
+Nothing here licenses a new computation: the coaching engine is deterministic
+and stays pure. Every figure on both screens comes from something the app
+already derives.
 
 ## 5. The laws (founder-confirmed, and now seven)
 

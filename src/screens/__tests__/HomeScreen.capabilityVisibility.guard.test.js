@@ -86,12 +86,36 @@ describe('T1-17: Today\'s card counts the effective session', () => {
   });
 
   test('the displayed count prefers effectiveSessionCount, falling back to the raw exerciseCounts map', () => {
-    expect(HOME).toMatch(
-      /\(effectiveSessionCount \?\? exerciseCounts\[displayWorkout\?\.routine\?\.id\]\) \? \(/,
+    // D167 law 1: the count moved out of inline JSX and into `heroMetaLine`,
+    // which composes the founder's full "6 exercises . 18 sets . about 52 min"
+    // line. The RULE this case exists for is unchanged and still pinned: the
+    // served count wins, the raw map is the fallback, and a null read shows
+    // neither rather than a guess. Only its location changed.
+    const memo = /const heroMetaLine = useMemo\(\(\) => \{[\s\S]*?\}, \[/.exec(HOME);
+    expect(!!memo).toBe(true);
+    expect(memo[0]).toMatch(
+      /const exercises = effectiveSessionCount \?\? exerciseCounts\[displayWorkout\?\.routine\?\.id\];/,
     );
-    expect(HOME).toMatch(
-      /\{effectiveSessionCount \?\? exerciseCounts\[displayWorkout\.routine\.id\]\} exercises/,
-    );
+    expect(memo[0]).toMatch(/if \(exercises\) parts\.push\(/);
+    expect(memo[0]).toMatch(/exercise\$\{exercises === 1 \? '' : 's'\}/);
+  });
+
+  test('the meta line adds sets and a duration only when each is genuinely known', () => {
+    // A failed routine read must leave the exercise count standing alone
+    // rather than printing "0 sets" or a guessed duration beside it.
+    const memo = /const heroMetaLine = useMemo\(\(\) => \{[\s\S]*?\}, \[/.exec(HOME);
+    expect(memo[0]).toMatch(/if \(sessionShape\.sets\) parts\.push\(/);
+    expect(memo[0]).toMatch(/if \(sessionShape\.minutes\) parts\.push\(`about \$\{sessionShape\.minutes\} min`\)/);
+    expect(memo[0]).toMatch(/return parts\.length \? parts\.join\(' . '\) : null;/);
+  });
+
+  test('the duration uses the engine estimator and the plan cards own input chain, not a new fallback', () => {
+    // D167: `estimateWorkoutMinutes` is already user-facing on plan cards, and
+    // `recommendedSets ?? 3` / `restSeconds ?? 90` is that screen's chain
+    // verbatim. A different fallback here would make Today disagree with the
+    // number the person was shown when they chose the plan.
+    expect(HOME).toMatch(/import \{ estimateWorkoutMinutes \} from '\.\.\/lib\/planEngine';/);
+    expect(HOME).toMatch(/sets: re\?\.recommendedSets \?\? 3, restSec: re\?\.restSeconds \?\? 90/);
   });
 
   test('re-fires on the displayed routine changing (one call per focus, via displayWorkout?.routine?.id)', () => {

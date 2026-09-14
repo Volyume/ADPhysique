@@ -7238,3 +7238,96 @@ the `photoSuppressed` gate that the scan tile above it respects;
 `useProgressData.js:293-294` builds its 84-day calendar with fixed 24-hour steps
 rather than `localDayKeysEndingAt`, which is the DST defect the rendering side
 already fixed.
+
+## D167 (2026-09-14) - Stage 2 rulings: the seven forks the recon lanes refused to decide
+
+**Authority.** Lead, under D33, on the stops raised by two read-only Opus recon
+lanes over `HomeScreen.js` (Today) and `AnalyticsScreen.js` (Progress). Each
+lane correctly stopped rather than interpreted. D165 set the direction, D166 the
+ED-safety answers; this ruling unblocks the build.
+
+**1. The state-J source guard is replaced by the coverage it was standing in
+for, not weakened.** `AnalyticsScreen.stateMatrix.test.js:841-851` asserts that
+AnalyticsScreen contains no `getLatestCoachOutput` and no `/coachDecision/i`,
+which the founder's D166 answer 1 makes impossible. Read to the end, that guard
+is not a rule about where a decision may appear: its own header (`:75-83`)
+explains it as a substitute for a mount test, because "mounting a screen with
+and without a coach decision fixture would produce byte-identical renders by
+construction". D166 makes that sentence false. State J is now a REAL state with
+two renders, so it gets the mount coverage the guard was standing in for.
+Deleting the absence assertions without adding that coverage would be
+weakening; replacing them is an upgrade.
+
+**2. The session duration on Today is built, and it is not a new claim.**
+`estimateWorkoutMinutes` (`planEngine.js:910-922`) is pure, deterministic and
+ALREADY user-facing on plan cards (`PlanLibraryScreen.js:174`, whose own comment
+says the figure is "honest about the plan's actual sets/rest rather than a guess
+from its name") and in the manual builder. Today uses the same estimator with
+the same established input chain, `{ sets: recommendedSets ?? 3, restSec:
+restSeconds ?? 90 }` (`PlanLibraryScreen.js:170`), over rows Home already
+fetches, so there is no new read and no new fallback invented. Copy is "about 52
+min" rather than "~52 min": British, and the app does not use symbols where a
+word will do. Rationale: a person choosing a plan is already shown this number;
+Today showing a different number, or none, is the inconsistency, not the
+estimate.
+
+**3. The non-scale progress signal on Today is TOTAL LIFTED this week.** D166
+ruled the class, not the instance. `weekStats.volume` is already loaded
+(`HomeScreen.js:951`, working sets only, warm-ups excluded) and currently
+rendered nowhere. Sessions-this-week was the other candidate and is rejected
+because the week ribbon's own caption already says it, and repeating one fact
+twice on one screen is the "here are 17 metrics" failure the founder named.
+Labelled "Total lifted", never "Volume" (law 7, D166 part 3), in the user's own
+unit.
+
+**4. Nutrition on Today reuses Home's existing suppression value; the ED read
+count stays exactly two.** `edFlagFailClosed.guard.test.js:139` pins
+`getOpenEdPatternFlag(user.id)` to EXACTLY two occurrences in HomeScreen, and
+its header records that the count "follows the surviving loaders rather than
+being weakened: it is now pinned exactly". A nutrition block is food-adjacent
+and must suppress, but Home already derives `edSuppressed` at `:613-616` from
+those two reads. The block consumes that derived value. Adding a third read
+would have been the lazy path and would have forced a deliberate guard change
+for no gain.
+
+**5. PERFORMANCE on Progress shows the measured strength read, not a word
+mapped from `loadSignal`.** The founder's sketch said "Rising". No engine field
+produces it: `loadSignal` is `'progress' | 'hold' | 'reduce'` and describes
+TRAINING LOAD, and `progressScanCheckInEvidence.js:203-212` is already on record
+refusing to map that signal to a body-composition direction, calling such a
+mapping "an invented rule". Inventing it here would break the same rule in the
+same way. Instead the row shows what `computeTrainingPillarSummary`
+(`progress/pillars.js:29-85`) already measures and already states to users:
+strength up on N of M lifts this month. That is a real, deterministic,
+user-facing performance fact rather than a relabelled internal enum.
+
+**6. PHYSIQUE consumes `buildScoreTierContract`, never the raw score.**
+`progressScanResultsContract.js:52-156` withholds the NUMBER on a
+low-confidence scan (band only, unless the person has explicitly revealed it)
+and withholds both under suppression. A row that rendered "Lean 84"
+unconditionally would show a number the photos screen deliberately hides from
+the same person on the same scan. It must also read through
+`progressScanDisplay.js`'s normalising helpers rather than
+`coachSummaryFromScan`, which returns the score raw and would show a
+pre-recalibration figure on a migrated row.
+
+**7. New weight consumers take `trend.delta` through `formatBodyWeightRate`,
+never `deltaLabel`.** The engine's `deltaLabel` (`weeklyCoach.js:1128`) is
+kg-only because its `units` input is the immutable gym unit, so a stone user
+reads kg. `CoachOutputScreen.js:2642-2657` works around this by hand at one call
+site. `src/lib/units.js:108-115` already solves it properly and is already used
+by the Body pillar. New code uses the helper; the hand reformat is not copied.
+
+**Defects the lanes found, being fixed:** `EvidencePanel.js:81` vs `:102`
+disagree on a border colour (frozen `borderSubtle`, live `border`, live wins),
+so the evidence pane draws the bright "wireframe" edge against its own intent --
+the same class of defect as `LoggedSetRow` in D166 part 3.
+
+**Reported, NOT fixed** (unrelated, per CLAUDE.md section 4): roughly nineteen
+dead style keys in HomeScreen from retired banners; `useVisualPillar` is called
+with two arguments but takes one (`AnalyticsScreen.js:129`), so `tier` is
+silently ignored and the comment above it is stale under D137;
+`useWeightTrend.js:115` returns the UNWINDOWED raw series as `rawData` while
+`ewmaData` uses the windowed one, so a faint raw line can include points the
+smoothed line deliberately excludes; `ProgressSections.js`'s header still claims
+the Progress landing draws its cards, which stopped being true.
