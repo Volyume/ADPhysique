@@ -7,15 +7,21 @@
  * waiting on its second independent confirmation (GD-11) carries a
  * "Pending" badge, so picking it is an informed choice, not a surprise.
  *
- * Lead visual review 2026-09-06, ruling V18: `Card padding="md"
- * radius="md"` (moved off a bare `PressableCard`), glyph 36, one-line
- * `body` title, one-line `caption` sub.
+ * Founder defect 2026-09-14, lead ruling CR-17: the row used to sit on a
+ * `Card` with its glyph in a 36 dp `circle()` chip (ruling V18), which
+ * gave the gym finder a boxed look nothing else in Community has any
+ * more. It is now `CohortRow`'s anatomy: the bare glyph at `iconSize.md`
+ * in `textMuted`, `bodyStrong` name, one `bodySm` `textSecondary` line, a
+ * `borderSubtle` hairline across the row, and no gutter of its own (every
+ * screen that mounts `GymPicker` -- Join, Edit profile, Pro onboarding --
+ * already pays `spacing.lg` on its own content). The "Pending" badge
+ * stays a pill: it is a state, not decoration.
  */
 
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Card from '../Card';
-import { spacing, type, iconSize, radius, circle } from '../../styles/theme';
+import PressableCard from '../PressableCard';
+import { spacing, type, iconSize, radius, colors } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { venueLine, isPendingVenue } from '../../lib/gyms';
 
@@ -25,60 +31,54 @@ export default function GymRow({ venue, onPress }) {
   const pending = isPendingVenue(venue);
 
   return (
-    <Card
+    <PressableCard
       onPress={onPress}
-      padding="md"
-      radius="md"
-      style={styles.row}
       accessibilityLabel={pending ? `${primary}, pending confirmation` : primary}
     >
-      <View style={[styles.glyph, { backgroundColor: t.colors.surface2 }]}>
-        <Ionicons name="business-outline" size={iconSize.sm} color={t.colors.textSecondary} />
-      </View>
-      <View style={styles.body}>
-        <Text
-          style={[styles.name, { ...t.type.body, color: t.colors.textPrimary }]}
-          numberOfLines={1}
-        >
-          {primary}
-        </Text>
-        {secondary ? (
+      <View style={styles.row}>
+        <Ionicons name="business-outline" size={iconSize.md} color={t.colors.textMuted} />
+        <View style={styles.body}>
           <Text
-            style={[styles.sub, { ...t.type.caption, color: t.colors.textSecondary }]}
+            style={[styles.name, { color: t.colors.textPrimary }]}
             numberOfLines={1}
           >
-            {secondary}
+            {primary}
           </Text>
+          {secondary ? (
+            <Text
+              style={[styles.sub, { color: t.colors.textSecondary }]}
+              numberOfLines={1}
+            >
+              {secondary}
+            </Text>
+          ) : null}
+        </View>
+        {pending ? (
+          <View style={[styles.badge, { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle }]}>
+            <Text style={[styles.badgeText, { color: t.colors.textSecondary }]}>
+              Pending
+            </Text>
+          </View>
         ) : null}
       </View>
-      {pending ? (
-        <View style={[styles.badge, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}>
-          <Text style={[styles.badgeText, { ...t.type.caption, color: t.colors.textSecondary }]}>
-            Pending
-          </Text>
-        </View>
-      ) : null}
-    </Card>
+      <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
+    </PressableCard>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  glyph: {
-    width: 36,
-    height: 36,
-    borderRadius: circle(36),
-    alignItems: 'center',
-    justifyContent: 'center',
+  row: {
+    flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: spacing.md,
   },
   body: { flex: 1, gap: spacing.xxs },
-  name: { ...type.body },
-  sub: { ...type.caption },
+  name: { ...type.bodyStrong, color: colors.textPrimary },
+  sub: { ...type.bodySm, color: colors.textSecondary },
   badge: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
     borderRadius: radius.full,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  badgeText: { ...type.caption },
+  badgeText: { ...type.caption, color: colors.textSecondary },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });

@@ -9,6 +9,13 @@
  * existing `removeFollower` lib function after a calm confirm. Reached
  * from `CommunityPrivacyScreen` and from the follower count on the
  * caller's own `CommunityProfileScreen`.
+ *
+ * Founder defect 2026-09-14, lead ruling CR-17: every person here used to
+ * arrive wrapped in a `Card` (through `ProfileCard`) with the kebab
+ * floating outside it, so one follower read as a box plus a loose button
+ * while the same person on the Hub read as a flat row. `ProfileCard` is
+ * now `PersonRow`, and the kebab is that row's own trailing control --
+ * one row, one hairline, no gap stacked on top of it.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -26,9 +33,10 @@ import MenuSheet from '../components/community/MenuSheet';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
-import { colors, spacing } from '../styles/theme';
+import { colors, spacing, circle, iconSize } from '../styles/theme';
 import { listFollowers, removeFollower } from '../lib/community';
 
+const KEBAB = 36;
 const PAGE = 20;
 
 const REFUSALS = {
@@ -155,25 +163,23 @@ export default function CommunityFollowersScreen({ navigation }) {
         renderItem={({ item }) => {
           const card = cardOf(item);
           return (
-            <View style={styles.row}>
-              <View style={styles.cardWrap}>
-                <ProfileCard
-                  card={card}
-                  showFollow={false}
-                  compact
-                  onPress={() => navigation.navigate('CommunityProfile', { userId: card.user_id })}
-                />
-              </View>
-              <Pressable
-                onPress={() => setMenuCard(card)}
-                hitSlop={spacing.sm}
-                style={[styles.kebab, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
-                accessibilityRole="button"
-                accessibilityLabel={`Options for @${card.handle}`}
-              >
-                <Ionicons name="ellipsis-horizontal" size={18} color={t.colors.textPrimary} />
-              </Pressable>
-            </View>
+            <ProfileCard
+              card={card}
+              showFollow={false}
+              compact
+              onPress={() => navigation.navigate('CommunityProfile', { userId: card.user_id })}
+              trailing={(
+                <Pressable
+                  onPress={() => setMenuCard(card)}
+                  hitSlop={spacing.sm}
+                  style={[styles.kebab, { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Options for @${card.handle}`}
+                >
+                  <Ionicons name="ellipsis-horizontal" size={iconSize.sm} color={t.colors.textSecondary} />
+                </Pressable>
+              )}
+            />
           );
         }}
         contentContainerStyle={styles.content}
@@ -199,14 +205,12 @@ export default function CommunityFollowersScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
-  content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.sm },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   loading: { paddingTop: spacing.xxl, alignItems: 'center' },
   skeleton: { gap: spacing.sm },
   footer: { paddingVertical: spacing.lg, alignItems: 'center' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.sm },
-  cardWrap: { flex: 1 },
   kebab: {
-    width: 36, height: 36, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth,
+    width: KEBAB, height: KEBAB, borderRadius: circle(KEBAB), borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center', justifyContent: 'center',
   },
 });

@@ -1,30 +1,55 @@
 /**
  * ProfileCard (blueprint section 6)
  *
- * One person, as a row: avatar, display name, @handle and place, the
- * facts they chose (styles, goal, setting) as one training line, an
- * optional reasons line, and the follow control.
+ * One person, as a row: avatar, display name, one line, and the one
+ * action this surface offers.
  *
- * Section 13, ruling 1: the reasons line is `textPrimary` at
- * `captionStrong`, never amber. Amber on a Community screen is only the
- * glyph on a primary button, the selected segment, an emphatic fill, the
- * Volyume chip and the unseen dot.
+ * Founder defect 2026-09-14 ("it is meant to not look AI and is meant to
+ * look like the rest of the app"), lead ruling CR-17: this file used to
+ * wrap every person in a `Card`, so the same person read as one product
+ * on the Hub, a cohort page or a group page (flat `PersonRow`s) and as a
+ * different one in Find people, Search, Followers, Connections and the
+ * Activity inbox, one tap away. `20-BLUEPRINT.md` section 9 rule 2 bans
+ * `Card` for people; the presentation guard only ever grepped SCREEN
+ * source for the literal `<Card`, so a card rendered inside this wrapper
+ * slipped through it for the whole campaign.
  *
- * Lead visual review 2026-09-06, ruling V8: avatar 40; name `bodyStrong`;
- * handle and place on one `caption` line in `textMuted`; reasons
- * `captionStrong` in `textPrimary`, at most two lines; the chosen facts as
- * one `caption` training line, in place of a chip row; actions trailing
- * per V7; `Card padding="md"`.
+ * So there is now ONE person row in Community: this file composes what a
+ * person card means (which facts, which reasons, which single action) and
+ * hands it to `PersonRow` (`docs/rules/styling.md`, "extend, do not
+ * fork"), which owns the anatomy -- avatar 32, `bodyStrong` name, one
+ * `bodySm` `textSecondary` line, an optional trailing control, a
+ * `borderSubtle` hairline across the row, and no gutter of its own
+ * (every screen below already pays `spacing.lg`).
  *
- * Lead correction, ruling V8a: a card shows ONE trailing action, never the
- * Follow plus Connect pair. Precedence: if `showConnect` and the viewer may
- * connect (`ConnectButton`'s own `shouldOfferConnect`), render `ConnectButton`
- * alone (Connect `primary`, Requested `secondary`, Respond `primary`); once
- * connected, render Message alone (`primary` sm `chatbubble-outline`, via
- * `onMessage`) with no Connected button on the card; otherwise (connect not
- * offered) render `FollowButton` alone. The profile screen composes the full
- * Follow+Connect pair itself and is unaffected; only what this card composes
- * changes.
+ * THE ONE LINE (a presentation ruling, no copy removed). `PersonRow`
+ * carries a single caption, so the four lines this card used to stack are
+ * now chosen by priority rather than piled up, most useful first:
+ *   1. the connect-deny line, when Connect is hidden by the target's own
+ *      preference -- refusal copy that explains the row's missing action,
+ *      and the only line on that row long enough to need the full width;
+ *   2. the reasons (SD-24), which already carry the place, the gym and
+ *      the age band that would otherwise repeat on the facts line;
+ *   3. the facts: `@handle`, the place line, the age band and (outside
+ *      `compact`) the chosen training facts.
+ * Every string this file ever rendered still renders; which one gets the
+ * line depends on what that row is FOR. Concatenating all four instead
+ * would have truncated the important half behind the unimportant one --
+ * "@priya_kb · Motherwell · Accepts requests from..." cuts at roughly
+ * thirty characters on a 360 dp phone.
+ *
+ * Section 13, ruling 1: no amber anywhere in this file (pinned at 0 by
+ * `rows.amber.guard.test.js`).
+ *
+ * Lead correction, ruling V8a (unchanged by CR-17): a row shows ONE
+ * trailing action, never the Follow plus Connect pair. Precedence: if
+ * `showConnect` and the viewer may connect (`ConnectButton`'s own
+ * `shouldOfferConnect`), render `ConnectButton` alone (Connect `primary`,
+ * Requested `secondary`, Respond `primary`); once connected, render
+ * Message alone (`primary` sm `chatbubble-outline`, via `onMessage`) with
+ * no Connected button on the row; otherwise (connect not offered) render
+ * `FollowButton` alone. The profile screen composes the full
+ * Follow+Connect pair itself and is unaffected.
  *
  * Spec 1.1 C / 1.3 (migration 163): a card's `place_label` (falling back
  * to `area_label`) and `age_band` join the handle line when present, and
@@ -32,21 +57,21 @@
  * (`same_place`, `near_place`, `within_25_miles`, `same_age_band`) read as
  * copy rather than a raw key. When Connect would otherwise be offered but
  * the target's own `connect_from` refuses the caller
- * (`connectDeniedByPreference`), Follow renders with one line explaining
+ * (`connectDeniedByPreference`), Follow renders with the line explaining
  * why ("Accepts requests from people who follow them" / "Not taking
- * requests"): the card is never silently missing its action.
+ * requests"): the row is never silently missing its action.
  *
  * Props:
  *   card       the profile card (user_id, handle, display_name,
  *              avatar_preset, bio, styles, goal, setting, area_label,
  *              gym_label, follower_count, relationship, ...)
- *   reasons    string[] from `suggestedPeople`, rendered as one line
+ *   reasons    string[] from `suggestedPeople`, rendered as the line
  *   onPress    opens the profile
  *   showFollow render the FollowButton (default true; pass false on your
  *              own card and inside a picker); only takes effect when
  *              Connect is not offered here (V8a)
  *   onFollowChange (relationship, card) after a successful follow toggle
- *   compact    drops the training line, for a condensed creator line
+ *   compact    drops the training facts, for a condensed creator line
  *   showConnect offer the connection tier instead of Follow when the viewer
  *              may connect (discovery blueprint section 4); V8a: one
  *              trailing action only, never both
@@ -54,24 +79,23 @@
  *   onConnect  (card) open the ConnectSheet
  *   onConnectChange (card) after any connection state change
  *   onMessage  (card) open the conversation; once connected this is the
- *              card's own Message action (V8a), not only the menu's
+ *              row's own Message action (V8a), not only the menu's
  *   onRulesOutdated () the rules changed and must be accepted first
+ *   trailing   a caller-built node for the row's trailing slot, in place
+ *              of the action above (the Followers and Connections kebab,
+ *              the Activity screen's Accept/Decline pair, the Privacy
+ *              screen's Unblock/Unmute): one row shape, whatever the
+ *              surface's own control happens to be
  */
 
-import { View, Text, StyleSheet } from 'react-native';
-import Card from '../Card';
 import Button from '../Button';
-import ProfileAvatarMark from '../ProfileAvatarMark';
+import PersonRow from './PersonRow';
 import FollowButton from './FollowButton';
 import ConnectButton, { shouldOfferConnect, connectDeniedByPreference } from './ConnectButton';
-import { spacing, type, colors } from '../../styles/theme';
-import useTheme from '../../hooks/useTheme';
 import {
   COMMUNITY_STYLE_KEYS, COMMUNITY_GOALS, COMMUNITY_SETTINGS, connectionState,
   reasonLines, TP_AGE_BANDS,
 } from '../../lib/community';
-
-const AVATAR = 40;
 
 /** The chosen facts, in the order the profile hero shows them. */
 export function factLabels(card) {
@@ -127,6 +151,31 @@ export function connectDenyLine(card) {
   return 'Accepts requests from people who follow them';
 }
 
+/**
+ * The row's one line, by priority (see the header): the refusal that
+ * explains a missing action, else the reasons this person is here, else
+ * who they are. Never a concatenation of all three, which would truncate
+ * the half that matters.
+ *
+ * @param {object} card
+ * @param {string[]} reasons
+ * @param {boolean} compact
+ * @param {string|null} denyLine
+ * @returns {string|null}
+ */
+export function personLine(card, reasons, compact, denyLine) {
+  if (denyLine) return denyLine;
+  const reasonLine = reasons?.length ? reasonLines(reasons, card).join(' · ') : null;
+  if (reasonLine) return reasonLine;
+  const facts = compact ? [] : factLabels(card);
+  return [
+    card?.handle ? `@${card.handle}` : null,
+    placeLine(card),
+    TP_AGE_BANDS[card?.age_band] ?? null,
+    facts.length ? facts.join(' · ') : null,
+  ].filter(Boolean).join(' · ') || null;
+}
+
 export default function ProfileCard({
   card,
   reasons = [],
@@ -140,18 +189,9 @@ export default function ProfileCard({
   onConnectChange,
   onMessage,
   onRulesOutdated,
+  trailing = null,
 }) {
-  const t = useTheme();
   if (!card) return null;
-  const facts = compact ? [] : factLabels(card);
-  const trainingLine = facts.length ? facts.join(' · ') : null;
-  // Fallback rows (SD-28) always carry an empty `reasons` array, so this
-  // is naturally null for them without any extra check here.
-  const reasonLine = reasons.length ? reasonLines(reasons, card).join(' · ') : null;
-  const name = card.display_name || card.handle;
-  const ageBandLabel = TP_AGE_BANDS[card.age_band] ?? null;
-  const handleAndPlace = [`@${card.handle}`, placeLine(card), ageBandLabel]
-    .filter(Boolean).join(' · ');
 
   // V8a: one trailing action, never the Follow+Connect pair. Connect (in
   // whichever of its own states) wins over Follow whenever it is offered at
@@ -161,90 +201,40 @@ export default function ProfileCard({
   const connected = canConnect && connectionState(card) === 'connected';
   const showAction = showFollow || canConnect;
   // Spec 1.3: Connect hidden by the target's OWN preference (not by a
-  // structural reason) shows Follow with a line saying why, so the card
+  // structural reason) shows Follow with the line saying why, so the row
   // is never quietly missing its action.
   const denyLine = showConnectDenyLine(showConnect, me, card) ? connectDenyLine(card) : null;
 
+  const action = canConnect ? (
+    connected ? (
+      <Button
+        variant="primary"
+        size="sm"
+        fullWidth={false}
+        title="Message"
+        icon="chatbubble-outline"
+        onPress={() => onMessage?.(card)}
+        accessibilityLabel={`Message @${card.handle ?? ''}`.trim()}
+      />
+    ) : (
+      <ConnectButton
+        card={card}
+        me={me}
+        onConnect={onConnect}
+        onChange={onConnectChange}
+        onMessage={onMessage}
+        onRulesOutdated={onRulesOutdated}
+      />
+    )
+  ) : (
+    <FollowButton card={card} onChange={onFollowChange} />
+  );
+
   return (
-    <Card
+    <PersonRow
+      person={{ ...card, caption: personLine(card, reasons, compact, denyLine) }}
       onPress={onPress}
-      accessibilityLabel={`${name}, @${card.handle}`}
-      padding="md"
-      style={styles.card}
-    >
-      <View style={styles.row}>
-        <ProfileAvatarMark
-          presetKey={card.avatar_preset}
-          displayName={name}
-          size={AVATAR}
-        />
-        <View style={styles.body}>
-          <Text style={[styles.name, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
-            {name}
-          </Text>
-          <Text style={[styles.handle, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
-            {handleAndPlace}
-          </Text>
-          {reasonLine ? (
-            <Text
-              style={[styles.reasons, { ...t.type.captionStrong, color: t.colors.textPrimary }]}
-              numberOfLines={2}
-            >
-              {reasonLine}
-            </Text>
-          ) : null}
-          {trainingLine ? (
-            <Text style={[styles.training, { ...t.type.caption, color: t.colors.textSecondary }]} numberOfLines={1}>
-              {trainingLine}
-            </Text>
-          ) : null}
-          {denyLine ? (
-            <Text style={[styles.deny, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
-              {denyLine}
-            </Text>
-          ) : null}
-        </View>
-        {showAction ? (
-          <View style={styles.actions}>
-            {canConnect ? (
-              connected ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  fullWidth={false}
-                  title="Message"
-                  icon="chatbubble-outline"
-                  onPress={() => onMessage?.(card)}
-                  accessibilityLabel={`Message @${card.handle ?? ''}`.trim()}
-                />
-              ) : (
-                <ConnectButton
-                  card={card}
-                  me={me}
-                  onConnect={onConnect}
-                  onChange={onConnectChange}
-                  onMessage={onMessage}
-                  onRulesOutdated={onRulesOutdated}
-                />
-              )
-            ) : (
-              <FollowButton card={card} onChange={onFollowChange} />
-            )}
-          </View>
-        ) : null}
-      </View>
-    </Card>
+      trailing={trailing ?? (showAction ? action : null)}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  card: { gap: spacing.md },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  body: { flex: 1, gap: spacing.xxs },
-  name: { ...type.bodyStrong, color: colors.textPrimary },
-  handle: { ...type.caption, color: colors.textMuted },
-  reasons: { ...type.captionStrong, color: colors.textPrimary },
-  training: { ...type.caption, color: colors.textSecondary },
-  deny: { ...type.caption, color: colors.textMuted },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2 },
-});

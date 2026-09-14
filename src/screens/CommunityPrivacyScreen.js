@@ -326,17 +326,22 @@ export default function CommunityPrivacyScreen({ navigation }) {
               {lists.blocked.map((row) => {
                 const card = row.card ?? row;
                 return (
-                  <View key={card.user_id} style={styles.row}>
-                    <ProfileCard card={card} showFollow={false} compact />
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      fullWidth={false}
-                      title="Unblock"
-                      onPress={() => undo('blocked', card)}
-                      accessibilityLabel={`Unblock @${card.handle}`}
-                    />
-                  </View>
+                  <ProfileCard
+                    key={card.user_id}
+                    card={card}
+                    showFollow={false}
+                    compact
+                    trailing={(
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        fullWidth={false}
+                        title="Unblock"
+                        onPress={() => undo('blocked', card)}
+                        accessibilityLabel={`Unblock @${card.handle}`}
+                      />
+                    )}
+                  />
                 );
               })}
             </View>
@@ -352,17 +357,22 @@ export default function CommunityPrivacyScreen({ navigation }) {
               {lists.muted.map((row) => {
                 const card = row.card ?? row;
                 return (
-                  <View key={card.user_id} style={styles.row}>
-                    <ProfileCard card={card} showFollow={false} compact />
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      fullWidth={false}
-                      title="Unmute"
-                      onPress={() => undo('muted', card)}
-                      accessibilityLabel={`Unmute @${card.handle}`}
-                    />
-                  </View>
+                  <ProfileCard
+                    key={card.user_id}
+                    card={card}
+                    showFollow={false}
+                    compact
+                    trailing={(
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        fullWidth={false}
+                        title="Unmute"
+                        onPress={() => undo('muted', card)}
+                        accessibilityLabel={`Unmute @${card.handle}`}
+                      />
+                    )}
+                  />
                 );
               })}
             </View>
@@ -419,7 +429,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   section: { gap: spacing.sm },
-  row: { gap: spacing.sm },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   hint: { ...type.caption, color: colors.textMuted },
 });

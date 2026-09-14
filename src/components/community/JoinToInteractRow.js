@@ -8,36 +8,46 @@
  * reason nor a route to the fix (product review 2026-09-06, item 16).
  *
  * One quiet row, in place of both, that goes to Join and comes back.
+ *
+ * Founder defect 2026-09-14, lead ruling CR-17: it used to be a `Card`,
+ * so a quiet one-line prompt read as a boxed panel under a flat comment
+ * list. It is now the house flat row -- one `bodySm` line, chevron, a
+ * `borderSubtle` hairline across the row, no gutter of its own (the post
+ * screen's content already pays `spacing.lg`).
  */
 
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Card from '../Card';
+import PressableCard from '../PressableCard';
 import useTheme from '../../hooks/useTheme';
-import { spacing, type, iconSize } from '../../styles/theme';
+import { spacing, type, colors, iconSize } from '../../styles/theme';
 
 export const JOIN_TO_INTERACT_LINE = 'Create your Community profile to react and comment';
 
 export default function JoinToInteractRow({ onPress }) {
   const t = useTheme();
   return (
-    <Card
+    <PressableCard
       onPress={onPress}
-      style={styles.card}
+      style={styles.wrap}
       accessibilityLabel={JOIN_TO_INTERACT_LINE}
     >
       <View style={styles.row}>
-        <Text style={[styles.line, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+        <Text style={[styles.line, { color: t.colors.textSecondary }]}>
           {JOIN_TO_INTERACT_LINE}
         </Text>
         <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
       </View>
-    </Card>
+      <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
+    </PressableCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { marginTop: spacing.md },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  line: { ...type.bodySm, flex: 1 },
+  wrap: { marginTop: spacing.md },
+  row: {
+    flexDirection: 'row', alignItems: 'center', minHeight: 48, gap: spacing.sm,
+  },
+  line: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });

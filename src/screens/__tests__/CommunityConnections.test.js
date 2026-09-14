@@ -19,15 +19,23 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('../../components/BackHeader', () => () => null);
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
+// Founder defect 2026-09-14, lead ruling CR-17 (`20-BLUEPRINT.md` section
+// 9 rule 2): `ProfileCard` is no longer a `Card` with the kebab floating
+// beside it -- it is `PersonRow`, and this screen hands it the kebab as the
+// row's own `trailing` control. The stand-in renders that slot so the
+// assertions below still reach the kebab where it now lives; without it
+// the mock would silently pin the OLD shape (a row with no trailing) and
+// pass while the real screen rendered no kebab at all.
 jest.mock('../../components/community/ProfileCard', () => {
   const React = require('react');
   const { Pressable, Text } = require('react-native');
   return {
     __esModule: true,
-    default: ({ card, onPress }) => React.createElement(
+    default: ({ card, onPress, trailing }) => React.createElement(
       Pressable,
       { onPress, accessibilityLabel: `card-${card.user_id}` },
       React.createElement(Text, null, card.handle),
+      trailing ?? null,
     ),
   };
 });

@@ -6,9 +6,18 @@
  * room with its own feed or admin, so the row states the label and the
  * count and nothing more.
  *
- * Lead visual review 2026-09-06, ruling V18: `Card padding="md"
- * radius="md"`, glyph 36, one-line `body` title, one-line `caption` sub,
- * trailing chevron.
+ * Founder defect 2026-09-14, lead ruling CR-17: the row used to sit on a
+ * `Card` with its glyph in a 36 dp `circle()` chip (ruling V18), so a
+ * cohort read as one product here and another as a `CohortRow` on the Hub
+ * one tap away. `20-BLUEPRINT.md` section 9 rule 2 bans `Card` for
+ * cohorts, and a circle that is not a person, a state or a value is
+ * decoration -- the thing that reads as generic. It is now `CohortRow`'s
+ * anatomy exactly: the bare glyph at `iconSize.md` in `textMuted`,
+ * `bodyStrong` title, one `bodySm` `textSecondary` line, chevron, a
+ * `borderSubtle` hairline across the row, and no gutter of its own (its
+ * page already pays `spacing.lg`). It is not `CohortRow` itself because a
+ * dimension's leading mark is its kind glyph, never an avatar stack of
+ * the people behind it.
  *
  * Communities revamp (2026-09-10): the "programme" dimension and its
  * icon are retired from the client (Volyume never explains Community as
@@ -32,8 +41,8 @@
 
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Card from '../Card';
-import { spacing, type, colors, iconSize, circle } from '../../styles/theme';
+import PressableCard from '../PressableCard';
+import { spacing, type, colors, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 
 const GLYPH = {
@@ -60,43 +69,37 @@ export default function DimensionRow({ dimension, onPress }) {
   const sub = peopleLine(dimension.count);
 
   return (
-    <Card
+    <PressableCard
       onPress={onPress}
-      padding="md"
-      radius="md"
-      style={styles.row}
       accessibilityLabel={`${dimension.label}. ${sub}`}
     >
-      <View style={[styles.glyph, { backgroundColor: t.colors.surface2 }]}>
+      <View style={styles.row}>
         <Ionicons
           name={GLYPH[dimension.kind]}
           size={iconSize.md}
-          color={t.colors.textSecondary}
+          color={t.colors.textMuted}
         />
+        <View style={styles.body}>
+          <Text style={[styles.label, { color: t.colors.textPrimary }]} numberOfLines={1}>
+            {dimension.label}
+          </Text>
+          <Text style={[styles.sub, { color: t.colors.textSecondary }]} numberOfLines={1}>
+            {sub}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
       </View>
-      <View style={styles.body}>
-        <Text style={[styles.label, { ...t.type.body, color: t.colors.textPrimary }]} numberOfLines={1}>
-          {dimension.label}
-        </Text>
-        <Text style={[styles.sub, { ...t.type.caption, color: t.colors.textSecondary }]} numberOfLines={1}>
-          {sub}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-    </Card>
+      <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
+    </PressableCard>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  glyph: {
-    width: 36,
-    height: 36,
-    borderRadius: circle(36),
-    alignItems: 'center',
-    justifyContent: 'center',
+  row: {
+    flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: spacing.md,
   },
   body: { flex: 1, gap: spacing.xxs },
-  label: { ...type.body, color: colors.textPrimary },
-  sub: { ...type.caption, color: colors.textSecondary },
+  label: { ...type.bodyStrong, color: colors.textPrimary },
+  sub: { ...type.bodySm, color: colors.textSecondary },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });

@@ -26,13 +26,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
-import Card from '../components/Card';
+import PressableCard from '../components/PressableCard';
 import SearchBar from '../components/SearchBar';
 import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/Skeleton';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, iconSize, circle } from '../styles/theme';
+import { colors, spacing, type, iconSize } from '../styles/theme';
 import {
   doorsFor, doorLine, doorZeroState, findPeople, hasProfile, COMMUNITY_DISCIPLINE_LABELS,
 } from '../lib/community';
@@ -95,37 +95,51 @@ function doorTitle(door) {
   return door.label;
 }
 
+/**
+ * One door, as the house flat row (founder defect 2026-09-14, lead ruling
+ * CR-17; `20-BLUEPRINT.md` section 9 rules 2 and 3). It used to be a
+ * `Card` with its glyph in a 36 dp `circle()` chip, so five doors read as
+ * five boxes on the one screen whose whole job is to hand you on to flat
+ * lists of people. The glyph keeps its meaning at `iconSize.md` in
+ * `textMuted`; the circle behind it was decoration, and decoration is
+ * what reads as generic. No gutter of its own: the list already pays
+ * `spacing.lg`.
+ */
 function DoorRow({ door, count, onPress }) {
   const t = useTheme();
   const line = lineFor(door, count);
   const title = doorTitle(door);
 
   return (
-    <Card
+    <PressableCard
       onPress={onPress}
-      style={styles.door}
       accessibilityLabel={`${title}. ${line}`}
     >
-      <View style={[styles.glyph, { backgroundColor: t.colors.surface2 }]}>
+      <View style={styles.door}>
         <Ionicons
           name={GLYPH[door.mode] ?? 'people-outline'}
           size={iconSize.md}
-          color={t.colors.textSecondary}
+          color={t.colors.textMuted}
         />
+        <View style={styles.doorBody}>
+          <Text
+            style={[styles.doorLabel, { color: t.colors.textPrimary }]}
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+          {/* No `numberOfLines`: a door that cannot work yet answers with a
+              whole sentence ("Add your gym to see who trains there"), and
+              truncating a requirement hides the one thing that opens the
+              door. The row grows instead. */}
+          <Text style={[styles.doorLine, { color: t.colors.textSecondary }]}>
+            {line}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
       </View>
-      <View style={styles.doorBody}>
-        <Text
-          style={[styles.doorLabel, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}
-          numberOfLines={1}
-        >
-          {title}
-        </Text>
-        <Text style={[styles.doorLine, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-          {line}
-        </Text>
-      </View>
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-    </Card>
+      <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
+    </PressableCard>
   );
 }
 
@@ -233,7 +247,6 @@ export default function CommunityFindPeopleScreen({ navigation }) {
         )}
         ListHeaderComponent={header}
         ListEmptyComponent={empty}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.4}
         onEndReached={() => { /* five doors; there is no second page */ }}
@@ -258,15 +271,11 @@ const styles = StyleSheet.create({
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
   header: { gap: spacing.md, marginBottom: spacing.md },
   skeletonStack: { gap: spacing.sm },
-  door: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  glyph: {
-    width: 36,
-    height: 36,
-    borderRadius: circle(36),
-    alignItems: 'center',
-    justifyContent: 'center',
+  door: {
+    flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: spacing.md,
   },
   doorBody: { flex: 1, gap: spacing.xxs },
   doorLabel: { ...type.bodyStrong, color: colors.textPrimary },
   doorLine: { ...type.bodySm, color: colors.textSecondary },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });

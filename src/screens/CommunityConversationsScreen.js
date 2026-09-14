@@ -15,6 +15,12 @@
  * A conversation the server has closed (a connection removed, a block
  * placed) is not listed at all, which is what the confirm on those
  * actions promised.
+ *
+ * Founder defect 2026-09-14, lead ruling CR-17: each conversation used to
+ * sit on a `Card` with a `spacing.md` gap between them, so the same
+ * person read as a box here and a flat row on the Hub one tap away.
+ * `ConversationRow` is now the house flat row and closes with its own
+ * hairline, so the separator and the gap are gone with it.
  */
 
 import { useCallback, useState } from 'react';
@@ -33,6 +39,9 @@ import { colors, spacing } from '../styles/theme';
 import { listConversations, markRead } from '../lib/community';
 
 const PAGE = 30;
+// The row's own `minHeight` (`ConversationRow`): a 64 dp flat row, not the
+// 96 dp a padded card used to measure.
+const ROW_HEIGHT = 64;
 
 export const CONVERSATIONS_OFFLINE_LINE = 'Volyume could not reach Community just now. Check your connection and try again.';
 
@@ -134,7 +143,7 @@ export default function CommunityConversationsScreen({ navigation }) {
       <FlashList
         data={rows}
         keyExtractor={(item) => String(item.id)}
-        estimatedItemSize={96}
+        estimatedItemSize={ROW_HEIGHT}
         renderItem={({ item }) => (
           <ConversationRow conversation={item} onPress={() => open(item)} />
         )}
@@ -142,7 +151,6 @@ export default function CommunityConversationsScreen({ navigation }) {
         ListFooterComponent={paging ? (
           <ActivityIndicator color={t.colors.primary} style={styles.footer} />
         ) : null}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.4}
         onEndReached={onEndReached}
@@ -165,7 +173,6 @@ export default function CommunityConversationsScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  separator: { height: spacing.md },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
   skeleton: { gap: spacing.sm },
   footer: { paddingVertical: spacing.lg },

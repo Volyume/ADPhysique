@@ -1,6 +1,7 @@
 /**
  * ConversationRow — one conversation in the Messages list (discovery
- * blueprint sections 2 and 10; SD-21, SD-31).
+ * blueprint sections 2 and 10, `docs/social-discovery-2026-09-06/70-DISCOVERY-BLUEPRINT.md`;
+ * SD-21, SD-31).
  *
  * The person, their handle, the first line of the last message, the day
  * it happened and an unseen dot. A day, never a clock time: a
@@ -10,10 +11,17 @@
  * The dot is the one amber affordance a row may carry (blueprint `30`
  * section 13, ruling 1). Everything else is neutral ink.
  *
- * Lead visual review 2026-09-06, ruling V18: `Card padding="md"
- * radius="md"`, avatar 36, one-line `body` title (the name), one-line
- * `caption` sub (the handle and the last message, combined), day and the
- * unread dot trailing.
+ * Founder defect 2026-09-14, lead ruling CR-17: the row used to sit on a
+ * `Card` (ruling V18), so a person in Messages read as a different
+ * product from the same person on the Hub or a cohort page one tap away.
+ * `20-BLUEPRINT.md` section 9 rule 2 bans `Card` for people. It is now
+ * `PersonRow`'s anatomy exactly -- avatar 32 (was 36), `bodyStrong` name,
+ * one `bodySm` line, the day and the dot trailing, a `borderSubtle`
+ * hairline across the row, and no gutter of its own (the screen's list
+ * already pays `spacing.lg`). It is not `PersonRow` itself because this
+ * row's trailing slot is a two-part meta stack (day over dot), not the
+ * single control that row takes, and because a conversation is addressed
+ * by its own id, never by the person's.
  *
  * Props:
  *   conversation  {id, other, unread, preview, ref_kind, last_message_at,
@@ -22,13 +30,14 @@
  */
 
 import { View, Text, StyleSheet } from 'react-native';
-import Card from '../Card';
+import PressableCard from '../PressableCard';
 import ProfileAvatarMark from '../ProfileAvatarMark';
 import { spacing, type, colors, circle } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { postDayLabel } from './PostCard';
 
-const AVATAR = 36;
+const AVATAR = 32;
+const DOT = 8;
 
 /**
  * The line under the name: the last message, cut at its first line
@@ -57,11 +66,8 @@ export default function ConversationRow({ conversation, onPress }) {
   const sub = [handle, line].filter(Boolean).join(' · ');
 
   return (
-    <Card
+    <PressableCard
       onPress={onPress}
-      padding="md"
-      radius="md"
-      style={styles.card}
       accessibilityLabel={[
         `Conversation with ${name}`, handle, line, day, unread ? 'Unread' : null,
       ].filter(Boolean).join('. ')}
@@ -73,13 +79,12 @@ export default function ConversationRow({ conversation, onPress }) {
           size={AVATAR}
         />
         <View style={styles.body}>
-          <Text style={[styles.name, { ...t.type.body, color: t.colors.textPrimary }]} numberOfLines={1}>
+          <Text style={[styles.name, { color: t.colors.textPrimary }]} numberOfLines={1}>
             {name}
           </Text>
           <Text
             style={[styles.sub, {
-              ...t.type.caption,
-              color: unread ? t.colors.textPrimary : t.colors.textMuted,
+              color: unread ? t.colors.textPrimary : t.colors.textSecondary,
             }]}
             numberOfLines={1}
           >
@@ -88,22 +93,25 @@ export default function ConversationRow({ conversation, onPress }) {
         </View>
         <View style={styles.meta}>
           {day ? (
-            <Text style={[styles.day, { ...t.type.caption, color: t.colors.textMuted }]}>{day}</Text>
+            <Text style={[styles.day, { color: t.colors.textMuted }]}>{day}</Text>
           ) : null}
           {unread ? <View style={[styles.dot, { backgroundColor: t.colors.primary }]} /> : null}
         </View>
       </View>
-    </Card>
+      <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
+    </PressableCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.md },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  row: {
+    flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: spacing.md,
+  },
   body: { flex: 1, gap: spacing.xxs },
-  name: { ...type.body, color: colors.textPrimary },
-  sub: { ...type.caption, color: colors.textMuted },
+  name: { ...type.bodyStrong, color: colors.textPrimary },
+  sub: { ...type.bodySm, color: colors.textSecondary },
   meta: { alignItems: 'flex-end', gap: spacing.xs },
   day: { ...type.caption, color: colors.textMuted },
-  dot: { width: 8, height: 8, borderRadius: circle(8) },
+  dot: { width: DOT, height: DOT, borderRadius: circle(DOT) },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });

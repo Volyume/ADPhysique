@@ -12,9 +12,18 @@
  * row is a plain line here like every other kind (product review
  * 2026-09-06, item 27).
  *
- * Lead visual review 2026-09-06, ruling V18: `Card padding="md"
- * radius="md"`, avatar 36, one-line `body` title, one-line `caption` sub
- * (the preview and the relative time, combined), trailing unread dot.
+ * Founder defect 2026-09-14, lead ruling CR-17: the row used to sit on a
+ * `Card` (ruling V18), so the same person read as one product in the
+ * Activity inbox and another on the Hub one tap away. `20-BLUEPRINT.md`
+ * section 9 rule 2 bans `Card` for people and activity. It is now
+ * `PersonRow`'s anatomy -- avatar 32 (was 36), one `body` line, one
+ * `bodySm` `textSecondary` sub, the unread dot trailing, a `borderSubtle`
+ * hairline across the row, and no gutter of its own (the screen's list
+ * already pays `spacing.lg`). The first line stays `body` rather than
+ * `bodyStrong`: it is a sentence about what happened ("@priya_kb
+ * commented on your post"), not a name, and rule 1 puts running text at
+ * `body`. It is not `PersonRow` itself because that row's first line IS a
+ * name and its label is composed from one.
  *
  * Props:
  *   item        {id, kind, actor, target_kind, target_id, preview,
@@ -23,13 +32,14 @@
  */
 
 import { View, Text, StyleSheet } from 'react-native';
-import Card from '../Card';
+import PressableCard from '../PressableCard';
 import ProfileAvatarMark from '../ProfileAvatarMark';
 import { spacing, type, colors, circle } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { calendarRelativeLabel } from '../../lib/workoutDate';
 
-const AVATAR = 36;
+const AVATAR = 32;
+const DOT = 8;
 
 const LINES = {
   follow: 'followed you',
@@ -74,11 +84,8 @@ export default function ActivityRow({ item, onPress }) {
   const sub = [item.preview, when].filter(Boolean).join(' · ');
 
   return (
-    <Card
+    <PressableCard
       onPress={onPress}
-      padding="md"
-      radius="md"
-      style={styles.card}
       accessibilityLabel={when ? `${line}. ${when}` : line}
     >
       <View style={styles.row}>
@@ -88,11 +95,11 @@ export default function ActivityRow({ item, onPress }) {
           size={AVATAR}
         />
         <View style={styles.body}>
-          <Text style={[styles.line, { ...t.type.body, color: t.colors.textPrimary }]} numberOfLines={1}>
+          <Text style={[styles.line, { color: t.colors.textPrimary }]} numberOfLines={1}>
             {line}
           </Text>
           {sub ? (
-            <Text style={[styles.sub, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
+            <Text style={[styles.sub, { color: t.colors.textSecondary }]} numberOfLines={1}>
               {sub}
             </Text>
           ) : null}
@@ -101,15 +108,18 @@ export default function ActivityRow({ item, onPress }) {
           <View style={[styles.dot, { backgroundColor: t.colors.primary }]} />
         ) : null}
       </View>
-    </Card>
+      <View style={[styles.divider, { backgroundColor: t.colors.borderSubtle }]} />
+    </PressableCard>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.md },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  row: {
+    flexDirection: 'row', alignItems: 'center', minHeight: 64, gap: spacing.md,
+  },
   body: { flex: 1, gap: spacing.xxs },
   line: { ...type.body, color: colors.textPrimary },
-  sub: { ...type.caption, color: colors.textMuted },
-  dot: { width: 8, height: 8, borderRadius: circle(8) },
+  sub: { ...type.bodySm, color: colors.textSecondary },
+  dot: { width: DOT, height: DOT, borderRadius: circle(DOT) },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });

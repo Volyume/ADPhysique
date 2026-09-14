@@ -10,6 +10,16 @@
  *
  * Programme search was removed with Community programme-sharing
  * (`docs/community-product-audit-2026-09-07/40-GAP-CLOSURE.md` §2).
+ *
+ * Founder defect 2026-09-14, lead ruling CR-17: a person here used to
+ * arrive in a `Card` and a group in a hand-rolled `surface` box with a
+ * "View" chip, so the same person and the same group each read as a
+ * different product from the Hub one tap away. `20-BLUEPRINT.md` section
+ * 9 rule 2 bans `Card` for people and groups. People now render through
+ * `ProfileCard` (which is `PersonRow`) and groups through `GroupRow`,
+ * the Hub's own group row -- so a group found by search and a group on
+ * the Hub are the same row, and the whole row is the target rather than
+ * a chip inside a box.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -26,6 +36,7 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/Skeleton';
 import Chip from '../components/Chip';
 import ProfileCard from '../components/community/ProfileCard';
+import GroupRow from '../components/community/GroupRow';
 import useTheme from '../hooks/useTheme';
 import { colors, spacing, type } from '../styles/theme';
 import {
@@ -35,6 +46,12 @@ import {
 
 const DEBOUNCE_MS = 250;
 const PAGE = 20;
+
+/** "Open · 8 members": the group row's one line, unchanged wording. */
+export function groupLine(group) {
+  const n = Number(group?.memberCount) || 0;
+  return `${GROUP_ACCESS[group?.access] ?? 'Open'} · ${n} ${n === 1 ? 'member' : 'members'}`;
+}
 
 export default function CommunitySearchScreen({ navigation, route }) {
   const t = useTheme();
@@ -181,21 +198,12 @@ export default function CommunitySearchScreen({ navigation, route }) {
         data={results}
         keyExtractor={(item) => (mode === 'groups' ? item.id : (item.card ?? item).user_id)}
         renderItem={({ item }) => (mode === 'groups' ? (
-          <View style={[styles.groupRow, { backgroundColor: t.colors.surface }]}>
-            <View style={styles.groupInfo}>
-              <Text style={[styles.groupName, { ...t.type.bodyStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <Text style={[styles.groupMeta, { ...t.type.caption, color: t.colors.textMuted }]} numberOfLines={1}>
-                {`${GROUP_ACCESS[item.access] ?? 'Open'} · ${item.memberCount} ${item.memberCount === 1 ? 'member' : 'members'}`}
-              </Text>
-            </View>
-            <Chip
-              label="View"
-              onPress={() => navigation.navigate('CommunityGroup', { id: item.id })}
-              accessibilityLabel={`View ${item.name}`}
-            />
-          </View>
+          <GroupRow
+            group={item}
+            line={groupLine(item)}
+            people={[]}
+            onPress={() => navigation.navigate('CommunityGroup', { id: item.id })}
+          />
         ) : (
           <ProfileCard
             card={item.card ?? item}
@@ -203,7 +211,6 @@ export default function CommunitySearchScreen({ navigation, route }) {
           />
         ))}
         ListEmptyComponent={empty}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
         keyboardShouldPersistTaps="handled"
         refreshControl={(
@@ -228,16 +235,12 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
   skeleton: { gap: spacing.sm },
   modeRow: { flexDirection: 'row', gap: spacing.xs2 },
-  recentBlock: { paddingHorizontal: spacing.lg, marginTop: -spacing.md, gap: spacing.sm },
+  // No gutter of its own: the list's own `contentContainerStyle` already
+  // pays `spacing.lg`, and paying it twice put these chips at 32 while the
+  // empty state above them sat at 16 (founder defect 2026-09-14).
+  recentBlock: { marginTop: -spacing.md, gap: spacing.sm },
   recentHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   recentTitle: { ...type.captionStrong },
   recentClear: { ...type.captionStrong },
   recentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
-  groupRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderRadius: 16, padding: spacing.md, marginBottom: spacing.md,
-  },
-  groupInfo: { flex: 1, gap: 2 },
-  groupName: { ...type.bodyStrong, color: colors.textPrimary },
-  groupMeta: { ...type.caption, color: colors.textMuted },
 });

@@ -284,6 +284,10 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
           </TouchableOpacity>
         ) : null}
       />
+      {/* No ItemSeparatorComponent: every person row closes with its own
+          hairline (founder defect 2026-09-14, CR-17; `20-BLUEPRINT.md`
+          section 9 rule 2). A gap stacked on top of a divider is the
+          boxed-list look this campaign is removing. */}
       <FlashList
         data={listItems}
         keyExtractor={(item) => item.key}
@@ -314,7 +318,6 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
         ListFooterComponent={paging ? (
           <ActivityIndicator color={t.colors.primary} style={styles.footer} />
         ) : null}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.4}
         onEndReached={onEndReached}
@@ -370,7 +373,9 @@ const styles = StyleSheet.create({
   listHeader: { gap: spacing.sm, marginBottom: spacing.md },
   countLine: { ...type.bodySm, color: colors.textSecondary },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
-  divider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
-  dividerLine: { flex: 1, height: 1 },
+  divider: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg,
+  },
+  dividerLine: { flex: 1, height: StyleSheet.hairlineWidth },
   dividerLabel: { ...type.caption, color: colors.textMuted },
 });

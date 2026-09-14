@@ -16,6 +16,17 @@
  *
  * Opening the screen marks everything seen, which clears the amber dot
  * on the Today header.
+ *
+ * Founder defect 2026-09-14, lead ruling CR-17: every row here used to
+ * sit on a `Card`, and a follow request drew a card for the person with
+ * its two answers floating underneath, so the inbox read as a stack of
+ * boxes while the Hub it opens from reads as flat rows.
+ * `20-BLUEPRINT.md` section 9 rule 2 bans `Card` for people and
+ * activity. Now: `ActivityRow` and `ProfileCard` are flat rows with a
+ * `borderSubtle` hairline each, a follow request IS one of those rows
+ * with Accept and Decline in its trailing slot, and a connection request
+ * stays a taller flat block because it carries the reasons and the note
+ * the person wrote, which is the whole point of the tier.
  */
 
 import { useCallback, useEffect, useState } from 'react';
@@ -172,7 +183,7 @@ export default function CommunityActivityScreen({ navigation }) {
     <View style={styles.requests}>
       {connectRequests.length ? (
         <>
-          <SectionLabel tone="muted">Connection requests</SectionLabel>
+          <SectionLabel tone="muted" style={styles.sectionLabel}>Connection requests</SectionLabel>
           {connectRequests.map((row) => {
             const card = row.requester ?? row.card ?? row;
             return (
@@ -188,41 +199,44 @@ export default function CommunityActivityScreen({ navigation }) {
           })}
         </>
       ) : null}
-      {requests.length ? <SectionLabel tone="muted">Follow requests</SectionLabel> : null}
+      {requests.length ? (
+        <SectionLabel tone="muted" style={styles.sectionLabel}>Follow requests</SectionLabel>
+      ) : null}
       {requests.map((row) => {
         const card = row.card ?? row;
         return (
-          <View key={card.user_id} style={styles.request}>
-            <ProfileCard
-              card={card}
-              showFollow={false}
-              compact
-              onPress={() => navigation.navigate('CommunityProfile', { handle: card.handle })}
-            />
-            <View style={styles.requestActions}>
-              <Button
-                variant="primary"
-                size="sm"
-                fullWidth={false}
-                title="Accept"
-                loading={busyId === card.user_id}
-                onPress={() => respond(card, true)}
-                accessibilityLabel={`Accept the follow request from @${card.handle}`}
-              />
-              <Button
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                title="Decline"
-                disabled={busyId === card.user_id}
-                onPress={() => respond(card, false)}
-                accessibilityLabel={`Decline the follow request from @${card.handle}`}
-              />
-            </View>
-          </View>
+          <ProfileCard
+            key={card.user_id}
+            card={card}
+            showFollow={false}
+            compact
+            onPress={() => navigation.navigate('CommunityProfile', { handle: card.handle })}
+            trailing={(
+              <View style={styles.requestActions}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  fullWidth={false}
+                  title="Accept"
+                  loading={busyId === card.user_id}
+                  onPress={() => respond(card, true)}
+                  accessibilityLabel={`Accept the follow request from @${card.handle}`}
+                />
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  fullWidth={false}
+                  title="Decline"
+                  disabled={busyId === card.user_id}
+                  onPress={() => respond(card, false)}
+                  accessibilityLabel={`Decline the follow request from @${card.handle}`}
+                />
+              </View>
+            )}
+          />
         );
       })}
-      <SectionLabel tone="muted">Activity</SectionLabel>
+      <SectionLabel tone="muted" style={styles.sectionLabel}>Activity</SectionLabel>
     </View>
   ) : null;
 
@@ -284,7 +298,6 @@ export default function CommunityActivityScreen({ navigation }) {
         ListFooterComponent={paging ? (
           <ActivityIndicator color={t.colors.primary} style={styles.footer} />
         ) : null}
-        ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         contentContainerStyle={styles.list}
         onEndReachedThreshold={0.4}
         onEndReached={onEndReached}
@@ -307,8 +320,11 @@ export default function CommunityActivityScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  requests: { gap: spacing.md, marginBottom: spacing.md },
-  request: { gap: spacing.sm },
+  requests: { marginBottom: spacing.sm },
+  // Blueprint rule 3's section rhythm, on the label this screen already
+  // uses (`SectionLabel` stays here: `Eyebrow` replaces it on the four
+  // revamped screens only, pinned by `community.presentation.guard`).
+  sectionLabel: { paddingTop: spacing.xl, paddingBottom: spacing.sm },
   requestActions: { flexDirection: 'row', gap: spacing.sm },
   loading: { paddingVertical: spacing.xxl, alignItems: 'center' },
   skeleton: { gap: spacing.sm },
