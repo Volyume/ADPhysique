@@ -1,6 +1,23 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-14 (later) — APP-WIDE VISUAL REDESIGN: RESEARCHED AND PLANNED, AWAITING THE FOUNDER ★
+
+Founder ordered a complete look-and-feel redesign plan ("looks far too much
+like it's built by ai") with eight named references. Two read-only Opus lanes
+landed in `docs/design-redesign-2026-09-14/`; the lead's synthesis is
+`20-DIRECTION-AND-PLAN.md`. Diagnosis: the tokens and the contrast system are
+good, the composition is generic (73.9% of text at 11-13 px, five sites above
+24 px in 106 screens, one radius doing five jobs, 204 cards plus 85
+hand-rolled, 99 identical empty states, no signature device). Direction
+"Instrument": one loud thing per screen, rows on the canvas, geometry carries
+meaning, plus two signature devices (the week ribbon and the ledger) and
+Archivo for figures. Four stages. NOTHING BUILT: three founder forks are open
+(the display face, the pinned small rest timer, how far to go). Board section
+"APP-WIDE VISUAL REDESIGN (2026-09-14)" carries the detail. Two outstanding
+facts found on the way: the styling rules wrongly claim system fonts, and the
+live light palette still has no founder on-device sign-off.
+===============================================================================
 ## ★ 2026-09-14 — COMMUNITY LOOK AND FEEL: THE LAYOUT LAW FIXED AND GUARDED ★
 
 Founder on two live screenshots: the alignment of the lines, the graph

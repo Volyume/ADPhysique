@@ -33,6 +33,57 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## APP-WIDE VISUAL REDESIGN (2026-09-14, founder order) — RESEARCHED AND PLANNED; PROPOSED, NOT RULED; NOTHING BUILT
+
+Founder in chat 2026-09-14: "I'd like you to plan a complete app look and feel
+redesign as I don't like what we have and I think it looks far too much like
+it's built by ai", naming Revolut, Things 3, Linear, Flighty, Airbnb, Arc,
+Calm and Duolingo, and asking for research, a plan and image suggestions.
+Folder `docs/design-redesign-2026-09-14/` (README = map). Two read-only Opus
+lanes ran: the references broken into 42 buildable devices plus fourteen
+further products and a 20-item machine-made checklist; and a full audit of the
+current visual system with counts and file:line.
+DIAGNOSIS (evidence, not opinion): the tokens, the font and the contrast
+system are genuinely good; the failure is composition. 73.9% of all typed text
+is 11 or 13 px and FIVE sites in 106 screens exceed 24 px; every block on
+every tab screen is the same width, radius and hairline; `radius.lg` is
+simultaneously the card, the button, the empty state, the tooltip and the tab
+pill; 204 Cards in 65 files plus 85 hand-rolled ones plus 99 identical empty
+states; 683 stock Ionicons, 244 amber-tinted against the app's own rule; and
+the signature device the design doc promises (a Skia glow) was never built.
+DIRECTION ("Instrument"): one loud thing per screen at display scale; rows on
+the canvas, cards reserved for discrete objects; geometry carries meaning
+(control radius separated from card radius, one full-bleed moment per screen).
+Signature devices: the week ribbon (seven cells, same place everywhere, a rest
+day drawn as a rest day, the ED-safe answer to a streak) and the ledger
+(tabular set rows in the display face). Typography: keep Inter, add Archivo
+expanded for the loud thing and figures. Colour: palette unchanged, amber
+rebudgeted to mean only "now". Progression: denominator framing, progress
+advances regardless of outcome, every loss-aversion device refused.
+REFERENCES REVISED: keep Linear, Things 3, Flighty and one Revolut idea; drop
+Duolingo (loss aversion, ED-forbidden), Calm (wrong context), Airbnb (owned
+photography we do not have), Arc (gestures vs chalky hands); add Whoop,
+Gentler Streak, Strong/Hevy and Garmin as a warning.
+FOUR STAGES, each shippable alone: 1 the spine (three authored components, the
+ribbon, the ledger, the display face, the radius split, the laws written into
+`docs/rules/styling.md` with a guard behind each); 2 the five daily screens;
+3 the long tail and the empty states; 4 the moments.
+COST FACTS: 106 screens, 162 components, 256 theme-consuming files, and 189 of
+them write every colour TWICE (frozen StyleSheet plus a per-render `live`
+object) — that needs a position before screen one; 92 test files assert on
+presentation; any palette change must be mirrored by hand into
+`src/widgets/widgets.js` and `src/lib/shareCard/drawShareCard.js`.
+OPEN FOUNDER FORKS (work starts on the answer): (1) the display face, yes or
+Inter everywhere; (2) the rest timer, whose small size is pinned by a guard
+from a founder device verdict; (3) how far, how fast, with the lead
+recommending stages 1 and 2 then a week of living with it.
+ALSO FOUND, outstanding: `docs/rules/styling.md:55` says "System fonts" and is
+wrong (seven Inter faces ship); and `theme.js:200-201` records that the LIGHT
+palette still wants the founder's on-device sign-off, while being live and
+user-selectable today.
+Delivered in chat as a page with the diagnosis, the laws and rendered screens:
+https://claude.ai/code/artifact/b97ca3da-d1ad-47ca-9936-38fc00963036
+
 ## COMMUNITY LOOK AND FEEL (2026-09-14, founder order on two live screenshots) — CAUSE FOUND AND FIXED; THE LAYOUT LAW NOW GUARDED
 
 Founder in chat 2026-09-14, on the Hub and a profile from the live app:
