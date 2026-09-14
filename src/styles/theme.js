@@ -445,6 +445,13 @@ const baseFontSize = {
   xxl: 24,
   xxxl: 32,
   display: 40,
+  // D166 law 1: one loud thing per screen, at a size that reads at arm's
+  // length mid-set. `display` at 40 was the ceiling and had a single call site
+  // in the whole product (a photo countdown), so where a screen actually needed
+  // to be loud it reached PAST the scale with a raw literal -- 96 and 44 in
+  // YearOfLifts, both carrying a source comment reading "Theme gap: no
+  // display-size + black type role exists". This is that missing step.
+  hero: 56,
 };
 
 export const fontSize = { ...baseFontSize };
@@ -484,6 +491,7 @@ export function resolveTheme(prefs) {
       xxl:     Math.round(baseFontSize.xxl     * 1.2),
       xxxl:    Math.round(baseFontSize.xxxl    * 1.2),
       display: Math.round(baseFontSize.display * 1.2),
+      hero:    Math.round(baseFontSize.hero    * 1.2),
     });
   }
 
@@ -604,6 +612,20 @@ export const letterSpacing = {
 // style={{ ...type.body, color: ... }}.
 function buildTypeRoles(fontSizeTable) {
   const roles = {
+    // D166 law 1. The ONE loud element on a screen: the session on Today, the
+    // working weight in the logger, the decision on Progress.
+    //
+    // It uses `displayHeavy` (InterDisplay-ExtraBold), which already shipped in
+    // fonts.js with zero call sites. Two things follow from that choice. A
+    // display optical size is drawn tighter and with smaller apertures than a
+    // text cut, so the optical tightening comes from the TYPEFACE rather than
+    // from negative tracking -- letterSpacing stays 0, which D3 requires and
+    // theme.test.js pins. And no new font file ships: the Archivo proposal was
+    // withdrawn under D164 because "scoreboard" is a sports cue.
+    get hero() {
+      return { fontFamily: fontFamily.displayHeavy, fontSize: fontSizeTable.hero,
+        lineHeight: Math.round(fontSizeTable.hero * lineHeight.tight), letterSpacing: letterSpacing.display };
+    },
     get display() {
       return { fontFamily: fontFamily.displayBold, fontSize: fontSizeTable.display,
         lineHeight: Math.round(fontSizeTable.display * lineHeight.tight), letterSpacing: letterSpacing.display };

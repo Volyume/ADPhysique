@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 // added to weight/nutrition surfaces.
 import SetRowMenu from './SetRowMenu';
 
-import { colors, spacing, radius, fontWeight, type, iconSize } from '../../styles/theme';
+import { colors, spacing, radius, circle, fontWeight, type, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { workoutLoggerSize } from '../../styles/layout';
 import { formatPerSide } from '../../lib/unilateral';
@@ -211,7 +211,10 @@ const styles = StyleSheet.create({
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2, minHeight: workoutLoggerSize.loggedSetMinHeight, borderRadius: radius.md, paddingVertical: spacing.xxs, paddingHorizontal: spacing.sm },
   loggedSetRowWarmup: { backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
-  setNumBadge: { width: workoutLoggerSize.setNumberBadge, height: workoutLoggerSize.setNumberBadge, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
+  // D166 law 3: this was `radius.lg`, the CARD radius, on a 22 dp box. RN
+  // clamps to half the box either way, so the rendered pixels are unchanged --
+  // but the token now says what the shape is instead of borrowing the card's.
+  setNumBadge: { width: workoutLoggerSize.setNumberBadge, height: workoutLoggerSize.setNumberBadge, borderRadius: circle(workoutLoggerSize.setNumberBadge), backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   // D43 S5 (D60 call 3): logged-set data numerals (set number, weight x
   // reps, est. 1RM) move onto the house numerals role (type.num(<role>)),
   // matching the app-wide "numerals as hero" system (see e.g.
@@ -251,7 +254,14 @@ function buildLiveStyles(t) {
     setNumBadge: { backgroundColor: t.colors.surface2 },
     setNumText: { ...t.type.num('captionStrong'), fontWeight: fontWeight.bold, color: t.colors.textSecondary },
     loggedSetText: { ...t.type.num('bodySm'), color: t.colors.textPrimary },
-    editingWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    // D166 part 3: this read `t.colors.border` while the frozen half sets
+    // `colors.borderSubtle`. The live half wins at runtime, so the in-place set
+    // editor drew the bright control-edge grey that SettingsPrimitives names as
+    // "the wireframe look", against its own frozen intent and against the
+    // hairline rule Community's layout guard pins. Two writes, thirty lines
+    // apart, with nothing comparing them -- the exact drift the double-write
+    // pattern makes invisible, which is why new components do not use it.
+    editingWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     editingTitle: { ...t.type.label, color: t.colors.textPrimary },
     editingDeleteText: { ...t.type.label, color: t.colors.error },
     editingCancelText: { ...t.type.label, color: t.colors.textSecondary },

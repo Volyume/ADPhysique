@@ -32,24 +32,14 @@ import { View, StyleSheet } from 'react-native';
 import { spacing, colors, circle } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { daysLabel } from '../../lib/community';
+import { DAY_ORDER, currentDayKey } from '../../lib/weekDays';
 
-const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-
-/**
- * Today's short day key ('mon'..'sun'), the local-device weekday in
- * `boards.js`'s vocabulary. No existing helper produces this form
- * (`dayKey.js` keys by calendar date, not weekday, for a different job);
- * named and kept here since DayDots owns this vocabulary and `PersonRow`
- * (the only other caller that needs "today") already imports from this
- * file.
- *
- * @param {Date} [now]
- * @returns {string}
- */
-export function currentDayKey(now = new Date()) {
-  return WEEKDAY_KEYS[now.getDay()];
-}
+// The weekday vocabulary moved to `src/lib/weekDays.js` when the week ribbon
+// (D166) put a week on Today and on Progress as well, so a shared component no
+// longer has to import from `components/community/`. Re-exported here so this
+// file's existing callers (PersonRow, and this component's own test) are
+// unchanged.
+export { currentDayKey };
 
 export default function DayDots({ days, todayKey }) {
   const t = useTheme();

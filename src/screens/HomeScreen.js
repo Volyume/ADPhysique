@@ -88,6 +88,7 @@ import { summariseCircuitGroups, formatCircuitPreviewLine } from '../lib/circuit
 import EvidencePanel from '../components/home/EvidencePanel';
 import { resolveEvidencePanel } from '../lib/home/evidencePanel';
 import { formatBodyWeight } from '../lib/units';
+import { formatNumber, formatWithUnit } from '../lib/format';
 import { getRecentIntakeSummary } from '../lib/food/db';
 // D139: the no-plan "Start with a plan" action previews before it commits.
 // prepareStartWithPlan owns the capability pre-flight (CC27 section 9.6 red-team
@@ -167,8 +168,8 @@ export default function HomeScreen({ navigation, route }) {
   // FOUNDER DECISION (fully free, no tier split): `tier` is no longer read
   // here -- every branch that used to fork on it now runs the single
   // full-access behaviour for everyone (see proGate.js FULL_ACCESS_FOR_ALL).
-  const { user, userProfile, startWorkout, activeWorkout, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
+  const { user, userProfile, startWorkout, activeWorkout, bodyWeightUnits, units, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, bodyWeightUnits: s.bodyWeightUnits, units: s.units, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
   );
 
   // CP-10 stage 3 (theming batch 2): live theme (src/hooks/useTheme.js).
@@ -2210,6 +2211,20 @@ export default function HomeScreen({ navigation, route }) {
   // pure renderer of already-derived data rather than importing the helper.
   const lastSessionRelativeDay = lastSession ? getRelativeDay(lastSession.startedAt) : null;
 
+  // D166 law 7 (a number states what it is), and a real defect it caught:
+  // HomeLastSessionCard hard-coded "kg lifted" in both its branches, so a user
+  // training in pounds was shown the wrong unit on their own home screen. The
+  // figure is session TONNAGE, which is stored in the user's chosen unit and
+  // never converted. It is labelled "Total lifted", never "Volume": the app
+  // defines Volume app-wide as a muscle's weekly hard sets
+  // (`coachGlossary.js`), and this exact lens was renamed once already because
+  // colliding the two names misled users (`LiftProgressScreen.js`).
+  const lastSessionTonnageLabel = (() => {
+    const tonnage = lastSession?.totalVolume || lastSessionTonnage;
+    if (!tonnage) return null;
+    return `${formatWithUnit(formatNumber(Math.round(tonnage)), units === 'lbs' ? 'lbs' : 'kg')} lifted`;
+  })();
+
   // Stable handler identities for the memoised (React.memo) extracted
   // components below, so passing them as props doesn't defeat the memo.
   // (openFirstReviewSurface lives above the arbiter call with the line it
@@ -2711,7 +2726,7 @@ export default function HomeScreen({ navigation, route }) {
         {lastSession && (
           <HomeLastSessionCard
             lastSession={lastSession}
-            lastSessionTonnage={lastSessionTonnage}
+            tonnageLabel={lastSessionTonnageLabel}
             relativeDay={lastSessionRelativeDay}
             onOpenHistory={goToWorkoutHistory}
             onRepeat={handleRepeatLastSession}

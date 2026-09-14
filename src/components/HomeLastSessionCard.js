@@ -14,7 +14,7 @@ import Button from './Button';
 //
 // `relativeDay` is computed by the caller (getRelativeDay(lastSession.startedAt))
 // so this component stays a pure renderer of already-derived data.
-function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onOpenHistory, onRepeat }) {
+function HomeLastSessionCard({ lastSession, tonnageLabel, relativeDay, onOpenHistory, onRepeat }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
   // keys only.
@@ -24,14 +24,14 @@ function HomeLastSessionCard({ lastSession, lastSessionTonnage, relativeDay, onO
     lastSessionMeta: { ...t.type.caption, color: t.colors.textMuted },
     lastSessionName: { ...t.type.label, color: t.colors.textPrimary },
   };
+  // `tonnageLabel` arrives pre-formatted from HomeScreen, where the unit
+  // preference lives (D166 law 7). Both branches here previously hard-coded
+  // "kg lifted", so a user training in pounds read the wrong unit on their own
+  // home screen.
   const meta = [
     lastSession.durationMinutes ? `${lastSession.durationMinutes}m` : null,
     lastSession.setCount ? `${lastSession.setCount} sets` : null,
-    lastSession.totalVolume
-      ? `${Math.round(lastSession.totalVolume).toLocaleString('en-GB')} kg lifted`
-      : lastSessionTonnage
-        ? `${Math.round(lastSessionTonnage).toLocaleString('en-GB')} kg lifted`
-        : null,
+    tonnageLabel,
   ].filter(Boolean).join(' - ');
 
   return (
