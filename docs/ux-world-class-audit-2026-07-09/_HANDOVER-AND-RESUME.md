@@ -15,10 +15,13 @@ from the row. All fixed hands-on, with `27-LOOK-AND-FEEL-PASS.md` (CR-17,
 D163) carrying the house rules Community now follows and the ruled fork on
 empty states (the shared box stays for a screen-level empty; a section
 empty is one quiet line). New guard
-`src/__tests__/community.layout.guard.test.js`. Named as not done: seven
-surfaces still render people as cards through wrapper components (its own
-lane), and `SectionLabel` versus `Eyebrow` across eleven screens needs one
-product decision. Board section "COMMUNITY LOOK AND FEEL (2026-09-14)".
+`src/__tests__/community.layout.guard.test.js`. The seven surfaces that
+still wrapped a person in a card landed the same day (`8ea88c6`): one
+person row everywhere, `ProfileCard` composing the meaning and
+`PersonRow` owning the anatomy. Named as not done: `SectionLabel` versus
+`Eyebrow` across eleven screens needs one product decision, and two
+pre-existing bugs are reported on the board (Search groups refresh,
+`DimensionRow` dead). Board section "COMMUNITY LOOK AND FEEL (2026-09-14)".
 ===============================================================================
 ## ★ 2026-09-13 (later) — COMMUNITY EARLY DAYS: THE HONEST COLD-START STATE LANDED ★
 

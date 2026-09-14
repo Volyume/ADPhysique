@@ -87,10 +87,15 @@ divider token and shape, the own-row bleed, the bars, the mark's scaling
 floors, the skeleton shape and the section-empty rule. The presentation
 guard covered three of the blueprint's ten rules on four of its
 twenty-four screens.
-NOT DONE, named: people still render as cards on seven remaining Community
-surfaces (Find people, People list, Followers, Connections, Search,
-Activity, Conversations) through wrapper components the guard's `<Card`
-grep cannot see, running as its own lane; and eleven Community screens
+ALSO LANDED (`8ea88c6`, Opus lane, same day): the seven remaining
+surfaces that still wrapped a person in a `Card` through wrapper
+components the guard's `<Card` grep cannot see now draw the one person
+row; `ProfileCard` composes the meaning and `PersonRow` owns the anatomy,
+its four stacked lines becoming one line by priority with a `trailing`
+slot for each surface's own control. Reported, not fixed (both
+pre-existing): the Search screen's Groups tab refreshes with the people
+query; `DimensionRow` has no consumers left.
+NOT DONE, named: eleven Community screens
 still head sections with `SectionLabel` while four use `Eyebrow`, one
 weight lighter than the app's heading, which is a law-vs-house conflict in
 blueprint rule 3 needing one product decision.

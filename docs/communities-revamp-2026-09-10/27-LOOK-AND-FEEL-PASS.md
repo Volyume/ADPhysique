@@ -114,11 +114,21 @@ call sites outside Community were touched.
 
 ## 4. Not done, and why
 
-- **People still render as cards on the remaining Community surfaces**
-  (Find people, People list, Followers, Connections, Search, Activity,
-  Conversations) through wrapper components the `<Card` grep in the
-  presentation guard cannot see. Converting them to the flat row language
-  runs as its own lane; it is presentation only and touches no behaviour.
+- ~~People still render as cards on the remaining Community surfaces.~~
+  LANDED the same day (commit `8ea88c6`, Opus lane): `ProfileCard` now
+  composes what a person card MEANS and hands it to `PersonRow`, which
+  owns the anatomy, so Find people, People list, Followers, Connections,
+  Search, Activity, Conversations and Privacy all draw the one person row.
+  Its four stacked lines became one line by priority (the refusal that
+  explains a missing action, else the reasons this person is here, else
+  who they are) with a new `trailing` slot for each surface's own control;
+  no string was removed. The decorative circles around glyphs went with
+  it, search results use the Hub's own group row, and
+  `CommunitySearchScreen`'s duplicate horizontal padding (another stepped
+  left edge) is gone. Found and NOT fixed, both pre-existing and reported:
+  pull to refresh on the Search screen's Groups tab runs the people query,
+  silently replacing group results; and `DimensionRow` has no consumers
+  left anywhere in the app.
 - **`SectionLabel` still heads eleven Community screens** while the four
   revamped ones use `Eyebrow`, which is one font weight lighter than the
   app's own heading. That is a law-vs-house conflict in blueprint rule 3
@@ -139,6 +149,10 @@ call sites outside Community were touched.
 4. Volt Gym row: the small avatars read as people, not discs.
 5. Pull to refresh: the placeholder rows are the same shape as the rows
    that replace them. Expect no sideways jump.
+5a. Find people, Search, Followers, Connections, the Activity inbox and
+   Conversations: a person is the same row as on the Hub, with that
+   screen's own control (the kebab, Accept and Decline, Unblock) sitting
+   IN the row. Expect no boxed cards anywhere in Community.
 6. PEOPLE and GROUPS both carry their action in the heading ("Find
    people", "New group"); there is no loose "Find people" row.
 7. With nothing followed, ACTIVITY is one quiet line, not a box.

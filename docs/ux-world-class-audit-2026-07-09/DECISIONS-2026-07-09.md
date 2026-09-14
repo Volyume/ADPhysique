@@ -6879,11 +6879,18 @@ under D33; the full analysis, the house rules and the device checklist are
    `src/__tests__/community.layout.guard.test.js` now pins the gutter, the
    divider token and shape, the own-row bleed, the bars, the mark's
    scaling floors, the skeleton shape and the section-empty rule.
-8. **Named as not done:** people still render as cards on seven remaining
-   Community surfaces through wrapper components the guard's `<Card` grep
-   cannot see (its own lane, presentation only), and eleven Community
-   screens still head their sections with `SectionLabel` while four use
-   `Eyebrow`, one weight lighter than the app's heading. That last is a
-   law-vs-house conflict in blueprint rule 3 and needs one decision for
-   the product rather than a patch per screen.
+8. **One person row, everywhere** (landed the same day): the seven
+   surfaces that still wrapped a person in a `Card` through wrapper
+   components now draw `PersonRow`. `ProfileCard` composes what a person
+   card means and the row owns the anatomy; its four stacked lines became
+   one line by priority (the refusal that explains a missing action, else
+   the reasons this person is here, else who they are), with a `trailing`
+   slot for each surface's own control. No string was removed.
+9. **Named as not done:** eleven Community screens still head their
+   sections with `SectionLabel` while four use `Eyebrow`, one weight
+   lighter than the app's heading. That is a law-vs-house conflict in
+   blueprint rule 3 and needs one decision for the product rather than a
+   patch per screen. Two pre-existing bugs found by the lane are reported
+   and untouched: the Search screen's Groups tab refreshes with the people
+   query, and `DimensionRow` has no consumers left in the app.
 
