@@ -39,12 +39,38 @@ body-fat figure. That is ED-adjacent and Section 2 requires a stop rather than
 an interpretation; the lead is not ruling it and not shipping a quiet reduction.
 Plan section 10.1. Everything else builds meanwhile.
 
-STAGE 1 (the spine) is the current work and waits on nothing: three authored
-objects, the ribbon, the ledger, the radius split, the display type step on
-existing faces, the charcoal ground, and laws 1-7 into `docs/rules/styling.md`
-with a guard behind each. Two outstanding facts found on the way: the styling
-rules wrongly claim system fonts, and the live light palette still has no
-founder on-device sign-off.
+THE THREE ED ANSWERS (D166): Progress's loud thing is the DECISION, not
+bodyweight; PHYSIQUE shows the scan's band and score, never a body-fat percent
+(the scan's estimator is never persisted and the shipped copy says it is not a
+body fat measurement); Today shows a non-scale signal, not a weekly kg delta.
+
+THREE LEAD CORRECTIONS (D166): the ribbon cannot draw a planned rest day (no
+scheduled-days concept, founder ruling 2026-08-03 with an absence guard) so it
+is two states plus today; "five sites above 24px" undercounts (two via a type
+role, nine more via raw tokens/literals); negative display tracking would
+reverse D3, so tightening comes from the InterDisplay face instead.
+
+STAGE 1 IS LANDED AND MERGED (`f9ec50c3`, `c168c353`): the warm charcoal ground
+and warm ink with both hand-copied mirrors moved and every contrast assertion
+re-run; `radius.control` with Button pointed at it plus a lint rule and all 16
+raw radius literals fixed; `fontSize.hero`/`type.hero` on the InterDisplay
+ExtraBold face already in the bundle (no new font -- Archivo was withdrawn under
+D164); and three new components on the migrated-primitive pattern,
+`BigNumber.js`, `WeekRibbon.js`, `LedgerRow.js`, with `src/lib/weekDays.js`
+extracted so a shared component need not import from `components/community/`.
+Guard: `src/__tests__/designDirectionD.guard.test.js`, 26 cases.
+
+Worth knowing for the next session: `rollingNumber.guard.test.js` caught a real
+design error in BigNumber's first draft (it wrapped the count-up behind an
+`animate` flag, which would have made a component used everywhere a hole in an
+ED allowlist of two). Animation was removed entirely. Two defects were fixed in
+passing: `HomeLastSessionCard` hard-coded "kg lifted", and `LoggedSetRow`'s
+frozen and live style halves disagreed about a border colour with the live half
+winning. `docs/rules/styling.md` now carries the seven laws and no longer claims
+the app uses system fonts.
+
+NEXT: stage 2, the five daily screens, starting with Today and Progress as
+specified at plan section 4c.
 ===============================================================================
 ## ★ 2026-09-14 — COMMUNITY LOOK AND FEEL: THE LAYOUT LAW FIXED AND GUARDED ★
 

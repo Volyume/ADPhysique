@@ -96,13 +96,72 @@ under any answer. Plan section 10.1.
 STILL OPEN, unchanged: the rest timer pinned small by
 `loggerVisualArchitecture.guard.test.js:6,58` from a founder device verdict
 (confirmed before stage 2 touches the logger); Dezzayn at $12/mo, optional.
-STAGE 1 (the spine) IS BUILDING and does not wait on any of the above: the
-number display, the set row, the primary button, the week ribbon, the ledger,
-the `radius.lg` split into card vs control, the display step on the EXISTING
-faces (no new font — the Archivo proposal was withdrawn by the lead under D164),
-the ground moved to the founder's charcoal with the contrast suite recomputed
-once, and laws 1-7 written into `docs/rules/styling.md` with a source guard
-behind each in the `community.layout.guard.test.js` idiom.
+FOUNDER ANSWERS ON THE THREE ED QUESTIONS (D166 part 1, answered 2026-09-14):
+(1) the loud thing on Progress is the **DECISION**, not bodyweight -- bodyweight
+and its delta sit below with the graph at current prominence; (2) PHYSIQUE shows
+the scan's **band and score** ("Lean . 84"), NOT a body-fat percentage -- the
+scan's estimator is deliberately never persisted and the shipped copy tells
+users it is not a body fat measurement, so "~11%" could only have come from a
+figure the user typed, rated low confidence by the app's own table; (3) Today
+shows a **non-scale** progress signal, not "+0.4 kg this week". Binding on all
+three: the new surfaces consume the same fail-closed chain
+(`edFlagFailClosed.guard.test.js`), and the DECISION line consumes
+`buildDecision()`/`whyThisWeek` WHOLE (its ED lockout branch is first by design).
+LEAD CORRECTIONS (D166 part 2), all three previously stated to the founder and
+now corrected: (1) **the ribbon cannot draw a planned rest day** -- the founder
+ruled 2026-08-03 that the product has no scheduled training days, enforced by an
+absence guard, so the ribbon is TWO states plus today and stays ED-safe because
+it is a record rather than a tally that can break; (2) **"five sites exceed
+24px" undercounts** -- only TWO do it through a type role, six more reach 32px
+via the raw `fontSize.xxxl` token and three via raw literals (96/44/34), which
+sharpens the diagnosis: the top of the scale is unused and screens reach PAST
+it; (3) **negative display tracking is not available** without reversing D3
+(`theme.test.js` pins `letterSpacing.display === 0`), so the optical tightening
+comes from the InterDisplay face instead -- no founder question needed.
+
+STAGE 1 (the spine) IS LANDED AND MERGED TO MAIN (`f9ec50c3`, `c168c353`):
+- Ground moved to the founder's `#111110` with warm off-white ink
+  (`#F2EFE7`/`#A8A196`/`#A59E93`) and warmed borders; the dark HC greys warmed
+  at unchanged luminance; CVD deliberately untouched (Okabe-Ito hue families,
+  not ramp greys). Both hand-copied mirrors moved with it (`widgets.js`,
+  `drawShareCard.js` including the two gradient stops picked against the old
+  ground). Every computed contrast assertion re-ran and passed; the two tests
+  that exist to make a token change VISIBLE did exactly that and their pins are
+  updated with reasons (the gridline ratio went UP, 3.45 -> 3.62).
+- `radius.control` (10) added and `Button.js`'s single `borderRadius` line
+  pointed at it -- that one line applied the CARD radius to every button
+  variant at every size. New lint rule bans raw `borderRadius` literals
+  (exempting `0`); all 16 existing ones fixed properly, not suppressed.
+- `fontSize.hero` (56) + `type.hero` on `fontFamily.displayHeavy`
+  (InterDisplay-ExtraBold, already in the bundle with ZERO call sites). Added to
+  the largerText enumeration, which lists keys by name so an omission is silent.
+- THREE SPINE COMPONENTS, all on the migrated-primitive pattern (frozen block =
+  palette-invariant only, live from `useTheme()` memoized on `[t]`), NOT the
+  frozen+live double-write 153 files still carry: `BigNumber.js`,
+  `WeekRibbon.js`, `LedgerRow.js`. Weekday vocabulary extracted to
+  `src/lib/weekDays.js` so a shared component need not import from
+  `components/community/`.
+- **A guard caught a real design error of the lead's**: BigNumber's first draft
+  wrapped `RollingNumber` behind an `animate` flag with an `isBodyweight`
+  refusal. `rollingNumber.guard.test.js` holds a commission allowlist of two
+  surfaces because the count-up carries the absolute "bodyweight never ticks"
+  rule -- and an allowlist is worthless once a component everything uses is on
+  it. Animation removed entirely (precedent: the Training Load hero was
+  deliberately not re-commissioned when it moved).
+- DEFECTS FIXED in passing: `HomeLastSessionCard` hard-coded "kg lifted" in both
+  branches so lbs users read the wrong unit on their own home screen (law 7);
+  `LoggedSetRow`'s frozen/live halves disagreed about a border (`borderSubtle`
+  vs `border`, live wins) so the set editor drew the "wireframe look" against
+  its own intent; `setNumBadge` used the card radius on a 22dp box.
+- `src/__tests__/designDirectionD.guard.test.js` (26 cases) pins the ground and
+  both mirrors, the radius split, the hero step and its face, the
+  no-double-write rule on all three components, amber-means-now on the ribbon
+  and ledger, the ribbon's two states, the ED carry-through, and law 7.
+- `docs/rules/styling.md` gains the seven laws and the new-component pattern,
+  and LOSES the false "System fonts" claim (seven Inter faces ship); the
+  h2/h3/title weights recorded there did not match the code either.
+NEXT: stage 2, the five daily screens. Today and Progress are specified by the
+founder at plan section 4c and now carry the three answers above.
 ALSO OUTSTANDING: `docs/rules/styling.md:55` says "System fonts" and is wrong
 (seven Inter faces ship); `theme.js:200-201` records that the LIGHT palette
 still wants the founder's on-device sign-off while being live today — direction
