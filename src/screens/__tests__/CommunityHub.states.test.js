@@ -305,13 +305,20 @@ describe('state 2: joined, nothing followed yet', () => {
     });
   });
 
-  test('the empty state answers "what now"', async () => {
+  // Founder defect 2026-09-14: a section with nothing in it is one quiet
+  // line, not a bordered box with a circle icon, a paragraph and a second
+  // "Find people" button duplicating the row two sections above it.
+  test('the empty ACTIVITY section is one quiet line, and the only Find people is the PEOPLE row', async () => {
     loadHub.mockResolvedValue(emptyHub());
-    const { text } = await render();
+    const { text, partTrees } = await render();
 
-    expect(text).toContain('Nothing here yet');
-    expect(text).toContain('Follow people to see their training here.');
-    expect(text).toContain('Find people');
+    expect(text).toContain('Follow people and their training shows up here.');
+    expect(text).not.toContain('Nothing here yet');
+    // The empty section itself carries no control at all: the one
+    // "Find people" on this screen is the PEOPLE row in the header.
+    const emptyTree = partTrees[partTrees.length - 1];
+    expect(flattenText(emptyTree.toJSON())).toContain('Follow people and their training shows up here.');
+    expect(emptyTree.root.findAll((n) => typeof n.props?.onPress === 'function')).toHaveLength(0);
   });
 
   test('no "Lifters like you" suggestions anywhere on the Hub (moved to Find people)', async () => {

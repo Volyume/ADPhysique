@@ -15,10 +15,11 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Card from '../Card';
 import ProfileAvatarMark from '../ProfileAvatarMark';
 import useTheme from '../../hooks/useTheme';
-import { spacing, type, colors } from '../../styles/theme';
+import { spacing, type, colors, circle } from '../../styles/theme';
 import { metricLabel, daysLabel } from '../../lib/community';
 
 const PREVIEW_ROWS = 8;
+const RING = 10;
 
 export default function GymWeekBoard({ board, label, onSeeAll }) {
   const t = useTheme();
@@ -101,8 +102,10 @@ const styles = StyleSheet.create({
   rank: { ...type.label, color: colors.textMuted, width: 20, textAlign: 'center' },
   rankSpacer: { width: 20 },
   avatarWrap: { position: 'relative' },
-  ringDot: { position: 'absolute', bottom: -1, right: -1, width: 10, height: 10, borderRadius: 5, borderWidth: 1.5 },
-  nameCol: { flex: 1, gap: 2 },
+  ringDot: {
+    position: 'absolute', bottom: -1, right: -1, width: RING, height: RING, borderRadius: circle(RING), borderWidth: 1.5,
+  },
+  nameCol: { flex: 1, gap: spacing.xxs },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   caption: { ...type.caption, color: colors.textMuted },
   metric: { color: colors.textPrimary },

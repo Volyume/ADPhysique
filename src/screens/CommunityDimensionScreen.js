@@ -64,7 +64,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
-import { SkeletonRow } from '../components/Skeleton';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
 import Eyebrow from '../components/community/Eyebrow';
 import PersonRow from '../components/community/PersonRow';
 import ActivityItemRow from '../components/community/ActivityItemRow';
@@ -81,7 +81,7 @@ import useCommunityMe from '../hooks/useCommunityMe';
 import { readEdOrCalmSuppressed } from '../hooks/usePhotoSuppression';
 import { getEdSupportLink } from '../lib/whyThisTemplates';
 import {
-  colors, spacing, type, iconSize,
+  colors, spacing, type, iconSize, circle,
 } from '../styles/theme';
 import {
   loadDimension, loadDimensionRecent, gymSummary, loadBoard, metricLabel, reactToPost,
@@ -628,11 +628,11 @@ export default function CommunityDimensionScreen({ navigation, route }) {
 
   const empty = loading ? (
     <View style={styles.skeleton}>
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
     </View>
   ) : error ? (
     <EmptyState
@@ -791,7 +791,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 48, paddingVertical: spacing.sm,
   },
   beatIcon: {
-    width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center',
+    width: 34, height: 34, borderRadius: circle(34), alignItems: 'center', justifyContent: 'center',
   },
   beatLabel: { ...type.bodySm, color: colors.textPrimary, flex: 1 },
   // The age-band lock and the calm-mode resting state (task 6): one line,

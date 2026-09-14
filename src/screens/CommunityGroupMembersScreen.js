@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   },
   rowFirst: { marginTop: spacing.sm },
   rowLast: {},
-  nameCol: { flex: 1, gap: 2 },
+  nameCol: { flex: 1, gap: spacing.xxs },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   caption: { ...type.caption, color: colors.textMuted },
 });

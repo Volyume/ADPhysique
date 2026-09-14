@@ -28,7 +28,7 @@ import { FlashList } from '@shopify/flash-list';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
-import { SkeletonRow } from '../components/Skeleton';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
 import Button from '../components/Button';
 import Eyebrow from '../components/community/Eyebrow';
 import PersonRow from '../components/community/PersonRow';
@@ -347,8 +347,8 @@ export default function CommunityGroupScreen({ navigation, route }) {
 
   const empty = loading ? (
     <View style={styles.skeleton}>
-      <SkeletonRow />
-      <SkeletonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
     </View>
   ) : error ? (
     <EmptyState
@@ -370,11 +370,11 @@ export default function CommunityGroupScreen({ navigation, route }) {
       <BackHeader title={group?.name || 'Group'} right={headerAction} />
       {loading && !group ? (
         <View style={styles.skeletonScreen}>
-          <SkeletonRow />
-          <SkeletonRow />
-          <SkeletonRow />
-          <SkeletonRow />
-          <SkeletonRow />
+          <SkeletonPersonRow />
+          <SkeletonPersonRow />
+          <SkeletonPersonRow />
+          <SkeletonPersonRow />
+          <SkeletonPersonRow />
         </View>
       ) : error && !group ? empty : (
         <FlashList

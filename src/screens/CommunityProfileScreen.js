@@ -56,7 +56,8 @@ import BottomSheet from '../components/BottomSheet';
 import ModalHeader from '../components/ModalHeader';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
-import { Skeleton, SkeletonRow } from '../components/Skeleton';
+import { Skeleton } from '../components/Skeleton';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
 import ProfileCard from '../components/community/ProfileCard';
 import FollowButton from '../components/community/FollowButton';
@@ -289,6 +290,12 @@ export default function CommunityProfileScreen({ navigation, route }) {
           displayName={card.display_name || card.handle}
           size={56}
         />
+        {/* Founder defect 2026-09-14: the name sat beside the avatar
+            while every line under it started back at the page gutter, so
+            the header had two competing left edges. Identity is now ONE
+            text column beside the avatar: name, handle, bio, the shared
+            facts and the training-profile line. Everything below the
+            header (strip, counts, actions) spans the page. */}
         <View style={styles.heroBody}>
           <Text style={[styles.name, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
             {card.display_name || card.handle}
@@ -296,42 +303,43 @@ export default function CommunityProfileScreen({ navigation, route }) {
           <Text style={[styles.handle, { ...t.type.bodySm, color: t.colors.textMuted }]}>
             {`@${card.handle}`}
           </Text>
+
+          {/* Lead ruling 2026-09-10 (communities revamp): running text was
+              never banned by presentation rule 1 (it restricts prominent
+              TYPE SIZES, not the presence of a paragraph at an allowed
+              size), so the bio is restored at `bodySm`, capped to three
+              lines, under the handle and above the facts line. */}
+          {card.bio ? (
+            <Text style={[styles.bio, { ...t.type.bodySm, color: t.colors.textSecondary }]} numberOfLines={3}>
+              {card.bio}
+            </Text>
+          ) : null}
+
+          {sharedFactsLine ? (
+            <Text style={[styles.facts, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+              {sharedFactsLine}
+            </Text>
+          ) : null}
+
+          {/* Spec D (migrate_164 Part 8): the owner always sees their own
+              gym and place (the server never hides a fact from its own
+              owner), `show_gym`/`show_place` only travel to the owner's
+              own card, so this can never render for anyone else's
+              profile. */}
+          {isMe && card.gym_label && card.show_gym === false ? (
+            <Text style={[styles.hiddenNote, { ...t.type.caption, color: t.colors.textMuted }]}>
+              Hidden from others
+            </Text>
+          ) : null}
+          {isMe && (card.place_label || card.area_label) && card.show_place === false ? (
+            <Text style={[styles.hiddenNote, { ...t.type.caption, color: t.colors.textMuted }]}>
+              Hidden from others
+            </Text>
+          ) : null}
+
+          <TrainingProfileLine card={card} />
         </View>
       </View>
-
-      {/* Lead ruling 2026-09-10 (communities revamp): running text was
-          never banned by presentation rule 1 (it restricts prominent
-          TYPE SIZES, not the presence of a paragraph at an allowed
-          size), so the bio is restored at `bodySm`, capped to three
-          lines, under the handle and above the facts line. */}
-      {card.bio ? (
-        <Text style={[styles.bio, { ...t.type.bodySm, color: t.colors.textSecondary }]} numberOfLines={3}>
-          {card.bio}
-        </Text>
-      ) : null}
-
-      {sharedFactsLine ? (
-        <Text style={[styles.facts, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-          {sharedFactsLine}
-        </Text>
-      ) : null}
-
-      {/* Spec D (migrate_164 Part 8): the owner always sees their own gym
-          and place (the server never hides a fact from its own owner),
-          `show_gym`/`show_place` only travel to the owner's own card, so
-          this can never render for anyone else's profile. */}
-      {isMe && card.gym_label && card.show_gym === false ? (
-        <Text style={[styles.hiddenNote, { ...t.type.caption, color: t.colors.textMuted }]}>
-          Hidden from others
-        </Text>
-      ) : null}
-      {isMe && (card.place_label || card.area_label) && card.show_place === false ? (
-        <Text style={[styles.hiddenNote, { ...t.type.caption, color: t.colors.textMuted }]}>
-          Hidden from others
-        </Text>
-      ) : null}
-
-      <TrainingProfileLine card={card} />
 
       {isMe && progress ? (
         <ProgressStrip
@@ -476,8 +484,8 @@ export default function CommunityProfileScreen({ navigation, route }) {
           <Skeleton width="35%" height={13} style={styles.skeletonHandle} />
         </View>
       </View>
-      <SkeletonRow />
-      <SkeletonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
     </View>
   ) : blockedCard ? (
     <EmptyState
@@ -521,17 +529,19 @@ export default function CommunityProfileScreen({ navigation, route }) {
       text="Neither of you can see the other in Community. You can unblock above."
     />
   ) : !viewable ? (
-    <EmptyState
-      icon="lock-closed-outline"
-      title="This profile is private"
-      text="Follow to see their training stories."
-    />
+    // Founder defect 2026-09-14: a section with nothing in it is one
+    // quiet line, not a bordered box with a circle icon and a paragraph
+    // (blueprint section 9 rule 9). The error and offline states above
+    // keep the full EmptyState: they carry a retry.
+    <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+      Follow to see their training stories.
+    </Text>
   ) : (
-    <EmptyState
-      icon="chatbubble-outline"
-      title="No training stories yet"
-      text="When they post a session, a personal best or a finished block, it appears here."
-    />
+    <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+      {isMe
+        ? 'Your sessions and personal bests show up here once you share them.'
+        : 'Their sessions and personal bests show up here.'}
+    </Text>
   );
 
   return (
@@ -635,13 +645,14 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
   hero: { gap: spacing.md, marginBottom: spacing.sm },
-  heroRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  heroRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   heroBody: { flex: 1, gap: spacing.xxs },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   handle: { ...type.bodySm, color: colors.textMuted },
   bio: { ...type.bodySm, color: colors.textSecondary },
   facts: { ...type.bodySm, color: colors.textSecondary },
   hiddenNote: { ...type.caption, color: colors.textMuted },
+  sectionEmpty: { ...type.bodySm, color: colors.textMuted, paddingVertical: spacing.sm },
   counts: { flexDirection: 'row', gap: spacing.lg },
   count: { ...type.bodySm, color: colors.textSecondary },
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },

@@ -55,7 +55,7 @@ import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
-import { SkeletonRow } from '../components/Skeleton';
+import SkeletonPersonRow from '../components/community/SkeletonPersonRow';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PrivacyReceipt from '../components/community/PrivacyReceipt';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
@@ -68,7 +68,7 @@ import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import {
-  colors, spacing, type, circle, fontSize, fontWeight, hitSlop,
+  colors, spacing, type, circle, fontSize, fontWeight, radius,
 } from '../styles/theme';
 import {
   loadHub, hasProfile, hasUnseen, hasUnreadMessages, reactToPost,
@@ -629,11 +629,17 @@ export default function CommunityHubScreen({ navigation, route }) {
 
       {joined ? (
         <>
-          <Eyebrow>PEOPLE</Eyebrow>
+          {/* PEOPLE and GROUPS are the same shape: an eyebrow with one
+              quiet trailing action. "Find people" used to be a bare text
+              row under the cohorts, which read as a second heading rather
+              than a control (founder look-and-feel pass 2026-09-14). */}
+          <Eyebrow trailing={{ label: 'Find people', onPress: () => navigation.navigate('CommunityFindPeople') }}>
+            PEOPLE
+          </Eyebrow>
           {summaryLoading ? (
             <>
-              <SkeletonRow />
-              <SkeletonRow />
+              <SkeletonPersonRow />
+              <SkeletonPersonRow />
             </>
           ) : cohorts.length || !summaryEmpty ? (
             cohorts.map((c) => (
@@ -666,17 +672,6 @@ export default function CommunityHubScreen({ navigation, route }) {
               />
             </View>
           )}
-          <Pressable
-            onPress={() => navigation.navigate('CommunityFindPeople')}
-            hitSlop={hitSlop}
-            style={styles.findPeopleRow}
-            accessibilityRole="button"
-            accessibilityLabel="Find people"
-          >
-            <Text style={[styles.findPeopleLabel, { ...t.type.label, color: t.colors.textSecondary }]}>
-              Find people
-            </Text>
-          </Pressable>
         </>
       ) : null}
 
@@ -686,7 +681,7 @@ export default function CommunityHubScreen({ navigation, route }) {
             GROUPS
           </Eyebrow>
           {summaryLoading ? (
-            <SkeletonRow />
+            <SkeletonPersonRow />
           ) : groups.length ? (
             groups.map((g) => (
               <GroupRow
@@ -739,9 +734,9 @@ export default function CommunityHubScreen({ navigation, route }) {
 
   const empty = (loading || meLoading) ? (
     <View style={styles.skeletonList}>
-      <SkeletonRow />
-      <SkeletonRow />
-      <SkeletonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
+      <SkeletonPersonRow />
     </View>
   ) : failed ? (
     // A read that did not answer is never reported as an empty community.
@@ -755,21 +750,22 @@ export default function CommunityHubScreen({ navigation, route }) {
       onSecondary={() => load()}
       secondaryAccessibilityLabel="Try loading Community again"
     />
-  ) : joined ? (
-    <EmptyState
-      icon="people-outline"
-      title="Nothing here yet"
-      text="Follow people to see their training here."
-      actionLabel="Find people"
-      onAction={() => navigation.navigate('CommunityFindPeople')}
-      actionAccessibilityLabel="Find people to follow"
-    />
   ) : (
-    <EmptyState
-      icon="sparkles-outline"
-      title="You are early"
-      text="Be the first to post a training story."
-    />
+    // Founder defect 2026-09-14 ("it looks rubbish"): a section with
+    // nothing in it was a bordered box with a 52 dp circle icon, a title,
+    // a paragraph and a "Find people" button that repeated the Find
+    // people row already sitting two sections above it. GROUPS on this
+    // same screen said its own emptiness in one quiet line; ACTIVITY now
+    // does the same, so the Hub reads as one list rather than a list with
+    // a poster stuck on the end (blueprint section 9 rule 9: one line,
+    // one action, never a paragraph). The offline and failed states above
+    // keep the full EmptyState: those carry a retry, and an error is not
+    // an empty section.
+    <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+      {joined
+        ? 'Follow people and their training shows up here.'
+        : 'Training stories from Community show up here.'}
+    </Text>
   );
 
   return (
@@ -811,9 +807,12 @@ export default function CommunityHubScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  header: { marginBottom: spacing.md },
+  // No bottom margin: the header's last child is an Eyebrow, which already
+  // carries the section rhythm, and the margin stacked under it so ACTIVITY
+  // sat 20 dp above its rows while PEOPLE and GROUPS sat 8 (2026-09-14).
+  header: {},
   statusNotice: {
-    borderWidth: 1, borderRadius: 16, padding: spacing.md, gap: spacing.xs, marginBottom: spacing.lg,
+    borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, gap: spacing.xs, marginBottom: spacing.lg,
   },
   statusNoticeLine: { ...type.bodySm },
   statusNoticeLink: { ...type.captionStrong },
@@ -858,10 +857,9 @@ const styles = StyleSheet.create({
   heroTitle: { ...type.h3, color: colors.textPrimary },
   heroBody: { ...type.bodySm, color: colors.textSecondary },
   heroActions: { flexDirection: 'row', gap: spacing.sm },
-  findPeopleRow: { minHeight: 48, justifyContent: 'center', paddingVertical: spacing.sm },
+  sectionEmpty: { ...type.bodySm, color: colors.textMuted, paddingVertical: spacing.sm },
   firstHere: { gap: spacing.sm, paddingVertical: spacing.sm, alignItems: 'flex-start' },
   firstHereLine: { ...type.bodySm, color: colors.textSecondary },
-  findPeopleLabel: { ...type.label, color: colors.textSecondary },
   groupsEmptyLine: { ...type.bodySm, color: colors.textMuted, paddingVertical: spacing.sm },
   offline: { ...type.caption, color: colors.textMuted, marginBottom: spacing.sm },
   skeletonList: { gap: spacing.md },
