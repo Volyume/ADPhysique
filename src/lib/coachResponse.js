@@ -211,7 +211,17 @@ function buildInterpretation({ output, history, units, suppress, showScience = f
 // Part 3: the decision plus the reason (reuses existing decision data)
 // ---------------------------------------------------------------------------
 
-function buildDecision({ output }) {
+/**
+ * The week's decision as ONE sentence, in safety precedence order.
+ *
+ * Exported since D166: the founder ruled that the Progress screen opens with
+ * this rather than with a bodyweight numeral, so it now has a consumer outside
+ * `buildCoachResponse`. The binding condition on every consumer is that it
+ * takes this function's answer WHOLE and never reproduces its happy path: the
+ * ED-pattern lockout is the FIRST branch by design, and a renderer that read
+ * `output.whyThisWeek` directly would silently skip it.
+ */
+export function buildDecision({ output }) {
   if (!output) return null;
   const heldDecisions = Array.isArray(output.heldDecisions) ? output.heldDecisions : [];
 

@@ -9577,6 +9577,36 @@ export async function applyCoachTrainingAdjustmentAtomically(args) {
   return receiptId;
 }
 
+/**
+ * The latest coach output WITH its row metadata.
+ *
+ * `getLatestCoachOutput` below returns the parsed `output_json` only, and the
+ * engine's output object carries no week stamp of its own (`week_start` is a
+ * column, and `weekLabel` inside the JSON is display copy like "Week 4 .
+ * Moderate cut", not a date). A caller that needs to know WHICH week the
+ * decision belongs to -- so it can say "last week's" rather than implying a
+ * stale sentence is current -- cannot get it from that function. Additive, so
+ * every existing caller is untouched.
+ *
+ * @param {string} userId
+ * @returns {Promise<{output: object, weekStart: number, updatedAt: number|null}|null>}
+ */
+export async function getLatestCoachOutputMeta(userId) {
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM coach_outputs WHERE user_id = ? ORDER BY week_start DESC LIMIT 1',
+    [userId],
+  );
+  if (!row) return null;
+  let output;
+  try { output = JSON.parse(row.output_json); } catch { output = rowToCamel(row); }
+  return {
+    output,
+    weekStart: Number(row.week_start) || 0,
+    updatedAt: Number(row.updated_at) || null,
+  };
+}
+
 export async function getLatestCoachOutput(userId) {
   const d = await db();
   const row = await d.getFirstAsync(
