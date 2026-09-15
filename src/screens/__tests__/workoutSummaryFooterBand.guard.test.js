@@ -152,9 +152,16 @@ describe('WorkoutSummary food-design-standard compliance (remediation 2026-07-11
   });
 
   test('data numerals carry tabular figures (checklist 5)', () => {
-    // hero tonnage, the three stat-tile values, and the exercise-breakdown
-    // set/weight readouts all render through type.num (tabular-nums).
-    expect(summary).toMatch(/heroValue:\s*\{ \.\.\.type\.num\('display'\)/);
+    // The stat-tile values and the exercise-breakdown set/weight readouts
+    // render through type.num (tabular-nums).
+    //
+    // D167: the `heroValue` assertion that led this list is gone with the key.
+    // The screen's loud element is now the 4-week verdict through BigNumber,
+    // and tonnage is a stat tile, so there was no display-size numeral left
+    // for that line to pin. The rule it protected did not disappear -- it
+    // moved: BigNumber renders its value at `type.num('hero')`, asserted in
+    // `src/components/__tests__/spineComponents.test.js`. Leaving the old line
+    // would have pinned a dead style key and blocked the cleanup.
     expect(summary).toMatch(/statValue:\s*\{ \.\.\.type\.num\('h3'\)/);
     expect(summary).toMatch(/exerciseListMeta:\s*\{\s*\n\s*\.\.\.type\.num\('caption'\)/);
     expect(summary).toMatch(/exerciseSetChip:\s*\{\s*\n\s*\.\.\.type\.num\('caption'\)/);

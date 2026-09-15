@@ -13,6 +13,7 @@ import {
   KeyboardGestureArea,
 } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import BigNumber from '../components/BigNumber';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, withAlpha, alpha, circle, motion, iconSize, fontFamily } from '../styles/theme';
@@ -1296,24 +1297,31 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         ) : null}
 
-        {/* D3 (design audit 03): tonnage is THE headline. One elevated hero
-            card carrying the display-size animated counter, with the 4-week
-            comparison verdict fused into it; the remaining three stats step
-            down to a compact row below. The hero is the screen's single
-            amber object (the numeral); everything else is neutral or tint. */}
+        {/* D3 (design audit 03) made tonnage the headline in an elevated hero
+            card, with the 4-week verdict fused underneath it. D167 swaps which
+            of the two is loud: the verdict is the answer to "how did that go",
+            tonnage is a stat about it, and tonnage was already the founder's
+            WEEKLY signal on Today. The card stays the screen's one elevated
+            object; there is no amber on it now. */}
         <Card elevated padding="xl" style={styles.heroCard}>
-          <StatBox
-            hero
-            // WAVE-A-FINDINGS.md UNIT_DEFECT (:1220-1226): hard-coded 'kg'
-            // regardless of the store's units, mislabelling an lbs user's
-            // total. Matches the already-fixed ShareCard sibling (R8/M5,
-            // :936: `units === 'lbs' ? 'lbs' : 'kg'`).
-            value={formatWithUnit(formatNumber(Math.round(tonnage || 0)), units === 'lbs' ? 'lbs' : 'kg')}
-            label="Total lifted"
-            tooltip={'Total weight moved this session: sets x reps x weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
-          />
-          {/* 4-week comparison verdict, fused into the hero so "your number"
-              and "how it compares" read as one statement. Renders once we
+          {/* 4-week comparison verdict, now the hero itself (D167, law 1).
+
+              The screen used to shout TONNAGE at 40px. Two things were wrong
+              with that. Law 1 says the loud element is "always the thing the
+              screen is for", and what this screen is for is "how did that
+              go?" -- tonnage answers the second question, not the first. And
+              the founder had already ruled tonnage is the WEEKLY non-scale
+              signal on Today (D167), so shouting it here said the same word
+              twice in two places. Tonnage moves to the stat grid, where law 7
+              already labelled it correctly and two guards pin that string.
+
+              The session's own NAME has never been rendered on this screen at
+              all -- `routineName` was loaded solely to title the share card.
+              It is the eyebrow now, which also matches Today: that screen
+              shouts what you are about to do, this one shouts how it went,
+              and Progress shouts what to do next.
+
+              Renders once we
               have either a prior session to compare against, or the 'first'
               verdict (no prior session at all - lead ruling: a session with
               nothing to compare against still deserves an honest line about
@@ -1324,48 +1332,57 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               readOnly mode, so this is already live-summary-only. */}
           {comparison && (comparison.priorCount > 0 || (comparison.verdict === 'first' && !calmSuppressed)) && (() => {
             const { verdict, pct, position, total, priorCount } = comparison;
-            let headline, sub, accent;
+            // D167: the verdict no longer carries a colour or an icon.
+            //
+            // It used to pick gold for a best, green for up, grey for down,
+            // beside a trophy or a trend arrow. Both go. Law 6 narrows colour
+            // to one meaning ("now"), and a headline tinted by how the session
+            // went is colour AS VERDICT -- the same good/bad tinting the app
+            // already refuses for body-weight trends, generalised. The trophy
+            // and the trend arrows are category props that stage 3 removes
+            // anyway. The sentence says "Strongest workout in 4 weeks"; it
+            // does not need a colour to be understood, and law 1 wants one
+            // loud thing rather than a loud thing plus a medal.
+            let headline, sub;
             if (verdict === 'first') {
               headline = 'First time on this session';
               sub = 'Every set is saved. Next time, these numbers show as Last session while you lift.';
-              accent = t.colors.textPrimary;
             } else if (verdict === 'best') {
-              headline = `Strongest workout in 4 weeks`;
+              headline = 'Strongest workout in 4 weeks';
               sub = `Top of ${total} sessions logged for this routine.`;
-              accent = t.colors.gold;
             } else if (verdict === 'up') {
               headline = `${pct >= 0 ? '+' : ''}${pct}% vs your 4-week average`;
               sub = `Position ${position} of ${total} sessions in the window.`;
-              accent = t.colors.success;
             } else if (verdict === 'down') {
               headline = `${pct}% vs your 4-week average`;
-              sub = `Sessions vary with recovery, sleep and stress. The 4-week trend carries more signal than any single session.`;
-              accent = t.colors.textSecondary;
+              sub = 'Sessions vary with recovery, sleep and stress. The 4-week trend carries more signal than any single session.';
             } else {
               headline = `On pace with your last ${priorCount} session${priorCount !== 1 ? 's' : ''}`;
               sub = 'Within about 10% of your 4-week average. Consistency is the goal.';
-              // Neutral, not amber: the hero numeral is this screen's one
-              // amber object (design audit 03 amber-inflation rule).
-              accent = t.colors.textPrimary;
             }
             return (
-              <View style={[styles.verdictRow, live.verdictRow]}>
-                <Ionicons
-                  name={verdict === 'best' ? 'trophy-outline' : verdict === 'up' ? 'trending-up-outline' : verdict === 'down' ? 'trending-down-outline' : 'analytics-outline'}
-                  size={16}
-                  color={accent}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.verdictHeadline, live.verdictHeadline, { color: accent }]}>{headline}</Text>
-                  <Text style={[styles.verdictSub, live.verdictSub]}>{sub}</Text>
-                </View>
-              </View>
+              <BigNumber
+                label={routineName || null}
+                value={headline}
+                caption={sub}
+                testID="summary-verdict"
+              />
             );
           })()}
         </Card>
 
         <View style={styles.statsGrid}>
-          <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" animateOrder={0} />
+          <StatBox
+            icon="flame-outline"
+            // WAVE-A-FINDINGS.md UNIT_DEFECT (:1220-1226): hard-coded 'kg'
+            // regardless of the store's units, mislabelling an lbs user's
+            // total. Matches the already-fixed ShareCard sibling (R8/M5,
+            // :936: `units === 'lbs' ? 'lbs' : 'kg'`).
+            value={formatWithUnit(formatNumber(Math.round(tonnage || 0)), units === 'lbs' ? 'lbs' : 'kg')}
+            label="Total lifted"
+            tooltip={'Total weight moved this session: sets x reps x weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
+            animateOrder={0}
+          />
           <StatBox
             icon="layers-outline"
             value={String(displayWorkingSets)}
@@ -1373,7 +1390,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             tooltip={'The sets counted in your weekly totals. Warm-ups are left out; every other logged set counts, however it felt.'}
             animateOrder={1}
           />
-          <StatBox icon="time-outline" value={`${durationMinutes || 0} min`} label="Duration" animateOrder={2} />
+          <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" animateOrder={2} />
+          <StatBox icon="time-outline" value={`${durationMinutes || 0} min`} label="Duration" animateOrder={3} />
         </View>
 
         {/* Communities revamp phase 3 (spec section 1, Q2; lead ruling,
@@ -2105,7 +2123,7 @@ function RevealSection({ children }) {
 // (reduceMotion), so it is exported purely so the live-theme flip contract
 // can be pinned against a real mounted instance (see
 // cp10Stage3WorkoutShellsLiveTheme.test.js). No behaviour change.
-export function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = false }) {
+export function StatBox({ icon, value, label, tooltip, animateOrder = 0 }) {
   // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
   // See buildLiveStyles' header comment (defined further down this
   // file, after the frozen `styles` block -- see the comment there for why).
@@ -2166,18 +2184,6 @@ export function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = 
   ) : (
     <Text style={[frozenStyle, liveStyle]} maxFontSizeMultiplier={maxFontSizeMultiplier}>{value}</Text>
   ));
-
-  if (hero) {
-    return (
-      <Animated.View style={[styles.heroValueWrap, { opacity, transform: [{ translateY }] }]}>
-        {numeral(styles.heroValue, live.heroValue, 1.3)}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
-          <Text style={[styles.heroValueLabel, live.heroValueLabel]}>{label}</Text>
-          {tooltip ? <InfoTooltip size={11} text={tooltip} /> : null}
-        </View>
-      </Animated.View>
-    );
-  }
 
   return (
     <Animated.View style={[styles.statBox, live.statBox, { opacity, transform: [{ translateY }] }]}>
@@ -2248,15 +2254,15 @@ const styles = StyleSheet.create({
   shareOfferButtons: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' },
   shareOfferLink: { ...type.bodySm, color: colors.textMuted },
   blockArcName: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  // D3 hero: the one elevated object on the screen (surfaceElevated ranks
-  // the hero, design audit 03 rule 4), carrying the display-size tonnage.
+  // The one elevated object on the screen (surfaceElevated ranks it above
+  // every flat card below). D167: it carries the 4-week verdict at type.hero
+  // through BigNumber, not the display-size tonnage counter it used to.
+  // `heroValue`/`heroValueWrap`/`heroValueLabel` and StatBox's `hero` branch
+  // went with that change rather than being left dead behind a guard.
   heroCard: {
     gap: spacing.md,
     alignItems: 'center',
   },
-  heroValueWrap: { alignItems: 'center', gap: spacing.xs },
-  heroValue: { ...type.num('display'), color: colors.primary },
-  heroValueLabel: { ...type.caption, color: colors.textSecondary },
   verdictRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     alignSelf: 'stretch',
@@ -2266,12 +2272,19 @@ const styles = StyleSheet.create({
   verdictHeadline: { ...type.bodyStrong },
   verdictSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   // The three remaining stats step down to one compact row under the hero.
-  statsGrid: { flexDirection: 'row', gap: spacing.md },
+  // Four stats since tonnage moved down here (D167), so the row wraps to a
+  // two-by-two. `minWidth` rather than a percentage basis: at the largest
+  // accessibility text scale a tile needs to be able to take a whole row
+  // rather than clip its own label.
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   // Compliance pass (remediation 2026-07-11, food design standard section 2 /
   // checklist 1): the three stat tiles are card-class surfaces, so radius.lg
   // (16, the one card radius), colors.surface, 1px border - matching Card.
   statBox: {
-    flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg,
+    // `minWidth` makes the four-tile grid wrap two-by-two, and lets a tile
+    // take a whole row at the largest accessibility text scale rather than
+    // clipping its own label.
+    flex: 1, minWidth: 136, backgroundColor: colors.surface, borderRadius: radius.lg,
     padding: spacing.md, alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.borderSubtle,
   },
   statValue: { ...type.num('h3'), color: colors.textPrimary },
@@ -2558,12 +2571,16 @@ function buildLiveStyles(t) {
     phaseActionText: { fontSize: t.fontSize.sm, color: t.colors.primary },
     phaseShareBtn: { borderColor: withAlpha(t.colors.primary, 0.376) },
     blockArcName: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    heroValue: { ...t.type.num('display'), color: t.colors.primary },
-    heroValueLabel: { ...t.type.caption, color: t.colors.textSecondary },
     verdictRow: { borderTopColor: t.colors.borderSubtle },
     verdictHeadline: { ...t.type.bodyStrong },
     verdictSub: { ...t.type.captionTight, color: t.colors.textMuted },
-    statBox: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    // D167: this read `t.colors.border` while the frozen half sets
+    // `colors.borderSubtle`. The live half wins at runtime, so every stat tile
+    // drew the bright control-edge grey against its own frozen intent. Third
+    // instance of the same two-halves-disagree defect (LoggedSetRow D166,
+    // EvidencePanel D167), and the reason new components do not use this
+    // pattern at all.
+    statBox: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     statValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
     statLabel: { ...t.type.caption, color: t.colors.textSecondary },
     prRow: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, 0.251) },
