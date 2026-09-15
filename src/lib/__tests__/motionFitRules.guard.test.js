@@ -44,14 +44,14 @@ const filesMatching = (re) =>
   sources.filter((s) => re.test(s.text)).map((s) => s.file).sort();
 
 describe('fit rule 1/3: springs.expressive is contained to sanctioned celebrations', () => {
-  // Deliberately EMPTY today: nothing in the app ships expressive motion,
-  // and that is the pinned state. The celebration work (M7, audit §3.3g)
-  // grows this list on purpose to exactly the three reward moments:
-  //   'components/PRCelebration.js'         (PR burst; MilestoneBurst lives here)
-  //   'screens/WorkoutSummaryScreen.js'     (50/100-session MilestoneBurst mount)
-  //   'screens/ProSetupCompleteScreen.js'   (plan-ready reveal)
-  // Any other file referencing the token is decoration (fit rule 1) or
-  // louder-than-sanctioned core-loop motion (fit rule 3) and must fail here.
+  // Deliberately EMPTY today, and now permanently so for the celebration
+  // half: D170 removed the 50/100-session MilestoneBurst mount from
+  // WorkoutSummaryScreen and D173 T4 deleted the particle machinery from
+  // PRCelebration.js outright, so the "grows to exactly the three reward
+  // moments" note this comment used to carry describes work that will not
+  // happen - law 5 forbids celebratory animation. Any file referencing the
+  // token is decoration (fit rule 1) or louder-than-sanctioned core-loop
+  // motion (fit rule 3) and must fail here.
   const EXPRESSIVE_ALLOWLIST = [];
 
   test('no file outside the allowlist references motion.springs.expressive', () => {

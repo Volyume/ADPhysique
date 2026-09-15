@@ -175,7 +175,7 @@ export default function CommunityGroupMembersScreen({ route }) {
 
   const menuRows = menuRow ? [
     ...(menuRow.role !== 'admin' ? [{
-      icon: 'ribbon-outline',
+      icon: 'shield-checkmark-outline',
       label: 'Make admin',
       onPress: () => { setMenuRow(null); makeAdmin(menuRow.card.user_id); },
     }] : []),

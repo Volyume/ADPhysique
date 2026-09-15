@@ -28,14 +28,18 @@ import {
 } from '../lib/database';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
 
+// D173 T1: the milestone-unlocked ICON is removed (the label already says
+// which rung), so the per-rung `icon` keys went with it rather than sitting
+// here unread. The trophy/medal/ribbon ladder they carried is the trophy-tier
+// game mechanic T1 and T3 retire.
 const MILESTONES = [
-  { sessions: 1,    label: 'First session',  icon: 'star-outline' },
-  { sessions: 10,   label: '10 sessions',    icon: 'fitness-outline' },
-  { sessions: 25,   label: '25 sessions',    icon: 'flash-outline' },
-  { sessions: 50,   label: '50 sessions',    icon: 'trophy-outline' },
-  { sessions: 100,  label: '100 sessions',   icon: 'trophy' },
-  { sessions: 250,  label: '250 sessions',   icon: 'medal-outline' },
-  { sessions: 500,  label: '500 sessions',   icon: 'ribbon-outline' },
+  { sessions: 1,    label: 'First session' },
+  { sessions: 10,   label: '10 sessions' },
+  { sessions: 25,   label: '25 sessions' },
+  { sessions: 50,   label: '50 sessions' },
+  { sessions: 100,  label: '100 sessions' },
+  { sessions: 250,  label: '250 sessions' },
+  { sessions: 500,  label: '500 sessions' },
 ];
 
 function nextMilestone(total) {
@@ -251,7 +255,6 @@ export default function ReadinessCards({ userId }) {
           <View style={styles.milestoneTop}>
             {lastUnlocked && (
               <View style={styles.milestoneUnlocked}>
-                <Ionicons name={lastUnlocked.icon} size={16} color={t.colors.gold} />
                 <Text style={[styles.milestoneUnlockedText, live.milestoneUnlockedText]}>{lastUnlocked.label}</Text>
               </View>
             )}
@@ -383,7 +386,7 @@ const styles = StyleSheet.create({
   },
   milestoneTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   milestoneUnlocked: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  milestoneUnlockedText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.gold },
+  milestoneUnlockedText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textSecondary },
   milestoneNext: { ...type.caption, color: colors.textMuted },
   milestoneBarTrack: { height: 4, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
   milestoneBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
@@ -443,7 +446,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     milestoneCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    milestoneUnlockedText: { fontSize: t.fontSize.sm, color: t.colors.gold },
+    milestoneUnlockedText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     milestoneNext: { ...t.type.caption, color: t.colors.textMuted },
     milestoneBarTrack: { backgroundColor: t.colors.surface2 },
     milestoneBarFill: { backgroundColor: t.colors.primary },

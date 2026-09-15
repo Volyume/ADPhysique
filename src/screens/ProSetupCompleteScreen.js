@@ -15,7 +15,7 @@ import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
-import { GOAL_LABELS, PHASE_LABELS, isCompetitionGoal } from '../lib/coachingGoals';
+import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { getSplitRationale, getSetupReceiptLine } from '../lib/whyThisTemplates';
 import { getActivePlan, getRoutinesForPlan, getMorningWeightsLast14Days, getOpenEdPatternFlag } from '../lib/database';
 import { getNotificationPermissionStatus } from '../lib/notifications/permissions';
@@ -266,7 +266,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
           <Text style={[styles.sub, live.sub]}>{receiptLine || "Here's your daily routine."}</Text>
           <View style={styles.readyGrid} accessibilityLabel="Setup summary">
             <View style={[styles.readyItem, live.readyItem]}>
-              <Ionicons name="flame-outline" size={15} color={t.colors.primary} />
+              <Ionicons name="nutrition-outline" size={15} color={t.colors.primary} />
               <Text style={[styles.readyText, live.readyText]}>Targets saved</Text>
             </View>
             <View style={[styles.readyItem, live.readyItem]}>
@@ -446,7 +446,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
             <Card style={[styles.routineCardChrome, live.routineCardChrome]}>
               <View style={styles.routineHeader}>
                 <View style={[styles.routineIconWrap, live.routineIconWrap]}>
-                  <Ionicons name="flame-outline" size={18} color={t.colors.primary} />
+                  <Ionicons name="nutrition-outline" size={18} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.routineTitle, live.routineTitle]}>3. Hit your daily targets</Text>
@@ -496,8 +496,11 @@ export default function ProSetupCompleteScreen({ navigation }) {
               </View>
               <View style={styles.goalRow}>
                 <View style={[styles.goalChip, live.goalChip]}>
+                  {/* D173 T3: the competition branch used to swap in a
+                      trophy. The chip's own text is the goal's name, so the
+                      glyph carried nothing the words do not. */}
                   <Ionicons
-                    name={isCompetitionGoal(userProfile?.trainingGoal) ? 'trophy-outline' : 'body-outline'}
+                    name="body-outline"
                     size={11}
                     color={t.colors.primary}
                   />

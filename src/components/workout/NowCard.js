@@ -85,12 +85,16 @@ export default function NowCard({
     ? `${heroWeight} ${units}${heroReps ? ` for ${heroReps} reps` : ''}`
     : 'No weight entered yet';
 
+  // D173 T2: a warm-up ramp is literally a ramp, so it is described rather
+  // than punned with a flame; and the ink moves off `warning`, which is a
+  // state colour (a warm-up is not a warning) - the same amber every other
+  // context kind already uses.
   const contextIcon = context?.kind === 'group'
     ? 'swap-horizontal'
     : context?.kind === 'warmup'
-      ? 'flame-outline'
+      ? 'trending-up-outline'
       : 'pulse-outline';
-  const contextColor = context?.kind === 'warmup' ? t.colors.warning : t.colors.primary;
+  const contextColor = t.colors.primary;
 
   // Phase 2B (physical-device corrective redesign, screenshot failure 3):
   // the "huge detached NowCard" is retired. The active set renders as the
@@ -143,7 +147,7 @@ export default function NowCard({
         >
           <Ionicons name={contextIcon} size={14} color={contextColor} style={styles.contextIcon} />
           <Text
-            style={[styles.contextText, { ...t.type.caption, color: context.kind === 'warmup' ? t.colors.warning : t.colors.textSecondary }]}
+            style={[styles.contextText, { ...t.type.caption, color: t.colors.textSecondary }]}
             numberOfLines={3}
           >
             {context.text}

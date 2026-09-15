@@ -9,7 +9,7 @@
  *
  * Pass `onPress` to get the PressableCard spring automatically (so cards
  * and tappable cards share one press model). `tone` draws an accent border
- * (primary / success / warning / error / gold) for hero cards; this is the
+ * (primary / success / warning / error / neutral) for hero cards; this is the
  * non-gradient accent the old GradientCard provided.
  */
 
@@ -68,7 +68,6 @@ export default function Card({
     success: t.colors.success,
     warning: t.colors.warning,
     error: t.colors.error,
-    gold: t.colors.gold,
     neutral: t.colors.border,
   };
   // The surface tiers Card can sit on. Lets the ONE Card component absorb the

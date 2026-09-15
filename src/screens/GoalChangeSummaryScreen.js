@@ -252,7 +252,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
             <SectionLabel style={styles.sectionLabelSpacing}>Training</SectionLabel>
             {goalChanged && (
               <ChangeCard
-                icon="trophy-outline"
+                icon="body-outline"
                 title="Physique goal"
                 prev={GOAL_LABELS[previous.goal] ?? previous.goal}
                 next={GOAL_LABELS[next.goal] ?? next.goal}
@@ -277,7 +277,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
 
             {kcalChanged && (
               <ChangeCard
-                icon="flame-outline"
+                icon="nutrition-outline"
                 title="Daily calories"
                 prev={`${prevKcal.toLocaleString('en-GB')} kcal`}
                 next={`${nextKcal.toLocaleString('en-GB')} kcal`}

@@ -237,7 +237,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // suppression as firstSessionLine. PRs are owned by PRCelebration and the
   // first session by COMP-013, so neither double-celebrates here.
   const [milestone, setMilestone] = useState(null);
-  // D2: the gold particle burst for the big rungs (50/100 sessions).
   // D2: calm-mode / open-ED suppression flag for the peak-surface celebratory
   // cards (the programme-arc strip + the phase-completion card). Set once from
   // the shared wellbeing read in loadVolumeAndHistory.
@@ -1282,22 +1281,22 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             rung is crossed (and never under calm/ED). Calm in tone, not loud. */}
         {milestone ? (
           <RevealSection delay={120}>
-            <Card tone="gold" style={styles.milestoneCard}>
-              <View style={[styles.milestoneIconWrap, live.milestoneIconWrap]}>
-                <Ionicons name={milestone.icon} size={22} color={t.colors.gold} />
+            <Card style={styles.milestoneCard}>
+              <View style={styles.milestoneIconWrap}>
+                <Ionicons name={milestone.icon} size={22} color={t.colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.milestoneTitle, live.milestoneTitle]}>{milestone.title}</Text>
                 <Text style={[styles.milestoneBody, live.milestoneBody]}>{milestone.body}</Text>
               </View>
               <TouchableOpacity
-                style={[styles.milestoneShareBtn, live.milestoneShareBtn]}
+                style={styles.milestoneShareBtn}
                 onPress={handleShareMilestone}
                 accessibilityRole="button"
                 accessibilityLabel="Share this milestone"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="share-social-outline" size={18} color={t.colors.gold} />
+                <Ionicons name="share-social-outline" size={18} color={t.colors.primary} />
               </TouchableOpacity>
             </Card>
           </RevealSection>
@@ -1379,7 +1378,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
         <View style={styles.statsGrid}>
           <StatBox
-            icon="flame-outline"
+            icon="stats-chart-outline"
             // WAVE-A-FINDINGS.md UNIT_DEFECT (:1220-1226): hard-coded 'kg'
             // regardless of the store's units, mislabelling an lbs user's
             // total. Matches the already-fixed ShareCard sibling (R8/M5,
@@ -1544,7 +1543,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {detectedPRs.length > 0 && (
           <RevealSection delay={1340}>
           <View style={[styles.prRow, live.prRow]}>
-            <Ionicons name="trophy-outline" size={18} color={t.colors.warning} />
+            {/* D174, lead review: this read `warning`. A personal best is not
+                a warning, and discipline 1 grants amber "a personal best" by
+                name -- so this is one of the dozen sites amber is actually for. */}
+            <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
             <Text style={[styles.prRowText, live.prRowText]}>{prLine}</Text>
             {/* C5-P34-02 (D96): this is where a novice meets the term for
                 the first time (the in-session celebration labels are plain
@@ -1822,9 +1824,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             which falls back to the neutral link above. */}
         {!readOnly && blockStory && !calmSuppressed && (
           <RevealSection delay={1480}>
-            <Card tone="gold" style={styles.phaseCard}>
+            <Card style={styles.phaseCard}>
               <View style={styles.phaseHeaderRow}>
-                <Ionicons name="flag" size={18} color={t.colors.gold} />
+                <Ionicons name="flag" size={18} color={t.colors.textSecondary} />
                 <Text style={[styles.phaseTitle, live.phaseTitle]}>Block finished</Text>
               </View>
               {blockStory.name ? (
@@ -1845,7 +1847,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <View style={styles.phaseActions}>
                 <Button
                   title="Watch your block story"
-                  icon="sparkles"
+                  icon="film-outline"
                   variant="tertiary"
                   size="sm"
                   onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
@@ -1873,7 +1875,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && sessionAdjustments.length > 0 && (
           <RevealSection delay={1520}>
             <View style={[styles.adjustedSummaryRow, live.adjustedSummaryRow]}>
-              <Ionicons name="sparkles" size={15} color={t.colors.primary} />
+              <Ionicons name="options-outline" size={15} color={t.colors.primary} />
               <Text style={[styles.adjustedSummaryText, live.adjustedSummaryText]}>
                 Adjusted today: {sessionAdjustments.map(a =>
                   `${(MUSCLE_DISPLAY_NAMES[a.muscle] || a.muscle).toLowerCase()}, ${a.setDelta < 0 ? '1 set fewer' : '1 set added'}`,
@@ -2096,9 +2098,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           />
         </View>
       </BottomSheet>
-      {/* D2: gold burst over the summary for the 50/100-session rungs. Set
-          only inside the calm/ED-suppressed-free branch; renders nothing
-          under reduce-motion; never blocks taps. */}
     </SafeAreaView>
   );
 }
@@ -2210,14 +2209,15 @@ const styles = StyleSheet.create({
   completionTitle: { ...type.h2, color: colors.textPrimary },
   completionDate: { fontSize: fontSize.sm, color: colors.textMuted },
   firstSessionLine: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary, marginTop: spacing.xs },
-  // D1 early-win milestone card. Gold accent (an achievement beat, kin to the
-  // PR row) but calm: a soft surface card, no confetti, no full-screen takeover.
+  // D1 early-win milestone card. D173 T1 dropped the gold Card tone and both
+  // gold washes (amber discipline 2: the accent is never a tint behind a
+  // glyph); it stays the plain surface card it already was underneath, with
+  // no confetti and no full-screen takeover.
   milestoneCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
   },
   milestoneIconWrap: {
     width: 40, height: 40, borderRadius: circle(40),
-    backgroundColor: withAlpha(colors.gold, 0.125),
     alignItems: 'center', justifyContent: 'center',
   },
   milestoneTitle: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
@@ -2225,7 +2225,6 @@ const styles = StyleSheet.create({
   milestoneShareBtn: {
     width: 36, height: 36, borderRadius: circle(36),
     alignItems: 'center', justifyContent: 'center',
-    backgroundColor: withAlpha(colors.gold, 0.125),
   },
   // D2 phase-completion celebration card.
   phaseCard: {
@@ -2564,10 +2563,8 @@ function buildLiveStyles(t) {
     completionTitle: { ...t.type.h2, color: t.colors.textPrimary },
     completionDate: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     firstSessionLine: { fontSize: t.fontSize.sm, color: t.colors.primary },
-    milestoneIconWrap: { backgroundColor: withAlpha(t.colors.gold, 0.125) },
     milestoneTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     milestoneBody: { ...t.type.captionTight, color: t.colors.textSecondary },
-    milestoneShareBtn: { backgroundColor: withAlpha(t.colors.gold, 0.125) },
     phaseTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     phaseName: { fontSize: t.fontSize.sm, color: t.colors.primary },
     phaseRecap: { ...t.type.bodySm, color: t.colors.textSecondary },

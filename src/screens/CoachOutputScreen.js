@@ -330,7 +330,7 @@ function NextWeekCard({
       <SectionHeader title="Nutrition" />
       {calories !== null ? (
         <AdjustmentRow
-          iconName="flame-outline"
+          iconName="nutrition-outline"
           label={calories.applied && calories.newKcal
             ? `${calLabel} → ${formatEnergy(calories.newKcal, energyUnit)} ${energyUnitLabel(energyUnit)}/day`
             : calLabel}
@@ -348,7 +348,7 @@ function NextWeekCard({
         />
       ) : (
         <AdjustmentRow
-          iconName="flame-outline"
+          iconName="nutrition-outline"
           label="Calories held"
           note="No change needed this week."
         />

@@ -41,8 +41,17 @@ Key roles (dark values shown; light/HC/CVD differ — never assume the hex):
 - Text: `textPrimary` / `textSecondary` / `textMuted` / `textDisabled` —
   WCAG ratios documented in theme.js and asserted in theme.test.js.
 - Data: `macroProtein/Carb/Fat/Fibre` (category hues, never adherence),
-  `chartLine/chartFill`, `gold/silver/bronze`, `celebrationEmber/Violet`
-  (confetti only), `scrim` (every backdrop), `camera`.
+  `chartLine/chartFill`, `scrim` (every backdrop), `camera`. Three groups of
+  role were DELETED in D173 and must not come back;
+  `src/lib/__tests__/rewardProps.guard.test.js` fails if any of them does.
+  - `gold` / `silver` / `bronze` (T1). A trophy tier is a game mechanic, and
+    amber discipline 3 forbids a medal colour alongside the accent.
+  - `celebrationEmber` / `celebrationViolet` (T4). The confetti palette. Their
+    only consumers were PRCelebration's particle builders, deleted with the
+    burst; law 5 forbids the animation they existed for.
+  - `shadow.glow` and its `theme.js` exception note (D174). Both consumers were
+    dead or unreachable, the Home Start-button glow the exception reserved was
+    never built, and the founder's design law says "No glow".
 
 Tints: use `withAlpha(colour, alpha.X)` with the **named stops** —
 `alpha.ghost .08 · tint .12 · soft .19 · edge .25 · mid .33 · strong .40 ·

@@ -1572,7 +1572,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                             just resolved live via t.colors instead of the
                             frozen import -- not an ED-gated valence mapping,
                             see WhySection's own header comment above. */}
-                        <WhySection icon="flame-outline" color={t.colors.warning} title={`Calories: ${formatEnergy(results.targetKcal ?? 0, energyUnit)} ${energyUnitLabel(energyUnit)}`} body={calorieWhy} />
+                        <WhySection icon="nutrition-outline" color={t.colors.warning} title={`Calories: ${formatEnergy(results.targetKcal ?? 0, energyUnit)} ${energyUnitLabel(energyUnit)}`} body={calorieWhy} />
                         <WhySection icon="barbell-outline" color={t.colors.primary} title={`Protein: ${results.proteinG}g`} body={proteinWhy} />
                         <WhySection icon="water-outline" color={t.colors.success} title={`Fat: ${results.fatG}g`} body={fatWhy} />
                         <WhySection icon="leaf-outline" color={t.colors.primary} title={`Carbs: ${results.carbsG}g`} body={carbWhy} />

@@ -25,11 +25,13 @@ export { fontFamily };
 // mini-bar, the tab bar). BLUR is not used on Android and is not installed
 // (expo-blur declined, Android-first rule); on iOS, blur may be introduced
 // only per-surface and only after profiling on a mid-range device, never
-// as a default. ONE surface in the app may carry a Skia glow (the Home
-// Start button, E15 element 3); no other glow, gradient orb or bloom is
-// permitted, with a single recorded exception (2026-07-09): shadow.glow, a
-// brand-tinted soft shadow reserved for the three Pro-moment hero surfaces,
-// applied only via that token, never inline. All surface motion uses the motion.* tokens; Reduce Motion
+// as a default. NO glow, gradient orb or bloom is permitted anywhere: the
+// founder's design law says "No glow", and amber discipline 3 names a glow
+// among the co-occurring tells. D174 closed the two exceptions this comment
+// used to record -- the Skia glow reserved for the Home Start button was
+// never built, and `shadow.glow` (a brand-tinted soft shadow for the
+// Pro-moment hero surfaces) had only dead or unreachable consumers left, so
+// the token went with them. All surface motion uses the motion.* tokens; Reduce Motion
 // flattens it. Chart verdict (E15 element 5, accepted): VolyumeChart is
 // the app's one chart engine; no second engine (Victory et al.), no
 // rebuild. Optional S-effort uplifts on record: a once-per-mount draw-in
@@ -135,11 +137,6 @@ const baseColors = {
   tabBarBorder: '#222222',
   inputBg: '#1E1E1E',
 
-  // Trophy tier
-  gold: '#FFD700',
-  silver: '#C0C0C0',
-  bronze: '#CD7F32',
-
   // Brand-locked OAuth button colours per Apple's Sign in with Apple
   // guidelines. Not part of the visual system; required for store
   // approval. Use these instead of inline hex literals so the "no
@@ -165,8 +162,12 @@ const baseColors = {
   // Celebration particle colours (PRCelebration confetti). Fixed festive hues
   // on the dark celebration scrim in both themes; never used as semantic
   // status. Tokenised from the two remaining raw hexes (design audit 03, D0).
-  celebrationEmber: '#FF6B35',
-  celebrationViolet: '#9C27B0',
+  // D173 T4, lead review: `celebrationEmber` / `celebrationViolet` were the
+  // confetti palette, and their ONLY consumers were PRCelebration's
+  // buildPrPalette / buildGoldPalette, which T4 deleted with the particle
+  // machinery. Removed rather than left as dead brand colours a later sweep
+  // would have to re-reason about. Law 5 forbids the celebratory animation
+  // they existed for, so nothing can legitimately want them back.
 
   // Chart tokens
   chartLine: '#F59E0B',
@@ -241,9 +242,6 @@ const lightColors = {
   tabBar: '#FFFFFF',
   tabBarBorder: '#E4E4DF',
   inputBg: '#EFEFEA',
-  gold: '#8A6D00',             // trophy INK (bright gold is a fill, keeps onPrimary)
-  silver: '#6E6E6E',
-  bronze: '#8C5318',
   chartLine: '#B45309',        // clears the 3:1 non-text graphical bar
   chartFill: 'rgba(180, 83, 9, 0.10)',
   // Macro CATEGORY colours, darkened for the light track (≥3:1 graphical on the
@@ -503,17 +501,6 @@ export function resolveTheme(prefs) {
     // Theme-invariant (LT-3) — same static object the legacy `shadow.card`
     // export uses below, never mutated by either system.
     card: cardShadow,
-    // Getter (same pattern as the legacy `shadow.glow`) so shadowColor tracks
-    // resolvedColors.primary, which the HC/CVD tables above may have changed.
-    get glow() {
-      return {
-        shadowColor: resolvedColors.primary,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.18,
-        shadowRadius: 16,
-        elevation: 8,
-      };
-    },
   };
 
   return {
@@ -809,21 +796,6 @@ export const shadow = {
   card: cardShadow,
 
   // The one sanctioned brand-tinted shadow (decision 2026-07-09, recorded in
-  // docs/design-usability-audit-2026-07-09/DECISIONS-2026-07-09.md): a soft
-  // amber halo reserved for Pro-moment hero surfaces (Welcome Pro card,
-  // ProOnboarding offer card, ProUpgrade success circle). One value set so
-  // the three sites cannot drift apart again. Getter so shadowColor reads
-  // colors.primary AFTER applyAccessibility's boot-time palette swap, the
-  // same pattern as the type.* roles.
-  get glow() {
-    return {
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.18,
-      shadowRadius: 16,
-      elevation: 8,
-    };
-  },
 };
 
 // The state-colour grammar (COMP-027): one learned-once vocabulary for every

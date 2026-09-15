@@ -78,8 +78,6 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
   // 1. Intro: period framing
   cards.push({
     type: 'intro',
-    icon: 'sparkles',
-    tone: 'gold',
     headline: 'Your year of lifts',
     subline: `${fmtDate(data.yearStart)} to ${fmtDate(data.yearEnd)}`,
   });
@@ -155,7 +153,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
   if (data.topExercises?.[0]) {
     cards.push({
       type: 'list',
-      icon: 'flame',
+      icon: 'repeat',
       tone: 'warning',
       headline: 'Your top lifts',
       subline: 'Most-trained exercises this year',
@@ -170,8 +168,8 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
   if (data.topPRs?.length > 0) {
     cards.push({
       type: 'list',
-      icon: 'trophy',
-      tone: 'gold',
+      icon: 'barbell',
+      tone: 'primary',
       headline: 'Personal records',
       subline: 'Estimated max lifts logged this year',
       rows: data.topPRs.slice(0, 5).map(pr => ({
@@ -201,7 +199,6 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
   cards.push({
     type: 'outro',
     icon: 'checkmark-circle',
-    tone: 'gold',
     headline: 'Here\'s to the year ahead.',
     subline: 'Keep turning up, keep adding a little, and the rest takes care of itself.',
   });
@@ -226,7 +223,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
   // WAVE-D-FINDINGS.md UNIT_DEFECT: see buildCards' identical fix above.
   const u = units === 'lbs' ? 'lbs' : 'kg';
   cards.push({
-    type: 'intro', icon: 'sparkles', tone: 'gold',
+    type: 'intro',
     headline: `${label}, in numbers.`,
     subline: `${fmtDate(data.startMs)} to ${fmtDate(data.endMs - 86400000)}`,
   });
@@ -265,7 +262,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
 
   if (data.topExercises?.[0]) {
     content.push({
-      type: 'list', icon: 'flame', tone: 'warning',
+      type: 'list', icon: 'repeat', tone: 'warning',
       headline: 'Your top lifts', subline: 'Most-trained this month',
       rows: data.topExercises.slice(0, 5).map(ex => ({ primary: ex.name, secondary: `${ex.sets.toLocaleString('en-GB')} sets` })),
     });
@@ -273,7 +270,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
 
   if (data.topPRs?.length > 0) {
     content.push({
-      type: 'list', icon: 'trophy', tone: 'gold',
+      type: 'list', icon: 'barbell', tone: 'primary',
       headline: 'Personal records', subline: 'Estimated max lifts this month',
       rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
@@ -300,7 +297,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
   }
 
   cards.push({
-    type: 'outro', icon: 'checkmark-circle', tone: 'gold',
+    type: 'outro', icon: 'checkmark-circle',
     headline: 'A fresh month ahead.', subline: 'Keep turning up and the numbers will follow.',
   });
   return cards;
@@ -319,7 +316,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
   // WAVE-D-FINDINGS.md UNIT_DEFECT: see buildCards' identical fix above.
   const u = units === 'lbs' ? 'lbs' : 'kg';
   cards.push({
-    type: 'intro', icon: 'sparkles', tone: 'gold',
+    type: 'intro',
     headline: `${label}, in numbers.`,
     subline: `${fmtDate(data.startMs)} to ${fmtDate(data.endMs - 86400000)}`,
   });
@@ -356,7 +353,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
 
   if (data.topExercises?.[0]) {
     content.push({
-      type: 'list', icon: 'flame', tone: 'warning',
+      type: 'list', icon: 'repeat', tone: 'warning',
       headline: 'Your top lifts', subline: 'Most-trained this week',
       rows: data.topExercises.slice(0, 5).map(ex => ({ primary: ex.name, secondary: `${ex.sets.toLocaleString('en-GB')} sets` })),
     });
@@ -364,7 +361,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
 
   if (data.topPRs?.length > 0) {
     content.push({
-      type: 'list', icon: 'trophy', tone: 'gold',
+      type: 'list', icon: 'barbell', tone: 'primary',
       headline: 'Personal records', subline: 'Estimated max lifts this week',
       rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
@@ -391,7 +388,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
   }
 
   cards.push({
-    type: 'outro', icon: 'checkmark-circle', tone: 'gold',
+    type: 'outro', icon: 'checkmark-circle',
     headline: 'A fresh week ahead.', subline: 'Keep turning up and the numbers will follow.',
   });
   return cards;
@@ -411,7 +408,7 @@ export function buildBlockCards(data, units) {
   const shapeBits = [];
   if (weeks) shapeBits.push(`${weeks} week${weeks === 1 ? '' : 's'}`);
   if (startMs && endMs) shapeBits.push(`${fmtDate(startMs)} to ${fmtDate(endMs)}`);
-  cards.push({ type: 'intro', icon: 'sparkles', tone: 'gold', headline: name, subline: shapeBits.join(' - ') });
+  cards.push({ type: 'intro', headline: name, subline: shapeBits.join(' - ') });
 
   // FB-17 (D96): the figure now compares the first week with the last
   // BUILD week, not with the deliberately halved recovery week, so a gold
@@ -452,7 +449,7 @@ export function buildBlockCards(data, units) {
   // is inside" pointed at a screen this deck does not link to (the link
   // runs the other way, from BlockReflection into the story).
   cards.push({
-    type: 'outro', icon: 'checkmark-circle', tone: 'gold',
+    type: 'outro', icon: 'checkmark-circle',
     headline: 'That block is done, recovery week included.', subline: 'Choosing your next block is the next step, on the Train tab.',
   });
   return cards;
@@ -472,14 +469,22 @@ function StoryCard({ card, width }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={[styles.cardWrap, { width }]}>
+      {/* D173 T1: `tone` is now opt-in. Every builder above used to name one,
+          so the old `card.tone || 'primary'` never actually fell back; the
+          intro and outro cards now name none, and `?? null` is what lets that
+          reach Card as "no accent" rather than being defaulted back to amber.
+          A card that names no icon draws none, too: the intro hero is a
+          headline and a date range, which is the whole of what it says. */}
       <GradientCard
-        tone={card.tone || 'primary'}
+        tone={card.tone ?? null}
         intensity={0.28}
         style={styles.card}
       >
-        <View style={[styles.iconWrap, live.iconWrap]}>
-          <Ionicons name={card.icon} size={32} color={t.colors.textPrimary} />
-        </View>
+        {card.icon ? (
+          <View style={[styles.iconWrap, live.iconWrap]}>
+            <Ionicons name={card.icon} size={32} color={t.colors.textPrimary} />
+          </View>
+        ) : null}
 
         {card.type === 'stat' && (
           <>

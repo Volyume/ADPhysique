@@ -73,7 +73,13 @@ describe('useTheme: derives from the store and matches resolveTheme()', () => {
     expect(ref.current.type.h1).toEqual(expected.type.h1);
     expect(ref.current.shadow.sm).toEqual(expected.shadow.sm);
     expect(ref.current.shadow.card).toBe(expected.shadow.card); // theme-invariant, shared by reference
-    expect(ref.current.shadow.glow.shadowColor).toBe(expected.shadow.glow.shadowColor);
+    // D174: this used to assert `shadow.glow.shadowColor` tracked the palette,
+    // because glow was the one shadow token that read a colour rather than
+    // '#000'. The glow is deleted (founder's design law: "No glow"), so that
+    // subject no longer exists. Rather than drop the line, the whole shadow
+    // object is compared -- strictly stronger than the three keys it replaced,
+    // and it keeps working if a palette-tracking shadow is ever added back.
+    expect(ref.current.shadow).toEqual(expected.shadow);
   });
 });
 

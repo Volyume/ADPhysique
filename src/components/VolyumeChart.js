@@ -384,16 +384,18 @@ export default function VolyumeChart({
             <Circle key={`dot-${i}`} cx={p.x} cy={p.y} r={dotRadius} fill={resolvedColor} />
           ))}
 
-          {/* CP-5 personal-best markers: a ring-and-dot in the gold trophy token,
-              bounded by points.length so a stale index (e.g. a narrower window)
-              marks nothing rather than the wrong point. */}
+          {/* CP-5 personal-best markers: a ring-and-dot in the amber primary
+              token (D173 T1 retired the gold trophy token; discipline 1 grants
+              amber "a personal best" by name), bounded by points.length so a
+              stale index (e.g. a narrower window) marks nothing rather than the
+              wrong point. */}
           {Array.isArray(highlightIndices) && highlightIndices.map((idx) => {
             const p = idx >= 0 && idx < points.length ? points[idx] : null;
             if (!p) return null;
             return (
               <React.Fragment key={`pr-${idx}`}>
-                <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={t.colors.gold} strokeWidth={1.5} />
-                <Circle cx={p.x} cy={p.y} r={1.5} fill={t.colors.gold} />
+                <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={t.colors.primary} strokeWidth={1.5} />
+                <Circle cx={p.x} cy={p.y} r={1.5} fill={t.colors.primary} />
               </React.Fragment>
             );
           })}

@@ -176,9 +176,9 @@ describe('CP-10 stage 3 (workout shells FINAL batch): flips live, no remount', (
     setTheme('dark', { reduceMotion: true });
     let tree;
     act(() => {
-      tree = create(<StatBox icon="flame-outline" value="8,432 kg" label="Total volume" />);
+      tree = create(<StatBox icon="stats-chart-outline" value="8,432 kg" label="Total volume" />);
     });
-    const icon = tree.root.findByProps({ name: 'flame-outline' });
+    const icon = tree.root.findByProps({ name: 'stats-chart-outline' });
     const darkIconColor = icon.props.color;
     expect(darkIconColor).toBe(theme.resolveTheme({ theme: 'dark' }).colors.textSecondary);
     const box = tree.root.findAll((n) => n.props.style && StyleSheet.flatten(n.props.style).borderColor)[0];
@@ -186,7 +186,7 @@ describe('CP-10 stage 3 (workout shells FINAL batch): flips live, no remount', (
     expect(darkBoxBg).toBe(theme.resolveTheme({ theme: 'dark' }).colors.surface);
 
     setTheme('light', { reduceMotion: true });
-    const lightIconColor = tree.root.findByProps({ name: 'flame-outline' }).props.color;
+    const lightIconColor = tree.root.findByProps({ name: 'stats-chart-outline' }).props.color;
     expect(lightIconColor).not.toBe(darkIconColor);
     expect(lightIconColor).toBe(theme.resolveTheme({ theme: 'light' }).colors.textSecondary);
     const lightBoxBg = flat(tree.root.findAll((n) => n.props.style && StyleSheet.flatten(n.props.style).borderColor)[0]).backgroundColor;

@@ -42,8 +42,8 @@ const GLYPH = {
   gym: 'business-outline',
   area: 'location-outline',
   like_me: 'barbell-outline',
-  // Task 8: same ribbon DimensionRow.js uses for a discipline cohort.
-  same_discipline: 'ribbon-outline',
+  // Task 8: same glyph DimensionRow.js uses for a discipline cohort.
+  same_discipline: 'pricetag-outline',
   partners: 'people-outline',
   might_know: 'git-network-outline',
 };

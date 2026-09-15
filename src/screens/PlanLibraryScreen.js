@@ -122,7 +122,7 @@ const QUIZ_STEPS = [
       { key: 'build_muscle', label: 'Build muscle',         icon: 'barbell-outline' },
       { key: 'get_stronger', label: 'Get stronger',         icon: 'trending-up-outline' },
       { key: 'conditioning', label: 'Improve conditioning', icon: 'heart-outline' },
-      { key: 'stage_prep',   label: 'Get on stage',         icon: 'trophy-outline' },
+      { key: 'stage_prep',   label: 'Get on stage',         icon: 'body-outline' },
     ],
   },
   {
@@ -687,7 +687,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
             return (
               <Chip
                 label={item.label}
-                icon={item.key === 'division' ? 'trophy-outline' : undefined}
+                icon={item.key === 'division' ? 'body-outline' : undefined}
                 selected={active}
                 onPress={() => {
                   setActiveCollection(item.key);

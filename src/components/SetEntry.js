@@ -465,7 +465,9 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
           ordinary set. Same shell as the Last session strip above the
           steppers (surface2 fill, hairline, radius.md, spacing.md inset)
           so it reads as part of the card, not a banner laid over it; the
-          one accent is the small amber trophy, the headline is plain white
+          one accent is the small amber barbell (D173 T3 retired the trophy:
+          a record is stated as a fact, in words and a number), the headline
+          is plain white
           and each record names itself on its own soft-grey line.
           buildRecordLine reuses detectPR, so this can never claim a record
           the celebration then withholds. */}
@@ -475,7 +477,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
           accessible
           accessibilityLabel={recordLine.a11y}
         >
-          <Ionicons name="trophy" size={iconSize.sm} color={t.colors.primary} style={styles.recordIcon} />
+          <Ionicons name="barbell-outline" size={iconSize.sm} color={t.colors.primary} style={styles.recordIcon} />
           <View style={styles.recordCopy}>
             <Text style={[styles.recordHeadline, live.recordHeadline]}>{recordLine.headline}</Text>
             {recordLine.reasons.map(reason => (

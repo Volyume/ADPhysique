@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, shadow, fontFamily, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, fontFamily, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
@@ -3708,7 +3708,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.xl,
     borderWidth: 2, borderColor: colors.primary,
     padding: spacing.lg, marginBottom: spacing.xl,
-    ...shadow.glow,
+    // D174: `...shadow.glow` removed with the token. This style is dead
+    // (see buildLiveStyles' note below) so nothing renders differently.
   },
   offerBadgeRow: { marginBottom: spacing.sm },
   offerBadge: {

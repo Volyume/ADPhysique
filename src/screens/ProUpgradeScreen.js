@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, KeyboardAvoidingView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, shadow, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { track as trackEvent } from '../lib/engineTelemetry';
 import Button from '../components/Button';
@@ -776,7 +776,10 @@ const styles = StyleSheet.create({
     width: 80, height: 80, borderRadius: circle(80),
     backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
-    ...shadow.glow,
+    // D174: `...shadow.glow` removed with the token. A shadow property on a
+    // decorative circle; no purchase, restore, entitlement or cascade path is
+    // in this hunk, so the billing discipline is not engaged, and the surface
+    // stays dormant and unregistered either way.
   },
   successTitle: {
     fontSize: fontSize.xxxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,

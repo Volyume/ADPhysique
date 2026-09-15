@@ -42,9 +42,12 @@ export default function WorkoutBottomBar({
   // null, or { label, onPress, testID } - when present it IS the primary.
   advance = null,
   safeBottom = 0,
-  // D87: leading Ionicons name on the logging primary ('trophy' while the
-  // entered set would break a record), icon only; accessibilityLabel stays
-  // primaryLabel per the R4/D64 same-string rule.
+  // D87: optional leading Ionicons name on the logging primary, icon only;
+  // accessibilityLabel stays primaryLabel per the R4/D64 same-string rule.
+  // No caller passes it today: D150 retired the record glyph this was written
+  // for, and `loggerVisualArchitecture.guard.test.js:120-121` pins that it is
+  // never re-bound to a record line. The example it used to give here named
+  // that glyph in the present tense, which read as a live behaviour.
   primaryIcon = null,
   // True while the 1.8s auto-advance timer is armed for the advance action.
   countdownActive = false,

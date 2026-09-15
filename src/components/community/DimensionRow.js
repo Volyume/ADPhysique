@@ -49,7 +49,7 @@ const GLYPH = {
   style: 'barbell-outline',
   gym: 'business-outline',
   area: 'location-outline',
-  discipline: 'ribbon-outline',
+  discipline: 'pricetag-outline',
   age_band: 'people-outline',
 };
 

@@ -164,7 +164,12 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
       accessibilityHint="Opens a sheet to change or delete this logged set"
     >
       {isWarmup ? (
-        <Ionicons name="flame-outline" size={14} color={t.colors.warning} style={{ width: 22, textAlign: 'center' }} />
+        /* D173 T2: the flame stood in the 22 dp column where a working set's
+           number goes, so it could not simply be deleted without taking the
+           ledger's alignment with it. The row's own text already reads
+           " - Warm-up", so the column only has to hold that alignment, and a
+           middle dot is the ledger's mark for "no number here". */
+        <Text style={[styles.warmupMark, live.warmupMark]}>&#183;</Text>
       ) : (
         <View style={[styles.setNumBadge, live.setNumBadge]}>
           <Text style={[styles.setNumText, live.setNumText]}>{progressNum}</Text>
@@ -209,8 +214,16 @@ const styles = StyleSheet.create({
   // retired - a completed set is one quiet LINE in the sequence, not a
   // container. Radius kept for the warm-up tint variant below.
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2, minHeight: workoutLoggerSize.loggedSetMinHeight, borderRadius: radius.md, paddingVertical: spacing.xxs, paddingHorizontal: spacing.sm },
-  loggedSetRowWarmup: { backgroundColor: colors.warningBg || colors.surface },
-  loggedSetTextWarmup: { color: colors.warning },
+  // D173 T2, extended by lead review: the glyph left `warning` but the row it
+  // sits in did not, so a warm-up row was a neutral dot inside a yellow wash --
+  // inconsistent with itself, and still the state-colour grammar violation the
+  // glyph change was made to fix (a warm-up is not a warning). The wash goes
+  // (law 2: rows on the canvas) and the text drops to `textMuted`, which is
+  // what the ledger wants anyway: a warm-up is a quieter row than a working
+  // set. Two non-colour cues survive -- the dot instead of a number, and the
+  // row's own " - Warm-up" text -- so nothing depends on the colour alone.
+  loggedSetRowWarmup: { backgroundColor: 'transparent' },
+  loggedSetTextWarmup: { color: colors.textMuted },
   // D166 law 3: this was `radius.lg`, the CARD radius, on a 22 dp box. RN
   // clamps to half the box either way, so the rendered pixels are unchanged --
   // but the token now says what the shape is instead of borrowing the card's.
@@ -223,6 +236,10 @@ const styles = StyleSheet.create({
   // setNumText keeps its bold emphasis (captionStrong is the nearest xs/
   // semibold house role; fontWeight.bold restores the original weight).
   setNumText: { ...type.num('captionStrong'), fontWeight: fontWeight.bold, color: colors.textSecondary },
+  // D173 T2: the warm-up column mark. Same 22 dp width and centring the
+  // retired flame glyph held, so a warm-up row still lines up with the
+  // numbered rows above and below it.
+  warmupMark: { ...type.num('captionStrong'), width: workoutLoggerSize.setNumberBadge, textAlign: 'center', color: colors.textMuted },
   loggedSetText: { ...type.num('bodySm'), flex: 1, color: colors.textPrimary, minWidth: 0 },
   // D43 S4: in-place editor block, replaces the modal sheet's chrome with a
   // house Card-adjacent surface local to the row -- same radius/border
@@ -249,10 +266,11 @@ const styles = StyleSheet.create({
 // omitted, there is nothing to unfreeze for them.
 function buildLiveStyles(t) {
   return {
-    loggedSetRowWarmup: { backgroundColor: t.colors.warningBg || t.colors.surface },
-    loggedSetTextWarmup: { color: t.colors.warning },
+    loggedSetRowWarmup: { backgroundColor: 'transparent' },
+    loggedSetTextWarmup: { color: t.colors.textMuted },
     setNumBadge: { backgroundColor: t.colors.surface2 },
     setNumText: { ...t.type.num('captionStrong'), fontWeight: fontWeight.bold, color: t.colors.textSecondary },
+    warmupMark: { ...t.type.num('captionStrong'), color: t.colors.textMuted },
     loggedSetText: { ...t.type.num('bodySm'), color: t.colors.textPrimary },
     // D166 part 3: this read `t.colors.border` while the frozen half sets
     // `colors.borderSubtle`. The live half wins at runtime, so the in-place set

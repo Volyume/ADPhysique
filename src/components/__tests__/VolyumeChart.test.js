@@ -12,7 +12,7 @@
  *                               below). Regression: commit 9c44e2d
  *                               already removed the stray `opacity={0.5}`
  *                               this suite guards against reappearing.
- *   CP-5 (PR markers)         — the line variant renders a small gold
+ *   CP-5 (PR markers)         — the line variant renders a small amber
  *                               ring-and-dot marker at each index named in
  *                               `highlightIndices`, out-of-range indices
  *                               are ignored (bounds safety), and the scrub
@@ -169,14 +169,20 @@ describe('CP-5: highlightIndices PR markers', () => {
     return plotPoints(values, box, min, max);
   }
 
-  function goldDots(tree) {
-    return tree.root.findAllByType('Circle').filter((c) => c.props.fill === colors.gold);
+  // D173 T1 retired the gold trophy token; the PB marker is now the amber
+  // primary (discipline 1 grants amber "a personal best" by name). The radius
+  // filter keeps this matching ONLY the marker dot, never the line's own dots
+  // or the scrub dot, which draw in the same token.
+  function prDots(tree) {
+    return tree.root.findAllByType('Circle').filter(
+      (c) => c.props.fill === colors.primary && c.props.r === 1.5,
+    );
   }
 
-  test('renders a gold ring-and-dot marker at exactly the highlighted indices', () => {
+  test('renders an amber ring-and-dot marker at exactly the highlighted indices', () => {
     const points = expectedPoints();
     const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} highlightIndices={[1, 3]} />);
-    const dots = goldDots(tree);
+    const dots = prDots(tree);
     expect(dots).toHaveLength(2);
     const positions = dots.map((c) => ({ x: c.props.cx, y: c.props.cy })).sort((a, b) => a.x - b.x);
     expect(positions[0]).toEqual({ x: points[1].x, y: points[1].y });
@@ -184,19 +190,19 @@ describe('CP-5: highlightIndices PR markers', () => {
 
     // A ring (stroke, no fill) accompanies each dot.
     const rings = tree.root.findAllByType('Circle').filter(
-      (c) => c.props.stroke === colors.gold && c.props.fill === 'none',
+      (c) => c.props.stroke === colors.primary && c.props.fill === 'none',
     );
     expect(rings).toHaveLength(2);
   });
 
   test('no markers render when highlightIndices is omitted (default behaviour unchanged)', () => {
     const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} />);
-    expect(goldDots(tree)).toHaveLength(0);
+    expect(prDots(tree)).toHaveLength(0);
   });
 
   test('an out-of-range highlight index is ignored (bounds safety)', () => {
     const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} highlightIndices={[-1, 99]} />);
-    expect(goldDots(tree)).toHaveLength(0);
+    expect(prDots(tree)).toHaveLength(0);
   });
 
   test('the scrub announcement mechanism folds in "Personal record" for a highlighted point (source-level)', () => {

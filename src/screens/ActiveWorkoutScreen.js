@@ -5521,7 +5521,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                           accessibilityLabel={`Empty bar, ${barKg} ${units}, 10 reps. Load as a warm-up set.`}
                         >
                           <View style={styles.overflowOptionRow}>
-                            <Ionicons name="flame-outline" size={16} color={t.colors.warning} />
+                            <Ionicons name="trending-up-outline" size={16} color={t.colors.textSecondary} />
                             <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`${barKg} ${units} x 10`}</Text>
                           </View>
                           <Text style={[styles.rampBarTag, live.rampBarTag]}>Empty bar</Text>
@@ -5560,7 +5560,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                         accessibilityLabel={`${row.isBar ? 'Empty bar' : `${row.weight} ${units}`}, ${row.reps} reps. Load as a warm-up set.`}
                       >
                         <View style={styles.overflowOptionRow}>
-                          <Ionicons name="flame-outline" size={16} color={t.colors.warning} />
+                          <Ionicons name="trending-up-outline" size={16} color={t.colors.textSecondary} />
                           <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`${row.weight} ${units} x ${row.reps}`}</Text>
                         </View>
                         {row.isBar ? <Text style={[styles.rampBarTag, live.rampBarTag]}>Empty bar</Text> : null}
@@ -5758,7 +5758,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityLabel="Warm-up sets"
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name="flame-outline" size={18} color={t.colors.textSecondary} />
+                  <Ionicons name="trending-up-outline" size={18} color={t.colors.textSecondary} />
                   <View style={styles.sheetOptionText}>
                     <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Warm-up sets</Text>
                     <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>Suggested light sets up to today's working weight.</Text>

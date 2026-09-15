@@ -35,7 +35,7 @@ export default function NutritionEducationScreen() {
         </Text>
 
         <Section
-          icon="flame-outline"
+          icon="nutrition-outline"
           tint={t.colors.warning}
           title="1. Calories. Your energy budget"
         >

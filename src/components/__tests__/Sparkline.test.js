@@ -1,9 +1,9 @@
 /**
  * Item 10 (campaign 2026-07-10, CP-5 residue): VolyumeChart's
- * highlightIndices gold ring-and-dot PR marker was wired on ExerciseDetail
+ * highlightIndices ring-and-dot PR marker was wired on ExerciseDetail
  * but LiftProgressScreen's row sparkline (this component, not VolyumeChart)
  * never got the same treatment. Pins the new highlightIndices prop against
- * the REAL Sparkline: same gold token, same ring(r=5, stroke)/dot(r=1.5,
+ * the REAL Sparkline: same token, same ring(r=5, stroke)/dot(r=1.5,
  * fill) idiom as VolyumeChart.test.js's CP-5 suite, plus the data-index ->
  * point-index remap so an index survives a value that got filtered out as
  * non-finite.
@@ -37,39 +37,45 @@ function expectedPoints(values = DATA) {
   return plotPoints(values, box, min, max);
 }
 
-function goldDots(tree) {
-  return tree.root.findAllByType('Circle').filter((c) => c.props.fill === colors.gold);
-}
-function goldRings(tree) {
+// D173 T1 retired the gold trophy token; the PB marker is now the amber
+// primary (discipline 1 grants amber "a personal best" by name). The radius
+// filter keeps these helpers matching ONLY the marker, never the line's own
+// dots, which draw in the same token when showDots is on.
+function prDots(tree) {
   return tree.root.findAllByType('Circle').filter(
-    (c) => c.props.stroke === colors.gold && c.props.fill === 'none',
+    (c) => c.props.fill === colors.primary && c.props.r === 1.5,
+  );
+}
+function prRings(tree) {
+  return tree.root.findAllByType('Circle').filter(
+    (c) => c.props.stroke === colors.primary && c.props.fill === 'none',
   );
 }
 
 describe('Sparkline -- highlightIndices PR markers (item 10)', () => {
-  test('renders a gold ring-and-dot marker at exactly the highlighted indices', () => {
+  test('renders an amber ring-and-dot marker at exactly the highlighted indices', () => {
     const points = expectedPoints();
     const tree = create(
       <Sparkline data={DATA} width={WIDTH} height={HEIGHT} highlightIndices={[1, 3]} />,
     );
-    const dots = goldDots(tree);
+    const dots = prDots(tree);
     expect(dots).toHaveLength(2);
     const positions = dots.map((c) => ({ x: c.props.cx, y: c.props.cy })).sort((a, b) => a.x - b.x);
     expect(positions[0]).toEqual({ x: points[1].x, y: points[1].y });
     expect(positions[1]).toEqual({ x: points[3].x, y: points[3].y });
-    expect(goldRings(tree)).toHaveLength(2);
+    expect(prRings(tree)).toHaveLength(2);
   });
 
   test('no markers render when highlightIndices is omitted (default behaviour unchanged)', () => {
     const tree = create(<Sparkline data={DATA} width={WIDTH} height={HEIGHT} />);
-    expect(goldDots(tree)).toHaveLength(0);
+    expect(prDots(tree)).toHaveLength(0);
   });
 
   test('an out-of-range highlight index is ignored (bounds safety)', () => {
     const tree = create(
       <Sparkline data={DATA} width={WIDTH} height={HEIGHT} highlightIndices={[-1, 99]} />,
     );
-    expect(goldDots(tree)).toHaveLength(0);
+    expect(prDots(tree)).toHaveLength(0);
   });
 
   test('an index whose value was filtered out as non-finite draws nothing', () => {
@@ -77,7 +83,7 @@ describe('Sparkline -- highlightIndices PR markers (item 10)', () => {
     const tree = create(
       <Sparkline data={withGap} width={WIDTH} height={HEIGHT} highlightIndices={[1]} />,
     );
-    expect(goldDots(tree)).toHaveLength(0);
+    expect(prDots(tree)).toHaveLength(0);
   });
 
   test('a highlight index after a filtered-out gap still maps to the right point', () => {
@@ -88,7 +94,7 @@ describe('Sparkline -- highlightIndices PR markers (item 10)', () => {
     const tree = create(
       <Sparkline data={withGap} width={WIDTH} height={HEIGHT} highlightIndices={[3]} />,
     );
-    const dots = goldDots(tree);
+    const dots = prDots(tree);
     expect(dots).toHaveLength(1);
     expect({ x: dots[0].props.cx, y: dots[0].props.cy }).toEqual({ x: points[2].x, y: points[2].y });
   });

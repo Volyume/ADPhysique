@@ -727,8 +727,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           )}
 
           {best1RM > 0 && (
-            <View style={[styles.est1RM, live.est1RM]}>
-              <Ionicons name="trophy-outline" size={16} color={t.colors.gold} />
+            <View style={styles.est1RM}>
               {/* D88: an estimate is never exact. One convention everywhere:
                   hedged and whole, matching the session rows below. */}
               <Text style={[styles.est1RMText, live.est1RMText]}>Estimated max: ~{Math.round(best1RM)} {units}</Text>
@@ -771,7 +770,6 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           return (
             <Card tone="primary" style={styles.prHighlightCard}>
               <View style={styles.prHighlightHeader}>
-                <Ionicons name="trophy" size={18} color={t.colors.primary} />
                 <SectionLabel tone="muted">Personal records</SectionLabel>
                 {/* D93 (Campaign 2, Phase 3): the records surfaces carry the
                     PR definition; the celebration toast stays clean. */}
@@ -1040,10 +1038,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             {prs.slice(0, 5).map((pr) => (
               <Card radius="md" style={styles.prRow} key={pr.id}>
                 <Ionicons
-                  name={pr.record_type === '1rm_estimate' ? 'trophy-outline' :
+                  name={pr.record_type === '1rm_estimate' ? 'barbell-outline' :
                    pr.record_type === 'heaviest_weight' ? 'barbell-outline' : 'repeat-outline'}
                   size={22}
-                  color={t.colors.gold}
+                  color={t.colors.primary}
                 />
                 <View style={styles.prInfo}>
                   <Text style={[styles.prLabel, live.prLabel]}>
@@ -1286,15 +1284,16 @@ const styles = StyleSheet.create({
   tagTextSecondary: { color: colors.textSecondary },
   secMuscles: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs },
   secMuscleLabel: { ...type.label, color: colors.textMuted },
+  // D173 T1: the gold wash and gold ink are gone (an estimated 1RM is a
+  // number, not a prize; amber discipline 2 forbids the tint behind it).
   est1RM: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: withAlpha(colors.gold, 0.082),
     borderRadius: radius.sm,
     padding: spacing.sm,
   },
-  est1RMText: { ...type.bodyStrong, color: colors.gold },
+  est1RMText: { ...type.bodyStrong, color: colors.textPrimary },
   sfrRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1600,8 +1599,7 @@ function buildLiveStyles(t) {
     tagSecondary: { backgroundColor: t.colors.surface2 },
     tagTextSecondary: { color: t.colors.textSecondary },
     secMuscleLabel: { ...t.type.label, color: t.colors.textMuted },
-    est1RM: { backgroundColor: withAlpha(t.colors.gold, 0.082) },
-    est1RMText: { ...t.type.bodyStrong, color: t.colors.gold },
+    est1RMText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     sfrRow: { borderTopColor: t.colors.borderSubtle },
     sfrValue: { ...t.type.num('title'), color: t.colors.textPrimary },
     sfrLabel: { ...t.type.caption, color: t.colors.textMuted },

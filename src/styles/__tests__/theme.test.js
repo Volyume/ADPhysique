@@ -365,9 +365,12 @@ describe('COMP-029 light theme', () => {
     }
   });
 
-  test('light status + trophy inks clear 4.5:1 on white', () => {
+  test('light status inks clear 4.5:1 on white', () => {
     applyAccessibility({ theme: 'light' });
-    for (const role of ['success', 'warning', 'error', 'gold', 'silver', 'bronze']) {
+    // D173 T1 deleted the gold/silver/bronze trophy-tier roles from every
+    // palette (a trophy tier is a game mechanic). The contrast bar this case
+    // exists to hold is unchanged for the status inks that remain.
+    for (const role of ['success', 'warning', 'error']) {
       expect(ratio(colors[role], '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
     }
     // warning stays distinct from the amber primary ink (COMP-027 separation).
