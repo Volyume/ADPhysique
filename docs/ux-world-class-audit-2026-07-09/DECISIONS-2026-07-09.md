@@ -7632,3 +7632,93 @@ updated. `WorkoutSummaryScreen.summarySpec.guard.test.js` swaps its
 hold-the-collision-open case for three that pin the ruling: the moment
 survives, the burst and reward haptic are gone, and every rung gets the same
 tick.
+
+---
+
+## D173 — Stage 3, the props: the flames, the trophies and the medal colours go, and what each one becomes (lead ruling, 2026-09-15)
+
+**Authority.** `docs/design-redesign-2026-09-14/20-DIRECTION-AND-PLAN.md` §3,
+amber discipline 3, verbatim: "Amber never appears alongside a flame, a trophy,
+a medal colour or a glow. Those go (stage 3)." Stage 3 in §7: "remove the
+flames, the medal colour tokens and the reward props (§3)". Founder, D165: "No
+gamification. No decorative fitness iconography."
+
+**A correction to the plan's own census first.** §3 says "four flame sites" and
+the session's earlier working count said "102 trophy references". Both are
+wrong and the second badly so: `grep trophy` was matching **hypertrophy**
+across the engine. The measured surface is 14 flame glyph sites, 19 trophy
+glyph sites, and three medal colour tokens with nine consuming files. The
+smaller number is the real one; it is recorded here so a later stage does not
+go looking for 83 sites that never existed.
+
+**The second correction is the one that changes the work.** Five of the
+fourteen flames are not decoration: `LoggedSetRow.js:167`, `NowCard.js:91` and
+`ActiveWorkoutScreen.js:5524/5563/5761` use `flame-outline` to mean **warm-up**,
+and in `LoggedSetRow` it stands in the 22 dp column where a working set's
+number goes. Deleting the glyph there would take out the warm-up signal and the
+ledger's alignment at once. So warm-up is re-encoded rather than stripped.
+
+### The substitution table
+
+**T1 — `gold`, `silver`, `bronze` are deleted from `theme.js`** (dark, light and
+every modifier table), and from the role list in `theme.test.js`. A trophy tier
+is a game mechanic. `silver` and `bronze` have no consumer outside that test.
+`gold`'s consumers resolve as:
+
+| Site | Becomes | Why |
+|---|---|---|
+| `VolyumeChart.js` / `Sparkline.js` PB ring-and-dot | `t.colors.primary` | Discipline 1 grants amber "a personal best" by name; discipline 4 is satisfied because a PB is earned by data. Keeps the marker, loses the second accent. |
+| `ExerciseDetailScreen.js` est-1RM chip wash + text | wash removed, text `textPrimary` | An estimated 1RM is a number, not a prize. The wash is discipline 2 ("never a tint behind a glyph"). |
+| `ReadinessCards.js` milestone-unlocked icon + text | icon removed, text `textSecondary` | The label already says which rung. |
+| `PRCelebration.js` toast icon | `t.colors.primary` | Same grant as the chart marker. |
+| `WorkoutSummaryScreen.js` milestone + phase `Card tone="gold"` and the two `withAlpha(gold, 0.125)` wraps | tone dropped, washes removed | Discipline 2. D170 already took the burst and the reward haptic; this takes the dress. |
+| `YearOfLiftsScreen.js` `tone: 'gold'` (×10) | `tone: 'primary'` where the card is the story's emphasis, otherwise no tone | A retrospective is not exempt from law 6. |
+| `Card.js` `TONES.gold` | removed | No consumer left. |
+
+**T2 — the flames.** Nine are decoration and go outright, seven of those
+because they sit beside a **calorie** figure, where law 7 already makes the
+number self-describing ("2,400 kcal" needs no pictogram). The five warm-up
+flames are re-encoded:
+
+- `LoggedSetRow.js` — a `textMuted` middle dot in the same 22 dp column. The
+  row's own text already reads " - Warm-up", so the column only has to hold the
+  ledger's alignment, and a dot is the ledger mark for "no number here".
+- `NowCard.js` context chip and the two `ActiveWorkoutScreen` warm-up-ramp
+  surfaces — `trending-up-outline`. A warm-up ramp is literally a ramp; that is
+  description, not a category pun.
+- The colour moves off `warning` at the same time. `warning` is `#F0E442`,
+  a state colour, and a warm-up is not a warning: that was a state-colour
+  grammar violation independent of this ruling, and §8 protects that grammar.
+
+**T3 — the trophies, medals, ribbons and sparkles.** A personal record is
+stated as a fact, in words and a number. Where a glyph is structurally required
+by a list that has one on every row, it is `barbell-outline` — the thing that
+actually happened. `milestones.js` loses its `flame-outline`/`ribbon-outline`/
+`medal-outline`/`trophy-outline` rungs to `barbell-outline`, keeping
+`calendar-outline` on `first_week`, which was already literal.
+
+**T4 — `MilestoneBurst` and the confetti machinery are deleted.** D170 removed
+its only mount from `WorkoutSummaryScreen` and
+`WorkoutSummaryScreen.summarySpec.guard.test.js:156` now pins its absence, so
+`MilestoneBurst`, `NUM_PARTICLES`, `createParticle`, `buildPrPalette`,
+`buildGoldPalette` and the particle styles are unreachable code that law 5
+would forbid anyway. `PRCelebration`'s default export — the calm bottom toast —
+is untouched apart from its icon colour.
+
+### What is sequenced, and it is sequenced rather than parked
+
+`src/lib/shareCard/drawShareCard.js` carries its own `PALETTE.gold = '#FFD700'`,
+a trophy moment, a PR glow and a "NEW PR" plate. **It is not in this unit, and
+it is not being dropped: it belongs to stage 4, "one properly made personal
+best moment that states a fact rather than throwing confetti", which is where
+the celebration language is being rewritten rather than recoloured piecemeal.**
+Named here so it cannot be lost: the share card is a rendered Skia image with
+its own palette system and its own pinned suites, and recolouring it now would
+be work stage 4 immediately redoes. Section 4's no-parking rule is satisfied by
+this being a scheduling ruling with a named destination, not a quiet omission.
+
+### What is NOT touched
+The macro rings (D172 already ruled them), the amber icon sweep (its own unit),
+`GradientCard.js` (already a no-gradient shim), and `shadow.glow` on the Home
+Start button, which is the single recorded glow exception of 2026-07-09 and is
+a founder-facing change rather than a mechanical one.

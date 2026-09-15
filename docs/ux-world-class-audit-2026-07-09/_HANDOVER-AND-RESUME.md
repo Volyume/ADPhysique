@@ -1,7 +1,7 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-09-14 (later) — APP-WIDE VISUAL REDESIGN: DIRECTION RULED (D165), STAGE 1 BUILDING ★
+## ★ 2026-09-14/15 — APP-WIDE VISUAL REDESIGN: STAGES 1 AND 2 LANDED, STAGE 3 IN PROGRESS ★
 
 RESUME HERE for the redesign. Live plan:
 `docs/design-redesign-2026-09-14/20-DIRECTION-AND-PLAN.md` **v3**. Research
@@ -32,6 +32,26 @@ states its unit (no cryptic minimalism); a card means an OBJECT, so the lead's
 centre of the product while Progress ends in a DECISION line ("that last thing
 is the reason Volyume exists"). Both screens are specified in their own words at
 plan section 4c.
+
+CURRENT POSITION, 2026-09-15: **stages 1 and 2 are complete, landed and
+merged to main. Stage 3 (the long tail and the props) is in progress.** The
+board section "APP-WIDE VISUAL REDESIGN (2026-09-14)" carries the per-stage
+detail and the in-flight lanes; read it with **D173** (the last section of
+`DECISIONS-2026-07-09.md`), which is the substitution table stage 3's props
+sweep is built from. Both previously held design questions are answered: the
+founder delegated them ("You are to make the decisions on what brings the best
+app") and the lead ruled both as **D170** -- the milestone moment survives
+without its gold burst or reward haptic, and the macro ring survives without
+its amber or its card.
+
+BUILD STATE: Android run **3581** (workflow_dispatch from main, head
+`5759b5dc`, 2026-09-15 09:34-09:56 UTC) is **green**. Run 3580 had failed three
+minutes in, inside `Setup Android SDK`, with `Failed to find package 'tools'`:
+`android-actions/setup-android` defaults its `packages` input to "tools
+platform-tools" and Google has removed the legacy `tools` package from the SDK
+repository. Nothing in the app caused it. The fix pins `packages:
+'platform-tools'`. 3581 does NOT yet carry `829c9f46` (Nutrition) or
+`27d37946` (the empty states), which landed after it.
 
 HELD OPENLY, needs a founder answer: the specified Progress screen makes
 bodyweight the single largest element in the product and adds a headline

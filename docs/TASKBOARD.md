@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## APP-WIDE VISUAL REDESIGN (2026-09-14) — DIRECTION RULED BY THE FOUNDER (D165); STAGE 1 BUILDING; ONE ED-SAFETY QUESTION HELD
+## APP-WIDE VISUAL REDESIGN (2026-09-14) — DIRECTION RULED BY THE FOUNDER (D165); STAGES 1 AND 2 LANDED AND MERGED; STAGE 3 IN PROGRESS; BOTH HELD QUESTIONS ANSWERED (D170)
 
 Plan: `docs/design-redesign-2026-09-14/20-DIRECTION-AND-PLAN.md` (**v3, live**).
 Research: files 10-13 in that folder (README = map). Decisions: **D164** (the
@@ -295,16 +295,65 @@ STILL TO DO on Nutrition (unblocked, mechanical): law 2 un-carding (`offCard`,
 `plannedBanner`, the water `<Card>`), law 3 (`radius.control` on ~10
 pressables), and a `DiaryScreen.nutritionSpec.guard.test.js` in the shape of
 the other four.
-**OPEN, FOR THE FOUNDER (D169): the macro rings.** The plan names them among
-the category props we carry and then does NOT list them in stage 3's removal
-set. D75 records a founder order that the ring is visible from day one ("Never
-re-propose hiding it"); that wording covers hiding rather than retiring, and
-treating the difference as permission would be sophistry. Asked 2026-09-15.
-**ALSO STILL OPEN (D168):** the 50/100-session milestone burst + reward haptic
-vs law 5. Asked 2026-09-15, unanswered.
-NEXT: finish Nutrition's law 2/3 pass, then stage 3 (the long tail, the empty
-states, the category props) and stage 4 (the moments).
-summary and Nutrition.
+**BOTH HELD QUESTIONS ARE ANSWERED AND LANDED (D170, `ae72376b`).** The
+founder delegated them in one line -- "You are to make the decisions on what
+brings the best app" -- and the lead ruled both under D33. (a) The 50/100
+milestone moment KEEPS its card, copy and share action; the gold particle burst
+and the reward haptic GO, and every rung now gets the same quiet tick. It is
+effort-framed, counts sessions and never weight, cannot break, happens twice in
+a lifetime and is already withheld from anyone flagged -- not the
+variable-reward loop the ED rule exists to stop; what settles it is law 5's
+second justification, that a full-screen gold burst is the most game-like device
+in the product. (b) The macro ring KEEPS the ring -- a ring is the right
+encoding for proportion-to-a-bound, which is information design and not a
+category signature -- and loses its amber (to `borderLight`, the ribbon's
+trained-day fill) and its card. It is still ONE colour at every value, so the
+2026-05-29 safety property is extended rather than reopened, and D75's order
+against HIDING it is untouched: it is visible from day one at every value.
+
+STAGE 2 IS COMPLETE. Nutrition's law 2/3 pass landed (`829c9f46`): nine
+pressables to `radius.control`, the off-card and planned banner un-carded to a
+hairline (both frozen AND live halves), `DiaryScreen.nutritionSpec.guard.test.js`
+in the shape of the other four.
+
+**STAGE 3 IS IN PROGRESS (the long tail and the props).**
+- LANDED (`27d37946`): **the empty states.** `EmptyState.js` is one component
+  on 87 call sites, so the 52 dp amber disc with its 1 dp amber edge around a
+  stock glyph -- the single most-repeated object in the product -- came out in
+  one file, along with the card chrome behind it. The glyph stays in
+  `textMuted` for wayfinding. The `ghost` variant was given its own
+  `borderWidth: 1` + `borderRadius: radius.lg`, because the base no longer sets
+  either and the dashed placeholder would otherwise have gone silently blank
+  while every test still passed.
+- RULED, IN FLIGHT: **the reward props, D173** (appended to the register
+  2026-09-15). Substitution table T1-T4: `gold`/`silver`/`bronze` deleted from
+  the theme; the PB markers in `VolyumeChart`/`Sparkline` move to amber
+  (discipline 1 grants amber "a personal best" by name); the gold washes go
+  (discipline 2); the flames, trophies, medals, ribbons and sparkles go; the
+  five WARM-UP flames are re-encoded rather than stripped (`LoggedSetRow` holds
+  the ledger's 22 dp column with a `textMuted` middle dot, the ramp surfaces
+  take `trending-up-outline`, and the colour leaves `warning`, which is a state
+  colour a warm-up was never entitled to); `MilestoneBurst` and the confetti
+  machinery are deleted, dead since D170. D173 also corrects the plan's own
+  census: §3's "four flame sites" and this session's working "102 trophy
+  references" were both wrong, the second badly -- `grep trophy` was matching
+  **hypertrophy** across the engine. The real surface is 14 flame glyphs, 19
+  trophy glyphs, three colour tokens, nine consuming files.
+  RECOVERY PATH if the agent dies: the ruling is complete in D173, so the work
+  is re-runnable from the register alone. Any partial tree is reviewed against
+  D173's table hunk by hunk and either finished or reverted -- never committed
+  blind, never discarded.
+- IN FLIGHT (read-only): the **amber census**, a per-site classification of all
+  ~268 `colors.primary` tints against §3's four disciplines, producing a work
+  order the lead rules before anything is edited.
+- QUEUED: the hand-rolled cards swept into the real `Card` against the
+  objecthood test.
+**SEQUENCED TO STAGE 4, NOT PARKED (D173):** `src/lib/shareCard/drawShareCard.js`
+carries its own `PALETTE.gold`, a trophy moment, a PR glow and a "NEW PR" plate.
+Stage 4 is "one properly made personal best moment that states a fact rather
+than throwing confetti" -- that is where the share card's celebration language
+gets rewritten, so recolouring it now would be work stage 4 immediately redoes.
+Named here so it cannot be lost.
 founder at plan section 4c and now carry the three answers above.
 ALSO OUTSTANDING: `docs/rules/styling.md:55` says "System fonts" and is wrong
 (seven Inter faces ship); `theme.js:200-201` records that the LIGHT palette
