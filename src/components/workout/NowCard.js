@@ -31,6 +31,7 @@ import { Ionicons } from '@expo/vector-icons';
 import SetEntry from '../SetEntry';
 import { spacing, radius, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
+import BigNumber from '../BigNumber';
 import { workoutLoggerSize } from '../../styles/layout';
 
 export default function NowCard({
@@ -73,6 +74,16 @@ export default function NowCard({
   useEffect(() => { setNoteOpen(false); }, [noteResetKey]);
 
   const noteVisible = noteOpen || (noteText ?? '').length > 0;
+
+  // The loud readout. Only for schemas that HAVE a working weight: a duration
+  // or distance set has no such number, and a reps-only set's load is the
+  // body, so shouting a blank or a zero would be worse than shouting nothing.
+  const showsWeight = exerciseType === 'weight_reps' || exerciseType === 'weighted_bodyweight';
+  const heroWeight = (setValue?.weight ?? '').toString().trim();
+  const heroReps = (setValue?.reps ?? '').toString().trim();
+  const heroSpoken = heroWeight
+    ? `${heroWeight} ${units}${heroReps ? ` for ${heroReps} reps` : ''}`
+    : 'No weight entered yet';
 
   const contextIcon = context?.kind === 'group'
     ? 'swap-horizontal'
@@ -183,6 +194,40 @@ export default function NowCard({
           </View>
         )
       ) : null}
+
+      {/* D165/D167 law 1: the working weight is the ONE loud element on the
+          logger. It was 16 px -- the number you are about to lift, on the
+          screen you read at arm's length with a bar in your hands, in the
+          same size as the rest of the row. The logging surface's largest
+          type was 17 px (the elapsed clock).
+
+          This is a READOUT; the steppers below remain the control. They are
+          not two representations of one fact: one is glanceable mid-set, the
+          other is a two-field editor you look down at.
+
+          STABILITY, and it is the reason for the minHeight. A height change
+          in this column while a field is focused fires Android's
+          scroll-into-view, which is indistinguishable from a drag and drops
+          the keyboard -- the defect `keyboardDismissMode='none'` and
+          `SetEntry.inputFocusStability` exist to hold shut. Reserving the
+          line box means an empty weight and a typed one occupy exactly the
+          same space, so no keystroke can ever change the layout.
+
+          It also carries no line clamp: a guard slices this exact span and
+          forbids one, so that the quiet first-time prefill line above stays
+          the only clamped thing between here and the entry fields. */}
+      {showsWeight && (
+        <View style={{ minHeight: t.type.hero.lineHeight, justifyContent: 'center' }}>
+          <BigNumber
+            value={heroWeight}
+            unit={heroWeight ? units : null}
+            caption={heroReps}
+            align="center"
+            accessibilityLabel={heroSpoken}
+            testID="logger-working-weight"
+          />
+        </View>
+      )}
 
       <SetEntry
         value={setValue}
