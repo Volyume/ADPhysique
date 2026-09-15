@@ -42,7 +42,12 @@ const GLYPH = {
   gym: 'business-outline',
   area: 'location-outline',
   like_me: 'barbell-outline',
-  // Task 8: same glyph DimensionRow.js uses for a discipline cohort.
+  // Task 8: the discipline-cohort glyph -- a chosen competitive/training
+  // identity, deliberately distinct from `like_me`'s barbell, which is kit
+  // and method rather than who someone is. (D177 item 3, 2026-09-15: this
+  // note used to point at src/components/community/DimensionRow.js for the
+  // same glyph. That component has no consumers, so the reference was
+  // rewritten to state the meaning rather than outlive the file.)
   same_discipline: 'pricetag-outline',
   partners: 'people-outline',
   might_know: 'git-network-outline',

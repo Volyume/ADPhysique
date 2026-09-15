@@ -32,7 +32,7 @@
  * identity changes while focused — this file's mock is corrected to
  * `useEffect(() => cb(), [cb])` to match that real dependency array. Every
  * loader in this screen's tree memoises its focus-effect callback with
- * `useCallback` keyed on stable identifiers (`user?.id`, or `[userId, tier,
+ * `useCallback` keyed on stable identifiers (`user?.id`, or `[userId,
  * suppressed]` for useVisualPillar), so this fix only adds the extra
  * re-fire useVisualPillar genuinely needs; it changes no other hook's
  * observed call count.
@@ -1071,9 +1071,13 @@ describe('State matrix — O: lb-unit user, unit strings correct throughout', ()
     // same session: bodyPillarCopy now formats the rate through
     // formatBodyWeightRate (units.js) -- lbs for lbs AND stone users (the
     // stone system's own sub-unit for small changes), kg for kg users.
-    // WeightTrendCard.js's sibling hard-coded literal (BodyMetrics detail
-    // surface, off this landing) is on record in the campaign notes, not
-    // fixed here (touch only what the task requires).
+    // The sibling of this defect is the Body metrics detail surface's own
+    // rate line (BodyMetricsScreen's "Weight trend" EWMA card, off this
+    // landing). It routes through formatBodyWeightRate too, pinned by
+    // src/screens/__tests__/weightRateUnits.guard.test.js. D177 item 1
+    // (2026-09-15) corrected this note, which used to credit that sibling
+    // literal to src/components/WeightTrendCard.js -- a file nothing
+    // imports, so it renders nowhere and fixes nothing for a user.
     expect(body[0].props.accessibilityLabel).toMatch(/lbs\/week/);
     expect(body[0].props.accessibilityLabel).not.toMatch(/kg\/week/);
   });

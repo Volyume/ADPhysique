@@ -56,7 +56,7 @@ import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceS
 import { robustValues } from '../lib/robustTrend';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { toEnergy, energyUnitLabel } from '../lib/format';
+import { toEnergy, energyUnitLabel, formatEnergy } from '../lib/format';
 import { formatBodyWeight, formatBodyWeightShort, formatBodyWeightRate, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { isCalm, WELLBEING_HELPLINE, WELLBEING_KEY } from '../lib/wellbeing';
 // WAVE-D-FINDINGS.md item 1 (lead ruling, D33/D98-2 precedent): the rate/
@@ -1145,7 +1145,8 @@ export default function BodyMetricsScreen() {
               <View style={styles.weightRow}>
                 <Text style={[styles.weightValue, live.weightValue]}>{formatBodyWeight(latest.body_weight, bwu)}</Text>
                 {/* WAVE-D-FINDINGS.md UNIT_DEFECT (:1156-1159, minor, same
-                    family as the mandatory WeightTrendCard item): getDelta
+                    family as the rate item that was mandatory there; its
+                    example cited WeightTrendCard, deleted under D177): getDelta
                     always returns a raw-KG difference (body_weight is stored
                     in kg per rowToEntry), so it must convert -- not just
                     relabel -- for an st/lbs display unit, mirroring
@@ -1242,7 +1243,19 @@ export default function BodyMetricsScreen() {
                 ) : (
                   <>
                     <View style={styles.burnRow}>
-                      <Text style={[styles.burnValue, live.burnValue]}>{toEnergy(adaptiveBurn.adjustedTDEE, energyUnit)}</Text>
+                      {/* DEFECT FIXED 2026-09-15 (D177). This rendered the bare
+                          `toEnergy` return, which is `Math.round(k)` with no
+                          grouping -- so a 2,400 kcal maintenance figure printed
+                          as "2400", and a kJ user's as "10042". P-15 requires
+                          en-GB formatting on every figure, and the only thing
+                          asserting it for this number was a guard pointed at
+                          `WeightTrendCard.js`, which nothing renders. This is
+                          the finding D177's re-point-before-you-delete order
+                          was written to surface. `formatEnergy` is the existing
+                          helper for exactly this (`formatNumber(toEnergy(...))`)
+                          and the unit is the sibling Text below, in a
+                          non-wrapping row, so the pair cannot split. */}
+                      <Text style={[styles.burnValue, live.burnValue]}>{formatEnergy(adaptiveBurn.adjustedTDEE, energyUnit)}</Text>
                       <Text style={[styles.burnUnit, live.burnUnit]}>{energyUnitLabel(energyUnit)}/day</Text>
                     </View>
                     {adaptiveBurn.insight ? (
@@ -1610,7 +1623,8 @@ export default function BodyMetricsScreen() {
 // Recomposition reframe card (ULTIMATE-RECOMP-01). Presentation-only: every fact
 // is pre-derived by deriveRecomp; this renders the numbers-first read plus one
 // plain sentence. Class-B body data, no valence colour (COMP-027). Returns null
-// when the reframe is not warranted, exactly like WeightTrendCard on !vm.render.
+// when the reframe is not warranted, the same shape the deleted WeightTrendCard
+// used on !vm.render (D177 removed it; nothing imported it).
 // CP-10 batch G lane 1 (2026-07-11): own useTheme() call, same rationale
 // as the chart components above.
 function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {

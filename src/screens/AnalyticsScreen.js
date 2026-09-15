@@ -88,11 +88,15 @@ function trainingPillarCopy({ completedWorkoutCount, summary, lastSessionAt, uni
   return { state, evidence };
 }
 
-// Campaign 23 (§15/§22 R2): the Body pillar's copy is the SAME weightTrend
-// view-model WeightTrendCard already renders (useWeightTrend/deriveWeightTrend)
-// -- no new derivation, only a compact two-line read of fields that already
-// exist. The full chart/maintenance detail stays one tap away in BodyMetrics
-// (WeightTrendCard renders there unchanged).
+// Campaign 23 (§15/§22 R2): the Body pillar's copy is a compact two-line read
+// of the SAME weightTrend view-model this screen already holds
+// (useWeightTrend/deriveWeightTrend) -- no new derivation, only fields that
+// already exist. The full chart/maintenance detail stays one tap away in Body
+// metrics, on BodyMetricsScreen's own "Weight trend" EWMA card and "Effective
+// maintenance" card, which are fed by the same derivation.
+// D177 item 1 (2026-09-15): these two lines used to say a WeightTrendCard
+// component rendered the view-model here and on Body metrics. It renders in
+// neither place -- nothing in src/ imports that file.
 function bodyPillarCopy(weightTrend, bodyWeightUnits) {
   if (!weightTrend?.render) {
     return { state: 'No weigh-ins logged yet', evidence: 'Log a morning weight to start your trend.' };
@@ -129,7 +133,12 @@ export default function AnalyticsScreen({ navigation, route }) {
   // closed under calm mode/open ED flag regardless of tier (usePhotoSuppression
   // inside the hook); only fetches scan data for a Pro user once suppression
   // is confirmed lifted.
-  const visualPillar = useVisualPillar(user?.id, tier);
+  // D177 item 2 (2026-09-15): this call passed `tier` as a second argument
+  // that useVisualPillar (src/hooks/useVisualPillar.js) does not take -- a
+  // residue of D137, when the product became fully free and tier stopped
+  // gating anything. Dropped, so the next person to add a second parameter
+  // does not inherit a caller silently feeding `tier` into it.
+  const visualPillar = useVisualPillar(user?.id);
 
   // The smoothed series for the trend graph, and the weekly rate beside it.
   // `formatBodyWeightRate` is the only path with no kg-to-stone-user bug; the

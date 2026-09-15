@@ -7,8 +7,9 @@
  * THE DEFECT: BodyMetricsScreen's "Weight trend" EWMA card and "Effective
  * maintenance" card rendered the weekly rate-of-change and the estimated-
  * maintenance kcal figure UNCONDITIONALLY, while the Progress root's
- * equivalent card (WeightTrendCard.js, fed by useWeightTrend ->
- * deriveWeightTrend, src/lib/weightTrend.js) deliberately withholds both
+ * equivalent read (AnalyticsScreen's Body pillar evidence row and its
+ * "Bodyweight" trend block, fed by useWeightTrend -> deriveWeightTrend,
+ * src/lib/weightTrend.js) deliberately withholds both
  * under an open ED-pattern flag, per that function's own header law:
  * "under an open ED/wellbeing flag the card drops to direction-only copy
  * with no rate, no maintenance number and no dot." BodyMetricsScreen
@@ -30,6 +31,12 @@
  * calm-mode gate on top of it (consistency was the mandate, not new
  * suppression law); the top-of-screen calm re-confirmation gate is a
  * separate, pre-existing mechanism and out of scope here.
+ *
+ * D177 item 1 (2026-09-15): this header used to name
+ * src/components/WeightTrendCard.js as the Progress root's card. Nothing
+ * imports that file, so it renders nowhere; the Progress root's live read
+ * is AnalyticsScreen's. Only the prose changed -- every assertion below
+ * already reads BodyMetricsScreen.js, which is the live surface.
  */
 import fs from 'fs';
 import path from 'path';

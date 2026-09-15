@@ -23,8 +23,16 @@ const root = path.resolve(__dirname, '../..');
 const read = (rel) => fs.readFileSync(path.join(root, rel), 'utf8');
 const relPath = (p) => path.relative(root, p).split(path.sep).join('/');
 
+// D177 item 1 (2026-09-15): this list used to name
+// `src/components/WeightTrendCard.js`. Nothing imports that file (verified
+// with `grep -rn "from '.*WeightTrendCard'\|require(.*WeightTrendCard"
+// src/`, which returns nothing), so the hard ED rule was being asserted
+// against a surface no user ever sees. Re-pointed to the Progress root,
+// whose Body pillar evidence row and "Bodyweight" trend block are the live
+// place a smoothed body-weight figure is read (AnalyticsScreen.js, fed by
+// useWeightTrend -> deriveWeightTrend).
 const WEIGHT_SURFACES = [
-  'src/components/WeightTrendCard.js',
+  'src/screens/AnalyticsScreen.js',
   'src/screens/BodyMetricsScreen.js',
   'src/components/TodayStrip.js',
 ];
@@ -56,6 +64,16 @@ function walk(dir) {
 }
 
 describe('RollingNumber: the body-weight number never ticks (hard ED rule)', () => {
+  // D177 item 1: the `.filter(existsSync)` below is exactly what let a
+  // deleted surface drop out of this matrix in silence, turning "this rule
+  // is unprotected" into "this rule never existed". Every listed surface
+  // must still be on disk, so retiring one fails HERE and has to be
+  // re-pointed deliberately instead of vanishing from the guard.
+  test('every listed weight surface still exists', () => {
+    const missing = WEIGHT_SURFACES.filter((f) => !fs.existsSync(path.join(root, f)));
+    expect(missing).toEqual([]);
+  });
+
   test.each(WEIGHT_SURFACES.filter((f) => fs.existsSync(path.join(root, f))))(
     '%s does not reference RollingNumber',
     (rel) => {

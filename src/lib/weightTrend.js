@@ -58,7 +58,10 @@ function isDiverging(actual, expected) {
  * @param {boolean} input.edFlagOpen   true when an ED/wellbeing flag is open
  * @param {?object} input.stepTrend    COMP-026 latest-run modifier state
  *                                      { applied:boolean, direction:-1|0|1 }, or null
- * @returns {object} view-model for WeightTrendCard
+ * @returns {object} view-model for the weight-trend surfaces. (This said
+ *          "for WeightTrendCard" until D177 deleted that component, which
+ *          nothing imported. The real consumers are BodyMetricsScreen's
+ *          WeightTrendChart and AnalyticsScreen's Body pillar.)
  */
 // COMP-026 (B): the secondary line shown on the card in a week the step-trend
 // modifier sized the calorie change. British English, no numbers, no "gain",

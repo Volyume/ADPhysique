@@ -35,7 +35,10 @@ export { fontFamily };
 // flattens it. Chart verdict (E15 element 5, accepted): VolyumeChart is
 // the app's one chart engine; no second engine (Victory et al.), no
 // rebuild. Optional S-effort uplifts on record: a once-per-mount draw-in
-// on the Analytics focal chart and the WeightTrendCard dashed goal band.
+// on the Analytics focal chart and a dashed goal band. (The second of those
+// named WeightTrendCard, a component deleted under D177 because nothing ever
+// imported it. The uplift remains on record against whatever renders the
+// band; today that is BodyMetricsScreen's own WeightTrendChart.)
 const baseColors = {
   // Core backgrounds, dark charcoal, not pure black.
   // Pure black (#000000) causes halation (blurring) for users with astigmatism.
