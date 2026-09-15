@@ -108,7 +108,14 @@ describe('remaining-as-hero (founder decision 2026-06-29)', () => {
     // 2100 - 1840 = 260 left; eaten reference shows "1840" + "of 2100 kcal"
     expect(numerals).toContain('260');
     expect(numerals).toContain('1,840');
-    expect(texts).toContain('left');
+    // D169, law 7: the sub-label was bare "left" and now carries the unit.
+    // The RULE this case pins is unchanged -- remaining is the hero, eaten
+    // and target are the quiet reference -- so the assertion follows the
+    // label rather than being dropped. Previously the largest number on the
+    // Nutrition tab was the one number in the product that did not say what
+    // it was.
+    expect(texts).toContain('kcal left');
+    expect(texts).not.toContain('left');
     expect(texts).toContain('of 2100 kcal');
   });
 
@@ -121,7 +128,9 @@ describe('remaining-as-hero (founder decision 2026-06-29)', () => {
     const numerals = tree.root.findAll((n) => n.props?.defaultValue != null)
       .map((n) => n.props.defaultValue);
     expect(numerals).toContain('200'); // |2100 - 2300|
-    expect(texts).toContain('over');
+    // D169, law 7, as above. Still the magnitude and the word, never an alarm.
+    expect(texts).toContain('kcal over');
+    expect(texts).not.toContain('over');
   });
 });
 

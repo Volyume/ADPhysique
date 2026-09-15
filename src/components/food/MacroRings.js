@@ -317,7 +317,16 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
                   accessibilityLabel={`${toEnergy(over ? Math.abs(remaining) : remaining, energyUnit)} ${energyWord} ${over ? 'over' : 'left'}`}
                   maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE}
                 />
-                <Text style={[styles.kcalSubLabel, live.kcalSubLabel]} numberOfLines={1}>{over ? 'over' : 'left'}</Text>
+                {/* D169, law 7 (a number states what it is): this read just
+                    "left" or "over". The unit was in the spoken label and on
+                    the quiet eaten reference beside it, but not on the figure
+                    itself -- so the largest number on the Nutrition tab was
+                    the one number in the product that did not say what it
+                    was. The target-less branch below already spelled its
+                    unit; the two now agree. */}
+                <Text style={[styles.kcalSubLabel, live.kcalSubLabel]} numberOfLines={1}>
+                  {`${energyUnitLabel(energyUnit)} ${over ? 'over' : 'left'}`}
+                </Text>
               </>
             ) : (
               <>

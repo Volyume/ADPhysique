@@ -7444,3 +7444,105 @@ A guard pinning code nothing renders asserts nothing and blocks the cleanup.
   slices. Caught by that guard.
 - A new guard asserted the rest timer uses `type.num('title')`; that is the
   header's elapsed clock. The timer is `type.num('bodyStrong')`.
+
+## D169 (2026-09-15) - Nutrition: the screen that does NOT get a loud number, and why that is law 1 rather than an exception to it
+
+**Authority.** Lead under D33, on a read-only Opus recon of `DiaryScreen.js`
+and the food components. The lane refused to pre-resolve its central fork and
+was right to: it flagged that "a calorie figure at 56px on the food screen is
+the same class of question as bodyweight-as-loudest on Progress and has had no
+equivalent ruling", and explicitly declined to assume the Progress answer
+generalises.
+
+### THE RULING: Nutrition gets no `type.hero` element.
+
+Not a deferral, not an exception, and not a safety dodge. Three reasons, and
+the third only settles what the first two already point at.
+
+**1. Law 1 says the loud element is "the thing the screen is FOR". This screen
+is not for answering a question.** Today asks what am I doing, Progress what do
+I do next, the logger what am I lifting, the summary how did that go - each has
+one answer and it is now loud. The diary is a WORKSPACE: its own header calls
+it "the daily workspace" (D138) and it takes input all day. "Exactly one loud
+thing per screen" is a ceiling, not a quota. Forcing a 56px numeral onto a
+screen with no single question would be obeying the letter of the law against
+its point.
+
+**2. Every candidate for a loud number here is wrong on its own merits.**
+- *Calories remaining* is the de facto hero today (32px, in the ring) and is a
+  COUNTDOWN OF WHAT YOU MAY STILL EAT. It is the most ED-loaded framing on the
+  screen, and 56px is the loudest possible version of it.
+- *Calories eaten* is a record rather than a decision, so it fails law 1's own
+  test even as it passes the safety one - and choosing it would silently
+  reverse a founder decision of 2026-06-29 that nobody asked to reopen.
+- *Protein* would make calories the second fact on a calorie diary.
+- *Day type* is null on every ordinary day and is itself ED-gated.
+- There is NO coach decision available on this screen to promote:
+  `readLatestDecision` is not called here, and adding it is new wiring, not a
+  restyle.
+
+**3. And it is the conservative direction on ED ground, which is where the two
+arguments meet.** The rest of the app withholds target-manipulating content
+under calm mode and an open flag; the diary deliberately does not withhold the
+person's own record, which is right, because the diary is the tool they came to
+use. But making a calorie countdown the loudest thing in the entire product is
+a change in PROMINENCE of exactly that content class, which is the same move
+Section 2 held open for bodyweight on Progress. Where the design answer and the
+safe answer coincide, there is nothing left to ask.
+
+**What Nutrition gets from stage 2 instead:** law 7 (below), law 2 and law 3
+passes, and the defect fixes. The screen becomes quieter and more consistent,
+which is what it needed; it did not need a number shouted at it.
+
+### RULED - law 7 on the one number that lacked it
+
+`MacroRings.js`'s ring numeral read a bare "left" or "over". The unit was in
+the spoken label and on the quiet eaten reference beside it, but not on the
+figure - so the largest number on the Nutrition tab was the one number in the
+product that did not say what it was. It now reads "kcal left" / "kcal over",
+agreeing with the target-less branch which already spelled its unit.
+`MacroRings.test.js`'s two remaining-as-hero cases are RE-ANCHORED, not
+dropped: the rule they pin (remaining is the hero, eaten and target are the
+quiet reference, never a separate alarm) is unchanged.
+
+### Defects fixed - the fourth through seventh instances
+
+Four frozen-vs-live disagreements, all on the Nutrition tab, live winning in
+every case because live is appended last in every style array here:
+- `MacroRings.js` `card.borderColor`, `DiaryScreen.js` `offCard.borderColor`
+  and `EmptyDiary.js` `card.borderColor`: frozen `borderSubtle`, live `border`.
+  Three cards drawing the bright control edge against their own intent.
+- `DiaryScreen.js` `todayPill.backgroundColor`: frozen `surface`, live
+  `surface2`. Worse than a colour nit - the rail it sits in documents at its
+  own definition why it stays on `surface` ("surface2 sits HIGHER on the
+  elevation ladder than the meal cards it navigates, which inverts the
+  hierarchy"), and the live half was inverting exactly that. Settled by its
+  sibling `dayPagerMore`, which agrees in both halves.
+
+### SAFETY GAP CLOSED
+
+`edFlagFailClosed.guard.test.js`'s DiaryScreen case asserted only that AT LEAST
+ONE read failed closed. The blanket sweep stops a `.catch(() => null)` creeping
+in, but **a new read with no `.catch` at all would have passed every guard in
+the repo** - on the food screen, where an unguarded read is worst. Now pinned
+exactly in the HomeScreen shape: every read fails closed, and there is exactly
+one.
+
+### OPEN, FOR THE FOUNDER - the macro rings
+
+The plan names "macro rings drawn in Skia" among the category props we carry
+(`20-DIRECTION-AND-PLAN.md:160-164`) and then does NOT list them in stage 3's
+removal set, which names the flames, the medal tokens and the reward props.
+So the plan diagnoses them and omits them from the only stage that removes
+props. That gap is not the lead's to fill: D75 records a founder order that the
+ring is visible from day one ("Never re-propose hiding it"), and while that
+wording covers hiding rather than retiring, treating the difference as
+permission would be sophistry.
+
+The honest position: the rings are well made, their adherence-neutral colour is
+itself a founder safety reversal, and a ring encodes proportion-to-a-bound
+better than a bar. What is true under direction D is that they are a card
+around a macro number (which the founder's own objecthood test excludes), the
+single largest amber spend in the product that does not mean "now", and a
+device the plan itself names as the category signature. Those are separable
+from the ring existing. Put to the founder 2026-09-15.

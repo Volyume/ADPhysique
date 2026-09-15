@@ -262,9 +262,48 @@ accident. Asked in chat 2026-09-15, unanswered, re-ask.
 **Third instance of the frozen-vs-live border defect fixed** (stat tiles),
 after `LoggedSetRow` (D166) and `EvidencePanel` (D167).
 
-NEXT: Nutrition (`DiaryScreen.js`), the fifth and last stage-2 screen. Recon
-dispatched 2026-09-15. Then stage 3 (the long tail, the empty states, the
-category props) and stage 4 (the moments).
+**NUTRITION IS RULED (D169) AND PART-LANDED** (`a986c202` + law 7).
+**THE RULING: Nutrition gets NO `type.hero` element**, and that is law 1 rather
+than an exception to it. "Exactly one loud thing per screen" is a CEILING, not
+a quota. Today, Progress, the logger and the summary each answer one question
+and that answer is now loud; the diary is a WORKSPACE (its own header calls it
+that, D138) that takes input all day and answers no single question. Every
+candidate is also wrong on its own merits: calories REMAINING is a countdown of
+what you may still eat (the most ED-loaded framing on the screen, and 56px is
+its loudest possible version); calories EATEN is a record not a decision AND
+would silently reverse a founder decision of 2026-06-29; protein would make
+calories the second fact on a calorie diary; day type is null on ordinary days
+and is itself ED-gated; and there is NO coach decision on this screen to
+promote (`readLatestDecision` is not called here). Design answer and safe
+answer coincide, so there is nothing to ask.
+LANDED: law 7 on the ring numeral -- it read a bare "left"/"over", so the
+largest number on the tab was the one number in the product that did not say
+what it was; now "kcal left"/"kcal over", agreeing with the target-less branch.
+`MacroRings.test.js`'s two remaining-as-hero cases RE-ANCHORED (the rule is
+unchanged, only the label gained its unit).
+FOUR MORE FROZEN-VS-LIVE DISAGREEMENTS FIXED (instances 4-7): `MacroRings`
+`card`, `DiaryScreen` `offCard`, `EmptyDiary` `card` (all frozen `borderSubtle`
+vs live `border`), plus `DiaryScreen` `todayPill` (frozen `surface` vs live
+`surface2`) -- that last one inverted an elevation rule the rail documents at
+its own definition, settled by its sibling `dayPagerMore` agreeing in both
+halves.
+SAFETY GAP CLOSED: `edFlagFailClosed.guard`'s DiaryScreen case asserted only
+that AT LEAST ONE read failed closed, so **a new read with no `.catch` at all
+would have passed every guard in the repo**, on the food screen. Now pinned
+exactly in the HomeScreen shape.
+STILL TO DO on Nutrition (unblocked, mechanical): law 2 un-carding (`offCard`,
+`plannedBanner`, the water `<Card>`), law 3 (`radius.control` on ~10
+pressables), and a `DiaryScreen.nutritionSpec.guard.test.js` in the shape of
+the other four.
+**OPEN, FOR THE FOUNDER (D169): the macro rings.** The plan names them among
+the category props we carry and then does NOT list them in stage 3's removal
+set. D75 records a founder order that the ring is visible from day one ("Never
+re-propose hiding it"); that wording covers hiding rather than retiring, and
+treating the difference as permission would be sophistry. Asked 2026-09-15.
+**ALSO STILL OPEN (D168):** the 50/100-session milestone burst + reward haptic
+vs law 5. Asked 2026-09-15, unanswered.
+NEXT: finish Nutrition's law 2/3 pass, then stage 3 (the long tail, the empty
+states, the category props) and stage 4 (the moments).
 summary and Nutrition.
 founder at plan section 4c and now carry the three answers above.
 ALSO OUTSTANDING: `docs/rules/styling.md:55` says "System fonts" and is wrong
