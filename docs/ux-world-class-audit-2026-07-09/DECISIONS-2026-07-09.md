@@ -8419,3 +8419,29 @@ Two properties are non-negotiable because the mechanism already has them and an
 extension must not lose them: a missing or malformed rect falls back to the
 ordinary push (`RootNavigator.js:383` already does `|| null`), and Reduce Motion
 replaces the zoom with a cross-fade rather than removing the feedback (law 5).
+
+---
+
+## D181 — Two founder answers, 2026-09-15
+
+**1. No build yet.** The founder was offered a build off current main (18
+commits ahead of build 3581, which predates the whole amber sweep, the props
+removal and the ED-safety fix) and chose **"No build, keep working"**, with the
+instruction: *"keep the checklists accumulating so whenever you do build, you
+have the full walk list ready."*
+
+So: no Android or iOS build is dispatched until the founder says so for that
+specific build (the rule was already inviolable; this records that the offer was
+made and declined rather than forgotten). And the per-lane device checklists,
+which have been accumulating inside agent reports where nobody would find them,
+are consolidated into **one ordered walk** at
+`docs/design-redesign-2026-09-14/30-DEVICE-WALK.md`, maintained from here on so
+it is ready the moment a build exists. A checklist that lives only in a report
+nobody re-reads is not a checklist.
+
+**2. The share card keeps its tonal ground.** D180 Part 1 ruled that the
+three-stop near-black grounds are the poster's paper rather than a decorative
+gradient, and surfaced it rather than treating it as settled, because outward
+brand is the founder's. They confirmed: **"Right call, keep the tone."** The
+grounds stay; every actual glow, the gold and the trophy still go. D180 Part 1
+stands as written and is now founder-confirmed rather than lead-ruled.
