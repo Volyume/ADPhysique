@@ -2717,6 +2717,28 @@ function buildLiveStyles(t) {
     approachCardLabelActive: { color: t.colors.primary },
     approachCardRange: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     approachCardRangeActive: { color: t.colors.primaryDim },
+    // DEFECT FIXED 2026-09-15 (D174, found by the amber census's structural
+    // differ). `approachCardDescActive` is defined in the frozen block at
+    // :2505 and was defined NOWHERE here, while :1138 consumes it as
+    // `active && [styles.approachCardDescActive, live.approachCardDescActive]`.
+    // So `live.approachCardDescActive` resolved undefined, the boot-time frozen
+    // value won permanently, and the key survived a theme flip while both its
+    // siblings above flipped correctly. Eighth instance of this class found
+    // this session; the differ found no others across 2,386 keys in 137 files.
+    //
+    // Restored at the frozen half's EXISTING rest value rather than recoloured.
+    // D174's A2 rules these hand-rolled `*Active` keys neutral, but it also
+    // rules that they migrate onto the shared selection primitives as one unit
+    // rather than being recoloured one at a time -- so all three approachCard
+    // keys move together in that unit, and this commit only closes the split.
+    // TENTH instance of the same class, found by the parity guard immediately
+    // after it was taught to read a multi-line frozen value. `approachCardDesc`
+    // carries `...type.captionTight` and `color: colors.textSecondary` across
+    // three lines, is consumed at :1138 as `[styles.approachCardDesc,
+    // live.approachCardDesc]`, and had no live twin -- so it kept the palette
+    // the app booted in. Its `Active` sibling above was the ninth.
+    approachCardDesc: { ...t.type.captionTight, color: t.colors.textSecondary },
+    approachCardDescActive: { color: t.colors.primaryDim },
     recommendedBadge: { backgroundColor: withAlpha(t.colors.primary, alpha.tint) },
     recommendedBadgeText: { fontSize: t.fontSize.micro, color: t.colors.primary },
     customProteinLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },

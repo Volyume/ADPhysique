@@ -441,7 +441,7 @@ export default function VolyumeChart({
   return (
     <View>
       {gestureWrapped}
-      <View style={[styles.viewDataWrap, live.viewDataWrap]}>
+      <View style={styles.viewDataWrap}>
         <Button
           title={showTable ? 'Hide data' : 'View data'}
           onPress={() => setShowTable(v => !v)}

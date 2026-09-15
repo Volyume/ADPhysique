@@ -151,7 +151,11 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
   // `style` on the Trigger means the clobber re-applies the SAME styling, so
   // the row is correct whether or not zeego clobbers -- deterministic either
   // way, and lossless if zeego ever stops clobbering.
-  const rowStyle = [styles.loggedSetRow, live.loggedSetRow, isWarmup && [styles.loggedSetRowWarmup, live.loggedSetRowWarmup]];
+  // `styles.loggedSetRow` is pure layout (flex, gap, minHeight, radius,
+  // padding), so it correctly has no buildLiveStyles twin and the `live`
+  // reference that used to sit here resolved undefined. The warm-up override
+  // beside it DOES carry colour, so it keeps both halves.
+  const rowStyle = [styles.loggedSetRow, isWarmup && [styles.loggedSetRowWarmup, live.loggedSetRowWarmup]];
   const row = (
     <TouchableOpacity
       style={rowStyle}

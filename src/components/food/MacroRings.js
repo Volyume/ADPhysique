@@ -295,9 +295,14 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   ].filter(Boolean).join(', ');
   const a11yLabel = onPress ? `${a11ySummary}. Tap for the breakdown by meal.` : a11ySummary;
 
+  // D172 stripped this card to `{ gap }` -- palette-invariant, so it correctly
+  // has no `buildLiveStyles` twin any more. The `live.card` that used to sit
+  // in the style array below resolved undefined and was dropped silently,
+  // which reads as if the surface follows the theme when there is nothing left
+  // to follow. `frozenLiveParity.guard.test.js` fails on exactly that mismatch.
   return (
     <TouchableOpacity
-      style={[styles.card, live.card]}
+      style={styles.card}
       onPress={onPress}
       disabled={!onPress}
       activeOpacity={0.9}

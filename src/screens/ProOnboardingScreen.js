@@ -2491,7 +2491,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 {bodyFat.trim() ? (
                   <View style={{ marginTop: spacing.sm }}>
                     {/* U-E-1: gloss the body fat method abbreviations (BIA/Caliper/DEXA). */}
-                    <View style={[styles.measuredRow, live.measuredRow]}>
+                    <View style={styles.measuredRow}>
                       <Text style={[styles.fieldHint, live.fieldHint]}>Estimate source</Text>
                       <InfoTooltip text={GLOSSARY.bodyFatMethod} size={13} />
                     </View>
@@ -2950,7 +2950,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   this division is judged on (or commonly brings up). Picking none
                   is fine, it just means a balanced plan. */}
               {GOALS_WITH_WEAK_POINTS.includes(trainingGoal) && (
-                <View style={[styles.wpSection, live.wpSection]}>
+                <View style={styles.wpSection}>
                   <Text style={[styles.wpLabel, live.wpLabel]}>
                     Anything to bring up? <Text style={[styles.wpOptional, live.wpOptional]}>(optional, up to 3)</Text>
                   </Text>
@@ -2972,15 +2972,15 @@ export default function ProOnboardingScreen({ navigation }) {
 
               <View style={styles.sectionLast}>
               <TouchableOpacity
-                style={[styles.proteinHead, live.proteinHead]}
+                style={styles.proteinHead}
                 onPress={() => setProteinOpen(v => !v)}
                 activeOpacity={0.8}
                 accessibilityRole="button"
                 accessibilityState={{ expanded: proteinOpen }}
                 accessibilityLabel={`Protein target, ${PROTEIN_APPROACHES[proteinApproach]?.label}. Tap to change.`}
               >
-                <View style={[styles.proteinCopy, live.proteinCopy]}>
-                  <View style={[styles.measuredRow, live.measuredRow]}>
+                <View style={styles.proteinCopy}>
+                  <View style={styles.measuredRow}>
                     <Text style={[styles.fieldLabel, live.fieldLabel]}>Protein target</Text>
                     {/* U-E-1: gloss the Standard/Optimised/Advanced protein tiers. */}
                     <InfoTooltip text={GLOSSARY.proteinTier} size={13} />
@@ -3008,7 +3008,7 @@ export default function ProOnboardingScreen({ navigation }) {
                         accessibilityState={{ selected: active }}
                         accessibilityLabel={`${opt.label}, ${opt.range}${recommended ? ', recommended' : ''}`}
                       >
-                        <View style={[styles.proteinOptionCopy, live.proteinOptionCopy]}>
+                        <View style={styles.proteinOptionCopy}>
                           <View style={styles.proteinOptTop}>
                             <Text style={[styles.proteinOptLabel, live.proteinOptLabel]}>{opt.label}</Text>
                             <Text style={[styles.proteinOptRange, live.proteinOptRange]}>{opt.range}</Text>
