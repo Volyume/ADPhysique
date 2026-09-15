@@ -404,10 +404,25 @@ export default function AthleteProfileScreen({ navigation }) {
     ? (summary.weightLoggedAt ? `Logged ${formatDate(summary.weightLoggedAt)}` : 'Current profile weight')
     : 'Open Progress to add body weight';
   const bodyFatText = summary.bodyFat != null ? `${Number(summary.bodyFat).toFixed(1)}%` : 'Not logged';
-  // Suppressed (calm mode or an open ED-pattern flag) behaves exactly like no
-  // scored scan at all: the tile falls through to the body-fat log, then the
-  // unscored placeholder, same as `shouldShowPhysiqueScore` already does when
-  // there is nothing to show.
+  // Suppressed (calm mode or an open ED-pattern flag) means this tile shows no
+  // body-composition figure AT ALL: not the Volyume Score, and not the body-fat
+  // percentage underneath it. It falls straight through to the unscored
+  // placeholder.
+  //
+  // DEFECT FIXED 2026-09-15. The comment that stood here said suppression
+  // "behaves exactly like no scored scan at all: the tile falls through to the
+  // body-fat log, then the unscored placeholder", and only `showPhysiqueScore`
+  // carried the `!photoSuppressed` guard. So a user under calm mode or an open
+  // ED-pattern flag lost the SCORE and was shown a raw body-fat percentage in
+  // its place -- strictly worse for the at-risk reader than the thing the
+  // suppression existed to withhold, and the exact figure the founder ruled
+  // against surfacing (D166: the tile shows the scan's band and score, never a
+  // body-fat percent). `usePhotoSuppression`'s own docstring says it gates
+  // "any bodyweight display". "No scan" and "flagged" are not the same state:
+  // showing someone their own logged body fat when there is simply nothing
+  // scored is fine; showing it to someone who is flagged is not. Only the
+  // second branch changes, and it changes in one direction -- strictly more is
+  // withheld, never less.
   const showPhysiqueScore = !photoSuppressed && shouldShowPhysiqueScore({
     scan: summary.scan,
     bodyFat: summary.bodyFat,
@@ -417,7 +432,7 @@ export default function AthleteProfileScreen({ navigation }) {
     label: 'Volyume Score',
     value: physiqueScoreTileValue(summary.scan),
     sub: physiqueScoreTileSub(summary.scan),
-  } : summary.bodyFatLoggedAt ? {
+  } : (!photoSuppressed && summary.bodyFatLoggedAt) ? {
     label: 'Body fat',
     value: bodyFatText,
     sub: `Logged ${formatDate(summary.bodyFatLoggedAt)}`,
