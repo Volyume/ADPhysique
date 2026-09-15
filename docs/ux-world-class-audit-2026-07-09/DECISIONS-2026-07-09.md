@@ -7218,12 +7218,35 @@ wants true negative tracking, that is a D3 reversal and goes to the founder then
 - `HomeLastSessionCard.js:31,33` hard-codes "kg lifted" on the Today screen, so
   a user training in pounds is shown the wrong unit on their own home screen.
   Directly in law 7's lane; fixed in stage 1.
+  **WITHDRAWN 2026-09-15 — this finding was wrong, and so is the one three
+  lines below it.** Gym weights are kg-ONLY (UK). `useAppStore.js:2224`
+  initialises `units: 'kg'`; `setUnits` (`:2225-2227`) discards its argument
+  and writes 'kg'; the cloud-hydration path (`:1161`) forces 'kg' with the
+  comment "ignore any legacy lbs value from the cloud", and `:1189` then sets
+  the store from that same literal. Those are the only three writers. There is
+  no lbs user for a tonnage figure to mislead, and `p15UnitDisplayCopy.guard`
+  and `YearOfLiftsScreen.tonnageUnits.guard` already pin the kg-only rule. The
+  label change still landed and is harmless, but it fixed nothing.
+  This withdrawal is recorded rather than the line deleted, because the same
+  premise -- "gym weights are stored in the user's chosen unit (kg|lbs)" --
+  is repeated across `WAVE-D-FINDINGS.md:445-470`, `recapPayload.js:26-32`,
+  `algorithms.js:384` and `CoachOutputScreen.js:2701`. It was true when those
+  were written; it is not true now, and every "hard-codes kg" finding
+  descending from it is inert. `bodyWeightUnits` is a separate preference and
+  DOES still vary (st/kg/lbs); nothing here applies to bodyweight.
 - `LoggedSetRow.js:227` vs `:254` disagree: the frozen style sets
   `borderColor: colors.borderSubtle` and the live override sets
   `t.colors.border`. The live half wins, so the in-place set editor draws the
   bright grey edge that `SettingsPrimitives.js` calls "the wireframe look". In
   the exact component the ledger replaces; fixed in stage 1.
-- `MesocycleBuilderScreen.js:459` hard-codes "(kg moved)" in a chart axis label.
+- ~~`MesocycleBuilderScreen.js:459` hard-codes "(kg moved)" in a chart axis
+  label.~~ **WITHDRAWN 2026-09-15, same reason as above: the app is kg-only, so
+  the label is correct.** `ProgressSections.js:90` (`{value} kg`) was checked at
+  the same time and is correct for the same reason. One real but separate
+  finding came out of the check and is NOT being fixed here: neither site uses
+  the non-breaking space between number and unit that the founder's copy rule
+  requires, and neither file is in `p15UnitDisplayCopy.guard`'s read list.
+  That is a gap in that guard's coverage, not a units defect.
 - The figure the founder objected to ("9,240") must be labelled **"Total
   lifted"**, never "Volume": the app defines Volume app-wide as a muscle's
   weekly hard sets (`coachGlossary.js:13-14`), and this exact lens was renamed

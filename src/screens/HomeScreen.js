@@ -2327,11 +2327,23 @@ export default function HomeScreen({ navigation, route }) {
   // pure renderer of already-derived data rather than importing the helper.
   const lastSessionRelativeDay = lastSession ? getRelativeDay(lastSession.startedAt) : null;
 
-  // D166 law 7 (a number states what it is), and a real defect it caught:
-  // HomeLastSessionCard hard-coded "kg lifted" in both its branches, so a user
-  // training in pounds was shown the wrong unit on their own home screen. The
-  // figure is session TONNAGE, which is stored in the user's chosen unit and
-  // never converted. It is labelled "Total lifted", never "Volume": the app
+  // D166 law 7 (a number states what it is). This label used to be hard-coded
+  // inside HomeLastSessionCard; it is composed here instead so the unit is
+  // stated in one place.
+  //
+  // CORRECTION 2026-09-15: when this moved, the note here claimed the old
+  // hard-coding meant "a user training in pounds was shown the wrong unit".
+  // That was wrong. Gym weights are kg-ONLY (UK): `useAppStore.js:2220-2227`
+  // initialises `units: 'kg'`, `setUnits` coerces ANY argument to 'kg', and
+  // the cloud-hydration path at `:1161` forces 'kg' while ignoring a legacy
+  // lbs value. There is no lbs user to mislead, and the same correction
+  // applies to every other "hard-codes kg" finding in the register. The
+  // read below is kept because it is defensive and free, not because it
+  // fixes anything. (`bodyWeightUnits` is a SEPARATE preference and does
+  // vary: st/kg/lbs. This figure is not bodyweight.)
+  //
+  // The figure is session TONNAGE. It is labelled "Total lifted", never
+  // "Volume": the app
   // defines Volume app-wide as a muscle's weekly hard sets
   // (`coachGlossary.js`), and this exact lens was renamed once already because
   // colliding the two names misled users (`LiftProgressScreen.js`).

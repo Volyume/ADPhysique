@@ -24,10 +24,12 @@ function HomeLastSessionCard({ lastSession, tonnageLabel, relativeDay, onOpenHis
     lastSessionMeta: { ...t.type.caption, color: t.colors.textMuted },
     lastSessionName: { ...t.type.label, color: t.colors.textPrimary },
   };
-  // `tonnageLabel` arrives pre-formatted from HomeScreen, where the unit
-  // preference lives (D166 law 7). Both branches here previously hard-coded
-  // "kg lifted", so a user training in pounds read the wrong unit on their own
-  // home screen.
+  // `tonnageLabel` arrives pre-formatted from HomeScreen, which composes the
+  // unit in one place (D166 law 7). CORRECTION 2026-09-15: the note here said
+  // the previous hard-coded "kg lifted" meant "a user training in pounds read
+  // the wrong unit". Not so -- gym weights are kg-only (`useAppStore.js:2220`,
+  // `setUnits` coerces anything to 'kg'), so the old label was correct and the
+  // move is composition hygiene, not a bug fix. See HomeScreen's fuller note.
   const meta = [
     lastSession.durationMinutes ? `${lastSession.durationMinutes}m` : null,
     lastSession.setCount ? `${lastSession.setCount} sets` : null,
