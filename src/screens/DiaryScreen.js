@@ -29,7 +29,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, iconSize, fontFamily, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import Card from '../components/Card';
@@ -2310,7 +2310,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'flex-end',
     marginTop: spacing.md, gap: spacing.sm,
   },
-  saveMealBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md },
+  saveMealBtn: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.control },
   saveMealBtnText: { ...type.body, color: colors.textPrimary },
   saveMealBtnTextPrimary: { ...type.label, color: colors.textPrimary },
   savedFoodTitle: { ...type.bodyStrong, color: colors.textPrimary },
@@ -2360,7 +2360,7 @@ const styles = StyleSheet.create({
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.control,
     backgroundColor: 'transparent',
   },
   dateButton: {
@@ -2370,7 +2370,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    borderRadius: radius.lg,
+    borderRadius: radius.control,
     paddingHorizontal: spacing.sm,
     backgroundColor: 'transparent',
   },
@@ -2383,7 +2383,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: radius.control,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -2394,7 +2394,7 @@ const styles = StyleSheet.create({
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.control,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface,
@@ -2431,11 +2431,14 @@ const styles = StyleSheet.create({
     color: colors.textMuted, fontSize: fontSize.xs, textAlign: 'center',
     marginTop: spacing.sm, paddingHorizontal: spacing.lg,
   },
+  // D171, law 2: a consent notice and a discovery card are not objects you can
+  // pick up, so neither is boxed. A hairline above separates them from what
+  // they follow, which is the same treatment Community landed under CR-17 and
+  // Today's four sections already use.
   offCard: {
     gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.lg,
     padding: spacing.md, marginBottom: spacing.lg,
   },
   offCardText: { ...type.bodySm, color: colors.textSecondary },
@@ -2462,28 +2465,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, minHeight: touchTarget.minimum,
     backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.control,
     marginBottom: spacing.sm,
   },
   addMealLabel: { ...type.label, color: colors.textPrimary },
+  // D171, law 2 and law 6. A banner is a message, not an object, so the fill
+  // and the box go; and its border was an amber edge on a surface that is
+  // amber at every value of the day, which is the decoration law 6 refuses.
+  // Amber now appears here only where the planned state is genuinely live.
   plannedBanner: {
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
-    borderRadius: radius.lg,
-    padding: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.md,
     marginBottom: spacing.lg,
     gap: spacing.sm,
   },
   plannedBannerText: { ...type.bodySm, color: colors.textPrimary },
   plannedBannerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   plannedBtnPrimary: {
-    borderRadius: radius.md,
+    borderRadius: radius.control,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 40,
     alignItems: 'center', justifyContent: 'center',
   },
   plannedBtnPrimaryText: { fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
   plannedBtnGhostButton: {
-    borderRadius: radius.lg,
+    borderRadius: radius.control,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface2,
@@ -2506,7 +2511,7 @@ const styles = StyleSheet.create({
   waterValue: { color: colors.textMuted, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], marginRight: spacing.xs },
   waterButtons: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   waterBtn: {
-    width: 36, height: 36, borderRadius: radius.md,
+    width: 36, height: 36, borderRadius: radius.control,
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
   },
   waterTrack: {
@@ -2574,13 +2579,12 @@ function buildLiveStyles(t) {
     targetModeText: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     targetsChangedText: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
     bankOffNote: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
-    // D169: the live half read `t.colors.border` while the frozen half sets
-    // `colors.borderSubtle` above. Live is appended after frozen in every
-    // style array on this screen, so live won and this drew the bright
-    // control-edge grey against its own stated intent. Same defect as
-    // LoggedSetRow (D166), EvidencePanel (D167) and the summary stat tiles
-    // (D168) -- the pattern the styling rules now forbid for new components.
-    offCard: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    // D171: un-carded (law 2), so the live half carries the hairline rather
+    // than a fill and a box. It has to move WITH the frozen half: live is
+    // appended after frozen in every style array here, so leaving the old fill
+    // and border in place would have re-applied the card at runtime and the
+    // change would have done nothing on device while looking right in source.
+    offCard: { borderTopColor: t.colors.borderSubtle },
     offCardText: { ...t.type.bodySm, color: t.colors.textSecondary },
     mealReminderOfferTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     offCardButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
@@ -2589,7 +2593,8 @@ function buildLiveStyles(t) {
     offCardCta: { ...t.type.label, color: t.colors.textPrimary },
     addMealRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     addMealLabel: { ...t.type.label, color: t.colors.textPrimary },
-    plannedBanner: { backgroundColor: t.colors.surface2, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    // D171: un-carded, and its amber edge went with the box. See offCard.
+    plannedBanner: { borderTopColor: t.colors.borderSubtle },
     plannedBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
     plannedBtnPrimary: {},
     plannedBtnPrimaryText: { fontSize: t.fontSize.sm },
