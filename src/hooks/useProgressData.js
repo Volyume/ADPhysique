@@ -13,7 +13,7 @@ import {
   calculate1RM, calculateTonnage, buildLoadSemanticsById, shouldDeload, buildLast4WeekDeloadBuckets,
 } from '../lib/algorithms';
 import { logError } from '../lib/errorLog';
-import { localDayKey, localWeekStartMs } from '../lib/dayKey';
+import { localDayKey, localDayKeysEndingAt, localWeekStartMs } from '../lib/dayKey';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -212,7 +212,13 @@ export default function useProgressData() {
         bars.push({
           value: Math.round(tonnage),
           label: wk === 0 ? 'Now' : `-${wk}w`,
-          color: wk === 0 ? colors.primary : colors.primaryDim,
+          // D174: this painted ALL FOUR bars amber or dim-amber, which is the
+          // accent as decoration -- three of them are history. Only the `wk === 0`
+          // bar is "Now", which is the one thing discipline 1 lets amber mark.
+          // The rest take `borderLight`, the token the week ribbon fills a
+          // trained day with, so "a past filled thing" reads the same across
+          // unrelated surfaces (D172's reasoning for the macro arc).
+          color: wk === 0 ? colors.primary : colors.borderLight,
         });
       }
       setMesoTonnage(bars);
@@ -288,14 +294,26 @@ export default function useProgressData() {
       if (!at) continue;
       completedDays.add(localDayKey(at));
     }
-    // Build {date, count} for the last 84 days (12 weeks)
-    const vals = [];
-    for (let i = 0; i < 84; i++) {
-      const key = localDayKey(now - i * DAY_MS);
-      if (completedDays.has(key)) {
-        vals.push({ date: key, count: 1 });
-      }
-    }
+    // Build {date, count} for the last 84 days (12 weeks).
+    //
+    // DEFECT FIXED 2026-09-15. This stepped back with `now - i * DAY_MS`, a
+    // fixed 24-hour subtraction, and then took the LOCAL day key of the result.
+    // Across a DST transition the two disagree: the UK's October change means a
+    // timestamp 24 hours earlier is an hour earlier or later in wall-clock
+    // terms, so within an hour of midnight the walk duplicates one local day
+    // and skips another. An 84-day window always spans a transition for part of
+    // the year, so the twelve-week calendar could show a trained day twice and
+    // lose a real one.
+    //
+    // `localDayKeysEndingAt` is the shared authority for exactly this and was
+    // already in the codebase: it anchors at NOON and steps with `setDate`,
+    // which is calendar-aware, so it cannot drift. Semantics are otherwise
+    // identical -- still only the trained days, still `{date, count: 1}`, and
+    // `TrainingCalendar` consumes the result as a Set plus a length, so the
+    // oldest-first ordering this returns is immaterial.
+    const vals = localDayKeysEndingAt(84, now)
+      .filter((key) => completedDays.has(key))
+      .map((key) => ({ date: key, count: 1 }));
     setCalValues(vals);
   }
 
