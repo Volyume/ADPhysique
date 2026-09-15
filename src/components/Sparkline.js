@@ -51,7 +51,11 @@ export default function Sparkline({
   accessibilitySummary,
 }) {
   const t = useTheme();
-  const resolvedColor = color ?? t.colors.primary;
+  // D174: a whole series is not "now", so the DEFAULT line/dot colour is the
+  // neutral fill token. The personal-best ring-and-dot below keeps the
+  // accent, which discipline 1 grants by name. An explicit `color` prop
+  // still wins.
+  const resolvedColor = color ?? t.colors.borderLight;
   const values = useMemo(
     () => (data || []).filter(v => Number.isFinite(v)),
     [data],

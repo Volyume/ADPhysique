@@ -639,7 +639,7 @@ export default function ProgressPhotoViewer({
               {currentMeta.note ? <Text style={[styles.metaNote, live.metaNote]}>{currentMeta.note}</Text> : null}
 
               <View style={[styles.storageNote, live.storageNote]}>
-                <Ionicons name="phone-portrait-outline" size={iconSize.sm} color={t.colors.primary} />
+                <Ionicons name="phone-portrait-outline" size={iconSize.sm} color={t.colors.textSecondary} />
                 <Text style={[styles.storageNoteText, live.storageNoteText]}>
                   Stored on this device. Export anything you want to keep before uninstalling, clearing app data or changing phones.
                 </Text>
@@ -826,11 +826,14 @@ const styles = StyleSheet.create({
   panel: { maxHeight: 320 },
   panelContent: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xl },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // A passive metadata tag, not a selection and not "now", so it drops to
+  // the quiet-tag treatment (surface2 ground, secondary ink) the day badges
+  // in this sweep use at rest. D174: the accent is never a ground.
   poseTag: {
-    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    backgroundColor: colors.surface2, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
-  poseTagText: { ...type.label, color: colors.primary },
+  poseTagText: { ...type.label, color: colors.textSecondary },
   metaDate: { ...type.bodyStrong, color: colors.textPrimary },
   metaWeight: { ...type.num('body'), color: colors.textSecondary, marginTop: spacing.xxs },
   metaNote: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm },
@@ -925,8 +928,8 @@ function buildLiveStyles(t) {
     counter: { color: t.colors.textMuted },
     stage: { backgroundColor: t.colors.camera },
     emptyText: { color: t.colors.textMuted },
-    poseTag: { backgroundColor: t.colors.primaryBg },
-    poseTagText: { color: t.colors.primary },
+    poseTag: { backgroundColor: t.colors.surface2 },
+    poseTagText: { color: t.colors.textSecondary },
     metaDate: { color: t.colors.textPrimary },
     metaWeight: { color: t.colors.textSecondary },
     metaNote: { color: t.colors.textSecondary },
@@ -939,6 +942,8 @@ function buildLiveStyles(t) {
     sheetTitle: { color: t.colors.textPrimary },
     noteField: { backgroundColor: t.colors.inputBg },
     keyboardDoneBar: { backgroundColor: t.colors.surface2, borderTopColor: t.colors.border },
+    // KEEP: an iOS keyboard-accessory commit label, held by D175 with
+    // `TextField`'s two, which follow the platform tint convention.
     keyboardDoneText: { ...t.type.bodyStrong, color: t.colors.primary },
   };
 }

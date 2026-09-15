@@ -91,8 +91,8 @@ export default function EngineLog({ userId }) {
           screen-reader navigable (matches CollapsibleSection.js's convention). */}
       <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: open }} style={styles.header} onPress={() => setOpen(v => !v)} activeOpacity={0.7}>
         <View style={styles.headerLeft}>
-          <View style={[styles.iconWrap, live.iconWrap]}>
-            <Ionicons name="pulse" size={18} color={t.colors.primary} />
+          <View style={styles.iconWrap}>
+            <Ionicons name="pulse" size={18} color={t.colors.textSecondary} />
           </View>
           <View>
             <Text style={[styles.headerLabel, live.headerLabel]}>Coaching log</Text>
@@ -129,7 +129,7 @@ export default function EngineLog({ userId }) {
               event.decision === 'rotate_exercise' ? 'swap-horizontal' :
               'remove-outline';
             const iconColor =
-              event.decision === 'add_set' ? t.colors.primary :
+              event.decision === 'add_set' ? t.colors.textSecondary :
               event.decision === 'drop_set' || event.decision === 'deload_trigger' ? t.colors.error :
               t.colors.textMuted;
             const muscleLabel = MUSCLE_DISPLAY_NAMES[event.muscle] || event.muscle || 'Unknown';
@@ -163,8 +163,9 @@ const styles = StyleSheet.create({
   },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
+  // §3.2, "a tint behind a glyph": fill and disc geometry both gone.
   iconWrap: {
-    width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.primaryBg,
+    width: 36, height: 36,
     alignItems: 'center', justifyContent: 'center',
   },
   headerLabel: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
@@ -185,7 +186,6 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    iconWrap: { backgroundColor: t.colors.primaryBg },
     headerLabel: { color: t.colors.textPrimary },
     headerSub: { ...t.type.caption, color: t.colors.textSecondary },
     body: { borderTopColor: t.colors.border },

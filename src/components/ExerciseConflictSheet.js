@@ -236,7 +236,8 @@ const styles = StyleSheet.create({
   row: { padding: spacing.md, gap: spacing.xs },
   name: { ...type.body, color: colors.textPrimary },
   where: { ...type.captionTight, color: colors.textMuted },
-  done: { ...type.captionTight, color: colors.primary },
+  // A resolved row is a COMPLETED step, which D174 reads as "not now".
+  done: { ...type.captionTight, color: colors.textSecondary },
   actions: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap', paddingTop: spacing.xs },
   // Round 17 (J2): the sm button is ~34dp effective with no hitSlop -
   // under the styling law's 48 minimum, on the lane's own install-
@@ -257,7 +258,7 @@ function buildLiveStyles(t) {
     intro: { ...t.type.caption, color: t.colors.textMuted },
     name: { ...t.type.body, color: t.colors.textPrimary },
     where: { ...t.type.captionTight, color: t.colors.textMuted },
-    done: { ...t.type.captionTight, color: t.colors.primary },
+    done: { ...t.type.captionTight, color: t.colors.textSecondary },
     footnote: { ...t.type.captionTight, color: t.colors.textMuted },
   });
 }

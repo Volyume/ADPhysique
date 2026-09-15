@@ -151,7 +151,12 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
   // live theme here so a caller that omits it still tracks a theme flip.
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  const resolvedTint = tint ?? t.colors.primary;
+  // D174, applied 2026-09-15. The ruling existed from the day D174 was written
+  // and the file was then excluded from every sweep lane as "settled" -- but
+  // "settled" was the ruling, not the code, and this default sat amber through
+  // four lanes. Caught by the components lane reporting it as a finding outside
+  // its own bounds.
+  const resolvedTint = tint ?? t.colors.borderLight;
   const progress = target && target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
   const plannedProgress = target && target > 0 ? Math.max(0, Math.min(1, (value + planned) / target)) : 0;
   // Remaining framing (factual value/target, no colour judgement, matches the
@@ -441,7 +446,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
   },
   kcalPlanned: {
-    color: colors.primary,
+    color: colors.textMuted,
     fontSize: fontSize.xs,
     fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     marginTop: spacing.xxs,
@@ -513,17 +518,26 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
+  // D174: the bars follow the arc off amber, which is D172's own sentence
+  // applied to the half its wording did not reach -- "an arc that is amber at
+  // 10% of the day and at 90% of it is amber as decoration". `borderLight` is
+  // the token the week ribbon fills a trained day with, so a filled thing reads
+  // the same across unrelated surfaces. The SAFETY property is untouched and is
+  // the reason this is a recolour rather than a redesign: the bar is ONE colour
+  // at every value, under and over target alike, so it never congratulates
+  // adherence or flags a deviation (2026-05-29). `MacroRings.test.js` still
+  // asserts exactly that.
   macroFill: {
     position: 'absolute', left: 0, top: 0,
     height: '100%',
     borderRadius: radius.full,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.borderLight,
   },
   macroFillPlanned: {
     position: 'absolute', left: 0, top: 0,
     height: '100%',
     borderRadius: radius.full,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.borderLight,
     opacity: 0.32,
   },
   macroBarPlanned: {
@@ -578,7 +592,7 @@ function buildLiveStyles(t) {
   return {
     kcalValue: { color: t.colors.textPrimary, fontSize: t.fontSize.xxxl, lineHeight: Math.round(t.fontSize.xxxl * 1.1) },
     kcalSubLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
-    kcalPlanned: { color: t.colors.primary, fontSize: t.fontSize.xs },
+    kcalPlanned: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     kcalEatenValue: { color: t.colors.textSecondary, fontSize: t.fontSize.xl },
     kcalEatenLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     plannedHint: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
@@ -589,8 +603,8 @@ function buildLiveStyles(t) {
     macroBarValue: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     macroBarValuePrimary: { color: t.colors.textPrimary },
     macroTrack: { backgroundColor: t.colors.surface2 },
-    macroFill: { backgroundColor: t.colors.primary },
-    macroFillPlanned: { backgroundColor: t.colors.primary },
+    macroFill: { backgroundColor: t.colors.borderLight },
+    macroFillPlanned: { backgroundColor: t.colors.borderLight },
     macroBarPlanned: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     macroBarSub: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     macroBarRemaining: { color: t.colors.textMuted, fontSize: t.fontSize.xs },

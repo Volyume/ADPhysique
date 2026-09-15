@@ -70,7 +70,11 @@ function WeeksHistoryBars({ t, history }) {
           return (
             // eslint-disable-next-line react/no-array-index-key -- fixed-length, order-stable history, no id of its own
             <View key={i} style={styles.barCol}>
-              <View style={[styles.bar, { height, backgroundColor: v > 0 ? t.colors.primary : t.colors.border }]} />
+              {/* D174 A3 scope ruling: this coloured EVERY bar with a value,
+                   not the tallest one -- a whole series in the accent, which is
+                   amber meaning nothing. `borderLight` is the ribbon's filled
+                   token; the heights still state the values. */}
+              <View style={[styles.bar, { height, backgroundColor: v > 0 ? t.colors.borderLight : t.colors.border }]} />
             </View>
           );
         })}

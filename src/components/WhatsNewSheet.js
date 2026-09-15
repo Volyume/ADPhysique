@@ -119,7 +119,7 @@ export default function WhatsNewSheet() {
       <View style={styles.list}>
         {items.map((item) => (
           <View key={item.text} style={styles.row}>
-            <Ionicons name={item.icon} size={18} color={t.colors.primary} style={styles.rowIcon} />
+            <Ionicons name={item.icon} size={18} color={t.colors.textSecondary} style={styles.rowIcon} />
             <Text style={[styles.rowText, live.rowText]}>{item.text}</Text>
           </View>
         ))}

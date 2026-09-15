@@ -87,14 +87,16 @@ export default function NowCard({
 
   // D173 T2: a warm-up ramp is literally a ramp, so it is described rather
   // than punned with a flame; and the ink moves off `warning`, which is a
-  // state colour (a warm-up is not a warning) - the same amber every other
-  // context kind already uses.
+  // state colour (a warm-up is not a warning). D174 then took it off the
+  // accent as well: the glyph is the same colour whatever the context kind,
+  // which is decoration by discipline 4's own test. The card's log-flash
+  // border below is the one amber this component still spends.
   const contextIcon = context?.kind === 'group'
     ? 'swap-horizontal'
     : context?.kind === 'warmup'
       ? 'trending-up-outline'
       : 'pulse-outline';
-  const contextColor = t.colors.primary;
+  const contextColor = t.colors.textSecondary;
 
   // Phase 2B (physical-device corrective redesign, screenshot failure 3):
   // the "huge detached NowCard" is retired. The active set renders as the

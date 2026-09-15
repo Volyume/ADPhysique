@@ -380,7 +380,7 @@ export default function BodyDiagramHeatmap({
           style={[styles.divisionLegendText, live.divisionLegendText]}
           accessibilityLabel={`Triangle up means elevated for ${divisionLabel}, triangle down means capped`}
         >
-          <Text style={{ color: t.colors.primary }}>▲</Text>
+          <Text style={{ color: t.colors.textPrimary }}>▲</Text>
           {` Elevated for ${divisionLabel} · `}
           <Text style={{ color: t.colors.textMuted }}>▼</Text>
           {' Capped'}

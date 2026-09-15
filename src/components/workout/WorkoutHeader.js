@@ -99,6 +99,12 @@ export default function WorkoutHeader({
             accessibilityRole="button"
             accessibilityLabel="Finish workout"
           >
+            {/* KEEP (D174 discipline 1, "the one committing button"): Finish is the
+                single commit in the logger chrome and it is icon-only by
+                founder order, so the accent is the weight that separates it
+                from Cancel. The bottom bar's action is `variant="primary"`,
+                which is neutral after the primitives sweep, so this is the
+                only amber on the screen. */}
             <Ionicons name="checkmark-done" size={iconSize.md} color={t.colors.primary} />
           </TouchableOpacity>
         ) : null}

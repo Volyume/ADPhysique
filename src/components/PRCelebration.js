@@ -128,7 +128,8 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
       onPress={onDismiss}
     >
       <Animated.View style={[styles.toast, live.toast, { opacity: toastOpacity }]}>
-        <Ionicons name={prIcon} size={20} color={t.colors.primary} />
+        {/* KEEP: a personal-best mark, which discipline 1 grants by name. */}
+          <Ionicons name={prIcon} size={20} color={t.colors.primary} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.toastTitle, live.toastTitle]}>{prLabel}</Text>
           <Text style={[styles.toastValue, live.toastValue]}>{pr.label}</Text>

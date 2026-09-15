@@ -81,9 +81,13 @@ const AMBER_COUNTS = [
   // Decorative only ("Nothing interactive; the row is the target",
   // spec): presence, not respect or a PR, so no amber either.
   ['AvatarStack.js', 0],
-  // The trained-day fill and the not-yet-trained-today ring (see the
-  // header comment above): one live use per branch, two total.
-  ['DayDots.js', 2],
+  // D174 A3 SCOPE RULING (2026-09-15). A3 kept the unread and today marks; a
+  // trained-day FILL is the week-ribbon idiom, and `WeekRibbon` -- the signature
+  // device -- fills a trained day with `borderLight` and reserves amber for
+  // TODAY. This file filled every trained day amber, so the app's signature
+  // disagreed with itself. Trained moved to `borderLight`; the today RING keeps
+  // its amber, which is the one use here A3 actually protects.
+  ['DayDots.js', 1],
   // The trained-today ring dot's live colour override, plus the same
   // dot's static frozen-style baseline (the CP-10 "frozen base + live
   // override" pattern every reference file in this folder uses).
@@ -92,11 +96,12 @@ const AMBER_COUNTS = [
   ['CohortRow.js', 0],
   // Same anatomy as CohortRow, same answer.
   ['GroupRow.js', 0],
-  // The "is this today" ring dot's live colour (once) plus its static
-  // frozen-style baseline (once), the PR mark's live colour (once), and
-  // the given-Respect heart's live colour when `myReaction` is true
-  // (once): four total.
-  ['ActivityItemRow.js', 4],
+  // The "is this today" ring dot's live colour (once), its frozen baseline
+  // (once), and the PR mark (once): three. The given-Respect heart came OFF
+  // amber under the D174 A3 scope ruling -- a Respect already given is a stored
+  // reaction, not the viewer's live moment, and the glyph already swaps
+  // heart/heart-outline so the filled shape carries the state without colour.
+  ['ActivityItemRow.js', 3],
   // F15: "Respect everyone who trained today" -- quiet by design, never
   // a committing action (its own header comment says so): no amber.
   ['RespectAllRow.js', 0],
@@ -106,23 +111,31 @@ const AMBER_COUNTS = [
   // borderline ones named in the lane report) ───────────────────────────
   ['ActivityRow.js', 1], // the unread dot fill (legacy feed row, pre-dates PostCard's replacement by ActivityItemRow)
   ['CommentRow.js', 0],
-  ['CommunityHeaderAction.js', 3], // the header glyph's icon colour, the unread-message-count badge fill, the plain "unseen" dot fill
+  // The two unread dots (activity and messages) keep their amber. The
+  // people-outline header glyph they sit on came off it under the D174 A3
+  // scope ruling: an unconditional icon tint is decoration, and A3 protects
+  // the dots, not the furniture around them.
+  ['CommunityHeaderAction.js', 2], // the header glyph's icon colour, the unread-message-count badge fill, the plain "unseen" dot fill
   ['ComposerInput.js', 0],
   ['ConnectButton.js', 0],
   ['ConnectRequestRow.js', 0],
   ['ConnectSheet.js', 0],
   ['ConversationRow.js', 1], // the unread dot fill
-  ['DimensionRow.js', 0],
   ['FollowButton.js', 0],
   ['GroupInviteSheet.js', 0],
   ['GymDetailSheet.js', 0],
   ['GymPicker.js', 0],
   ['GymRow.js', 0],
   ['GymSummary.js', 0],
-  ['GymWeekBoard.js', 3], // the "See all" link text colour (live + its StyleSheet baseline) and the trained-today ring dot fill
+  // The trained-today ring dot, and only that. The "See all" link went to full
+  // ink under the D174 A3 scope ruling (a quiet text action is not "now").
+  ['GymWeekBoard.js', 1], // the "See all" link text colour (live + its StyleSheet baseline) and the trained-today ring dot fill
   ['JoinToInteractRow.js', 0],
   ['MenuSheet.js', 0],
-  ['MessageBubble.js', 1], // ComposerInput link colour passed to LinkedBody
+  // None. The in-message link colour went to full ink under the D174 A3 scope
+  // ruling: `LinkedBody` underlines its links, so the affordance survives
+  // without the accent -- and an underline does not depend on colour vision.
+  ['MessageBubble.js', 0], // ComposerInput link colour passed to LinkedBody
   ['MessageComposer.js', 0],
   // Was 2 -- a Switch's track (at half alpha) and its thumb -- until D174 A1
   // ruled that a switch's on-state is a STORED PREFERENCE, not a live moment,
@@ -134,10 +147,15 @@ const AMBER_COUNTS = [
   ['PeopleFiltersSheet.js', 0],
   ['PlacePicker.js', 0],
   ['PostCard.js', 0],
-  ['PrivacyReceipt.js', 1], // the shield-checkmark icon colour
+  // None. The shield glyph was an unconditional icon tint (D174 A3 scope
+  // ruling).
+  ['PrivacyReceipt.js', 0], // the shield-checkmark icon colour
   ['ProfileCard.js', 0],
   ['ProfileMenuSheet.js', 0],
-  ['ProgressStrip.js', 1], // the tallest of the eight weekly-history bars
+  // None. This coloured EVERY bar with a value, not the tallest -- a whole
+  // series in the accent, which is amber meaning nothing (D174 A3 scope
+  // ruling). The heights still state the values.
+  ['ProgressStrip.js', 0], // the tallest of the eight weekly-history bars
   ['ReportSheet.js', 0],
   ['SessionSheet.js', 0],
   // A placeholder in the shape of a PersonRow; it borrows the shared

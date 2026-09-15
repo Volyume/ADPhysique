@@ -44,7 +44,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   text: { ...type.caption, color: colors.textMuted, flex: 1 },
-  dismiss: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
+  // A quiet dismiss action, so it takes Button's own tertiary ink (D174).
+  dismiss: { ...type.caption, color: colors.textSecondary, fontWeight: fontWeight.semibold },
 });
 
 // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
@@ -53,6 +54,6 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     text: { ...t.type.caption, color: t.colors.textMuted },
-    dismiss: { ...t.type.caption, color: t.colors.primary },
+    dismiss: { ...t.type.caption, color: t.colors.textSecondary },
   };
 }

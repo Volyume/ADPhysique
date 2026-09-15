@@ -8255,3 +8255,110 @@ frozen/live twins of the ~50 logical KEEPs), 315 in `src/components/` — the
 lane not yet run — and 4 in `lib`/`hooks`/`navigation`, all platform chrome.
 Both screen lanes are guarded by an exact-line table, so a new amber fails
 loudly and every survivor carries a written reason.
+
+---
+
+## D179 — The components lane, the A3 scope question, and a ruling I never gave an owner (2026-09-15)
+
+The last amber lane swept `src/components/**` (299 amber-bearing lines across 76
+files to 68 across 37) and produced two things more valuable than the sweep.
+
+### 1. A ruling of mine that was never applied, because "settled" is not "done"
+
+The lane reported, from **outside its own bounds**, that
+`src/components/food/MacroRings.js` still carried **all eight** amber references
+D174 ordered removed — the `macroFill` and `macroFillPlanned` bars, the
+`kcalPlanned` ink and the defensive `tint` default, both halves each.
+
+D174 ruled them on 2026-09-15 ("**Ruled: the bars follow the arc to
+`borderLight`**"). Every lane brief after that then listed the file as an
+exclusion, worded as "D172/D174 settled it, do not touch" — and **"settled" was
+the ruling, not the code.** The file passed through four lanes untouched
+because each one was correctly told not to touch it, and nobody was ever told
+to do it. That is a lead error, not an agent one: a ruling without an owner is
+a ruling that does not happen.
+
+Applied now, all four keys, both halves. `MacroRings.test.js`'s
+adherence-neutral cases still assert ONE colour at every value including over
+target — the 2026-05-29 safety property — and pass, which is why this is a
+recolour rather than a redesign.
+
+**Standing correction to how exclusions are written:** an exclusion must name
+its owner or its reason ("already applied", "owned by lane X", "ruled OUT of
+scope"), never a bare "settled". Three words of ambiguity hid an unapplied
+ruling through four passes.
+
+### 2. A3's "stands unchanged" froze more than it meant to
+
+D174 A3 kept the Community unread dots amber and said
+`rows.amber.guard.test.js`'s table "stands unchanged … must keep it passing
+rather than re-anchor it." But that table pins **every file in the folder by
+exact count**, not just the dots — so the instruction froze seven sites the rule
+table would otherwise have swept. The lane stopped on all seven and asked.
+
+**RULED: A3 protects the marks it names — the unread dot, the trained-today
+ring, the PR mark. It does not protect the furniture around them.** These eight
+lines go:
+
+| Site | Why it is not A3's |
+|---|---|
+| `GymWeekBoard` "See all" (both halves) | A quiet text action is not "now". |
+| `CommunityHeaderAction` people glyph | An unconditional icon tint is decoration; A3 protects the dots ON it. |
+| `PrivacyReceipt` shield glyph | Same. |
+| `MessageBubble` `linkColor` | `LinkedBody` underlines its links, so the affordance survives without the accent — and an underline does not depend on colour vision. |
+| `ProgressStrip` bar fill | It coloured **every** bar with a value, not the tallest one as the count table's own comment claimed. A whole series in the accent is amber meaning nothing. |
+| `ActivityItemRow` Respect heart | A Respect already given is a stored reaction, not the viewer's live moment. The glyph already swaps `heart`/`heart-outline`, so the filled shape carries the state without colour. |
+| **`DayDots` trained-day fill** | **The one that matters.** See below. |
+
+**`DayDots` was filling a TRAINED day amber.** `WeekRibbon` — the signature
+device the founder singled out ("probably my favourite new component") and D165
+specified — fills a trained day with `borderLight` and reserves amber for
+**today**. So the app's own signature device disagreed with itself across two
+surfaces, and the guard table's exact-count mechanism was holding the
+disagreement in place. Trained is `borderLight` now; the today ring keeps its
+amber, which is the use A3 actually protects.
+
+Three guards re-anchored with their intent intact: `rows.amber.guard`'s counts,
+`community.layout.guard`'s zero-week case (whose subject is that a week with
+NOTHING in it still draws visibly — the non-zero colour was incidental), and the
+lane's own `amberComponents.guard`.
+
+### 3. A defect the lane introduced and caught itself
+Applying D178 #4 (a selection tick is full ink) to `ConsentCheckboxRow` and
+`food/EntryRow` left the tick on `onPrimary`, which is `#0D0D0D` in **every**
+palette — near-black ink on a `textPrimary` box, invisible in the light theme.
+Both ticks now invert to `background`, the same move D175 made for the switch
+thumb. `OptionCard`'s tick has no filled ground, which is why D178 #4 works
+there unmodified. Pinned in both directions.
+
+### Also landed
+`BlockProgressCard`'s set-volume bars were `primary` at 100%, `warning` at 70%
+and a tinted accent below — one colour at every value now, which also retires a
+`warning` borrowing on a meter that is not a warning. `SectionLabel`'s
+`tone="primary"` became full ink rather than muted (muted would have made the
+tone a synonym of `tone="muted"`), which fixes three `CoachOutputScreen`
+eyebrows that **slipped both screen lanes** because those guards match
+`colors.primary*` and never saw `tone="primary"`. `Card`'s unknown-tone fallback
+no longer defaults to the accent. `DimensionRow` is deleted (D177 item 3),
+unblocked now that this lane has released the amber table.
+
+### Held, correctly, for the founder
+`workout/WorkoutOutline.js`'s amber top edge is a **named founder device order
+of 2026-08-22** ("the same amber at the same weight, but STATIC and full
+width"). By its own description a static full-width accent edge is decoration
+under discipline 4, and `border` would carry the separation. **Reversing a
+founder device verdict is not a sweep's call and is not a lead ruling either.**
+Left exactly as ordered, and surfaced.
+
+`ProfileAvatarMark`'s six-colour preset palette (one preset is `tone: 'primary'`,
+the others borrow `macroFat`, `success`, `macroCarb`, `warning`, `error`) is one
+question about decorative state-colour borrowing, not an amber question.
+Greying only the amber one would leave a single grey preset among five coloured
+ones — the exact defect D178 refused for the macro legend. Queued whole.
+
+### Where the amber ended up
+**1,375 raw references at the census; 174 now.** 101 in screens, 69 in
+components, 4 in `lib`/`hooks`/`navigation` (all platform chrome), 0 in
+`styles`. Most of the remainder are frozen/live twins of a line already counted.
+Every one is pinned by exact line, in one of four lane guards, with a written
+reason.

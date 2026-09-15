@@ -14,7 +14,7 @@
  *
  * Rules obeyed (section 1 preamble; `docs/rules/styling.md`): function
  * component, `useTheme`, tokens only (`circle(6)` for the dots,
- * `spacing.xs` gap, `colors.primary`/`colors.border`, no raw hex/spacing/
+ * `spacing.xs` gap, `borderLight`/`border` with amber for today, no raw hex/spacing/
  * font-size literals), `StyleSheet.create` at the bottom. `c.primary`
  * appears only for a trained dot's fill and the not-yet-trained-today
  * ring (pinned by `rows.amber.guard.test.js`). Never imports
@@ -64,7 +64,14 @@ export default function DayDots({ days, todayKey }) {
             style={[
               styles.dot,
               {
-                backgroundColor: isTrained ? t.colors.primary : t.colors.border,
+                // D174 A3 scope ruling. A3 protects the UNREAD and today marks;
+                // a trained-day FILL is the week-ribbon idiom, and `WeekRibbon`
+                // -- the signature device D165 specified -- fills a trained day
+                // with `borderLight` and reserves amber for TODAY. This filled
+                // every trained day amber, so the app's own signature disagreed
+                // with itself across two surfaces. The today ring below is
+                // untouched and stays amber.
+                backgroundColor: isTrained ? t.colors.borderLight : t.colors.border,
                 borderColor: ringToday ? t.colors.primary : 'transparent',
                 borderWidth: ringToday ? 1 : 0,
               },

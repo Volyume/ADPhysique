@@ -102,7 +102,10 @@ export function EntryRow({
     >
       {selectionMode ? (
         <View style={[styles.checkbox, live.checkbox, selected && [styles.checkboxOn, live.checkboxOn]]}>
-          {selected ? <Ionicons name="checkmark" size={14} color={t.colors.onPrimary} /> : null}
+          {/* The box is `textPrimary` now, so the tick inverts to the page ground:
+              `onPrimary` is near-black ink for an AMBER fill and would vanish
+              on the light theme. Same inversion as the switch thumb (D175). */}
+          {selected ? <Ionicons name="checkmark" size={14} color={t.colors.background} /> : null}
         </View>
       ) : null}
       <View style={styles.entryMain}>
@@ -206,9 +209,11 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     marginRight: spacing.md,
   },
+  // D178 #4: a selection tick takes full ink, the way the shipped
+  // OptionCard already draws its own.
   checkboxOn: {
-    backgroundColor: colors.primaryFill,
-    borderColor: colors.primary,
+    backgroundColor: colors.textPrimary,
+    borderColor: colors.textPrimary,
   },
   entryMain: { flex: 1 },
   // Ultimate-Audit item 15 (D22 15a): name + meal tag share a row so the tag
@@ -262,7 +267,7 @@ function buildLiveStyles(t) {
     entryRow: { backgroundColor: t.colors.surface, borderTopColor: t.colors.borderSubtle },
     entryRowSelected: { backgroundColor: t.colors.surface2 },
     checkbox: { borderColor: t.colors.border },
-    checkboxOn: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
+    checkboxOn: { backgroundColor: t.colors.textPrimary, borderColor: t.colors.textPrimary },
     entryName: { color: t.colors.textPrimary },
     mealTag: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     mealTagText: { color: t.colors.textMuted },

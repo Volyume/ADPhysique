@@ -23,7 +23,7 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
   if (!meso) {
     return (
       <TouchableOpacity style={[styles.card, live.card, styles.mesoEmpty]} onPress={onBuild} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Browse plans">
-        <Ionicons name="layers-outline" size={32} color={t.colors.primaryDim} />
+        <Ionicons name="layers-outline" size={32} color={t.colors.textMuted} />
         <Text style={[styles.mesoEmptyTitle, live.mesoEmptyTitle]}>No plan running yet</Text>
         <Text style={[styles.mesoEmptySub, live.mesoEmptySub]}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
         <View style={[styles.mesoEmptyBtn, live.mesoEmptyBtn]}>
@@ -143,7 +143,10 @@ export function TrainingCalendar({ values }) {
                 key={di}
                 style={{
                   width: SQ, height: SQ, borderRadius: radius.hair,
-                  backgroundColor: trained ? t.colors.primary : t.colors.surface2,
+                  // A trained day is not "now": it takes the same
+                  // `borderLight` fill WeekRibbon gives a trained cell, so a
+                  // filled thing reads identically across the app (D174 A1).
+                  backgroundColor: trained ? t.colors.borderLight : t.colors.surface2,
                 }}
               />
             ))}
@@ -153,7 +156,7 @@ export function TrainingCalendar({ values }) {
       <View style={styles.calLegend}>
         <View style={[styles.calDot, { backgroundColor: t.colors.surface2, borderWidth: 1, borderColor: t.colors.border }]} />
         <Text style={[styles.calLegendText, live.calLegendText]}>Rest</Text>
-        <View style={[styles.calDot, { backgroundColor: t.colors.primary }]} />
+        <View style={[styles.calDot, { backgroundColor: t.colors.borderLight }]} />
         <Text style={[styles.calLegendText, live.calLegendText]}>Trained</Text>
         <Text style={[styles.calLegendText, live.calLegendText, { marginLeft: 'auto' }]}>{trainedCount} days trained</Text>
       </View>
@@ -257,7 +260,7 @@ export function MuscleFrequencyTable({ rows, showAll, onToggle }) {
           <Ionicons
             name={showAll ? 'chevron-up' : 'chevron-down'}
             size={12}
-            color={t.colors.primary}
+            color={t.colors.textSecondary}
           />
         </TouchableOpacity>
       )}
@@ -359,6 +362,7 @@ const styles = StyleSheet.create({
     height: 4, borderRadius: radius.full,
     backgroundColor: colors.surface2, overflow: 'hidden',
   },
+  // KEEP: a meter whose width tracks your live position through the block.
   mesoProgressFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   mesoProgressLabel: { ...type.num('caption'), color: colors.textMuted },
   sparkWrap:           { marginTop: spacing.xs },
@@ -453,8 +457,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', marginTop: spacing.xs,
     paddingVertical: spacing.xxs,
   },
+  // A quiet show-more action, so it takes Button's own tertiary ink.
   freqToggleText: {
-    ...type.captionStrong, color: colors.primary,
+    ...type.captionStrong, color: colors.textSecondary,
   },
 
   // ── Workload Card (ACWR) ──
@@ -544,7 +549,7 @@ function buildLiveStyles(t) {
     freqCountUp: { color: t.colors.success },
     freqDivider: { color: t.colors.textMuted },
     freqLastWeek: { color: t.colors.textMuted },
-    freqToggleText: { color: t.colors.primary },
+    freqToggleText: { color: t.colors.textSecondary },
     workloadCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     workloadTitle: { color: t.colors.textMuted },
     workloadBarBg: { backgroundColor: t.colors.surface2 },

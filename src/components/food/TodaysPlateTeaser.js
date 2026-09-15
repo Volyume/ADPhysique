@@ -82,7 +82,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg, gap: spacing.xs, alignSelf: 'stretch',
     marginBottom: spacing.lg,
   },
-  eyebrow: { ...type.captionStrong, color: colors.primary },
+  // D174: an eyebrow tint is decoration, so it drops to the muted label ink.
+  eyebrow: { ...type.captionStrong, color: colors.textMuted },
   title: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   sub: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.sm },
   plates: { gap: spacing.sm },
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    eyebrow: { color: t.colors.primary },
+    eyebrow: { color: t.colors.textMuted },
     title: { color: t.colors.textPrimary },
     sub: { color: t.colors.textSecondary },
     plate: { backgroundColor: t.colors.surface2 },

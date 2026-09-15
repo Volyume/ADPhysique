@@ -119,7 +119,7 @@ export default function FoodRow({
           accessibilityRole="button"
           accessibilityLabel={addAccessibilityLabel || `Add ${food.name}`}
         >
-          <Ionicons name="add" size={16} color={t.colors.primary} />
+          <Ionicons name="add" size={16} color={t.colors.textSecondary} />
           <Text style={[styles.addBtnText, live.addBtnText]}>{addLabel}</Text>
         </TouchableOpacity>
       ) : (
@@ -147,12 +147,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xxs,
     borderRadius: radius.full,
-    backgroundColor: colors.primaryBg,
+    // D174: one amber Add button per search result is a scarcity failure by
+    // volume, the same argument A1 made about nine amber switch rows. Quiet
+    // neutral chip; the border and the label carry it.
+    backgroundColor: colors.surface2,
     paddingHorizontal: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  addBtnText: { color: colors.primary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  addBtnText: { color: colors.textPrimary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   rowChevron: { marginLeft: spacing.xs },
   editBtn: {
     minWidth: 32, minHeight: 32,
@@ -172,7 +175,7 @@ function buildLiveStyles(t) {
     rowNameMuted: { color: t.colors.textMuted },
     rowMeta: { color: t.colors.textMuted },
     rowMetaMuted: { color: t.colors.textMuted },
-    addBtn: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.border },
-    addBtnText: { color: t.colors.primary },
+    addBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    addBtnText: { color: t.colors.textPrimary },
   };
 }

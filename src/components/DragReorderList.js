@@ -153,7 +153,10 @@ export function useDragAutoScrollBridge() {
 function buildLiveStyles(t) {
   return {
     handleIcon: { color: t.colors.textMuted },
-    blockLifted: { backgroundColor: t.colors.surface2, borderColor: t.colors.primary, ...t.shadow.md },
+    // The lift already reads through a raised surface and a shadow; a third
+    // cue in the accent is decoration, and a block being dragged is not one of
+    // discipline 1's four instances of "now" (D174).
+    blockLifted: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderLight, ...t.shadow.md },
   };
 }
 

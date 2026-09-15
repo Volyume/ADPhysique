@@ -47,7 +47,9 @@ const styles = StyleSheet.create({
     minHeight: touchTarget.minimum, // 44pt touch target
   },
   chipText: { ...type.label, color: colors.textSecondary },
-  chipTextActive: { color: colors.primary },
+  // D174 A2: a window chip picks a VIEW, so the selected label is full ink
+  // at the semibold face rather than the accent.
+  chipTextActive: { ...type.w('label', 'semibold'), color: colors.textPrimary },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
@@ -56,6 +58,6 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     chipText: { ...t.type.label, color: t.colors.textSecondary },
-    chipTextActive: { color: t.colors.primary },
+    chipTextActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
   };
 }

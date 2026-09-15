@@ -166,7 +166,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
             accessibilityLabel={`Decrease weight by ${Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5} ${units}`}
             accessibilityHint="Hold to keep adjusting"
           >
-            <Ionicons name="remove" size={20} color={t.colors.primary} />
+            <Ionicons name="remove" size={20} color={t.colors.textSecondary} />
           </TouchableOpacity>
           <TextInput
             testID="volyume-weight-input"
@@ -208,7 +208,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
             accessibilityLabel={`Increase weight by ${Number(weightStepKg) > 0 ? Number(weightStepKg) : 2.5} ${units}`}
             accessibilityHint="Hold to keep adjusting"
           >
-            <Ionicons name="add" size={20} color={t.colors.primary} />
+            <Ionicons name="add" size={20} color={t.colors.textSecondary} />
           </TouchableOpacity>
         </View>
   );
@@ -225,7 +225,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
             accessibilityLabel="Decrease reps by 1"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Ionicons name="remove" size={20} color={t.colors.primary} />
+            <Ionicons name="remove" size={20} color={t.colors.textSecondary} />
           </TouchableOpacity>
           <TextInput
             testID="volyume-reps-input"
@@ -262,7 +262,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
             accessibilityLabel="Increase reps by 1"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Ionicons name="add" size={20} color={t.colors.primary} />
+            <Ionicons name="add" size={20} color={t.colors.textSecondary} />
           </TouchableOpacity>
         </View>
   );
@@ -314,7 +314,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
             accessibilityLabel="Decrease time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Ionicons name="remove" size={20} color={t.colors.primary} />
+            <Ionicons name="remove" size={20} color={t.colors.textSecondary} />
           </TouchableOpacity>
           <TextInput
             testID="volyume-duration-input"
@@ -338,7 +338,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
             accessibilityLabel="Increase time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Ionicons name="add" size={20} color={t.colors.primary} />
+            <Ionicons name="add" size={20} color={t.colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -366,7 +366,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
             accessibilityLabel="Decrease distance"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Ionicons name="remove" size={20} color={t.colors.primary} />
+            <Ionicons name="remove" size={20} color={t.colors.textSecondary} />
           </TouchableOpacity>
           <TextInput
             testID="volyume-distance-input"
@@ -395,7 +395,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
             accessibilityLabel="Increase distance"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Ionicons name="add" size={20} color={t.colors.primary} />
+            <Ionicons name="add" size={20} color={t.colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -415,7 +415,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
             accessibilityLabel="Decrease time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Ionicons name="remove" size={20} color={t.colors.primary} />
+            <Ionicons name="remove" size={20} color={t.colors.textSecondary} />
           </TouchableOpacity>
           <TextInput
             testID="volyume-distance-time-input"
@@ -439,7 +439,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
             accessibilityLabel="Increase time"
             accessibilityHint="Hold to keep adjusting"
           >
-            <Ionicons name="add" size={20} color={t.colors.primary} />
+            <Ionicons name="add" size={20} color={t.colors.textSecondary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -625,18 +625,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  // D174 A2: a selected RIR button was an amber wash plus amber ink. It now
+  // carries the three neutral cues the shared primitives carry -- `surface3`
+  // fill, `borderLight` edge, full ink at the semibold face. (These keys are
+  // unreferenced: the per-set effort picker was removed, see the note at the
+  // render site. Recoloured rather than deleted so nothing structural moves
+  // inside a colour sweep.)
   rirBtnActive: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
+    backgroundColor: colors.surface3,
+    borderColor: colors.borderLight,
   },
   rirBtnText: {
     ...type.label,
     color: colors.textSecondary,
   },
   rirBtnTextActive: {
-    color: colors.primary,
+    ...type.w('label', 'semibold'),
+    color: colors.textPrimary,
   },
   // Numeric-keypad Done bar (iOS InputAccessoryView). Colours come from `live`.
+  // The Done label KEEPS the accent: D175 names an iOS keyboard accessory's
+  // commit affordance as KEEP-structural, following the platform tint
+  // convention, and `TextField`'s two accessory labels were held for the same
+  // reason.
   keyboardDoneBar: {
     flexDirection: 'row',
     justifyContent: 'flex-end',

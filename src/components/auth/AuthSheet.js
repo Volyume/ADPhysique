@@ -513,7 +513,10 @@ const styles = StyleSheet.create({
   // Text actions: no pill, a full touch target, the accent only on the verb.
   textAction: { minHeight: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
   textActionLabel: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
-  textActionAccent: { ...type.bodyStrong, fontSize: fontSize.sm, color: colors.primary },
+  // A text link inside a sentence: it is already `bodyStrong` beside a
+  // `textSecondary` line, so full ink is the distinction and the accent is
+  // not needed (D174 -- a link is not the user's live moment).
+  textActionAccent: { ...type.bodyStrong, fontSize: fontSize.sm, color: colors.textPrimary },
   legal: { minHeight: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
   legalText: { ...type.caption, color: colors.textMuted },
   eyeBtn: {
@@ -532,7 +535,7 @@ function buildLiveStyles(t) {
     notice: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     noticeText: { ...t.type.bodySm, color: t.colors.textSecondary },
     textActionLabel: { ...t.type.bodySm, color: t.colors.textSecondary },
-    textActionAccent: { ...t.type.bodyStrong, fontSize: t.fontSize.sm, color: t.colors.primary },
+    textActionAccent: { ...t.type.bodyStrong, fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     legalText: { ...t.type.caption, color: t.colors.textMuted },
   };
 }

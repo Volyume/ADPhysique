@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, circle, withAlpha, alpha, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, circle, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Card from './Card';
 
@@ -36,8 +36,8 @@ function HomeWelcomeCard({ onDismiss }) {
   const t = useTheme();
   const live = {
     welcomeTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
-    welcomeStepNum: { backgroundColor: withAlpha(t.colors.primary, alpha.tint) },
-    welcomeStepNumText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    welcomeStepNum: { backgroundColor: t.colors.surface2 },
+    welcomeStepNumText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     welcomeStepTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     welcomeStepBody: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
@@ -98,11 +98,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.md,
   },
+  // D174: a step number is an index, so the tint goes and the numeral drops
+  // to muted ink. The disc keeps its shape here (it is a numbered bullet, not
+  // a tint behind a stock glyph) but its ground is neutral.
   welcomeStepNum: {
     width: 22,
     height: 22,
     borderRadius: circle(22),
-    backgroundColor: withAlpha(colors.primary, alpha.tint),
+    backgroundColor: colors.surface2,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.hair,
@@ -110,7 +113,7 @@ const styles = StyleSheet.create({
   welcomeStepNumText: {
     fontSize: fontSize.xs,
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
-    color: colors.primary,
+    color: colors.textMuted,
   },
   welcomeStepTitle: {
     fontSize: fontSize.md,

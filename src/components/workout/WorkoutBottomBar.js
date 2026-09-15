@@ -122,6 +122,9 @@ export default function WorkoutBottomBar({
                   style={[
                     styles.countdownFill,
                     {
+                      // KEEP: the auto-advance countdown is a meter whose
+                      // width tracks a live value, and it exists only while
+                      // it is counting down.
                       backgroundColor: t.colors.primary,
                       width: countdownAnim.interpolate({
                         inputRange: [0, 1],

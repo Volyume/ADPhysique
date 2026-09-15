@@ -112,7 +112,7 @@ export default function PhotoDetailsSheet({
               </View>
             ) : null}
             <View style={[styles.contextBox, live.contextBox]}>
-              <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={t.colors.primary} />
+              <Ionicons name="shield-checkmark-outline" size={iconSize.sm} color={t.colors.textSecondary} />
               <Text style={[styles.contextText, live.contextText]}>
                 Date and pose make future reviews fairer by grouping photos from the same day together.
               </Text>
@@ -125,7 +125,7 @@ export default function PhotoDetailsSheet({
               accessibilityRole="button"
               accessibilityLabel={`Change the date, currently ${formatProgressPhotoDay(dateMs)}`}
             >
-              <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.primary} />
+              <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.textSecondary} />
               <Text style={[styles.dateText, live.dateText]} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(dateMs)}</Text>
               <Ionicons name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
@@ -146,7 +146,7 @@ export default function PhotoDetailsSheet({
                     <Ionicons
                       name={p.icon}
                       size={iconSize.sm}
-                      color={active ? t.colors.primary : t.colors.textMuted}
+                      color={active ? t.colors.textPrimary : t.colors.textMuted}
                     />
                     <Text style={[styles.poseOptionText, live.poseOptionText, active && [styles.poseOptionTextActive, live.poseOptionTextActive]]}>
                       {p.label}
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: spacing.md,
     marginBottom: spacing.lg,
@@ -242,9 +242,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surface2,
   },
-  poseOptionActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  poseOptionActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   poseOptionText: { ...type.label, color: colors.textSecondary },
-  poseOptionTextActive: { color: colors.primary },
+  poseOptionTextActive: { ...type.w('label', 'semibold'), color: colors.textPrimary },
   actions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -269,15 +269,15 @@ function buildLiveStyles(t) {
     sheetTitle: { color: t.colors.textPrimary },
     sheetIntro: { color: t.colors.textSecondary },
     previewWrap: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    contextBox: { backgroundColor: t.colors.primaryBg },
+    contextBox: { backgroundColor: t.colors.surface },
     contextText: { color: t.colors.textPrimary },
     helper: { color: t.colors.textMuted },
     dateField: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     dateText: { color: t.colors.textPrimary },
     sectionLabel: { color: t.colors.textMuted },
     poseOption: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    poseOptionActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    poseOptionActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     poseOptionText: { color: t.colors.textSecondary },
-    poseOptionTextActive: { color: t.colors.primary },
+    poseOptionTextActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
   };
 }

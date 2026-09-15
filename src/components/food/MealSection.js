@@ -176,7 +176,7 @@ export default function MealSection({
             accessibilityRole="button"
             accessibilityLabel={`Add ${mealSuggestion.name ?? 'meal'} to ${slot.label}`}
           >
-            <Ionicons name="add" size={14} color={t.colors.primary} />
+            <Ionicons name="add" size={14} color={t.colors.textSecondary} />
             <Text style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{mealSuggestion.name ?? 'Meal'}</Text>
           </TouchableOpacity>
         </View>
@@ -193,7 +193,7 @@ export default function MealSection({
                 + `${yesterdayCopy.count === 1 ? 'entry' : 'entries'} into ${slot.label}`
               }
             >
-              <Ionicons name="copy-outline" size={14} color={t.colors.primary} />
+              <Ionicons name="copy-outline" size={14} color={t.colors.textSecondary} />
               <Text style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{yesterdayCopy.label}</Text>
             </TouchableOpacity>
           ) : null}
@@ -209,7 +209,7 @@ export default function MealSection({
               accessibilityLabel={usualChipAccessibilityLabel(food, slot.label)}
               accessibilityHint="Hold to change the portion first"
             >
-              <Ionicons name="add" size={14} color={t.colors.primary} />
+              <Ionicons name="add" size={14} color={t.colors.textSecondary} />
               <Text style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{usualChipLabel(food)}</Text>
             </TouchableOpacity>
           )) : null}

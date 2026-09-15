@@ -93,9 +93,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  // D174 A2: the chosen reason is a selection, so it carries the three
+  // neutral cues rather than an amber wash.
   rowSelected: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
+    backgroundColor: colors.surface3,
+    borderColor: colors.borderLight,
   },
   radio: {
     width: 20,
@@ -106,14 +108,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // D178 #4: a radio dot is a selection mark and takes full ink, the same
+  // way the shipped OptionCard already draws its tick. The ring follows the
+  // dot so the two are one mark, not two.
   radioSelected: {
-    borderColor: colors.primary,
+    borderColor: colors.textPrimary,
   },
   radioDot: {
     width: 10,
     height: 10,
     borderRadius: circle(10),
-    backgroundColor: colors.primaryFill,
+    backgroundColor: colors.textPrimary,
   },
   rowText: {
     flex: 1,
@@ -148,10 +153,10 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     row: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    rowSelected: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    rowSelected: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     radio: { borderColor: t.colors.textMuted },
-    radioSelected: { borderColor: t.colors.primary },
-    radioDot: { backgroundColor: t.colors.primaryFill },
+    radioSelected: { borderColor: t.colors.textPrimary },
+    radioDot: { backgroundColor: t.colors.textPrimary },
     rowText: { color: t.colors.textSecondary },
     rowTextSelected: { color: t.colors.textPrimary },
   };

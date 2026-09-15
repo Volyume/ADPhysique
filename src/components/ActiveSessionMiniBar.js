@@ -64,7 +64,7 @@ function MiniBarStatus() {
         style={styles.statusWrap}
         accessibilityLabel={`Rest, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
       >
-        <Ionicons name="timer-outline" size={13} color={t.colors.primary} />
+        <Ionicons name="timer-outline" size={13} color={t.colors.textSecondary} />
         <Text style={[styles.statusTimer, { fontSize: t.fontSize.sm, color: t.colors.primary }]}>{`${mins}:${String(secs).padStart(2, '0')}`}</Text>
       </Animated.View>
     );
@@ -145,6 +145,9 @@ const styles = StyleSheet.create({
   },
   exercise: { ...type.label, color: colors.textPrimary, flex: 1 },
   statusWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
+  // A KEEP: a rest countdown that is ticking right now is the user's live
+  // moment. D175 ruling 3 says one mark per state, so the glyph beside it
+  // dropped to `textSecondary` and the FIGURE carries it.
   statusTimer: {
     color: colors.primary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     fontVariant: ['tabular-nums'],

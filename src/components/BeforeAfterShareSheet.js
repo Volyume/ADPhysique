@@ -449,15 +449,15 @@ export default function BeforeAfterShareSheet({
 
         <View style={[styles.privacyReceipt, live.privacyReceipt]}>
           <View style={styles.receiptRow}>
-            <Ionicons name="image-outline" size={16} color={t.colors.primary} />
+            <Ionicons name="image-outline" size={16} color={t.colors.textSecondary} />
             <Text style={[styles.receiptText, live.receiptText]}>Exports one composed PNG, not your raw photos.</Text>
           </View>
           <View style={styles.receiptRow}>
-            <Ionicons name="lock-closed-outline" size={16} color={t.colors.primary} />
+            <Ionicons name="lock-closed-outline" size={16} color={t.colors.textSecondary} />
             <Text style={[styles.receiptText, live.receiptText]}>Nothing leaves the device until you tap Share or Save.</Text>
           </View>
           <View style={styles.receiptRow}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={t.colors.primary} />
+            <Ionicons name="shield-checkmark-outline" size={16} color={t.colors.textSecondary} />
             <Text style={[styles.receiptText, live.receiptText]}>Names, notes, measurements and your photo library never appear.</Text>
           </View>
         </View>
@@ -487,7 +487,7 @@ export default function BeforeAfterShareSheet({
                   />
                   {on ? (
                     <View pointerEvents="none" style={[styles.thumbCheck, live.thumbCheck]}>
-                      <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />
+                      <Ionicons name="checkmark-circle" size={20} color={t.colors.textPrimary} />
                     </View>
                   ) : null}
                   {range ? <Text style={[styles.thumbRange, live.thumbRange]} numberOfLines={1}>{range}</Text> : null}
@@ -632,7 +632,7 @@ function SegmentBtn({ label, active, onPress, icon }) {
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
     >
-      <Ionicons name={icon} size={15} color={active ? t.colors.primary : t.colors.textMuted} />
+      <Ionicons name={icon} size={15} color={active ? t.colors.textPrimary : t.colors.textMuted} />
       <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -664,7 +664,9 @@ const styles = StyleSheet.create({
     width: 72, height: 72, borderRadius: radius.md,
     borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.surface,
   },
-  thumbOn: { borderColor: colors.primary },
+  // D178 #4: the chosen-photo ring and its tick are one selection mark, and
+  // they are drawn over arbitrary photo content, so both take full ink.
+  thumbOn: { borderColor: colors.textPrimary },
   thumbCheck: {
     position: 'absolute', top: spacing.xxs, right: spacing.xxs,
     backgroundColor: colors.background, borderRadius: radius.full,
@@ -721,7 +723,9 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   exportReceiptCol: { flexGrow: 1, flexBasis: '48%', minWidth: 136, gap: spacing.xxs },
-  exportReceiptTitle: { ...type.caption, color: colors.primary },
+  // An eyebrow over the two receipt columns: D174 sends a label tint to
+  // `textMuted` and leaves the lines beneath it at full ink.
+  exportReceiptTitle: { ...type.caption, color: colors.textMuted },
   exportReceiptLine: { ...type.captionTight, color: colors.textPrimary, lineHeight: 17 },
   // O36: the one receipt line that carries an InfoTooltip (Visible Volyume
   // Score) needs a row wrapper; every other line stays a plain Text.
@@ -758,7 +762,7 @@ function buildLiveStyles(t) {
     privacyReceipt: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     receiptText: { ...t.type.caption, color: t.colors.textPrimary },
     thumb: { backgroundColor: t.colors.surface },
-    thumbOn: { borderColor: t.colors.primary },
+    thumbOn: { borderColor: t.colors.textPrimary },
     thumbCheck: { backgroundColor: t.colors.background },
     thumbRange: { ...t.type.captionTight, color: t.colors.textMuted },
     hint: { ...t.type.bodySm, color: t.colors.textMuted },
@@ -772,7 +776,7 @@ function buildLiveStyles(t) {
     toggleRow: { borderBottomColor: t.colors.borderSubtle },
     toggleLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     exportReceipt: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    exportReceiptTitle: { ...t.type.caption, color: t.colors.primary },
+    exportReceiptTitle: { ...t.type.caption, color: t.colors.textMuted },
     exportReceiptLine: { ...t.type.captionTight, color: t.colors.textPrimary },
     privacyNote: { ...t.type.captionTight, color: t.colors.textMuted },
   };

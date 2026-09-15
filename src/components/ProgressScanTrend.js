@@ -188,8 +188,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
   },
   marker: { width: 14, height: 14, borderRadius: circle(14) },
-  markerSolid: { backgroundColor: colors.primary },
-  markerHollow: { backgroundColor: 'transparent', borderWidth: 2, borderColor: colors.primary },
+  // Every scored point on the ladder drew an amber marker, so the accent was
+  // marking a whole series rather than "now" (D174). `borderLight` is the
+  // token the week ribbon fills a trained cell with, so a filled mark reads
+  // the same way here.
+  markerSolid: { backgroundColor: colors.borderLight },
+  markerHollow: { backgroundColor: 'transparent', borderWidth: 2, borderColor: colors.borderLight },
   markerUnscored: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' },
   pointCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
   pointDate: { ...type.label, color: colors.textPrimary },
@@ -218,8 +222,8 @@ function buildLiveStyles(t) {
     placeholderText: { color: t.colors.textPrimary },
     connector: { backgroundColor: t.colors.border },
     connectorGap: { borderLeftColor: t.colors.border },
-    markerSolid: { backgroundColor: t.colors.primary },
-    markerHollow: { borderColor: t.colors.primary },
+    markerSolid: { backgroundColor: t.colors.borderLight },
+    markerHollow: { borderColor: t.colors.borderLight },
     markerUnscored: { borderColor: t.colors.border },
     pointDate: { color: t.colors.textPrimary },
     pointValue: { color: t.colors.textMuted },

@@ -297,6 +297,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   btnStacked: { width: '100%' },
+  // KEEP: an alert's confirming action is discipline 1's "one committing
+  // button", and there is exactly one of them per alert.
   btnPrimary: { backgroundColor: colors.primaryFill },
   btnDestructive: { backgroundColor: 'transparent' },
   btnCancel: { backgroundColor: 'transparent' },

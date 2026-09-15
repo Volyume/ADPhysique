@@ -35,7 +35,7 @@ export default function GymWeekBoard({ board, label, onSeeAll }) {
         </Text>
         {onSeeAll ? (
           <Pressable onPress={onSeeAll} accessibilityRole="button" accessibilityLabel="See all at this gym">
-            <Text style={[styles.seeAll, { ...t.type.caption, color: t.colors.primary }]}>See all</Text>
+            <Text style={[styles.seeAll, { ...t.type.caption, color: t.colors.textPrimary }]}>See all</Text>
           </Pressable>
         ) : null}
       </View>
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingTop: spacing.md, paddingBottom: spacing.sm,
   },
   title: { ...type.bodyStrong, color: colors.textPrimary, flex: 1, marginRight: spacing.sm },
-  seeAll: { ...type.caption, color: colors.primary },
+  seeAll: { ...type.caption, color: colors.textPrimary },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,

@@ -116,7 +116,7 @@ export default function PhotoDateRangeSheet({
               accessibilityRole="button"
               accessibilityLabel={`Change the earliest date, currently ${Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}`}
             >
-              <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.primary} />
+              <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.textSecondary} />
               <Text style={[styles.dateText, live.dateText]} numberOfLines={1} ellipsizeMode="tail">{Number.isFinite(fromDraft) ? formatProgressPhotoDay(fromDraft) : 'Any'}</Text>
               <Ionicons name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
@@ -128,7 +128,7 @@ export default function PhotoDateRangeSheet({
               accessibilityRole="button"
               accessibilityLabel={`Change the latest date, currently ${Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}`}
             >
-              <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.primary} />
+              <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.textSecondary} />
               <Text style={[styles.dateText, live.dateText]} numberOfLines={1} ellipsizeMode="tail">{Number.isFinite(toDraft) ? formatProgressPhotoDay(toDraft) : 'Any'}</Text>
               <Ionicons name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>

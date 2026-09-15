@@ -114,7 +114,10 @@ export default function VolyumeChart({
   // CP-10 stage 4: an explicit prop always wins; an omitted prop falls back
   // to the LIVE theme (t.colors.*) instead of the frozen module `theme`
   // singleton, so it tracks a theme flip once this component re-renders.
-  const resolvedColor = color ?? t.colors.primary;
+  // D174: a whole series is not "now", so an omitted `color` now falls back
+  // to the neutral fill token rather than the accent. The CP-5 personal-best
+  // ring-and-dot below is the one amber mark this chart spends.
+  const resolvedColor = color ?? t.colors.borderLight;
   const resolvedColor2 = color2 ?? withAlpha(t.colors.textMuted, alpha.strong);
   const resolvedAxisColor = axisColor ?? t.colors.border;
   const resolvedRulesColor = rulesColor ?? t.colors.border;

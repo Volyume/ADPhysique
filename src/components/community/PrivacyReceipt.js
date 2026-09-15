@@ -65,7 +65,7 @@ export default function PrivacyReceipt() {
   return (
     <Card surface="surface2" radius="md" padding="md" style={styles.card}>
       <View style={styles.compact}>
-        <Ionicons name="shield-checkmark-outline" size={iconSize.md} color={t.colors.primary} />
+        <Ionicons name="shield-checkmark-outline" size={iconSize.md} color={t.colors.textSecondary} />
         <Text style={[styles.line, { ...t.type.caption, color: t.colors.textPrimary }]}>
           {PRIVACY_RECEIPT_LINE}
         </Text>

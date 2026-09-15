@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from './InfoTooltip';
 import PressableCard from './PressableCard';
@@ -61,10 +61,13 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek, onPr
       </View>
       {blockProgress.map(p => {
         const pct = p.planned > 0 ? Math.min(1, p.actual / p.planned) : 0;
-        const fillColor =
-          pct >= 1 ? t.colors.primary
-          : pct >= 0.7 ? t.colors.warning
-          : withAlpha(t.colors.primary, alpha.edge);
+        // D172/D174 (the MacroRings ruling, applied to the same shape): a
+        // meter whose WIDTH already states the value does not also encode it
+        // in colour. The three-step ladder spent amber at 100%, borrowed
+        // `warning` in the middle (the §8 state-colour borrowing A1 refused
+        // for switches) and drew an amber tint below that. One neutral fill
+        // at every value now, exactly as the macro arc and bars were ruled.
+        const fillColor = t.colors.borderLight;
         return (
           <View
             key={p.muscle}

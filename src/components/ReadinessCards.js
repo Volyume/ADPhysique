@@ -296,8 +296,8 @@ export default function ReadinessCards({ userId }) {
             <>
               <View style={[styles.recoveryDivider, live.recoveryDivider]} />
               <View style={styles.mfHeaderRow}>
-                <View style={[styles.mfIconWrap, { backgroundColor: t.colors.primaryBg }]}>
-                  <Ionicons name="flash-outline" size={20} color={t.colors.primary} />
+                <View style={styles.mfIconWrap}>
+                  <Ionicons name="flash-outline" size={20} color={t.colors.textSecondary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.mfTitle, live.mfTitle]}>Training recency</Text>
@@ -389,6 +389,7 @@ const styles = StyleSheet.create({
   milestoneUnlockedText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textSecondary },
   milestoneNext: { ...type.caption, color: colors.textMuted },
   milestoneBarTrack: { height: 4, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
+  // KEEP: a meter whose width tracks a live value.
   milestoneBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
 
   recoveryCard: {
@@ -412,7 +413,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     borderRadius: radius.lg, borderWidth: 1, padding: spacing.md,
   },
-  trendInsightGood: { backgroundColor: colors.successBg ?? colors.primaryBg, borderColor: withAlpha(colors.success, alpha.edge) },
+  // The `??` fallback used to land on the amber wash if a palette ever
+  // shipped without `successBg`; a neutral surface is the safe default now.
+  trendInsightGood: { backgroundColor: colors.successBg ?? colors.surface, borderColor: withAlpha(colors.success, alpha.edge) },
   trendInsightWarn: { backgroundColor: colors.warningBg, borderColor: withAlpha(colors.warning, alpha.edge) },
   trendInsightText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
@@ -421,7 +424,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
   },
   mfHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  mfIconWrap: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  // §3.2, "a tint behind a glyph": the amber disc lost its fill (applied
+  // inline at the call site) and its disc geometry, leaving a fixed glyph
+  // column so the row's left edge does not move.
+  mfIconWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   mfTitle: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   mfSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   mfChipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
@@ -456,7 +462,7 @@ function buildLiveStyles(t) {
     gaugeLabel: { ...t.type.caption, color: t.colors.textMuted },
     gaugeScale: { ...t.type.caption, color: t.colors.textMuted },
     recoveryNote: { ...t.type.caption, color: t.colors.textMuted },
-    trendInsightGood: { backgroundColor: t.colors.successBg ?? t.colors.primaryBg, borderColor: withAlpha(t.colors.success, alpha.edge) },
+    trendInsightGood: { backgroundColor: t.colors.successBg ?? t.colors.surface, borderColor: withAlpha(t.colors.success, alpha.edge) },
     trendInsightWarn: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, alpha.edge) },
     trendInsightText: { ...t.type.bodySm, color: t.colors.textSecondary },
     mfCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },

@@ -165,7 +165,7 @@ export default function CalorieBankSheet({
           accessibilityLabel="Less"
           style={[styles.stepBtn, live.stepBtn, requestedBump <= BUMP_STEP && styles.stepBtnDisabled]}
         >
-          <Ionicons name="remove" size={24} color={requestedBump <= BUMP_STEP ? t.colors.textMuted : t.colors.primary} />
+          <Ionicons name="remove" size={24} color={requestedBump <= BUMP_STEP ? t.colors.textMuted : t.colors.textSecondary} />
         </TouchableOpacity>
         <Text style={[styles.stepValue, live.stepValue]} accessibilityLabel={`${requestedBump} kcal`}>+{requestedBump}</Text>
         <TouchableOpacity
@@ -176,7 +176,7 @@ export default function CalorieBankSheet({
           accessibilityLabel="More"
           style={[styles.stepBtn, live.stepBtn, requestedBump >= stepMax && styles.stepBtnDisabled]}
         >
-          <Ionicons name="add" size={24} color={requestedBump >= stepMax ? t.colors.textMuted : t.colors.primary} />
+          <Ionicons name="add" size={24} color={requestedBump >= stepMax ? t.colors.textMuted : t.colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -214,7 +214,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.md, gap: spacing.sm,
   },
   activeText: { flex: 1, color: colors.textSecondary, fontSize: fontSize.sm },
-  clearText: { color: colors.primary, fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  // A quiet text action, so it takes Button's own tertiary ink (D174).
+  clearText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   sectionLabel: {
     marginTop: spacing.lg, marginBottom: spacing.sm,
   },
@@ -224,9 +225,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surface,
   },
-  dayChipActive: { backgroundColor: colors.primaryFill, borderColor: colors.primary },
+  // D174 A2: choosing which day to plan is a selection, not the user's live
+  // moment. Three neutral cues -- raised fill, lighter edge, full ink at the
+  // bold face the chip already carried.
+  dayChipActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   dayChipText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  dayChipTextActive: { color: colors.onPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  dayChipTextActive: { color: colors.textPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl, alignSelf: 'center' },
   stepBtn: {
     width: 48, height: 48, borderRadius: circle(48),
@@ -248,6 +252,7 @@ const styles = StyleSheet.create({
     color: colors.warning,
     marginTop: spacing.lg, textAlign: 'center',
   },
+  // KEEP: "Plan it" is the one committing button on this sheet.
   applyBtn: {
     marginTop: spacing.lg, minHeight: 48, borderRadius: radius.lg,
     backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center',
@@ -267,11 +272,11 @@ function buildLiveStyles(t) {
     ruleLine: { color: t.colors.textMuted },
     activeRow: { backgroundColor: t.colors.surface2 },
     activeText: { color: t.colors.textSecondary },
-    clearText: { color: t.colors.primary },
+    clearText: { color: t.colors.textSecondary },
     dayChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    dayChipActive: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
+    dayChipActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     dayChipText: { color: t.colors.textSecondary },
-    dayChipTextActive: { color: t.colors.onPrimary },
+    dayChipTextActive: { color: t.colors.textPrimary },
     stepBtn: { borderColor: t.colors.border },
     stepValue: { color: t.colors.textPrimary },
     preview: { color: t.colors.textSecondary },

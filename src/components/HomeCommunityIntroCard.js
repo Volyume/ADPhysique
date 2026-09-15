@@ -18,7 +18,7 @@
  */
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { spacing, type, radius } from '../styles/theme';
+import { spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Card from './Card';
 import Button from './Button';
@@ -33,8 +33,8 @@ export default function HomeCommunityIntroCard({ onOpen, onDismiss }) {
   return (
     <Card style={styles.card} accessibilityLabel={`${COMMUNITY_INTRO_TITLE}. ${COMMUNITY_INTRO_BODY}`}>
       <View style={styles.head}>
-        <View style={[styles.icon, { backgroundColor: t.colors.primaryBg }]}>
-          <Ionicons name="people-outline" size={20} color={t.colors.primary} />
+        <View style={styles.icon}>
+          <Ionicons name="people-outline" size={20} color={t.colors.textSecondary} />
         </View>
         <View style={styles.copy}>
           <Text style={[styles.title, { color: t.colors.textPrimary }]}>{COMMUNITY_INTRO_TITLE}</Text>
@@ -52,7 +52,9 @@ export default function HomeCommunityIntroCard({ onOpen, onDismiss }) {
 const styles = StyleSheet.create({
   card: { marginBottom: spacing.md },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  icon: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  // §3.2, "a tint behind a glyph": the fill was applied inline and the disc
+  // geometry went with it, leaving a fixed glyph column.
+  icon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   copy: { flex: 1, minWidth: 0, gap: spacing.xs },
   title: { ...type.h3 },
   body: { ...type.bodySm },

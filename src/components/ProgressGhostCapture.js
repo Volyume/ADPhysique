@@ -703,7 +703,7 @@ export default function ProgressGhostCapture({
             accessibilityLabel={showGrid ? 'Hide framing grid' : 'Show framing grid'}
             accessibilityHint="Turns the camera framing grid on or off"
           >
-            <Ionicons name="grid-outline" size={iconSize.md} color={showGrid ? t.colors.primary : t.colors.textSecondary} />
+            <Ionicons name="grid-outline" size={iconSize.md} color={showGrid ? t.colors.textPrimary : t.colors.textSecondary} />
           </Pressable>
 
           <Pressable
@@ -900,12 +900,16 @@ const styles = StyleSheet.create({
     height: 28,
     justifyContent: 'center',
   },
+  // A KEEP: the fill's width tracks the live overlay strength, which is the
+  // one thing on this screen a meter is for. De-washed from 90% alpha to the
+  // solid token, because the campaign's rule is that the accent is never
+  // alpha'd (D174, the de-washed focus rings).
   sliderFill: {
     position: 'absolute',
     left: 0,
     height: 4,
     borderRadius: radius.hair,
-    backgroundColor: withAlpha(colors.primary, 0.9),
+    backgroundColor: colors.primary,
   },
   sliderThumb: {
     position: 'absolute',
@@ -938,16 +942,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: withAlpha(colors.textPrimary, 0.16),
   },
+  // D174 A2: choosing an overlay strength picks a VIEW of the camera
+  // preview, so the selected preset carries the three neutral cues.
   opacityPresetActive: {
-    backgroundColor: colors.primaryFill,
-    borderColor: colors.primary,
+    backgroundColor: colors.surface3,
+    borderColor: colors.borderLight,
   },
   opacityPresetText: {
     ...type.label,
     color: withAlpha(colors.textPrimary, 0.86),
   },
   opacityPresetTextActive: {
-    color: colors.onPrimary,
+    ...type.w('label', 'semibold'),
+    color: colors.textPrimary,
   },
   controlRow: {
     flexDirection: 'row',
@@ -986,14 +993,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   timerChipActive: {
-    backgroundColor: colors.primaryFill,
+    backgroundColor: colors.surface3,
   },
   timerChipText: {
     ...type.label,
     color: colors.textSecondary,
   },
   timerChipTextActive: {
-    color: colors.onPrimary,
+    ...type.w('label', 'semibold'),
+    color: colors.textPrimary,
   },
   pillBtn: {
     width: 48,
@@ -1143,18 +1151,18 @@ function buildLiveStyles(t) {
     modeChip: { color: withAlpha(t.colors.textPrimary, 0.82) },
     subtitle: { color: withAlpha(t.colors.textPrimary, 0.85) },
     iconBtn: { backgroundColor: withAlpha(t.colors.background, 0.5) },
-    sliderFill: { backgroundColor: withAlpha(t.colors.primary, 0.9) },
+    sliderFill: { backgroundColor: t.colors.primary },
     sliderThumb: { backgroundColor: t.colors.textPrimary },
     sliderPct: { color: withAlpha(t.colors.textPrimary, 0.85) },
     opacityPreset: { backgroundColor: withAlpha(t.colors.background, 0.46), borderColor: withAlpha(t.colors.textPrimary, 0.16) },
-    opacityPresetActive: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
+    opacityPresetActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     opacityPresetText: { color: withAlpha(t.colors.textPrimary, 0.86) },
-    opacityPresetTextActive: { color: t.colors.onPrimary },
+    opacityPresetTextActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
     selfieAdvice: { color: withAlpha(t.colors.textPrimary, 0.92), backgroundColor: withAlpha(t.colors.background, 0.55) },
     timerRow: { backgroundColor: withAlpha(t.colors.background, 0.5) },
-    timerChipActive: { backgroundColor: t.colors.primaryFill },
+    timerChipActive: { backgroundColor: t.colors.surface3 },
     timerChipText: { color: t.colors.textSecondary },
-    timerChipTextActive: { color: t.colors.onPrimary },
+    timerChipTextActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
     pillBtn: { backgroundColor: withAlpha(t.colors.background, 0.5) },
     captureBtn: { borderColor: t.colors.textPrimary, backgroundColor: withAlpha(t.colors.textPrimary, 0.15) },
     captureInner: { backgroundColor: t.colors.textPrimary },

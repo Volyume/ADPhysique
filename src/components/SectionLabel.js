@@ -40,7 +40,11 @@ const styles = StyleSheet.create({
   label: { ...type.overline, color: colors.textSecondary },
   title: { ...type.title, color: colors.textPrimary },
   muted: { color: colors.textMuted },
-  primary: { color: colors.primary },
+  // D174: an eyebrow tint is decoration. This tone now means "primary INK",
+  // which keeps the three-step ladder it was built for (label ->
+  // textSecondary, muted -> textMuted, primary -> textPrimary) without
+  // spending the accent on a section heading.
+  primary: { color: colors.textPrimary },
 });
 
 // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
@@ -51,6 +55,6 @@ function buildLiveStyles(t) {
     label: { ...t.type.overline, color: t.colors.textSecondary },
     title: { ...t.type.title, color: t.colors.textPrimary },
     muted: { color: t.colors.textMuted },
-    primary: { color: t.colors.primary },
+    primary: { color: t.colors.textPrimary },
   };
 }

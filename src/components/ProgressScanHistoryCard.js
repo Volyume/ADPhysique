@@ -255,14 +255,16 @@ const styles = StyleSheet.create({
   scanEntryTitleGroup: { flex: 1, minWidth: 0, gap: spacing.xxs },
   scanEntryTitle: { ...type.label, color: colors.textPrimary },
   scanEntryActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1, maxWidth: '58%' },
+  // A confidence label is a passive tag, not the user's live moment, so the
+  // wash goes and the quiet neutral ground takes its place (D174).
   confidencePill: {
     borderRadius: radius.full,
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface2,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
     maxWidth: 180,
   },
-  confidencePillText: { ...type.caption, color: colors.primary, flexShrink: 1 },
+  confidencePillText: { ...type.caption, color: colors.textSecondary, flexShrink: 1 },
   scanDeleteButton: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   scanInsightGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   scanInsightCell: {
@@ -301,8 +303,8 @@ function buildLiveStyles(t) {
     scanBody: { color: t.colors.textMuted },
     scanEntry: { borderTopColor: t.colors.borderSubtle },
     scanEntryTitle: { color: t.colors.textPrimary },
-    confidencePill: { backgroundColor: t.colors.primaryBg },
-    confidencePillText: { color: t.colors.primary },
+    confidencePill: { backgroundColor: t.colors.surface2 },
+    confidencePillText: { color: t.colors.textSecondary },
     scanInsightCell: { backgroundColor: t.colors.surface2 },
     scanInsightLabel: { color: t.colors.textMuted },
     scanInsightValue: { color: t.colors.textPrimary },

@@ -31,8 +31,8 @@ function TodayLine({ item, testID }) {
 
   const { text, onPress, onDismiss, accessibilityLabel } = item;
   const live = {
-    row: { backgroundColor: t.colors.primaryBg },
-    accent: { backgroundColor: t.colors.primary },
+    row: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    accent: { backgroundColor: t.colors.textMuted },
     text: { ...t.type.bodySm, color: t.colors.textPrimary },
   };
 
@@ -45,9 +45,11 @@ function TodayLine({ item, testID }) {
       accessibilityLabel={accessibilityLabel || text}
       testID={testID}
     >
-      {/* The single accent: one dot, one colour. No per-occupant icon set —
+      {/* The single mark: one dot, one colour. No per-occupant icon set --
           that would reintroduce the "five idioms" problem this component
-          exists to close. */}
+          exists to close. D174 took the dot and the row off the accent: a
+          nudge is a callout, not the user's live moment, so the wash goes,
+          the hairline carries the row and the bullet drops to muted ink. */}
       <View style={[styles.accent, live.accent]} />
       <Text style={[styles.text, live.text]} numberOfLines={2}>{text}</Text>
       {onDismiss ? (
@@ -61,7 +63,7 @@ function TodayLine({ item, testID }) {
           <Ionicons name="close" size={16} color={t.colors.textMuted} />
         </TouchableOpacity>
       ) : (
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textSecondary} />
       )}
     </TouchableOpacity>
   );
@@ -74,7 +76,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + spacing.xxs,
@@ -83,7 +87,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: radius.full,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.textMuted,
   },
   text: { ...type.bodySm, flex: 1, color: colors.textPrimary },
 });

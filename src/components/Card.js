@@ -79,7 +79,11 @@ export default function Card({
     surface2: t.colors.surface2,
     surface3: t.colors.surface3,
   };
-  const accent = tone ? (TONES[tone] || TONES.primary) : null;
+  // An UNKNOWN tone falls back to the neutral edge, not the accent (D174):
+  // a typo should never spend amber. `tone="primary"` still resolves to the
+  // accent for the call sites discipline 1 grants it, e.g. a personal-best
+  // card.
+  const accent = tone ? (TONES[tone] || TONES.neutral) : null;
   const backgroundColor = surface
     ? (SURFACES[surface] || t.colors.surface)
     : elevated ? t.colors.surfaceElevated : t.colors.surface;

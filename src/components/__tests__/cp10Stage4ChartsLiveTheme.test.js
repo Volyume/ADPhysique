@@ -93,11 +93,18 @@ describe('CP-10 stage 4: VolyumeChart flips live, no remount', () => {
     });
     const mainPath = tree.root.findAllByType('Path')[0];
     const darkStroke = mainPath.props.stroke;
-    expect(darkStroke).toBe(theme.resolveTheme({ theme: 'dark' }).colors.primary);
+    // RE-ANCHORED, intent unchanged (amber sweep, D174): this case is about
+    // the LIVE FLIP -- that an omitted `color` prop resolves against
+    // `useTheme()` and changes on the same mounted instance -- and it pinned
+    // `colors.primary` only because that was the default of the day. D174
+    // sends a whole-series line to `borderLight` (a series is not "now"), so
+    // the token moved and the assertion still proves exactly what it proved
+    // before: the default tracks the palette, and dark and light differ.
+    expect(darkStroke).toBe(theme.resolveTheme({ theme: 'dark' }).colors.borderLight);
 
     setTheme('light');
     const lightStroke = tree.root.findAllByType('Path')[0].props.stroke;
-    expect(lightStroke).toBe(theme.resolveTheme({ theme: 'light' }).colors.primary);
+    expect(lightStroke).toBe(theme.resolveTheme({ theme: 'light' }).colors.borderLight);
     expect(lightStroke).not.toBe(darkStroke);
     act(() => { tree.unmount(); });
   });

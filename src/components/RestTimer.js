@@ -92,9 +92,10 @@ export default function RestTimer() {
     countdownNum: { color: t.colors.warning },
     label: { ...t.type.overline, color: t.colors.textMuted },
     skipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    adjBtnText: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    adjBtnText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     adjBtnTextNeg: { color: t.colors.textSecondary },
     drainTrack: { backgroundColor: t.colors.surface3 },
+    // KEEP: the drain bar's width tracks the live rest countdown.
     drainFill: { backgroundColor: t.colors.primaryFill },
     drainFillWarm: { backgroundColor: t.colors.warning },
     doneText: { fontSize: t.fontSize.sm, color: t.colors.onSuccessBg },
@@ -586,10 +587,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
+  // The add-time label is a quiet control, not the one committing button, so
+  // it drops off the accent to full ink; the minus label stays a step quieter
+  // and the +/- sign is what actually names the direction (D174).
   adjBtnText: {
     fontSize: fontSize.sm,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-    color: colors.primary,
+    color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
   },
   adjBtnTextNeg: { color: colors.textSecondary },

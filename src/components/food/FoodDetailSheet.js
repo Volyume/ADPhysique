@@ -546,7 +546,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', minHeight: touchTarget.minimum,
   },
   unitBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  unitBtnTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  // D174 A2: these override the shared Chip's selected label, whose own
+  // treatment is already full ink at the semibold face, so they must not put
+  // the accent back on top of it.
+  unitBtnTextActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   // Ultimate-Audit item 15 (D22 15b): the eaten-at button reuses unitBtn's
   // shape but stays visually neutral (border, not a selected-chip fill) --
   // it is a value to open, not a radio choice.
@@ -606,7 +609,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   mealBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  mealBtnTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  mealBtnTextActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   actions: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     marginTop: spacing.sm,
@@ -643,7 +646,7 @@ function buildLiveStyles(t) {
     lastVerified: { color: t.colors.textMuted },
     fieldLabel: { color: t.colors.textSecondary },
     unitBtnText: { color: t.colors.textSecondary },
-    unitBtnTextActive: { color: t.colors.primary },
+    unitBtnTextActive: { color: t.colors.textPrimary },
     eatenAtBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     stepBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     gramHint: { color: t.colors.textMuted },
@@ -653,7 +656,7 @@ function buildLiveStyles(t) {
     extraText: { color: t.colors.textPrimary },
     extraLabel: { color: t.colors.textMuted },
     mealBtnText: { color: t.colors.textSecondary },
-    mealBtnTextActive: { color: t.colors.primary },
+    mealBtnTextActive: { color: t.colors.textPrimary },
     deleteBtn: { borderColor: t.colors.border },
     selectBtn: { borderColor: t.colors.border },
     cancelText: { color: t.colors.textSecondary },

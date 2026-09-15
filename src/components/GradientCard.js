@@ -15,7 +15,9 @@ import Card from './Card';
 import { withAlpha, alpha } from '../styles/theme';
 
 export default function GradientCard({
-  tone = 'primary',
+  // D174: the default accent is neutral now. `Card` maps `neutral` to the
+  // `border` token, which is what the amber sweep sends an accent edge to.
+  tone = 'neutral',
   tint,
   intensity: _intensity, // accepted but unused (was always ignored)
   style,

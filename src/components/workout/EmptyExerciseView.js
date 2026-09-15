@@ -80,7 +80,7 @@ export default function EmptyExerciseView({ onAdd, onFinish, onCancel, elapsed, 
           onPress={onAdd}
           accessibilityLabel="Add exercise"
         >
-          <Ionicons name="add" size={22} color={t.colors.primary} />
+          <Ionicons name="add" size={22} color={t.colors.textSecondary} />
           <Text style={[styles.addFirstBtnText, live.addFirstBtnText]}>Add exercise</Text>
         </Button>
       </View>
@@ -131,11 +131,11 @@ const styles = StyleSheet.create({
   exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: workoutLoggerSize.exerciseNavMaxHeight },
   exerciseNavContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, gap: spacing.sm, alignItems: 'center' },
   navTab: { minHeight: workoutLoggerSize.exerciseTabMinHeight, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, backgroundColor: colors.surface2 },
-  navTabActive: { backgroundColor: colors.primaryBg },
+  navTabActive: { backgroundColor: colors.surface3 },
   navTabText: { ...type.label, color: colors.textSecondary },
-  navTabTextActive: { color: colors.primary },
-  navTabBadge: { width: workoutLoggerSize.exerciseTabBadge, height: workoutLoggerSize.exerciseTabBadge, borderRadius: circle(workoutLoggerSize.exerciseTabBadge), backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center' },
-  navTabBadgeText: { ...type.caption, color: colors.onPrimary, fontSize: fontSize.micro },
+  navTabTextActive: { ...type.w('label', 'semibold'), color: colors.textPrimary },
+  navTabBadge: { width: workoutLoggerSize.exerciseTabBadge, height: workoutLoggerSize.exerciseTabBadge, borderRadius: circle(workoutLoggerSize.exerciseTabBadge), backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' },
+  navTabBadgeText: { ...type.caption, color: colors.textPrimary, fontSize: fontSize.micro },
   emptyView: { flex: 1, backgroundColor: colors.background },
   emptyContent: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: spacing.xxxl, gap: spacing.md, paddingHorizontal: spacing.xl },
   emptyTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
@@ -161,11 +161,11 @@ function buildLiveStyles(t) {
     timerText: { ...t.type.num('title'), color: t.colors.textPrimary },
     exerciseNav: { borderBottomColor: t.colors.border },
     navTab: { backgroundColor: t.colors.surface2 },
-    navTabActive: { backgroundColor: t.colors.primaryBg },
+    navTabActive: { backgroundColor: t.colors.surface3 },
     navTabText: { ...t.type.label, color: t.colors.textSecondary },
-    navTabTextActive: { color: t.colors.primary },
-    navTabBadge: { backgroundColor: t.colors.primaryFill },
-    navTabBadgeText: { ...t.type.caption, color: t.colors.onPrimary, fontSize: t.fontSize.micro },
+    navTabTextActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
+    navTabBadge: { backgroundColor: t.colors.surface3 },
+    navTabBadgeText: { ...t.type.caption, color: t.colors.textPrimary, fontSize: t.fontSize.micro },
     emptyView: { backgroundColor: t.colors.background },
     emptyTitle: { ...t.type.title, color: t.colors.textPrimary },
     emptySubtitle: { ...t.type.body, color: t.colors.textSecondary },

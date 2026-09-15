@@ -35,7 +35,7 @@ import Card from './Card';
 import Button from './Button';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, fontSize, fontWeight, withAlpha, circle, radius, type, fontFamily } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { todayLocalKey } from '../lib/dayKey';
 import { track } from '../lib/telemetry';
@@ -169,8 +169,8 @@ export default function ProgressPhotoPrompt({ milestoneId, onAddPhoto }) {
   return (
     <Card style={styles.card} accessibilityLabel="Mark the moment">
       <View style={styles.headerRow}>
-        <View style={[styles.iconWrap, live.iconWrap]}>
-          <Ionicons name="camera-outline" size={20} color={t.colors.primary} />
+        <View style={styles.iconWrap}>
+          <Ionicons name="camera-outline" size={20} color={t.colors.textSecondary} />
         </View>
         <View style={styles.headerText}>
           <Text style={[styles.title, live.title]}>Mark the moment</Text>
@@ -222,11 +222,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: spacing.md,
   },
+  // §3.2, "a tint behind a glyph": fill and disc geometry both gone.
   iconWrap: {
     width: 36,
     height: 36,
-    borderRadius: circle(36),
-    backgroundColor: withAlpha(colors.primary, 0.125),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -278,7 +277,6 @@ const styles = StyleSheet.create({
 // actions/actionButton have no colour tokens.
 function buildLiveStyles(t) {
   return {
-    iconWrap: { backgroundColor: withAlpha(t.colors.primary, 0.125) },
     title: { color: t.colors.textPrimary },
     body: { color: t.colors.textSecondary },
     optOutBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },

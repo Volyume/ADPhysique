@@ -206,9 +206,12 @@ export default function ActivityItemRow({
             <Ionicons
               name={respected ? 'heart' : 'heart-outline'}
               size={iconSize.md}
-              // The Respect glyph: the row's second sanctioned amber use,
-              // amber only once the viewer has actually given it.
-              color={respected ? t.colors.primary : t.colors.textMuted}
+              // D174 A3 scope ruling: a Respect you have already given is a
+              // stored reaction, not your live moment, so it sits outside
+              // discipline 1's ceiling. Nothing is lost by the change -- the
+              // glyph itself already swaps `heart` / `heart-outline`, so the
+              // filled shape carries the state without the colour.
+              color={respected ? t.colors.textPrimary : t.colors.textMuted}
             />
           </TouchableOpacity>
           <Text style={[styles.comments, { color: t.colors.textMuted }]}>{comments}</Text>
