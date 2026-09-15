@@ -7331,3 +7331,116 @@ silently ignored and the comment above it is stale under D137;
 `ewmaData` uses the windowed one, so a faint raw line can include points the
 smoothed line deliberately excludes; `ProgressSections.js`'s header still claims
 the Progress landing draws its cards, which stopped being true.
+
+## D168 (2026-09-15) - Stage 2: the logger and the summary, and one collision HELD OPEN
+
+**Authority.** Lead under D33, on two read-only Opus recon lanes. Both refused
+to pre-resolve their forks, correctly.
+
+### OPEN, NOT RULED - the milestone celebration vs law 5
+
+`WorkoutSummaryScreen.js:854-855` fires `setMilestoneBurst(true)` and
+`hapticMilestone()` at the 50- and 100-session rungs: a full-screen gold
+particle burst (`PRCelebration.js:60-113`, ~2,400 ms) and `haptics.prAchieved`
+(`haptics.js:111`), a two-peak reward curve. Both are a standing FOUNDER
+decision (D2, "design audit 03 win #4"), both already gate on calm mode and an
+open ED flag, and both no-op under Reduce Motion.
+
+Law 5, as written into `docs/rules/styling.md` and approved as part of the
+direction, says: "No celebratory animation and no reward haptics: that is the
+ED-safety rule."
+
+These cannot both hold. **The lead is not resolving it in either direction.**
+Removing a celebration the founder deliberately approved is not the lead's call;
+neither is writing an exception into an ED rule. The founder's own standing
+decision therefore stands UNCHANGED, and
+`WorkoutSummaryScreen.summarySpec.guard.test.js` now pins the burst, the haptic
+and the calm-mode withhold in place, with a comment saying the collision is
+open, so that nobody resolves it by accident while it waits. Asked in chat
+2026-09-15; re-ask until answered.
+
+### RULED - the logger
+
+**1. The working weight is loud; the ledger does NOT go on this screen.**
+Law 1's own worked example, and the measurement was worse than the plan stated:
+the plan says the logger's largest type is 20px, which is true of the FILE, but
+the logging surface tops out at 17px (the elapsed clock) and the weight itself
+was 16px. It is now `type.hero` through `BigNumber` in `NowCard`, between the
+prefill row and `SetEntry`. A readout, not a second control: one is glanceable
+mid-set at arm's length, the other is a two-field editor.
+
+**The ledger is refused here, and that is a judgement not a phase.** The set
+sequence on the logger is an interactive workspace, not a log: rows ABOVE the
+input carry an in-place editor and a zeego long-press menu at 36dp
+(`workoutLoggerSize.loggedSetMinHeight`), and the rows BELOW it are deliberate
+11px previews. `LedgerRow` floors at 48dp (`touchTarget.minimum`). A straight
+swap grows every line by 12-22dp; on a six-set exercise that is ~100dp more
+column between the top of the screen and the input, which is exactly the drift
+the collapse-after-three fold was built to stop from the founder's own device
+screenshots. The ledger belongs where sets are READ (history, Progress, the
+summary), not where they are entered.
+
+**2. The rest timer was never in scope and needed no founder answer.** The
+lead had told the founder the logger was "gated" on confirming the rest-timer
+verdict. That was wrong: the verdict pins the timer SMALL and law 1 wants it
+quiet, so the two agree and there is nothing to change. Only a change TO the
+timer would need the founder, and none is proposed. Corrected in chat.
+
+**3. The reserved line box is a safety measure, not a style choice.** A height
+change in the current-set column while a field is focused fires Android's
+scroll-into-view, which the platform cannot distinguish from a drag, and the
+keyboard drops mid-set. That is the defect `keyboardDismissMode='none'` and
+`SetEntry.inputFocusStability` exist to hold shut. A hero that mounted once a
+weight was typed would reintroduce it on the first keystroke of every set. The
+block therefore reserves `t.type.hero.lineHeight` unconditionally and is gated
+on the SCHEMA (weight-bearing or not), never on whether a value is present.
+
+### RULED - the workout summary
+
+**4. The loud element is the four-week verdict, not tonnage.** Law 1 defines
+the loud thing as what the screen is FOR, and this screen is for "how did that
+go"; tonnage answers the second question. The founder had also already ruled
+tonnage the WEEKLY non-scale signal on Today (D167 ruling 3), so shouting it
+here said one word twice in two places. The verdict was already computed
+("Strongest workout in 4 weeks", "On pace with your last 3 sessions") and only
+ever rendered at 16px beneath the number. Tonnage drops to the stat grid, where
+law 7 already labelled it correctly and two guards pin its exact call shape.
+
+**5. The session name becomes the eyebrow.** `routineName` is loaded on every
+mount and was used SOLELY to title the share card; the screen has never told
+you which session you just did. With this, the three screens answer the
+founder's three questions in sequence: Today what you are about to do, the
+summary how it went, Progress what to do next.
+
+**6. The verdict loses its colour and its icon.** It was gold for a best, green
+for up, grey for down, beside a trophy or a trend arrow. A headline tinted by
+how the session went is colour AS VERDICT, the same good/bad tinting the app
+already refuses for body-weight trends; law 6 narrows colour to one meaning;
+and the trophy and arrows are category props stage 3 removes. The sentence
+carries itself.
+
+**7. Dead code goes with the change, and its guard is re-anchored not deleted.**
+StatBox's `hero` branch and the `heroValue`/`heroValueWrap`/`heroValueLabel`
+styles are removed. `workoutSummaryFooterBand.guard.test.js:157` pinned
+`heroValue: { ...type.num('display')`; that rule (loud figures carry tabular
+numerals) now lives in `BigNumber` and is asserted in `spineComponents.test.js`.
+A guard pinning code nothing renders asserts nothing and blocks the cleanup.
+
+### Defects fixed
+
+- `WorkoutSummaryScreen.js` stat tiles: frozen `borderColor: colors.borderSubtle`
+  vs live `t.colors.border`, live wins, so every tile drew the bright control
+  edge against its own intent. **Third instance** of this exact defect after
+  `LoggedSetRow` (D166) and `EvidencePanel` (D167) - the pattern the styling
+  rules now forbid for new components.
+
+### Lead errors corrected
+
+- The brief told the summary lane this screen "owns the only `type.num('display')`
+  hero in the product". False: four screens use it (`NutritionTargetsScreen`,
+  `LiftProgressScreen`, `ExerciseDetailScreen` and this one).
+- A comment written into `NowCard` explaining that the block carries no line
+  clamp contained the banned token, inside the exact span a sibling guard
+  slices. Caught by that guard.
+- A new guard asserted the rest timer uses `type.num('title')`; that is the
+  header's elapsed clock. The timer is `type.num('bodyStrong')`.

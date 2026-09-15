@@ -95,12 +95,29 @@ cheerful sentence). The weight trend graph arrives on the tab for the first
 time: one smoothed line, no axes or fill, rate through `formatBodyWeightRate`.
 Guard: `AnalyticsScreen.progressSpec.guard.test.js`, 16 cases.
 
-NEXT in stage 2: the logger, the workout summary, Nutrition. THE LOGGER IS
-GATED on an unanswered founder question -- `loggerVisualArchitecture.guard.test.js:6,58`
-pins the rest timer small and bans `fontSize: 26` from a founder device
-verdict, and law 1 wants the working weight loud with the timer quiet. The laws
-agree with the verdict, but it is confirmed rather than assumed before that
-screen is touched (plan section 10.2).
+**FOUR OF FIVE STAGE-2 SCREENS ARE LANDED.** Today (`506cba31`), Progress
+(`e5256195`), the logger (`c2dcb04a`), the workout summary (`05f026d9`). Each
+has exactly one loud element answering its own question: Today the session you
+are about to do, Progress the coaching decision, the logger the working weight,
+the summary how it went. Rulings: **D167** (seven stage-2 forks) and **D168**
+(the logger and summary).
+
+THE LOGGER WAS NEVER GATED -- the lead said it was and was wrong. The rest-timer
+verdict pins it SMALL and law 1 wants it quiet, so they agree and nothing needed
+asking. The ledger is REFUSED on the logger (D168 ruling 1): its set sequence is
+an interactive workspace, not a log, and a 48dp presentational row would push
+the input away, which is the exact failure the collapse-after-three fold exists
+to stop.
+
+**ONE THING IS OPEN AND MUST NOT BE RESOLVED QUIETLY:** the 50/100-session
+milestone gold burst and reward haptic are a standing founder decision (D2) that
+collides with law 5's "no celebratory animation and no reward haptics: that is
+the ED-safety rule". The lead resolved it in NEITHER direction; the founder's
+decision stands unchanged and `WorkoutSummaryScreen.summarySpec.guard.test.js`
+pins it in place with a comment saying why. Asked 2026-09-15, unanswered.
+
+NEXT: Nutrition (`DiaryScreen.js`), the last stage-2 screen; recon dispatched
+2026-09-15. Then stage 3 and stage 4.
 ===============================================================================
 ## ★ 2026-09-14 — COMMUNITY LOOK AND FEEL: THE LAYOUT LAW FIXED AND GUARDED ★
 

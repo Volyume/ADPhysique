@@ -227,7 +227,44 @@ founder's section 4c spec and the D166/D167 rulings:
   slice and would have passed whatever the code said.
 - The three pillar rows, the empty states, the recent-sessions list, the volume
   strip and the nav grid are all untouched and still guard-covered.
-NEXT in stage 2: the logger, the workout summary, Nutrition.
+**THE LOGGER IS LANDED** (`c2dcb04a`). The working weight is `type.hero`
+through `BigNumber` in `NowCard`. The measurement was worse than the plan said:
+the plan's "largest type 20px" is FILE-true but the logging SURFACE topped out
+at 17px (the elapsed clock) and the weight itself was 16px. The block reserves
+`t.type.hero.lineHeight` unconditionally and is gated on the SCHEMA, never on
+whether a value is present -- a height change in that column under a focused
+field fires Android's scroll-into-view, drops the keyboard, and is the defect
+`keyboardDismissMode='none'` exists to hold shut. The rest timer is untouched
+and never needed a founder answer (the verdict pins it small, law 1 wants it
+quiet, they agree). **The ledger is REFUSED on the logger** (D168 ruling 1):
+the set sequence there is an interactive workspace, not a log, and `LedgerRow`'s
+48dp floor against 36dp logged rows and 11px previews would push the input away
+-- the exact failure the fold was built to stop. Guard:
+`NowCard.workingWeight.guard.test.js` (11 cases).
+
+**THE WORKOUT SUMMARY IS LANDED** (`05f026d9`). The four-week verdict is the
+loud element; tonnage drops to the stat grid (it was shouting the founder's own
+WEEKLY Today signal); the session NAME is rendered for the first time, as the
+eyebrow -- it was loaded every mount solely to title the share card. The verdict
+loses its gold/green/grey accent and its trophy/trend icon: a headline tinted by
+how the session went is colour AS VERDICT, which the app already refuses for
+body-weight trends. StatBox's dead `hero` branch and its styles are removed and
+the guard that pinned them RE-ANCHORED to where the rule now lives. Guard:
+`WorkoutSummaryScreen.summarySpec.guard.test.js` (13 cases).
+
+**OPEN, HELD, NOT RULED (D168):** the 50/100-session milestone gold burst +
+reward haptic is a standing FOUNDER decision (D2) that collides head-on with
+law 5 ("no celebratory animation and no reward haptics: that is the ED-safety
+rule"). The lead is resolving it in NEITHER direction; the founder's decision
+stands unchanged and a test now pins it in place so nobody resolves it by
+accident. Asked in chat 2026-09-15, unanswered, re-ask.
+
+**Third instance of the frozen-vs-live border defect fixed** (stat tiles),
+after `LoggedSetRow` (D166) and `EvidencePanel` (D167).
+
+NEXT: Nutrition (`DiaryScreen.js`), the fifth and last stage-2 screen. Recon
+dispatched 2026-09-15. Then stage 3 (the long tail, the empty states, the
+category props) and stage 4 (the moments).
 summary and Nutrition.
 founder at plan section 4c and now carry the three answers above.
 ALSO OUTSTANDING: `docs/rules/styling.md:55` says "System fonts" and is wrong
