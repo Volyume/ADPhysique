@@ -115,10 +115,16 @@ case (0 is the React Native default).
 - Durations/easings from `motion` (`micro 120 · state 200 · sheet 260 ·
   enter 320 · exit 220 · hero 440`; Material-3 bezier curves; `motion.spring`
   for press/drag). One `hero` moment per screen, maximum.
-- **Reduce Motion is law**: every animation collapses (AnimatedEntrance,
-  Skeleton, PRCelebration and the stack transitions show the pattern), and
-  haptics run through `src/lib/haptics.js` — never raw `expo-haptics` — so
-  the setting silences them too.
+- **Reduce Motion is law**, and law 5 below states it precisely: motion is
+  REPLACED by a cross-fade, not removed. This bullet used to say "every
+  animation collapses ... the stack transitions show the pattern", which named
+  the exact behaviour law 5 forbids, and the stack transitions were indeed
+  doing it -- `animationEnabled: false`, feedback deleted rather than replaced.
+  Corrected 2026-09-15 (D182) when the stage 4 transition lane found the
+  contradiction and the code behind it. AnimatedEntrance and Skeleton collapse
+  correctly (there is nothing to cross-fade TO in an entrance); a stack
+  transition cross-fades. Haptics run through `src/lib/haptics.js` -- never raw
+  `expo-haptics` -- so the setting silences them too.
 - Loading states use the `Skeleton` primitives in the real layout slots, not
   bare spinners. Press feedback: `PressableCard` for card-shaped touchables.
 

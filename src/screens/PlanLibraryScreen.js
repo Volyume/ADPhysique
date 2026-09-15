@@ -30,6 +30,7 @@ import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { measureHeroOrigin } from '../navigation/heroTransition';
 import { useToast } from '../components/Toast';
 import BottomSheet from '../components/BottomSheet';
 
@@ -386,6 +387,19 @@ export default function PlanLibraryScreen({ navigation, route }) {
   const [activeCollection, setActiveCollection] = useState(initialCollection);
   const [selectedDivision, setSelectedDivision] = useState(null);
   const listRef = useRef(null);
+  // D180 part 2 (origin-aware hero zoom): the tapped plan card's native node,
+  // by plan id, so PlanDetail can grow out of the card the user touched. The
+  // card body is a TouchableOpacity rather than a PressableCard (which
+  // measures itself), and the footer's "Preview plan" opens the same plan, so
+  // both hand the SAME card rect rather than two different origins. Entries
+  // are added and removed by the row's own ref callback, so a row that has
+  // scrolled away simply is not in the map and the push is the ordinary one.
+  const planCardNodes = useRef(new Map());
+  const openPlan = useCallback((planId) => {
+    measureHeroOrigin(planCardNodes.current.get(planId), (rect) => {
+      navigation.navigate('PlanDetail', { planId, isLibrary: true, __heroOrigin: rect || undefined });
+    });
+  }, [navigation]);
   // RB-3 (D96, Review B): appAlert queues, so two taps on a plan card used
   // to queue two dialogs and run two copies + two activations. One
   // synchronous guard across the whole add flow.
@@ -800,8 +814,12 @@ export default function PlanLibraryScreen({ navigation, route }) {
           return (
             <Card padding="none" style={styles.planCard}>
               <TouchableOpacity
+                ref={(node) => {
+                  if (node) planCardNodes.current.set(plan.id, node);
+                  else planCardNodes.current.delete(plan.id);
+                }}
                 style={styles.planCardMain}
-                onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: true })}
+                onPress={() => openPlan(plan.id)}
                 activeOpacity={0.88}
                 accessibilityRole="button"
                 accessibilityLabel={[
@@ -870,7 +888,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                   title="Preview plan"
                   variant="secondary"
                   size="sm"
-                  onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: true })}
+                  onPress={() => openPlan(plan.id)}
                   style={[styles.previewBtn, live.previewBtn]}
                   textStyle={[styles.previewText, live.previewText]}
                   accessibilityLabel={`Preview ${planHeadingName(plan.name)}`}

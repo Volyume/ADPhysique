@@ -423,8 +423,16 @@ describe('LiftProgressScreen — R2 (2026-07-11) design-cohesion census', () => 
 
   test('badge/chip label text maps onto the exact captionStrong role', () => {
     // xs+semibold raw pairs -> type.captionStrong (frozen + live twin).
-    expect(LIFT_PROGRESS_SOURCE).toMatch(/levelBadgeText: \{ \.\.\.type\.captionStrong \}/);
-    expect(LIFT_PROGRESS_SOURCE).toMatch(/levelBadgeText: \{ \.\.\.t\.type\.captionStrong \}/);
+    //
+    // RE-ANCHORED 2026-09-15. `levelBadgeText` gained an explicit colour when
+    // the strength-level colour ladder was retired (it used to take its ink
+    // from a five-rung map, one rung of which resolved to a deleted token). The
+    // case's intent is that the badge label spreads the house ROLE rather than
+    // hand-rolling xs+semibold, and it still does -- so the pattern now matches
+    // the same shape its own sibling `metricChipText` has always had, two lines
+    // below. That is the house spelling for "this role, this ink".
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/levelBadgeText: \{ \.\.\.type\.captionStrong, color: colors\.textSecondary \}/);
+    expect(LIFT_PROGRESS_SOURCE).toMatch(/levelBadgeText: \{ \.\.\.t\.type\.captionStrong, color: t\.colors\.textSecondary \}/);
     expect(LIFT_PROGRESS_SOURCE).toMatch(/metricChipText: \{ \.\.\.type\.captionStrong, color: colors\.textSecondary \}/);
     expect(LIFT_PROGRESS_SOURCE).toMatch(/metricChipText: \{ \.\.\.t\.type\.captionStrong, color: t\.colors\.textSecondary \}/);
   });

@@ -9,10 +9,17 @@
  *     the native handle can't be measured (it fires the callback with null so
  *     the destination just falls back to centre zoom). Consumers that pass a
  *     plain onPress/onLongPress are byte-compatible (unchanged behaviour).
- *  2. RootNavigator's heroZoom stays a graceful centre zoom when no
- *     __heroOrigin param is supplied (the app-wide default and the cross-tab
- *     entry behaviour), with the defensive current.progress fallback intact —
- *     a source guard, since the interpolator is internal to the navigator.
+ *  2. The heroZoom stays a graceful centre zoom when no __heroOrigin param is
+ *     supplied (the app-wide default and the cross-tab entry behaviour), with
+ *     the defensive current.progress fallback intact.
+ *
+ * RE-ANCHORED 2026-09-15 (D180 part 2): the interpolator moved out of
+ * RootNavigator.js into src/navigation/heroTransition.js so it could be
+ * pinned by CALLING it rather than by reading its source. These assertions
+ * keep their exact intent and now read the module that holds the code; the
+ * behavioural versions of the same properties live in
+ * src/navigation/__tests__/heroTransition.guard.test.js. The registration
+ * assertion still reads RootNavigator.js, which is where registrations live.
  */
 import fs from 'fs';
 import path from 'path';
@@ -81,25 +88,32 @@ describe('RootNavigator heroZoom origin-aware extension (D31)', () => {
     path.join(__dirname, '..', '..', 'navigation', 'RootNavigator.js'),
     'utf8',
   );
+  const HERO = fs.readFileSync(
+    path.join(__dirname, '..', '..', 'navigation', 'heroTransition.js'),
+    'utf8',
+  );
 
   test('the defensive current.progress fallback is intact', () => {
-    expect(NAV).toContain("if (!current?.progress) {\n      return { cardStyle: { opacity: 1 } };");
+    expect(HERO).toContain("if (!current?.progress) {\n      return { cardStyle: { opacity: 1 } };");
   });
 
   test('centre zoom (opacity 0->1, scale 0.92->1) is the exact fallback when no origin is present', () => {
     // The origin branch is guarded on a real measured rect; when it is absent
     // the interpolator returns the byte-identical centre zoom it always had.
-    expect(NAV).toContain('outputRange: [0.92, 1],');
-    expect(NAV).toContain('return { cardStyle: { opacity, transform: [{ scale }] } };');
+    expect(HERO).toContain('outputRange: [0.92, 1],');
+    expect(HERO).toContain('return { cardStyle: { opacity, transform: [{ scale }] } };');
   });
 
   test('the origin branch grows from the tapped rect only when a finite rect is supplied', () => {
-    expect(NAV).toContain('if (origin && Number.isFinite(origin.width) && origin.width > 0 && screen?.width && screen?.height) {');
-    expect(NAV).toContain('const startScale = Math.min(0.95, Math.max(0.85, origin.width / screen.width));');
+    expect(HERO).toContain('if (origin && Number.isFinite(origin.width) && origin.width > 0 && screen?.width && screen?.height) {');
+    expect(HERO).toContain('const startScale = Math.min(0.95, Math.max(0.85, origin.width / screen.width));');
   });
 
   test('heroZoomOptions reads the destination route __heroOrigin param', () => {
-    expect(NAV).toContain('cardStyleInterpolator: makeHeroZoomCardStyle(route?.params?.__heroOrigin || null),');
+    // HERO_ORIGIN_PARAM is the literal '__heroOrigin'; the lookup is the same
+    // read, named once so a call site and the interpolator cannot drift.
+    expect(HERO).toContain("export const HERO_ORIGIN_PARAM = '__heroOrigin';");
+    expect(HERO).toContain('cardStyleInterpolator: makeHeroZoomCardStyle(route?.params?.[HERO_ORIGIN_PARAM] || null),');
   });
 
   test('ExerciseDetail registrations use the origin-aware options', () => {

@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { safeDate, safeFormatDate, safeNumber, safeToFixed } from '../lib/safeFormat';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import AnimatedEntrance from '../components/AnimatedEntrance';
@@ -43,18 +43,26 @@ import { logError } from '../lib/errorLog';
 // -- the label -> colour mapping is byte-identical in meaning, only the
 // token SOURCE moved from the frozen import to the live theme. Returns a
 // resolver function, same call shape as before.
-function buildLevelColor(c) {
-  return function getLevelColor(label) {
-    const map = {
-      Beginner: c.textMuted,
-      Novice: c.textSecondary,
-      Intermediate: c.success,
-      Advanced: c.primary,
-      Elite: c.gold,
-    };
-    return map[label] || c.textMuted;
-  };
-}
+// DEFECT FIXED 2026-09-15, and the chain that produced it is worth recording.
+//
+// This mapped five strength rungs onto five colours: textMuted, textSecondary,
+// success, primary, gold. D173 T1 then DELETED the `gold` role from the theme,
+// so `map.Elite` became `undefined`, fell through the `||` default, and an
+// ELITE lifter's badge rendered in the same muted grey as a BEGINNER's. Top and
+// bottom of the scale, identical.
+//
+// Three guards should have caught it and none did, for one reason: this file
+// aliases the live palette to `c`, and every amber/token matcher in the
+// campaign was written against the literal identifier `colors` (`colors.gold`,
+// `t.colors.primary`). An alias made a deleted token and a live amber both
+// invisible to the sweep. Those regexes are widened alongside this fix.
+//
+// The ladder itself is retired rather than repaired. A strength RANK is not
+// "now", so it sits outside amber discipline 1's ceiling, and borrowing
+// `success` for a middling rung is the state-colour borrowing §8 protects
+// against. `AthleteProfileScreen`'s `levelPill` shows the identical concept and
+// was already ruled neutral in the A-M sweep; the two surfaces now agree, and
+// the WORD names the rung exactly as it always did.
 
 // A lift is at a recent best when its latest session is its best estimated max
 // to date (and it has been trained more than once, so "best" means something).
@@ -135,7 +143,6 @@ export default function LiftProgressScreen({ navigation }) {
   // because this is a list-heavy screen (renderItem runs once per row).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  const resolveLevelColor = useMemo(() => buildLevelColor(t.colors), [t]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useFocusEffect(useCallback(() => { loadData(); }, [user?.id]));
@@ -360,8 +367,8 @@ export default function LiftProgressScreen({ navigation }) {
                     : `${Math.round(lvl.ratio * 100)}% of your body weight`}
                 </Text>
               </View>
-              <View style={[styles.levelBadge, { backgroundColor: withAlpha(resolveLevelColor(lvl.label), alpha.tint) }]}>
-                <Text style={[styles.levelBadgeText, live.levelBadgeText, { color: resolveLevelColor(lvl.label) }]}>{lvl.label}</Text>
+              <View style={[styles.levelBadge, live.levelBadge]}>
+                <Text style={[styles.levelBadgeText, live.levelBadgeText]}>{lvl.label}</Text>
               </View>
             </View>
           ))}
@@ -729,8 +736,12 @@ const styles = StyleSheet.create({
   // R2 (2026-07-11): badge class -> radius.full; label text -> captionStrong
   // (exact xs+semibold role, FOOD-DESIGN-STANDARD.md sections 3-4). Was
   // radius.sm and a raw fontSize.xs + fontWeight.semibold pair.
-  levelBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.full, flexShrink: 0 },
-  levelBadgeText: { ...type.captionStrong },
+  // Neutral, matching `AthleteProfileScreen.levelPill` -- the same concept on
+  // another screen, already ruled neutral in the A-M sweep. The alpha'd tint
+  // that used to sit behind the label was discipline 2's "a tint behind a
+  // glyph" in its label form, and the label names the rung anyway.
+  levelBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.full, flexShrink: 0, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
+  levelBadgeText: { ...type.captionStrong, color: colors.textSecondary },
 
   bwPromptCard: {
     flexDirection: 'row',
@@ -851,7 +862,8 @@ function buildLiveStyles(t) {
     strengthRow: { borderTopColor: t.colors.borderSubtle },
     strengthName: { ...t.type.label, color: t.colors.textPrimary },
     strengthNarrative: { ...t.type.num('caption'), color: t.colors.textMuted },
-    levelBadgeText: { ...t.type.captionStrong },
+    levelBadge: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    levelBadgeText: { ...t.type.captionStrong, color: t.colors.textSecondary },
     bwPromptCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     bwPromptTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     bwPromptText: { ...t.type.captionTight, color: t.colors.textSecondary },

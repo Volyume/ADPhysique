@@ -102,6 +102,25 @@ describe('D173 T1: the trophy-tier colour roles do not exist', () => {
     expect(offences).toEqual([]);
   });
 
+  test('nor through an ALIAS of the palette, which is how one survived', () => {
+    // THE HOLE THIS CLOSES, found 2026-09-15. The case above requires the
+    // literal identifier `colors`. `LiftProgressScreen.js` aliases the live
+    // table to `c` (`buildLevelColor(c)`, a house pattern), so its
+    // `Elite: c.gold` was invisible to this guard for the whole campaign --
+    // and because D173 T1 had deleted the role, `map.Elite` resolved
+    // `undefined`, fell through the `||` default, and an ELITE lifter's badge
+    // rendered in the same muted grey as a BEGINNER's. A deleted token plus an
+    // aliasing convention plus a regex anchored on one identifier produced a
+    // live defect no test could see.
+    //
+    // The rule is now the property, not the object: these three words are only
+    // ever the deleted medal roles, so ANY `.gold` / `.silver` / `.bronze`
+    // member access in product source is an offence whatever it hangs off.
+    // `\b` keeps "golden" and the like out of it.
+    const offences = filesMatching(/\.\s*(gold|silver|bronze)\b/);
+    expect(offences).toEqual([]);
+  });
+
   test('no Card or GradientCard call site asks for the gold tone', () => {
     const offences = filesMatching(/tone\s*[:=]\s*\{?\s*['"]gold['"]/);
     expect(offences).toEqual([]);

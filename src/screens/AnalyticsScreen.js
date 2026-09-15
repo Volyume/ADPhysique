@@ -500,7 +500,8 @@ export default function AnalyticsScreen({ navigation, route }) {
                 <SessionCard
                   key={w.id}
                   workout={w}
-                  onPress={() => navigation.navigate('WorkoutSummary', {
+                  onPressWithLayout={(rect) => navigation.navigate('WorkoutSummary', {
+                    __heroOrigin: rect || undefined,
                     workoutId: w.id,
                     durationMinutes: w.durationMinutes,
                     exerciseCount: exerciseIds.length,
@@ -766,7 +767,11 @@ function VolumeSummaryStrip({ volume, loading, onPress, landmarksTable = null })
 // CP-10 batch G (2026-07-11): sibling function-component scope, own
 // useTheme() call (same reasoning as PillarRow above), same shared
 // buildLiveStyles(t).
-function SessionCard({ workout, onPress }) {
+// D180 part 2 (origin-aware hero zoom): this row IS a completed session and
+// the screen it opens IS that session's summary, so the summary grows out of
+// the row it came from. `onPressWithLayout` hands back null when the handle
+// could not be measured, and the push is then the ordinary one.
+function SessionCard({ workout, onPressWithLayout }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const name = workout.name || 'Session';
@@ -776,7 +781,7 @@ function SessionCard({ workout, onPress }) {
   return (
     <Card
       style={styles.sessionCard}
-      onPress={onPress}
+      onPressWithLayout={onPressWithLayout}
       accessibilityLabel={`View summary for ${name}`}
     >
       <View style={styles.sessionLeft}>

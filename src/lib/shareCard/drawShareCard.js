@@ -26,17 +26,20 @@
  * unmodified under both Jest and the manual eval-based render harness.
  */
 
-// react-native-skia PaintStyle / TileMode / BlurStyle are plain numeric enums;
-// hardcoded here so the module needs no RN-only imports (keeps it Node-runnable).
+// react-native-skia PaintStyle / TileMode are plain numeric enums; hardcoded
+// here so the module needs no RN-only imports (keeps it Node-runnable). The
+// BlurStyle constant went with the blur it served (D180): nothing on this
+// canvas blurs any more.
 const FILL = 0;
 const STROKE = 1;
 const CLAMP = 0;
-const BLUR_NORMAL = 0;
 
 // The share card's own palette. DESIGN_SYSTEM.md whitelists this offline canvas
 // to hold its own values (it is not a screen/component bound by the no-hardcoded-
-// hex rule); the values track the brand — amber #F5A623 for data, #FFD700 gold
-// for trophy moments, the near-black tonal background, textPrimary/secondary/muted.
+// hex rule); the values track the brand — amber #F5A623 for data, the near-black
+// tonal background, textPrimary/secondary/muted. D180 (stage 4) deleted the
+// #FFD700 gold: D173 T1 removed the medal colours from the app, and the same
+// role has no business surviving on the card.
 const PALETTE = {
   // D165 (2026-09-14): bg0 tracks theme.js `background`, moved to warm charcoal
   // #111110; bg1/bg2 are share-card-only tonal steps between it and `surface`.
@@ -48,7 +51,7 @@ const PALETTE = {
   // near-invisible in the exported PNG and disappeared entirely under platform
   // re-compression.
   border: '#757169', divider: 'rgba(255,255,255,0.06)',
-  accent: '#F5A623', gold: '#FFD700',
+  accent: '#F5A623',
   // text/textSecondary/textMuted track theme.js textPrimary/textSecondary/
   // textMuted, all warmed under D165. textMuted had drifted by a digit to
   // #9B9B9B once before; it is checked against theme.js, not eyeballed.
@@ -85,7 +88,7 @@ const STORY_SAFE_BOTTOM_RATIO = 0.20;
 // at the top of drawShareCard; single-threaded so a module-level handle is safe.
 let BG = null;
 
-// amber/gold at an alpha, as an rgba() string Skia.Color parses on both runtimes.
+// amber at an alpha, as an rgba() string Skia.Color parses on both runtimes.
 function rgba(hex, a) {
   const h = hex.replace('#', '');
   const r = parseInt(h.slice(0, 2), 16);
@@ -154,28 +157,21 @@ function strokeRRect(canvas, Skia, x, y, w, h, r, colorStr, lw) {
   canvas.drawRRect(Skia.RRectXY(Skia.XYWHRect(x, y, w, h), r, r), paintFor(Skia, colorStr, STROKE, lw));
 }
 
-// A soft blurred glow (Skia MaskFilter blur), used for the PR numeral's warm
-// amber halo (pillar 2) and the per-type background accent geometry (pillar 1).
-// MaskFilter.MakeBlur is core Skia, present identically on the device JsiSk*
-// path and the CanvasKit-in-Node harness path (both wrap the same C++ API).
+// THE SOFT BLURRED HALO IS DELETED (D180, stage 4). One helper drew every
+// glow on this canvas -- the PR numeral's amber halo, the PR and session
+// background corners, and the card frame's two lit corners. The founder's own
+// statement of the design law (plan §4a) says "No glow." in as many words, and
+// §3 discipline 3 forbids amber appearing alongside one, so the helper goes
+// with its call sites rather than sitting here waiting to be called again.
+//
 // DECORATION IS NEVER LOAD-BEARING (founder device failure 2026-08-18: the
-// share preview would not build at all on a plain dark session card - the
-// exact path this glow runs on, and the only Skia call the rebuilt renderer
-// added there). MaskFilter/blur support is the least portable corner of the
-// Skia surface between the CanvasKit build the harness renders with and the
-// JsiSk build on device, so a failure here must degrade to "no glow", never
-// to "no card". Same law applied to every other ornament below.
-function drawGlow(canvas, Skia, cx, cy, radius, colorStr, alpha, sigma) {
-  try {
-    const p = Skia.Paint();
-    p.setAntiAlias(true);
-    p.setColor(Skia.Color(rgba(colorStr, alpha)));
-    if (Skia.MaskFilter && typeof Skia.MaskFilter.MakeBlur === 'function') {
-      p.setMaskFilter(Skia.MaskFilter.MakeBlur(BLUR_NORMAL, Math.max(0.1, sigma), true));
-    }
-    canvas.drawCircle(cx, cy, radius, p);
-  } catch (_e) { /* ornament only: a card without its glow is still a card */ }
-}
+// share preview would not build at all on a plain dark session card, on the
+// exact path the deleted glow ran on). That law outlives the glow and governs
+// what is left: every ornament here stays inside a try/catch, and no Skia call
+// added to this file may be able to take the card down with it. What remains
+// of the per-type geometry is plain rects and circles -- no MaskFilter, which
+// was the least portable corner of the Skia surface between the CanvasKit
+// build the harness renders with and the JsiSk build on device.
 
 // Greedy word wrap to a max pixel width, using the active font.
 function wrapText(font, str, maxW) {
@@ -364,17 +360,17 @@ const BG_THEME = {
   beforeAfter: { stops: [PALETTE.bg0, PALETTE.bg1, PALETTE.bg0], dir: 'vertical' },
 };
 
-// One restrained accent geometry per type (amber only, low alpha, never
-// neon) -- the visual signature a no-photo card carries when there is no
-// photo tone to lean on.
+// At most one restrained accent geometry per type (amber only, low alpha,
+// never neon) -- the visual signature a no-photo card carries when there is
+// no photo tone to lean on. Three types have one; two have none, since D180
+// (below).
 function drawBackgroundGeometry(canvas, Skia, W, H, cardType) {
-  if (cardType === 'pr') {
-    // The trophy moment's own light source: a soft glow seated top-right,
-    // echoed by the numeral's own glow lower on the canvas. Kept small and
-    // corner-anchored -- a large sigma here read as a wash across the whole
-    // canvas rather than a restrained accent (rendered and corrected).
-    drawGlow(canvas, Skia, W * 0.92, H * 0.05, W * 0.18, PALETTE.accent, 0.07, W * 0.05);
-  } else if (cardType === 'milestone') {
+  // D180: the PR card's top-right glow and the session card's low-left glow
+  // are both gone. Those two types now carry no accent geometry at all -- the
+  // tonal ground IS their signature, and on the PR card the numeral's own
+  // amber is the one thing meant to be seen. The three below survive because
+  // they are GEOMETRY rather than glow: a ring, seven day-ticks and a seam.
+  if (cardType === 'milestone') {
     // One large, quiet ring, mostly off-canvas -- large-type editorial framing
     // for the big number, never competing with it.
     const paint = paintFor(Skia, rgba(PALETTE.accent, 0.09), STROKE, Math.max(1, W * 0.006));
@@ -390,11 +386,9 @@ function drawBackgroundGeometry(canvas, Skia, W, H, cardType) {
   } else if (cardType === 'beforeAfter') {
     // A faint vertical seam echoing the gutter between the two photo cells.
     fillRect(canvas, Skia, W / 2 - Math.max(1, W * 0.0015), H * 0.05, Math.max(2, W * 0.003), H * 0.12, rgba(PALETTE.accent, 0.14));
-  } else {
-    // session (and any unrecognised type, matching the dispatcher's own
-    // default): one quiet glow low-left, balancing the header's weight.
-    drawGlow(canvas, Skia, W * 0.06, H * 0.96, W * 0.16, PALETTE.accent, 0.06, W * 0.05);
   }
+  // pr, session and any unrecognised type (matching the dispatcher's own
+  // default) draw nothing here.
 }
 
 function drawCraftedBackground(canvas, Skia, W, H, cardType) {
@@ -438,18 +432,19 @@ function drawBackground(canvas, Skia, W, H, cardType) {
 // something like this"): the family's frame. A flat amber bar welded to the
 // top edge read as a browser chrome bar once the card was posted on a dark
 // feed; a card needs an EDGE, so the artwork sits inside a rounded amber
-// rule with the corners lit. Same call site on every card type, so the whole
-// family gains it at once rather than the session card drifting away from
-// its siblings.
+// rule. Same call site on every card type, so the whole family gains it at
+// once rather than the session card drifting away from its siblings.
+//
+// D180 removed the two lit corners this frame used to carry (a soft blurred
+// glow behind the top-left and bottom-right radii). The EDGE was the founder's
+// order; the light behind it was not, and "No glow." is the law. The rule
+// itself is untouched, including the second wider-and-fainter pass that keeps
+// it from re-compressing away to a hairline on a real feed.
 function drawCardFrame(canvas, Skia, W, H, s) {
   const inset = Math.round(14 * s);
   const r = Math.round(52 * s);
   const w = W - inset * 2;
   const h = H - inset * 2;
-  // The lit corners, drawn UNDER the rule so the stroke stays crisp.
-  const glow = Math.round(230 * s);
-  drawGlow(canvas, Skia, inset + r, inset + r, glow, PALETTE.accent, 0.18, 90 * s);
-  drawGlow(canvas, Skia, W - inset - r, H - inset - r, glow, PALETTE.accent, 0.13, 100 * s);
   strokeRRect(canvas, Skia, inset, inset, w, h, r, rgba(PALETTE.accent, 0.55), Math.max(1, 3 * s));
   // A second, wider and fainter rule just outside it: on a real feed this is
   // what stops the edge looking like a 1px hairline after re-compression.
@@ -533,30 +528,11 @@ function iconList(canvas, Skia, cx, cy, size, colorStr) {
   }
 }
 
-function iconTrophy(canvas, Skia, cx, cy, size, colorStr) {
-  const lw = Math.max(1, size * 0.09);
-  const top = cy - size * 0.44;
-  // The bowl, tapered by stacking three bands rather than drawn as one
-  // rounded box: a single rrect reads as a bucket at this size, and the
-  // module has no path builder to spend on one glyph.
-  const bands = [
-    { w: size * 0.62, h: size * 0.2, r: size * 0.05 },
-    { w: size * 0.5, h: size * 0.17, r: size * 0.05 },
-    { w: size * 0.28, h: size * 0.13, r: size * 0.06 },
-  ];
-  let by = top;
-  bands.forEach((b) => {
-    fillRRect(canvas, Skia, cx - b.w / 2, by, b.w, b.h, b.r, colorStr);
-    by += b.h;
-  });
-  // Handles, hooked off the widest band.
-  const paint = paintFor(Skia, colorStr, STROKE, lw * 0.85);
-  canvas.drawCircle(cx - size * 0.37, top + size * 0.16, size * 0.12, paint);
-  canvas.drawCircle(cx + size * 0.37, top + size * 0.16, size * 0.12, paint);
-  // Stem, then the plinth.
-  fillRRect(canvas, Skia, cx - size * 0.06, by, size * 0.12, size * 0.14, size * 0.03, colorStr);
-  fillRRect(canvas, Skia, cx - size * 0.26, by + size * 0.14, size * 0.52, size * 0.11, size * 0.05, colorStr);
-}
+// The trophy glyph that stood here is DELETED (D180, applying D173 T3: "a
+// personal record is stated as a fact, in words and a number"). It had one
+// call site, the session card's top-lift row, where the words already said
+// what it was. The three icons above stay because each names a QUANTITY its
+// stat box would otherwise leave unlabelled (sets, time, exercises).
 
 // Footer block height, ONE definition. D109-1 drops the tagline band
 // everywhere and replaces the stacked wordmark/tagline+underline/url lockup
@@ -763,7 +739,11 @@ function sessionHeroInfo(p, unit) {
     return {
       value: String(p.prCount),
       label: p.prCount === 1 ? 'LIFT WITH A NEW BEST' : 'LIFTS WITH A NEW BEST',
-      color: PALETTE.gold,
+      // D180/D173 T1: this hero used to be gold. A personal best is exactly
+      // what §3 discipline 1 grants amber by name, and the other two branches
+      // already take accent/ink -- so the hero's colour no longer changes
+      // meaning when the moment is a best, it just stays the card's one accent.
+      color: PALETTE.accent,
     };
   }
   if (p.showVolume && (p.tonnage || 0) > 0) {
@@ -875,9 +855,12 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
       fillRRect(cv, Skia, pad, by, cardW, cardH, r, rgba(PALETTE.accent, 0.06));
       strokeRRect(cv, Skia, pad, by, cardW, cardH, r, rgba(PALETTE.accent, 0.65), Math.max(1, 2 * s));
       const midY = by + cardH / 2;
-      const iconSize = Math.round(46 * s);
-      iconTrophy(cv, Skia, pad + Math.round(46 * s), midY, iconSize, PALETTE.gold);
-      const labelX = pad + Math.round(84 * s);
+      // D180/D173 T3: the gold trophy that sat here is deleted. On a row that
+      // already reads "TOP LIFT | 180 kg × 10 | Chest-Supported T-Bar Row",
+      // the glyph said nothing the words did not. Nothing replaces it: the
+      // label moves left to the same 28-px inset the exercise name keeps on
+      // the right, so the row closes up instead of opening with a dead column.
+      const labelX = pad + Math.round(28 * s);
       textTracked(cv, Skia, 'TOP LIFT', labelX, midY + Math.round(8 * s), font(22), PALETTE.accent, 'left', Math.round(2 * s));
       // A hairline between the label and the number, so the pair reads as
       // one statement rather than two stacked fragments.
@@ -925,25 +908,33 @@ function drawPR(canvas, Skia, W, H, p, s, font, wordmark) {
   const brandY = headerTopY(H, fmt, pad + Math.round(60 * s));
   if (p.showDate && p.date) text(canvas, Skia, p.date, W - pad, brandY, font(22, 'regular'), PALETTE.textMuted, 'right');
 
-  // The trophy card (ELITE-SHARE-SPEC pillar 2): the numeral scales up to
-  // BE the hero -- previously it was sized smaller than even the milestone
-  // and weekly heroes, which is exactly what left a dead zone around it on a
-  // card whose entire job is celebrating one number. It now gets both the
-  // bigger start size AND a warm amber glow (Skia blur) seated behind it.
+  // The personal-best card (ELITE-SHARE-SPEC pillar 2, re-ruled by D180): the
+  // numeral scales up to BE the hero -- previously it was sized smaller than
+  // even the milestone and weekly heroes, which is exactly what left a dead
+  // zone around it on a card whose entire job is stating one number. It keeps
+  // the bigger start size; the warm amber halo that used to sit behind it is
+  // gone with every other glow on this canvas.
   function layoutBody(cv, startY) {
     const by = startY;
-    // Plain text in the pill (matches the intensity badge). No decorative
-    // glyphs: the star (U+2605) is missing from some system fonts and renders
-    // as tofu.
+    // D180: the gold pill is GONE -- 15% fill, 44% stroke and gold ink, drawn
+    // round three words. "Law 2: a pill drawn round a label is not an object."
+    // What is left is a plain letter-spaced eyebrow in muted ink, which is
+    // what `SectionLabel` is in the app and what this card's own sticker
+    // export (stickerContentFor) has always drawn for the same string.
+    // No decorative glyphs: the star (U+2605) is missing from some system
+    // fonts and renders as tofu.
+    //
+    // The two baselines below are the ones the pill's own text and the
+    // exercise name already sat on, so taking the plate away changes the
+    // paint and not the composition: the eyebrow does not move, the name
+    // does not move, and the body's measured height (which runBody centres
+    // the whole block from) is unchanged.
     const label = 'PERSONAL RECORD';
     const f = font(24);
-    const bw = measure(f, label) + 60 * s; const bh = Math.round(56 * s);
-    fillRRect(cv, Skia, (W - bw) / 2, by, bw, bh, bh / 2, rgba(PALETTE.gold, 0.15));
-    strokeRRect(cv, Skia, (W - bw) / 2, by, bw, bh, bh / 2, rgba(PALETTE.gold, 0.44), Math.max(1, 2 * s));
-    text(cv, Skia, label, W / 2, by + bh * 0.68, f, PALETTE.gold, 'center');
+    textTracked(cv, Skia, label, W / 2, by + Math.round(38 * s), f, PALETTE.textMuted, 'center', Math.round(3 * s));
 
     const exFont = font(p.isSquare ? 56 : 72);
-    let ey = by + bh + Math.round(70 * s);
+    let ey = by + Math.round(126 * s);
     // Two-line cap with an ellipsis on the tail (audit M2): a long exercise
     // name used to lose its last word(s) with no visible sign of truncation.
     wrapTextCapped(exFont, p.exerciseName || 'Exercise', W - pad * 2, 2).forEach((l) => {
@@ -960,13 +951,10 @@ function drawPR(canvas, Skia, W, H, p, s, font, wordmark) {
     // bigger than even the milestone/weekly heroes and only shrinks to fit a
     // genuinely long string.
     const wFont = fitFont(null, wStr, W - pad * 1.5, p.isSquare ? 200 : 270, (px) => font(px), 72);
-    const wCy = ey + wFont.getSize() * 0.62;
-    // A restrained halo, not a wash: sized off the numeral's own font size
-    // (not the full multi-character string width) and a small blur sigma, so
-    // the glow reads as warm light seated tightly behind the digits rather
-    // than tinting the whole canvas (rendered and corrected twice -- the
-    // first pass spanned the card, the second was still a hard-edged disc).
-    drawGlow(cv, Skia, W / 2, wCy, wFont.getSize() * 0.62, PALETTE.accent, 0.16, wFont.getSize() * 0.16);
+    // D180: the halo that sat behind these digits is deleted. The numeral
+    // KEEPS its amber -- §3 discipline 1 grants amber "a personal best" by
+    // name, and after this sweep it is the only amber the card spends. Type
+    // at 200-270 design-px does not need light behind it to be the hero.
     text(cv, Skia, wStr, W / 2, ey + wFont.getSize(), wFont, PALETTE.accent, 'center');
     let endY = ey + wFont.getSize();
 
@@ -1108,7 +1096,12 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
     if (p.bestLift && p.bestLift.weight) {
       const bl = p.bestLift;
       text(cv, Skia, 'BEST LIFT', pad, by, font(p.isSquare ? 18 : 22), PALETTE.textMuted, 'left');
-      if (bl.isNewBest) text(cv, Skia, 'NEW PR', W - pad, by, font(p.isSquare ? 18 : 22), PALETTE.gold, 'right');
+      // D180/D173 T1: this was the last gold on the family. It takes the ink
+      // ramp rather than the accent because the amber on this row is already
+      // spent, one line below, on the lift itself -- which IS the personal
+      // best §3 discipline 1 grants the colour to. Primary ink keeps the tag
+      // a statement rather than a second column label beside "BEST LIFT".
+      if (bl.isNewBest) text(cv, Skia, 'NEW PR', W - pad, by, font(p.isSquare ? 18 : 22), PALETTE.text, 'right');
       by += Math.round((p.isSquare ? 40 : 52) * s);
       const liftStr = `${bl.exerciseName} · ${withUnit(String(bl.weight), bl.units || 'kg')} × ${bl.reps}`;
       const blFont = fitFont(null, liftStr, W - pad * 2, p.isSquare ? 42 : 54, (px) => font(px));

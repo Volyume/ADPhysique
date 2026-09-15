@@ -8445,3 +8445,106 @@ gradient, and surfaced it rather than treating it as settled, because outward
 brand is the founder's. They confirmed: **"Right call, keep the tone."** The
 grounds stay; every actual glow, the gold and the trophy still go. D180 Part 1
 stands as written and is now founder-confirmed rather than lead-ruled.
+
+---
+
+## D182 — Stage 4 landed, and two defects the lanes found outside their own bounds (2026-09-15)
+
+Both stage 4 lanes are in: the personal-best card (D180 Part 1) and the
+origin-aware transition (Part 2). The share-card lane could actually RENDER its
+work -- `scripts/render-share-card.cjs` drives the module through CanvasKit with
+the same JsiSk API the device uses -- so its visual claims are observed rather
+than inferred, which is a materially better footing than any other lane in this
+campaign had. A device walk is still required: the harness uses Liberation Sans,
+not the platform font, and layout is measured per font.
+
+### 1. An Elite lifter's badge was rendering as a Beginner's
+
+Found by the share-card lane while resolving gold consumers, reported from
+**outside its own lane**, and left untouched for a ruling. It is the most
+instructive defect of the campaign because three separate guards should have
+caught it and none could.
+
+`LiftProgressScreen.js` mapped five strength rungs onto five colours, the top
+one being `c.gold`. **D173 T1 deleted the `gold` role.** So `map.Elite` became
+`undefined`, fell through the `|| c.textMuted` default, and the top of the scale
+rendered in the same muted grey as the bottom.
+
+**Why nothing caught it.** The file aliases the live palette to `c`
+(`buildLevelColor(c)`, a house pattern from CP-10). Every relevant guard is
+anchored on the literal identifier `colors`:
+- `rewardProps.guard.test.js` pinned "no file reads `colors.gold`" -- and passed.
+- `themeTokens.guard.test.js` exists for exactly this class ("no component
+  references a token that does not exist") -- and passed.
+- The A-M amber lane guard matches `colors.primary*`, so it never saw the same
+  file's `Advanced: c.primary` either. **Live amber went through the whole sweep
+  unseen.**
+
+A deleted token, plus an aliasing convention, plus a regex anchored on one
+identifier, produced a live defect no test could see and a sweep could not find.
+
+**Fixed, and the ladder retired rather than repaired.** A strength RANK is not
+"now", so it is outside discipline 1's ceiling, and borrowing `success` for a
+middling rung is the §8 state-colour borrowing this campaign has refused
+everywhere else. `AthleteProfileScreen`'s `levelPill` shows the identical concept
+and was already ruled neutral in the A-M sweep; the two surfaces now agree, and
+the WORD names the rung as it always did.
+
+**Both guards hardened:**
+- `rewardProps.guard` gains a case banning the PROPERTY rather than the object:
+  any `.gold` / `.silver` / `.bronze` member access on anything at all. Those
+  three words are only ever the deleted medal roles. Mutation-tested.
+- `themeTokens.guard` now strips comments before scanning. It had to: a comment
+  written AT the deletion site, explaining why the token was removed, failed the
+  build. **A guard that punishes you for documenting a removal teaches people
+  not to document removals.** Its aliasing limit is now recorded in the file,
+  with a pointer to the property-level ban that covers the specific case, and a
+  warning that any future token deletion needs the same treatment.
+
+### 2. Reduce Motion was removing motion, not replacing it
+
+Law 5 is explicit: "Reduce Motion replaces motion with a cross-fade rather than
+removing the feedback." The navigator returned `animationEnabled: false` --
+feedback deleted. Nothing in the repo pinned it, and there was no cross-fade
+anywhere in the navigation layer.
+
+Fixed for the hero routes: under Reduce Motion they now animate with an
+opacity-only cross-fade at `motion.micro` (120 ms), inside law 5's ceiling.
+All seven hero registrations were moved onto one entry point so the behaviour
+cannot be honoured on some and not others.
+
+**`docs/rules/styling.md` was contradicting itself and the code was following
+the wrong half.** Line 118 said "every animation collapses ... the stack
+transitions show the pattern" -- naming the exact behaviour law 5 forbids, and
+citing as exemplary the code that was violating it. Corrected, with the reason
+recorded in place.
+
+**STILL OPEN, and it is a founder-facing accessibility question rather than a
+lead one:** every NON-hero screen still removes its animation under Reduce
+Motion. Extending the cross-fade app-wide would also override the modal
+slide-up on four presentation-modal screens, which cannot be verified without a
+device. Named on the board and in the device walk.
+
+### 3. Three corrections to D180's own candidate list
+The transition lane surveyed ~250 navigations across 96 destinations and found
+D180's enumeration wrong in three places: "an exercise in the picker" is not a
+navigation at all (the picker calls `onSelect`/`onClose`); "a routine" has no
+qualifying call site (all three are an icon button, an alert or a sheet); and
+"a workout in history" is satisfied by Analytics' Recent sessions list, because
+`WorkoutHistoryScreen` is an accordion whose navigation comes from a button.
+Five call sites across three screens were wired; everything else was correctly
+refused, including a Community set that qualifies on the object test but sits
+outside D180's enumeration and would need shared row components threaded.
+
+### 4. Two findings left alone, both correctly
+`PressableCard.measureThen` has no watchdog, so a measure that never calls back
+on a detached node loses that tap. Pre-existing, affects all five hero call
+sites, and the fix would change a pinned source line. The new `measureHeroOrigin`
+carries a 100 ms watchdog, so the new path is covered; the older one is not.
+Recorded on the board.
+
+The share card's frame rule and three amber pills in the card family are all
+from a founder device order of 2026-08-24 ("a card needs an EDGE"). D180's
+phrase "the ONE amber on the card" was imprecise -- it meant the one amber in
+the card's CONTENT. The frame was never in scope, and reversing a device order
+is not a lead call.

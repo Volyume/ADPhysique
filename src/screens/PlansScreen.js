@@ -114,14 +114,20 @@ const BLOCK_ICON = {
 // long-press = options), the previous-only "Set active" button, then the
 // options button. None nests inside another.
 //
-// Props: plan, meta (workout-count string or null), onPress, onLongPress,
-// onOptions, onSetActive (null for archived rows -- activation stays
-// inside the archived options sheet, unchanged), archived (muted name
+// Props: plan, meta (workout-count string or null), onPressWithLayout,
+// onLongPress, onOptions, onSetActive (null for archived rows -- activation
+// stays inside the archived options sheet, unchanged), archived (muted name
 // styling variant, matching the old archivedPlanCardName treatment),
 // isLast (drops the row's own hairline divider on the final row of its
 // section body).
+//
+// D180 part 2 (origin-aware hero zoom): the row press is origin-aware. This
+// row IS the plan and the screen it opens IS that plan, which is the only
+// case the zoom is honest, so it hands PlanDetail the row's measured rect and
+// the screen grows out of the row. An unmeasurable handle arrives as null and
+// the push is the ordinary one.
 function CompactPlanRow({
-  plan, meta, onPress, onLongPress, onOptions, onSetActive, archived = false, isLast = false,
+  plan, meta, onPressWithLayout, onLongPress, onOptions, onSetActive, archived = false, isLast = false,
 }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -130,7 +136,7 @@ function CompactPlanRow({
     <View style={[styles.compactRow, live.compactRow, isLast && styles.compactRowLast]}>
       <PressableCard
         style={styles.compactRowPress}
-        onPress={onPress}
+        onPressWithLayout={onPressWithLayout}
         onLongPress={onLongPress}
         accessibilityLabel={name}
       >
@@ -1873,7 +1879,7 @@ export default function PlansScreen({ navigation }) {
                                   key={plan.id}
                                   plan={plan}
                                   meta={planWorkoutCounts[plan.id] ? `${planWorkoutCounts[plan.id]} workout${planWorkoutCounts[plan.id] !== 1 ? 's' : ''}` : null}
-                                  onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                                  onPressWithLayout={(rect) => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false, __heroOrigin: rect || undefined })}
                                   onLongPress={() => handlePlanOptions(plan)}
                                   onOptions={() => handlePlanOptions(plan)}
                                   onSetActive={() => handleSetActive(plan)}
@@ -1899,7 +1905,7 @@ export default function PlansScreen({ navigation }) {
                         key={plan.id}
                         plan={plan}
                         meta={planWorkoutCounts[plan.id] ? `${planWorkoutCounts[plan.id]} workout${planWorkoutCounts[plan.id] !== 1 ? 's' : ''}` : null}
-                        onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                        onPressWithLayout={(rect) => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false, __heroOrigin: rect || undefined })}
                         onLongPress={() => handlePlanOptions(plan)}
                         onOptions={() => handlePlanOptions(plan)}
                         onSetActive={() => handleSetActive(plan)}
@@ -1948,7 +1954,7 @@ export default function PlansScreen({ navigation }) {
                     key={plan.id}
                     plan={plan}
                     meta={planWorkoutCounts[plan.id] ? `${planWorkoutCounts[plan.id]} workout${planWorkoutCounts[plan.id] !== 1 ? 's' : ''}` : null}
-                    onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                    onPressWithLayout={(rect) => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false, __heroOrigin: rect || undefined })}
                     onLongPress={() => handleArchivedPlanOptions(plan)}
                     onOptions={() => handleArchivedPlanOptions(plan)}
                     onSetActive={null}
