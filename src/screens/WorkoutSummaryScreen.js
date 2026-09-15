@@ -39,8 +39,7 @@ import {
 } from '../lib/database';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { claimMilestones } from '../lib/milestones';
-import { selection as hapticSelection, prAchieved as hapticMilestone } from '../lib/haptics';
-import { MilestoneBurst } from '../components/PRCelebration';
+import { selection as hapticSelection } from '../lib/haptics';
 import ProgressPhotoPrompt from '../components/ProgressPhotoPrompt';
 import { calculateWeeklyVolume, calculateExcludedWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
@@ -239,7 +238,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // first session by COMP-013, so neither double-celebrates here.
   const [milestone, setMilestone] = useState(null);
   // D2: the gold particle burst for the big rungs (50/100 sessions).
-  const [milestoneBurst, setMilestoneBurst] = useState(false);
   // D2: calm-mode / open-ED suppression flag for the peak-surface celebratory
   // cards (the programme-arc strip + the phase-completion card). Set once from
   // the shared wellbeing read in loadVolumeAndHistory.
@@ -846,17 +844,25 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           });
           if (shown) {
             setMilestone(shown);
-            // D2 (design audit 03 win #4): scale the payoff to the rung. The
-            // big rungs (50/100 sessions) earn the gold particle burst and the
-            // celebration haptic ladder; the earlier rungs keep the quiet
-            // tick. Same calm/ED suppression as the card (this branch), and
-            // the burst itself renders nothing under reduce-motion.
-            if (shown.key === 'sessions_50' || shown.key === 'sessions_100') {
-              setMilestoneBurst(true);
-              hapticMilestone();
-            } else {
-              hapticSelection();
-            }
+            // D170 (founder delegated the call 2026-09-15). D2 scaled the
+            // payoff to the rung: the 50- and 100-session rungs earned a
+            // full-screen gold particle burst and the celebration haptic
+            // ladder. Both are removed; every rung now gets the same quiet
+            // tick, and the MOMENT itself is untouched -- the card, its copy
+            // and its share action all stay.
+            //
+            // The milestone was never the problem. It is effort-framed
+            // ("Fifty times you've turned up. That takes some doing."), it
+            // counts sessions and never weight, it cannot break, and it fires
+            // twice in a lifetime. What went is the particle physics: a gold
+            // burst is the most game-like device in the product, and the
+            // direction is "no gamification" in as many words. Law 5 gives
+            // two reasons for the rule -- ED-safety and not feeling like a
+            // game -- and it is the second that settles this one. Stage 4
+            // already says the personal-best moment should state a fact
+            // rather than throw confetti; this is the same device and the
+            // same answer.
+            hapticSelection();
           }
         } catch (_) {}
       }
@@ -2093,7 +2099,6 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       {/* D2: gold burst over the summary for the 50/100-session rungs. Set
           only inside the calm/ED-suppressed-free branch; renders nothing
           under reduce-motion; never blocks taps. */}
-      {milestoneBurst ? <MilestoneBurst onDone={() => setMilestoneBurst(false)} /> : null}
     </SafeAreaView>
   );
 }

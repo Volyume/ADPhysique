@@ -31,7 +31,10 @@ const KCAL_MAX_FONT_SCALE = 1.3;
 // calibrated for text-on-light contrast. Colour choice only, no change to
 // the adherence-neutral behaviour above.
 export function bandColour() {
-  return colors.primaryFill;
+  // D170: see buildBandColour below for why the arc left amber. Both forms
+  // move together -- a frozen half and a live half disagreeing about a colour
+  // is the exact defect this codebase has now found seven times.
+  return colors.borderLight;
 }
 
 // CP-10 stage 4 (theming, Skia/chart consumers, 2026-07-10): live variant of
@@ -43,7 +46,21 @@ export function bandColour() {
 // untouched and stays the frozen-singleton form for any unmigrated caller
 // and its own colocated test.
 export function buildBandColour(c) {
-  return c.primaryFill;
+  // D170 (founder delegated the call 2026-09-15): the arc leaves amber.
+  //
+  // This does NOT reopen the 2026-05-29 adherence-neutral decision above -- it
+  // extends it. That decision's property is that the ring is ONE colour at
+  // every value and makes no judgement about being under or over target. It
+  // still is. What changes is which colour, and why: law 6 spends amber only
+  // on "now", and an arc that is amber at 10% of the day and at 90% of it is
+  // amber as decoration. It was the single largest amber spend in the product
+  // that meant nothing.
+  //
+  // `borderLight` is deliberate rather than merely neutral: it is the same
+  // token the week ribbon fills a trained day with, so "a filled thing" reads
+  // the same in both devices. Shared vocabulary across two unrelated surfaces
+  // is what makes an app read as authored rather than assembled.
+  return c.borderLight;
 }
 
 function arcPath(cx, cy, r, startDeg, sweepDeg) {
@@ -384,11 +401,13 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
 }
 
 const styles = StyleSheet.create({
+  // D170, law 2 as the founder stated it: "a card should mean: this thing is
+  // an object", and their own worked example of what is NOT one is "a macro
+  // number". This is a reading of today, not a thing you can pick up, so the
+  // fill, the border and the radius go and it becomes a block on the canvas.
+  // It keeps its vertical rhythm and its whole touch surface; the precedent is
+  // Today's own nutrition block, which is a tappable section with no chrome.
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle,
-    padding: spacing.lg,
     gap: spacing.lg,
   },
   kcalRow: {
@@ -552,13 +571,6 @@ const styles = StyleSheet.create({
 // they stay untouched with no `live.*` entry.
 function buildLiveStyles(t) {
   return {
-    // D169: the live half read `t.colors.border` while the frozen half sets
-    // `colors.borderSubtle` above. Live is appended after frozen in every
-    // style array on this screen, so live won and this drew the bright
-    // control-edge grey against its own stated intent. Same defect as
-    // LoggedSetRow (D166), EvidencePanel (D167) and the summary stat tiles
-    // (D168) -- the pattern the styling rules now forbid for new components.
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     kcalValue: { color: t.colors.textPrimary, fontSize: t.fontSize.xxxl, lineHeight: Math.round(t.fontSize.xxxl * 1.1) },
     kcalSubLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     kcalPlanned: { color: t.colors.primary, fontSize: t.fontSize.xs },

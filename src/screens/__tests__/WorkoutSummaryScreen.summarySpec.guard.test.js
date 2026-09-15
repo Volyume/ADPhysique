@@ -137,14 +137,34 @@ describe('ED-safety and the celebration are untouched', () => {
     expect(SRC).toContain("isCalm(mode) || mode === 'read_failed'");
   });
 
-  test('the milestone burst and its haptic are exactly as the founder approved them', () => {
-    // D2 approved both; law 5 forbids celebratory animation and reward
-    // haptics. That collision is a founder ruling and is OPEN. Until it is
-    // answered the founder's own standing decision stands, unchanged, and
-    // this case exists so nobody resolves it by accident in either direction.
-    expect(SRC).toContain('setMilestoneBurst(true)');
-    expect(SRC).toContain('hapticMilestone()');
-    expect(SRC).toContain('<MilestoneBurst');
+  test('the milestone moment survives: the card, its copy and its share action', () => {
+    // D170. The milestone was never the problem. It is effort-framed, counts
+    // sessions and never weight, cannot break, and fires twice in a lifetime.
+    expect(SRC).toContain('setMilestone(shown)');
+    expect(SRC).toContain('handleShareMilestone');
+    expect(SRC).toContain('milestoneCard');
+  });
+
+  test('the gold particle burst and the reward haptic are gone', () => {
+    // D2 gave the 50- and 100-session rungs a full-screen gold burst and the
+    // celebration haptic ladder; law 5 forbids exactly those two things. The
+    // founder delegated the call. What went is the particle physics: a gold
+    // burst is the most game-like device in the product and the direction is
+    // "no gamification" in as many words. Law 5's two justifications are
+    // ED-safety and not feeling like a game, and it is the second that
+    // settles this one.
+    expect(SRC).not.toContain('MilestoneBurst');
+    expect(SRC).not.toContain('milestoneBurst');
+    expect(SRC).not.toContain('hapticMilestone');
+    expect(SRC).not.toContain('prAchieved');
+  });
+
+  test('every rung now gets the same quiet tick', () => {
+    // Not a reward curve, and not scaled to the rung: a selection tick is
+    // feedback that something happened, which is what law 5 allows.
+    expect(SRC).toContain('hapticSelection()');
+    const claim = SRC.slice(SRC.indexOf('if (shown) {'), SRC.indexOf('} catch (_) {}'));
+    expect(claim).not.toMatch(/sessions_50|sessions_100/);
   });
 
   test('the celebration is still withheld under calm mode or an open flag', () => {

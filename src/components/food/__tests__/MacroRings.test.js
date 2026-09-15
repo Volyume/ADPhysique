@@ -15,16 +15,21 @@ describe('bandColour (adherence-neutral, founder decision 2026-05-29)', () => {
   // STROKE, so it takes the bright fill token (`primaryFill`), not the
   // muted text-ink token (`primary`) - see MacroRings.js's bandColour comment.
   test('always the brand amber fill, regardless of under or over target', () => {
-    expect(bandColour(0, 100)).toBe(colors.primaryFill);
-    expect(bandColour(80, 100)).toBe(colors.primaryFill);
-    expect(bandColour(100, 100)).toBe(colors.primaryFill);
-    expect(bandColour(150, 100)).toBe(colors.primaryFill);
+    // D170: the token moved from primaryFill to borderLight (law 6 -- amber
+    // means "now", and an arc that is amber at 10% of the day and at 90% of
+    // it is amber as decoration). The RULE this case pins is untouched and is
+    // the safety one: ONE colour at every value, under or over, so the ring
+    // never congratulates adherence or flags a deviation by colour.
+    expect(bandColour(0, 100)).toBe(colors.borderLight);
+    expect(bandColour(80, 100)).toBe(colors.borderLight);
+    expect(bandColour(100, 100)).toBe(colors.borderLight);
+    expect(bandColour(150, 100)).toBe(colors.borderLight);
   });
 
-  test('no target also resolves to the brand amber fill', () => {
-    expect(bandColour(100, null)).toBe(colors.primaryFill);
-    expect(bandColour(0, undefined)).toBe(colors.primaryFill);
-    expect(bandColour()).toBe(colors.primaryFill);
+  test('no target resolves to the same neutral arc token', () => {
+    expect(bandColour(100, null)).toBe(colors.borderLight);
+    expect(bandColour(0, undefined)).toBe(colors.borderLight);
+    expect(bandColour()).toBe(colors.borderLight);
   });
 
   test('never signals success-green or warning-amber (no colour judgement)', () => {
@@ -45,15 +50,15 @@ describe('bandColour (adherence-neutral, founder decision 2026-05-29)', () => {
 // bandColour() itself is untouched, still frozen-singleton, still covered
 // by the describe block above.
 describe('buildBandColour (CP-10 stage 4, live-theme variant)', () => {
-  test('resolves the same primaryFill token as the legacy singleton, for the current (dark) palette', () => {
+  test('resolves the same token as the legacy singleton, for the current (dark) palette', () => {
     expect(buildBandColour(colors)).toBe(bandColour());
   });
 
   test('reads off the PASSED-IN colour table, not the frozen singleton -- tracks a live theme flip', () => {
     const darkColors = resolveTheme({ theme: 'dark' }).colors;
     const lightColors = resolveTheme({ theme: 'light' }).colors;
-    expect(buildBandColour(darkColors)).toBe(darkColors.primaryFill);
-    expect(buildBandColour(lightColors)).toBe(lightColors.primaryFill);
+    expect(buildBandColour(darkColors)).toBe(darkColors.borderLight);
+    expect(buildBandColour(lightColors)).toBe(lightColors.borderLight);
   });
 });
 

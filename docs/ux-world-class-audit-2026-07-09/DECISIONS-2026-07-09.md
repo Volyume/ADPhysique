@@ -7546,3 +7546,89 @@ around a macro number (which the founder's own objecthood test excludes), the
 single largest amber spend in the product that does not mean "now", and a
 device the plan itself names as the category signature. Those are separable
 from the ring existing. Put to the founder 2026-09-15.
+
+## D170 (2026-09-15) - The two held questions, ruled: the celebration and the rings
+
+**Authority.** Founder in chat 2026-09-15, delegating both explicitly: "You are
+to make the decisions on what brings the best app." Ruled by the lead under
+D33's criterion, which is the best product and never the lesser effort. Both
+were held open at D168 and D169 specifically because one was ED-adjacent and
+the other touched a standing founder order; the delegation resolves the
+authority question, not the substance, so the reasoning is recorded in full.
+
+### 1. The milestone celebration: the MOMENT stays, the PARTICLE PHYSICS go.
+
+D2 gave the 50- and 100-session rungs a full-screen gold particle burst
+(`PRCelebration.js`, ~2,400 ms) and the celebration haptic ladder
+(`haptics.prAchieved`, a two-peak reward curve). Law 5 forbids exactly those
+two things.
+
+**RULED: both are removed. Every rung now gets the same quiet selection tick.
+The card, its copy and its share action are untouched.**
+
+The milestone was never the problem, and it would have been easy to delete the
+whole thing under cover of a safety rule. It is effort-framed ("Fifty times
+you've turned up. That takes some doing."), it counts SESSIONS and never
+weight, it cannot break, it fires twice in a lifetime, and it is already
+withheld under calm mode and an open flag. That is not the variable-reward loop
+the ED rule exists to prevent, and saying otherwise would be using the rule as
+a blunt instrument.
+
+What settles it is law 5's SECOND justification rather than its first. The law
+as written gives two: "that is the ED-safety rule, and it is also what keeps it
+from feeling like a game". A full-screen gold particle burst is the most
+game-like device in the product, and direction D says "No gamification" in as
+many words. The plan's own stage 4 already says the personal-best moment should
+"state a fact rather than throw confetti"; this is the same device and it gets
+the same answer. The haptic goes with it because a two-peak reward curve IS the
+reward haptic the law names, and the moment does not need one: the card says it.
+
+### 2. The macro rings: the RING stays, its AMBER and its CARD go.
+
+The plan names "macro rings drawn in Skia" among the category props we carry,
+then omits them from stage 3's removal set. D75 orders that the ring is visible
+from day one, "Never re-propose hiding it".
+
+**RULED: the ring device stays. The arc leaves amber for `borderLight`, and the
+card around it is retired.**
+
+**Why the ring stays.** A ring is the correct encoding for
+proportion-to-a-bound, and that is information design rather than a category
+signature. Whoop's recovery ring is a tell because it scores a person; a fuel
+gauge is not a tell. It is also genuinely well built: UI-thread animation, no
+per-frame JS, Reduce Motion honoured, a full spoken summary as a polite live
+region. Retiring it would reverse three recorded decisions, produce the largest
+diff in stage 2, and lose a real affordance to win a stylistic argument.
+
+**Why the amber goes, and why this does NOT reopen the 2026-05-29 safety
+decision.** That decision's property is that the ring is ONE colour at EVERY
+value and makes no judgement about being under or over target, because for the
+at-risk subgroup colour-coded targets drive the harm pattern. It still is one
+colour at every value. What changes is which colour. Law 6 spends amber on
+"now", and an arc that is amber at 10% of the day and at 90% of it is amber as
+decoration: it was the single largest amber spend in the product that meant
+nothing. `borderLight` is chosen deliberately rather than merely neutrally,
+because it is the token the week ribbon fills a trained day with, so "a filled
+thing" reads the same across two unrelated surfaces. Both the frozen
+`bandColour()` and the live `buildBandColour()` moved together; changing one
+would have created an eighth instance of the defect this session has been
+fixing.
+
+**Why the card goes.** The founder's own statement of law 2 is "a card should
+mean: this thing is an object", and their own worked example of what is not one
+is "a macro number". This is a reading of today. It keeps its full touch
+surface and its rhythm; the precedent is Today's nutrition block, which is a
+tappable section with no chrome.
+
+**On D75.** That order forbids re-proposing that the ring be HIDDEN. Nothing
+here hides it: it is visible from day one, at every value, exactly as ordered.
+The colour of its stroke and the box around it are not what D75 protects, and
+the ruling does not stretch its wording to claim otherwise.
+
+### Tests re-anchored, never dropped
+`MacroRings.test.js`'s adherence-neutral cases still assert ONE colour at every
+value including over target - the safety rule they exist for - with the token
+updated. `WorkoutSummaryScreen.summarySpec.guard.test.js` swaps its
+hold-the-collision-open case for three that pin the ruling: the moment
+survives, the burst and reward haptic are gone, and every rung gets the same
+tick.
