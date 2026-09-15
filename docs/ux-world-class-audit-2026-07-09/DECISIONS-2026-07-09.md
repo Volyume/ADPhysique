@@ -7745,3 +7745,177 @@ The macro rings (D172 already ruled them), the amber icon sweep (its own unit),
 `GradientCard.js` (already a no-gradient shim), and `shadow.glow` on the Home
 Start button, which is the single recorded glow exception of 2026-07-09 and is
 a founder-facing change rather than a mechanical one.
+
+---
+
+## D174 — The amber census, and the four forks it could not decide (lead ruling, 2026-09-15)
+
+**Authority.** Plan §3 (the four amber disciplines) and §5 law 6. Read-only Opus
+census, 2026-09-15, measured against that text. Ruled under D33.
+
+### The count I gave the founder was wrong by a factor of four
+
+I reported "217 amber-tinted Ionicons" and worked from a 268-line grep
+(`color={...colors.primary}`). That grep is **one of nine mechanisms and 19.5%
+of the surface**. The measured figure is **1,375 raw references across 175
+files**, of which 391 are live-half mirrors of a frozen key, giving **918-984
+logical sites** (two counting methods, the gap being multi-reference single
+lines). The other eight mechanisms: `primaryBg` washes (229 refs), `primaryFill`
+(80), `primaryDim` (15), Switch `trackColor`/`thumbColor` (81), tinted borders
+(70), solid borders (60), `ActivityIndicator`/`RefreshControl` tints (31), and
+one `shadow.glow`.
+
+Roughly **71% of those sites fail §3**. Under discipline 1 the product is
+entitled to about **twelve** amber sites. It has nearly a thousand. That is the
+real size of law 6, and it is the reason the sweep is being ruled centrally
+rather than screen by screen.
+
+Five leverage claims were spot-checked against the tree before any of this was
+ruled, and all five hold exactly: 104 `<SettingRow>` instances across 17 files;
+63 `variant="tertiary"` and 18 `variant="emphatic"`; `Illustrations.js` has zero
+production importers (two Jest mocks only); `shadow.glow` has exactly two
+consumers; and `approachCardDescActive` is frozen-only while both its siblings
+carry live twins.
+
+### The reading that settles three of the four forks
+
+Disciplines 1 and 4 are not two permissions. **Discipline 1 is a ceiling**
+("amber marks 'now' and nothing else", with four named instances) and
+**discipline 4 is a filter inside it** ("a colour is applied because a number or
+a state justifies it"). Discipline 4 cannot widen discipline 1. So "it is a
+state" is never on its own an argument for amber: the state also has to be
+*now*. A stored preference is not now. A chosen filter is not now.
+
+### A1 — Switches (81 sites, 14 files): RULED, amber leaves
+
+A switch's on-state is a stored preference, not a live moment, so it is outside
+the ceiling. The census's own cost note for keeping it is decisive on its own
+terms: up to nine amber rows on one Settings screen is a scarcity failure by
+volume even where each row is individually defensible.
+
+`success` is refused as the replacement: a switch being on is not a success, and
+§8 protects the state-colour grammar from exactly this kind of borrowing.
+
+The on-track becomes **`borderLight`** and the thumb **`textPrimary`**; the
+off-track keeps `surface3` with a `textMuted` thumb. `borderLight` is chosen for
+the same reason D172 chose it for the macro arc: it is the token the week ribbon
+fills a trained day with, so "a filled thing" reads identically across unrelated
+surfaces. Position remains the primary cue, which is the platform semantic and
+what assistive technology announces.
+
+**BUILD REQUIREMENT, not an assumption:** the on/off pair must be re-asserted
+against the contrast suite before this lands. If `borderLight` does not separate
+from `surface3` at the graphical bar, the fix is a lighter neutral, never a
+return to amber.
+
+**Fixed regardless of the above, because it is a plain bug:** 13 sites pass
+`thumbColor={t.colors.primary}` UNCONDITIONALLY, so the thumb is amber when the
+switch is OFF -- `NotificationSettingsScreen.js:752,806,828,854,873,892,917,975,1021`,
+`CoachingRemindersScreen.js:448,500,549,573`, `CommunityPrivacyScreen.js:287,302`,
+`CommunityJoinScreen.js:608`, `community/PeopleFiltersSheet.js:124`,
+`CommunityTrainingProfileScreen.js:326`. A colour applied in the absence of the
+state it names is discipline 4 broken in the plainest way available.
+
+### A2 — The selected filter chip (~122 `Chip` sites + ~120 hand-rolled): RULED, neutral
+
+A filter chip selects a **view**, not a state of the user's training. Discipline
+1's four instances are all the user's live moment; a chosen tab is not one. So
+the ceiling excludes it.
+
+Selected becomes `surface3` fill + `textPrimary` label at the semibold face +
+`borderLight` edge. Unselected stays `surface` + `textSecondary` + `border`.
+That is **three simultaneous differences** where several hand-rolled variants
+today carry only one (colour), so selection gets *stronger*, not weaker -- which
+answers the census's stated cost rather than accepting it.
+
+**BUILD REQUIREMENT:** device-checked at the largest accessibility text size
+before landing, because that is where a fill-plus-weight distinction is most
+likely to collapse.
+
+This ruling also governs the ~120 hand-rolled `*Active`/`*Selected` style keys
+the census enumerated. They are migrated onto `Chip`/`SegmentedControl`/
+`OptionCard`/`Dropdown` rather than recoloured one by one; recolouring them
+individually would preserve the duplication that produced them.
+
+### A3 — Community unread dots: RULED, amber stays
+
+"New since you looked" is the one thing in this list that genuinely IS now: it
+marks the live unconsumed item and it disappears the moment you look at it. It
+is earned by data (discipline 4), transient by construction (discipline 1), and
+at most one dot per row. It is also the one surface where amber discipline was
+already applied deliberately, under CR-17/D163. **`rows.amber.guard.test.js`'s
+`AMBER_COUNTS` table stands unchanged**, and any future sweep that touches these
+files must keep it passing rather than re-anchor it.
+
+### A4 — `ProfileAvatarMark`: RULED, neutral, same treatment as A2
+
+The census framed this as "identity marks are the one place a brand colour is
+conventionally spent regardless of state". That convention is precisely what the
+founder's design law refuses. An avatar badge that is amber whatever the state
+is decoration under discipline 4.
+
+The selected branch at `:80` is the same category as A2's chips -- a choice in a
+picker -- so it takes A2's treatment rather than a second, inconsistent one. The
+unconditional `primaryFill` badges (`:67`, `:96`), the `withAlpha` tint (`:41`)
+and the amber initial (`:112`/`:132`) all go.
+
+### Two the census flagged for a lead rather than deciding
+
+**The `MacroRings` bars.** Correctly flagged: D172's written scope was "the
+arc", and the bars underneath it are still amber at every value. D172's own
+sentence applies verbatim -- "an arc that is amber at 10% of the day and at 90%
+of it is amber as decoration". **Ruled: the bars follow the arc to
+`borderLight`** (`:515`/`:587`, `:521`/`:588`), `kcalPlanned` to `textMuted`
+(`:439`/`:576`), and the defensive default at `:154` to `borderLight`. This is
+D172 extended, not reopened: `MacroRings.test.js`'s adherence-neutral cases still
+assert ONE colour at every value including over target, which is the safety
+property, and it is untouched.
+
+**The glow.** `shadow.glow` has exactly two consumers: `ProOnboardingScreen.js:3711`
+(inside `offerCard`, which that file's own comment at `:3750-3752` records as
+dead and unreferenced -- confirmed by grep) and `ProUpgradeScreen.js:779`
+(`successCircle`). Discipline 3 names a glow explicitly, and the founder's own
+statement of the law says "No glow." The Home Start-button glow that `theme.js:28-30`
+records as the single permitted exception **was never built** -- there is no
+`shadow.glow` reference in `HomeScreen.js`. **Ruled: both consumers and the
+token go, and `theme.js:28-30`'s exception note goes with them.** Removing an
+unused permission is not removing a feature, and the founder can restore it in
+one line if they ever want it.
+
+On `ProUpgradeScreen.js` being a dormant billing surface: the billing discipline
+forbids refactoring "purchase/restore/entitlement/cascade flows without a
+dedicated written test plan". A shadow property on a decorative circle is none
+of those, and the surface stays dormant and unregistered either way. Recorded
+explicitly rather than done quietly.
+
+### The eighth frozen/live defect
+
+A structural differ over all 137 `buildLiveStyles` files (2,386 keys defined in
+both halves) found **zero** same-key colour disagreements -- the seven fixed this
+session appear to have been the whole population. It found one defect of a
+different shape:
+
+**`NutritionTargetsScreen.js:2505`** defines `approachCardDescActive:
+{ color: colors.primaryDim }` in the frozen block and **nowhere in the live
+block**, while `:1138` consumes it as `active && [styles.approachCardDescActive,
+live.approachCardDescActive]`. So `live.approachCardDescActive` resolves
+`undefined` and the boot-time frozen value wins permanently, surviving a theme
+flip. Its two siblings both have live twins (`:2494`/`:2717`, `:2500`/`:2719`).
+Verified in the tree before being written down.
+
+### Order of work, which is not the order of the report
+
+Four files clear roughly a third of the surface and go first:
+1. `SettingsPrimitives.js` (3 lines, ~108 sites, 17 files) -- the amber-tinted
+   disc behind a stock glyph on 104 `<SettingRow>`s. §3.2's "a tint behind a
+   glyph" and the REMOVE-decoration definition word for word. This is the
+   `EmptyState.js` of the amber sweep.
+2. `Button.js` (2 lines, ~82 sites) -- `tertiary` (63 sites, three amber
+   properties each: wash ground, amber label on a non-committing button, tinted
+   border) and `primary.iconFg` (19 icon-bearing sites). `emphatic` is untouched;
+   it is discipline 1's "one committing button".
+3. `Chip.js` + `SegmentedControl.js` + `OptionCard.js` + `Dropdown.js` (~130
+   sites), now unblocked by A2.
+4. `Illustrations.js` -- deleted. Zero production importers, 28 amber `ACCENT`
+   strokes including a decorative `opacity: 0.5` halo. The only references are
+   two Jest mocks and a guard that asserts an illustration is NOT used.
