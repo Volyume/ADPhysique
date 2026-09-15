@@ -8090,3 +8090,64 @@ filename (`src/screens/[A-M]*.js` and `src/screens/[N-Z]*.js`), so a partial
 tree from one is independent of the other, and
 `src/__tests__/frozenLiveParity.guard.test.js` will catch a half-applied
 frozen/live pair in either.
+
+---
+
+## D177 — Three findings from the stage 3 tail, ruled now and executed once the screen lanes land (2026-09-15)
+
+Recorded here rather than held in a session's head, because all three touch
+files two concurrent lanes currently own.
+
+### 1. `WeightTrendCard.js` is dead, five suites pin it, and two live screens say it renders
+
+**Verified, not inferred.** `src/components/WeightTrendCard.js` exports a
+default component. `grep -rn "from '.*WeightTrendCard'\|require(.*WeightTrendCard"`
+over `src/` returns **nothing**. Every other mention in the tree is a comment.
+
+What actually renders on the weight surface is `WeightTrendChart`, a **different
+component defined locally inside `BodyMetricsScreen.js:221`** and mounted at
+`:1179`. The comments at `AnalyticsScreen.js:92` and `:95` state that
+"WeightTrendCard renders there unchanged" and are simply wrong.
+
+Five suites pin the dead file: `WeightTrendCard.rateUnits.guard.test.js`,
+`rollingNumber.guard.test.js`, `p15UnitDisplayCopy.guard.test.js`,
+`AnalyticsScreen.stateMatrix.test.js`,
+`BodyMetricsScreen.weightTrendParity.guard.test.js`.
+
+**Why this is worse than ordinary dead code.** Two of those are safety and copy
+guards on a WEIGHT surface. They read as protecting the bodyweight card a user
+actually sees. They protect a file nobody renders, so the live surface has less
+cover than the suite names imply, and anyone auditing the ED-adjacent weight
+screens would be misled by both the guards and the comments.
+
+**RULED: re-point before deleting, never the other way round.** For each of the
+five, establish what the assertion is FOR. If its intent is a property of the
+live weight surface, it moves to `WeightTrendChart` and must pass there before
+anything is deleted; if its intent is genuinely specific to the dead component,
+it is recorded as void rather than quietly dropped. The file goes only after
+every intent has a live home. The stale comments in `AnalyticsScreen.js` are
+corrected in the same change. **Deleting first and re-pointing afterwards is
+forbidden**: it converts "this rule is unprotected" into "this rule never
+existed", which is the failure the tests-are-the-contract rule exists to stop.
+
+### 2. `useVisualPillar` is called with an argument it does not take
+`AnalyticsScreen.js:132` calls `useVisualPillar(user?.id, tier)`. The signature
+at `src/hooks/useVisualPillar.js:38` is `useVisualPillar(userId)`. The second
+argument is silently ignored — almost certainly a residue of D137, when the
+product became fully free and tier stopped gating anything. Harmless today and
+wrong tomorrow: the next person to add a second parameter inherits a caller
+passing `tier` into it. **RULED: drop the argument.** Trivial, but it is a live
+call site telling a lie about its own hook.
+
+### 3. `DimensionRow` has no consumers
+`src/components/community/DimensionRow.js` is referenced only by a comment in
+`CommunityFindPeopleScreen.js:45`. Genuinely dead, and it took an edit in the
+D173 props sweep (its `ribbon-outline` went to `pricetag-outline`) purely
+because it was in the grep. **RULED: delete it**, and rewrite the comment that
+points at it so the reference does not outlive the file.
+
+### Sequencing
+1 and 2 need `BodyMetricsScreen.js` and `AnalyticsScreen.js`, which the
+`src/screens/[A-M]*.js` lane currently owns. 3 is free but is grouped with them
+so the tail lands as one reviewable change rather than three. None is parked:
+the ruling is complete here and execution is mechanical.
