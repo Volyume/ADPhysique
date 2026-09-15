@@ -166,6 +166,23 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          # Run 3580 (2026-09-15) died here in three minutes, before npm ci and
+          # long before Gradle:
+          #   Warning: Failed to find package 'tools'
+          #   Error: sdkmanager failed with exit code 1
+          # This action's default `packages` is "tools platform-tools", and
+          # `tools` is the LEGACY SDK Tools package Google has now removed from
+          # the repository, so sdkmanager can no longer resolve it. Nothing in
+          # the repo changed to cause this; the hosted runner's cmdline-tools
+          # moved on (16.0 in that run) and the default stopped being valid.
+          #
+          # So: drop ONLY the package that no longer exists, and keep the
+          # other half of the default. The next step installs the platforms,
+          # build-tools, CMake and both NDKs explicitly and with retries, but
+          # it does not install platform-tools, so that stays here rather than
+          # being lost as a side effect of this fix.
+          packages: 'platform-tools'
 
       # API 35 (Android 15) is now the Play Store minimum target. Make sure the
       # platform, build-tools, CMake, and native NDK versions are installed
