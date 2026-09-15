@@ -1896,8 +1896,10 @@ export default function DiaryScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Open saved meals"
         >
-          <View style={[styles.savedFoodIcon, live.savedFoodIcon]}>
-            <Ionicons name="bookmark-outline" size={20} color={t.colors.primary} />
+          {/* D174: the amber disc behind the glyph goes, fill and geometry
+              together (section 3.2, "a tint behind a glyph"). */}
+          <View style={styles.savedFoodIcon}>
+            <Ionicons name="bookmark-outline" size={20} color={t.colors.textSecondary} />
           </View>
           <View style={styles.savedFoodText}>
             <Text style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Saved meals</Text>
@@ -1911,8 +1913,8 @@ export default function DiaryScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Open recipes"
         >
-          <View style={[styles.savedFoodIcon, live.savedFoodIcon]}>
-            <Ionicons name="restaurant-outline" size={20} color={t.colors.primary} />
+          <View style={styles.savedFoodIcon}>
+            <Ionicons name="restaurant-outline" size={20} color={t.colors.textSecondary} />
           </View>
           <View style={styles.savedFoodText}>
             <Text style={[styles.savedFoodOptionTitle, live.savedFoodOptionTitle]}>Recipes</Text>
@@ -1946,7 +1948,7 @@ export default function DiaryScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Scan barcode"
         >
-          <Ionicons name="barcode-outline" size={26} color={t.colors.primary} />
+          <Ionicons name="barcode-outline" size={26} color={t.colors.textSecondary} />
         </TouchableOpacity>
       ) : null}
 
@@ -2065,8 +2067,9 @@ export default function DiaryScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Copy food from another logged day"
         >
-          <View style={[styles.diaryToolIcon, live.diaryToolIcon]}>
-            <Ionicons name="copy-outline" size={18} color={t.colors.primary} />
+          {/* D174: same disc, same answer as savedFoodIcon. */}
+          <View style={styles.diaryToolIcon}>
+            <Ionicons name="copy-outline" size={18} color={t.colors.textSecondary} />
           </View>
           <View style={styles.diaryToolCopy}>
             <Text style={[styles.diaryToolTitle, live.diaryToolTitle]}>Copy from another day</Text>
@@ -2080,8 +2083,8 @@ export default function DiaryScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel="Open nutrition trends and export"
         >
-          <View style={[styles.diaryToolIcon, live.diaryToolIcon]}>
-            <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
+          <View style={styles.diaryToolIcon}>
+            <Ionicons name="analytics-outline" size={18} color={t.colors.textSecondary} />
           </View>
           <View style={styles.diaryToolCopy}>
             <Text style={[styles.diaryToolTitle, live.diaryToolTitle]}>Trends and export</Text>
@@ -2180,7 +2183,7 @@ function WaterRow({
     <Card padding="md" style={styles.waterRow}>
       <View style={styles.waterHeader}>
         <View style={styles.waterLeft}>
-          <Ionicons name="water-outline" size={18} color={t.colors.primary} />
+          <Ionicons name="water-outline" size={18} color={t.colors.textSecondary} />
           <Text style={[styles.waterLabel, live.waterLabel]}>Water</Text>
         </View>
         <View style={styles.waterButtons}>
@@ -2285,13 +2288,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.md,
   },
+  // D174: was a 40dp `primaryBg` disc. Fill and disc geometry gone; a fixed
+  // glyph column keeps every tool row's copy on one left edge.
   diaryToolIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
+    width: iconSize.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
   },
   diaryToolCopy: { flex: 1, minWidth: 0 },
   diaryToolTitle: { ...type.bodyStrong, color: colors.textPrimary },
@@ -2322,13 +2324,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.sm,
   },
+  // D174: same disc as diaryToolIcon above, same answer.
   savedFoodIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
+    width: iconSize.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
   },
   savedFoodText: { flex: 1 },
   savedFoodOptionTitle: { ...type.bodyStrong, color: colors.textPrimary },
@@ -2552,7 +2552,6 @@ function buildLiveStyles(t) {
     selActionLabel: { color: t.colors.textPrimary, fontSize: t.fontSize.xs },
     moveOptionText: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
     copyRowMeta: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
-    diaryToolIcon: { backgroundColor: t.colors.primaryBg },
     diaryToolTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     diaryToolText: { ...t.type.bodySm, color: t.colors.textMuted },
     saveMealHint: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
@@ -2561,7 +2560,6 @@ function buildLiveStyles(t) {
     saveMealBtnTextPrimary: { ...t.type.label, color: t.colors.textPrimary },
     savedFoodTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     savedFoodIntro: { ...t.type.bodySm, color: t.colors.textMuted },
-    savedFoodIcon: { backgroundColor: t.colors.primaryBg },
     savedFoodOptionTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     savedFoodOptionSub: { ...t.type.bodySm, color: t.colors.textMuted },
     dateCluster: { borderColor: t.colors.border, backgroundColor: t.colors.surface },

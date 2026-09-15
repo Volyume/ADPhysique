@@ -462,7 +462,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         {(_unsure('kcal100g', kcal) || _unsure('protein100g', protein)
           || _unsure('carbs100g', carbs) || _unsure('fat100g', fat)
           || _unsure('fibre100g', fibre)) ? (
-          <Text style={[styles.unsureNote, live.unsureNote]}>Amber figures aren't certain, check them.</Text>
+          <Text style={[styles.unsureNote, live.unsureNote]}>Highlighted figures aren't certain, check them.</Text>
         ) : null}
         <View style={styles.row}>
           <NumField label="Calories" value={kcal} onChange={setKcal} suffix="kcal" unsure={_unsure('kcal100g', kcal)} />
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
   contextLabel: { color: colors.textMuted, fontSize: fontSize.sm, marginBottom: spacing.lg },
   barcodeHint: {
     ...type.label,
-    color: colors.primary,
+    color: colors.textSecondary,
     marginTop: -spacing.md, marginBottom: spacing.lg,
   },
   dupeBanner: {
@@ -615,7 +615,12 @@ const styles = StyleSheet.create({
   numField: { flex: 1 },
   row: { flexDirection: 'row', gap: spacing.sm },
   numSuffix: { color: colors.textMuted, fontSize: fontSize.sm, marginLeft: spacing.xs },
-  numWrapUnsure: { borderColor: colors.primary },
+  // D174 lead ruling. A low-confidence OCR figure is not "now", so it is
+  // outside discipline 1's ceiling and the accent cannot mark it. `warning` is
+  // not borrowed here, it is the correct role: this IS a caution that the
+  // scanned number may be wrong. Section 8's state-colour grammar is served,
+  // not bent.
+  numWrapUnsure: { borderColor: colors.warning },
   unsureNote: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: -spacing.xs, marginBottom: spacing.sm },
   // L05-ACF2 (2026-07-09 design audit): the live portion-calorie preview.
   portionPreview: { color: colors.textPrimary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, marginTop: -spacing.xs, marginBottom: spacing.sm },
@@ -634,11 +639,11 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     contextLabel: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
-    barcodeHint: { ...t.type.label, color: t.colors.primary },
+    barcodeHint: { ...t.type.label, color: t.colors.textSecondary },
     dupeBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     dupeText: { ...t.type.bodySm, color: t.colors.textSecondary },
     numSuffix: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
-    numWrapUnsure: { borderColor: t.colors.primary },
+    numWrapUnsure: { borderColor: t.colors.warning },
     unsureNote: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     portionPreview: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
   };

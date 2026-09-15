@@ -128,9 +128,17 @@ describe('ED-safety: the weight trend block is not widened', () => {
   });
 
   test('the trend is never coloured as good or bad', () => {
-    // Body-weight trends are Class B: never red/green. The line takes the
-    // brand accent, which carries no verdict.
-    expect(TREND_BLOCK).toContain('color={t.colors.primary}');
+    // Body-weight trends are Class B: never red/green. THAT is what this case
+    // exists for, and the second assertion below -- the one that does the
+    // safety work -- is untouched.
+    //
+    // Re-anchored 2026-09-15 (D174): the token in the first assertion was
+    // incidental. Its comment said the line takes "the brand accent, which
+    // carries no verdict"; the verdict-free property is the point, not the
+    // accent. D174 ruled a whole-series chart line neutral (`borderLight`, the
+    // same token the week ribbon fills a trained day with), so the line is
+    // still one colour at every value and still carries no verdict.
+    expect(TREND_BLOCK).toContain('color={t.colors.borderLight}');
     expect(TREND_BLOCK).not.toMatch(/colors\.(success|error|warning)/);
   });
 

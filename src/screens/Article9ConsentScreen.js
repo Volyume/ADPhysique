@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
   bullets: { gap: spacing.xs, marginLeft: spacing.xs },
   bulletRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   bulletDot: {
-    color: colors.primary,
+    color: colors.textMuted,
     fontSize: fontSize.md,
     lineHeight: 22,
     width: 12,
@@ -482,7 +482,7 @@ function buildLiveStyles(t) {
     title: { ...t.type.h2, color: t.colors.textPrimary },
     body: { ...t.type.body, color: t.colors.textSecondary },
     subhead: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    bulletDot: { color: t.colors.primary, fontSize: t.fontSize.md },
+    bulletDot: { color: t.colors.textMuted, fontSize: t.fontSize.md },
     bulletText: { ...t.type.bodySm, color: t.colors.textSecondary },
     withdrawNote: { ...t.type.bodySm, color: t.colors.textMuted },
     ctaPrimary: { backgroundColor: t.colors.primaryFill },

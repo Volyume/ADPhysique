@@ -101,10 +101,18 @@ describe('the emphatic set is curated: committing actions only', () => {
 });
 
 describe('the hand-rolled fills on the reviewed screens follow the same rule', () => {
-  test('the Nutrition scanner is a raised disc with an amber glyph', () => {
+  // Renamed and re-anchored 2026-09-15 (D174). The case is about BUTTON
+  // HIERARCHY: the scanner is a raised neutral disc, not an emphatic amber
+  // fill -- that first assertion is untouched and is the point. The glyph's
+  // amber was incidental, and D174's first REMOVE row (an unconditional
+  // `primary` on an Ionicon) takes it to `textSecondary`, which is exactly
+  // what Button's own `primary` variant already passes as its `iconFg`
+  // (Button.js:73). So the FAB now agrees with the variant it hand-rolls.
+  test('the Nutrition scanner is a raised disc, not an emphatic fill', () => {
     const diary = read('screens/DiaryScreen.js');
     expect(diary).toMatch(/scanFab: \{[\s\S]{0,300}backgroundColor: colors\.surface2, borderWidth: 1, borderColor: colors\.border,/);
-    expect(diary).toMatch(/<Ionicons name="barcode-outline" size=\{26\} color=\{t\.colors\.primary\} \/>/);
+    expect(diary).toMatch(/<Ionicons name="barcode-outline" size=\{26\} color=\{t\.colors\.textSecondary\} \/>/);
+    expect(diary).not.toMatch(/scanFab: \{[\s\S]{0,300}colors\.primaryFill/);
   });
   test('the workout logger primaries are raised surfaces with white labels', () => {
     const aw = read('screens/ActiveWorkoutScreen.js');

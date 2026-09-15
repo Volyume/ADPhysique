@@ -242,7 +242,7 @@ export default function MyRecipesScreen({ navigation, route }) {
             ? <ActivityIndicator size="small" color={t.colors.primary} />
             : (
               <View style={[styles.logPill, live.logPill]}>
-                <Ionicons name="add" size={16} color={t.colors.primary} />
+                <Ionicons name="add" size={16} color={t.colors.textSecondary} />
                 <Text style={[styles.logPillText, live.logPillText]}>Log</Text>
               </View>
             )}
@@ -299,7 +299,7 @@ export default function MyRecipesScreen({ navigation, route }) {
         onClose={() => navigation.goBack()}
         rightAccessory={(
           <TouchableOpacity onPress={() => { haptics.selection(); onCreate(); }} hitSlop={12} accessibilityRole="button" accessibilityLabel="New recipe">
-            <Ionicons name="add" size={26} color={t.colors.primary} />
+            <Ionicons name="add" size={26} color={t.colors.textSecondary} />
           </TouchableOpacity>
         )}
       />
@@ -400,12 +400,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xxs,
     borderRadius: radius.full,
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface2,
     paddingHorizontal: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  logPillText: { ...type.label, color: colors.primary },
+  logPillText: { ...type.label, color: colors.textSecondary },
   rowActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -437,8 +437,8 @@ function buildLiveStyles(t) {
     row: { borderBottomColor: t.colors.borderSubtle },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     meta: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
-    logPill: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.border },
-    logPillText: { ...t.type.label, color: t.colors.primary },
+    logPill: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    logPillText: { ...t.type.label, color: t.colors.textSecondary },
     sheetTitle: { ...t.type.title, color: t.colors.textPrimary },
     sheetSub: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
   };

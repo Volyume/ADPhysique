@@ -50,10 +50,24 @@ describe('CoachOutputScreen R2 radius cohesion', () => {
   });
 
   // R2 lead-ruled one-liner (2026-07-11, coach/home lane): the adjustment
-  // icon-backing joins the control/input/icon-backing family at radius.md
-  // (FOOD-DESIGN-STANDARD.md section 4). Was radius.sm. Pinned so it cannot
-  // drift back to the tighter corner.
-  test('the adjustment icon-backing uses the icon-backing radius (md)', () => {
-    expect(radiusOf('adjustmentIconWrap')).toBe('md');
+  // icon-backing joined the control/input/icon-backing family at radius.md
+  // (FOOD-DESIGN-STANDARD.md section 4), pinned so it could not drift back to
+  // the tighter radius.sm.
+  //
+  // Re-anchored 2026-09-15 under D174: there is no icon-backing left to give a
+  // corner to. The amber census ruled the `primaryBg` disc behind that glyph a
+  // "tint behind a glyph" (plan section 3.2) and removed the fill AND the disc
+  // geometry, exactly as SettingsPrimitives' 104 rows did. The intent of the
+  // case -- this wrap never carries a bespoke corner -- is asserted directly
+  // now, and more strongly, because the whole disc has to stay gone for it to
+  // pass. `radiusOf` is deliberately NOT reused here: its regex runs on past a
+  // key with no borderRadius and reports the NEXT key's radius, which is how
+  // this read "full" the moment the disc went.
+  test('the adjustment icon-backing carries no disc at all (D174)', () => {
+    const block = SOURCE.match(/\n {2}adjustmentIconWrap: \{([\s\S]*?)\n {2}\},/);
+    expect(block).not.toBeNull();
+    expect(block[1]).not.toMatch(/borderRadius/);
+    expect(block[1]).not.toMatch(/backgroundColor/);
+    expect(block[1]).toMatch(/width: iconSize\.lg/);
   });
 });

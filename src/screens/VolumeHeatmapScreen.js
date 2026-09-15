@@ -559,7 +559,7 @@ export default function VolumeHeatmapScreen() {
                 style={[
                   styles.windowBtn,
                   active
-                    ? { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary }
+                    ? { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight }
                     : { backgroundColor: t.colors.surface, borderColor: t.colors.border },
                 ]}
                 onPress={() => setWindowWeeks(opt.weeks)}
@@ -571,7 +571,9 @@ export default function VolumeHeatmapScreen() {
                 <Text
                   style={[
                     styles.windowBtnText, live.windowBtnText,
-                    { color: active ? t.colors.primary : t.colors.textSecondary },
+                    active
+                      ? { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary }
+                      : { color: t.colors.textSecondary },
                   ]}
                 >
                   {opt.label}
@@ -949,7 +951,7 @@ function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
           height={SPARK_MAX_HEIGHT}
           barWidth={SPARK_BAR_WIDTH}
           barGap={SPARK_BAR_GAP}
-          color={t.colors.primary}
+          color={t.colors.borderLight}
           interactive
           onScrubIndex={setScrubIdx}
           accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} weekly volume trend`}
@@ -1161,7 +1163,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  editRowClear: { ...type.caption, color: colors.primary },
+  editRowClear: { ...type.caption, color: colors.textSecondary },
   editInputs: { flexDirection: 'row', gap: spacing.sm },
   editInputGroup: { flex: 1, gap: spacing.xs },
   editInputLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
@@ -1204,7 +1206,7 @@ function buildLiveStyles(t) {
     editSubtitle: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     editRow: { borderBottomColor: t.colors.borderSubtle },
     editMuscleName: { ...t.type.label, color: t.colors.textSecondary },
-    editRowClear: { ...t.type.caption, color: t.colors.primary },
+    editRowClear: { ...t.type.caption, color: t.colors.textSecondary },
     editInputLabel: { ...t.type.caption, color: t.colors.textMuted },
   };
 }

@@ -8,7 +8,7 @@ import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 import { safeDate, safeFormatDate } from '../lib/safeFormat';
 
-import { colors, fontSize, fontWeight, spacing, radius, buildVolumeStatusColor, type, circle, iconSize, withAlpha, alpha, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, buildVolumeStatusColor, type, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import Button from '../components/Button';
@@ -447,7 +447,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                   data={trendLineData}
                   width={trendChartWidth}
                   height={72}
-                  color={t.colors.primary}
+                  color={t.colors.borderLight}
                   curved
                 />
               )}
@@ -549,7 +549,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Open your monthly recap, about 45 seconds"
           >
-            <Ionicons name="newspaper-outline" size={18} color={t.colors.primary} />
+            <Ionicons name="newspaper-outline" size={18} color={t.colors.textSecondary} />
             <Text style={[styles.recapCardText, live.recapCardText]}>
               Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready - 45 seconds
             </Text>
@@ -648,7 +648,7 @@ function PillarRow({ icon, label, stateText, evidenceText, onPress }) {
       accessibilityRole="button"
       accessibilityLabel={a11y}
     >
-      <Ionicons name={icon} size={22} color={t.colors.primary} />
+      <Ionicons name={icon} size={22} color={t.colors.textSecondary} />
       <View style={styles.pillarTextWrap}>
         <View style={styles.pillarLabelRow}>
           <Text style={[styles.pillarLabel, live.pillarLabel]}>{label}</Text>
@@ -880,8 +880,8 @@ const styles = StyleSheet.create({
   // ── Moments (R5) ──
   recapCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   recapCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
@@ -966,7 +966,7 @@ function buildLiveStyles(t) {
     pillarState: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     pillarEvidence: { ...t.type.bodySm, color: t.colors.textSecondary },
     adherenceLine: { ...t.type.caption, color: t.colors.textMuted },
-    recapCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    recapCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     recapCardText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     volEmptyText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     volSummaryCount: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },

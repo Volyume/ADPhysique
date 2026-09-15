@@ -10,7 +10,7 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { getLibraryPlans, getPlanWorkoutCounts, getLibraryPlanExerciseRows, copyPlanFromLibrary, activatePlanWithBlock, getActiveBlock, updateRoutineExerciseExercise, recordExerciseSwap } from '../lib/database';
 import { estimateWorkoutMinutes } from '../lib/planEngine';
@@ -730,8 +730,8 @@ export default function PlanLibraryScreen({ navigation, route }) {
               onPress={openQuiz}
               accessibilityLabel="Not sure where to start? Answer two quick questions for a plan suggestion"
             >
-              <View style={[styles.quizBannerIcon, live.quizBannerIcon]}>
-                <Ionicons name="help-circle-outline" size={20} color={t.colors.primary} />
+              <View style={styles.quizBannerIcon}>
+                <Ionicons name="help-circle-outline" size={20} color={t.colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.quizBannerTitle, live.quizBannerTitle]}>Not sure where to start?</Text>
@@ -926,7 +926,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
                       accessibilityLabel={opt.label}
                     >
                       {opt.icon && (
-                        <Ionicons name={opt.icon} size={20} color={t.colors.primary} style={{ marginRight: spacing.md }} />
+                        <Ionicons name={opt.icon} size={20} color={t.colors.textSecondary} style={{ marginRight: spacing.md }} />
                       )}
                       <Text style={[styles.quizOptionText, live.quizOptionText]}>{opt.label}</Text>
                       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
@@ -941,7 +941,7 @@ export default function PlanLibraryScreen({ navigation, route }) {
               // Result step
               <>
                 <View style={styles.quizResultIcon}>
-                  <Ionicons name="checkmark-circle" size={32} color={t.colors.primary} />
+                  <Ionicons name="checkmark-circle" size={32} color={t.colors.textSecondary} />
                 </View>
                 <Text style={[styles.quizResultTitle, live.quizResultTitle]}>Here's our suggestion</Text>
                 <Card surface="surface2" style={styles.quizResultCard}>
@@ -1035,7 +1035,7 @@ const styles = StyleSheet.create({
   },
   collectionChip: { minHeight: 36, justifyContent: 'center', paddingVertical: spacing.xxs },
   collectionChipText: { ...type.label, color: colors.textSecondary },
-  collectionChipTextActive: { color: colors.primary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  collectionChipTextActive: { color: colors.textPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 
   // Division grid
   divisionSection: {
@@ -1059,7 +1059,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: 6,
   },
   divisionChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  divisionChipTextActive: { color: colors.primary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  divisionChipTextActive: { color: colors.textPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   // Card owns background/radius/padding/border here.
   divisionDesc: {
     marginTop: spacing.md,
@@ -1082,9 +1082,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     marginBottom: spacing.md,
   },
+  // D174: was a 40dp `primaryBg` disc behind a stock glyph. Fixed glyph
+  // column now, no fill.
   quizBannerIcon: {
-    width: 40, height: 40, borderRadius: radius.xl,
-    backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
+    width: 40, alignItems: 'center', justifyContent: 'center',
   },
   quizBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   quizBannerBody: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
@@ -1105,9 +1106,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: colors.border,
   },
-  badgeAmber: { backgroundColor: colors.surface2, borderColor: withAlpha(colors.primary, alpha.edge) },
+  badgeAmber: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   badgeText: { fontSize: fontSize.micro, color: colors.textMuted, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
-  badgeTextAmber: { color: colors.primary },
+  badgeTextAmber: { color: colors.textPrimary },
   workoutCount: { ...type.caption, color: colors.textMuted, marginLeft: spacing.sm },
   planName: { ...type.bodyStrong, color: colors.textPrimary },
   planDesc: { ...type.bodySm, color: colors.textSecondary },
@@ -1145,9 +1146,9 @@ const styles = StyleSheet.create({
   },
   quizDot: {
     width: 8, height: 8, borderRadius: circle(8),
-    backgroundColor: colors.border,
+    backgroundColor: colors.surface3,
   },
-  quizDotActive: { backgroundColor: colors.primary },
+  quizDotActive: { backgroundColor: colors.borderLight },
   quizQuestion: {
     fontSize: fontSize.lg, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary, textAlign: 'center',
@@ -1201,21 +1202,20 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     filterPanel: { backgroundColor: t.colors.surface, borderBottomColor: t.colors.borderSubtle },
     collectionChipText: { ...t.type.label, color: t.colors.textSecondary },
-    collectionChipTextActive: { color: t.colors.primary },
+    collectionChipTextActive: { color: t.colors.textPrimary },
     divisionSection: { backgroundColor: t.colors.surface, borderBottomColor: t.colors.borderSubtle },
     divisionGroupLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     divisionIntroDesc: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     divisionChipText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
-    divisionChipTextActive: { color: t.colors.primary },
+    divisionChipTextActive: { color: t.colors.textPrimary },
     divisionDescText: { ...t.type.bodySm, color: t.colors.textSecondary },
     listBand: { backgroundColor: t.colors.background },
-    quizBannerIcon: { backgroundColor: t.colors.primaryBg },
     quizBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     quizBannerBody: { ...t.type.caption, color: t.colors.textMuted },
     badge: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    badgeAmber: { backgroundColor: t.colors.surface2, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    badgeAmber: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     badgeText: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
-    badgeTextAmber: { color: t.colors.primary },
+    badgeTextAmber: { color: t.colors.textPrimary },
     workoutCount: { ...t.type.caption, color: t.colors.textMuted },
     planName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     planDesc: { ...t.type.bodySm, color: t.colors.textSecondary },
@@ -1224,8 +1224,8 @@ function buildLiveStyles(t) {
     previewBtn: { backgroundColor: t.colors.surface2 },
     addBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     addBtnText: { ...t.type.label, color: t.colors.textPrimary },
-    quizDot: { backgroundColor: t.colors.border },
-    quizDotActive: { backgroundColor: t.colors.primary },
+    quizDot: { backgroundColor: t.colors.surface3 },
+    quizDotActive: { backgroundColor: t.colors.borderLight },
     quizQuestion: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     quizOptionText: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     quizSkipText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },

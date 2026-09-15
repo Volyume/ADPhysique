@@ -124,8 +124,8 @@ export default function TrainingConsiderationsScreen() {
           onPress={() => { haptics.selection(); setOpenId(null); }}
           style={styles.backRow}
         >
-          <Ionicons name="arrow-back" size={iconSize.sm} color={t.colors.primary} />
-          <Text style={[styles.backLabel, { color: t.colors.primary }]}>All considerations</Text>
+          <Ionicons name="arrow-back" size={iconSize.sm} color={t.colors.textSecondary} />
+          <Text style={[styles.backLabel, { color: t.colors.textSecondary }]}>All considerations</Text>
         </PressableCard>
 
         <View style={styles.intro}>

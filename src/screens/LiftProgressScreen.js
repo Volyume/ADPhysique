@@ -374,7 +374,7 @@ export default function LiftProgressScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Add your body weight"
         >
-          <Ionicons name="body-outline" size={20} color={t.colors.primary} />
+          <Ionicons name="body-outline" size={20} color={t.colors.textSecondary} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.bwPromptTitle, live.bwPromptTitle]}>Add your body weight</Text>
             <Text style={[styles.bwPromptText, live.bwPromptText]}>
@@ -612,7 +612,11 @@ function WeightLiftedHero({ series, units, onMakeCard }) {
   const bars = useMemo(
     () => series.map((pt, i) => ({
       value: pt.value,
-      color: i === lastIdx ? t.colors.primary : t.colors.primaryDim,
+      // D174: the LAST bar is this week -- discipline 1's "now", and the one
+      // amber this chart is entitled to. Every bar behind it was `primaryDim`,
+      // i.e. a whole amber series, so history takes the neutral fill the week
+      // ribbon uses for a trained day.
+      color: i === lastIdx ? t.colors.primary : t.colors.borderLight,
     })),
     [series, lastIdx, t],
   );
@@ -700,8 +704,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
+  // D174: a strength standing is a rank, not the user's live moment; the
+  // xxxl heavy face is what makes it the loud thing on the card (law 1).
   standingLabel: {
-    color: colors.primary,
+    color: colors.textPrimary,
     fontSize: fontSize.xxxl,
     fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy,
     lineHeight: 36,
@@ -734,7 +740,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
+    borderColor: colors.border,
     marginBottom: spacing.md,
   },
   bwPromptTitle: { ...type.bodyStrong, color: colors.textPrimary },
@@ -751,9 +757,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  filterTabActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  // D174 A2: a filter tab selects a VIEW. Selected takes the three cues
+  // Chip/SegmentedControl now use -- `surface3` fill, `borderLight` edge and
+  // the primary ink at the semibold face.
+  filterTabActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   filterTabText: { ...type.label, color: colors.textSecondary },
-  filterTabTextActive: { color: colors.primary },
+  filterTabTextActive: { ...type.w('label', 'semibold'), color: colors.textPrimary },
 
   // ── Metric switcher (R1) ──
   metricRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
@@ -765,10 +774,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  metricChipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  metricChipActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   // R2 (2026-07-11): raw xs+semibold pair -> captionStrong (exact role match).
   metricChipText: { ...type.captionStrong, color: colors.textSecondary },
-  metricChipTextActive: { color: colors.primary },
+  metricChipTextActive: { color: colors.textPrimary },
 
   // ── Lift row ──
   card: {
@@ -784,8 +793,12 @@ const styles = StyleSheet.create({
   cardMain: { flex: 1, gap: spacing.xxs },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   name: { ...type.bodyStrong, color: colors.textPrimary, flexShrink: 1 },
+  // D174: the PR MARK stays amber -- discipline 1 names a personal best in
+  // its own four instances. What goes is the second amber mark for the same
+  // state: the alpha'd amber ground behind it, which is discipline 2's wash
+  // (D175 3 made exactly this call about the dropdown chevron).
   prTag: {
-    backgroundColor: withAlpha(colors.primary, alpha.soft),
+    backgroundColor: colors.surface3,
     // R2 (2026-07-11): badge class -> radius.full (FOOD-DESIGN-STANDARD.md
     // section 4). Was radius.sm.
     borderRadius: radius.full,
@@ -831,7 +844,7 @@ function buildLiveStyles(t) {
     heroAxisLabel: { ...t.type.captionTight, color: t.colors.textMuted },
     standingCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     standingHeadline: { borderBottomColor: t.colors.borderSubtle },
-    standingLabel: { color: t.colors.primary, fontSize: t.fontSize.xxxl },
+    standingLabel: { color: t.colors.textPrimary, fontSize: t.fontSize.xxxl },
     standingSub: { ...t.type.caption, color: t.colors.textMuted },
     standingNext: { ...t.type.label, color: t.colors.textSecondary },
     sectionSub: { ...t.type.caption, color: t.colors.textMuted },
@@ -839,20 +852,20 @@ function buildLiveStyles(t) {
     strengthName: { ...t.type.label, color: t.colors.textPrimary },
     strengthNarrative: { ...t.type.num('caption'), color: t.colors.textMuted },
     levelBadgeText: { ...t.type.captionStrong },
-    bwPromptCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    bwPromptCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     bwPromptTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     bwPromptText: { ...t.type.captionTight, color: t.colors.textSecondary },
     filterTab: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    filterTabActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    filterTabActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     filterTabText: { ...t.type.label, color: t.colors.textSecondary },
-    filterTabTextActive: { color: t.colors.primary },
+    filterTabTextActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
     metricChip: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    metricChipActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    metricChipActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     metricChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
-    metricChipTextActive: { color: t.colors.primary },
+    metricChipTextActive: { color: t.colors.textPrimary },
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    prTag: { backgroundColor: withAlpha(t.colors.primary, alpha.soft) },
+    prTag: { backgroundColor: t.colors.surface3 },
     prTagText: { fontSize: t.fontSize.micro, color: t.colors.primary },
     meta: { ...t.type.caption, color: t.colors.textMuted },
     lastTime: { ...t.type.caption, color: t.colors.textSecondary },

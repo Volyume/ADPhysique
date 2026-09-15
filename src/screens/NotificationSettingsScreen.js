@@ -723,8 +723,8 @@ export default function NotificationSettingsScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Coaching reminders"
         >
-          <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
-            <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
+          <View style={styles.toggleIconWrap}>
+            <Ionicons name="pulse-outline" size={18} color={t.colors.textSecondary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.crossLinkTitle, live.crossLinkTitle]}>Coaching reminders</Text>
@@ -741,8 +741,8 @@ export default function NotificationSettingsScreen({ navigation }) {
         <Card style={styles.card}>
           {/* Toggle row */}
           <View style={styles.toggleRow}>
-            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
-              <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
+            <View style={styles.toggleIconWrap}>
+              <Ionicons name="barbell-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Remind me to train</Text>
             <Switch
@@ -795,8 +795,8 @@ export default function NotificationSettingsScreen({ navigation }) {
         <SectionLabel style={styles.sectionLabel}>Getting started</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.toggleRow}>
-            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
-              <Ionicons name="rocket-outline" size={18} color={t.colors.primary} />
+            <View style={styles.toggleIconWrap}>
+              <Ionicons name="rocket-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Getting-started nudges</Text>
             <Switch
@@ -817,8 +817,8 @@ export default function NotificationSettingsScreen({ navigation }) {
               opening the app; never repeated, never under calm mode or an
               open wellbeing flag. */}
           <View style={styles.toggleRow}>
-            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
-              <Ionicons name="leaf-outline" size={18} color={t.colors.primary} />
+            <View style={styles.toggleIconWrap}>
+              <Ionicons name="leaf-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Welcome-back note</Text>
             <Switch
@@ -843,8 +843,8 @@ export default function NotificationSettingsScreen({ navigation }) {
         <SectionLabel style={styles.sectionLabel}>Community</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.toggleRow}>
-            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
-              <Ionicons name="people-outline" size={18} color={t.colors.primary} />
+            <View style={styles.toggleIconWrap}>
+              <Ionicons name="people-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>New followers</Text>
             <Switch
@@ -862,8 +862,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             </Text>
           </View>
           <View style={styles.toggleRow}>
-            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
-              <Ionicons name="chatbubble-outline" size={18} color={t.colors.primary} />
+            <View style={styles.toggleIconWrap}>
+              <Ionicons name="chatbubble-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Reactions and comments</Text>
             <Switch
@@ -881,8 +881,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             </Text>
           </View>
           <View style={styles.toggleRow}>
-            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
-              <Ionicons name="mail-outline" size={18} color={t.colors.primary} />
+            <View style={styles.toggleIconWrap}>
+              <Ionicons name="mail-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Messages</Text>
             <Switch
@@ -906,8 +906,8 @@ export default function NotificationSettingsScreen({ navigation }) {
           </View>
           <View style={[styles.divider, live.divider]} />
           <View style={styles.toggleRow}>
-            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
-              <Ionicons name="moon-outline" size={18} color={t.colors.primary} />
+            <View style={styles.toggleIconWrap}>
+              <Ionicons name="moon-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Community quiet hours</Text>
             <Switch
@@ -964,8 +964,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             <View key={r.id}>
               {i > 0 ? <View style={[styles.divider, live.divider]} /> : null}
               <View style={styles.toggleRow}>
-                <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
-                  <Ionicons name="restaurant-outline" size={18} color={t.colors.primary} />
+                <View style={styles.toggleIconWrap}>
+                  <Ionicons name="restaurant-outline" size={18} color={t.colors.textSecondary} />
                 </View>
                 <Text style={[styles.toggleLabel, live.toggleLabel]}>{r.label}</Text>
                 <Switch
@@ -1010,8 +1010,8 @@ export default function NotificationSettingsScreen({ navigation }) {
         <SectionLabel style={styles.sectionLabel}>Quiet hours</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.toggleRow}>
-            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
-              <Ionicons name="moon-outline" size={18} color={t.colors.primary} />
+            <View style={styles.toggleIconWrap}>
+              <Ionicons name="moon-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Quiet hours</Text>
             <Switch
@@ -1149,11 +1149,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
   },
+  // D174: was a 34dp `primaryBg` disc behind a stock glyph -- the same
+  // decoration SettingsPrimitives lost on its 104 rows. Fixed glyph column
+  // now, so every row keeps one left edge with no amber ground.
   toggleIconWrap: {
     width: 34,
-    height: 34,
-    borderRadius: radius.control,
-    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1206,7 +1206,7 @@ const styles = StyleSheet.create({
   },
   timePickerValue: {
     ...type.num('bodyStrong'),
-    color: colors.primary,
+    color: colors.textPrimary,
   },
 
   // Bottom note
@@ -1256,13 +1256,12 @@ function buildLiveStyles(t) {
     permissionBanner: { backgroundColor: withAlpha(t.colors.warning, alpha.tint), borderColor: withAlpha(t.colors.warning, 0.35) },
     bannerText: { ...t.type.bodySm, color: t.colors.warning },
     bannerActionText: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.warning },
-    toggleIconWrap: { backgroundColor: t.colors.primaryBg },
     toggleLabel: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     divider: { backgroundColor: t.colors.border },
     helperRow: { borderTopColor: t.colors.borderSubtle },
     helperText: { ...t.type.bodySm, color: t.colors.textMuted },
     timePickerLabel: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
-    timePickerValue: { ...t.type.num('bodyStrong'), color: t.colors.primary },
+    timePickerValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     bottomNoteText: { ...t.type.bodySm, color: t.colors.textMuted },
     crossLink: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     crossLinkTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },

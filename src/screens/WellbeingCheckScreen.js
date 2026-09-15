@@ -38,8 +38,10 @@ export default function WellbeingCheckScreen({ navigation }) {
   // AddCustomFoodScreen's own precedent (batch D). ED-SAFETY-ADJACENT:
   // theming only -- every string and the calm-mode/threshold logic below are
   // byte-identical; the selected/unselected colours here are a plain UI
-  // selection indicator (same primary/primaryBg pair for either a "Yes" or
-  // "No" tap), not a valence mapping, so they convert mechanically.
+  // selection indicator (the same pair for either a "Yes" or a "No" tap),
+  // not a valence mapping, so they convert mechanically. D174: that pair was
+  // `primary`/`primaryBg` and is now the three neutral cues Chip/OptionCard
+  // use -- a `surface3` fill, a `borderLight` edge and the semibold label.
   const t = useTheme();
   const live = buildLiveStyles(t);
 
@@ -221,15 +223,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryBg,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surface3,
   },
   btnText: {
     ...type.label,
     color: colors.textMuted,
   },
   btnTextSelected: {
-    color: colors.primary,
+    ...type.w('label', 'semibold'),
+    color: colors.textPrimary,
   },
 
 
@@ -262,9 +265,9 @@ function buildLiveStyles(t) {
     item: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     question: { ...t.type.bodySm, color: t.colors.textPrimary },
     btn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    btnSelected: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
+    btnSelected: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
     btnText: { ...t.type.label, color: t.colors.textMuted },
-    btnTextSelected: { color: t.colors.primary },
+    btnTextSelected: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
     saveHint: { ...t.type.captionTight, color: t.colors.textSecondary },
     privacy: { ...t.type.captionTight, color: t.colors.textMuted },
   };

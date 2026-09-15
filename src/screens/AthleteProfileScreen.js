@@ -223,8 +223,13 @@ function Row({ icon, label, sub, onPress, status = null, t, live }) {
       accessibilityLabel={accessibility.accessibilityLabel}
       accessibilityHint={accessibility.accessibilityHint}
     >
-      <View style={[styles.rowIcon, live.rowIcon]}>
-        <Ionicons name={icon} size={18} color={t.colors.primary} />
+      {/* D174 (amber census, 2026-09-15): this glyph sat on a 36dp
+          `primaryBg` disc, the "tint behind a glyph" plan section 3.2 forbids
+          by name. Fill and disc geometry both go, the same answer
+          SettingsPrimitives' 104 rows took, and the glyph takes the secondary
+          ink. `rowIcon` now carries no token, so it has no live twin. */}
+      <View style={styles.rowIcon}>
+        <Ionicons name={icon} size={18} color={t.colors.textSecondary} />
       </View>
       <View style={{ flex: 1 }}>
         <View style={styles.rowLabelLine}>
@@ -661,8 +666,10 @@ export default function AthleteProfileScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel={avatarUri ? 'Change profile photo' : 'Choose profile photo'}
         >
-          <View style={[styles.photoOptionIcon, live.photoOptionIcon]}>
-            <Ionicons name="image-outline" size={20} color={t.colors.primary} />
+          {/* D174: the amber disc behind the glyph goes, fill and geometry
+              together; `photoOptionIcon` is layout-only now. */}
+          <View style={styles.photoOptionIcon}>
+            <Ionicons name="image-outline" size={20} color={t.colors.textSecondary} />
           </View>
           <View style={styles.photoOptionCopy}>
             <Text style={[styles.photoOptionTitle, live.photoOptionTitle]}>Photo from phone</Text>
@@ -748,25 +755,28 @@ const styles = StyleSheet.create({
   },
   liftName: { ...type.bodyStrong, color: colors.textPrimary },
   liftSub: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
+  // D174: a strength level is a RANK, not the user's live moment, so it sits
+  // outside amber discipline 1's ceiling. The pill keeps its objecthood from
+  // the surface ladder (one step up from the card it sits on) and its ordinary
+  // border, and the label takes the secondary ink.
   levelPill: {
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
-    backgroundColor: colors.primaryBg,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  levelPillText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.black },
+  levelPillText: { ...type.caption, color: colors.textSecondary, fontWeight: fontWeight.black },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
+  // D174: was a 36dp `primaryBg` disc; now a fixed glyph column with no fill,
+  // so every row's label keeps the same left edge without an amber ground.
   rowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
+    width: iconSize.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -822,13 +832,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
+  // D174: same disc, same answer as rowIcon above.
   photoOptionIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.md,
+    width: iconSize.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
   },
   photoOptionCopy: { flex: 1, minWidth: 0 },
   photoOptionTitle: { ...type.bodyStrong, color: colors.textPrimary },
@@ -851,12 +859,16 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
   },
+  // D174 A2: a chosen avatar is a selection in a picker, not a live moment.
+  // It takes the same three simultaneous cues Chip/OptionCard now use -- a
+  // `surface3` fill, a `borderLight` edge and the primary ink at the semibold
+  // face -- so selection reads stronger than the single amber border did.
   avatarPresetOptionSelected: {
-    borderColor: colors.primary,
-    backgroundColor: colors.surfaceElevated,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surface3,
   },
   avatarPresetOptionText: { ...type.captionTight, color: colors.textSecondary },
-  avatarPresetOptionTextSelected: { color: colors.textPrimary },
+  avatarPresetOptionTextSelected: { ...type.w('captionTight', 'semibold'), color: colors.textPrimary },
 });
 
 // CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
@@ -881,9 +893,8 @@ function buildLiveStyles(t) {
     statSub: { ...t.type.captionTight, color: t.colors.textSecondary },
     liftName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     liftSub: { ...t.type.caption, color: t.colors.textSecondary },
-    levelPill: { borderColor: withAlpha(t.colors.primary, alpha.edge), backgroundColor: t.colors.primaryBg },
-    levelPillText: { ...t.type.caption, color: t.colors.primary },
-    rowIcon: { backgroundColor: t.colors.primaryBg },
+    levelPill: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    levelPillText: { ...t.type.caption, color: t.colors.textSecondary },
     rowLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     rowSub: { ...t.type.caption, color: t.colors.textSecondary },
     statusPill_fresh: { backgroundColor: t.colors.successBg, borderColor: withAlpha(t.colors.success, alpha.edge) },
@@ -899,12 +910,11 @@ function buildLiveStyles(t) {
     avatarClearText: { ...t.type.label, color: t.colors.error },
     avatarGalleryLabel: { ...t.type.label, color: t.colors.textSecondary },
     photoOption: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    photoOptionIcon: { backgroundColor: t.colors.primaryBg },
     photoOptionTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     photoOptionSub: { ...t.type.caption, color: t.colors.textSecondary },
     avatarPresetOption: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
-    avatarPresetOptionSelected: { borderColor: t.colors.primary, backgroundColor: t.colors.surfaceElevated },
+    avatarPresetOptionSelected: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
     avatarPresetOptionText: { ...t.type.captionTight, color: t.colors.textSecondary },
-    avatarPresetOptionTextSelected: { color: t.colors.textPrimary },
+    avatarPresetOptionTextSelected: { ...t.type.w('captionTight', 'semibold'), color: t.colors.textPrimary },
   };
 }

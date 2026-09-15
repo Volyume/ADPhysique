@@ -478,7 +478,7 @@ export default function CommunityHubScreen({ navigation, route }) {
         accessibilityRole="button"
         accessibilityLabel="Search Community"
       >
-        <Ionicons name="search-outline" size={18} color={t.colors.primary} />
+        <Ionicons name="search-outline" size={18} color={t.colors.textSecondary} />
       </Pressable>
       {joined ? (
         <Pressable
@@ -488,7 +488,7 @@ export default function CommunityHubScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={hasUnseen(me) ? 'Activity, new activity' : 'Activity'}
         >
-          <Ionicons name="notifications-outline" size={18} color={t.colors.primary} />
+          <Ionicons name="notifications-outline" size={18} color={t.colors.textSecondary} />
           {hasUnseen(me) ? (
             <View style={[styles.dot, { backgroundColor: t.colors.primary, borderColor: t.colors.background }]} />
           ) : null}
@@ -504,7 +504,7 @@ export default function CommunityHubScreen({ navigation, route }) {
             ? `Messages, ${Number(me?.unseen_messages ?? 0)} unread`
             : 'Messages'}
         >
-          <Ionicons name="chatbubbles-outline" size={18} color={t.colors.primary} />
+          <Ionicons name="chatbubbles-outline" size={18} color={t.colors.textSecondary} />
           {hasUnreadMessages(me) ? (
             <View style={[styles.badge, { backgroundColor: t.colors.primary, borderColor: t.colors.background }]}>
               <Text style={[styles.badgeText, { color: t.colors.onPrimary }]}>
@@ -534,7 +534,7 @@ export default function CommunityHubScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Read Community rules"
           >
-            <Text style={[styles.statusNoticeLink, { color: t.colors.primary }]}>Community rules</Text>
+            <Text style={[styles.statusNoticeLink, { color: t.colors.textPrimary }]}>Community rules</Text>
           </TouchableOpacity>
         </View>
       ) : null}

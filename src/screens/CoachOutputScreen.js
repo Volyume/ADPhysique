@@ -128,7 +128,7 @@ import SectionLabel from '../components/SectionLabel';
 import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, letterSpacing, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, letterSpacing, fontFamily, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { touchTarget } from '../styles/layout';
 // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): NO haptics
@@ -229,8 +229,13 @@ function AdjustmentRow({
   const showApply = (!!onApply && !applied && !holdNote) || settling;
   return (
     <View style={styles.adjustmentRow}>
-      <View style={[styles.adjustmentIconWrap, live.adjustmentIconWrap]}>
-        <Ionicons name={iconName} size={18} color={t.colors.primary} />
+      {/* D174 (amber census): the glyph sat on a 32dp `primaryBg` disc --
+          section 3.2's "a tint behind a glyph". Fill and disc geometry both
+          go, as they did on SettingsPrimitives' 104 rows, and the glyph takes
+          the secondary ink. `adjustmentIconWrap` carries no token now, so it
+          has no live twin. */}
+      <View style={styles.adjustmentIconWrap}>
+        <Ionicons name={iconName} size={18} color={t.colors.textSecondary} />
       </View>
       <View style={styles.adjustmentContent}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
@@ -817,7 +822,7 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
     <ScrollView contentContainerStyle={styles.content}>
       <Card style={styles.card}>
         <View style={styles.insufficientIconRow}>
-          <Ionicons name="time-outline" size={32} color={t.colors.primary} />
+          <Ionicons name="time-outline" size={32} color={t.colors.textSecondary} />
         </View>
         <Text style={[styles.insufficientTitle, live.insufficientTitle]}>Building your baseline.</Text>
         {/* A3 (audit 04 §4): the hold is a decision, so it renders as a full
@@ -2852,7 +2857,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             The other placement is ProSetupCompleteScreen, at Pro setup. */}
         {showAdherenceWhy ? (
           <View style={styles.coachNoteRow}>
-            <Ionicons name="bulb-outline" size={14} color={t.colors.primary} />
+            <Ionicons name="bulb-outline" size={14} color={t.colors.textSecondary} />
             <Text style={[styles.coachNoteText, live.coachNoteText]}>
               Consistency is what your coach reads best. The more sessions you log, the better it understands how your body responds, and the more precisely it can adjust your plan.
             </Text>
@@ -2993,7 +2998,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           ) : null}
           <StatChip
             icon="barbell-outline"
-            iconColor={t.colors.primary}
+            iconColor={t.colors.textSecondary}
             value={`${sessionsCompleted}/${sessionsPlanned}`}
             label="sessions"
             valueColor={t.colors.textPrimary}
@@ -3115,7 +3120,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             their period and shows a water-plausible rise). */}
         {cyclePhaseNote?.note ? (
           <View style={styles.coachNoteRow}>
-            <Ionicons name="water-outline" size={14} color={t.colors.primary} />
+            <Ionicons name="water-outline" size={14} color={t.colors.textSecondary} />
             <Text style={[styles.coachNoteText, live.coachNoteText]}>{cyclePhaseNote.note}</Text>
           </View>
         ) : null}
@@ -3439,10 +3444,12 @@ const styles = StyleSheet.create({
   weekHeader: {
     gap: spacing.xs,
   },
+  // D174: the week heading is the screen's title, not the user's live moment.
+  // Its size and weight carry it; the amber was decoration on top of both.
   weekLabel: {
     fontSize: fontSize.xxl,
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
-    color: colors.primary,
+    color: colors.textPrimary,
   },
   weekRange: {
     fontSize: fontSize.sm,
@@ -3544,17 +3551,19 @@ const styles = StyleSheet.create({
     ...type.bodySm,
     color: colors.textSecondary,
   },
+  // D174: a callout is not "now". The card keeps its objecthood from the
+  // surface ladder and its hairline; the eyebrow takes the muted ink.
   focusCard: {
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
+    borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.xs,
   },
   focusLabel: {
     ...type.overline,
-    color: colors.primary,
+    color: colors.textMuted,
   },
   focusText: {
     ...type.bodyStrong,
@@ -3568,13 +3577,11 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.xs,
   },
+  // D174: was a 32dp `primaryBg` icon-backing disc (R2, 2026-07-11). The
+  // fill and the disc geometry are gone; what is left is a fixed glyph
+  // column, so every adjustment row's text keeps the same left edge.
   adjustmentIconWrap: {
-    width: 32,
-    height: 32,
-    // R2 (2026-07-11): icon-backing family -> radius.md (control/input/
-    // icon-backing class, FOOD-DESIGN-STANDARD.md section 4). Was radius.sm.
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
+    width: iconSize.lg,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.hair,
@@ -3601,11 +3608,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.successBg ?? colors.surface2,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: withAlpha(colors.success ?? colors.primary, alpha.mid),
+    borderWidth: 1, borderColor: withAlpha(colors.success ?? colors.borderLight, alpha.mid),
   },
   appliedChipText: {
     ...type.captionStrong,
-    color: colors.success ?? colors.primary,
+    color: colors.success ?? colors.textSecondary,
   },
   adjustmentNote: {
     ...type.bodySm,
@@ -3923,7 +3930,7 @@ function buildLiveStyles(t) {
     receiptLabel: { ...t.type.caption, color: t.colors.textMuted },
     receiptRowText: { ...t.type.bodySm, color: t.colors.textSecondary },
     receiptUnlock: { ...t.type.caption, color: t.colors.textPrimary },
-    weekLabel: { fontSize: t.fontSize.xxl, color: t.colors.primary },
+    weekLabel: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
     weekRange: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     manualModeNote: { ...t.type.caption, color: t.colors.textMuted },
     heroWhy: { ...t.type.bodySm, color: t.colors.textSecondary },
@@ -3936,17 +3943,16 @@ function buildLiveStyles(t) {
     nextReadCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     preCommitmentLine: { ...t.type.bodySm, color: t.colors.textPrimary },
     forwardLine: { ...t.type.bodySm, color: t.colors.textSecondary },
-    focusCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
-    focusLabel: { color: t.colors.primary },
+    focusCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    focusLabel: { color: t.colors.textMuted },
     focusText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    adjustmentIconWrap: { backgroundColor: t.colors.primaryBg },
     adjustmentLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     adjustmentLabelHero: { ...t.type.h3, color: t.colors.textPrimary },
     appliedChip: {
       backgroundColor: t.colors.successBg ?? t.colors.surface2,
-      borderColor: withAlpha(t.colors.success ?? t.colors.primary, alpha.mid),
+      borderColor: withAlpha(t.colors.success ?? t.colors.borderLight, alpha.mid),
     },
-    appliedChipText: { ...t.type.captionStrong, color: t.colors.success ?? t.colors.primary },
+    appliedChipText: { ...t.type.captionStrong, color: t.colors.success ?? t.colors.textSecondary },
     adjustmentNote: { ...t.type.bodySm, color: t.colors.textSecondary },
     adjustmentDetail: { ...t.type.bodySm, color: t.colors.textPrimary },
     adjustmentHold: { ...t.type.bodySm, color: t.colors.textPrimary },

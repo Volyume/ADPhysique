@@ -105,8 +105,16 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/Photo from phone/);
     expect(source).toMatch(/avatarPresetGrid: \{[\s\S]*justifyContent: 'space-between'/);
     expect(source).toMatch(/avatarPresetOption: \{[\s\S]*flexBasis: '30\.5%'[\s\S]*backgroundColor: colors\.surface/);
-    expect(source).toMatch(/avatarPresetOptionSelected: \{[\s\S]*borderColor: colors\.primary,[\s\S]*backgroundColor: colors\.surfaceElevated/);
-    expect(source).toMatch(/avatarPresetOptionTextSelected: \{ color: colors\.textPrimary \}/);
+    // Re-anchored under D174 A2 (2026-09-15). What these three lines pin is
+    // that a CHOSEN preset has a visible selected treatment and that the
+    // treatment is not an amber wash -- the amber border was incidental to
+    // that intent, and A2 ruled a picker selection outside amber discipline
+    // 1's ceiling. The selected state is now three simultaneous cues instead
+    // of one colour (surface3 fill, borderLight edge, primary ink at the
+    // semibold face), so it is STRONGER than what this used to pin, and the
+    // no-wash assertion below is unchanged and still the point.
+    expect(source).toMatch(/avatarPresetOptionSelected: \{[\s\S]*borderColor: colors\.borderLight,[\s\S]*backgroundColor: colors\.surface3/);
+    expect(source).toMatch(/avatarPresetOptionTextSelected: \{ \.\.\.type\.w\('captionTight', 'semibold'\), color: colors\.textPrimary \}/);
     expect(source).not.toMatch(/avatarPresetOptionSelected: \{[\s\S]*backgroundColor: colors\.primaryBg/);
     expect(source).not.toMatch(/\.\.\.AVATAR_PRESETS\.map\(\(preset\) => \(\{ text: preset\.label/);
     expect(source).toMatch(/Add profile picture or Volyume avatar/);

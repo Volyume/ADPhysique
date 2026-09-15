@@ -132,7 +132,7 @@ export default function WeeklyStoryScreen() {
         {!loading && story.chapters.map((c) => (
           <View key={c.key} style={[styles.chapterCard, live.chapterCard]}>
             <View style={styles.chapterHeaderRow}>
-              <Ionicons name={c.icon} size={18} color={t.colors.primary} />
+              <Ionicons name={c.icon} size={18} color={t.colors.textSecondary} />
               <SectionLabel tone="muted">{c.heading}</SectionLabel>
             </View>
             <Text style={[styles.chapterBody, live.chapterBody, c.empty && [styles.chapterBodyEmpty, live.chapterBodyEmpty]]}>{c.body}</Text>

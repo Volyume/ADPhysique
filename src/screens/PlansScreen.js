@@ -1152,7 +1152,7 @@ export default function PlansScreen({ navigation }) {
   // wording/logic byte-identical, only the token SOURCE moved from the
   // frozen import to the live theme.
   function blockIconColor(action) {
-    if (action === 'in_recovery') return t.colors.primary;
+    if (action === 'in_recovery') return t.colors.textSecondary;
     if (action === 'post_recovery') return t.colors.success;
     return t.colors.warning;
   }
@@ -1766,7 +1766,7 @@ export default function PlansScreen({ navigation }) {
                 accessibilityLabel={card.title}
               >
                 <View style={[styles.actionCardIcon, live.actionCardIcon, featured && [styles.actionCardIconFeatured, live.actionCardIconFeatured]]}>
-                  <Ionicons name={card.icon} size={24} color={t.colors.primary} />
+                  <Ionicons name={card.icon} size={24} color={t.colors.textSecondary} />
                 </View>
                 <View style={styles.actionCardBody}>
                   <View style={styles.actionCardTitleRow}>
@@ -1779,7 +1779,7 @@ export default function PlansScreen({ navigation }) {
                   </View>
                   <Text style={[styles.actionCardDesc, live.actionCardDesc]}>{card.description}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={featured ? t.colors.primary : t.colors.textMuted} />
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </Card>
             );
           })}
@@ -2356,15 +2356,15 @@ const styles = StyleSheet.create({
   noActivePlanText: { ...type.bodySm, flex: 1, color: colors.textMuted },
 
   activePlanCard: {
-    borderColor: withAlpha(colors.primary, alpha.edge), gap: spacing.md,
+    borderColor: colors.borderLight, gap: spacing.md,
   },
   activePlanHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   activeBadge: {
-    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    backgroundColor: colors.surface3, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.strong),
+    borderWidth: 1, borderColor: colors.borderLight,
   },
-  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black },
+  activeBadgeText: { fontSize: fontSize.xs, color: colors.textPrimary, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black },
   activePlanName: { fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   activePlanMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
   activePlanWeek: { ...type.num('caption'), color: colors.textMuted },
@@ -2434,19 +2434,19 @@ const styles = StyleSheet.create({
   actionCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs },
   actionCardTitle: { ...type.bodyStrong, color: colors.textPrimary },
   actionCardBadge: {
-    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    backgroundColor: colors.surface3, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
+    borderWidth: 1, borderColor: colors.borderLight,
   },
-  actionCardBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.primary },
+  actionCardBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
   actionCardDesc: { ...type.captionTight, color: colors.textMuted },
   actionCardFeatured: {
-    borderColor: withAlpha(colors.primary, alpha.edge),
-    backgroundColor: colors.primaryBg,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surface,
   },
   actionCardIconFeatured: {
     backgroundColor: colors.surface,
-    borderColor: withAlpha(colors.primary, alpha.edge),
+    borderColor: colors.borderLight,
   },
   // Block advisor card
   blockCard: {
@@ -2462,7 +2462,7 @@ const styles = StyleSheet.create({
   },
   blockCardRecovery: {
     backgroundColor: colors.surface,
-    borderColor: withAlpha(colors.primary, alpha.mid),
+    borderColor: colors.border,
   },
   blockCardComplete: {
     backgroundColor: colors.surface,
@@ -2543,7 +2543,7 @@ const styles = StyleSheet.create({
   blockOption: { gap: spacing.xs },
   blockOptionTags: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   blockOptionFlag: {
-    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary,
+    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textMuted,
   },
   blockOptionDetail: { ...type.caption, color: colors.textSecondary },
 
@@ -2587,9 +2587,9 @@ function buildLiveStyles(t) {
     trainingBlocksSub: { ...t.type.caption, color: t.colors.textMuted },
     proCoachNote: { fontSize: t.fontSize.xs, color: t.colors.textMuted, borderTopColor: t.colors.border },
     noActivePlanText: { ...t.type.bodySm, color: t.colors.textMuted },
-    activePlanCard: { borderColor: withAlpha(t.colors.primary, alpha.edge) },
-    activeBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.strong) },
-    activeBadgeText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    activePlanCard: { borderColor: t.colors.borderLight },
+    activeBadge: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
+    activeBadgeText: { fontSize: t.fontSize.xs, color: t.colors.textPrimary },
     activePlanName: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
     activePlanMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     activePlanWeek: { ...t.type.num('caption'), color: t.colors.textMuted },
@@ -2613,14 +2613,14 @@ function buildLiveStyles(t) {
     templateMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
     actionCardIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     actionCardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    actionCardBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
-    actionCardBadgeText: { fontSize: t.fontSize.micro, color: t.colors.primary },
+    actionCardBadge: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
+    actionCardBadgeText: { fontSize: t.fontSize.micro, color: t.colors.textPrimary },
     actionCardDesc: { ...t.type.captionTight, color: t.colors.textMuted },
-    actionCardFeatured: { borderColor: withAlpha(t.colors.primary, alpha.edge), backgroundColor: t.colors.primaryBg },
-    actionCardIconFeatured: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    actionCardFeatured: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface },
+    actionCardIconFeatured: { backgroundColor: t.colors.surface, borderColor: t.colors.borderLight },
     blockCardHeadsUp: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.warning, alpha.mid) },
     blockCardWarning: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.warning, alpha.strong) },
-    blockCardRecovery: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    blockCardRecovery: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     blockCardComplete: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.success, alpha.mid) },
     blockCardIconWrap: { backgroundColor: t.colors.surface2 },
     blockCardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -2639,7 +2639,7 @@ function buildLiveStyles(t) {
     nextBlockBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     ledgerStoryLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     // FQ-2 (D96): the two next-block options' flag and description lines.
-    blockOptionFlag: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    blockOptionFlag: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     blockOptionDetail: { ...t.type.caption, color: t.colors.textSecondary },
     // R9 (D70): blockRestartBtn/blockRestartBtnText/blockNewBtn/
     // blockNewBtnText live twins deleted alongside their frozen styles - the

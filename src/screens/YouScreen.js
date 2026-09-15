@@ -14,7 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 // D134 (founder 2026-09-03): the tier-blind Injuries & limitations row's live line.
 import { loadCapabilityState } from '../lib/capability/store';
 import { howYouTrainSummary } from '../lib/capability/summary';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import ScreenHeader from '../components/ScreenHeader';
@@ -91,8 +91,8 @@ function NavRow({ icon, label, sub, onPress }) {
       onPress={handlePress}
       accessibilityLabel={label}
     >
-      <View style={[styles.navRowIcon, live.navRowIcon]}>
-        <Ionicons name={icon} size={18} color={t.colors.primary} />
+      <View style={styles.navRowIcon}>
+        <Ionicons name={icon} size={18} color={t.colors.textSecondary} />
       </View>
       <View style={styles.navRowText}>
         <View style={styles.navRowLabelRow}>
@@ -470,13 +470,13 @@ export default function YouScreen({ navigation }) {
         {latestReview ? (
           <Card
             style={styles.statusCard}
-            tone="primary"
+            tone="neutral"
             onPress={() => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)}
             accessibilityLabel={`Open your weekly coach update${reviewDate ? ` from ${reviewDate}` : ''}`}
           >
             <View style={styles.statusTop}>
-              <View style={[styles.statusIcon, live.statusIcon]}>
-                <Ionicons name="git-branch-outline" size={20} color={t.colors.primary} />
+              <View style={styles.statusIcon}>
+                <Ionicons name="git-branch-outline" size={20} color={t.colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
                 {/* The "COACH" kicker that sat here is gone. It restated the
@@ -688,15 +688,12 @@ const styles = StyleSheet.create({
   loadErrorBody: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   statusCard: { gap: spacing.md },
   statusTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  // D174: was a 40dp `primaryBg` disc with a tinted edge behind a stock
+  // glyph. Fixed glyph column now, no fill and no edge.
   statusIcon: {
     width: 40,
-    height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
   },
   // B-5: statusEyebrow's typography now comes from SectionLabel (tone="primary").
   statusTitle: { ...type.bodyStrong, color: colors.textPrimary },
@@ -717,11 +714,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
+  // D174: was a 36dp `primaryBg` disc behind a stock glyph -- the same
+  // decoration SettingsPrimitives lost on its 104 rows. Fixed glyph column.
   navRowIcon: {
     width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -752,11 +748,9 @@ function buildLiveStyles(t) {
     loadErrorIcon: { backgroundColor: t.colors.warningBg },
     loadErrorTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     loadErrorBody: { ...t.type.caption, color: t.colors.textSecondary },
-    statusIcon: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     statusTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     statusBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     navRow: { borderBottomColor: t.colors.borderSubtle },
-    navRowIcon: { backgroundColor: t.colors.primaryBg },
     navRowLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     navRowSub: { ...t.type.caption, color: t.colors.textSecondary },
     aboutName: { fontSize: t.fontSize.sm, color: t.colors.textMuted },

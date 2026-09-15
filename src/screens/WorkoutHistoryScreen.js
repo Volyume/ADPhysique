@@ -789,7 +789,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           <Ionicons
             name={viewMode === 'calendar' ? 'list-outline' : 'calendar-outline'}
             size={18}
-            color={viewMode === 'calendar' ? t.colors.primary : t.colors.textSecondary}
+            color={t.colors.textSecondary}
           />
         </TouchableOpacity>
       </View>
@@ -945,8 +945,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   toggleBtnActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryBg,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surface3,
   },
 
   // ── Filter chips ───────────────────────────────────────────────────────────
@@ -963,7 +963,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   filterChipTextActive: {
-    color: colors.primary,
+    color: colors.textPrimary,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
 
@@ -1002,25 +1002,29 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   dayCircleTrained: {
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface3,
   },
   dayCircleToday: {
     borderWidth: 1,
     borderColor: colors.primary,
   },
   dayCircleSelected: {
-    backgroundColor: colors.primaryFill,
+    backgroundColor: colors.borderLight,
   },
   dayNum: {
     ...type.num('caption'),
     color: colors.textMuted,
   },
   dayNumTrained: {
-    color: colors.primary,
+    color: colors.textPrimary,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
+  // The selected day inverts against its `borderLight` fill, the same way
+  // D175 ruled the switch thumb: dark-on-light in the dark theme and
+  // light-on-dark in the light one. Measured 4.43 dark / 4.36 light /
+  // 8.18 darkHC / 8.49 lightHC.
   dayNumSelected: {
-    color: colors.onPrimary,
+    color: colors.background,
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
   },
   clearDayBtn: {
@@ -1235,17 +1239,17 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     topBarTitle: { ...t.type.label, color: t.colors.textMuted },
     toggleBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    toggleBtnActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
+    toggleBtnActive: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
     filterChipText: { ...t.type.label, color: t.colors.textSecondary },
-    filterChipTextActive: { color: t.colors.primary },
+    filterChipTextActive: { color: t.colors.textPrimary },
     calendarMonthTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     dayHeader: { ...t.type.captionStrong, color: t.colors.textMuted },
-    dayCircleTrained: { backgroundColor: t.colors.primaryBg },
+    dayCircleTrained: { backgroundColor: t.colors.surface3 },
     dayCircleToday: { borderColor: t.colors.primary },
-    dayCircleSelected: { backgroundColor: t.colors.primaryFill },
+    dayCircleSelected: { backgroundColor: t.colors.borderLight },
     dayNum: { ...t.type.num('caption'), color: t.colors.textMuted },
-    dayNumTrained: { color: t.colors.primary },
-    dayNumSelected: { color: t.colors.onPrimary },
+    dayNumTrained: { color: t.colors.textPrimary },
+    dayNumSelected: { color: t.colors.background },
     clearDayBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     clearDayText: { ...t.type.label, color: t.colors.textPrimary },
     cardDate: { fontSize: t.fontSize.md, color: t.colors.textPrimary, fontVariant: ['tabular-nums'] },

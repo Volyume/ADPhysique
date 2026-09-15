@@ -321,7 +321,7 @@ export default function ScanLabelScreen({ navigation, route }) {
           <Ionicons
             name={torch ? 'flashlight' : 'flashlight-outline'}
             size={22}
-            color={torch ? t.colors.primary : t.colors.textPrimary}
+            color={torch ? t.colors.textPrimary : t.colors.textSecondary}
           />
         </TouchableOpacity>
         )}

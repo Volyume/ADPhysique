@@ -1377,7 +1377,7 @@ export default function HowYouTrainScreen() {
               sub={episodeSub(ep)}
               showArrow={false} />
             <View style={styles.chipRow}>
-              <Text style={[styles.statusPill, { backgroundColor: chip.attention ? t.colors.primaryBg : t.colors.surface2, color: chip.attention ? t.colors.primary : t.colors.textSecondary }]}>
+              <Text style={[styles.statusPill, { backgroundColor: chip.attention ? t.colors.surface3 : t.colors.surface2, color: chip.attention ? t.colors.textPrimary : t.colors.textSecondary }]}>
                 {chip.label}
               </Text>
               {ep.rows.some(r => r.state === 'active' && r.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED) ? (
@@ -1595,20 +1595,32 @@ function Choice({ label, sub, onPress, t, selected, primary, disabled, compact }
         // alone - the border doubles in weight and the label carries a
         // visible tick (the set-type picker's own convention), so the
         // state survives greyscale and colour-vision deficiency.
-        { borderColor: selected ? t.colors.primary : t.colors.border, backgroundColor: primary ? t.colors.primaryBg : 'transparent' },
+        // D174 A2: a chosen option in a picker is not the user's live moment,
+        // so the selected edge takes `borderLight`; the doubled border weight
+        // and the tick below are the other two cues.
+        //
+        // LEAD RULING on the `primary` prop (a boolean, not the colour -- a
+        // plain grep misreads this line): its one call site is "Save my
+        // choices", the committing button in this sheet, so it IS entitled to
+        // amber under discipline 1. It was wearing a `primaryBg` WASH, which
+        // discipline 2 forbids outright. It now wears the house form every
+        // other committing button wears -- a solid `primaryFill` with
+        // `onPrimary` ink (`Button.js`'s `emphatic`) -- so it is entitled to
+        // the accent and spends it the same way as the rest of the app.
+        { borderColor: selected ? t.colors.borderLight : t.colors.border, backgroundColor: primary ? t.colors.primaryFill : 'transparent' },
         selected && styles.choiceSelected,
         disabled && { opacity: 0.4 },
       ]}
     >
       <View style={styles.choiceLabelRow}>
         {selected ? (
-          <Text style={[styles.choiceTick, { color: t.colors.primary }]} importantForAccessibility="no">✓</Text>
+          <Text style={[styles.choiceTick, { color: t.colors.textPrimary }]} importantForAccessibility="no">✓</Text>
         ) : null}
         {/* R2-12: the label wraps inside the row (the codebase's flex:1 +
             minWidth:0 idiom, SettingsPrimitives' own note) - a long
             label at large accessibility type must never push past the
             card because the tick joined the row. */}
-        <Text style={[styles.choiceLabel, styles.choiceLabelInRow, { color: t.colors.textPrimary }]}>{label}</Text>
+        <Text style={[styles.choiceLabel, styles.choiceLabelInRow, { color: primary ? t.colors.onPrimary : t.colors.textPrimary }]}>{label}</Text>
       </View>
       {sub ? <Text style={[styles.hint, { color: t.colors.textSecondary }]}>{sub}</Text> : null}
     </PressableCard>

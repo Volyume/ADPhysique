@@ -466,7 +466,7 @@ export default function FoodInsightsScreen({ navigation }) {
                 data2={calorieTargetRule}
                 width={CHART_WIDTH}
                 height={140}
-                color={t.colors.primary}
+                color={t.colors.borderLight}
                 color2={withAlpha(t.colors.textMuted, alpha.half)}
                 thickness={2}
                 thickness2={1}
@@ -573,7 +573,7 @@ export default function FoodInsightsScreen({ navigation }) {
                     data2={proteinTargetRule}
                     width={CHART_WIDTH}
                     height={120}
-                    color={t.colors.primary}
+                    color={t.colors.borderLight}
                     color2={withAlpha(t.colors.textMuted, alpha.half)}
                     thickness={2}
                     thickness2={1}
@@ -737,9 +737,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm, borderRadius: radius.full,
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
   },
-  windowChipOn: { borderColor: colors.primary, backgroundColor: colors.surface2 },
+  // D174 A2: a chosen window is a chosen VIEW, not the user's live moment.
+  // Selected takes the three cues Chip now uses -- `surface3` fill,
+  // `borderLight` edge, `textPrimary` ink (the face is already semibold).
+  windowChipOn: { borderColor: colors.borderLight, backgroundColor: colors.surface3 },
   windowChipText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
-  windowChipTextOn: { color: colors.primary },
+  windowChipTextOn: { color: colors.textPrimary },
 
   sectionLabelSpacing: { marginBottom: spacing.sm },
   card: {
@@ -748,7 +751,7 @@ const styles = StyleSheet.create({
   cardFootnote: { ...type.caption, color: colors.textMuted, marginTop: spacing.md },
   // L05-cross (2026-07-09 design audit): the tappable variant of the
   // footnote above, used only when it links through to Nutrition targets.
-  cardFootnoteLink: { color: colors.primary, textDecorationLine: 'underline' },
+  cardFootnoteLink: { color: colors.textSecondary, textDecorationLine: 'underline' },
   proteinHeadline: { ...type.title, color: colors.textPrimary },
   proteinChartWrap: { marginTop: spacing.md },
   emptyActionStack: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
@@ -773,7 +776,10 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginHorizontal: spacing.sm,
   },
-  barFill: { height: '100%', backgroundColor: colors.primary, borderRadius: radius.sm },
+  // D174 (the MacroRings precedent): a bar that is amber at every value is
+  // amber as decoration. The whole series takes `borderLight`, the token the
+  // week ribbon fills a trained day with.
+  barFill: { height: '100%', backgroundColor: colors.borderLight, borderRadius: radius.sm },
   barValue: { color: colors.textPrimary, fontSize: fontSize.sm, width: 56, textAlign: 'right' },
 
   adherenceRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
@@ -784,7 +790,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginHorizontal: spacing.sm,
   },
-  adherenceFill: { height: '100%', backgroundColor: colors.primary, borderRadius: radius.xs },
+  adherenceFill: { height: '100%', backgroundColor: colors.borderLight, borderRadius: radius.xs },
   adherenceValue: { color: colors.textPrimary, fontSize: fontSize.sm, width: 44, textAlign: 'right' },
 
   // Nutrient averages (build gap #18): a plain two-column factual row, "Protein
@@ -815,11 +821,11 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     windowChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    windowChipOn: { borderColor: t.colors.primary, backgroundColor: t.colors.surface2 },
+    windowChipOn: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
     windowChipText: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
-    windowChipTextOn: { color: t.colors.primary },
+    windowChipTextOn: { color: t.colors.textPrimary },
     cardFootnote: { ...t.type.caption, color: t.colors.textMuted },
-    cardFootnoteLink: { color: t.colors.primary },
+    cardFootnoteLink: { color: t.colors.textSecondary },
     proteinHeadline: { ...t.type.title, color: t.colors.textPrimary },
     emptyText: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
     insightHeadline: { ...t.type.body, color: t.colors.textPrimary },
@@ -829,11 +835,11 @@ function buildLiveStyles(t) {
     summaryDelta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     barDay: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     barTrack: { backgroundColor: t.colors.surface2 },
-    barFill: { backgroundColor: t.colors.primary },
+    barFill: { backgroundColor: t.colors.borderLight },
     barValue: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
     adherenceLabel: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     adherenceTrack: { backgroundColor: t.colors.surface2 },
-    adherenceFill: { backgroundColor: t.colors.primary },
+    adherenceFill: { backgroundColor: t.colors.borderLight },
     adherenceValue: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
     nutrientLabel: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
     nutrientValue: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },

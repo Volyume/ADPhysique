@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, fontFamily, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, motion, fontFamily, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
@@ -345,7 +345,7 @@ function ProOnboardingHeader({ step, title, sub, onBack, skipGym = false }) {
           <View style={styles.outcomeGrid}>
             {outcomes.map((item) => (
               <View key={item.label} style={[styles.outcomeChip, live.outcomeChip]}>
-                <Ionicons name={item.icon} size={14} color={t.colors.primary} />
+                <Ionicons name={item.icon} size={14} color={t.colors.textSecondary} />
                 {/* Campaign 27 Pillar A (D104): chip has no fixed height and
                     sizes to content, so the label wraps instead of clamping. */}
                 <Text style={[styles.outcomeChipText, live.outcomeChipText]}>{item.label}</Text>
@@ -383,7 +383,7 @@ function StageRow({ label, state, reduceMotion, t, live }) {
         {state === 'current' ? <ActivityIndicator size="small" color={t.colors.primary} /> : null}
         {state === 'upcoming' ? <View style={[styles.seqDot, live.seqDot]} /> : null}
         <Animated.View style={[StyleSheet.absoluteFill, styles.seqIconCentre, { opacity: tickOpacity }]} pointerEvents="none">
-          <Ionicons name="checkmark-circle" size={18} color={t.colors.primary} importantForAccessibility="no" />
+          <Ionicons name="checkmark-circle" size={18} color={t.colors.textSecondary} importantForAccessibility="no" />
         </Animated.View>
       </View>
       <Animated.Text style={[styles.seqLine, live.seqLine, state === 'current' && styles.seqLineCurrent, { opacity: textOpacity }]}>
@@ -399,8 +399,8 @@ function QuestionGroup({ icon, title, sub, children }) {
   return (
     <View style={[styles.questionGroup, live.questionGroup]}>
       <View style={styles.questionGroupHead}>
-        <View style={[styles.questionGroupIcon, live.questionGroupIcon]}>
-          <Ionicons name={icon} size={18} color={t.colors.primary} />
+        <View style={styles.questionGroupIcon}>
+          <Ionicons name={icon} size={18} color={t.colors.textSecondary} />
         </View>
         <View style={styles.questionGroupCopy}>
           {/* RA-7 (D96, Review A): title optional. On a step with exactly
@@ -3020,7 +3020,7 @@ export default function ProOnboardingScreen({ navigation }) {
                           </View>
                           <Text style={[styles.proteinOptDesc, live.proteinOptDesc]}>{PROTEIN_SHORT[key]}</Text>
                         </View>
-                        {active ? <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} /> : null}
+                        {active ? <Ionicons name="checkmark-circle" size={20} color={t.colors.textPrimary} /> : null}
                       </TouchableOpacity>
                     );
                   })}
@@ -3076,8 +3076,8 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <View style={[styles.coachCard, live.coachCard]}>
               <View style={styles.coachCardHead}>
-                <View style={[styles.notifIconWrap, live.notifIconWrap]}>
-                  <Ionicons name="time-outline" size={18} color={t.colors.primary} />
+                <View style={styles.notifIconWrap}>
+                  <Ionicons name="time-outline" size={18} color={t.colors.textSecondary} />
                 </View>
                 <Text style={[styles.coachCardTitle, live.coachCardTitle]}>{copy.title}</Text>
               </View>
@@ -3121,7 +3121,7 @@ export default function ProOnboardingScreen({ navigation }) {
                         </View>
                       </View>
                       {active ? (
-                        <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />
+                        <Ionicons name="checkmark-circle" size={20} color={t.colors.textPrimary} />
                       ) : null}
                     </TouchableOpacity>
                   );
@@ -3214,7 +3214,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   onLayout={(e) => setPayoffH(Math.round(e.nativeEvent.layout.height))}
                 >
                   <View style={styles.seqEyebrowRow}>
-                    <Ionicons name="checkmark-circle" size={16} color={t.colors.primary} importantForAccessibility="no" />
+                    <Ionicons name="checkmark-circle" size={16} color={t.colors.textSecondary} importantForAccessibility="no" />
                     <Text style={[styles.seqEyebrow, live.seqEyebrow]}>Plan ready</Text>
                   </View>
                   <Text style={[styles.seqHeading, live.seqHeading]} accessibilityRole="header">Your plan is ready</Text>
@@ -3269,8 +3269,8 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <View style={[styles.coachCard, live.coachCard]}>
             <View style={styles.coachCardHead}>
-              <View style={[styles.notifIconWrap, live.notifIconWrap]}>
-                <Ionicons name="git-branch-outline" size={18} color={t.colors.primary} />
+              <View style={styles.notifIconWrap}>
+                <Ionicons name="git-branch-outline" size={18} color={t.colors.textSecondary} />
               </View>
               <Text style={[styles.coachCardTitle, live.coachCardTitle]}>How your coaching works</Text>
             </View>
@@ -3313,8 +3313,8 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <View style={[styles.notifSection, live.notifSection]}>
               <View style={styles.notifHeader}>
-                <View style={[styles.notifIconWrap, live.notifIconWrap]}>
-                  <Ionicons name="scale-outline" size={18} color={t.colors.primary} />
+                <View style={styles.notifIconWrap}>
+                  <Ionicons name="scale-outline" size={18} color={t.colors.textSecondary} />
                 </View>
                 <View style={styles.notifCopy}>
                   <Text style={[styles.notifTitle, live.notifTitle]}>Morning weight reminder</Text>
@@ -3371,8 +3371,8 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <View style={[styles.notifSection, live.notifSection]}>
               <View style={styles.notifHeader}>
-                <View style={[styles.notifIconWrap, live.notifIconWrap]}>
-                  <Ionicons name="calendar-outline" size={18} color={t.colors.primary} />
+                <View style={styles.notifIconWrap}>
+                  <Ionicons name="calendar-outline" size={18} color={t.colors.textSecondary} />
                 </View>
                 <View style={styles.notifCopy}>
                   <Text style={[styles.notifTitle, live.notifTitle]}>Weekly check-in reminder</Text>
@@ -3475,7 +3475,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xxs,
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface2,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
@@ -3526,7 +3526,7 @@ const styles = StyleSheet.create({
     position: 'absolute', left: spacing.lg, right: spacing.lg, top: spacing.lg,
   },
   seqEyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
-  seqEyebrow: { ...type.overline, color: colors.primary },
+  seqEyebrow: { ...type.overline, color: colors.textMuted },
   seqPlanLines: { gap: spacing.xxs, marginTop: spacing.sm, marginBottom: spacing.md },
   seqPlanLine: { ...type.body, color: colors.textPrimary },
   seqPayoffBtn: { marginTop: spacing.lg },
@@ -3569,11 +3569,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.lg,
   },
+  // D174: was a 36dp `primaryBg` disc behind a stock glyph. Fixed glyph
+  // column now, no fill.
   questionGroupIcon: {
     width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -3610,17 +3609,17 @@ const styles = StyleSheet.create({
     minHeight: 64,
   },
   proteinOptionCopy: { flex: 1, minWidth: 0 },
-  proteinOptActive: { borderColor: colors.primary },
+  proteinOptActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   proteinOptTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs, flexWrap: 'wrap' },
   proteinOptLabel: { ...type.bodyStrong, color: colors.textPrimary },
   proteinOptRange: { fontSize: fontSize.xs, color: colors.textMuted },
   proteinOptDesc: { ...type.captionTight, color: colors.textSecondary },
   recBadge: {
-    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    backgroundColor: colors.surface, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: 1,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.188),
+    borderWidth: 1, borderColor: colors.border,
   },
-  recBadgeText: { fontSize: fontSize.micro, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  recBadgeText: { fontSize: fontSize.micro, color: colors.textMuted, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   // Weak-point selector (step 3). Chip grid, division-scoped options.
   wpSection: { marginTop: spacing.lg, marginBottom: spacing.sm },
@@ -3636,7 +3635,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.md,
     borderWidth: 1.5, borderColor: colors.border,
   },
-  fieldWrapFocused: { borderColor: withAlpha(colors.primary, 0.502) },
+  fieldWrapFocused: { borderColor: colors.primary },
   fieldInput: {
     flex: 1, paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
@@ -3661,9 +3660,10 @@ const styles = StyleSheet.create({
   },
   notifHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   notifCopy: { flex: 1, minWidth: 0 },
+  // D174: was a 36dp `primaryBg` disc behind a stock glyph. Fixed glyph
+  // column now, no fill.
   notifIconWrap: {
-    width: 36, height: 36, borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
+    width: 36,
     alignItems: 'center', justifyContent: 'center',
   },
   notifTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xxs },
@@ -3671,13 +3671,13 @@ const styles = StyleSheet.create({
   requiredPill: {
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.188),
-    backgroundColor: colors.primaryBg,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
     alignSelf: 'flex-start',
   },
-  requiredPillText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
+  requiredPillText: { ...type.caption, color: colors.textSecondary, fontWeight: fontWeight.semibold },
 
   coachCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
@@ -3699,14 +3699,14 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     justifyContent: 'center',
   },
-  hourChipActive: { backgroundColor: colors.primaryFill, borderColor: colors.primary },
+  hourChipActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   hourChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  hourChipTextActive: { color: colors.onPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  hourChipTextActive: { color: colors.textPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 
   // Beta offer card
   offerCard: {
     backgroundColor: colors.surface, borderRadius: radius.xl,
-    borderWidth: 2, borderColor: colors.primary,
+    borderWidth: 2, borderColor: colors.borderLight,
     padding: spacing.lg, marginBottom: spacing.xl,
     // D174: `...shadow.glow` removed with the token. This style is dead
     // (see buildLiveStyles' note below) so nothing renders differently.
@@ -3714,10 +3714,10 @@ const styles = StyleSheet.create({
   offerBadgeRow: { marginBottom: spacing.sm },
   offerBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    alignSelf: 'flex-start', backgroundColor: colors.primaryFill,
+    alignSelf: 'flex-start', backgroundColor: colors.surface3,
     borderRadius: radius.xs, paddingHorizontal: spacing.sm, paddingVertical: 3,
   },
-  offerBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.onPrimary },
+  offerBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
   offerHeadline: { fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 26 },
   offerBody: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.md },
   offerPerks: { gap: spacing.xs },
@@ -3767,17 +3767,16 @@ function buildLiveStyles(t) {
     stepTitle: { ...t.type.h2, color: t.colors.textPrimary },
     stepSub: { ...t.type.bodySm, color: t.colors.textSecondary },
     outcomeEyebrow: { ...t.type.caption, color: t.colors.textMuted },
-    outcomeChip: { backgroundColor: t.colors.primaryBg },
+    outcomeChip: { backgroundColor: t.colors.surface2 },
     outcomeChipText: { ...t.type.caption, color: t.colors.textPrimary },
     seqPanel: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     seqHeading: { ...t.type.h3, color: t.colors.textPrimary },
     seqSub: { ...t.type.bodySm, color: t.colors.textSecondary },
     seqLine: { ...t.type.bodySm, color: t.colors.textPrimary },
     seqDot: { borderColor: t.colors.textMuted },
-    seqEyebrow: { ...t.type.overline, color: t.colors.primary },
+    seqEyebrow: { ...t.type.overline, color: t.colors.textMuted },
     seqPlanLine: { ...t.type.body, color: t.colors.textPrimary },
     questionGroup: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    questionGroupIcon: { backgroundColor: t.colors.primaryBg },
     questionGroupTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     questionGroupSub: { ...t.type.captionTight, color: t.colors.textSecondary },
     continueHint: { ...t.type.caption, color: t.colors.textSecondary },
@@ -3785,29 +3784,28 @@ function buildLiveStyles(t) {
     fieldHint: { ...t.type.captionTight, color: t.colors.textMuted },
     provisionalKcal: { ...t.type.captionTight, color: t.colors.textSecondary },
     proteinOpt: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    proteinOptActive: { borderColor: t.colors.primary },
+    proteinOptActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     proteinOptLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     proteinOptRange: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     proteinOptDesc: { ...t.type.captionTight, color: t.colors.textSecondary },
-    recBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.188) },
-    recBadgeText: { fontSize: t.fontSize.micro, color: t.colors.primary },
+    recBadge: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    recBadgeText: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
     wpLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     wpOptional: { color: t.colors.textMuted },
     wpHint: { ...t.type.captionTight, color: t.colors.textMuted },
     notifSection: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    notifIconWrap: { backgroundColor: t.colors.primaryBg },
     notifTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     notifSub: { ...t.type.captionTight, color: t.colors.textMuted },
-    requiredPill: { borderColor: withAlpha(t.colors.primary, 0.188), backgroundColor: t.colors.primaryBg },
-    requiredPillText: { ...t.type.caption, color: t.colors.primary },
+    requiredPill: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    requiredPillText: { ...t.type.caption, color: t.colors.textSecondary },
     coachCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     coachCardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     coachCardBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     timeLabel: { ...t.type.caption, color: t.colors.textMuted },
     hourChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    hourChipActive: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
+    hourChipActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     hourChipText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
-    hourChipTextActive: { color: t.colors.onPrimary },
+    hourChipTextActive: { color: t.colors.textPrimary },
     primaryBtnText: {},
   };
 }

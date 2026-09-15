@@ -139,7 +139,7 @@ export default function CommunitySearchScreen({ navigation, route }) {
               accessibilityRole="button"
               accessibilityLabel="Clear recent searches"
             >
-              <Text style={[styles.recentClear, { ...t.type.captionStrong, color: t.colors.primary }]}>
+              <Text style={[styles.recentClear, { ...t.type.captionStrong, color: t.colors.textPrimary }]}>
                 Clear
               </Text>
             </TouchableOpacity>

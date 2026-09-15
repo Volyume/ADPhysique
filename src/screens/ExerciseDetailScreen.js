@@ -823,7 +823,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* Congratulatory banner, shown briefly when goal is auto-detected as achieved */}
         {congratsBanner && (
           <Animated.View style={[styles.congratsBanner, live.congratsBanner, { opacity: congratsOpacity }]}>
-            <Ionicons name="checkmark-circle" size={18} color={t.colors.primary} />
+            <Ionicons name="checkmark-circle" size={18} color={t.colors.textSecondary} />
             <Text style={[styles.congratsText, live.congratsText]}>You've hit your target. Set a new one.</Text>
           </Animated.View>
         )}
@@ -846,7 +846,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           <Card style={styles.goalCard}>
             <View style={styles.goalCardHeader}>
               <View style={styles.goalCardLeft}>
-                <Ionicons name="flag" size={14} color={t.colors.primary} />
+                <Ionicons name="flag" size={14} color={t.colors.textSecondary} />
                 <SectionLabel tone="muted">Target</SectionLabel>
               </View>
               <TouchableOpacity onPress={openGoalSheet} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Edit target">
@@ -861,7 +861,11 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               </View>
               <Ionicons name="arrow-forward" size={14} color={t.colors.textMuted} />
               <View style={styles.goalWeightItem}>
-                <Text style={[styles.goalWeightValue, live.goalWeightValue, { color: t.colors.primary }]}>
+                {/* D174: the target used to be amber so it read differently from
+                    the current est. max beside it. The two labels and the arrow
+                    between them already say which is which, so the override
+                    goes rather than being recoloured into a second grey. */}
+                <Text style={[styles.goalWeightValue, live.goalWeightValue]}>
                   {finiteOr(goal.targetWeight, '-')}{units}
                 </Text>
                 <Text style={[styles.goalWeightLabel, live.goalWeightLabel]}>
@@ -877,7 +881,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <Text style={[
               styles.goalBarCaption,
               live.goalBarCaption,
-              goalProgress >= 1 && { color: t.colors.primary },
+              goalProgress >= 1 && { color: t.colors.textPrimary },
             ]}>
               {goalProgress >= 1
                 ? 'Goal reached.'
@@ -938,7 +942,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   data={windowedPoints.map(d => ({ value: d[activeYKey] }))}
                   width={windowWidth - spacing.lg * 2 - spacing.md * 2}
                   height={96}
-                  color={t.colors.primary}
+                  color={t.colors.borderLight}
                   thickness={2}
                   area
                   areaTopColor={t.colors.chartFill}
@@ -1041,7 +1045,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   name={pr.record_type === '1rm_estimate' ? 'barbell-outline' :
                    pr.record_type === 'heaviest_weight' ? 'barbell-outline' : 'repeat-outline'}
                   size={22}
-                  color={t.colors.primary}
+                  color={t.colors.textSecondary}
                 />
                 <View style={styles.prInfo}>
                   <Text style={[styles.prLabel, live.prLabel]}>
@@ -1136,7 +1140,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 {steps.length >= 2 ? (
                   steps.map((step, i) => (
                     <View key={i} style={[styles.stepRow, i > 0 && styles.stepRowSpaced]}>
-                      <View style={[styles.stepNumber, live.stepNumber]}>
+                      {/* D174: the step number sat in a `primaryBg` disc. An
+                          index is not "now": fill and disc geometry go, and the
+                          figure takes the muted ink. */}
+                      <View style={styles.stepNumber}>
                         <Text style={[styles.stepNumberText, live.stepNumberText]}>{i + 1}</Text>
                       </View>
                       <Text style={[styles.stepText, live.stepText]}>{step}</Text>
@@ -1273,13 +1280,15 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  // D174: the primary-muscle tag was a `primaryBg` wash. It keeps its step
+  // above `tagSecondary` from the surface ladder and the ink instead.
   tag: {
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface3,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
   },
-  tagText: { ...type.label, color: colors.primary },
+  tagText: { ...type.label, color: colors.textPrimary },
   tagSecondary: { backgroundColor: colors.surface2 },
   tagTextSecondary: { color: colors.textSecondary },
   secMuscles: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs },
@@ -1339,9 +1348,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  chartToggleBtnActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  // D174 A2: the chart-metric toggle selects a VIEW.
+  chartToggleBtnActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   chartToggleBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  chartToggleBtnTextActive: { color: colors.primary },
+  chartToggleBtnTextActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   e1rmNote: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, fontStyle: 'italic' },
   chartContainer: {
     height: 120,
@@ -1428,9 +1438,13 @@ const styles = StyleSheet.create({
     ...type.num('display'),
     color: colors.primary,
   },
+  // D174: `prHeroValue` above is the personal best discipline 1 names in its
+  // own four instances, and it is the ONE amber figure this card is entitled
+  // to. The supporting records take the primary ink; three amber numerals in
+  // one card is the scarcity failure A1 refused by volume.
   prHighlightStatValue: {
     ...type.num('title'),
-    color: colors.primary,
+    color: colors.textPrimary,
   },
   prHighlightStatLabel: {
     ...type.caption,
@@ -1448,14 +1462,11 @@ const styles = StyleSheet.create({
   stepRowSpaced: { marginTop: spacing.md },
   stepNumber: {
     width: 22,
-    height: 22,
-    borderRadius: radius.full,
-    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.hair,
   },
-  stepNumberText: { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.primary },
+  stepNumberText: { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textMuted },
   stepText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   plateauBanner: {
     flexDirection: 'row',
@@ -1531,16 +1542,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, 0.251),
+    borderColor: colors.border,
   },
   congratsText: {
     ...type.label,
     flex: 1,
-    color: colors.primary,
+    color: colors.textPrimary,
   },
   // Goal modal. BottomSheet supplies the backdrop, panel chrome and drag
   // handle now (D36a migration) -- only the content-level styles remain.
@@ -1594,8 +1605,8 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    tag: { backgroundColor: t.colors.primaryBg },
-    tagText: { ...t.type.label, color: t.colors.primary },
+    tag: { backgroundColor: t.colors.surface3 },
+    tagText: { ...t.type.label, color: t.colors.textPrimary },
     tagSecondary: { backgroundColor: t.colors.surface2 },
     tagTextSecondary: { color: t.colors.textSecondary },
     secMuscleLabel: { ...t.type.label, color: t.colors.textMuted },
@@ -1611,9 +1622,9 @@ function buildLiveStyles(t) {
     loadErrorTitle: { ...t.type.title, color: t.colors.textPrimary },
     loadErrorText: { ...t.type.bodySm, color: t.colors.textSecondary },
     chartToggleBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    chartToggleBtnActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    chartToggleBtnActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     chartToggleBtnText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
-    chartToggleBtnTextActive: { color: t.colors.primary },
+    chartToggleBtnTextActive: { color: t.colors.textPrimary },
     e1rmNote: { ...t.type.caption, color: t.colors.textMuted },
     chartContainer: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     historyDate: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
@@ -1626,13 +1637,12 @@ function buildLiveStyles(t) {
     subCardEquipment: { ...t.type.caption, color: t.colors.textMuted },
     prHighlightStatBordered: { borderLeftColor: t.colors.border },
     prHeroValue: { ...t.type.num('display'), color: t.colors.primary },
-    prHighlightStatValue: { ...t.type.num('title'), color: t.colors.primary },
+    prHighlightStatValue: { ...t.type.num('title'), color: t.colors.textPrimary },
     prHighlightStatLabel: { ...t.type.caption, color: t.colors.textMuted },
     prHighlightDate: { ...t.type.caption, color: t.colors.textMuted },
     notesText: { ...t.type.bodySm, color: t.colors.textSecondary },
     adaptedLabel: { ...t.type.captionStrong, color: t.colors.textPrimary },
-    stepNumber: { backgroundColor: t.colors.primaryBg },
-    stepNumberText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    stepNumberText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     stepText: { ...t.type.bodySm, color: t.colors.textSecondary },
     plateauBanner: { backgroundColor: t.colors.warningBg },
     plateauTitle: { ...t.type.label, color: t.colors.warning },
@@ -1642,8 +1652,8 @@ function buildLiveStyles(t) {
     goalBarTrack: { backgroundColor: t.colors.surface2 },
     goalBarFill: { backgroundColor: t.colors.primaryFill },
     goalBarCaption: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    congratsBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
-    congratsText: { ...t.type.label, color: t.colors.primary },
+    congratsBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    congratsText: { ...t.type.label, color: t.colors.textPrimary },
     modalTitle: { ...t.type.title, color: t.colors.textPrimary },
     modalSubtitle: { ...t.type.bodySm, color: t.colors.textMuted },
     weightInput: { fontSize: t.fontSize.xxl },

@@ -750,7 +750,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={item.label}
         >
-          <Ionicons name={item.icon} size={20} color={t.colors.primary} />
+          <Ionicons name={item.icon} size={20} color={t.colors.textSecondary} />
           <Text style={[styles.ctaText, live.ctaText]}>{item.label}</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
@@ -899,7 +899,7 @@ export default function FoodSearchScreen({ navigation, route }) {
               </View>
               {loggingMealId === busyKey
                 ? <ActivityIndicator size="small" color={t.colors.primary} />
-                : <Ionicons name={isFood ? 'add-circle' : 'chevron-forward'} size={isFood ? 26 : 22} color={t.colors.primary} />}
+                : <Ionicons name={isFood ? 'add-circle' : 'chevron-forward'} size={isFood ? 26 : 22} color={t.colors.textSecondary} />}
             </TouchableOpacity>
           );
         }}
@@ -1129,7 +1129,9 @@ const styles = StyleSheet.create({
     height: 2, width: '100%', backgroundColor: 'transparent',
     borderRadius: radius.hair,
   },
-  tabUnderlineActive: { backgroundColor: colors.primary },
+  // D174 A2: a tab selects a VIEW. The label already carries the state twice
+  // (textPrimary at the semibold face); the rule becomes the neutral fill.
+  tabUnderlineActive: { backgroundColor: colors.borderLight },
 
   searchBar: {
     margin: spacing.md,
@@ -1161,7 +1163,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     backgroundColor: colors.surface,
     borderWidth: 1, borderColor: colors.borderSubtle,
-    borderLeftWidth: 3, borderLeftColor: colors.primary,
+    borderLeftWidth: 3, borderLeftColor: colors.border,
     borderRadius: radius.lg,
     marginHorizontal: spacing.md, marginTop: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
@@ -1241,7 +1243,7 @@ function buildLiveStyles(t) {
     tabBar: { borderBottomColor: t.colors.border },
     tabLabel: { ...t.type.label, color: t.colors.textMuted },
     tabLabelActive: { color: t.colors.textPrimary },
-    tabUnderlineActive: { backgroundColor: t.colors.primary },
+    tabUnderlineActive: { backgroundColor: t.colors.borderLight },
     provenanceNote: { ...t.type.captionTight, color: t.colors.textMuted },
     ctaRow: { borderBottomColor: t.colors.borderSubtle },
     ctaText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -1250,7 +1252,7 @@ function buildLiveStyles(t) {
     suggestCard: {
       backgroundColor: t.colors.surface,
       borderColor: t.colors.border,
-      borderLeftColor: t.colors.primary,
+      borderLeftColor: t.colors.border,
     },
     suggestName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     suggestMacros: { ...t.type.caption, color: t.colors.textSecondary },

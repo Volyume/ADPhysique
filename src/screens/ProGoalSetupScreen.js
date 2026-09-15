@@ -11,7 +11,7 @@ import useAppStore from '../store/useAppStore';
 // tab's stack and PlanLibrary in the Train tab's, so the jump must cross tabs.
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
@@ -935,7 +935,7 @@ export default function ProGoalSetupScreen({ navigation }) {
                 <Ionicons
                   name="barbell-outline"
                   size={18}
-                  color={active ? t.colors.primary : t.colors.textSecondary}
+                  color={active ? t.colors.textPrimary : t.colors.textSecondary}
                 />
               </View>
               <View style={styles.phaseBody}>
@@ -950,7 +950,7 @@ export default function ProGoalSetupScreen({ navigation }) {
                 </View>
                 <Text style={[styles.phaseDetail, live.phaseDetail]}>{APPROACH_SHORT[key]}</Text>
               </View>
-              {active && <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />}
+              {active && <Ionicons name="checkmark-circle" size={20} color={t.colors.textPrimary} />}
             </TouchableOpacity>
           );
         })}
@@ -1045,7 +1045,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg, marginBottom: spacing.sm,
   },
-  phaseCardActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  phaseCardActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   phaseIconWrap: {
     width: 40, height: 40, borderRadius: radius.md,
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
@@ -1056,7 +1056,7 @@ const styles = StyleSheet.create({
     ...type.bodyStrong,
     color: colors.textPrimary, marginBottom: spacing.xs,
   },
-  phaseLabelActive: { color: colors.primary },
+  phaseLabelActive: { ...type.w('bodyStrong', 'semibold'), color: colors.textPrimary },
   phaseDetail: { ...type.bodySm, color: colors.textSecondary },
 
   footerNote: {
@@ -1068,12 +1068,12 @@ const styles = StyleSheet.create({
   approachRange: {
     fontSize: fontSize.xs, color: colors.textMuted, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
-  approachRangeActive: { color: colors.primaryDim },
+  approachRangeActive: { color: colors.textSecondary },
   suggestedBadge: {
-    backgroundColor: withAlpha(colors.primary, alpha.tint), borderRadius: radius.full,
+    backgroundColor: colors.surface, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: 1,
   },
-  suggestedBadgeText: { ...type.captionStrong, color: colors.primary },
+  suggestedBadgeText: { ...type.captionStrong, color: colors.textMuted },
 
 });
 
@@ -1091,15 +1091,15 @@ function buildLiveStyles(t) {
     optionalTag: { ...t.type.caption, color: t.colors.textMuted },
     showDateInput: { fontSize: t.fontSize.md },
     phaseCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    phaseCardActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    phaseCardActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     phaseIconWrap: { backgroundColor: t.colors.surface2 },
     phaseLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    phaseLabelActive: { color: t.colors.primary },
+    phaseLabelActive: { ...t.type.w('bodyStrong', 'semibold'), color: t.colors.textPrimary },
     phaseDetail: { ...t.type.bodySm, color: t.colors.textSecondary },
     footerNoteText: { ...t.type.captionTight, color: t.colors.textMuted },
     approachRange: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    approachRangeActive: { color: t.colors.primaryDim },
-    suggestedBadge: { backgroundColor: withAlpha(t.colors.primary, alpha.tint) },
-    suggestedBadgeText: { ...t.type.captionStrong, color: t.colors.primary },
+    approachRangeActive: { color: t.colors.textSecondary },
+    suggestedBadge: { backgroundColor: t.colors.surface },
+    suggestedBadgeText: { ...t.type.captionStrong, color: t.colors.textMuted },
   };
 }

@@ -44,7 +44,7 @@ import Chip from '../components/Chip';
 import TextField from '../components/TextField';
 import { getRollupsForRange, getPlannedDaysInRange, confirmPlannedDay } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady, scheduleMissedCheckinFollowups } from '../lib/notifications';
 import { logError, logWarn } from '../lib/errorLog';
@@ -1411,7 +1411,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   <Ionicons
                     name={opt.icon}
                     size={22}
-                    color={isSelected ? t.colors.primary : t.colors.textSecondary}
+                    color={isSelected ? t.colors.textPrimary : t.colors.textSecondary}
                   />
                   <Text style={[styles.perfCardText, isSelected && styles.perfCardTextSelected, live.perfCardText, isSelected && live.perfCardTextSelected]}>
                     {opt.label}
@@ -1696,7 +1696,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         <BackHeader title="Weekly check-in" onBack={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={styles.gateCenterScroll}>
           <View style={[styles.gateIconWrap, live.gateIconWrap]}>
-            <Ionicons name="time-outline" size={32} color={t.colors.primary} />
+            <Ionicons name="time-outline" size={32} color={t.colors.textSecondary} />
           </View>
           <Text style={[styles.gateTitle, live.gateTitle]}>First check-in needs more data</Text>
           {hasStartedBaseline ? (
@@ -2052,7 +2052,7 @@ const styles = StyleSheet.create({
     width: 20, height: 4, borderRadius: radius.hair,
     backgroundColor: colors.surface3,
   },
-  stepDotDone: { backgroundColor: withAlpha(colors.primary, alpha.strong) },
+  stepDotDone: { backgroundColor: colors.borderLight },
   stepDotActive: { backgroundColor: colors.primary },
 
   scroll: { flex: 1 },
@@ -2064,7 +2064,7 @@ const styles = StyleSheet.create({
 
   weekLabel: {
     ...type.label,
-    color: colors.primary,
+    color: colors.textMuted,
     marginBottom: spacing.lg,
   },
   alreadyInRow: {
@@ -2136,10 +2136,10 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   skipNoteTappable: {
-    fontSize: fontSize.sm, color: colors.primary,
+    fontSize: fontSize.sm, color: colors.textPrimary,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.surface2, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
   },
 
   // -- Progress scan evidence (integration-plan.md §5) ------------------------
@@ -2161,7 +2161,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.xs,
   },
   scanPromptActionPrimary: {
-    fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary,
+    fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary,
   },
   scanPromptActionSecondary: {
     fontSize: fontSize.sm, color: colors.textMuted,
@@ -2174,7 +2174,7 @@ const styles = StyleSheet.create({
   },
   plannedBackstop: {
     backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.primary,
+    borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -2216,9 +2216,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.borderSubtle,
   },
-  perfCardSelected: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  perfCardSelected: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   perfCardText: { ...type.label, color: colors.textSecondary, flex: 1 },
-  perfCardTextSelected: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  perfCardTextSelected: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   ctaRow: { marginTop: spacing.lg },
   ctaHint: { textAlign: 'center', fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.sm },
@@ -2314,9 +2314,9 @@ function buildLiveStyles(t) {
     headerBar: { borderBottomColor: t.colors.border, backgroundColor: t.colors.background },
     headerTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     stepDot: { backgroundColor: t.colors.surface3 },
-    stepDotDone: { backgroundColor: withAlpha(t.colors.primary, alpha.strong) },
+    stepDotDone: { backgroundColor: t.colors.borderLight },
     stepDotActive: { backgroundColor: t.colors.primary },
-    weekLabel: { ...t.type.label, color: t.colors.primary },
+    weekLabel: { ...t.type.label, color: t.colors.textMuted },
     alreadyInRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     alreadyInText: { ...t.type.bodySm, color: t.colors.textSecondary },
     stepHeading: { ...t.type.h3, color: t.colors.textPrimary },
@@ -2328,25 +2328,25 @@ function buildLiveStyles(t) {
     weightSummaryText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     weightSummaryMissed: { ...t.type.caption, color: t.colors.textMuted },
     skipNote: { ...t.type.bodySm, color: t.colors.textMuted, backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    skipNoteTappable: { fontSize: t.fontSize.sm, color: t.colors.primary, backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    skipNoteTappable: { fontSize: t.fontSize.sm, color: t.colors.textPrimary, backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     scanEvidenceHeadline: { ...t.type.bodySm, color: t.colors.textPrimary },
     scanEvidenceDetail: { ...t.type.caption, color: t.colors.textSecondary },
     scanEvidenceConfidence: { ...t.type.caption, color: t.colors.textMuted },
     scanPromptCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     scanPromptTitle: { ...t.type.label, color: t.colors.textPrimary },
     scanPromptBody: { ...t.type.captionTight, color: t.colors.textSecondary },
-    scanPromptActionPrimary: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    scanPromptActionPrimary: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     scanPromptActionSecondary: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     autoDerivedNote: { ...t.type.caption, color: t.colors.textSecondary },
-    plannedBackstop: { backgroundColor: t.colors.surface2, borderColor: t.colors.primary },
+    plannedBackstop: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     plannedBackstopText: { ...t.type.caption, color: t.colors.textPrimary },
     plannedBackstopBtnText: { fontSize: t.fontSize.sm },
     shortFieldInput: { fontSize: t.fontSize.lg },
     charCount: { ...t.type.num('caption'), color: t.colors.textMuted },
     perfCard: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    perfCardSelected: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    perfCardSelected: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     perfCardText: { ...t.type.label, color: t.colors.textSecondary },
-    perfCardTextSelected: { color: t.colors.primary },
+    perfCardTextSelected: { color: t.colors.textPrimary },
     ctaHint: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     headerQuickTag: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     fastSummaryCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },

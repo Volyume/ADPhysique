@@ -299,7 +299,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
             }))}
             width={chartWidth}
             height={120}
-            color={t.colors.primary}
+            color={t.colors.borderLight}
             thickness={2}
             area
             curved
@@ -384,7 +384,7 @@ function BodyFatTrendChart({ entries }) {
         data2={rawData}
         width={chartWidth}
         height={100}
-        color={t.colors.primary}
+        color={t.colors.borderLight}
         color2={withAlpha(t.colors.textMuted, alpha.strong)}
         thickness={2}
         thickness2={1}
@@ -451,7 +451,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
         data={data}
         width={chartWidth}
         height={100}
-        color={t.colors.primary}
+        color={t.colors.borderLight}
         thickness={2}
         area
         curved
@@ -1048,7 +1048,7 @@ export default function BodyMetricsScreen() {
         <BackHeader title="Body metrics" />
         <ScrollView contentContainerStyle={styles.optInContent}>
           <View style={[styles.confirmCard, live.confirmCard]}>
-            <Ionicons name="leaf-outline" size={32} color={t.colors.primary} />
+            <Ionicons name="leaf-outline" size={32} color={t.colors.textSecondary} />
             <Text style={[styles.confirmTitle, live.confirmTitle]}>A gentle pause</Text>
             <Text style={[styles.confirmBody, live.confirmBody]}>
               You asked for a calmer experience. Body measurements can be a
@@ -1106,7 +1106,7 @@ export default function BodyMetricsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Progress photos, private to this device"
         >
-          <Ionicons name="camera-outline" size={20} color={t.colors.primary} />
+          <Ionicons name="camera-outline" size={20} color={t.colors.textSecondary} />
           <Text style={[styles.photosRowText, live.photosRowText]}>Progress photos</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
@@ -1760,20 +1760,20 @@ const styles = StyleSheet.create({
     minWidth: '30%', backgroundColor: colors.surface2, borderRadius: radius.md,
     padding: spacing.md, gap: spacing.xxs, borderWidth: 1, borderColor: 'transparent',
   },
-  measureCellActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
+  measureCellActive: { borderColor: colors.borderLight, backgroundColor: colors.surface3 },
   measureValue: { ...type.num('bodyStrong'), color: colors.textPrimary },
-  measureValueActive: { color: colors.primary },
+  measureValueActive: { ...type.w(type.num('bodyStrong'), 'semibold'), color: colors.textPrimary },
   measureLabel: { ...type.caption, color: colors.textMuted },
-  measureLabelActive: { color: colors.primaryDim },
+  measureLabelActive: { color: colors.textSecondary },
   measureTabRow: { flexDirection: 'row', gap: spacing.xs, paddingVertical: spacing.sm },
   measureTab: {
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
     borderRadius: radius.full, backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.border,
   },
-  measureTabActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  measureTabActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   measureTabText: { ...type.captionStrong, color: colors.textSecondary },
-  measureTabTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  measureTabTextActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   logBtn: {
     paddingVertical: spacing.lg,
@@ -1902,15 +1902,15 @@ function buildLiveStyles(t) {
     recompCta: { ...t.type.label, color: t.colors.textPrimary },
     bodyFatValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
     measureCell: { backgroundColor: t.colors.surface2 },
-    measureCellActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
+    measureCellActive: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
     measureValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
-    measureValueActive: { color: t.colors.primary },
+    measureValueActive: { ...t.type.w(t.type.num('bodyStrong'), 'semibold'), color: t.colors.textPrimary },
     measureLabel: { ...t.type.caption, color: t.colors.textMuted },
-    measureLabelActive: { color: t.colors.primaryDim },
+    measureLabelActive: { color: t.colors.textSecondary },
     measureTab: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    measureTabActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    measureTabActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     measureTabText: { ...t.type.captionStrong, color: t.colors.textSecondary },
-    measureTabTextActive: { color: t.colors.primary },
+    measureTabTextActive: { color: t.colors.textPrimary },
     logBtnText: { ...t.type.title, color: t.colors.textPrimary },
     formCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     formTitle: { ...t.type.title, color: t.colors.textPrimary },

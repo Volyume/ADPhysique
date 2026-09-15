@@ -33,7 +33,7 @@ import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { appAlert } from '../components/AppAlert';
 import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
-import { colors, fontSize, fontWeight, spacing, radius, hitSlop, type, circle, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, hitSlop, type, circle, fontFamily, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { todayLocalKey, parseLocalDay } from '../lib/dayKey';
@@ -1087,8 +1087,10 @@ export default function MealPlanScreen({ navigation, route }) {
         </View>
       ) : !plan ? (
         <ScrollView contentContainerStyle={[styles.emptyScroll, { paddingBottom: emptyBottomPadding }]}>
-          <View style={[styles.emptyIcon, live.emptyIcon]}>
-            <Ionicons name="restaurant-outline" size={30} color={t.colors.primary} />
+          {/* D174: the glyph sat on a 56dp `primaryBg` disc. EmptyState, swept
+              in the same pass, carries no disc at all; this matches it. */}
+          <View style={styles.emptyIcon}>
+            <Ionicons name="restaurant-outline" size={30} color={t.colors.textSecondary} />
           </View>
           <Text style={[styles.emptyTitle, live.emptyTitle]}>Meal builder</Text>
           <Text style={[styles.emptyBody, live.emptyBody]}>
@@ -1096,23 +1098,23 @@ export default function MealPlanScreen({ navigation, route }) {
           </Text>
           <View style={styles.emptySteps} accessibilityLabel="Meal planning steps">
             <View style={[styles.emptyStep, live.emptyStep]}>
-              <Ionicons name="analytics-outline" size={16} color={t.colors.primary} />
+              <Ionicons name="analytics-outline" size={16} color={t.colors.textSecondary} />
               <Text style={[styles.emptyStepText, live.emptyStepText]}>Uses your calories and macros</Text>
             </View>
             <View style={[styles.emptyStep, live.emptyStep]}>
-              <Ionicons name="options-outline" size={16} color={t.colors.primary} />
+              <Ionicons name="options-outline" size={16} color={t.colors.textSecondary} />
               <Text style={[styles.emptyStepText, live.emptyStepText]}>Follows your meal preferences</Text>
             </View>
             <View style={[styles.emptyStep, live.emptyStep]}>
-              <Ionicons name="checkmark-circle-outline" size={16} color={t.colors.primary} />
+              <Ionicons name="checkmark-circle-outline" size={16} color={t.colors.textSecondary} />
               <Text style={[styles.emptyStepText, live.emptyStepText]}>Nothing counts until you mark it eaten</Text>
             </View>
           </View>
 
           <View style={[styles.preferencesCard, live.preferencesCard]} accessibilityLabel={`Meal preferences, ${prefSummary}`}>
             <View style={styles.prefsToggle}>
-              <View style={[styles.preferencesIcon, live.preferencesIcon]}>
-                <Ionicons name="options-outline" size={18} color={t.colors.primary} />
+              <View style={styles.preferencesIcon}>
+                <Ionicons name="options-outline" size={18} color={t.colors.textSecondary} />
               </View>
               <View style={styles.prefsToggleCopy}>
                 <Text style={[styles.prefsToggleText, live.prefsToggleText]}>Meal preferences</Text>
@@ -1127,7 +1129,7 @@ export default function MealPlanScreen({ navigation, route }) {
 
           <Card style={styles.planOption}>
             <View style={styles.planOptionHead}>
-              <Ionicons name="today-outline" size={18} color={t.colors.primary} />
+              <Ionicons name="today-outline" size={18} color={t.colors.textSecondary} />
               <Text style={[styles.planOptionTitle, live.planOptionTitle]}>{planStartDate === todayLocalKey() ? 'Today' : planStartLabel}</Text>
             </View>
             <Text style={[styles.planOptionDesc, live.planOptionDesc]}>
@@ -1138,7 +1140,7 @@ export default function MealPlanScreen({ navigation, route }) {
 
           <Card style={styles.planOption}>
             <View style={styles.planOptionHead}>
-              <Ionicons name="calendar-outline" size={18} color={t.colors.primary} />
+              <Ionicons name="calendar-outline" size={18} color={t.colors.textSecondary} />
               <Text style={[styles.planOptionTitle, live.planOptionTitle]}>Week ahead</Text>
             </View>
             <Text style={[styles.planOptionDesc, live.planOptionDesc]}>
@@ -1253,8 +1255,8 @@ export default function MealPlanScreen({ navigation, route }) {
               accessibilityState={{ expanded: prefsOpen }}
               accessibilityLabel={`Meal preferences, ${prefSummary}`}
             >
-              <View style={[styles.preferencesIcon, live.preferencesIcon]}>
-                <Ionicons name="options-outline" size={18} color={t.colors.primary} />
+              <View style={styles.preferencesIcon}>
+                <Ionicons name="options-outline" size={18} color={t.colors.textSecondary} />
               </View>
               <View style={styles.prefsToggleCopy}>
                 <Text style={[styles.prefsToggleText, live.prefsToggleText]}>Meal preferences</Text>
@@ -1450,8 +1452,8 @@ export default function MealPlanScreen({ navigation, route }) {
 
           <View style={[styles.planActionPanel, live.planActionPanel]}>
             <View style={styles.planActionHead}>
-              <View style={[styles.planActionIcon, live.planActionIcon]}>
-                <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={t.colors.primary} />
+              <View style={styles.planActionIcon}>
+                <Ionicons name={isDayPlan ? 'today-outline' : 'calendar-outline'} size={18} color={t.colors.textSecondary} />
               </View>
               <View style={styles.planActionCopy}>
                 <Text style={[styles.planActionTitle, live.planActionTitle]}>{isDayPlan ? `Ready to add ${planStartDate === todayLocalKey() ? 'today' : planStartLabel}` : `Ready to add ${planStartLabel} onwards`}</Text>
@@ -1858,13 +1860,10 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.md,
   },
+  // D174: was a 56dp `primaryBg` disc behind the empty-state glyph.
   emptyIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
   },
   emptyTitle: { color: colors.textPrimary, fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, textAlign: 'center' },
   emptyBody: { ...type.body, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, marginBottom: spacing.md },
@@ -1921,7 +1920,9 @@ const styles = StyleSheet.create({
   dayLetter: { ...type.label, color: colors.textSecondary },
   dayLetterOn: { color: colors.textPrimary },
   dayDot: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.border, marginTop: 4 },
-  dayDotTrain: { backgroundColor: colors.primary },
+  // D174: a trained day takes `borderLight`, the token the week ribbon fills
+  // a trained day with (A1's own reasoning for choosing it).
+  dayDotTrain: { backgroundColor: colors.borderLight },
   dayHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md },
   dayTitleGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   dayLabel: { ...type.label, color: colors.textPrimary },
@@ -1950,13 +1951,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   planActionHead: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  // D174: was a 36dp `primaryBg` disc; a fixed glyph column now.
   planActionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
+    width: iconSize.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
   },
   planActionCopy: { flex: 1, minWidth: 0 },
   planActionTitle: { ...type.bodyStrong, color: colors.textPrimary },
@@ -1996,7 +1995,9 @@ const styles = StyleSheet.create({
   weightChoiceLabel: { color: colors.textMuted, fontSize: fontSize.xs },
   weightChoiceChip: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, minHeight: 0 },
   weightChoiceChipText: { fontSize: fontSize.xs },
-  weightChoiceChipTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  // D174 A2: Chip's own selected label is already textPrimary at the semibold
+  // face; this override used to put the accent back on top of it.
+  weightChoiceChipTextActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   macroLine: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs, fontVariant: ['tabular-nums'] },
   seasonIntro: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.sm },
   seasonWrap: {
@@ -2040,13 +2041,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     minHeight: 42,
   },
+  // D174: the `primaryBg` fill and the disc radius go. The WIDTH stays at
+  // PREFERENCES_ICON_SIZE because `preferencesHint` below indents itself by
+  // exactly that value -- the geometry is load-bearing for a sibling's
+  // alignment, which is not true of the other discs in this sweep.
   preferencesIcon: {
     width: PREFERENCES_ICON_SIZE,
-    height: PREFERENCES_ICON_SIZE,
-    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.primaryBg,
   },
   prefsToggleCopy: { flex: 1, minWidth: 0 },
   prefsToggleText: { ...type.bodyStrong, color: colors.textPrimary },
@@ -2133,7 +2135,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, gap: spacing.xs, minHeight: 56, justifyContent: 'center',
   },
-  swapOptionOn: { borderColor: colors.primary },
+  // D174 A2: a chosen swap is a selection in a picker.
+  swapOptionOn: { borderColor: colors.borderLight },
   swapOptionMain: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm },
   swapOptionName: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
   swapOptionTag: { ...type.caption, color: colors.textSecondary },
@@ -2163,7 +2166,6 @@ function buildLiveStyles(t) {
     absentLine: { ...t.type.caption, color: t.colors.textMuted },
     habitQuestion: { ...t.type.body, color: t.colors.textPrimary },
     habitDetail: { ...t.type.bodySm, color: t.colors.textSecondary },
-    emptyIcon: { backgroundColor: t.colors.primaryBg },
     emptyTitle: { color: t.colors.textPrimary, fontSize: t.fontSize.xl },
     emptyBody: { ...t.type.body, color: t.colors.textSecondary },
     emptyStep: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
@@ -2175,7 +2177,7 @@ function buildLiveStyles(t) {
     dayLetter: { ...t.type.label, color: t.colors.textSecondary },
     dayLetterOn: { color: t.colors.textPrimary },
     dayDot: { backgroundColor: t.colors.border },
-    dayDotTrain: { backgroundColor: t.colors.primary },
+    dayDotTrain: { backgroundColor: t.colors.borderLight },
     dayLabel: { ...t.type.label, color: t.colors.textPrimary },
     typeChip: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     typeChipText: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
@@ -2186,7 +2188,6 @@ function buildLiveStyles(t) {
     exclusionNotice: { borderColor: t.colors.warning, backgroundColor: t.colors.surface },
     exclusionNoticeText: { ...t.type.bodySm, color: t.colors.textPrimary },
     planActionPanel: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    planActionIcon: { backgroundColor: t.colors.primaryBg },
     planActionTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     planActionSub: { ...t.type.bodySm, color: t.colors.textSecondary },
     planQuickAction: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
@@ -2196,7 +2197,7 @@ function buildLiveStyles(t) {
     itemLine: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     weightChoiceLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     weightChoiceChipText: { fontSize: t.fontSize.xs },
-    weightChoiceChipTextActive: { color: t.colors.primary },
+    weightChoiceChipTextActive: { color: t.colors.textPrimary },
     macroLine: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     seasonIntro: { ...t.type.bodySm, color: t.colors.textMuted },
     seasonWrap: { borderTopColor: t.colors.border },
@@ -2208,7 +2209,6 @@ function buildLiveStyles(t) {
     totalsLabel: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     totalsText: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     preferencesCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    preferencesIcon: { backgroundColor: t.colors.primaryBg },
     prefsToggleText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     prefsToggleSub: { ...t.type.caption, color: t.colors.textSecondary },
     preferencesHint: { ...t.type.caption, color: t.colors.textMuted },
@@ -2230,7 +2230,7 @@ function buildLiveStyles(t) {
     groceryQty: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     groceryQtyTicked: { color: t.colors.textMuted },
     swapOption: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    swapOptionOn: { borderColor: t.colors.primary },
+    swapOptionOn: { borderColor: t.colors.borderLight },
     swapOptionName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     swapOptionTag: { ...t.type.caption, color: t.colors.textSecondary },
     swapOptionMacros: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },

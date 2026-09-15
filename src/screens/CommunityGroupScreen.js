@@ -411,7 +411,7 @@ export default function CommunityGroupScreen({ navigation, route }) {
                     {togetherLine(group)}
                   </Text>
                   {group.togetherPlannedWeek > 0 ? (
-                    <View style={[styles.togetherTrack, { backgroundColor: t.colors.primaryBg }]}>
+                    <View style={[styles.togetherTrack, { backgroundColor: t.colors.surface2 }]}>
                       <View
                         style={[styles.togetherFill, {
                           backgroundColor: t.colors.primary,
@@ -558,8 +558,13 @@ const styles = StyleSheet.create({
   // Phase 3: "Together this week" (spec section 4).
   togetherWrap: { gap: spacing.xxs },
   together: { ...type.label, color: colors.textSecondary },
+  // D174: the FILL stays amber -- its width tracks a live value, which is
+  // discipline 4 earned by data and discipline 1's "now". The unfilled TRACK
+  // was a `primaryBg` wash behind it, which is discipline 2 exactly, so it
+  // takes the house meter-track neutral (`surface2`, as mesoProgressTrack,
+  // milestoneBarTrack and macroTrack all use).
   togetherTrack: {
-    height: radius.hair, borderRadius: radius.hair, overflow: 'hidden', backgroundColor: colors.primaryBg,
+    height: radius.hair, borderRadius: radius.hair, overflow: 'hidden', backgroundColor: colors.surface2,
   },
   togetherFill: { height: '100%', borderRadius: radius.hair, backgroundColor: colors.primary },
   // Phase 3: "Share a workout with the group", top of ACTIVITY.

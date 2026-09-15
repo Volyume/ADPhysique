@@ -202,41 +202,39 @@ export default function HomeScreen({ navigation, route }) {
     constraintGroup: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     constraintLineRow: { borderBottomColor: t.colors.borderSubtle },
     constraintLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    coachingNudge: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
-    coachingNudgeLeft: { backgroundColor: t.colors.primaryBg },
+    coachingNudge: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     coachingNudgeTitle: { ...t.type.label, color: t.colors.textPrimary },
     coachingNudgeBody: { ...t.type.captionTight, color: t.colors.textSecondary },
     coachingNudgeScanSubline: { ...t.type.captionTight, color: t.colors.textMuted },
     intentTitle: { ...t.type.h3, color: t.colors.textPrimary },
     intentSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     intentOption: { backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
-    intentOptionIcon: { backgroundColor: t.colors.primaryBg },
     readinessGroupLabel: { ...t.type.overline, color: t.colors.textMuted },
     intentOptionLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     intentOptionSub: { ...t.type.caption, color: t.colors.textSecondary },
     readinessLabel: { ...t.type.caption, color: t.colors.textSecondary },
     readinessChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 ?? t.colors.background },
-    readinessChipActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
+    readinessChipActive: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
     readinessChipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    readinessChipTextActive: { color: t.colors.primary },
+    readinessChipTextActive: { color: t.colors.textPrimary },
     intentSkipText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     skipSessionText: { ...t.type.caption, color: t.colors.textMuted },
     intentOptOutText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     intentOptOutSub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    coachBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
-    coachBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    coachBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    coachBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     coachBannerBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    deloadBanner: { backgroundColor: withAlpha(t.colors.primary, alpha.tint), borderColor: withAlpha(t.colors.primary, alpha.mid) },
-    deloadBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    deloadBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    deloadBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     deloadBannerBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    plateauBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    plateauBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     plateauBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
-    activationBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    activationBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     activationBannerTitle: { ...t.type.bodySm, color: t.colors.textPrimary },
     activationBannerBody: { ...t.type.bodySm, color: t.colors.textMuted },
-    phaseBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    phaseBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     phaseBannerText: { ...t.type.captionTight, color: t.colors.textSecondary },
-    quickStartCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    quickStartCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     quickStartIcon: { backgroundColor: t.colors.surface2 },
     quickStartTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     quickStartSub: { ...t.type.bodySm, color: t.colors.textSecondary },
@@ -2804,7 +2802,7 @@ export default function HomeScreen({ navigation, route }) {
               accessibilityLabel="Start your first workout"
             >
               <View style={[styles.quickStartIcon, live.quickStartIcon]}>
-                <Ionicons name="barbell-outline" size={28} color={t.colors.primary} />
+                <Ionicons name="barbell-outline" size={28} color={t.colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
@@ -2972,11 +2970,11 @@ export default function HomeScreen({ navigation, route }) {
             accessibilityLabel={plateauBanner.line}
           >
             <View style={styles.plateauBannerLeft}>
-              <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
+              <Ionicons name="analytics-outline" size={18} color={t.colors.textSecondary} />
               {/* Campaign 27 Pillar A (D104): sentence-length copy never carries
                   a line clamp - it wraps, and the row grows. */}
               <Text style={[styles.plateauBannerText, live.plateauBannerText]}>{plateauBanner.line}</Text>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </View>
             <TouchableOpacity
               onPress={dismissPlateauBanner}
@@ -3000,7 +2998,7 @@ export default function HomeScreen({ navigation, route }) {
             accessibilityLabel={activationBannerLine(activationNudge.stage)?.title}
           >
             <View style={styles.activationBannerLeft}>
-              <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
+              <Ionicons name="barbell-outline" size={18} color={t.colors.textSecondary} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.activationBannerTitle, live.activationBannerTitle]} numberOfLines={1}>
                   {activationBannerLine(activationNudge.stage)?.title}
@@ -3299,8 +3297,11 @@ export default function HomeScreen({ navigation, route }) {
             onPress={() => { haptics.selection(); confirmStart(opt.key); }}
             accessibilityLabel={`${opt.label}. ${opt.sub}. Starts the workout.`}
           >
-            <View style={[styles.intentOptionIcon, live.intentOptionIcon]}>
-              <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
+            {/* D174: the glyph sat on a 40dp `primaryBg` disc -- section 3.2's
+                "a tint behind a glyph". Fill and disc geometry both go; the
+                key carries no token now, so it has no live twin. */}
+            <View style={styles.intentOptionIcon}>
+              <Ionicons name={opt.icon} size={20} color={t.colors.textSecondary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
@@ -3548,11 +3549,14 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
+    borderColor: colors.border,
   },
+  // D174: was a 36dp `primaryBg` disc behind a glyph; fill and disc geometry
+  // both go. (This key and `coachingNudge` above have had no render consumer
+  // since the nudge's JSX was removed -- swept anyway so a future revival
+  // cannot bring the wash back with it.)
   coachingNudgeLeft: {
-    width: 36, height: 36, borderRadius: radius.sm,
-    backgroundColor: colors.primaryBg,
+    width: iconSize.lg,
     alignItems: 'center', justifyContent: 'center',
   },
   coachingNudgeTitle: {
@@ -3593,10 +3597,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  // D174: was a 40dp `primaryBg` disc; a fixed glyph column now, so every
+  // intent row's label keeps one left edge.
   intentOptionIcon: {
-    width: 40, height: 40,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
+    width: iconSize.lg,
     alignItems: 'center', justifyContent: 'center',
   },
   intentOptionLabel: {
@@ -3650,16 +3654,18 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface2 ?? colors.background,
   },
+  // D174 A2: a readiness chip selects an answer, and selection is carried by
+  // fill, edge and weight together rather than by the accent.
   readinessChipActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primaryBg,
+    borderColor: colors.borderLight,
+    backgroundColor: colors.surface3,
   },
   readinessChipText: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
   },
   readinessChipTextActive: {
-    color: colors.primary,
+    color: colors.textPrimary,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   intentSkip: {
@@ -3693,8 +3699,8 @@ const styles = StyleSheet.create({
   // extra bottom margin (the content gap carries the rhythm).
   coachBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.md,
   },
   // COMP-023 trial value banner, grown into the A3 coach ledger card,
@@ -3702,24 +3708,24 @@ const styles = StyleSheet.create({
   // D3: the trial-banner and free-coach-line styles moved to AttentionCard
   // with their JSX (one card class, internal priority recorded there).
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  coachBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
+  coachBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xxs },
   coachBannerBody: { ...type.bodySm, color: colors.textSecondary },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: withAlpha(colors.primary, alpha.tint), borderRadius: radius.md,
+    backgroundColor: colors.surface, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
+    borderWidth: 1, borderColor: colors.border,
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  deloadBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
+  deloadBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xxs },
   deloadBannerBody: { ...type.bodySm, color: colors.textSecondary },
 
   // B3 lift plateau banner; one line plus tap-through, matches the banner
   // system's tokens (trial-banner top row shape).
   plateauBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     gap: spacing.md,
   },
@@ -3733,8 +3739,8 @@ const styles = StyleSheet.create({
   // S6 activation nudge banner (shares the plateau banner's card shape)
   activationBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.surface, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     gap: spacing.md,
   },
@@ -3751,10 +3757,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: colors.primaryBg,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.edge),
+    borderColor: colors.border,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
@@ -3772,12 +3778,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.primaryBg,
+    // D174: a quick-start card is a callout, not the user's live moment. The
+    // wash and the tinted edge both go; the hairline carries the card. (D3's
+    // note here said the edge was tinted "not a solid amber border" -- that
+    // was the amber-inflation rule of its day; the ceiling is tighter now.)
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    // D3: tinted edge, not a solid amber border (amber-inflation rule),
-    // "Start with a plan" above is the no-plan state's one amber fill.
-    borderColor: withAlpha(colors.primary, alpha.edge),
+    borderColor: colors.border,
     padding: spacing.lg,
     marginBottom: spacing.lg,
   },

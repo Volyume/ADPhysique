@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
@@ -677,7 +677,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                       accessibilityRole="button"
                       accessibilityLabel={`Start ${routine.name}`}
                     >
-                      <Ionicons name="play" size={13} color={t.colors.primary} />
+                      <Ionicons name="play" size={13} color={t.colors.textPrimary} />
                     </TouchableOpacity>
                   </View>
                 )}
@@ -730,7 +730,7 @@ export default function PlanDetailScreen({ navigation, route }) {
             <SectionLabel>Manage</SectionLabel>
             <Card padding="none" style={styles.manageCard}>
               <TouchableOpacity style={[styles.manageRow, live.manageRow]} onPress={handleEditPlan} accessibilityRole="button" accessibilityLabel="Edit plan">
-                <Ionicons name="create-outline" size={18} color={t.colors.primary} />
+                <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
                 <Text style={[styles.manageRowText, live.manageRowText]}>Edit plan</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
@@ -760,16 +760,16 @@ const styles = StyleSheet.create({
   },
   libraryBadgeText: { fontSize: fontSize.xs, color: colors.textMuted, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   activeBadge: {
-    alignSelf: 'flex-start', backgroundColor: colors.primaryBg, borderRadius: radius.full,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
+    alignSelf: 'flex-start', backgroundColor: colors.surface3, borderRadius: radius.full,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderWidth: 1, borderColor: colors.borderLight,
   },
-  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  activeBadgeText: { fontSize: fontSize.xs, color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   featuredBadge: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
-    alignSelf: 'flex-start', backgroundColor: colors.primaryFill, borderRadius: radius.full,
+    alignSelf: 'flex-start', backgroundColor: colors.surface3, borderRadius: radius.full,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
   },
-  featuredBadgeText: { fontSize: fontSize.xs, color: colors.onPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  featuredBadgeText: { fontSize: fontSize.xs, color: colors.textPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   planName: { fontSize: fontSize.xxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
   planDesc: { ...type.bodySm, color: colors.textSecondary },
   planStats: { flexDirection: 'row', gap: spacing.xl },
@@ -779,7 +779,7 @@ const styles = StyleSheet.create({
   section: { gap: spacing.md },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   reorderToggleText: { fontSize: fontSize.sm, color: colors.textSecondary, fontFamily: fontFamily.regular, fontWeight: fontWeight.regular },
-  reorderToggleTextActive: { color: colors.primary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  reorderToggleTextActive: { color: colors.textPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   reorderActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   reorderBtn: {
     width: 32,
@@ -832,7 +832,7 @@ const styles = StyleSheet.create({
   },
   whyItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
   whyItemGap: { marginBottom: spacing.xs },
-  whyBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: spacing.xs2 },
+  whyBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.textMuted, marginTop: spacing.xs2 },
   whyText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 });
 
@@ -848,16 +848,16 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     libraryBadge: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     libraryBadgeText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    activeBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.376) },
-    activeBadgeText: { fontSize: t.fontSize.xs, color: t.colors.primary },
-    featuredBadge: { backgroundColor: t.colors.primaryFill },
-    featuredBadgeText: { fontSize: t.fontSize.xs, color: t.colors.onPrimary },
+    activeBadge: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
+    activeBadgeText: { fontSize: t.fontSize.xs, color: t.colors.textPrimary },
+    featuredBadge: { backgroundColor: t.colors.surface3 },
+    featuredBadgeText: { fontSize: t.fontSize.xs, color: t.colors.textPrimary },
     planName: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
     planDesc: { ...t.type.bodySm, color: t.colors.textSecondary },
     planStatValue: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
     planStatLabel: { ...t.type.caption, color: t.colors.textMuted },
     reorderToggleText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    reorderToggleTextActive: { color: t.colors.primary },
+    reorderToggleTextActive: { color: t.colors.textPrimary },
     reorderBtn: { backgroundColor: t.colors.surface2 },
     emptyCardText: { ...t.type.bodySm, color: t.colors.textMuted },
     workoutIndex: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
@@ -868,7 +868,7 @@ function buildLiveStyles(t) {
     startWorkoutBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     manageRow: { borderBottomColor: t.colors.borderSubtle },
     manageRowText: { ...t.type.body, color: t.colors.textPrimary },
-    whyBullet: { backgroundColor: t.colors.primary },
+    whyBullet: { backgroundColor: t.colors.textMuted },
     whyText: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
 }

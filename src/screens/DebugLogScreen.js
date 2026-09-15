@@ -121,12 +121,12 @@ export default function DebugLogScreen() {
 
       <View style={styles.actionsRow}>
         <TouchableOpacity style={[styles.actionBtn, live.actionBtn]} onPress={handleShare} accessibilityRole="button" accessibilityLabel="Share logs">
-          <Ionicons name="share-outline" size={16} color={t.colors.primary} />
-          <Text style={[styles.actionLabel, live.actionLabel, { color: t.colors.primary }]}>Share</Text>
+          <Ionicons name="share-outline" size={16} color={t.colors.textSecondary} />
+          <Text style={[styles.actionLabel, live.actionLabel, { color: t.colors.textSecondary }]}>Share</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionBtn, live.actionBtn]} onPress={handleDiagnose} accessibilityRole="button" accessibilityLabel="Run sync diagnostics">
-          <Ionicons name="medkit-outline" size={16} color={t.colors.primary} />
-          <Text style={[styles.actionLabel, live.actionLabel, { color: t.colors.primary }]}>Sync diag</Text>
+          <Ionicons name="medkit-outline" size={16} color={t.colors.textSecondary} />
+          <Text style={[styles.actionLabel, live.actionLabel, { color: t.colors.textSecondary }]}>Sync diag</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionBtn, live.actionBtn, styles.actionBtnDanger, live.actionBtnDanger]} onPress={handleClear} accessibilityRole="button" accessibilityLabel="Clear logs">
           <Ionicons name="trash-outline" size={16} color={t.colors.error} />

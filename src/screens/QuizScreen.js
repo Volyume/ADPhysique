@@ -194,8 +194,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingTop: spacing.md,
   },
   progressDots: { flexDirection: 'row', gap: spacing.sm },
-  dot: { width: 8, height: 8, borderRadius: circle(8), backgroundColor: colors.border },
-  dotActive: { backgroundColor: colors.primary },
+  dot: { width: 8, height: 8, borderRadius: circle(8), backgroundColor: colors.surface3 },
+  dotActive: { backgroundColor: colors.borderLight },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   h1: { color: colors.textPrimary, fontSize: fontSize.xxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black },
   lede: { ...type.body, color: colors.textSecondary, marginTop: spacing.xs, marginBottom: spacing.lg },
@@ -220,8 +220,8 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    dot: { backgroundColor: t.colors.border },
-    dotActive: { backgroundColor: t.colors.primary },
+    dot: { backgroundColor: t.colors.surface3 },
+    dotActive: { backgroundColor: t.colors.borderLight },
     h1: { color: t.colors.textPrimary, fontSize: t.fontSize.xxl },
     lede: { ...t.type.body, color: t.colors.textSecondary },
     section: { color: t.colors.textPrimary, fontSize: t.fontSize.lg },

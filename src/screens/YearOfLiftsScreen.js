@@ -87,7 +87,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
     cards.push({
       type: 'stat',
       icon: 'barbell',
-      tone: 'primary',
+      tone: 'neutral',
       value: data.totalSessions.toLocaleString('en-GB'),
       unit: data.totalSessions === 1 ? 'session' : 'sessions',
       caption: data.avgSessionsPerWeek >= 3
@@ -128,7 +128,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
     cards.push({
       type: 'stat',
       icon: 'layers',
-      tone: 'primary',
+      tone: 'neutral',
       value: data.totalSets.toLocaleString('en-GB'),
       unit: data.totalSets === 1 ? 'set' : 'sets',
       caption: data.uniqueExercises > 0
@@ -142,7 +142,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
     cards.push({
       type: 'stat',
       icon: 'calendar',
-      tone: 'primary',
+      tone: 'neutral',
       value: data.topMonth,
       unit: 'busiest month',
       caption: 'The month you put in the most work.',
@@ -169,7 +169,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
     cards.push({
       type: 'list',
       icon: 'barbell',
-      tone: 'primary',
+      tone: 'neutral',
       headline: 'Personal records',
       subline: 'Estimated max lifts logged this year',
       rows: data.topPRs.slice(0, 5).map(pr => ({
@@ -188,7 +188,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
     cards.push({
       type: 'stat',
       icon: 'infinite',
-      tone: 'primary',
+      tone: 'neutral',
       value: lifetime.sessions.toLocaleString('en-GB'),
       unit: lifetime.sessions === 1 ? 'session, lifetime' : 'sessions, lifetime',
       caption: `${lifetime.tonnage.toLocaleString('en-GB')} ${u} lifted and ${lifetime.reps.toLocaleString('en-GB')} reps, all time.`,
@@ -242,7 +242,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
         : `That's roughly ${data.avgSessionsPerWeek} sessions a week.`;
     }
     content.push({
-      type: 'stat', icon: 'barbell', tone: 'primary',
+      type: 'stat', icon: 'barbell', tone: 'neutral',
       value: data.totalSessions.toLocaleString('en-GB'),
       unit: data.totalSessions === 1 ? 'session' : 'sessions',
       caption,
@@ -270,7 +270,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
 
   if (data.topPRs?.length > 0) {
     content.push({
-      type: 'list', icon: 'barbell', tone: 'primary',
+      type: 'list', icon: 'barbell', tone: 'neutral',
       headline: 'Personal records', subline: 'Estimated max lifts this month',
       rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
@@ -278,7 +278,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
 
   if (data.bestSession) {
     content.push({
-      type: 'stat', icon: 'flash', tone: 'primary',
+      type: 'stat', icon: 'flash', tone: 'neutral',
       value: data.bestSession.tonnage.toLocaleString('en-GB'), unit: `${u}, best session`,
       caption: `Your biggest session was on ${fmtDate(data.bestSession.startedAt)}.`,
     });
@@ -333,7 +333,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
       caption = `${data.totalSessions} session${data.totalSessions === 1 ? '' : 's'} this week.`;
     }
     content.push({
-      type: 'stat', icon: 'barbell', tone: 'primary',
+      type: 'stat', icon: 'barbell', tone: 'neutral',
       value: data.totalSessions.toLocaleString('en-GB'),
       unit: data.totalSessions === 1 ? 'session' : 'sessions',
       caption,
@@ -361,7 +361,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
 
   if (data.topPRs?.length > 0) {
     content.push({
-      type: 'list', icon: 'barbell', tone: 'primary',
+      type: 'list', icon: 'barbell', tone: 'neutral',
       headline: 'Personal records', subline: 'Estimated max lifts this week',
       rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
@@ -369,7 +369,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
 
   if (data.bestSession) {
     content.push({
-      type: 'stat', icon: 'flash', tone: 'primary',
+      type: 'stat', icon: 'flash', tone: 'neutral',
       value: data.bestSession.tonnage.toLocaleString('en-GB'), unit: `${u}, best session`,
       caption: `Your biggest session was on ${fmtDate(data.bestSession.startedAt)}.`,
     });
@@ -431,14 +431,14 @@ export function buildBlockCards(data, units) {
   // records. Same rows, same maths, honest label.
   if (data.prs?.length > 0) {
     cards.push({
-      type: 'list', icon: 'barbell', tone: 'primary',
+      type: 'list', icon: 'barbell', tone: 'neutral',
       headline: 'Your best lifts', subline: 'Estimated max lifts this block',
       rows: data.prs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
 
   cards.push({
-    type: 'stat', icon: 'layers', tone: 'primary',
+    type: 'stat', icon: 'layers', tone: 'neutral',
     value: data.totalSessions.toLocaleString('en-GB'),
     unit: data.totalSessions === 1 ? 'session' : 'sessions',
     caption: `${data.totalSets.toLocaleString('en-GB')} sets - ${data.tonnage.toLocaleString('en-GB')} ${u} moved.`,
@@ -474,7 +474,11 @@ function StoryCard({ card, width }) {
           intro and outro cards now name none, and `?? null` is what lets that
           reach Card as "no accent" rather than being defaulted back to amber.
           A card that names no icon draws none, too: the intro hero is a
-          headline and a date range, which is the whole of what it says. */}
+          headline and a date range, which is the whole of what it says.
+          D174: the cards that DO name a tone now name `neutral`. An accent
+          border on every card of a year in review is the tinted-border case
+          the amber census names, and Card's `neutral` resolves to exactly the
+          `border` token the rule sends it to. */}
       <GradientCard
         tone={card.tone ?? null}
         intensity={0.28}
@@ -965,7 +969,7 @@ const styles = StyleSheet.create({
     // preserved). R2 (2026-07-11): the rank (1-5) is a pure readout -> tabular.
     fontSize: fontSize.lg,
     fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
-    color: colors.primary,
+    color: colors.textMuted,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
   },
@@ -1026,7 +1030,7 @@ function buildLiveStyles(t) {
     heroSubline: { ...t.type.body, color: t.colors.textSecondary },
     listHeadline: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
     listSubline: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    listRank: { fontSize: t.fontSize.lg, color: t.colors.primary, fontVariant: ['tabular-nums'] },
+    listRank: { fontSize: t.fontSize.lg, color: t.colors.textMuted, fontVariant: ['tabular-nums'] },
     listPrimary: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     listSecondary: { fontSize: t.fontSize.sm, color: t.colors.textSecondary, fontVariant: ['tabular-nums'] },
     tapPressed: { backgroundColor: withAlpha(t.colors.textPrimary, 0.08) },

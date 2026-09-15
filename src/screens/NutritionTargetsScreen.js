@@ -266,14 +266,24 @@ function MacroCard({ label, grams, perKg, perKgLbm, basis, kcalPercent, barColor
 
 // D3 (design audit 03): each "why" compresses to its one bolded claim (the
 // title carries the number) with the full paragraph behind a disclosure.
-function WhySection({ icon, color, title, body }) {
+function WhySection({ icon, title, body }) {
   const [open, setOpen] = useState(false);
   // CP-10 batch E (2026-07-10): sibling function-component scope, own
-  // useTheme() call and shared buildLiveStyles(t). The `color` prop itself
-  // already arrives live from the caller (t.colors.warning/primary/success,
-  // see the WhySection render sites below); this is per-topic icon identity
-  // (calories/protein/fat/carbs), not an ED-gated valence mapping, so it
-  // converts mechanically like any other colour token.
+  // useTheme() call and shared buildLiveStyles(t).
+  //
+  // D174/D175 (amber census, 2026-09-15): this row used to take a per-topic
+  // `color` prop and spend it twice -- as the glyph ink AND as a
+  // `withAlpha(color, alpha.tint)` ground behind it. The mapping was
+  // calories = warning, protein = primary, fat = success, carbs = primary,
+  // which borrowed two STATE colours (section 8's state-colour grammar), gave
+  // protein and carbs the SAME colour, disagreed with the identical legend on
+  // NutritionEducationScreen (fat = warning, carbs = success) and disagreed
+  // with this screen's own macro bars at the MacroCard render sites, which
+  // already carry macroProtein/macroCarb/macroFat. There is no calorie
+  // category token and calories must never read as a warning, so the legend
+  // is retired rather than re-encoded: the disc fill goes (plan section 3
+  // discipline 2, "a tint behind a glyph"), the glyph takes the secondary ink,
+  // and each row's own title carries its topic and its figure (law 7).
   const t = useTheme();
   const live = buildLiveStyles(t);
   return (
@@ -286,8 +296,8 @@ function WhySection({ icon, color, title, body }) {
         accessibilityState={{ expanded: open }}
         accessibilityLabel={`${title}. ${open ? 'Hide' : 'Show'} the explanation`}
       >
-        <View style={[styles.whySectionIcon, { backgroundColor: withAlpha(color, alpha.tint) }]}>
-          <Ionicons name={icon} size={14} color={color} />
+        <View style={styles.whySectionIcon}>
+          <Ionicons name={icon} size={14} color={t.colors.textSecondary} />
         </View>
         <Text style={[styles.whySectionTitle, live.whySectionTitle]}>{title}</Text>
         <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={14} color={t.colors.textMuted} />
@@ -831,8 +841,8 @@ export default function NutritionTargetsScreen({ navigation, route }) {
             style={[styles.eduCard, live.eduCard]}
             accessibilityLabel="New to calories and macros? Open the 5-minute guide"
           >
-            <View style={[styles.eduIconWrap, live.eduIconWrap]}>
-              <Ionicons name="book-outline" size={18} color={t.colors.primary} />
+            <View style={styles.eduIconWrap}>
+              <Ionicons name="book-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.eduTitle, live.eduTitle]}>New to calories and macros?</Text>
@@ -867,7 +877,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                       accessibilityLabel={`${g.label}, ${g.detail}`}
                     >
                       {active && (
-                        <Ionicons name="checkmark-circle" size={14} color={t.colors.primary} style={styles.goalCheck} />
+                        <Ionicons name="checkmark-circle" size={14} color={t.colors.textPrimary} style={styles.goalCheck} />
                       )}
                       <Text style={[styles.goalLabel, live.goalLabel, active && [styles.goalLabelActive, live.goalLabelActive]]}>{g.label}</Text>
                       <Text style={[styles.goalDetail, live.goalDetail, active && [styles.goalDetailActive, live.goalDetailActive]]}>{g.detail}</Text>
@@ -1077,7 +1087,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                     <Ionicons
                       name="checkmark-circle"
                       size={14}
-                      color={t.colors.primary}
+                      color={t.colors.textPrimary}
                       style={styles.goalCheck}
                     />
                   )}
@@ -1122,7 +1132,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                 accessibilityLabel={ap.label}
               >
                 <View style={styles.approachCardHeader}>
-                  {active && <Ionicons name="checkmark-circle" size={14} color={t.colors.primary} style={{ marginRight: spacing.xs }} />}
+                  {active && <Ionicons name="checkmark-circle" size={14} color={t.colors.textPrimary} style={{ marginRight: spacing.xs }} />}
                   <Text style={[styles.approachCardLabel, live.approachCardLabel, active && [styles.approachCardLabelActive, live.approachCardLabelActive]]}>
                     {ap.label}
                   </Text>
@@ -1566,16 +1576,13 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                     </TouchableOpacity>
                     {whyExpanded && (
                       <View style={styles.whyBody}>
-                        {/* CP-10 batch E: each WhySection's `color` prop is the
-                            same per-topic icon identity as before (calories =
-                            warning, protein/carbs = primary, fat = success),
-                            just resolved live via t.colors instead of the
-                            frozen import -- not an ED-gated valence mapping,
-                            see WhySection's own header comment above. */}
-                        <WhySection icon="nutrition-outline" color={t.colors.warning} title={`Calories: ${formatEnergy(results.targetKcal ?? 0, energyUnit)} ${energyUnitLabel(energyUnit)}`} body={calorieWhy} />
-                        <WhySection icon="barbell-outline" color={t.colors.primary} title={`Protein: ${results.proteinG}g`} body={proteinWhy} />
-                        <WhySection icon="water-outline" color={t.colors.success} title={`Fat: ${results.fatG}g`} body={fatWhy} />
-                        <WhySection icon="leaf-outline" color={t.colors.primary} title={`Carbs: ${results.carbsG}g`} body={carbWhy} />
+                        {/* D174/D175: the per-topic `color` prop is gone. See
+                            WhySection's own header comment for why the legend
+                            was retired rather than re-encoded. */}
+                        <WhySection icon="nutrition-outline" title={`Calories: ${formatEnergy(results.targetKcal ?? 0, energyUnit)} ${energyUnitLabel(energyUnit)}`} body={calorieWhy} />
+                        <WhySection icon="barbell-outline" title={`Protein: ${results.proteinG}g`} body={proteinWhy} />
+                        <WhySection icon="water-outline" title={`Fat: ${results.fatG}g`} body={fatWhy} />
+                        <WhySection icon="leaf-outline" title={`Carbs: ${results.carbsG}g`} body={carbWhy} />
                       </View>
                     )}
                   </View>
@@ -1670,7 +1677,7 @@ export default function NutritionTargetsScreen({ navigation, route }) {
                 return (
                   <Card radius="md" padding="md" style={styles.awarenessCard}>
                     <View style={styles.awarenessHeader}>
-                      <Ionicons name="nutrition-outline" size={16} color={t.colors.primary} />
+                      <Ionicons name="nutrition-outline" size={16} color={t.colors.textSecondary} />
                       <Text style={[styles.awarenessTitle, live.awarenessTitle]}>{awareness.title}</Text>
                     </View>
                     <Text style={[styles.awarenessIntro, live.awarenessIntro]}>{awareness.intro}</Text>
@@ -1901,7 +1908,10 @@ const styles = StyleSheet.create({
   fastTitle: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   fastSubtitle: { ...type.bodySm, color: colors.textSecondary },
   fineTuneLink: { alignSelf: 'center', marginTop: spacing.xs },
-  eduIconWrap: { width: 32, height: 32, borderRadius: circle(32), backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
+  // D174: was a 32dp `primaryBg` disc. Same answer as SettingsPrimitives'
+  // 104 rows -- a fixed glyph column with no fill, so the row keeps its left
+  // edge without an amber ground behind a stock icon.
+  eduIconWrap: { width: iconSize.lg, alignItems: 'center', justifyContent: 'center' },
   eduTitle: { ...type.label, color: colors.textPrimary },
   eduBody: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
   pageSubtitle: {
@@ -1963,8 +1973,8 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   goalCardActive: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
+    backgroundColor: colors.surface3,
+    borderColor: colors.borderLight,
   },
   goalCheck: {
     marginBottom: spacing.xxs,
@@ -1974,14 +1984,15 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
   },
   goalLabelActive: {
-    color: colors.primary,
+    ...type.w('label', 'semibold'),
+    color: colors.textPrimary,
   },
   goalDetail: {
     ...type.caption,
     color: colors.textMuted,
   },
   goalDetailActive: {
-    color: colors.primaryDim,
+    color: colors.textSecondary,
   },
 
   // ── Consent ───────────────────────────────────────────────────────────────────────
@@ -2045,7 +2056,7 @@ const styles = StyleSheet.create({
   },
   heroKcal: {
     ...type.num('display'),
-    color: colors.primary,
+    color: colors.textPrimary,
   },
   heroRange: {
     fontSize: fontSize.sm,
@@ -2137,7 +2148,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: circle(8),
-    backgroundColor: colors.primaryFill,
+    backgroundColor: colors.textMuted,
     opacity: 0.7,
   },
   // Campaign 3 discoverability audit finding #4: honest, distinct label +
@@ -2185,15 +2196,15 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   mealCountChipActive: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
+    backgroundColor: colors.surface3,
+    borderColor: colors.borderLight,
   },
   mealCountChipText: {
     ...type.num('bodyStrong'),
     color: colors.textSecondary,
   },
   mealCountChipTextActive: {
-    color: colors.primary,
+    color: colors.textPrimary,
   },
   mealCountRecDot: {
     position: 'absolute',
@@ -2202,7 +2213,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: circle(6),
-    backgroundColor: colors.primaryFill,
+    backgroundColor: colors.textMuted,
   },
   mealCountRecCaption: {
     ...type.caption,
@@ -2210,7 +2221,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   mealCountRecCaptionDot: {
-    color: colors.primary,
+    color: colors.textMuted,
     fontSize: fontSize.micro,
   },
   mealCountRecButton: {
@@ -2222,13 +2233,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.mid),
+    borderColor: colors.border,
     backgroundColor: colors.surface2,
   },
   mealCountRecButtonText: {
     ...type.caption,
     fontWeight: fontWeight.semibold,
-    color: colors.primary,
+    color: colors.textSecondary,
   },
   perMealHint: {
     flexDirection: 'row',
@@ -2422,11 +2433,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.mid),
+    borderColor: colors.border,
   },
   recalcBtnText: {
     ...type.label,
-    color: colors.primary,
+    color: colors.textSecondary,
   },
 
   // ── Collapsed form summary ────────────────────────────────────────────────────────
@@ -2453,12 +2464,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.mid),
+    borderColor: colors.border,
   },
   reconfigureBtnText: {
     fontSize: fontSize.xs,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-    color: colors.primary,
+    color: colors.textSecondary,
   },
 
   // ── Protein approach ─────────────────────────────────────────────────────────
@@ -2477,8 +2488,8 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   approachCardActive: {
-    backgroundColor: colors.primaryBg,
-    borderColor: colors.primary,
+    backgroundColor: colors.surface3,
+    borderColor: colors.borderLight,
   },
   approachCardHeader: {
     flexDirection: 'row',
@@ -2491,20 +2502,20 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     flex: 1,
   },
-  approachCardLabelActive: { color: colors.primary },
+  approachCardLabelActive: { ...type.w('label', 'semibold'), color: colors.textPrimary },
   approachCardRange: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
     fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
-  approachCardRangeActive: { color: colors.primaryDim },
+  approachCardRangeActive: { color: colors.textSecondary },
   approachCardDesc: {
     ...type.captionTight,
     color: colors.textSecondary,
   },
-  approachCardDescActive: { color: colors.primaryDim },
+  approachCardDescActive: { color: colors.textSecondary },
   recommendedBadge: {
-    backgroundColor: withAlpha(colors.primary, alpha.tint),
+    backgroundColor: colors.surface,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
@@ -2512,7 +2523,7 @@ const styles = StyleSheet.create({
   recommendedBadgeText: {
     fontSize: fontSize.micro,
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
-    color: colors.primary,
+    color: colors.textMuted,
   },
   customProteinRow: {
     flexDirection: 'row',
@@ -2586,10 +2597,10 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingVertical: spacing.xs,
   },
+  // D174: was a 24dp tinted square behind the glyph. Fixed glyph column now,
+  // no fill, so the four rows keep one left edge.
   whySectionIcon: {
     width: 24,
-    height: 24,
-    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2640,7 +2651,6 @@ function buildLiveStyles(t) {
     eduCard: { borderLeftColor: t.colors.border },
     fastTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     fastSubtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
-    eduIconWrap: { backgroundColor: t.colors.primaryBg },
     eduTitle: { ...t.type.label, color: t.colors.textPrimary },
     eduBody: { ...t.type.captionTight, color: t.colors.textSecondary },
     pageSubtitle: { ...t.type.bodySm, color: t.colors.textMuted },
@@ -2648,18 +2658,18 @@ function buildLiveStyles(t) {
     fieldHintKg: { ...t.type.caption, color: t.colors.textMuted },
     optional: { color: t.colors.textMuted },
     numInput: { ...t.type.body },
-    goalCardActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    goalCardActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     goalLabel: { ...t.type.label, color: t.colors.textPrimary },
-    goalLabelActive: { color: t.colors.primary },
+    goalLabelActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
     goalDetail: { ...t.type.caption, color: t.colors.textMuted },
-    goalDetailActive: { color: t.colors.primaryDim },
+    goalDetailActive: { color: t.colors.textSecondary },
     consentText: { ...t.type.bodySm, color: t.colors.textSecondary },
     calcBtn: { backgroundColor: t.colors.primaryFill },
     calcBtnDisabled: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     calcBtnText: { ...t.type.title, color: t.colors.onPrimary },
     calcBtnTextDisabled: { color: t.colors.textDisabled },
     heroLabel: { ...t.type.label, color: t.colors.textSecondary },
-    heroKcal: { ...t.type.num('display'), color: t.colors.primary },
+    heroKcal: { ...t.type.num('display'), color: t.colors.textPrimary },
     heroRange: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     macroGrams: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
     macroLabel: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
@@ -2669,19 +2679,19 @@ function buildLiveStyles(t) {
     perMealHeading: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     perMealValue: { color: t.colors.textPrimary },
     perMealUnit: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
-    mealDot: { backgroundColor: t.colors.primaryFill },
+    mealDot: { backgroundColor: t.colors.textMuted },
     mealCountLabel: { ...t.type.caption, color: t.colors.textMuted },
     mealCountSectionLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     mealCountSectionSub: { ...t.type.caption, color: t.colors.textMuted },
     mealCountChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    mealCountChipActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    mealCountChipActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     mealCountChipText: { ...t.type.num('bodyStrong'), color: t.colors.textSecondary },
-    mealCountChipTextActive: { color: t.colors.primary },
-    mealCountRecDot: { backgroundColor: t.colors.primaryFill },
+    mealCountChipTextActive: { color: t.colors.textPrimary },
+    mealCountRecDot: { backgroundColor: t.colors.textMuted },
     mealCountRecCaption: { ...t.type.caption, color: t.colors.textMuted },
-    mealCountRecCaptionDot: { color: t.colors.primary },
-    mealCountRecButton: { borderColor: withAlpha(t.colors.primary, alpha.mid), backgroundColor: t.colors.surface2 },
-    mealCountRecButtonText: { ...t.type.caption, color: t.colors.primary },
+    mealCountRecCaptionDot: { color: t.colors.textMuted },
+    mealCountRecButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    mealCountRecButtonText: { ...t.type.caption, color: t.colors.textSecondary },
     perMealHint: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, alpha.edge) },
     perMealHintText: { ...t.type.captionTight, color: t.colors.textSecondary },
     phaseTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -2706,17 +2716,17 @@ function buildLiveStyles(t) {
     calcKey: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     calcValue: { ...t.type.label, color: t.colors.textPrimary },
     disclaimer: { ...t.type.captionTight, color: t.colors.textMuted, borderTopColor: t.colors.border },
-    recalcBtn: { borderColor: withAlpha(t.colors.primary, alpha.mid) },
-    recalcBtnText: { ...t.type.label, color: t.colors.primary },
+    recalcBtn: { borderColor: t.colors.border },
+    recalcBtnText: { ...t.type.label, color: t.colors.textSecondary },
     collapsedText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    reconfigureBtn: { borderColor: withAlpha(t.colors.primary, alpha.mid) },
-    reconfigureBtnText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    reconfigureBtn: { borderColor: t.colors.border },
+    reconfigureBtnText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     approachNoteText: { ...t.type.captionTight, color: t.colors.textMuted },
-    approachCardActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    approachCardActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     approachCardLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    approachCardLabelActive: { color: t.colors.primary },
+    approachCardLabelActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
     approachCardRange: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    approachCardRangeActive: { color: t.colors.primaryDim },
+    approachCardRangeActive: { color: t.colors.textSecondary },
     // DEFECT FIXED 2026-09-15 (D174, found by the amber census's structural
     // differ). `approachCardDescActive` is defined in the frozen block at
     // :2505 and was defined NOWHERE here, while :1138 consumes it as
@@ -2738,9 +2748,9 @@ function buildLiveStyles(t) {
     // live.approachCardDesc]`, and had no live twin -- so it kept the palette
     // the app booted in. Its `Active` sibling above was the ninth.
     approachCardDesc: { ...t.type.captionTight, color: t.colors.textSecondary },
-    approachCardDescActive: { color: t.colors.primaryDim },
-    recommendedBadge: { backgroundColor: withAlpha(t.colors.primary, alpha.tint) },
-    recommendedBadgeText: { fontSize: t.fontSize.micro, color: t.colors.primary },
+    approachCardDescActive: { color: t.colors.textSecondary },
+    recommendedBadge: { backgroundColor: t.colors.surface },
+    recommendedBadgeText: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
     customProteinLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     customProteinInput: { ...t.type.body },
     customProteinUnit: { ...t.type.label, color: t.colors.textSecondary },

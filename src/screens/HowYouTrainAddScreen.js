@@ -553,7 +553,7 @@ export default function HowYouTrainAddScreen() {
         onBack={postSave ? finish : goBackStep}
         right={postSave ? null : (
           <PressableCard onPress={confirmLeave} accessibilityRole="button" accessibilityLabel="Cancel adding this" style={styles.cancelBtn}>
-            <Text style={[styles.cancelText, { color: t.colors.primary }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: t.colors.textPrimary }]}>Cancel</Text>
           </PressableCard>
         )}
       />
@@ -576,8 +576,8 @@ export default function HowYouTrainAddScreen() {
 
       <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {draft.from && step === planSteps(draft, ctx)[0] ? (
-          <View style={[styles.fromRow, { backgroundColor: t.colors.primaryBg }]}>
-            <Ionicons name="information-circle-outline" size={iconSize.sm} color={t.colors.primary} />
+          <View style={[styles.fromRow, { backgroundColor: t.colors.surface }]}>
+            <Ionicons name="information-circle-outline" size={iconSize.sm} color={t.colors.textSecondary} />
             <Text style={[styles.fromText, { color: t.colors.textPrimary }]}>
               {draft.from.question ? `From ${draft.from.name}: ${draft.from.question}` : `From ${draft.from.name}`}
             </Text>
@@ -695,7 +695,7 @@ export default function HowYouTrainAddScreen() {
                   showArrow={false}
                   accessibilityLabel={`${l.label}: ${l.value}${l.step ? '. Change' : ''}`}
                   onPress={l.step ? () => { haptics.selection(); setReturnToCheck(true); setStep(l.step); } : undefined}
-                  rightElement={l.step ? <Text style={[styles.changeText, { color: t.colors.primary }]}>Change</Text> : null}
+                  rightElement={l.step ? <Text style={[styles.changeText, { color: t.colors.textPrimary }]}>Change</Text> : null}
                 />
               ))}
             </View>
@@ -721,8 +721,8 @@ export default function HowYouTrainAddScreen() {
             {plan.lines.length ? (
               <PressableCard onPress={() => { haptics.selection(); setShowLines((v) => !v); }} accessibilityRole="button"
                 accessibilityState={{ expanded: showLines }} style={styles.disclosure}>
-                <Text style={[styles.changeText, { color: t.colors.primary }]}>{showLines ? 'Hide each exercise' : 'Choose per exercise'}</Text>
-                <Ionicons name={showLines ? 'chevron-up' : 'chevron-down'} size={iconSize.sm} color={t.colors.primary} />
+                <Text style={[styles.changeText, { color: t.colors.textPrimary }]}>{showLines ? 'Hide each exercise' : 'Choose per exercise'}</Text>
+                <Ionicons name={showLines ? 'chevron-up' : 'chevron-down'} size={iconSize.sm} color={t.colors.textMuted} />
               </PressableCard>
             ) : null}
             {showLines ? (
@@ -763,8 +763,12 @@ export default function HowYouTrainAddScreen() {
         {step === ADD_STEP.DONE ? (
           <>
             <View style={styles.doneIconWrap}>
-              <View style={[styles.doneIcon, { backgroundColor: t.colors.primaryBg }]}>
-                <Ionicons name="checkmark" size={32} color={t.colors.primary} />
+              {/* D174: the saved tick sat in a `primaryBg` disc. Law 5 forbids a
+                  celebratory treatment anyway, so the wash goes and the tick is a
+                  calm neutral mark. `doneIcon` keeps its geometry: the wrap is the
+                  centring frame for a 32dp glyph, not a tint behind it. */}
+              <View style={styles.doneIcon}>
+                <Ionicons name="checkmark" size={32} color={t.colors.textSecondary} />
               </View>
             </View>
             <Card>

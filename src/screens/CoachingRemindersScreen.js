@@ -421,8 +421,8 @@ export default function CoachingRemindersScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Notifications and reminders"
         >
-          <View style={[styles.iconWrap, live.iconWrap]}>
-            <Ionicons name="notifications-outline" size={18} color={t.colors.primary} />
+          <View style={styles.iconWrap}>
+            <Ionicons name="notifications-outline" size={18} color={t.colors.textSecondary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.crossLinkTitle, live.crossLinkTitle]}>Notifications and reminders</Text>
@@ -437,8 +437,8 @@ export default function CoachingRemindersScreen({ navigation }) {
         <SectionLabel style={styles.sectionLabelSpacing}>Morning weight</SectionLabel>
         <Card style={[styles.card, live.card]} padding="md">
           <View style={styles.cardHeader}>
-            <View style={[styles.iconWrap, live.iconWrap]}>
-              <Ionicons name="scale-outline" size={18} color={t.colors.primary} />
+            <View style={styles.iconWrap}>
+              <Ionicons name="scale-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <Text style={[styles.cardTitle, styles.toggleTitle]}>Morning weight reminder</Text>
             <Switch
@@ -489,8 +489,8 @@ export default function CoachingRemindersScreen({ navigation }) {
         <SectionLabel style={styles.sectionLabelSpacing}>Weekly check-in</SectionLabel>
         <Card style={[styles.card, live.card]} padding="md">
           <View style={styles.cardHeader}>
-            <View style={[styles.iconWrap, live.iconWrap]}>
-              <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
+            <View style={styles.iconWrap}>
+              <Ionicons name="pulse-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <Text style={[styles.cardTitle, styles.toggleTitle]}>Weekly check-in reminder</Text>
             <Switch
@@ -538,8 +538,8 @@ export default function CoachingRemindersScreen({ navigation }) {
         <SectionLabel style={styles.sectionLabelSpacing}>Check-in follow-up</SectionLabel>
         <Card style={[styles.card, live.card]} padding="md">
           <View style={styles.cardHeader}>
-            <View style={[styles.iconWrap, live.iconWrap]}>
-              <Ionicons name="hand-left-outline" size={18} color={t.colors.primary} />
+            <View style={styles.iconWrap}>
+              <Ionicons name="hand-left-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <Text style={[styles.cardTitle, styles.toggleTitle]}>Follow up if a check-in slips by</Text>
             <Switch
@@ -562,8 +562,8 @@ export default function CoachingRemindersScreen({ navigation }) {
         <SectionLabel style={styles.sectionLabelSpacing}>Meal-plan reminder</SectionLabel>
         <Card style={[styles.card, live.card]} padding="md">
           <View style={styles.cardHeader}>
-            <View style={[styles.iconWrap, live.iconWrap]}>
-              <Ionicons name="restaurant-outline" size={18} color={t.colors.primary} />
+            <View style={styles.iconWrap}>
+              <Ionicons name="restaurant-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <Text style={[styles.cardTitle, styles.toggleTitle]}>Remind me to confirm planned meals</Text>
             <Switch
@@ -620,9 +620,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingHorizontal: spacing.lg, marginBottom: spacing.md,
   },
+  // D174 (amber census): was a 36dp `primaryBg` disc behind a stock glyph --
+  // section 3.2's "a tint behind a glyph", the same disc SettingsPrimitives
+  // lost on 104 rows. Fill and disc geometry both go; what remains is a fixed
+  // glyph column, so every card header keeps one left edge. No token left, so
+  // no live twin.
   iconWrap: {
-    width: 36, height: 36, borderRadius: radius.sm,
-    backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
+    width: iconSize.lg, alignItems: 'center', justifyContent: 'center',
   },
   cardTitle: { ...type.bodyStrong, color: colors.textPrimary },
   toggleTitle: { flex: 1 },
@@ -636,8 +640,10 @@ const styles = StyleSheet.create({
     minWidth: 40,
     marginBottom: spacing.md,
   },
+  // D174 A1's reading: a reminder schedule is a STORED PREFERENCE, not the
+  // user's live moment, so it sits outside amber discipline 1's ceiling.
   scheduleText: {
-    ...type.label, color: colors.primary,
+    ...type.label, color: colors.textSecondary,
     paddingHorizontal: spacing.lg, marginTop: -spacing.sm, marginBottom: spacing.sm,
   },
   scheduleSubText: {
@@ -649,8 +655,11 @@ const styles = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.borderSubtle, marginTop: spacing.xs,
   },
   helperText: { ...type.bodySm, color: colors.textMuted },
+  // D174: "Saved" confirms a stored preference. The word carries the meaning;
+  // borrowing `success` here would raid the state-colour grammar section 8
+  // protects, exactly as A1 refused it for the switch track.
   savedText: {
-    fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
+    fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     textAlign: 'center', marginTop: spacing.sm,
   },
   // Item 9(b) (D141): copied verbatim from NotificationSettingsScreen's own
@@ -691,14 +700,13 @@ function buildLiveStyles(t) {
     warningText: { ...t.type.captionTight, color: t.colors.warning },
     warningActionText: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.warning },
     card: { backgroundColor: t.colors.surface2 },
-    iconWrap: { backgroundColor: t.colors.primaryBg },
     cardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     pickerLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    scheduleText: { ...t.type.label, color: t.colors.primary },
+    scheduleText: { ...t.type.label, color: t.colors.textSecondary },
     scheduleSubText: { ...t.type.captionTight, color: t.colors.textSecondary },
     helperBlock: { borderTopColor: t.colors.borderSubtle },
     helperText: { ...t.type.bodySm, color: t.colors.textMuted },
-    savedText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    savedText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     crossLink: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     crossLinkTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     crossLinkSub: { ...t.type.captionTight, color: t.colors.textMuted },

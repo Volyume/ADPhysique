@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import BigNumber from '../components/BigNumber';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, withAlpha, alpha, circle, motion, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, withAlpha, circle, motion, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -1296,7 +1296,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 accessibilityLabel="Share this milestone"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="share-social-outline" size={18} color={t.colors.primary} />
+                <Ionicons name="share-social-outline" size={18} color={t.colors.textSecondary} />
               </TouchableOpacity>
             </Card>
           </RevealSection>
@@ -1863,7 +1863,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   accessibilityLabel="Share block finished"
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="share-social-outline" size={18} color={t.colors.primary} />
+                  <Ionicons name="share-social-outline" size={18} color={t.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
             </Card>
@@ -1875,7 +1875,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && sessionAdjustments.length > 0 && (
           <RevealSection delay={1520}>
             <View style={[styles.adjustedSummaryRow, live.adjustedSummaryRow]}>
-              <Ionicons name="options-outline" size={15} color={t.colors.primary} />
+              <Ionicons name="options-outline" size={15} color={t.colors.textSecondary} />
               <Text style={[styles.adjustedSummaryText, live.adjustedSummaryText]}>
                 Adjusted today: {sessionAdjustments.map(a =>
                   `${(MUSCLE_DISPLAY_NAMES[a.muscle] || a.muscle).toLowerCase()}, ${a.setDelta < 0 ? '1 set fewer' : '1 set added'}`,
@@ -2208,7 +2208,7 @@ const styles = StyleSheet.create({
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   completionTitle: { ...type.h2, color: colors.textPrimary },
   completionDate: { fontSize: fontSize.sm, color: colors.textMuted },
-  firstSessionLine: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary, marginTop: spacing.xs },
+  firstSessionLine: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textSecondary, marginTop: spacing.xs },
   // D1 early-win milestone card. D173 T1 dropped the gold Card tone and both
   // gold washes (amber discipline 2: the accent is never a tint behind a
   // glyph); it stays the plain surface card it already was underneath, with
@@ -2232,20 +2232,20 @@ const styles = StyleSheet.create({
   },
   phaseHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   phaseTitle: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  phaseName: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary },
+  phaseName: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   phaseRecap: { ...type.bodySm, color: colors.textSecondary },
   phaseNext: { ...type.captionTight, color: colors.textMuted },
   phaseActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxs },
   phaseActionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
     paddingVertical: spacing.md, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
+    borderWidth: 1, borderColor: colors.border,
   },
-  phaseActionText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary },
+  phaseActionText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textSecondary },
   phaseShareBtn: {
     width: touchTarget.minimum, height: touchTarget.minimum, borderRadius: radius.md,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
+    borderWidth: 1, borderColor: colors.border,
   },
   // D2 programme-arc strip wrapper, surface card matching the other summary
   // sections, holding the reused BlockShapeCard (dots + effort word).
@@ -2293,12 +2293,17 @@ const styles = StyleSheet.create({
   },
   statValue: { ...type.num('h3'), color: colors.textPrimary },
   statLabel: { ...type.caption, color: colors.textSecondary },
+  // D174 ruled the glyph on this row to amber ("a personal best is not a
+  // warning, and discipline 1 grants amber a personal best by name") and left
+  // the row it sits in yellow, which the N-Z lane spotted. Finishing the job:
+  // the ground and the label leave `warning` too, so the row is a plain card
+  // with one amber mark on it rather than a caution with an amber glyph.
   prRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.warningBg, borderRadius: radius.md, padding: spacing.md,
-    borderWidth: 1, borderColor: withAlpha(colors.warning, 0.251),
+    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
+    borderWidth: 1, borderColor: colors.border,
   },
-  prRowText: { ...type.label, flex: 1, color: colors.warning },
+  prRowText: { ...type.label, flex: 1, color: colors.textPrimary },
   // CO-3: quiet onward links, same register as CoachOutputScreen's
   // planEditLink ("See your updated plan") -- a neutral pill, never amber.
   onwardLinksRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
@@ -2380,8 +2385,8 @@ const styles = StyleSheet.create({
   // COMP-015 confirmation row
   adjustedSummaryRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.primaryBg, borderRadius: radius.md,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    backgroundColor: colors.surface2, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
   },
   adjustedSummaryText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
@@ -2403,12 +2408,13 @@ const styles = StyleSheet.create({
     width: touchTarget.minimum, height: touchTarget.minimum, minWidth: touchTarget.minimum, borderRadius: radius.md, backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
-  // D3: selected state uses the app-wide chip grammar (tint + amber edge,
-  // see components/Chip.js), not a full amber fill.
-  ratingBtnActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  // D3/D174: selected state uses the app-wide chip grammar, which is now the
+  // three neutral cues Chip.js carries -- a `surface3` fill, a `borderLight`
+  // edge and the label at full ink -- not a tint and an amber edge.
+  ratingBtnActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   ratingBtnText: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  ratingBtnTextActive: { color: colors.primary },
-  ratingValueLabel: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  ratingBtnTextActive: { color: colors.textPrimary },
+  ratingValueLabel: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   notesField: { borderRadius: radius.md },
   notesInput: { ...type.body, padding: spacing.lg, minHeight: 80, textAlignVertical: 'top' },
   nextTimeNoteField: { borderRadius: radius.md },
@@ -2473,14 +2479,14 @@ const styles = StyleSheet.create({
     minHeight: touchTarget.minimum,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.strong),
-    backgroundColor: colors.primaryBg,
+    borderColor: colors.border,
+    backgroundColor: 'transparent',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
   shareFooterBtnText: {
     ...type.label,
-    color: colors.primary,
+    color: colors.textSecondary,
   },
   exerciseList: {
     overflow: 'hidden',
@@ -2562,16 +2568,16 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     completionTitle: { ...t.type.h2, color: t.colors.textPrimary },
     completionDate: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    firstSessionLine: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    firstSessionLine: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     milestoneTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     milestoneBody: { ...t.type.captionTight, color: t.colors.textSecondary },
     phaseTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
-    phaseName: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    phaseName: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     phaseRecap: { ...t.type.bodySm, color: t.colors.textSecondary },
     phaseNext: { ...t.type.captionTight, color: t.colors.textMuted },
-    phaseActionBtn: { borderColor: withAlpha(t.colors.primary, 0.376) },
-    phaseActionText: { fontSize: t.fontSize.sm, color: t.colors.primary },
-    phaseShareBtn: { borderColor: withAlpha(t.colors.primary, 0.376) },
+    phaseActionBtn: { borderColor: t.colors.border },
+    phaseActionText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    phaseShareBtn: { borderColor: t.colors.border },
     blockArcName: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     verdictRow: { borderTopColor: t.colors.borderSubtle },
     verdictHeadline: { ...t.type.bodyStrong },
@@ -2585,8 +2591,8 @@ function buildLiveStyles(t) {
     statBox: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     statValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
     statLabel: { ...t.type.caption, color: t.colors.textSecondary },
-    prRow: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, 0.251) },
-    prRowText: { ...t.type.label, color: t.colors.warning },
+    prRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    prRowText: { ...t.type.label, color: t.colors.textPrimary },
     onwardLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     onwardLinkText: { ...t.type.label, color: t.colors.textPrimary },
     constraintEffectLine: { ...t.type.bodySm, color: t.colors.textSecondary },
@@ -2604,7 +2610,7 @@ function buildLiveStyles(t) {
     coachZoneDivider: { backgroundColor: t.colors.borderSubtle },
     feedbackToggleBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     feedbackToggleBtnText: { ...t.type.bodyStrong, color: t.colors.textSecondary },
-    adjustedSummaryRow: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
+    adjustedSummaryRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     adjustedSummaryText: { ...t.type.bodySm, color: t.colors.textSecondary },
     blockRecapRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     blockRecapText: { ...t.type.label, color: t.colors.textPrimary },
@@ -2612,18 +2618,18 @@ function buildLiveStyles(t) {
     ratingHint: { ...t.type.caption, color: t.colors.textMuted },
     feedbackPurpose: { ...t.type.caption, color: t.colors.textMuted },
     ratingBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    ratingBtnActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    ratingBtnActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     ratingBtnText: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
-    ratingBtnTextActive: { color: t.colors.primary },
-    ratingValueLabel: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    ratingBtnTextActive: { color: t.colors.textPrimary },
+    ratingValueLabel: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     notesInput: { ...t.type.body },
     nextTimeNoteInput: { fontSize: t.fontSize.sm },
     templateBtnText: { ...t.type.label, color: t.colors.textSecondary },
     stickyFooter: { borderTopColor: t.colors.border, backgroundColor: t.colors.background },
     saveErrorCard: { backgroundColor: withAlpha(t.colors.error, 0.12), borderColor: withAlpha(t.colors.error, 0.28) },
     saveErrorText: { ...t.type.caption, color: t.colors.textPrimary },
-    shareFooterBtn: { borderColor: withAlpha(t.colors.primary, alpha.strong), backgroundColor: t.colors.primaryBg },
-    shareFooterBtnText: { ...t.type.label, color: t.colors.primary },
+    shareFooterBtn: { borderColor: t.colors.border, backgroundColor: 'transparent' },
+    shareFooterBtnText: { ...t.type.label, color: t.colors.textSecondary },
     exerciseListRow: { borderBottomColor: t.colors.borderSubtle },
     exerciseListName: { ...t.type.label, color: t.colors.textPrimary },
     exerciseListMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },

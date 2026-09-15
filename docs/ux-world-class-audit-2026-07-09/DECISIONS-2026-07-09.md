@@ -8151,3 +8151,107 @@ points at it so the reference does not outlive the file.
 `src/screens/[A-M]*.js` lane currently owns. 3 is free but is grouped with them
 so the tail lands as one reviewable change rather than three. None is parked:
 the ruling is complete here and execution is mechanical.
+
+---
+
+## D178 — The nine sites the two screen lanes refused to guess at (lead ruling, 2026-09-15)
+
+Both lanes applied D174's rule table across `src/screens/` (A-M: 482 raw amber
+references to 72; N-Z: 423 to 48) and stopped on nine sites rather than guess.
+Every stop was correct. Four needed a ruling that the table could not give.
+
+### Ruled REMOVE
+
+**1. `AddCustomFoodScreen` — the low-confidence OCR border, and the copy above
+it.** The screen's own words were *"Amber figures aren't certain, check them."*
+So the amber was load-bearing for a sentence, which is why the lane stopped.
+But naming a colour in copy is an accessibility fault on its own terms: a
+reader who cannot distinguish the colour cannot act on the instruction. Both
+halves move. The border takes **`warning`** — not borrowed, but the correct
+role, because a scanned figure that may be wrong IS a caution — and the copy
+becomes "Highlighted figures aren't certain, check them." The field already
+carries `accessibilityHint: "Not certain, check this value"`, so a screen-reader
+user has a non-colour cue; a sighted colour-blind user now has the border weight
+and the banner rather than a colour name. `AddCustomFoodScreen.test.js`'s banner
+constant is re-anchored, intent untouched.
+
+**2. `BlockReflectionScreen` — `prValue`, and the rename is the substantive
+half.** The style was called `prValue`, so it read as a personal best, the one
+figure discipline 1 grants amber by name. FB-16's own comment says these rows
+are the best estimated max **within this block**, "never compared against a
+prior block, a prior best or any record store", and the copy deliberately
+refuses to call them records. Not a record, so not entitled to the accent. It
+is now `blockBestValue` at `textPrimary`: a style name that contradicts what it
+styles is how the next reader gets it wrong again, so the name went with the
+colour.
+
+**3. `ShareCardScreen` — the "which PR" picker chip.** The lane found a direct
+contradiction inside its own brief: the KEEP list named `prChipTextActive` among
+the personal-best sites, while A2 sends a chip that selects a view to the
+neutral treatment. **The KEEP-list line was the lead's error.** This chip does
+not MARK a personal best, it picks which one goes on the card, and its label is
+an exercise name. Neutral.
+
+**4. Selection ticks, everywhere.** A2 ruled a selection is not "now", yet
+D174's KEEP list also named "the selection mark itself (the tick, the radio
+dot)" as amber. Those two cannot both stand, and the shipped `OptionCard`
+primitive had already resolved it in practice by rendering its tick at
+`textPrimary`. **A2 wins: it is the later and more specific ruling, the
+selected state already carries three cues, and a hand-rolled tick disagreeing
+with the shared primitive is the exact duplication this campaign exists to
+remove.** Six ticks across four screens moved.
+
+### Ruled KEEP
+
+**5. `NutritionTargetsScreen` — the energy-availability "ease this cut" nudge.**
+The lane was right to refuse this one on its own authority. It is the
+remediation **action** for a low energy-availability state; the render block's
+own comment records that it "only ever RAISES calories". Its prominence is an
+ED-safety property, not decoration, and quietening a safety affordance inside a
+colour sweep is exactly the kind of silent reduction Section 4 forbids. It is
+also the one committing action on that surface, which discipline 1 protects
+outright. **Stays amber.**
+
+**6. `PlansScreen` — the "Injuries & limitations" attention glyph.** Kept,
+because the lane's evidence is decisive: `summary.js` sets `attention` for both
+*awaiting* and *undecided*, and the sub line only explains itself in the first
+case — so in the second, the tint is the only cue the user gets. An item
+awaiting the user's decision is the nearest thing to "now" in that list.
+**Recorded as a copy gap rather than fixed here:** the undecided case should say
+so in words, and then the colour would be reinforcement rather than the whole
+message.
+
+**7 and 8. The camera reticle and the alignment frame** (`ScanBarcodeScreen`,
+`ScanLabelScreen`). Both are drawn over a **live camera feed**, so their
+legibility is against arbitrary scene content, which the contrast suite — which
+measures against app surfaces — cannot assert for any neutral token. The census
+already classed a camera reticle as KEEP-structural. Unchanged.
+
+### Ruled at review, beyond what the lanes were asked
+**9. `WorkoutSummaryScreen`'s PR row.** D173 ruled its glyph to amber on the
+grounds that "a personal best is not a warning" — and left the row's `warningBg`
+ground and `warning` label exactly where they were, which the N-Z lane spotted.
+Finishing the job: the ground becomes `surface` and the label `textPrimary`, so
+the row is a plain card carrying one amber mark rather than a caution with an
+amber glyph.
+
+### The macro legend: retired rather than migrated, and the lane was right
+D175 left open whether the per-topic tint on the nutrition "why these numbers"
+rows should move onto the unused `macroProtein/Carb/Fat/Fibre` tokens. The lane
+retired the tint entirely, and its evidence is better than the question:
+**there is no calorie category token**, so migrating would leave the calories
+row grey among three coloured ones; `macroProtein` is byte-identical to the
+accent, so migrating protein renders identical pixels under a new name; and the
+"legend" already contradicted itself across two adjacent screens (protein and
+carbs both `primary` on one, fat `warning` on the other). A legend nobody could
+read was carrying a `warning` tint on a **calorie** figure, which is the §8
+state-colour borrowing A1 refused for switches, in its worst instance. The macro
+BARS keep their category tokens — they are meters, which is those tokens'
+actual contract.
+
+### Where the amber stands
+420 raw references remain in product source: 101 in `src/screens/` (largely
+frozen/live twins of the ~50 logical KEEPs), 315 in `src/components/` — the
+lane not yet run — and 4 in `lib`/`hooks`/`navigation`, all platform chrome.
+Both screen lanes are guarded by an exact-line table, so a new amber fails
+loudly and every survivor carries a written reason.
