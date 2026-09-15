@@ -13,7 +13,19 @@ thumb-friendly layouts, bottom sheets, restrained glass effects, tactile depth
 and purposeful micro-interactions rather than simply throwing gradients and
 cards everywhere", plus the Dezzayn resource.
 
-**Status: DIRECTION RULED BY THE FOUNDER (D165). Stage 1 is building.**
+**Status (2026-09-15): STAGES 1 AND 2 COMPLETE AND MERGED. STAGE 3 IS IN ITS
+FINAL PASS. STAGE 4 NOT STARTED.** Live detail is on `docs/TASKBOARD.md` under
+"APP-WIDE VISUAL REDESIGN"; the rulings are D164-D177 in
+`docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`. What this
+document is FOR is the direction, the laws and the stage definitions, all of
+which still stand. Three numbers in it are now known to be wrong and are
+corrected where they appear: §3's "four flame sites" (eighteen), §3's "244
+amber-tinted stock icons" (that was one of NINE mechanisms; the real figure is
+1,375 raw references across 175 files, 918-984 logical sites), and §3's promise
+that the glow "should stay unbuilt" (it was never built, and the token that
+permitted it is now deleted, D174).
+
+**Status: DIRECTION RULED BY THE FOUNDER (D165).**
 The three directions in v2 are superseded by direction **D — "Ledger, dark"**
 (section 4), ruled by the founder in chat 2026-09-14 along with a screen-level
 specification for Today and Progress and three corrections to the lead's plan.
@@ -441,6 +453,25 @@ empty states: retire the 99 boxed empties to the section rule proven on
 Community, remove the flames, the medal colour tokens and the reward props (§3),
 thin the stock iconography, sweep hand-rolled cards into the real one.
 Mechanical, agent-run, guarded.
+
+> **Progress (2026-09-15).** Empty states done in one component (87 call sites).
+> Props done (D173): the medal colour roles deleted, 18 flames and 33
+> trophy/medal/ribbon/sparkles glyphs replaced, the confetti machinery deleted,
+> and the glow with it (D174). Amber: the seven shared primitives and all 43
+> switches done (D174/D175) — including the disc behind the glyph on 104
+> settings rows and the wash on 62 non-committing buttons. The two screen
+> halves are the final pass. **Still queued inside this stage:** the
+> hand-rolled cards swept into the real `Card` against the objecthood test, and
+> the structural migration of the hand-rolled selection styles onto the shared
+> primitives (D176 — they are neutralised in place first, deliberately, so the
+> migration's acceptance test can be "no visual change").
+>
+> Two corrections this stage produced, both worth more than the sweep itself:
+> the `warning` state colour was being spent on things that are not warnings
+> (a warm-up row, a personal best), and a defect class where a colour defined
+> in the frozen half and consumed from the live half freezes an element at the
+> boot-time palette had been fixed by hand TEN times before
+> `frozenLiveParity.guard.test.js` was written to catch it mechanically.
 
 **Stage 4 — the moments.** The origin-aware hero-zoom transition the app already
 has but uses on only 9 of 137 screens, and one properly made personal best
