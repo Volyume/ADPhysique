@@ -8036,3 +8036,57 @@ unit next opens those files. `OptionCard.iconWrap` is `surface2`, now one step
 DARKER than the selected card's `surface3`, so the icon disc reads as a well
 rather than a raised chip on a selected card -- neutral-on-neutral, exposed
 rather than caused by this sweep, and the next unit's to resolve.
+
+---
+
+## D176 — The hand-rolled selection styles: neutralise now, migrate as its own unit (lead ruling, 2026-09-15)
+
+**What D174 said.** A2 ruled the ~120 hand-rolled `*Active` / `*Selected` style
+keys "are migrated onto `Chip`/`SegmentedControl`/`OptionCard`/`Dropdown` rather
+than recoloured individually; recolouring them individually would preserve the
+duplication that produced them."
+
+**What is actually being done, and why this is a change rather than a reading.**
+The screen sweeps apply the primitives' new three-cue treatment (`surface3` fill
++ `borderLight` edge + `textPrimary` at the semibold face) to those keys in
+place. They are not being restructured onto the shared components in this pass.
+
+That is a real departure from A2's wording and is recorded as one. The reasoning:
+
+1. **The campaign's requirement is law 6, and neutralising satisfies it in
+   full.** Every one of those keys stops being amber, which is what discipline 1
+   demands. The duplication A2 objects to is a maintainability problem, not an
+   amber problem, and the two are separable.
+2. **Restructuring 120 selection surfaces across ~60 screens onto shared
+   components is a different kind of work** from a colour sweep: it changes JSX
+   structure, touch targets, accessibility trees and layout on screens the
+   founder has device-walked. Folding it into a mechanical recolour would put
+   the riskiest change in the campaign inside the pass with the least review per
+   site.
+3. **Doing it in place first makes the migration EASIER, not harder.** Once
+   every hand-rolled selection renders the identical three cues as the real
+   primitive, the migration becomes a structural swap with a visual no-op as its
+   acceptance test — which is the safest possible form for it to take. Doing it
+   the other way round would mean migrating and recolouring in one diff with
+   nothing to diff against.
+
+**This is sequencing with a named destination, not parking.** The migration is
+on the board as its own queued unit with this rationale attached. What would
+make it parking is if the amber survived pending the refactor; it does not.
+
+**The acceptance test for that later unit is written now, while the reason is
+fresh:** after migration, every converted surface must render the same three
+cues, keep its existing `accessibilityState.selected`, keep its touch target at
+or above `touchTarget.minimum`, and produce no visual change on a device walk.
+If a conversion cannot meet all four, that surface stays hand-rolled and the
+reason is recorded rather than the bar lowered.
+
+### Recovery paths for the two screen lanes now running (recorded before, not after)
+Both lanes are pure recolours against D174's rule table, so a dead agent loses
+no decisions: the table is in the register and the work is re-runnable from it.
+A partial tree is reviewed hunk by hunk against that table and either finished
+or reverted — never committed blind, never discarded. The lanes are disjoint by
+filename (`src/screens/[A-M]*.js` and `src/screens/[N-Z]*.js`), so a partial
+tree from one is independent of the other, and
+`src/__tests__/frozenLiveParity.guard.test.js` will catch a half-applied
+frozen/live pair in either.
