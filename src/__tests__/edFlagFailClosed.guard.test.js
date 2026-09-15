@@ -99,8 +99,21 @@ describe('ED-safety: getOpenEdPatternFlag reads on safety surfaces fail CLOSED',
   });
 
   // 3. DiaryScreen — the banking carve-out feed.
-  test('DiaryScreen ED-flag read fails closed', () => {
-    expect(FILES.diary).toMatch(FAIL_CLOSED_SENTINEL);
+  //    D169: this case asserted only that AT LEAST ONE read fails closed. The
+  //    blanket FAIL_OPEN_NULL sweep below stops a `.catch(() => null)` read
+  //    creeping in, but a new read with NO `.catch` at all would have passed
+  //    every guard in this repo — on the food screen, where an unguarded read
+  //    is worst. Pinned exactly now, in the HomeScreen shape: every read on
+  //    this screen fails closed, and there is exactly one. A recomposition
+  //    that adds a second (say, to withhold a figure) updates this number
+  //    deliberately, which is the whole point.
+  test('DiaryScreen ED-flag reads fail closed, and every read is accounted for', () => {
+    const matches = FILES.diary.match(
+      /getOpenEdPatternFlag\([^)]*\)\.catch\(\(\)\s*=>\s*'read_failed'\)/g,
+    ) || [];
+    const allReads = FILES.diary.match(/getOpenEdPatternFlag\(/g) || [];
+    expect(matches.length).toBe(allReads.length);
+    expect(matches.length).toBe(1);
     // The banking carve-out is gated on edFlagOpen derived from !!edFlag.
     expect(FILES.diary).toMatch(/setEdFlagOpen\(!!edFlag\)/);
   });

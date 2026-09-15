@@ -2562,13 +2562,25 @@ function buildLiveStyles(t) {
     dateCluster: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     dateLabel: { ...t.type.label, color: t.colors.textPrimary },
     dateSubLabel: { ...t.type.caption, color: t.colors.textMuted },
-    todayPill: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    // D169: the live half lifted this to `surface2` while the frozen half
+    // sets `surface`. That is not a colour nit: the rail this pill sits in
+    // documents at its own definition why it stays on `surface` -- "surface2
+    // sits HIGHER on the elevation ladder than the meal cards it navigates,
+    // which inverts the hierarchy". The live half was inverting exactly that,
+    // one step, for the pill inside the same row.
+    todayPill: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     todayPillText: { ...t.type.caption, color: t.colors.textPrimary },
     dayPagerMore: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     targetModeText: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     targetsChangedText: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
     bankOffNote: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
-    offCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    // D169: the live half read `t.colors.border` while the frozen half sets
+    // `colors.borderSubtle` above. Live is appended after frozen in every
+    // style array on this screen, so live won and this drew the bright
+    // control-edge grey against its own stated intent. Same defect as
+    // LoggedSetRow (D166), EvidencePanel (D167) and the summary stat tiles
+    // (D168) -- the pattern the styling rules now forbid for new components.
+    offCard: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     offCardText: { ...t.type.bodySm, color: t.colors.textSecondary },
     mealReminderOfferTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     offCardButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },

@@ -543,7 +543,13 @@ const styles = StyleSheet.create({
 // they stay untouched with no `live.*` entry.
 function buildLiveStyles(t) {
   return {
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    // D169: the live half read `t.colors.border` while the frozen half sets
+    // `colors.borderSubtle` above. Live is appended after frozen in every
+    // style array on this screen, so live won and this drew the bright
+    // control-edge grey against its own stated intent. Same defect as
+    // LoggedSetRow (D166), EvidencePanel (D167) and the summary stat tiles
+    // (D168) -- the pattern the styling rules now forbid for new components.
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     kcalValue: { color: t.colors.textPrimary, fontSize: t.fontSize.xxxl, lineHeight: Math.round(t.fontSize.xxxl * 1.1) },
     kcalSubLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     kcalPlanned: { color: t.colors.primary, fontSize: t.fontSize.xs },
