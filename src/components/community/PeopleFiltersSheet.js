@@ -44,7 +44,7 @@ import Button from '../Button';
 import Chip from '../Chip';
 import SectionLabel from '../SectionLabel';
 import useTheme from '../../hooks/useTheme';
-import { spacing, type, colors, withAlpha, alpha } from '../../styles/theme';
+import { spacing, type, colors } from '../../styles/theme';
 import {
   FILTER_SCOPES, PLACE_BAND_MILES, PLACE_BAND_LABELS, normaliseFilters,
   TP_DAYS, TP_TIME_BANDS, TP_EXPERIENCE_BANDS, TP_AGE_BANDS,
@@ -119,9 +119,13 @@ export default function PeopleFiltersSheet({
     setDraft(draftFrom(null));
   }
 
+  // D174 A1: a switch's on-state is a stored preference, not a live moment, so
+  // it sits outside amber discipline 1's ceiling. The on-track is the neutral
+  // fill and the thumb is the ink; `thumbColor` is NOT held here because it has
+  // to read the switch's own value -- held flat, it painted the thumb the
+  // on-colour while the switch was off, which is discipline 4 broken.
   const switchColours = {
-    trackColor: { false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) },
-    thumbColor: t.colors.primary,
+    trackColor: { false: t.colors.surface3, true: t.colors.textMuted },
     ios_backgroundColor: t.colors.surface2,
   };
 
@@ -268,6 +272,7 @@ export default function PeopleFiltersSheet({
             onValueChange={(next) => set({ partner_only: next })}
             accessibilityLabel="Only people open to training together"
             {...switchColours}
+            thumbColor={draft.partner_only ? t.colors.surface : t.colors.textMuted}
           />
         </View>
       </View>

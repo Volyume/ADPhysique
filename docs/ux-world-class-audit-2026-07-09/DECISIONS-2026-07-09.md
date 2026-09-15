@@ -7919,3 +7919,120 @@ Four files clear roughly a third of the surface and go first:
 4. `Illustrations.js` -- deleted. Zero production importers, 28 amber `ACCENT`
    strokes including a decorative `opacity: 0.5` halo. The only references are
    two Jest mocks and a guard that asserts an illustration is NOT used.
+
+---
+
+## D175 — Four amendments to D174, made at lead review of the amber sweep (2026-09-15)
+
+Two Opus lanes applied D174 (the seven shared primitives; every Switch in the
+app). Both stopped rather than guessed on the things below, which is what the
+briefs asked for. Three of the four amendments change a token D174 itself ruled.
+
+### 1. The switch thumb: `textPrimary` is withdrawn, `surface` replaces it
+
+D174 A1 ruled the on-track `borderLight` and the thumb `textPrimary`, and made
+the contrast check a BUILD REQUIREMENT rather than an assumption. That was the
+right call, because the ruling did not survive it.
+
+**`borderLight` failed.** Measured against `surface3` through `applyAccessibility`
+in all six palettes: **2.93** dark, 3.67 light, 5.40 darkHC, 7.15 lightHC,
+**2.93** darkCVD, 3.67 lightCVD. It misses the 3:1 non-text bar in dark and
+darkCVD by 0.07 -- exactly the kind of near-miss a later reader rounds up. The
+lane walked D174's ladder to rung 2, **`textMuted`** (4.71 / 5.40 / 7.49 / 7.15
+/ 4.71 / 5.40), which clears everywhere.
+
+**And that took `textPrimary` with it.** D174 chose `textPrimary` for the thumb
+*because* it separated from a `borderLight` track at 3.71. Against a `textMuted`
+track it measures **1.45 to 2.60** across the six. The lane brute-forced every
+token in every palette: none clears 3:1 against BOTH `surface3` and
+`textPrimary`, because the higher-contrast tables deliberately lift the greys
+towards the ink. At 1.45:1 in darkHC the thumb is close to invisible for exactly
+the users who turned higher contrast on.
+
+**RULED: the on-thumb is `surface`.** Measured against the `textMuted` track:
+**6.64 / 6.70 / 10.57 / 8.88 / 6.64 / 6.70**. The thumb stops tracking the ink
+and starts inverting: it reads as the card punched through the bar, dark-on-light
+when the switch is on and light-on-dark when it is off. That is how a well-drawn
+switch reads anyway, and it is the only rung that meets the requirement D174 set
+for itself. Asserted permanently in `theme.test.js` (five cases over six
+palettes), mutation-tested: restoring `textPrimary` turns it red naming the
+palette.
+
+For scale, what this replaced: the shipped on/off track separation was **1.13 to
+2.68**, so the two states were very nearly the same colour, and 20 switches drew
+an amber thumb at 6.16:1 while switched OFF. The state cue improved from
+1.13-2.68 to >=4.71 everywhere.
+
+### 2. An ED-safety test was failing on a style property, and the sweep worked around it the wrong way
+
+`DietaryPreferencesEditor.test.js` proves the excluded-foods nudge mentions
+neither weight nor calories, by scanning `JSON.stringify(tree.toJSON())` for the
+substring. That tree includes STYLE props, and one style key is spelled
+`fontWeight`. So when `Chip` gained a semibold selected label through the house
+`type.w()` helper, an ED-safety case went red on a style key rather than on
+anything a user could read.
+
+The lane's workaround was to spell the Inter face without the weight. It works,
+and it is the wrong way round: `type.w()` sets the numeric weight precisely
+because that is what "still reads to accessibility services"
+(`theme.js:724-726`). That traded real accessibility on **114 chips** for a
+string match, and the guard it wrote would have frozen the trade in place.
+
+**RULED: the scan is made precise and the chip keeps its weight.** The test now
+strips `"fontWeight": <value>` declarations before the substring check, and
+asserts that is ALL it stripped (the count of removed "weight" occurrences must
+equal the count of fontWeight declarations). This cannot weaken the assertion,
+and the reason is stated rather than trusted: no sentence, spoken label or
+testID can live inside a font-weight value. Everything else is scanned exactly
+as before. Proved in both directions -- a nudge that really does mention weight
+still fails the case; the style key no longer does.
+
+This is an edit to an ED-safety test, so it is recorded here in full rather than
+folded into a sweep. No gate, floor, detector, suppression or copy changed.
+
+### 3. The dropdown chevron is not a second mark for the same state
+
+D174 A2 named `dropdownTriggerFilled` as the one amber survivor in that file: a
+filled or open input is a live input state. The chevron tinted on the *same*
+`value` condition, so a filled field carried TWO amber marks for ONE state.
+**RULED: the border keeps the state, the chevron goes back to `textMuted`** and
+is deliberately absent from the guard's allow-list, so its return fails the case.
+
+### 4. Nine settings glyphs the sweep stranded
+
+`SettingsPrimitives` lost the amber disc for all 104 `<SettingRow>`s, but nine
+hand-rolled rows in three files share that style while passing their own
+`color={t.colors.primary}` -- so the disc left and the tint stayed, splitting
+those rows from the swept ones. **RULED and fixed** in
+`DietaryPreferencesEditor.js` (3), `SettingsProfileScreen.js` (5) and
+`SettingsWorkoutScreen.js` (1).
+
+### Measured corrections to D174's own figures
+Reported as measurements, not as blame; D174's census was itself a correction of
+a worse one. Switch-bearing files **15**, not 14. Unconditional-amber-thumb
+sites **18 source lines rendering as 20 switches**, not 13 -- and a **19th**,
+`HowYouTrainAddScreen.js:648`, had the same defect in a neutral colour, which no
+amber census could have found. `variant="tertiary"` is **62** in production
+source, not 63. Icon-bearing default Buttons are **33**, not 19: the census
+grep missed `trailingIcon` and multi-line JSX tags. `<SettingRow>` at 104 across
+17 files matched exactly.
+
+### Accepted from the lanes without amendment
+`OptionCard`'s unselected label stays `textPrimary` rather than dimming to A2's
+`textSecondary` (its detail line is already `textSecondary`, so dimming would
+flatten the card's own hierarchy to win a contrast that the fill, the edge, the
+semibold face and the tick already carry). `Chip`'s unselected ground moves to
+`surface` as A2 specified, so an unselected chip on a card is identified by its
+border alone -- that is what `border` is for, and leaving it at `surface2` would
+have put the selected state one step from its neighbour instead of two.
+
+### Named, not fixed, with a destination
+`TextField`'s two iOS keyboard-accessory labels stay amber (the census classed a
+keyboard accessory's commit affordance as KEEP-structural, and it follows the
+platform tint convention). `ios_backgroundColor` disagrees with itself across 18
+sites (`surface2` at 14, `surface3` at 4) at a 1.15:1 difference nobody can see;
+pre-existing, neither `trackColor` nor `thumbColor`, and it belongs to whichever
+unit next opens those files. `OptionCard.iconWrap` is `surface2`, now one step
+DARKER than the selected card's `surface3`, so the icon disc reads as a well
+rather than a raised chip on a selected card -- neutral-on-neutral, exposed
+rather than caused by this sweep, and the next unit's to resolve.

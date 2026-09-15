@@ -58,11 +58,6 @@ jest.mock('../../components/Button', () => {
     )
   );
 });
-jest.mock('../../components/Illustrations', () => {
-  const React = require('react');
-  const { Text } = require('react-native');
-  return { EmptyWorkoutsIllustration: () => React.createElement(Text, null, 'empty illustration') };
-});
 jest.mock('../../components/Skeleton', () => {
   const React = require('react');
   const { Text } = require('react-native');

@@ -74,7 +74,7 @@ describe('Button', () => {
     );
   });
 
-  test('the default (standard primary) is a raised bordered surface with a white label and an amber icon (D148)', () => {
+  test('the default (standard primary) is a raised bordered surface with a white label and a neutral icon (D148, D174)', () => {
     let tree;
     act(() => { tree = create(<Button title="Start workout" icon="play" onPress={() => {}} />); });
     const pressable = tree.root.findByProps({ accessibilityRole: 'button' });
@@ -88,19 +88,38 @@ describe('Button', () => {
     expect(label.props.style).toEqual(
       expect.arrayContaining([expect.objectContaining({ color: colors.textPrimary })]),
     );
+    // D174 (amber census): the glyph was amber on every icon-bearing primary.
+    // Discipline 1 gives the accent to "now" only, and Start workout is a
+    // routine action, so the icon takes the secondary ink. The button is still
+    // obviously primary -- through the raised surface, the border and the white
+    // label asserted above, which is exactly what D148 said carried it.
     const icon = tree.root.findByProps({ name: 'play' });
-    expect(icon.props.color).toBe(colors.primary);
+    expect(icon.props.color).toBe(colors.textSecondary);
+    expect(icon.props.color).not.toBe(colors.primary);
   });
 
   test('tertiary renders as a contained ghost button, not a bare orange text link', () => {
+    // The INTENT of this case is unchanged and is the reason it survives D174:
+    // `tertiary` must stay a CONTAINED control, never a bare coloured text
+    // link. What changed is what contains it. It used to be an amber wash with
+    // an amber label; D174 (A2's reading of discipline 1 -- a ghost button
+    // commits to nothing, so it is not "now") leaves the box drawn by the
+    // border alone, with the secondary ink.
     let tree;
     act(() => { tree = create(<Button title="Not now" variant="tertiary" onPress={() => {}} />); });
     const pressable = tree.root.findByProps({ accessibilityRole: 'button' });
     const flattenedStyle = Array.isArray(pressable.props.style)
       ? Object.assign({}, ...pressable.props.style)
       : pressable.props.style;
-    expect(flattenedStyle.backgroundColor).toBe(colors.primaryBg);
+    expect(flattenedStyle.backgroundColor).toBe('transparent');
+    expect(flattenedStyle.borderColor).toBe(colors.border);
+    // Contained: the border is still drawn, which is what stops this reading
+    // as a text link.
     expect(flattenedStyle.borderWidth).toBe(1);
+    const label = tree.root.findByType(Text);
+    expect(label.props.style).toEqual(
+      expect.arrayContaining([expect.objectContaining({ color: colors.textSecondary })]),
+    );
   });
 
   test('outline is neutral chrome, not an amber text-link button', () => {

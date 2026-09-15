@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
+import { colors, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import { getUserBodyProfile } from '../lib/database';
@@ -145,8 +145,8 @@ export default function SettingsCoachingScreen() {
             <Switch
               value={calmEnabled}
               onValueChange={toggleCalmMode}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={calmEnabled ? t.colors.primary : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={calmEnabled ? t.colors.surface : t.colors.textMuted}
             />
           }
         />
@@ -176,8 +176,8 @@ export default function SettingsCoachingScreen() {
             <Switch
               value={readinessAsk}
               onValueChange={toggleReadinessAsk}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={readinessAsk ? t.colors.primary : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={readinessAsk ? t.colors.surface : t.colors.textMuted}
             />
           }
         />
@@ -275,8 +275,8 @@ export default function SettingsCoachingScreen() {
             <Switch
               value={showScience}
               onValueChange={toggleScience}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={showScience ? t.colors.primary : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={showScience ? t.colors.surface : t.colors.textMuted}
             />
           }
         />
@@ -293,8 +293,8 @@ export default function SettingsCoachingScreen() {
               <Switch
                 value={cycleEnabled}
                 onValueChange={toggleCycleTracking}
-                trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                thumbColor={cycleEnabled ? t.colors.primary : t.colors.textMuted}
+                trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+                thumbColor={cycleEnabled ? t.colors.surface : t.colors.textMuted}
               />
             }
           />

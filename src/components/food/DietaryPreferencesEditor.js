@@ -89,7 +89,7 @@ export default function DietaryPreferencesEditor() {
       <View style={[styles.block, liveText.block]}>
         <View style={styles.blockHeader}>
           <View style={[settingsStyles.settingIcon, live.settingIcon]}>
-            <Ionicons name="nutrition-outline" size={18} color={t.colors.primary} />
+            <Ionicons name="nutrition-outline" size={18} color={t.colors.textSecondary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Diet</Text>
@@ -118,7 +118,7 @@ export default function DietaryPreferencesEditor() {
       <View style={[styles.block, liveText.block]}>
         <View style={styles.blockHeader}>
           <View style={[settingsStyles.settingIcon, live.settingIcon]}>
-            <Ionicons name="warning-outline" size={18} color={t.colors.primary} />
+            <Ionicons name="warning-outline" size={18} color={t.colors.textSecondary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Allergens to avoid</Text>
@@ -151,7 +151,7 @@ export default function DietaryPreferencesEditor() {
       <View style={[styles.block, liveText.block, styles.lastBlock]}>
         <View style={styles.blockHeader}>
           <View style={[settingsStyles.settingIcon, live.settingIcon]}>
-            <Ionicons name="close-circle-outline" size={18} color={t.colors.primary} />
+            <Ionicons name="close-circle-outline" size={18} color={t.colors.textSecondary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Foods we will not suggest</Text>

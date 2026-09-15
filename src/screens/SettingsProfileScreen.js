@@ -209,7 +209,7 @@ export default function SettingsProfileScreen() {
         <View style={styles.nameRow}>
           <TextField
             containerStyle={styles.nameField}
-            leading={<Ionicons name="person-outline" size={18} color={t.colors.primary} />}
+            leading={<Ionicons name="person-outline" size={18} color={t.colors.textSecondary} />}
             value={editName}
             onChangeText={setEditName}
             placeholder="Your first name"
@@ -234,7 +234,7 @@ export default function SettingsProfileScreen() {
         <View style={[styles.dietBlock, liveText.dietBlock]}>
           <View style={styles.dietHeader}>
             <View style={[settingsStyles.settingIcon, live.settingIcon]}>
-              <Ionicons name="male-female-outline" size={18} color={t.colors.primary} />
+              <Ionicons name="male-female-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Biological sex</Text>
@@ -262,7 +262,7 @@ export default function SettingsProfileScreen() {
         <View style={[styles.dietBlock, liveText.dietBlock]}>
           <View style={styles.dietHeader}>
             <View style={[settingsStyles.settingIcon, live.settingIcon]}>
-              <Ionicons name="resize-outline" size={18} color={t.colors.primary} />
+              <Ionicons name="resize-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Height</Text>
@@ -281,7 +281,7 @@ export default function SettingsProfileScreen() {
         <View style={[styles.dietBlock, liveText.dietBlock]}>
           <View style={styles.dietHeader}>
             <View style={[settingsStyles.settingIcon, live.settingIcon]}>
-              <Ionicons name="calendar-outline" size={18} color={t.colors.primary} />
+              <Ionicons name="calendar-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Date of birth</Text>
@@ -293,7 +293,7 @@ export default function SettingsProfileScreen() {
         <View style={[styles.dietBlock, liveText.dietBlock]}>
           <View style={styles.dietHeader}>
             <View style={[settingsStyles.settingIcon, live.settingIcon]}>
-              <Ionicons name="nutrition-outline" size={18} color={t.colors.primary} />
+              <Ionicons name="nutrition-outline" size={18} color={t.colors.textSecondary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Diet preference</Text>

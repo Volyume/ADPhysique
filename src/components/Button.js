@@ -14,14 +14,19 @@
  *               agree). Normally at most one per screen.
  *   primary     the standard primary, and the default: a raised charcoal
  *               surface with a neutral border, a white semibold label and
- *               amber icons. Routine important actions (Start workout, Log
+ *               neutral icons. Routine important actions (Start workout, Log
  *               set, Add food, Save, Continue) live here: obvious through
- *               position, size, contrast and the amber glyph, not fill.
+ *               position, size, contrast and the raised surface, not fill.
+ *               (D174: the glyph was amber on 33 icon-bearing sites. A
+ *               routine action is not "now", so the accent left the glyph.)
  *   secondary   the quieter sibling: the base surface, the same border, a
  *               softer label. Supporting choices beside a primary.
  *   outline     alias of secondary (kept for existing callers).
- *   tertiary    quiet ghost button, amber label on a faint amber tint, for
- *               compact contextual actions.
+ *   tertiary    quiet ghost button for compact contextual actions: no
+ *               ground at all, a secondary label and a neutral border.
+ *               (D174: this carried three amber properties at once -- a
+ *               `primaryBg` wash, an amber label on a button that commits to
+ *               nothing, and a tinted border -- across 62 call sites.)
  *   destructive solid error fill, light text
  *
  * Sizes: sm | md (default) | lg. `loading` shows an inline spinner and
@@ -49,7 +54,7 @@ import PressableCard from './PressableCard';
 import useAppStore from '../store/useAppStore';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
-import { spacing, radius, motion, withAlpha, alpha, lineHeight } from '../styles/theme';
+import { spacing, radius, motion, lineHeight } from '../styles/theme';
 import { fontFamily } from '../styles/fontFamily';
 import { touchTarget } from '../styles/layout';
 
@@ -64,10 +69,14 @@ function buildVariants(c) {
     // near-white in the light theme and fails contrast on the amber fill (audit U-F-1).
     emphatic: { bg: c.primaryFill, fg: c.onPrimary, border: 'transparent', iconFg: c.onPrimary },
     // The standard primary: lifted one surface, bordered so it separates on
-    // any parent (the border token clears 3:1), white label, amber glyphs.
-    primary: { bg: c.surface2, fg: c.textPrimary, border: c.border, iconFg: c.primary },
+    // any parent (the border token clears 3:1), white label, neutral glyphs.
+    primary: { bg: c.surface2, fg: c.textPrimary, border: c.border, iconFg: c.textSecondary },
     secondary: { bg: c.surface, fg: c.textSecondary, border: c.border, iconFg: c.textSecondary },
-    tertiary: { bg: c.primaryBg, fg: c.primary, border: withAlpha(c.primary, alpha.edge), iconFg: c.primary },
+    // D174 (amber census): a ghost button is the quietest thing in the
+    // hierarchy and was drawn with the loudest colour in the palette. It keeps
+    // its BOX -- the border is what makes it a contained control rather than a
+    // bare text link -- and loses the wash, the amber label and the tinted edge.
+    tertiary: { bg: 'transparent', fg: c.textSecondary, border: c.border, iconFg: c.textSecondary },
     outline: { bg: c.surface, fg: c.textSecondary, border: c.border, iconFg: c.textSecondary },
     // fg uses onError (always-light ink, theme.js), NOT textPrimary, which flips
     // dark in the light theme and fails contrast on the dark-red fill (audit U-F-1).

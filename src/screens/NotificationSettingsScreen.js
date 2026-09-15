@@ -748,8 +748,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             <Switch
               value={trainingEnabled}
               onValueChange={handleTrainingToggle}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={t.colors.primary}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={trainingEnabled ? t.colors.surface : t.colors.textMuted}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Training reminder toggle"
             />
@@ -802,8 +802,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             <Switch
               value={activationNudgeEnabled}
               onValueChange={handleActivationNudgeToggle}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={t.colors.primary}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={activationNudgeEnabled ? t.colors.surface : t.colors.textMuted}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Getting-started nudge toggle"
             />
@@ -824,8 +824,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             <Switch
               value={returnNudgeEnabled}
               onValueChange={handleReturnNudgeToggle}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={t.colors.primary}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={returnNudgeEnabled ? t.colors.surface : t.colors.textMuted}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Welcome-back note toggle"
             />
@@ -850,8 +850,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             <Switch
               value={communityFollowEnabled}
               onValueChange={handleCommunityFollowToggle}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={t.colors.primary}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={communityFollowEnabled ? t.colors.surface : t.colors.textMuted}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="New followers toggle"
             />
@@ -869,8 +869,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             <Switch
               value={communityActivityEnabled}
               onValueChange={handleCommunityActivityToggle}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={t.colors.primary}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={communityActivityEnabled ? t.colors.surface : t.colors.textMuted}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Reactions and comments toggle"
             />
@@ -888,8 +888,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             <Switch
               value={communityMessageEnabled}
               onValueChange={handleCommunityMessageToggle}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={t.colors.primary}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={communityMessageEnabled ? t.colors.surface : t.colors.textMuted}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Messages toggle"
             />
@@ -913,8 +913,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             <Switch
               value={communityQuietHours.enabled}
               onValueChange={(v) => persistCommunityQuietHours({ enabled: v })}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={t.colors.primary}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={communityQuietHours.enabled ? t.colors.surface : t.colors.textMuted}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Community quiet hours toggle"
             />
@@ -971,8 +971,8 @@ export default function NotificationSettingsScreen({ navigation }) {
                 <Switch
                   value={r.enabled}
                   onValueChange={(v) => toggleMealReminder(r.id, v)}
-                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                  thumbColor={t.colors.primary}
+                  trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+                  thumbColor={r.enabled ? t.colors.surface : t.colors.textMuted}
                   ios_backgroundColor={t.colors.surface2}
                   accessibilityLabel={`${r.label} reminder toggle`}
                 />
@@ -1017,8 +1017,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             <Switch
               value={quietHours.enabled !== false}
               onValueChange={(v) => persistQuietHours({ enabled: v })}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={t.colors.primary}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={quietHours.enabled !== false ? t.colors.surface : t.colors.textMuted}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Quiet hours toggle"
             />

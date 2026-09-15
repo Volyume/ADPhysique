@@ -8,7 +8,7 @@ import { canScheduleExactAlarms, requestExactAlarmAccess } from '../lib/notifica
 import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import NumericStepper from '../components/Stepper';
 import Chip from '../components/Chip';
-import { colors, withAlpha, alpha, spacing, radius } from '../styles/theme';
+import { colors, spacing, radius } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 
@@ -100,7 +100,7 @@ export default function SettingsWorkoutScreen() {
       <View style={[styles.section, live.section]}>
         <View style={[styles.settingRow, live.settingRow]}>
           <View style={[styles.settingIcon, live.settingIcon]}>
-            <Ionicons name="body-outline" size={18} color={t.colors.primary} />
+            <Ionicons name="body-outline" size={18} color={t.colors.textSecondary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.settingLabel, live.settingLabel]}>Body weight unit</Text>
@@ -190,8 +190,8 @@ export default function SettingsWorkoutScreen() {
             <Switch
               value={!!autoStartRestTimer}
               onValueChange={v => { haptics.selection(); setAutoStartRestTimer(v); }}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={autoStartRestTimer ? t.colors.primary : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={autoStartRestTimer ? t.colors.surface : t.colors.textMuted}
             />
           }
         />
@@ -208,8 +208,8 @@ export default function SettingsWorkoutScreen() {
             <Switch
               value={!!restEndAlertEnabled}
               onValueChange={v => { haptics.selection(); setRestEndAlertEnabled(v); }}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={restEndAlertEnabled ? t.colors.primary : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={restEndAlertEnabled ? t.colors.surface : t.colors.textMuted}
             />
           }
         />
@@ -227,8 +227,8 @@ export default function SettingsWorkoutScreen() {
             <Switch
               value={!!restSoundsEnabled}
               onValueChange={v => { haptics.selection(); setRestSoundsEnabled(v); }}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={restSoundsEnabled ? t.colors.primary : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={restSoundsEnabled ? t.colors.surface : t.colors.textMuted}
             />
           }
         />

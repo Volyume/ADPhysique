@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from './InfoTooltip';
 import FieldError from './FieldError';
@@ -15,6 +15,17 @@ import FieldError from './FieldError';
 // label; omitted by default so existing usages are unchanged.
 // error (D146): a string renders the trigger border in the error colour and
 // a FieldError line under the control.
+//
+// D174 A2 (2026-09-15): the CHOSEN row in the open list was an amber
+// `primaryBg` wash with an amber tick. Choosing an option is not "now", so the
+// selected row is a `surface3` fill with a neutral tick beside the label that
+// already carried `textPrimary` at the semibold face.
+//
+// The TRIGGER is D174's one named exception inside this file: a filled or open
+// input is a live input state, so it keeps amber -- but `dropdownTriggerFilled`
+// was a 40%-alpha wash of it, which is section 3.2's tint. It is solid
+// `primary` now, matching `dropdownTriggerOpen`, so the state reads at full
+// strength instead of at four tenths of it.
 export default function Dropdown({ label, hint, value, options, onChange, placeholder = 'Choose…', tip, error }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
@@ -52,7 +63,12 @@ export default function Dropdown({ label, hint, value, options, onChange, placeh
         <Text style={[styles.dropdownValue, live.dropdownValue, !value && [styles.dropdownPlaceholder, live.dropdownPlaceholder]]}>
           {selected?.label ?? placeholder}
         </Text>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={value ? t.colors.primary : t.colors.textMuted} />
+        {/* LEAD RULING, D174: this fired amber on the same `value` condition as
+            `dropdownTriggerFilled`, which D174 ruled KEEPS its amber as an
+            open/filled input state. Two amber marks for one state is the
+            scarcity failure discipline 1 is about, so the border carries the
+            state and the chevron goes back to being a disclosure affordance. */}
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={t.colors.textMuted} />
       </TouchableOpacity>
       {open && (
         <View style={[styles.dropdownList, live.dropdownList]}>
@@ -75,7 +91,7 @@ export default function Dropdown({ label, hint, value, options, onChange, placeh
                 </Text>
                 {opt.sub ? <Text style={[styles.dropdownItemSub, live.dropdownItemSub]}>{opt.sub}</Text> : null}
               </View>
-              {value === opt.value && <Ionicons name="checkmark" size={16} color={t.colors.primary} />}
+              {value === opt.value && <Ionicons name="checkmark" size={16} color={t.colors.textPrimary} />}
             </TouchableOpacity>
           ))}
         </View>
@@ -99,7 +115,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.border,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md + 2,
   },
-  dropdownTriggerFilled: { borderColor: withAlpha(colors.primary, alpha.strong) },
+  dropdownTriggerFilled: { borderColor: colors.primary },
   dropdownTriggerOpen: { borderColor: colors.primary, borderBottomLeftRadius: 0, borderBottomRightRadius: 0 },
   dropdownValue: { fontSize: fontSize.md, color: colors.textPrimary, flex: 1, marginRight: spacing.sm },
   dropdownPlaceholder: { color: colors.textDisabled },
@@ -114,7 +130,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   dropdownItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.borderSubtle },
-  dropdownItemActive: { backgroundColor: colors.primaryBg },
+  dropdownItemActive: { backgroundColor: colors.surface3 },
   dropdownItemLabel: { ...type.body, color: colors.textSecondary, marginBottom: spacing.hair },
   dropdownItemLabelActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   dropdownItemSub: { ...type.captionTight, color: colors.textMuted },
@@ -128,13 +144,13 @@ function buildLiveStyles(t) {
     fieldLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     fieldHint: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     dropdownTrigger: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    dropdownTriggerFilled: { borderColor: withAlpha(t.colors.primary, alpha.strong) },
+    dropdownTriggerFilled: { borderColor: t.colors.primary },
     dropdownTriggerOpen: { borderColor: t.colors.primary },
     dropdownValue: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     dropdownPlaceholder: { color: t.colors.textDisabled },
     dropdownList: { backgroundColor: t.colors.surface, borderColor: t.colors.primary },
     dropdownItemBorder: { borderBottomColor: t.colors.borderSubtle },
-    dropdownItemActive: { backgroundColor: t.colors.primaryBg },
+    dropdownItemActive: { backgroundColor: t.colors.surface3 },
     dropdownItemLabel: { ...t.type.body, color: t.colors.textSecondary },
     dropdownItemLabelActive: { color: t.colors.textPrimary },
     dropdownItemSub: { ...t.type.captionTight, color: t.colors.textMuted },

@@ -444,8 +444,8 @@ export default function CoachingRemindersScreen({ navigation }) {
             <Switch
               value={morningEnabled}
               onValueChange={handleMorningToggle}
-              trackColor={{ false: t.colors.surface3, true: t.colors.primaryBg }}
-              thumbColor={t.colors.primary}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={morningEnabled ? t.colors.surface : t.colors.textMuted}
               ios_backgroundColor={t.colors.surface3}
               accessibilityLabel="Morning weight reminder toggle"
             />
@@ -496,8 +496,8 @@ export default function CoachingRemindersScreen({ navigation }) {
             <Switch
               value={checkinEnabled}
               onValueChange={handleCheckinToggle}
-              trackColor={{ false: t.colors.surface3, true: t.colors.primaryBg }}
-              thumbColor={t.colors.primary}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={checkinEnabled ? t.colors.surface : t.colors.textMuted}
               ios_backgroundColor={t.colors.surface3}
               accessibilityLabel="Weekly check-in reminder toggle"
             />
@@ -545,8 +545,8 @@ export default function CoachingRemindersScreen({ navigation }) {
             <Switch
               value={missedEnabled}
               onValueChange={handleMissedToggle}
-              trackColor={{ false: t.colors.surface3, true: t.colors.primaryBg }}
-              thumbColor={t.colors.primary}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={missedEnabled ? t.colors.surface : t.colors.textMuted}
               ios_backgroundColor={t.colors.surface3}
               accessibilityLabel="Check-in follow-up toggle"
             />
@@ -569,8 +569,8 @@ export default function CoachingRemindersScreen({ navigation }) {
             <Switch
               value={plannedConfirmEnabled}
               onValueChange={handlePlannedConfirmToggle}
-              trackColor={{ false: t.colors.surface3, true: t.colors.primaryBg }}
-              thumbColor={t.colors.primary}
+              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+              thumbColor={plannedConfirmEnabled ? t.colors.surface : t.colors.textMuted}
               ios_backgroundColor={t.colors.surface3}
               accessibilityLabel="Meal-plan reminder toggle"
             />

@@ -35,7 +35,7 @@ import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
+import { colors, spacing, type } from '../styles/theme';
 import {
   relationships, unblockUser, unmuteUser, upsertProfile, leaveCommunity,
   hasProfile, setConnectFrom, CONNECT_FROM_VALUES, setShowGym, setShowPlace,
@@ -283,8 +283,8 @@ export default function CommunityPrivacyScreen({ navigation }) {
                     value={showGym}
                     onValueChange={changeShowGym}
                     accessibilityLabel="Show my gym"
-                    trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                    thumbColor={t.colors.primary}
+                    trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+                    thumbColor={showGym ? t.colors.surface : t.colors.textMuted}
                     ios_backgroundColor={t.colors.surface2}
                   />
                 )}
@@ -298,8 +298,8 @@ export default function CommunityPrivacyScreen({ navigation }) {
                     value={showPlace}
                     onValueChange={changeShowPlace}
                     accessibilityLabel="Show my place"
-                    trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                    thumbColor={t.colors.primary}
+                    trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+                    thumbColor={showPlace ? t.colors.surface : t.colors.textMuted}
                     ios_backgroundColor={t.colors.surface2}
                   />
                 )}

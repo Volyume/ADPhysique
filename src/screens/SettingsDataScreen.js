@@ -17,7 +17,6 @@ import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getStatus as getSyncStatus, syncAll, deleteUserPref, setUserPref } from '../lib/sync';
 import { getQueueStats, retryFailedOps } from '../lib/syncQueue';
 import { formatLastSynced } from '../lib/syncStatusLabel';
-import { withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { SettingsPage, SettingRow, SectionHeader, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 
@@ -358,8 +357,8 @@ export default function SettingsDataScreen({ navigation }) {
               <Switch
                 value={scanSkipName}
                 onValueChange={toggleScanSkipName}
-                trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                thumbColor={scanSkipName ? t.colors.primary : t.colors.textMuted}
+                trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+                thumbColor={scanSkipName ? t.colors.surface : t.colors.textMuted}
               />
             }
           />

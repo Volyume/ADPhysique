@@ -124,7 +124,14 @@ const AMBER_COUNTS = [
   ['MenuSheet.js', 0],
   ['MessageBubble.js', 1], // ComposerInput link colour passed to LinkedBody
   ['MessageComposer.js', 0],
-  ['PeopleFiltersSheet.js', 2], // a Switch's track (at half alpha) and thumb colours
+  // Was 2 -- a Switch's track (at half alpha) and its thumb -- until D174 A1
+  // ruled that a switch's on-state is a STORED PREFERENCE, not a live moment,
+  // so it sits outside amber discipline 1's ceiling. The track is now the
+  // neutral on-fill and the thumb the neutral ink. The pin's intent is
+  // unchanged (this file's amber usage is counted exactly, and drift fails);
+  // only the count moved, and it moved because the amber left. A3's unread-dot
+  // entries in this table are the ones D174 ordered left alone, and they are.
+  ['PeopleFiltersSheet.js', 0],
   ['PlacePicker.js', 0],
   ['PostCard.js', 0],
   ['PrivacyReceipt.js', 1], // the shield-checkmark icon colour

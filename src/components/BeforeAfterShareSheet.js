@@ -33,7 +33,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, motion, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { useToast } from './Toast';
 import { appAlert } from './AppAlert';
@@ -558,8 +558,8 @@ export default function BeforeAfterShareSheet({
               <Switch
                 value={showWeight}
                 onValueChange={setShowWeight}
-                trackColor={{ false: t.colors.surface2, true: withAlpha(t.colors.primary, alpha.strong) }}
-                thumbColor={showWeight ? t.colors.primary : t.colors.textMuted}
+                trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+                thumbColor={showWeight ? t.colors.surface : t.colors.textMuted}
               />
             </View>
           </View>

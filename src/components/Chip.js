@@ -1,9 +1,17 @@
 /**
  * Chip
  *
- * A single selectable pill with one selected treatment (amber fill +
- * border), used for "pick one / pick some" choices. Replaces the per-screen
- * goal / phase / protein / day-hour chip styling the audit found drifting.
+ * A single selectable pill with one selected treatment, used for "pick one /
+ * pick some" choices. Replaces the per-screen goal / phase / protein /
+ * day-hour chip styling the audit found drifting.
+ *
+ * D174 A2 (2026-09-15): a chip selects a VIEW, not a state of the user's
+ * training, so it sits outside amber discipline 1's ceiling ("amber marks
+ * 'now' and nothing else"). Selection is now carried by THREE simultaneous
+ * differences instead of one colour -- a `surface3` fill, the `textPrimary`
+ * ink at the semibold face, and a `borderLight` edge -- against an unselected
+ * chip on `surface` with `textSecondary` ink and the ordinary `border`. That is a
+ * stronger selected state than the amber one it replaces, not a quieter one.
  *
  * Pass `selected` + `onPress`. `icon` is an optional leading Ionicons name.
  */
@@ -64,8 +72,8 @@ export default function Chip({
       accessibilityState={accessibilityState}
       style={[
         styles.chip,
-        { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-        selected && { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+        { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+        selected && { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
         disabled && styles.chipDisabled,
         style,
       ]}
@@ -75,7 +83,7 @@ export default function Chip({
         <Ionicons
           name={icon}
           size={14}
-          color={selected ? t.colors.primary : t.colors.textMuted}
+          color={selected ? t.colors.textPrimary : t.colors.textMuted}
           style={styles.icon}
         />
       ) : null}
@@ -84,7 +92,15 @@ export default function Chip({
           styles.label,
           { ...t.type.label, color: t.colors.textSecondary },
           labelStyle,
-          selected && { color: t.colors.primary },
+          // The house semibold helper, which sets the Inter face AND the
+          // numeric fontWeight -- the numeric half being what "still reads to
+          // accessibility services" (theme.js:724-726). The sweep originally
+          // spelled the face alone, to dodge an ED-safety suite that scanned a
+          // serialised render tree for the substring "weight" and was tripped
+          // by the STYLE KEY. Lead ruling: that traded real accessibility on
+          // 114 chips for a string match, so the scan was made precise instead
+          // (see DietaryPreferencesEditor.test.js) and this keeps `w()`.
+          selected && { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
           selected && selectedLabelStyle,
         ]}
         numberOfLines={numberOfLines}

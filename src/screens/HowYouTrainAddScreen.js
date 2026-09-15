@@ -644,8 +644,8 @@ export default function HowYouTrainAddScreen() {
                 <Switch
                   value={!!draft.clinician}
                   onValueChange={(v) => { haptics.selection(); setDraft((d) => ({ ...d, clinician: v })); }}
-                  trackColor={{ false: t.colors.borderSubtle, true: t.colors.primary }}
-                  thumbColor={t.colors.textPrimary}
+                  trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
+                  thumbColor={draft.clinician ? t.colors.surface : t.colors.textMuted}
                 />
               )}
             />

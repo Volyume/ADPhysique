@@ -1,6 +1,6 @@
 import { forwardRef, useState, useContext, useId } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Keyboard, InputAccessoryView, Platform } from 'react-native';
-import { spacing, radius, withAlpha, alpha } from '../styles/theme';
+import { spacing, radius } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import FieldError from './FieldError';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
@@ -144,7 +144,13 @@ const TextField = forwardRef(function TextField({
             borderColor: t.colors.border,
           },
           multiline && styles.fieldMultiline,
-          focused && { borderColor: withAlpha(t.colors.primary, alpha.strong) },
+          // D174 (amber census): the focus ring STAYS amber -- a focused field
+          // is the user's live moment, which is exactly what discipline 1
+          // grants the accent. What goes is the 40% alpha it was drawn at: a
+          // washed ring is section 3.2's tint and it weakened the one
+          // indicator a keyboard or switch-control user navigates by, so it is
+          // the solid token now.
+          focused && { borderColor: t.colors.primary },
           error ? { borderColor: t.colors.error } : null,
           disabled && styles.disabled,
           fieldStyle,

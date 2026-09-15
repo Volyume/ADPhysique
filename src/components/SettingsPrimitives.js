@@ -34,14 +34,17 @@ export function SettingRow({ icon, label, sub, value, onPress, destructive, righ
       // override; every existing call site is byte-identical without it.
       accessibilityLabel={accessibilityLabel ?? (value ? `${label}: ${value}` : label)}
     >
-      <View
-        style={[
-          styles.settingIcon,
-          { backgroundColor: t.colors.primaryBg },
-          destructive && { backgroundColor: t.colors.errorBg },
-        ]}
-      >
-        <Ionicons name={icon} size={18} color={destructive ? t.colors.error : t.colors.primary} />
+      {/* D174 (amber census, 2026-09-15): the glyph used to sit on a 34dp
+          amber-tinted disc -- `primaryBg` behind a stock Ionicon on 104 rows
+          across 17 screens. Plan section 3.2 forbids the accent becoming "a
+          tint behind a glyph" and D174's REMOVE-decoration definition names
+          "an icon in a settings list" word for word, so the fill and the disc
+          geometry both go and the glyph takes the secondary ink. The
+          `destructive` branch keeps `error`: that is the state-colour grammar
+          section 8 protects, and it is the one thing on a settings row that a
+          colour genuinely has to say. */}
+      <View style={styles.settingIcon}>
+        <Ionicons name={icon} size={18} color={destructive ? t.colors.error : t.colors.textSecondary} />
       </View>
       {/* Campaign 27 Pillar A (D104): minWidth: 0 added so the label column
           uses the codebase's safe flex:1 + minWidth:0 wrapping idiom. */}
@@ -133,7 +136,13 @@ export function useSettingsStyles() {
     safe: { backgroundColor: t.colors.background },
     section: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     settingRow: { borderBottomColor: t.colors.borderSubtle },
-    settingIcon: { backgroundColor: t.colors.primaryBg },
+    // D174: the row glyph carries no tint at all now, so this override has
+    // nothing theme-dependent left to carry. Kept as an explicit empty object
+    // rather than deleted because ~8 call sites outside this file append it as
+    // `[settingsStyles.settingIcon, live.settingIcon]`; a missing key there
+    // would read as the one-sided frozen/live defect this campaign has spent
+    // itself closing, rather than as a deliberate absence.
+    settingIcon: {},
     settingLabel: { ...t.type.body, color: t.colors.textPrimary },
     settingSub: { ...t.type.captionTight, color: t.colors.textMuted },
     dataPrivacyNote: { ...t.type.captionTight, color: t.colors.textMuted },
@@ -180,15 +189,17 @@ export const settingsStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
+  // D174: was a 34dp `primaryBg` disc. It is now a fixed 24dp column with no
+  // fill, so the glyph keeps every row's label on the same left edge (the
+  // ledger alignment) without an amber ground behind it. `settingIconDestructive`
+  // went with the fill: it was an `errorBg` wash for the same disc, it had no
+  // consumer outside this file, and SettingRow's destructive branch says what
+  // it needs to say in the glyph ink.
   settingIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.md,
-    backgroundColor: colors.primaryBg,
+    width: iconSize.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  settingIconDestructive: { backgroundColor: colors.errorBg },
   settingLabel: { ...type.body, color: colors.textPrimary },
   settingSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   settingLabelDestructive: { color: colors.error },

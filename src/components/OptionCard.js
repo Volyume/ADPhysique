@@ -10,6 +10,15 @@ import useTheme from '../hooks/useTheme';
 // `accessibilityRole` (additive, 2026-09-03): the Injuries & limitations wizard uses
 // this card for multi-select steps too, where a screen reader must hear
 // "checkbox, checked" rather than "radio, selected". Default unchanged.
+//
+// D174 A2 (2026-09-15): picking an option is a choice, not the user's live
+// moment, so the selected card is no longer amber. It is a `surface3` fill, a
+// `borderLight` edge, the label at the semibold face and a neutral tick --
+// four differences against the unselected card, where the amber version had
+// three. The unselected label deliberately stays `textPrimary`: this card's
+// detail line is already `textSecondary`, and dimming the label to match it
+// would flatten the card's own hierarchy to win a contrast the fill and the
+// edge already carry.
 export default function OptionCard({ icon, label, detail, active, onPress, iconSize = 18, accessibilityRole = 'radio' }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
@@ -26,13 +35,13 @@ export default function OptionCard({ icon, label, detail, active, onPress, iconS
       accessibilityLabel={label}
     >
       <View style={[styles.iconWrap, live.iconWrap]}>
-        <Ionicons name={icon} size={iconSize} color={active ? t.colors.primary : t.colors.textSecondary} />
+        <Ionicons name={icon} size={iconSize} color={active ? t.colors.textPrimary : t.colors.textSecondary} />
       </View>
       <View style={styles.body}>
         <Text style={[styles.label, live.label, active && [styles.labelActive, live.labelActive]]}>{label}</Text>
         {detail ? <Text style={[styles.detail, live.detail]}>{detail}</Text> : null}
       </View>
-      {active ? <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} /> : null}
+      {active ? <Ionicons name="checkmark-circle" size={20} color={t.colors.textPrimary} /> : null}
     </TouchableOpacity>
   );
 }
@@ -44,7 +53,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.lg, marginBottom: spacing.sm,
   },
-  cardActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
+  cardActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
   iconWrap: {
     width: 40, height: 40, borderRadius: radius.md,
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
@@ -52,7 +61,7 @@ const styles = StyleSheet.create({
   },
   body: { flex: 1 },
   label: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xs },
-  labelActive: { color: colors.primary },
+  labelActive: { ...type.w('bodyStrong', 'semibold'), color: colors.textPrimary },
   detail: { ...type.bodySm, color: colors.textSecondary },
 });
 
@@ -62,10 +71,10 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    cardActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    cardActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     iconWrap: { backgroundColor: t.colors.surface2 },
     label: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    labelActive: { color: t.colors.primary },
+    labelActive: { ...t.type.w('bodyStrong', 'semibold'), color: t.colors.textPrimary },
     detail: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
 }

@@ -129,14 +129,20 @@ describe('CP-10 stage 3 (Settings family): useSettingsStyles() flips live, no re
     });
     let tree;
     act(() => { tree = create(<SettingsDietaryScreen />); });
+    // RE-ANCHORED (D174 amber sweep): this row's glyph was `colors.primary` and
+    // is `colors.textSecondary` now -- a settings-list icon is wayfinding, not
+    // a state, so it sits outside amber discipline 1's ceiling. THIS SUITE'S
+    // INTENT IS UNCHANGED and is not about the amber: it proves the colour is
+    // read from the LIVE theme and flips on a preference change with no
+    // remount. It still proves exactly that, on the token the row now uses.
     const icon = tree.root.findByProps({ name: 'nutrition-outline' });
     const darkColor = icon.props.color;
-    expect(darkColor).toBe(theme.resolveTheme({ theme: 'dark' }).colors.primary);
+    expect(darkColor).toBe(theme.resolveTheme({ theme: 'dark' }).colors.textSecondary);
 
     setTheme('light');
     const lightColor = tree.root.findByProps({ name: 'nutrition-outline' }).props.color;
     expect(lightColor).not.toBe(darkColor);
-    expect(lightColor).toBe(theme.resolveTheme({ theme: 'light' }).colors.primary);
+    expect(lightColor).toBe(theme.resolveTheme({ theme: 'light' }).colors.textSecondary);
     act(() => { tree.unmount(); });
   });
 });

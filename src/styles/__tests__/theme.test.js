@@ -453,3 +453,157 @@ describe('COMP-029 light theme', () => {
     expect(colors.error).toBe('#CC79A7');
   });
 });
+
+// ─── D174 A1: the switch on/off pair, at the 3:1 graphical bar ──────────────
+// AUTHORITY. `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`
+// D174 A1, whose parent is `docs/design-redesign-2026-09-14/20-DIRECTION-AND-
+// PLAN.md` §3 (the four amber disciplines) and §5 law 6. A switch's on-state
+// is a STORED PREFERENCE, not a live moment, so it sits outside discipline 1's
+// ceiling and amber leaves it. §8 protects the computed WCAG assertions; this
+// block adds to them rather than re-anchoring any of them.
+//
+// D174's own words make the gate a build requirement, not an assumption: "the
+// on/off pair must be re-asserted against the contrast suite before this
+// lands. If `borderLight` does not separate from `surface3` at the graphical
+// bar, the fix is a lighter neutral, never a return to amber."
+//
+// MEASURED, and why the ruled `borderLight` is not what shipped. Computed with
+// the WCAG 2.x relative-luminance formula used everywhere else in this file,
+// against `surface3` (the off-track), in all six palettes:
+//
+//                 dark   light  darkHC  lightHC  darkCVD  lightCVD
+//   borderLight   2.93   3.67    5.40     7.15     2.93     3.67   <- FAILS dark
+//   textMuted     4.71   5.40    7.49     7.15     4.71     5.40   <- lands here
+//   textSecondary 4.88   6.02    8.13     8.77     4.88     6.02
+//
+// So the on-track is `textMuted`: the first rung of D174's own ladder that
+// clears 3:1 in EVERY palette, and a further-from-`surface3` neutral exactly as
+// the ruling directs. (Its word was "lighter", which is the dark-theme reading;
+// on light, further from `surface3` means darker. Separation is the property.)
+//
+// WHAT THIS BLOCK DOES NOT ASSERT, and why it is recorded here rather than
+// quietly dropped. D174 also ruled the on-thumb `textPrimary`. Measured against
+// its own on-track it is 2.31 (dark), 2.60 (light), 1.45 (darkHC), 1.96
+// (lightHC), 2.31 (darkCVD), 2.60 (lightCVD) -- under 3:1 in all six, and no
+// token in the palette clears 3:1 against BOTH `surface3` and `textPrimary` in
+// all six, because the higher-contrast tables lift the greys towards the ink by
+// design. The state cue itself is safe: the two TRACKS separate at >=4.71:1
+// everywhere, which is what identifies on from off, and switch position (the
+// platform semantic, and what assistive technology announces) is unchanged. The
+// on-thumb is a redundant cue. Referred to the lead as a D174 follow-up rather
+// than resolved by inventing a thumb token here.
+describe('D174 A1: switch track and thumb clear the non-text bar', () => {
+  function relLum(hex) {
+    const h = String(hex).replace('#', '');
+    const ch = (i) => {
+      const c = parseInt(h.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * ch(0) + 0.7152 * ch(2) + 0.0722 * ch(4);
+  }
+  function ratio(a, b) {
+    const la = relLum(a);
+    const lb = relLum(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  }
+
+  // The six palettes the app can actually resolve to: both themes, each with
+  // higher contrast and with colour-blind-safe applied.
+  const PALETTES = [
+    ['dark', { theme: 'dark' }],
+    ['light', { theme: 'light' }],
+    ['darkHC', { theme: 'dark', higherContrast: true }],
+    ['lightHC', { theme: 'light', higherContrast: true }],
+    ['darkCVD', { theme: 'dark', colorBlindSafe: true }],
+    ['lightCVD', { theme: 'light', colorBlindSafe: true }],
+  ];
+
+  afterEach(() => applyAccessibility({}));
+
+  // The switch pair, named once so a future recolour has to come through here.
+  const trackOff = (c) => c.surface3;
+  const trackOn = (c) => c.textMuted;
+  const thumbOff = (c) => c.textMuted;
+  // LEAD RULING, 2026-09-15. D174 A1 ruled `textPrimary` here, chosen because it
+  // separated from a `borderLight` on-track at 3.71. The contrast gate then
+  // rejected `borderLight` (2.93 in dark) and the track moved lighter to
+  // `textMuted` -- and that pairing went with it: textPrimary on textMuted
+  // measures 1.45 to 2.60 across the six palettes, which is close to invisible
+  // in darkHC for exactly the users who turned higher contrast ON. No token
+  // clears 3:1 against BOTH `surface3` and `textPrimary` in all six, because
+  // the higher-contrast tables deliberately lift the greys towards the ink.
+  //
+  // `surface` inverts instead of tracking: the thumb reads as the card punched
+  // through the bar, dark-on-light when the switch is on and light-on-dark when
+  // it is off. That is how a well-drawn switch reads anyway, and it clears the
+  // bar in every palette, which `textPrimary` never could.
+  const thumbOn = (c) => c.surface;
+
+  test('the on-track separates from the off-track at 3:1 in every palette', () => {
+    // This IS the state cue, so it carries WCAG 1.4.11's 3:1 non-text bar.
+    for (const [name, prefs] of PALETTES) {
+      applyAccessibility(prefs);
+      const r = ratio(trackOn(colors), trackOff(colors));
+      expect({ palette: name, clears3: r >= 3 }).toEqual({ palette: name, clears3: true });
+    }
+  });
+
+  test('the off-state thumb separates from its own track at 3:1 in every palette', () => {
+    for (const [name, prefs] of PALETTES) {
+      applyAccessibility(prefs);
+      const r = ratio(thumbOff(colors), trackOff(colors));
+      expect({ palette: name, clears3: r >= 3 }).toEqual({ palette: name, clears3: true });
+    }
+  });
+
+  test('the on-state thumb separates from its own track at 3:1 in every palette', () => {
+    // The half of the build requirement D174 asked for and its ruled token
+    // could not meet. It is asserted rather than waived, so the pair cannot
+    // drift back to a thumb that vanishes into its own bar.
+    for (const [name, prefs] of PALETTES) {
+      applyAccessibility(prefs);
+      const r = ratio(thumbOn(colors), trackOn(colors));
+      expect({ palette: name, clears3: r >= 3 }).toEqual({ palette: name, clears3: true });
+    }
+  });
+
+  test('a thumb is never the same colour as the track it sits on', () => {
+    // The cheapest way for a later recolour to erase the position cue outright.
+    for (const [name, prefs] of PALETTES) {
+      applyAccessibility(prefs);
+      expect({ palette: name, on: thumbOn(colors) === trackOn(colors) })
+        .toEqual({ palette: name, on: false });
+      expect({ palette: name, off: thumbOff(colors) === trackOff(colors) })
+        .toEqual({ palette: name, off: false });
+    }
+  });
+
+  test('borderLight is recorded as measured, so the ladder is not re-walked from memory', () => {
+    // D174 ruled `borderLight` and made the gate a build requirement. It fails
+    // in dark by 0.07, which is exactly the kind of near-miss that gets rounded
+    // up by a later reader. Pinned so the ruling's rejected rung stays a
+    // measurement rather than a recollection.
+    applyAccessibility({ theme: 'dark' });
+    expect(ratio(colors.borderLight, colors.surface3)).toBeLessThan(3);
+    applyAccessibility({ theme: 'dark', colorBlindSafe: true });
+    expect(ratio(colors.borderLight, colors.surface3)).toBeLessThan(3);
+  });
+
+  test('neither half of the pair is any amber token, in any palette', () => {
+    // The ruling itself: amber leaves the switch. `success` was refused too --
+    // a switch being on is not a success, and §8 protects the state-colour
+    // grammar from that borrowing.
+    for (const [name, prefs] of PALETTES) {
+      applyAccessibility(prefs);
+      const amber = [colors.primary, colors.primaryFill, colors.primaryDim, colors.primaryBg];
+      for (const role of [trackOn, trackOff, thumbOn, thumbOff]) {
+        expect({ palette: name, amber: amber.includes(role(colors)) })
+          .toEqual({ palette: name, amber: false });
+      }
+      for (const role of [trackOn, thumbOn]) {
+        expect({ palette: name, state: role(colors) === colors.success })
+          .toEqual({ palette: name, state: false });
+      }
+    }
+  });
+});
