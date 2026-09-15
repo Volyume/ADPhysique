@@ -8362,3 +8362,60 @@ components, 4 in `lib`/`hooks`/`navigation` (all platform chrome), 0 in
 `styles`. Most of the remainder are frozen/live twins of a line already counted.
 Every one is pinned by exact line, in one of four lane guards, with a written
 reason.
+
+---
+
+## D180 — Stage 4, the moments: what the personal best becomes, and where the transition goes (lead ruling, 2026-09-15)
+
+**Authority.** Plan §7 stage 4, verbatim: "The origin-aware hero-zoom transition
+the app already has but uses on only 9 of 137 screens, and one properly made
+personal best moment that states a fact rather than throwing confetti. Last,
+because it is decoration if the rest is not right." Stages 1-3 are complete, so
+the rest is right. D173 sequenced `src/lib/shareCard/` here explicitly.
+
+**A third census correction, and the same direction as the other two.** §7 says
+the transition is used on 9 of 137 screens. It has **three call sites**
+(`LiftProgressScreen.js:266`, `:475`, `ExerciseDetailScreen.js:1083`), all
+navigating to the same destination, `ExerciseDetail`. The mechanism itself is
+generic — any `navigation.navigate(route, { __heroOrigin: rect })` gets the
+grow-from-rect interpolator, and `onPressWithLayout` is the measuring helper.
+
+### Part 1 — the personal-best moment
+
+The PR share card already states a fact, which is worth saying before changing
+it: "PERSONAL RECORD" / the exercise name / `120 kg × 5` as the hero / "Previous
+best: 110 kg". The structure is right. What is wrong is the chrome around it,
+and it is every prop this campaign has spent three stages removing, concentrated
+in one renderer.
+
+| Site | Ruling |
+|---|---|
+| The gold pill behind "PERSONAL RECORD" (15% fill, 44% stroke, gold ink) | **The pill goes entirely.** D173 T1 deleted the medal colour from the app; the same role has no business surviving on the card. It becomes a plain letter-spaced eyebrow in `PALETTE.textMuted`, which is what `SectionLabel` is in the app. Law 2: a pill drawn round a label is not an object. |
+| The halo behind the hero numeral | **Goes.** Discipline 3 names a glow; the founder's law says "No glow." in as many words; `shadow.glow` is already deleted from the app. |
+| `drawBackgroundGeometry`'s PR corner glow, the session glow, and `drawCardFrame`'s two corner glows | **All go**, for the same reason. That leaves `drawGlow` itself with no callers: **delete it**, so the capability cannot come back by accident. The milestone ring, the weekly day-ticks and the before/after seam are geometry rather than glow and stay. |
+| `PALETTE.gold` and `iconTrophy` | **Deleted**, with their consumers resolved per D173's table. |
+| The hero numeral's amber | **STAYS.** Discipline 1 grants amber "a personal best" by name, and after the above it is the ONE amber on the card. That is the point. |
+
+**The tonal grounds stay, and this is a judgement rather than an omission.** Each
+moment has a three-stop background (`pr` is `#1B140E` → `bg0` → `#120D0A`). The
+founder's law says "No gradients", and that line sits in a list with "No neon"
+and "No glow" — it is about decorative effect. A near-black warm-to-neutral
+tonal shift on a poster is the paper, not an effect. A share card is a rendered
+image someone posts, not a screen someone operates, and flattening a poster's
+ground to a single value would lose depth the medium legitimately has. Recorded
+so a later reader sees it was decided, and **surfaced to the founder** rather
+than treated as settled, because outward brand is theirs.
+
+### Part 2 — the transition
+
+Extended to the list-to-detail pairs where the tapped row visually BECOMES the
+destination, which is the only case the effect is honest: tapping a workout in
+history, a plan, a routine, an exercise in the picker. Not to sheets (a sheet
+already has its own entrance), not to tab switches, and not anywhere the
+destination is not the thing tapped — a zoom that grows from an unrelated rect
+is worse than no zoom.
+
+Two properties are non-negotiable because the mechanism already has them and an
+extension must not lose them: a missing or malformed rect falls back to the
+ordinary push (`RootNavigator.js:383` already does `|| null`), and Reduce Motion
+replaces the zoom with a cross-fade rather than removing the feedback (law 5).
