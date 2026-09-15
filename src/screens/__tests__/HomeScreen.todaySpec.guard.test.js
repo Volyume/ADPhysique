@@ -154,7 +154,16 @@ describe('ED-safety: the coach sentence keeps its lockout branch', () => {
   });
 
   test('it renders only for a week that was really checked in', () => {
-    expect(HOME).toContain('coachDecision?.sentence && coachDecision.isCompleted');
+    expect(HOME).toContain('const coachSentenceShown = !!(coachDecision?.sentence && coachDecision.isCompleted)');
+    expect(HOME).toContain('{!initialLoading && coachSentenceShown && (');
+  });
+
+  test('the Today line pointer stands down when the sentence itself renders', () => {
+    // The rank-3 Today line is "This week's coaching decision. See why." -- a
+    // signpost that existed because the sentence was unreachable from Today.
+    // Showing both would put a signpost and its destination on one screen.
+    // Both read the SAME expression so they cannot disagree about which shows.
+    expect(HOME).toContain('eligible: showCoachBanner && !coachSentenceShown');
   });
 
   test('a stale decision is captioned as stale, not presented as current', () => {

@@ -2257,6 +2257,17 @@ export default function HomeScreen({ navigation, route }) {
     haptics.selection();
     navigateCrossTab(navigation, 'ProfileTab', 'You');
   }, [navigation]);
+  // D167 review finding: the Today line's rank-3 occupant is a POINTER --
+  // "This week's coaching decision. See why." -- and it existed because the
+  // sentence itself was unreachable from Today. It is reachable now: the Coach
+  // section below renders the sentence in full. Leaving both would put a
+  // signpost and its destination on the same screen, which is the three-way
+  // duplication Campaign 22 Phase 2 already had to unpick once.
+  //
+  // So the pointer stands down exactly when the sentence renders, and both read
+  // the SAME expression, so they can never disagree about which is showing.
+  const coachSentenceShown = !!(coachDecision?.sentence && coachDecision.isCompleted);
+
   const todayLineItem = resolveTodayLine({
     // Rank 1 is reserved: no positive Home safety banner exists to feed it
     // yet (today ED/calm suppression only SUPPRESSES other content, inside
@@ -2267,7 +2278,7 @@ export default function HomeScreen({ navigation, route }) {
       onPress: () => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'Plans'); },
     },
     coachDecision: {
-      eligible: showCoachBanner,
+      eligible: showCoachBanner && !coachSentenceShown,
       caloriesKcal: latestCoachOutput?.adjustments?.calories?.applied
         ? latestCoachOutput.adjustments.calories.newKcal
         : null,
@@ -2857,7 +2868,7 @@ export default function HomeScreen({ navigation, route }) {
             first branch and cannot be skipped (D166). `isCompleted` is the
             app's existing test for a real decision rather than a computation
             the engine happened to run for an unchecked-in week. */}
-        {!initialLoading && coachDecision?.sentence && coachDecision.isCompleted && (
+        {!initialLoading && coachSentenceShown && (
           <TouchableOpacity
             style={styles.todaySection}
             onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput')}
