@@ -373,9 +373,52 @@ in the shape of the other four.
   is re-runnable from the register alone. Any partial tree is reviewed against
   D173's table hunk by hunk and either finished or reverted -- never committed
   blind, never discarded.
-- IN FLIGHT (read-only): the **amber census**, a per-site classification of all
-  ~268 `colors.primary` tints against §3's four disciplines, producing a work
-  order the lead rules before anything is edited.
+- LANDED AND MERGED (`32976a4e`): **the amber sweep, first pass** -- the seven
+  shared primitives and every Switch in the app, ruled as **D174** and amended
+  at lead review as **D175**. The census first: the working "217 amber icons"
+  was one of NINE mechanisms and 19.5% of the surface; the real figure is 1,375
+  raw references in 175 files, 918-984 logical sites, ~71% failing §3, against
+  a discipline-1 entitlement of about twelve.
+  Cleared in this pass: the amber disc behind a stock glyph on 104
+  `<SettingRow>`s across 17 screens (a frozen/live **TRIPLE**, not a pair -- the
+  same wash in `StyleSheet.create`, in `useSettingsStyles`, and a third time
+  inline in `SettingRow`'s render, where it won); `Button.tertiary` on 62
+  non-committing buttons; selection on chips, segments, option cards and
+  dropdown rows, which now separates by fill + weight + edge rather than colour;
+  43 switches; `Illustrations.js` deleted (28 amber strokes, zero importers).
+  `emphatic` is untouched -- it is discipline 1's one committing button.
+  **D175's four amendments, three of which overturn a token D174 chose:**
+  (1) the switch on-track `borderLight` FAILED its own build requirement at 2.93
+  against `surface3` in dark and darkCVD, so it moved to `textMuted`; and that
+  took the `textPrimary` thumb with it (1.45-2.60, near-invisible in darkHC),
+  so the thumb is `surface` and INVERTS against its track, measuring 6.64-10.57.
+  The shipped state cue was 1.13-2.68 before this and is >=4.71 now, and 20
+  switches had been drawing an amber thumb while switched OFF.
+  (2) an **ED-safety test was failing on a style property** -- the nudge scan
+  reads the serialised render tree and one style key is spelled `fontWeight`, so
+  a semibold chip label tripped it. The sweep's workaround dropped the numeric
+  weight (which is what "still reads to accessibility services") from 114 chips
+  to satisfy a string match; the scan was made precise instead and proved in
+  both directions. (3) the dropdown chevron was a second amber mark for the same
+  state as the filled border. (4) nine hand-rolled settings rows were stranded
+  with the tint after the disc left.
+  Guards: `amberPrimitives.guard.test.js` (16 cases, 17 mutations, 0 survivors),
+  `switchColours.guard.test.js` (8 cases, 3 mutations), and five computed
+  contrast cases in `theme.test.js` over all six palettes -- with `borderLight`
+  pinned as FAILING so the rejected rung stays a measurement.
+  Gates: tsc strict 0, lint 0, check-imports OK (2022 files), 1323 suites /
+  20,503 tests passed, 16 skipped.
+- ALSO LANDED (`4d3e5b22`): **`frozenLiveParity.guard.test.js`**, which closes
+  the defect class this campaign has fixed by hand TEN times. A colour-bearing
+  frozen style key consumed as `[styles.K, live.K]` but absent from
+  `buildLiveStyles` resolves undefined, is dropped silently, and freezes that
+  element at the boot-time palette forever -- nothing throws, nothing lints, and
+  every existing test passes because they all assert the frozen value. The scan
+  found the tenth (`NutritionTargetsScreen`'s `approachCardDesc`) within a
+  minute of working, plus seven dead references, two of them created by this
+  campaign. Its own three draft bugs are recorded in its header because each
+  made it pass by measuring nothing; a coverage case now pins that it reaches
+  100+ files.
 - QUEUED: the hand-rolled cards swept into the real `Card` against the
   objecthood test.
 **SEQUENCED TO STAGE 4, NOT PARKED (D173):** `src/lib/shareCard/drawShareCard.js`
