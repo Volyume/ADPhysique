@@ -325,7 +325,37 @@ in the shape of the other four.
   `borderWidth: 1` + `borderRadius: radius.lg`, because the base no longer sets
   either and the dashed placeholder would otherwise have gone silently blank
   while every test still passed.
-- RULED, IN FLIGHT: **the reward props, D173** (appended to the register
+- LANDED AND MERGED (`17af0464`): **the reward props, D173 T1-T4**, plus four
+  lead-review rulings. gold/silver/bronze deleted from both palettes with their
+  five hexes; the PB markers moved to amber (discipline 1 grants it by name);
+  the gold washes and both `tone="gold"` dresses gone; 18 flame and 33
+  trophy/medal/ribbon/sparkles glyphs replaced; `MilestoneBurst` and the
+  confetti machinery deleted. **The glow went with them (D174)**, closing
+  discipline 3's fourth tell: `shadow.glow`'s two consumers were a dead style
+  and a dormant billing circle, and the Skia glow `theme.js` reserved for the
+  Home Start button was never built. `celebrationEmber`/`celebrationViolet`
+  followed, their only consumers being the deleted particle palettes.
+  Guard: `rewardProps.guard.test.js`, 14 cases, mutation-tested both ways.
+  Gates: tsc strict 0, lint 0, check-imports OK (2020 files), 1320 suites /
+  20,471 tests passed, 16 skipped.
+  **Lead-review additions worth carrying forward:** the warm-up GLYPH left
+  `warning` but the row it sits in did not, so a warm-up was a neutral dot in a
+  yellow wash -- the wash and the yellow text are gone too; the summary's PR row
+  was drawn in `warning` when a PB is one of the dozen things amber is for; two
+  comments describing the deleted burst were left dangling, one directly above
+  an unrelated calm-mode declaration it misdescribed.
+  **ESCALATED, NOT GUESSED -- two ED-adjacent colour questions for the amber
+  sweep unit:** (a) `NutritionTargetsScreen.js:1575` and
+  `NutritionEducationScreen.js:39` tint the CALORIES entry with `warning` as a
+  per-topic identity (calories = warning, protein/carbs = primary, fat =
+  success), which the file's own comment says is deliberate and "not an ED-gated
+  valence mapping" -- but proper category tokens (`macroProtein/Carb/Fat/Fibre`)
+  exist at `theme.js:183-186` and are not being used, and the amber sweep has to
+  rule protein/carbs = `primary` anyway, so splitting the decision would be
+  worse than sequencing it. (b) Nothing else on those surfaces moved: only
+  `icon`/`iconName` props changed, and no floor, clamp line, flag read, calm
+  branch or suppression gate is in any hunk.
+- SUPERSEDED, kept for the record: **the reward props, D173** (appended to the register
   2026-09-15). Substitution table T1-T4: `gold`/`silver`/`bronze` deleted from
   the theme; the PB markers in `VolyumeChart`/`Sparkline` move to amber
   (discipline 1 grants amber "a personal best" by name); the gold washes go
