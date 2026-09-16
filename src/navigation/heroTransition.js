@@ -194,6 +194,35 @@ function usableRect(x, y, width, height) {
  * can never be lost (property A). Pass the node itself (`ref.current`, or the
  * entry read out of a per-row ref map), read at press time.
  */
+// Screen options for a screen that is NOT a hero destination. Under Reduce
+// Motion it REPLACES the transition with the same cross-fade the hero routes
+// use; otherwise it adds nothing and the navigator's own defaults stand.
+//
+// D182 fixed Reduce Motion on the hero routes and left this gap open: every
+// other screen was still getting `animationEnabled: false` from the navigator,
+// which DELETES the feedback rather than replacing it, and law 5 is explicit
+// that it must be replaced. This closes it.
+//
+// It is applied PER SCREEN rather than through the navigator's `screenOptions`
+// for one reason found the hard way on the hero routes: a screen's own
+// `options` are applied AFTER `screenOptions`
+// (`@react-navigation/core`'s `useDescriptors`), so a screen that sets
+// anything of its own -- `presentation: 'modal'` on seven registrations here --
+// can silently win against a navigator-level override. Routing every screen
+// through one entry point means Reduce Motion cannot be honoured on some
+// screens and not others, which is the failure this whole fix exists to stop.
+export function reducedMotionOptions(extra) {
+  return () => {
+    if (!readsReduceMotion()) return { ...(extra || {}) };
+    return {
+      ...(extra || {}),
+      animationEnabled: true,
+      transitionSpec: crossFadeTransitionSpec,
+      cardStyleInterpolator: crossFadeCardStyle,
+    };
+  };
+}
+
 export function measureHeroOrigin(node, run) {
   if (typeof run !== 'function') return;
   let settled = false;

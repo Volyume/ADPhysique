@@ -24,7 +24,7 @@ import { colors, spacing, fontSize, fontWeight, fontFamily } from '../styles/the
 // this import (not from theme.js itself -- App.js's boot-time
 // bootstrapAccessibility still uses it there).
 import { useNavTheme, useStackOptions } from './navTheme';
-import { heroZoomOptions } from './heroTransition';
+import { heroZoomOptions, crossFadeTransitionSpec, crossFadeCardStyle, reducedMotionOptions } from './heroTransition';
 // D36c (TalkBack sheet isolation, 2026-07-10): SheetIsolationBoundary wraps
 // the screen container below and hides it from TalkBack/VoiceOver while any
 // shared BottomSheet is open, restoring it on close. See that module's
@@ -317,9 +317,25 @@ const RecipeBuilderScreen    = lazyScreen(() => require('../screens/RecipeBuilde
 // Pulled from the store at render time so toggling Reduce Motion takes
 // effect on the next navigation push without an app restart. Returns an
 // override merged into the per-stack screenOptions in each navigator.
+// D182 follow-up, 2026-09-16. This returned `{ animationEnabled: false }`,
+// which DELETES the transition rather than replacing it -- the exact thing law
+// 5 forbids ("Reduce Motion replaces motion with a cross-fade rather than
+// removing the feedback"). Stage 4 fixed the hero routes and left every other
+// screen on the old behaviour; this closes the rest.
+//
+// The seven `presentation: 'modal'` screens are NOT covered by this
+// navigator-level override, because a screen's own `options` are applied after
+// `screenOptions` and can win. They carry `reducedMotionOptions()` on their own
+// registrations instead, so the behaviour is uniform rather than depending on
+// merge precedence.
 function useStackMotionOverride() {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  return reduceMotion ? { animationEnabled: false } : null;
+  if (!reduceMotion) return null;
+  return {
+    animationEnabled: true,
+    transitionSpec: crossFadeTransitionSpec,
+    cardStyleInterpolator: crossFadeCardStyle,
+  };
 }
 
 function DiaryStack({ navigation }) {
@@ -343,22 +359,22 @@ function DiaryStack({ navigation }) {
       <Stack.Screen
         name="FoodSearch"
         component={FoodSearchScreen}
-        options={{ headerShown: false, presentation: 'modal' }}
+        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
       />
       <Stack.Screen
         name="AddCustomFood"
         component={AddCustomFoodScreen}
-        options={{ headerShown: false, presentation: 'modal' }}
+        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
       />
       <Stack.Screen
         name="ScanBarcode"
         component={ScanBarcodeScreen}
-        options={{ headerShown: false, presentation: 'modal' }}
+        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
       />
       <Stack.Screen
         name="ScanLabel"
         component={ScanLabelScreen}
-        options={{ headerShown: false, presentation: 'modal' }}
+        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
       />
       <Stack.Screen
         name="FoodInsights"
@@ -368,17 +384,17 @@ function DiaryStack({ navigation }) {
       <Stack.Screen
         name="MyRecipes"
         component={MyRecipesScreen}
-        options={{ headerShown: false, presentation: 'modal' }}
+        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
       />
       <Stack.Screen
         name="MyMeals"
         component={MyMealsScreen}
-        options={{ headerShown: false, presentation: 'modal' }}
+        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
       />
       <Stack.Screen
         name="RecipeBuilder"
         component={RecipeBuilderScreen}
-        options={{ headerShown: false, presentation: 'modal' }}
+        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
       />
       {/* ProUpgrade is a dormant billing surface (fully-free product) and is
           no longer registered here -- see the dormant-screens comment near

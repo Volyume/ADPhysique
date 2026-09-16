@@ -39,15 +39,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import {
-  HERO_ORIGIN_PARAM,
-  heroZoomTransitionSpec,
-  crossFadeTransitionSpec,
-  crossFadeCardStyle,
-  makeHeroZoomCardStyle,
-  heroZoomOptions,
-  measureHeroOrigin,
-} from '../heroTransition';
+import { HERO_ORIGIN_PARAM, heroZoomTransitionSpec, crossFadeTransitionSpec, crossFadeCardStyle, makeHeroZoomCardStyle, heroZoomOptions, measureHeroOrigin, reducedMotionOptions } from '../heroTransition';
 import useAppStore from '../../store/useAppStore';
 
 // A stand-in for react-navigation's Animated progress value. It is NOT a mock
@@ -357,5 +349,56 @@ describe('the wired set: which routes and which call sites (D180 part 2)', () =>
     const library = read('screens', 'PlanLibraryScreen.js');
     expect(library).toContain('measureHeroOrigin(planCardNodes.current.get(planId)');
     expect(library.split('onPress={() => openPlan(plan.id)}').length - 1).toBe(2);
+  });
+});
+
+describe('Reduce Motion replaces motion everywhere, not just on hero routes', () => {
+  // D182 fixed the hero routes and named the rest as an open gap: every OTHER
+  // screen was still getting `animationEnabled: false` from the navigator,
+  // which deletes the feedback instead of replacing it. Law 5 is explicit that
+  // it must be replaced. Closed 2026-09-16; these cases stop it reopening.
+  const NAV = fs.readFileSync(
+    path.join(__dirname, '..', 'RootNavigator.js'), 'utf8',
+  );
+  const code = (src) => src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+  const NAV_CODE = code(NAV);
+
+  test('the navigator override never disables animation outright', () => {
+    // The exact spelling that deleted the feedback for two years.
+    expect(NAV_CODE).not.toMatch(/animationEnabled:\s*false/);
+  });
+
+  test('the navigator override supplies the cross-fade instead', () => {
+    expect(NAV_CODE).toContain('transitionSpec: crossFadeTransitionSpec');
+    expect(NAV_CODE).toContain('cardStyleInterpolator: crossFadeCardStyle');
+  });
+
+  test('every modal registration goes through the one entry point', () => {
+    // Modals cannot rely on the navigator override: a screen's own `options`
+    // are applied AFTER `screenOptions`, so a bare `presentation: 'modal'`
+    // could win and leave those screens on the old behaviour. Every one of them
+    // is wrapped, and a bare spelling is banned so a new modal cannot be added
+    // outside the rule.
+    const wrapped = NAV_CODE.match(/reducedMotionOptions\(\{ headerShown: false, presentation: 'modal' \}\)/g) || [];
+    expect(wrapped.length).toBeGreaterThanOrEqual(7);
+    expect(NAV_CODE).not.toMatch(/options=\{\{[^}]*presentation: 'modal'/);
+  });
+
+  test('reducedMotionOptions adds nothing when Reduce Motion is off', () => {
+    useAppStore.setState({ accessibility: { reduceMotion: false } });
+    expect(reducedMotionOptions({ headerShown: false })()).toEqual({ headerShown: false });
+  });
+
+  test('and replaces the transition when it is on, inside law 5 ceiling', () => {
+    useAppStore.setState({ accessibility: { reduceMotion: true } });
+    const out = reducedMotionOptions({ headerShown: false })();
+    expect(out.headerShown).toBe(false);
+    expect(out.animationEnabled).toBe(true);
+    expect(out.cardStyleInterpolator).toBe(crossFadeCardStyle);
+    for (const phase of ['open', 'close']) {
+      expect(out.transitionSpec[phase].config.duration).toBeLessThanOrEqual(400);
+    }
   });
 });

@@ -8548,3 +8548,75 @@ from a founder device order of 2026-08-24 ("a card needs an EDGE"). D180's
 phrase "the ONE amber on the card" was imprecise -- it meant the one amber in
 the card's CONTENT. The frame was never in scope, and reversing a device order
 is not a lead call.
+
+---
+
+## D183 — Closing the two items stage 4 left open (2026-09-16)
+
+D182 named both of these as open rather than burying them. Both are closed now,
+and neither was a design question -- one is an accessibility law the app was
+breaking everywhere, the other is a dropped tap.
+
+### 1. Reduce Motion now REPLACES motion on every screen, not just hero routes
+
+Law 5: "Reduce Motion replaces motion with a cross-fade rather than removing
+the feedback." Stage 4 found the navigator returning `{ animationEnabled: false }`
+-- feedback deleted -- and fixed the seven hero registrations. Every other
+screen in the app was still on the old behaviour.
+
+`useStackMotionOverride` now returns the same cross-fade the hero routes use
+(`animationEnabled: true` + `crossFadeTransitionSpec` + an opacity-only
+interpolator, 120 ms, inside law 5's 400 ms ceiling).
+
+**The seven `presentation: 'modal'` screens are wired separately and
+deliberately.** A screen's own `options` are applied AFTER the navigator's
+`screenOptions` (`@react-navigation/core`'s `useDescriptors`), which is the
+precedence the hero lane already had to discover the hard way. A bare
+`presentation: 'modal'` could therefore win against a navigator-level override
+and leave exactly those screens on the deleted-animation behaviour -- the
+"honoured on some screens and not others" failure this fix exists to stop. They
+carry `reducedMotionOptions()` on their own registrations instead, so the
+behaviour does not depend on merge precedence at all.
+
+D182 recorded this as needing a device because the cross-fade would override the
+modal slide-up. That is true and it is the intended outcome: under Reduce Motion
+a slide-up IS motion, and law 5 says replace it. A cross-fade is strictly
+gentler than the slide it replaces, so the change cannot make the setting worse
+for the user it exists for. The device walk covers it.
+
+**Guarded**: the literal `animationEnabled: false` spelling is banned from the
+navigator; the cross-fade pair is pinned; every modal registration must be
+wrapped and a bare modal spelling fails; and both branches of
+`reducedMotionOptions` are asserted against the real function. Mutation-tested
+three ways.
+
+### 2. A tap could be lost on a recycled row
+
+`PressableCard.measureThen` called `measureInWindow` directly. It handled "no
+native handle" but not "handle exists, callback never arrives" -- which is what
+a node detached between the press and the measure does, and a recycled
+`FlashList` row detaches. That tap was lost outright, with no fallback.
+
+The stage 4 lane found it, reported it, and correctly did not fix it inside a
+transition-wiring task. It also wrote the fix without knowing it:
+`measureHeroOrigin` already carries a fire-once guard, a rect validity check and
+a 100 ms watchdog. `measureThen` now delegates to it, so there is one
+implementation rather than two that drift.
+
+`heroMorphOrigin.test.js` pinned the old inline call by its literal text. Its
+intent -- a proper rect reaches the callback -- is re-pointed onto the delegate
+and **strengthened**: it now also asserts the fire-once guard and the watchdog,
+which the old spelling could not express.
+
+### Still open, and now the only things left from the campaign
+- The Community list-to-detail set qualifies for the hero transition on the
+  object test but sits outside D180's enumeration and needs the shared row
+  components threaded (D182 §3).
+- `ProfileAvatarMark`'s six-colour preset palette borrows `success`, `warning`
+  and `error` for decoration. One question about decorative state-colour
+  borrowing, not an amber question (D179).
+- The hand-rolled selection styles are neutralised in place; their structural
+  migration onto the shared primitives is its own unit with a written
+  acceptance test (D176).
+- **Founder-facing, unchanged:** the logger outline's static amber top edge, a
+  named device order of 2026-08-22.

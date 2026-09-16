@@ -77,9 +77,29 @@ describe('PressableCard origin-aware measure API', () => {
     expect(firstPressHandler(tree, 'onLongPress')).toBeNull();
   });
 
-  test('source: the measured path forwards a {x, y, width, height} rect via measureInWindow', () => {
-    const src = fs.readFileSync(path.join(__dirname, '..', 'PressableCard.js'), 'utf8');
-    expect(src).toContain('node.measureInWindow((x, y, width, height) => cb({ x, y, width, height }));');
+  test('source: the measured path forwards a {x, y, width, height} rect, and cannot lose a tap', () => {
+    // RE-POINTED 2026-09-16. This pinned PressableCard's own inline
+    // `measureInWindow` call. That implementation covered the "no native
+    // handle" case but not the one where the handle EXISTS and the callback
+    // never arrives -- a node detached between press and measure, which a
+    // recycled list row can do. That tap was lost outright.
+    //
+    // The card now delegates to `measureHeroOrigin`, which was written for the
+    // same job on the newer call sites and already carried a fire-once guard,
+    // a rect validity check and a watchdog. The intent of this case is
+    // unchanged -- a proper rect reaches the callback -- and it is now asserted
+    // where the code lives, plus the no-lost-tap property the old spelling
+    // could not give.
+    const card = fs.readFileSync(path.join(__dirname, '..', 'PressableCard.js'), 'utf8');
+    expect(card).toContain("import { measureHeroOrigin } from '../navigation/heroTransition';");
+    expect(card).toContain('measureHeroOrigin(viewRef.current, cb);');
+    // And the delegate really does forward the rect and really does guard.
+    const hero = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'navigation', 'heroTransition.js'), 'utf8',
+    );
+    expect(hero).toContain('node.measureInWindow((x, y, width, height) =>');
+    expect(hero).toMatch(/setTimeout\(/);
+    expect(hero).toMatch(/let settled = false;/);
   });
 });
 
