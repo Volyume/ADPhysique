@@ -1331,12 +1331,16 @@ describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, 
     expect(celebration).toContain('New heaviest weight');
   });
 
-  test('the effort instruction names its own door (C5-P34-04)', () => {
+  // RE-ANCHORED on the founder's order of 2026-09-17 ("We don't need to
+  // explain reps in reserve at all in block info"). The sheet no longer
+  // defines the effort target, so the chip's label may not promise that it
+  // does: a door must name only what is behind it. The label names the
+  // block and nothing else, which is what it said before C5-P34-04.
+  test('the block chip names only what its sheet holds (C5-P34-04, re-anchored)', () => {
     const home = read('screens/HomeScreen.js');
-    // The chip publishes "stop N short of failure" and opens the only sheet
-    // that defines it; its label named the block and nothing else.
-    expect(home).toContain('accessibilityLabel="See the shape of your training block and what the effort target means"');
-    expect(read('components/HomeBlockShapeSheet.js')).toContain('GLOSSARY.rir');
+    expect(home).toContain('accessibilityLabel="See the shape of your training block"');
+    expect(home).not.toContain('and what the effort target means');
+    expect(read('components/HomeBlockShapeSheet.js')).not.toContain('{GLOSSARY.rir}');
   });
 
   test('Est. max claims only the evidence it has (C5-P14-03, re-pinned for phase 2B)', () => {

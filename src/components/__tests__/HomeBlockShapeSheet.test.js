@@ -58,7 +58,10 @@ describe('HomeBlockShapeSheet', () => {
     expect(text).toContain('Your block');
     expect(text).toContain('Hypertrophy block');
     expect(text).toContain(GLOSSARY.deload);
-    expect(text).toContain(GLOSSARY.rir);
+    // Founder order 2026-09-17: the block sheet does not explain reps in
+    // reserve. The gloss and its GLOSSARY entry are gone; pinned as absent.
+    expect(text).not.toMatch(/Reps in reserve/);
+    expect(GLOSSARY.rir).toBeUndefined();
   });
 
   // D93 (Campaign 2, Phase 4): the sheet is the block's education surface.

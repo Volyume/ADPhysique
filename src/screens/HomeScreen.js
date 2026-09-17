@@ -2370,7 +2370,7 @@ export default function HomeScreen({ navigation, route }) {
          something else entirely and had no reason to open the one
          sheet that answers the phrase they just heard. The
          definition stays exactly one tap away. */
-      accessibilityLabel="See the shape of your training block and what the effort target means"
+      accessibilityLabel="See the shape of your training block"
     >
       <Ionicons
         name={READINESS_ICON[readinessSummary.tone] ?? READINESS_ICON.go}
