@@ -6402,7 +6402,8 @@ const styles = StyleSheet.create({
   // off it -- a swap reason is not the user's live moment -- so the ORDER
   // and the ink step (secondary over the muted structural line) carry it.
   swapItemTag: { ...type.caption, color: colors.textSecondary, lineHeight: 16 },
-  swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, marginTop: spacing.md, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.sm, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface },
+  // D165 law 3: a control, not a card (D186).
+  swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, marginTop: spacing.md, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.sm, borderRadius: radius.control, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface },
   swapBrowseText: { ...type.label, color: colors.textPrimary },
   swapEmpty: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.xs },
   swapEmptyTitle: { ...type.label, color: colors.textPrimary },
@@ -6476,7 +6477,8 @@ const styles = StyleSheet.create({
   // amber button with a clear label rather than a tinted outline. Dark label
   // for contrast on amber (white on amber fails WCAG). Warm-ups stay visually
   // secondary via the tinted-outline override below.
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.xs, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
+  // D165 law 3: a control, not a card (D186).
+  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.control, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.xs, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
   btnDisabled: { opacity: 0.5 },
   completeBtnText: { ...type.bodyStrong, color: colors.textPrimary },
   completeBtnWarmup: { backgroundColor: colors.warningBg || colors.surface, borderWidth: 1, borderColor: colors.warning },
@@ -6507,12 +6509,13 @@ const styles = StyleSheet.create({
   },
   autoAdvanceRowText: { ...type.caption, color: colors.textMuted },
   autoAdvanceRowDot: { ...type.caption, color: colors.textMuted },
+  // D165 law 3: a control, not a card (D186).
   autoAdvanceRowActionBtn: {
     minHeight: workoutLoggerSize.primaryActionMinHeight,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: radius.control,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
@@ -6534,9 +6537,10 @@ const styles = StyleSheet.create({
   bottomBarRow: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm },
   // D174: a cluster banner is a callout; the wash and the half-alpha amber
   // edge both go and the hairline carries it.
+  // D165 law 2: a cluster prompt, not an object -- no box, a borderSubtle hairline above (D186).
   clusterBanner: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
-    backgroundColor: colors.surface, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
+    padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
   },
   clusterTitle: { ...type.label, color: colors.textPrimary },
   // R2 numerals sweep: the cluster rep tally is data -> tabular figures.
@@ -6723,7 +6727,8 @@ const styles = StyleSheet.create({
   supStepNum: { color: colors.textMuted, fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, minWidth: 14 },
   supStepText: { ...type.bodySm, color: colors.textPrimary, flex: 1 },
   supTip: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xs },
-  supPrimaryBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
+  // D165 law 3: a control, not a card (D186).
+  supPrimaryBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
   supPrimaryBtnText: { ...type.bodyStrong, color: colors.textPrimary },
   supSecondaryRow: { flexDirection: 'row', gap: spacing.sm },
   supSecondaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
@@ -6743,7 +6748,8 @@ const styles = StyleSheet.create({
   discardSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%', maxHeight: '88%', gap: spacing.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   discardTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
   discardBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs },
-  keepTrainingBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
+  // D165 law 3: a control, not a card (D186).
+  keepTrainingBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
   keepTrainingBtnText: { ...type.bodyStrong, color: colors.textPrimary },
   discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
   discardConfirmBtnText: { ...type.label, color: colors.error },
@@ -6865,7 +6871,7 @@ function buildLiveStyles(t) {
     autoAdvanceRowActionBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     autoAdvanceRowAction: { ...t.type.captionStrong, color: t.colors.textPrimary },
     bottomBar: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
-    clusterBanner: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    clusterBanner: { borderTopColor: t.colors.borderSubtle },
     clusterTitle: { ...t.type.label, color: t.colors.textPrimary },
     clusterReps: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     clusterInput: { backgroundColor: t.colors.background, color: t.colors.textPrimary, borderColor: t.colors.border, ...t.type.body },

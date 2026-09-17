@@ -121,13 +121,21 @@ describe('law 6: the verdict is not coloured by how it went', () => {
 });
 
 describe('the frozen and live halves agree about the stat tile border', () => {
-  test('both say borderSubtle', () => {
-    // Third instance of this defect (LoggedSetRow, EvidencePanel, here): the
-    // live half won and every tile drew the bright control-edge grey against
-    // its own frozen intent.
-    expect(SRC).toContain('borderColor: colors.borderSubtle');
-    expect(SRC).toContain('statBox: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle }');
-    expect(SRC).not.toContain('statBox: { backgroundColor: t.colors.surface, borderColor: t.colors.border }');
+  // RE-ANCHORED 2026-09-17 (D186): this pinned a defect where the live half
+  // read `t.colors.border` while the frozen half set `colors.borderSubtle`
+  // (third instance: LoggedSetRow, EvidencePanel, here), so the two halves
+  // disagreed on the tile's border colour. D186 follow-up (D165 law 2: a
+  // number is not an object) removed statBox's fill/corner/border outright
+  // -- there is no border colour left on the tile for the two halves to
+  // disagree about, and no live.statBox key left to carry one. The intent
+  // ("the two halves never silently disagree about this surface") moves to
+  // statsGrid, the row that now carries the shared hairline, which is where
+  // the file's one borderSubtle-bearing key for this area lives.
+  test('the tile lost its border entirely; the row above agrees with itself on borderSubtle', () => {
+    expect(SRC).not.toMatch(/statBox:\s*\{[^}]*borderColor/);
+    expect(SRC).toContain('borderTopColor: colors.borderSubtle, paddingTop: spacing.md');
+    expect(SRC).toContain('statsGrid: { borderTopColor: t.colors.borderSubtle }');
+    expect(SRC).not.toContain('statsGrid: { borderTopColor: t.colors.border }');
   });
 });
 

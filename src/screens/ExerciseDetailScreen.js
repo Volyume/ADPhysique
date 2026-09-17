@@ -1368,14 +1368,13 @@ const styles = StyleSheet.create({
   chartToggleBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   chartToggleBtnTextActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   e1rmNote: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, fontStyle: 'italic' },
+  // D165 law 2: a chart, not an object -- no box, a borderSubtle hairline above (D186).
   chartContainer: {
     height: 120,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     overflow: 'hidden',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   section: { gap: spacing.md },
   historyCard: {
@@ -1642,7 +1641,7 @@ function buildLiveStyles(t) {
     chartToggleBtnText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     chartToggleBtnTextActive: { color: t.colors.textPrimary },
     e1rmNote: { ...t.type.caption, color: t.colors.textMuted },
-    chartContainer: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    chartContainer: { borderTopColor: t.colors.borderSubtle },
     historyDate: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     historyEst: { ...t.type.num('caption'), color: t.colors.textMuted },
     prLabel: { fontSize: t.fontSize.sm, color: t.colors.textMuted },

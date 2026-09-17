@@ -1377,7 +1377,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           })()}
         </Card>
 
-        <View style={styles.statsGrid}>
+        <View style={[styles.statsGrid, live.statsGrid]}>
           <StatBox
             icon="stats-chart-outline"
             // WAVE-A-FINDINGS.md UNIT_DEFECT (:1220-1226): hard-coded 'kg'
@@ -2198,7 +2198,7 @@ export function StatBox({ icon, value, label, tooltip, animateOrder = 0 }) {
   ));
 
   return (
-    <Animated.View style={[styles.statBox, live.statBox, { opacity, transform: [{ translateY }] }]}>
+    <Animated.View style={[styles.statBox, { opacity, transform: [{ translateY }] }]}>
       <Ionicons name={icon} size={20} color={t.colors.textSecondary} />
       {numeral(styles.statValue, live.statValue)}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
@@ -2288,16 +2288,23 @@ const styles = StyleSheet.create({
   // two-by-two. `minWidth` rather than a percentage basis: at the largest
   // accessibility text scale a tile needs to be able to take a whole row
   // rather than clip its own label.
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  // Compliance pass (remediation 2026-07-11, food design standard section 2 /
-  // checklist 1): the three stat tiles are card-class surfaces, so radius.lg
-  // (16, the one card radius), colors.surface, 1px border - matching Card.
+  // D165 law 2: a row of stat tiles, not an object -- no box, a borderSubtle hairline above (D186).
+  statsGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle, paddingTop: spacing.md,
+  },
+  // D165 law 2: a number, not an object -- no box; the shared hairline lives
+  // on statsGrid above, not one per tile (D186; TodayStrip is the cited
+  // precedent). Superseded checklist-1 note this replaces: the tiles used to
+  // be treated as card-class surfaces (radius.lg, colors.surface, 1px
+  // border); D165 law 2 says a number is not an object, so that reading no
+  // longer holds.
   statBox: {
     // `minWidth` makes the four-tile grid wrap two-by-two, and lets a tile
     // take a whole row at the largest accessibility text scale rather than
     // clipping its own label.
-    flex: 1, minWidth: 136, backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.borderSubtle,
+    flex: 1, minWidth: 136,
+    padding: spacing.md, alignItems: 'center', gap: spacing.xs,
   },
   statValue: { ...type.num('h3'), color: colors.textPrimary },
   statLabel: { ...type.caption, color: colors.textSecondary },
@@ -2383,9 +2390,10 @@ const styles = StyleSheet.create({
   },
   coachZoneSubHeading: { ...type.label, color: colors.textSecondary },
   coachZoneDivider: { height: 1, backgroundColor: colors.borderSubtle },
+  // D165 law 3: a control, not a card (D186).
   feedbackToggleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface2, borderRadius: radius.lg, padding: spacing.md,
+    backgroundColor: colors.surface2, borderRadius: radius.control, padding: spacing.md,
     borderWidth: 1, borderColor: colors.border,
   },
   feedbackToggleBtnText: { ...type.bodyStrong, color: colors.textSecondary },
@@ -2581,13 +2589,15 @@ function buildLiveStyles(t) {
     verdictRow: { borderTopColor: t.colors.borderSubtle },
     verdictHeadline: { ...t.type.bodyStrong },
     verdictSub: { ...t.type.captionTight, color: t.colors.textMuted },
-    // D167: this read `t.colors.border` while the frozen half sets
-    // `colors.borderSubtle`. The live half wins at runtime, so every stat tile
-    // drew the bright control-edge grey against its own frozen intent. Third
-    // instance of the same two-halves-disagree defect (LoggedSetRow D166,
-    // EvidencePanel D167), and the reason new components do not use this
-    // pattern at all.
-    statBox: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    // D167 (historical): this read `t.colors.border` while the frozen half
+    // set `colors.borderSubtle`, so every stat tile drew the bright
+    // control-edge grey against its own frozen intent. D186 follow-up
+    // (D165 law 2: a number is not an object) removed statBox's fill/
+    // corner/border outright, so there is no border colour left for the
+    // two halves to disagree about, and no live.statBox key left to carry
+    // one (frozenLiveParity.guard.test.js keeps enforcing the two-halves-
+    // agree rule generally). The row above them carries the hairline now.
+    statsGrid: { borderTopColor: t.colors.borderSubtle },
     statValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
     statLabel: { ...t.type.caption, color: t.colors.textSecondary },
     prRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
