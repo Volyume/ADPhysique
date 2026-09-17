@@ -197,13 +197,12 @@ const styles = StyleSheet.create({
 
   list: { gap: spacing.lg },
 
+  // D165 law 2: a form question, not an object -- no box, a borderSubtle hairline above (D171/D172).
   item: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
 
   question: {
@@ -216,7 +215,7 @@ const styles = StyleSheet.create({
   btn: {
     flex: 1,
     paddingVertical: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: radius.control,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface2,
@@ -262,7 +261,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     intro: { ...t.type.bodySm, color: t.colors.textSecondary },
-    item: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    item: { borderTopColor: t.colors.borderSubtle },
     question: { ...t.type.bodySm, color: t.colors.textPrimary },
     btn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     btnSelected: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },

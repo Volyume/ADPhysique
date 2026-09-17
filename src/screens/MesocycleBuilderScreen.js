@@ -20,6 +20,7 @@ import { SkeletonCard } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
+import Card from '../components/Card';
 import {
   getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets, getAllExercises,
   getActivePlan, getRoutinesForPlan,
@@ -205,7 +206,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
           <>
             {/* ── Active plan (coach / manual built) ───── */}
             {activePlan && (
-              <View style={[styles.planCard, live.planCard]}>
+              <Card style={styles.planCard}>
                 <View style={styles.planCardHead}>
                   <Ionicons name="barbell" size={18} color={t.colors.textSecondary} />
                   <Text style={[styles.planCardTag, live.planCardTag]}>Your active plan</Text>
@@ -289,7 +290,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                     recovery week. There is nothing to set up.
                   </Text>
                 )}
-              </View>
+              </Card>
             )}
 
             {/* ── Active block dashboard ───────────────── */}
@@ -311,7 +312,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
           const currentWeek = getCurrentWeek(meso);
           const totalWeeks = meso.durationWeeks || 4;
           return (
-            <View style={[styles.mesoCard, live.mesoCard, isActive && [styles.mesoCardActive, live.mesoCardActive]]}>
+            <Card style={[styles.mesoCard, isActive && [styles.mesoCardActive, live.mesoCardActive]]}>
               {isActive && (
                 <View style={[styles.activeBadge, live.activeBadge]}>
                   <Text style={[styles.activeBadgeText, live.activeBadgeText]}>Active</Text>
@@ -379,7 +380,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   )}
                 </View>
               )}
-            </View>
+            </Card>
           );
         }}
         ListEmptyComponent={
@@ -537,9 +538,10 @@ const styles = StyleSheet.create({
   },
 
   // Active dashboard
-  dashCard: {
-    backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border, gap: spacing.md, marginBottom: spacing.xl,
+  // D165 law 2: a dashboard panel, not an object -- no box, a borderSubtle hairline above (D171/D172).
+  dashCard: { padding: spacing.lg, gap: spacing.md, marginBottom: spacing.xl,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   dashHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   dashName:   { ...type.title, color: colors.textPrimary },
@@ -556,9 +558,13 @@ const styles = StyleSheet.create({
   recovLabel: { fontSize: fontSize.micro, color: colors.textMuted },
 
   // Meso list cards
+  // D165 law 2, the founder's test: a BLOCK is an object -- it has a name,
+  // dates, a focus and a week you are on, and it can be active. It keeps a
+  // card and it is now the real one, which already owns the surface, the
+  // radius.lg, the edge and the padding this shell hand-rolled. Only the gap
+  // and the ACTIVE edge (a state Card has no prop for) stay here.
   mesoCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    gap: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
+    gap: spacing.md,
   },
   // D174 A2: the active card among siblings separates by edge, not accent.
   mesoCardActive: { borderColor: colors.borderLight },
@@ -576,10 +582,11 @@ const styles = StyleSheet.create({
   mesoMeta:   { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
   metaItem:   { fontSize: fontSize.sm, color: colors.textSecondary },
 
+  // D165 law 2, the founder's test: a PLAN is an object -- the founder's own
+  // list names one. It keeps a card and it is now the real one; only the gap
+  // and the margin it does not own stay.
   planCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
-    padding: spacing.lg, gap: spacing.xs, marginBottom: spacing.lg,
+    gap: spacing.xs, marginBottom: spacing.lg,
   },
   planCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, justifyContent: 'space-between' },
   planCardTag: {
@@ -644,7 +651,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     historyLabel: { ...t.type.label, color: t.colors.textSecondary },
-    dashCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    dashCard: { borderTopColor: t.colors.borderSubtle },
     dashName: { ...t.type.title, color: t.colors.textPrimary },
     dashWeek: { ...t.type.num('caption'), color: t.colors.textSecondary },
     progTrack: { backgroundColor: t.colors.surface2 },
@@ -652,13 +659,11 @@ function buildLiveStyles(t) {
     tonnageLabel: { ...t.type.caption, color: t.colors.textMuted },
     recovValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     recovLabel: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
-    mesoCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     mesoCardActive: { borderColor: t.colors.borderLight },
     activeBadge: { backgroundColor: t.colors.surface3 },
     activeBadgeText: { fontSize: t.fontSize.xs, color: t.colors.textPrimary },
     mesoName: { ...t.type.title, color: t.colors.textPrimary },
     metaItem: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    planCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     planCardTag: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     planCardName: { ...t.type.h3, color: t.colors.textPrimary },
     planCardMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },

@@ -24,23 +24,54 @@ const SOURCE = fs.readFileSync(
   'utf8',
 );
 
+// Bounded to the key's OWN block (`[^}]*`), not to the rest of the file.
+// The original `[\s\S]*?` walked past the closing brace, so once a key stopped
+// declaring a radius this returned the NEXT key's radius instead of null --
+// which is the difference between "this surface has no corner" and "this
+// surface has somebody else's corner". Found 2026-09-17 when the card sweep
+// made the first key radius-less and the helper reported `full`.
 function radiusOf(styleName) {
   const m = SOURCE.match(
-    new RegExp(`${styleName}:\\s*\\{[\\s\\S]*?borderRadius:\\s*radius\\.(\\w+)`),
+    new RegExp(`${styleName}:\\s*\\{[^}]*borderRadius:\\s*radius\\.(\\w+)`),
   );
   return m ? m[1] : null;
 }
 
 describe('CoachOutputScreen R2 radius cohesion', () => {
-  test('every plain surface content card uses the app-wide card radius (lg)', () => {
+  // RE-ANCHORED 2026-09-17 under D165 law 2 (the card sweep), and the INTENT
+  // of the R2 case is kept exactly: these four surfaces must all carry ONE
+  // treatment and none of them a bespoke one. What changed is which treatment.
+  // R2 settled "plain surface content card -> radius.lg" because radius.lg was
+  // the card class of its day; the founder's later ruling is that a card means
+  // an object ("A workout might be an object. A set isn't. A macro number
+  // probably isn't. A trend isn't necessarily."), and none of these four is an
+  // object: they are the coach's paragraphs -- a plan edit, a lead sentence, a
+  // focus and a countdown. So the box came off all four together,
+  // and this case now pins that none of them has a card shell and all of them
+  // draw the same borderSubtle hairline. A future edit that re-boxes ONE of
+  // them fails here exactly as a bespoke corner used to.
+  test('the hold-week hero is the same real Card as the applyable verdict', () => {
+    // Lead ruling at the card-sweep landing: the applyable verdict renders
+    // `<Card elevated tone="primary">`; its hold-week twin in the same slot is
+    // the same real Card (elevated, no tone -- Wave A B6's "no amber"), not a
+    // hairline section. One slot, one shape.
+    expect(SOURCE).toMatch(/<Card elevated style=\{styles\.holdHeroCard\}>/);
+    expect(radiusOf('holdHeroCard')).toBeNull(); // Card owns the corner
+    expect(SOURCE).not.toMatch(/holdHeroCard:\s*\{[^}]*backgroundColor/);
+    expect(SOURCE).not.toMatch(/holdHeroCard:\s*\{[^}]*borderTopWidth/);
+  });
+
+  test('no coach paragraph wears a card, and all four share one hairline', () => {
     for (const card of [
       'planEditCard',
-      'holdHeroCard',
       'coachLeadCard',
       'focusCard',
       'countdownCard',
     ]) {
-      expect(radiusOf(card)).toBe('lg');
+      expect({ card, radius: radiusOf(card) }).toEqual({ card, radius: null });
+      expect({ card, hairline: new RegExp(
+        `${card}:\\s*\\{[^}]*borderTopColor: colors\\.borderSubtle`,
+      ).test(SOURCE) }).toEqual({ card, hairline: true });
     }
   });
 

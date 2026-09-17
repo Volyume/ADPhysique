@@ -2287,13 +2287,15 @@ const styles = StyleSheet.create({
   foldersHeaderRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  folderBlock: {
-    borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radius.lg,
-    backgroundColor: colors.surface, overflow: 'hidden',
+  // D165 law 2: a list section, not an object -- no box, a borderSubtle hairline above (D171/D172).
+  folderBlock: { overflow: 'hidden',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.lg,
   },
   folderHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+    paddingVertical: spacing.md,
   },
   // AX-11: the toggle-pressable's own row, sibling to moreBtn inside
   // folderHeader. flex: 1 takes the same remaining width the whole row used
@@ -2399,13 +2401,15 @@ const styles = StyleSheet.create({
   // idiom, without a header above it) used by the unfiled list and the
   // archived list; folder bodies reuse the existing folderBlock/folderBody
   // pair instead, since they already carry a header.
-  compactListBody: {
-    borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radius.lg,
-    backgroundColor: colors.surface, overflow: 'hidden',
+  // D165 law 2: a list body, not an object -- no box, a borderSubtle hairline above (D171/D172).
+  compactListBody: { overflow: 'hidden',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.lg,
   },
   compactRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+    paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle,
   },
   // The last row in any section body drops its own divider so the body's
@@ -2575,7 +2579,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     sectionSubtitle: { ...t.type.caption, color: t.colors.textMuted },
-    folderBlock: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
+    folderBlock: { borderTopColor: t.colors.borderSubtle },
     folderName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     folderCount: { ...t.type.num('caption'), color: t.colors.textMuted },
     folderBody: { borderTopColor: t.colors.border },
@@ -2610,7 +2614,7 @@ function buildLiveStyles(t) {
     // its own useTheme() (sibling scope, matching NavRow's precedent), so
     // its tokens live here once and both callers (this screen and the row
     // component) read the identical entries.
-    compactListBody: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
+    compactListBody: { borderTopColor: t.colors.borderSubtle },
     compactRow: { borderBottomColor: t.colors.borderSubtle },
     compactRowName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     compactRowNameArchived: { color: t.colors.textSecondary },

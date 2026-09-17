@@ -456,8 +456,8 @@ accumulating so whenever you do build, you have the full walk list ready" --
 hence `docs/design-redesign-2026-09-14/30-DEVICE-WALK.md` (`be13e681`), the one
 consolidated walk, now 62 numbered steps plus the lettered additions below; and
 "Right call, keep the tone" on the share card's tonal grounds.
-**THE LEDGER, BUILT AS SPECIFIED (founder ruling 2026-09-17, D184) -- LANDING
-2026-09-17, hands-on (hash recorded at the card-sweep landing):** the lead
+**THE LEDGER, BUILT AS SPECIFIED (founder ruling 2026-09-17, D184) -- LANDED
+2026-09-17, hands-on (`3002d2da`, on main `e8c42f42` with D185):** the lead
 surfaced that `LedgerRow` had ONE consumer at the end of stage 4 and that
 "ruled off the logger" (D168) was the lead doing less on the surface the plan
 named first; the founder ruled "Build it as specified". Three surfaces now draw

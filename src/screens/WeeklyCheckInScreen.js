@@ -2012,9 +2012,10 @@ const styles = StyleSheet.create({
   gateScroll: {
     padding: spacing.lg, gap: spacing.lg,
   },
-  gateCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xxl,
-    borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.md,
+  // D165 law 2: a gate state, not an object -- no box, a borderSubtle hairline above (D171/D172).
+  gateCard: { padding: spacing.xxl, alignItems: 'center', gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   gateTitle: {
     ...type.title, color: colors.textSecondary,
@@ -2146,14 +2147,13 @@ const styles = StyleSheet.create({
   scanEvidenceHeadline: { ...type.bodySm, color: colors.textPrimary },
   scanEvidenceDetail: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   scanEvidenceConfidence: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
+  // D165 law 2: a prompt, not an object -- no box, a borderSubtle hairline above (D171/D172).
   scanPromptCard: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     marginBottom: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   scanPromptTitle: { ...type.label, color: colors.textPrimary },
   scanPromptBody: { ...type.captionTight, color: colors.textSecondary },
@@ -2172,13 +2172,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
     fontStyle: 'italic',
   },
+  // D165 law 2: content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   plannedBackstop: {
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
-    borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
     gap: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   plannedBackstopText: { ...type.caption, color: colors.textPrimary },
   plannedBackstopBtn: { alignSelf: 'flex-start', borderRadius: radius.md },
@@ -2213,7 +2213,7 @@ const styles = StyleSheet.create({
   perfCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
-    backgroundColor: colors.surface2, borderRadius: radius.lg,
+    backgroundColor: colors.surface2, borderRadius: radius.control,
     borderWidth: 1, borderColor: colors.borderSubtle,
   },
   perfCardSelected: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
@@ -2225,14 +2225,13 @@ const styles = StyleSheet.create({
 
   // -- COMP-008 Fast Check-In ------------------------------------------------
   headerQuickTag: { fontSize: fontSize.xs, color: colors.textMuted },
+  // D165 law 2: a summary, not an object -- no box, a borderSubtle hairline above (D171/D172).
   fastSummaryCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.xl,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   fastSummaryRow: {
     flexDirection: 'row',
@@ -2251,7 +2250,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
     minHeight: touchTarget.minimum,
-    borderRadius: radius.lg,
+    borderRadius: radius.control,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface2,
@@ -2308,7 +2307,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     gateIconWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    gateCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    gateCard: { borderTopColor: t.colors.borderSubtle },
     gateTitle: { ...t.type.title, color: t.colors.textSecondary },
     gateBody: { ...t.type.bodySm, color: t.colors.textMuted },
     headerBar: { borderBottomColor: t.colors.border, backgroundColor: t.colors.background },
@@ -2332,13 +2331,13 @@ function buildLiveStyles(t) {
     scanEvidenceHeadline: { ...t.type.bodySm, color: t.colors.textPrimary },
     scanEvidenceDetail: { ...t.type.caption, color: t.colors.textSecondary },
     scanEvidenceConfidence: { ...t.type.caption, color: t.colors.textMuted },
-    scanPromptCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    scanPromptCard: { borderTopColor: t.colors.borderSubtle },
     scanPromptTitle: { ...t.type.label, color: t.colors.textPrimary },
     scanPromptBody: { ...t.type.captionTight, color: t.colors.textSecondary },
     scanPromptActionPrimary: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     scanPromptActionSecondary: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     autoDerivedNote: { ...t.type.caption, color: t.colors.textSecondary },
-    plannedBackstop: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    plannedBackstop: { borderTopColor: t.colors.borderSubtle },
     plannedBackstopText: { ...t.type.caption, color: t.colors.textPrimary },
     plannedBackstopBtnText: { fontSize: t.fontSize.sm },
     shortFieldInput: { fontSize: t.fontSize.lg },
@@ -2349,7 +2348,7 @@ function buildLiveStyles(t) {
     perfCardTextSelected: { color: t.colors.textPrimary },
     ctaHint: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     headerQuickTag: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    fastSummaryCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    fastSummaryCard: { borderTopColor: t.colors.borderSubtle },
     fastSummaryLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     fastSummaryValue: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     fastSummaryProvenance: { ...t.type.caption, color: t.colors.textMuted },

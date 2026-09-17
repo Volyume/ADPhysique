@@ -79,14 +79,14 @@ export default function EmptyDiary({
 }
 
 const styles = StyleSheet.create({
+  // D165 law 2: an empty state, not an object -- no box, a borderSubtle hairline above (D171/D172).
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle,
     paddingVertical: spacing.xl, paddingHorizontal: spacing.lg,
     alignItems: 'center',
     gap: spacing.md,
     marginBottom: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   body: {
     ...type.body,
@@ -140,7 +140,7 @@ function buildLiveStyles(t) {
     // control-edge grey against its own stated intent. Same defect as
     // LoggedSetRow (D166), EvidencePanel (D167) and the summary stat tiles
     // (D168) -- the pattern the styling rules now forbid for new components.
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    card: { borderTopColor: t.colors.borderSubtle },
     body: { color: t.colors.textSecondary },
     planRow: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     planIcon: { backgroundColor: t.colors.surface },

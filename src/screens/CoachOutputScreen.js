@@ -2941,7 +2941,7 @@ export default function CoachOutputScreen({ navigation, route }) {
                 Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.
               </Text>
             ) : null}
-            <View style={[styles.holdHeroCard, live.holdHeroCard]}>
+            <Card elevated style={styles.holdHeroCard}>
               <Text style={[styles.holdHeroText, live.holdHeroText]}>
                 {heldDecisions && heldDecisions.length > 0
                   ? 'Hold steady this week.'
@@ -2952,7 +2952,7 @@ export default function CoachOutputScreen({ navigation, route }) {
                   {whyThisWeek.includes('. ') ? whyThisWeek.slice(0, whyThisWeek.indexOf('. ') + 1) : whyThisWeek}
                 </Text>
               ) : null}
-            </View>
+            </Card>
           </Reanimated.View>
         )}
 
@@ -3349,11 +3349,11 @@ const styles = StyleSheet.create({
   coachNoteText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   // A1 one-amber rule (03 gap #1 named this card): a static utility card no
   // longer wears the hero's amber border; plain outline, quiet contained actions.
+  // D165 law 2: a content section, not an object -- no box, a borderSubtle hairline above (D171/D172).
   planEditCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.md, marginTop: spacing.sm, gap: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   planEditHead: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   planEditBody: { ...type.bodySm, color: colors.textSecondary },
@@ -3489,28 +3489,26 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   // Wave A B6: the hold-week hero, a verdict card with no Apply and no
-  // amber; the same elevated surface the applyable hero uses.
-  holdHeroCard: {
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    padding: spacing.lg,
-    gap: spacing.xs,
-  },
+  // amber; the same elevated surface the applyable hero uses. Lead ruling at
+  // the card-sweep landing (2026-09-17): the applyable verdict is a real
+  // `Card elevated`, so its hold-week twin is the same real Card rather than
+  // a hairline section -- one slot, one shape, whether or not there is an
+  // Apply. Whether the verdict slot should be a card at all is a Coach-tab
+  // question for the device walk, not something to answer by making the two
+  // states of one slot differ.
+  holdHeroCard: { gap: spacing.xs },
   holdHeroText: {
     ...type.h3,
     color: colors.textPrimary,
   },
   // Five-part coach response: parts 1+2 lead card and the part 5
   // forward-pull line. Same tokens as the surrounding cards.
+  // D165 law 2: a content section, not an object -- no box, a borderSubtle hairline above (D171/D172).
   coachLeadCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     padding: spacing.lg,
     gap: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   coachLeadAck: {
     ...type.bodyStrong,
@@ -3534,14 +3532,13 @@ const styles = StyleSheet.create({
   // 2026-08-06: the edge padding came off when these moved inside the
   // padded nextReadCard (it existed to keep the old floating lines off the
   // screen edge).
+  // D165 law 2: a content section, not an object -- no box, a borderSubtle hairline above (D171/D172).
   nextReadCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     padding: spacing.lg,
     marginTop: spacing.md,
     gap: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   preCommitmentLine: {
     ...type.bodySm,
@@ -3553,13 +3550,12 @@ const styles = StyleSheet.create({
   },
   // D174: a callout is not "now". The card keeps its objecthood from the
   // surface ladder and its hairline; the eyebrow takes the muted ink.
+  // D165 law 2: a content section, not an object -- no box, a borderSubtle hairline above (D171/D172).
   focusCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.lg,
     gap: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   focusLabel: {
     ...type.overline,
@@ -3711,18 +3707,17 @@ const styles = StyleSheet.create({
   // views, where it is the only action on screen.
   // Wave A B6: the permanent quiet route to the coaching history.
   // B4 countdown: deliberately neutral (surface + border, no amber).
+  // D165 law 2: a content section, not an object -- no box, a borderSubtle hairline above (D171/D172).
   countdownCard: {
-    backgroundColor: colors.surface,
     // R2 (remediation 2026-07-11): a plain surface content card, so it takes
     // the app-wide card radius (radius.lg), matching its four sibling surface
     // cards in this file (planEditCard/holdHeroCard/coachLeadCard/focusCard).
     // It is NOT a tinted D69/D70 banner (those keep radius.md). Box only -- the
     // ED/calm suppression gate that hides this surface is untouched.
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     padding: spacing.lg,
     marginTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   countdownLine: {
     ...type.h3,
@@ -3918,7 +3913,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     coachNoteText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    planEditCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    planEditCard: { borderTopColor: t.colors.borderSubtle },
     planEditHead: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     planEditBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     scanAssessmentDetail: { ...t.type.caption, color: t.colors.textSecondary },
@@ -3934,16 +3929,15 @@ function buildLiveStyles(t) {
     weekRange: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     manualModeNote: { ...t.type.caption, color: t.colors.textMuted },
     heroWhy: { ...t.type.bodySm, color: t.colors.textSecondary },
-    holdHeroCard: { backgroundColor: t.colors.surfaceElevated, borderColor: t.colors.border },
     holdHeroText: { ...t.type.h3, color: t.colors.textPrimary },
-    coachLeadCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    coachLeadCard: { borderTopColor: t.colors.borderSubtle },
     coachLeadAck: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     coachLeadCommitment: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     coachLeadInterpretation: { ...t.type.body, color: t.colors.textSecondary },
-    nextReadCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    nextReadCard: { borderTopColor: t.colors.borderSubtle },
     preCommitmentLine: { ...t.type.bodySm, color: t.colors.textPrimary },
     forwardLine: { ...t.type.bodySm, color: t.colors.textSecondary },
-    focusCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    focusCard: { borderTopColor: t.colors.borderSubtle },
     focusLabel: { color: t.colors.textMuted },
     focusText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     adjustmentLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -3969,7 +3963,7 @@ function buildLiveStyles(t) {
     dietBreakBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     dietBreakFootnote: { ...t.type.caption, color: t.colors.textMuted },
     doneBtnText: { fontSize: t.fontSize.lg },
-    countdownCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    countdownCard: { borderTopColor: t.colors.borderSubtle },
     countdownLine: { ...t.type.h3, color: t.colors.textPrimary },
     countdownCheckpointTitle: { ...t.type.bodyStrong, color: t.colors.textSecondary },
     countdownCheckpointDetail: { ...t.type.body, color: t.colors.textSecondary },

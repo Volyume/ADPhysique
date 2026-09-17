@@ -107,13 +107,12 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek, onPr
 }
 
 const styles = StyleSheet.create({
+  // D165 law 2: a volume stat panel, not an object -- no box, a borderSubtle hairline above (D171/D172).
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     gap: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   header: {
     flexDirection: 'row',
@@ -172,7 +171,7 @@ const styles = StyleSheet.create({
 // already resolved live via fillColor above).
 function buildLiveStyles(t) {
   return {
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    card: { borderTopColor: t.colors.borderSubtle },
     title: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     week: { ...t.type.caption, color: t.colors.textMuted },
     muscle: { ...t.type.captionStrong, color: t.colors.textSecondary },

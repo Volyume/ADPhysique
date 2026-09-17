@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
+import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -337,7 +338,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
 
             {/* Best session */}
             {data.bestSession?.volume > 0 && (
-              <View style={[styles.bestSessionCard, live.bestSessionCard]}>
+              <Card style={styles.bestSessionCard}>
                 <Ionicons name="flash-outline" size={16} color={t.colors.textSecondary} />
                 <View style={styles.bestSessionInfo}>
                   <Text style={[styles.bestSessionLabel, live.bestSessionLabel]}>Best session</Text>
@@ -348,7 +349,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
                       swapped for the store's units, mirroring :309. */}
                   {Math.round(data.bestSession.volume).toLocaleString('en-GB')} {units}
                 </Text>
-              </View>
+              </Card>
             )}
 
             {/* What's next.
@@ -407,11 +408,13 @@ const styles = StyleSheet.create({
   blockName: { fontSize: fontSize.xxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
   blockDates: { fontSize: fontSize.sm, color: colors.textMuted },
 
+  // D165 law 2: stats, not an object -- no box, a borderSubtle hairline above (D171/D172).
   statsRow: {
     flexDirection: 'row',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
     overflow: 'hidden',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.lg,
   },
   statBlock: {
     flex: 1, alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.xs,
@@ -421,17 +424,19 @@ const styles = StyleSheet.create({
   statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   statLabel: { ...type.caption, color: colors.textMuted },
 
+  // D165 law 2: narrative content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   narrativeCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg, gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   narrativeLine: { ...type.body, color: colors.textSecondary },
 
+  // D165 law 2: a section, not an object -- no box, a borderSubtle hairline above (D171/D172).
   section: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg, gap: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
 
@@ -456,25 +461,26 @@ const styles = StyleSheet.create({
   // it wrong again, so the name goes with the colour.
   blockBestValue: { ...type.num('bodyStrong'), color: colors.textPrimary },
 
+  // D165 law 2, the founder's test: a SESSION is an object -- a dated
+  // training session with its own volume -- and the founder's own list names
+  // "a session summary" as one. It keeps a card, and it is now the real one,
+  // which already owns the surface, the radius.lg and the edge this shell
+  // hand-rolled. Only the row layout it does not own stays.
   bestSessionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
   },
   bestSessionInfo: { flex: 1, gap: spacing.xxs },
   bestSessionLabel: { ...type.label, color: colors.textPrimary },
   bestSessionDate: { ...type.num('caption'), color: colors.textMuted },
   bestSessionVolume: { ...type.num('title'), color: colors.textPrimary },
 
+  // D165 law 2: a section, not an object -- no box, a borderSubtle hairline above (D171/D172).
   nextSection: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg, gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   nextTitle: { ...type.bodyStrong, color: colors.textPrimary },
   nextBody: { ...type.bodySm, color: colors.textSecondary },
@@ -490,22 +496,21 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     blockName: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
     blockDates: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    statsRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    statsRow: { borderTopColor: t.colors.borderSubtle },
     statValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     statLabel: { ...t.type.caption, color: t.colors.textMuted },
-    narrativeCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    narrativeCard: { borderTopColor: t.colors.borderSubtle },
     narrativeLine: { ...t.type.body, color: t.colors.textSecondary },
-    section: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    section: { borderTopColor: t.colors.borderSubtle },
     prRow: { borderTopColor: t.colors.borderSubtle },
     ledgerLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     prExercise: { ...t.type.label, color: t.colors.textPrimary },
     prType: { ...t.type.caption, color: t.colors.textMuted },
     blockBestValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
-    bestSessionCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     bestSessionLabel: { ...t.type.label, color: t.colors.textPrimary },
     bestSessionDate: { ...t.type.num('caption'), color: t.colors.textMuted },
     bestSessionVolume: { ...t.type.num('title'), color: t.colors.textPrimary },
-    nextSection: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    nextSection: { borderTopColor: t.colors.borderSubtle },
     nextTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     nextBody: { ...t.type.bodySm, color: t.colors.textSecondary },
   };

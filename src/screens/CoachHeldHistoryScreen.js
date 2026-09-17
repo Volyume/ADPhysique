@@ -293,13 +293,12 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
   },
 
+  // D165 law 2: a week section, not an object -- no box, a borderSubtle hairline above (D171/D172).
   weekBlock: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     padding: spacing.lg,
     gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   weekLabel: {
     ...type.captionStrong,
@@ -369,7 +368,7 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     intro: { ...t.type.bodySm, color: t.colors.textMuted },
     scorecard: { ...t.type.bodySm, color: t.colors.textPrimary },
-    weekBlock: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    weekBlock: { borderTopColor: t.colors.borderSubtle },
     weekLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     decisionLabel: { ...t.type.label, color: t.colors.textMuted },
     decisionLabelChanged: { color: t.colors.success },

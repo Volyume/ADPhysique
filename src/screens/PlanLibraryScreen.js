@@ -1195,12 +1195,12 @@ const styles = StyleSheet.create({
   quizResultDesc: { ...type.bodySm, color: colors.textSecondary },
   quizResultMeta: { ...type.caption, color: colors.textMuted },
   quizStartBtn: {
-    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control,
     paddingVertical: spacing.md, alignItems: 'center',
   },
   quizStartText: { ...type.bodyStrong, color: colors.textPrimary },
   quizBrowseBtn: {
-    backgroundColor: colors.surface2, borderRadius: radius.lg,
+    backgroundColor: colors.surface2, borderRadius: radius.control,
     paddingVertical: spacing.md, alignItems: 'center',
     borderWidth: 1, borderColor: colors.border,
   },

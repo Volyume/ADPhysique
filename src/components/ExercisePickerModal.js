@@ -1201,7 +1201,7 @@ const styles = StyleSheet.create({
     // Round 14 (J2): 48 effective (the styling law's minimum), on the
     // scale - 44 was both under it and an off-scale literal.
     minHeight: spacing.xxxl,
-    backgroundColor: colors.surface, borderRadius: radius.lg,
+    backgroundColor: colors.surface, borderRadius: radius.control,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderWidth: 1, borderColor: colors.borderSubtle,
   },
@@ -1229,7 +1229,7 @@ const styles = StyleSheet.create({
   createSaveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
     minHeight: spacing.xxxl,
-    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.sm, marginTop: spacing.sm,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, paddingVertical: spacing.sm, marginTop: spacing.sm,
   },
   createSaveBtnText: { ...type.label, color: colors.textPrimary },
 });

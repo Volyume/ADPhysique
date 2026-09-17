@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import SvgBarSparkline from './SvgBarSparkline';
 import HintCaption from './HintCaption';
@@ -96,13 +96,12 @@ export default function FatigueTrendCard({ sessions }) {
 }
 
 const styles = StyleSheet.create({
+  // D165 law 2: a trend, not an object -- no box, a borderSubtle hairline above (D171/D172).
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     gap: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   title: {
     fontSize: fontSize.sm,
@@ -125,7 +124,7 @@ const styles = StyleSheet.create({
 // chartWrap has no colour tokens.
 function buildLiveStyles(t) {
   return {
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    card: { borderTopColor: t.colors.borderSubtle },
     title: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     coachLine: { ...t.type.captionTight, color: t.colors.textMuted },
   };

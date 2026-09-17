@@ -204,7 +204,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   quizChip: { minHeight: touchTarget.minimum },
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
-  cta: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
+  cta: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
   ctaOff: { opacity: 0.5 },
   ctaText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy },
 });

@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
   block: { gap: spacing.sm, marginBottom: spacing.lg },
   btn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    paddingVertical: spacing.md, borderRadius: radius.lg,
+    paddingVertical: spacing.md, borderRadius: radius.control,
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
   },
   btnText: { ...type.bodyStrong, color: colors.textPrimary },

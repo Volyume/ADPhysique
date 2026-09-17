@@ -3492,6 +3492,17 @@ const styles = StyleSheet.create({
   seqWrap: { width: '100%', gap: spacing.lg },
   // D147: a charcoal surface with a hairline, not an outlined box; its
   // size is fixed from the first frame (see the render note).
+  // STOPPED, NOT SWEPT (card sweep, 2026-09-17). By D165 law 2 this panel is
+  // not an object -- it is a progress readout that becomes a payoff -- so the
+  // sweep's own verdict was "the box comes off". It does not come off here,
+  // because D147 is a FOUNDER DIRECTION about this exact surface: "The card is
+  // a charcoal surface with a hairline, not the 1.5px outlined box", reviewed
+  // by the founder as an animation, with "the card's box does not change" as
+  // the thing that was signed off. A later general law does not get to quietly
+  // reverse a specific founder ruling, so this is left exactly as it was and
+  // the conflict goes back as a question. Its radius.xl is left alone for the
+  // same reason: moving it to the card radius would assert the opposite half
+  // of the same undecided question.
   seqPanel: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
@@ -3555,13 +3566,12 @@ const styles = StyleSheet.create({
   },
   ruleLine: { ...type.caption, color: colors.textSecondary },
   secondaryAction: { marginTop: spacing.md },
+  // D165 law 2: a form, not an object -- no box, a borderSubtle hairline above (D171/D172).
   questionGroup: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.borderSubtle,
     padding: spacing.md,
     marginBottom: spacing.xl,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   questionGroupHead: {
     flexDirection: 'row',
@@ -3653,10 +3663,11 @@ const styles = StyleSheet.create({
   pairFull: { flex: 1 },
 
   // Notifications
+  // D165 law 2: settings, not an object -- no box, a borderSubtle hairline above (D171/D172).
   notifSection: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1.5, borderColor: colors.borderSubtle,
     padding: spacing.md, marginBottom: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   notifHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   notifCopy: { flex: 1, minWidth: 0 },
@@ -3679,10 +3690,11 @@ const styles = StyleSheet.create({
   },
   requiredPillText: { ...type.caption, color: colors.textSecondary, fontWeight: fontWeight.semibold },
 
+  // D165 law 2: content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   coachCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1.5, borderColor: colors.borderSubtle,
     padding: spacing.md, marginBottom: spacing.xl,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   coachCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },
   coachCardTitle: { ...type.bodyStrong, color: colors.textPrimary },
@@ -3776,7 +3788,7 @@ function buildLiveStyles(t) {
     seqDot: { borderColor: t.colors.textMuted },
     seqEyebrow: { ...t.type.overline, color: t.colors.textMuted },
     seqPlanLine: { ...t.type.body, color: t.colors.textPrimary },
-    questionGroup: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    questionGroup: { borderTopColor: t.colors.borderSubtle },
     questionGroupTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     questionGroupSub: { ...t.type.captionTight, color: t.colors.textSecondary },
     continueHint: { ...t.type.caption, color: t.colors.textSecondary },
@@ -3793,12 +3805,12 @@ function buildLiveStyles(t) {
     wpLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     wpOptional: { color: t.colors.textMuted },
     wpHint: { ...t.type.captionTight, color: t.colors.textMuted },
-    notifSection: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    notifSection: { borderTopColor: t.colors.borderSubtle },
     notifTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     notifSub: { ...t.type.captionTight, color: t.colors.textMuted },
     requiredPill: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     requiredPillText: { ...t.type.caption, color: t.colors.textSecondary },
-    coachCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    coachCard: { borderTopColor: t.colors.borderSubtle },
     coachCardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     coachCardBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     timeLabel: { ...t.type.caption, color: t.colors.textMuted },

@@ -199,10 +199,10 @@ export default function HomeScreen({ navigation, route }) {
     coachBriefLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
     // D112 R5 (closes audit T1-14/T2-31, T1-15/T2-24): standalone
     // constraint / AWAITING rows, same live-theme shape as the brief line.
-    constraintGroup: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    constraintGroup: { borderTopColor: t.colors.borderSubtle },
     constraintLineRow: { borderBottomColor: t.colors.borderSubtle },
     constraintLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    coachingNudge: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    coachingNudge: { borderTopColor: t.colors.borderSubtle },
     coachingNudgeTitle: { ...t.type.label, color: t.colors.textPrimary },
     coachingNudgeBody: { ...t.type.captionTight, color: t.colors.textSecondary },
     coachingNudgeScanSubline: { ...t.type.captionTight, color: t.colors.textMuted },
@@ -234,7 +234,7 @@ export default function HomeScreen({ navigation, route }) {
     activationBannerBody: { ...t.type.bodySm, color: t.colors.textMuted },
     phaseBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     phaseBannerText: { ...t.type.captionTight, color: t.colors.textSecondary },
-    quickStartCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    quickStartCard: { borderTopColor: t.colors.borderSubtle },
     quickStartIcon: { backgroundColor: t.colors.surface2 },
     quickStartTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     quickStartSub: { ...t.type.bodySm, color: t.colors.textSecondary },
@@ -3510,19 +3510,21 @@ const styles = StyleSheet.create({
   // section and the Coach tab's NavGroup: one container, hairline-divided
   // rows, heading outside the box.
   constraintSection: { gap: spacing.md },
+  // D165 law 2: a list of rows, not an object -- no box, a borderSubtle hairline above (D171/D172).
   constraintGroup: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     overflow: 'hidden',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.lg,
   },
   constraintLineRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    // The group's box came off (law 2), so the row no longer pays a second
+    // gutter inside it: it sits at the page's own 16 dp edge like every other
+    // line on the screen. One gutter, paid once by the page (CR-17/D163).
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
     paddingVertical: spacing.xs,
@@ -3541,15 +3543,14 @@ const styles = StyleSheet.create({
 
   // Block progress card
   // Pro coaching discovery nudge
+  // D165 law 2: a nudge (dead, swept anyway), not an object -- no box, a borderSubtle hairline above (D171/D172).
   coachingNudge: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   // D174: was a 36dp `primaryBg` disc behind a glyph; fill and disc geometry
   // both go. (This key and `coachingNudge` above have had no render consumer
@@ -3592,7 +3593,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     backgroundColor: colors.surface2 ?? colors.background,
-    borderRadius: radius.lg,
+    borderRadius: radius.control,
     padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
@@ -3774,6 +3775,7 @@ const styles = StyleSheet.create({
   },
 
   // Quick-start card (empty state fast path)
+  // D165 law 2: a callout, not an object -- no box, a borderSubtle hairline above (D171/D172).
   quickStartCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3782,12 +3784,10 @@ const styles = StyleSheet.create({
     // wash and the tinted edge both go; the hairline carries the card. (D3's
     // note here said the edge was tinted "not a solid amber border" -- that
     // was the amber-inflation rule of its day; the ceiling is tighter now.)
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     padding: spacing.lg,
     marginBottom: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   quickStartIcon: {
     width: 48,

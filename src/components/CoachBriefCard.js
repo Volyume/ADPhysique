@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
+import { colors, fontWeight, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 // ── Coach Brief Card ──────────────────────────────────────────────────────────
@@ -21,13 +21,6 @@ const BRIEF_ICON = { go: 'fitness-outline', caution: 'warning-outline', recover:
 // export) so HomeScreen's own readiness-summary chip (S15#7), which reuses
 // the same tone colours, builds it from its OWN live `t.colors` and stays in
 // the same theme generation as this card.
-function buildBriefBorder(c) {
-  return {
-    go:      withAlpha(c.primary, alpha.soft),
-    caution: withAlpha(c.warning, alpha.soft),
-    recover: withAlpha(c.success, alpha.soft),
-  };
-}
 export function buildBriefIconColor(c) {
   return {
     go:      c.primary,
@@ -38,19 +31,17 @@ export function buildBriefIconColor(c) {
 
 function CoachBriefCard({ brief, onDismiss }) {
   const t = useTheme();
-  const BRIEF_BORDER = buildBriefBorder(t.colors);
   const BRIEF_ICON_COLOR = buildBriefIconColor(t.colors);
-  const borderColor = BRIEF_BORDER[brief.type] ?? BRIEF_BORDER.go;
   const iconColor   = BRIEF_ICON_COLOR[brief.type] ?? BRIEF_ICON_COLOR.go;
   const iconName    = BRIEF_ICON[brief.type] ?? BRIEF_ICON.go;
   const live = {
-    coachBriefCard: { backgroundColor: t.colors.surface },
+    coachBriefCard: { borderTopColor: t.colors.borderSubtle },
     coachBriefHeadline: { ...t.type.bodySm, fontWeight: fontWeight.bold, color: t.colors.textPrimary },
     coachBriefBody: { ...t.type.captionTight, color: t.colors.textSecondary },
   };
 
   return (
-    <View style={[styles.coachBriefCard, live.coachBriefCard, { borderColor }]}>
+    <View style={[styles.coachBriefCard, live.coachBriefCard]}>
       <Ionicons name={iconName} size={18} color={iconColor} style={{ marginTop: spacing.xxs }} />
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={[styles.coachBriefHeadline, live.coachBriefHeadline]}>{brief.headline}</Text>
@@ -70,15 +61,22 @@ function CoachBriefCard({ brief, onDismiss }) {
 export default React.memo(CoachBriefCard);
 
 const styles = StyleSheet.create({
-  // Pre-workout coaching brief card
+  // Pre-workout coaching brief.
+  //
+  // D165 law 2, the founder's test: a coaching sentence is a message, not an
+  // object, so the fill, the card radius and the box go and a borderSubtle
+  // hairline above separates it from what it follows. The tone-tinted edge
+  // went with the box and nothing was lost by it: the glyph beside the text
+  // already carries the same go / caution / recover colour, so the edge was a
+  // SECOND mark for one state -- the duplication D174 removed from the
+  // dropdown chevron for the same reason.
   coachBriefCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    padding: spacing.md,
+    paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   coachBriefHeadline: {
     ...type.bodySm,

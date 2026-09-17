@@ -15,7 +15,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, radius, type } from '../../styles/theme';
+import { colors, spacing, type } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 
 function EvidencePanel({ panel, onPress, testID }) {
@@ -74,13 +74,12 @@ function EvidencePanel({ panel, onPress, testID }) {
 export default React.memo(EvidencePanel);
 
 const styles = StyleSheet.create({
+  // D165 law 2: evidence content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   wrap: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     padding: spacing.md,
     gap: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   headerRow: {
     flexDirection: 'row',
@@ -104,7 +103,7 @@ function buildLiveStyles(t) {
     // so the pane drew the bright control-edge grey against its own intent --
     // the same two-halves-disagree defect as LoggedSetRow (D166 part 3), and
     // the reason new components no longer use this pattern at all.
-    wrap: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    wrap: { borderTopColor: t.colors.borderSubtle },
     title: { ...t.type.caption, color: t.colors.textMuted },
     countdown: { ...t.type.bodySm, color: t.colors.textSecondary },
     rowText: { ...t.type.bodySm, color: t.colors.textSecondary },

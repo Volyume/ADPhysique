@@ -32,7 +32,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, spacing, radius, type } from '../styles/theme';
+import { colors, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import { SkeletonCard } from '../components/Skeleton';
@@ -157,13 +157,12 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 
+  // D165 law 2: a chapter of content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   chapterCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     padding: spacing.lg,
     gap: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   chapterHeaderRow: {
     flexDirection: 'row',
@@ -190,7 +189,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     intro: { ...t.type.bodySm, color: t.colors.textMuted },
-    chapterCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    chapterCard: { borderTopColor: t.colors.borderSubtle },
     chapterBody: { ...t.type.body, color: t.colors.textPrimary },
     chapterBodyEmpty: { color: t.colors.textMuted },
   };

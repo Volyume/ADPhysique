@@ -23,10 +23,33 @@ import path from 'path';
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'ProgressSections.js'), 'utf8');
 
 describe('ProgressSections cohesion census (R2)', () => {
-  test('card-class surfaces are radius.lg', () => {
-    for (const name of ['card', 'calWrap', 'durationWrap', 'freqWrap', 'workloadCard']) {
-      expect(SRC).toMatch(new RegExp(`${name}:\\s*\\{[\\s\\S]{0,200}?borderRadius: radius\\.lg`));
+  // RE-ANCHORED 2026-09-17 under D165 law 2 (the card sweep). The INTENT is
+  // unchanged -- these surfaces must not drift apart, and none of them may
+  // invent its own corner -- but which treatment they share has moved. R2
+  // settled radius.lg because radius.lg was the card class of its day; the
+  // founder's later ruling is that "a card should mean: this thing is an
+  // object", and four of the five are charts and readouts (a calendar, a
+  // duration chart, a frequency table, a training-load panel), which the
+  // founder's own examples put outside objecthood ("a trend isn't
+  // necessarily"). The fifth, `card`, WAS the object -- the training block --
+  // and it is now the real `Card` component rather than a fifth hand-rolled
+  // copy of one, so it no longer has a local style key at all.
+  test('the four chart surfaces carry the same hairline and no card shell', () => {
+    for (const name of ['calWrap', 'durationWrap', 'freqWrap', 'workloadCard']) {
+      const block = new RegExp(`${name}:\\s*\\{[^}]*`).exec(SRC);
+      expect({ name, found: !!block }).toEqual({ name, found: true });
+      expect({ name, radius: /borderRadius/.test(block[0]) }).toEqual({ name, radius: false });
+      expect({ name, fill: /backgroundColor/.test(block[0]) }).toEqual({ name, fill: false });
+      expect({ name, hairline: /borderTopColor: colors\.borderSubtle/.test(block[0]) })
+        .toEqual({ name, hairline: true });
     }
+  });
+
+  test('the training block is the real Card, not a fifth hand-rolled one', () => {
+    expect(SRC).toMatch(/import Card from '\.\/Card'/);
+    expect(SRC).toMatch(/<Card\s+style=\{styles\.mesoCard\}/);
+    // The shell it replaced is gone rather than left behind unused.
+    expect(SRC).not.toMatch(/\n {2}card:\s*\{/);
   });
 
   test('both horizontal meters share the radius.full pill/bar family', () => {

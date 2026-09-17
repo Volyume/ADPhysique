@@ -48,7 +48,7 @@ export default function TodayStrip({
   // WeightLogged/WeightEmpty helpers below (unchanged decomposition).
   const t = useTheme();
   const live = {
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    card: { borderTopColor: t.colors.borderSubtle },
     metricIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     cellLabel: { ...t.type.caption, color: t.colors.textMuted },
     cellValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -278,17 +278,16 @@ export default function TodayStrip({
 }
 
 const styles = StyleSheet.create({
+  // D165 law 2: a strip of stats, not an object -- no box, a borderSubtle hairline above (D171/D172).
   card: {
-    backgroundColor: colors.surface,
     // R9/D70 (design-cohesion sweep): app-wide card class is radius.lg
     // (16px, FOOD-DESIGN-STANDARD.md section 2); this strip's compact
     // padding/gap stays as-is, the density is deliberate.
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     gap: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   metricRow: {
     minHeight: 54,

@@ -1105,10 +1105,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // branches internally on `isReordering` for its trailing action column, so
   // nothing here needs to change between the two containers below.
   const renderExerciseRow = ({ item: { routineExercise, exercise }, index }) => (
-          <TouchableOpacity
-            style={[styles.exerciseCard, live.exerciseCard, exercise.unresolved && [styles.exerciseCardUnresolved, live.exerciseCardUnresolved]]}
-            onPress={() => {
-              if (isReordering) return;
+          <Card
+            style={[styles.exerciseCard, exercise.unresolved && [styles.exerciseCardUnresolved, live.exerciseCardUnresolved]]}
+            onPress={isReordering ? undefined : () => {
               if (exercise.unresolved) {
                 // Broken-FK row left over from the pre-deterministic-ID
                 // sync era. Open the existing swap modal so the user
@@ -1128,7 +1127,6 @@ export default function RoutineDetailScreen({ navigation, route }) {
               }
               openEdit(routineExercise, exercise);
             }}
-            activeOpacity={isReordering ? 1 : 0.8}
             accessibilityRole={isReordering ? undefined : 'button'}
             accessibilityLabel={isReordering ? undefined : (exercise.unresolved ? `Re-link ${exercise.name}` : `Edit ${exercise.name}`)}
           >
@@ -1305,7 +1303,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 </TouchableOpacity>
               </View>
             )}
-          </TouchableOpacity>
+          </Card>
   );
 
   const addExerciseFooter = (
@@ -1653,15 +1651,17 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
   startBtn: { marginBottom: spacing.xl },
+  // D165 law 2, the founder's test: an EXERCISE in a routine is an object --
+  // it has an order, sets, reps and a rest, and you swap, reorder and remove
+  // it. It keeps a card and it is now the real one, which already owns the
+  // surface, the radius.lg, the edge and the padding this shell hand-rolled.
+  // Only the row layout it does not own stays. While the list is REORDERING
+  // the row passes no `onPress`, so `Card` renders a plain View with no role
+  // and no label -- exactly the tree the conditional role built before.
   exerciseCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
   },
   // Visual variant for rows whose exercise_id couldn't be resolved
   // against the local exercises table (cloud-restored from a build
@@ -1865,7 +1865,6 @@ const tagStyles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    exerciseCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     exerciseCardUnresolved: { borderColor: t.colors.warning, backgroundColor: t.colors.warningBg },
     orderBadge: { backgroundColor: t.colors.surface2 },
     orderBadgeUnresolved: { backgroundColor: withAlpha(t.colors.warning, 0.251) },

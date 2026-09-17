@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { G, Ellipse, Rect, Path, Line } from 'react-native-svg';
-import { colors, fontSize, fontWeight, spacing, radius, letterSpacing, circle, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, letterSpacing, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -406,13 +406,12 @@ function LegendSwatch({ color, label, bordered, borderColor, textStyle }) {
 }
 
 const styles = StyleSheet.create({
+  // D165 law 2: a chart, not an object -- no box, a borderSubtle hairline above (D171/D172).
   container: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   labelRow: {
     flexDirection: 'row',
@@ -460,7 +459,7 @@ const styles = StyleSheet.create({
 // colour tokens.
 function buildLiveStyles(t) {
   return {
-    container: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    container: { borderTopColor: t.colors.borderSubtle },
     figureLabel: { color: t.colors.textMuted },
     legend: { borderTopColor: t.colors.border },
     legendText: { color: t.colors.textMuted },

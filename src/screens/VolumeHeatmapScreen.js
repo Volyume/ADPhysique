@@ -1053,13 +1053,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
   },
+  // D165 law 2: a chart, not an object -- no box, a borderSubtle hairline above (D171/D172).
   heatmapCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     padding: spacing.lg,
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   muscleRow: {
     flexDirection: 'row',
@@ -1190,7 +1189,7 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     windowBtnText: { ...t.type.label },
     windowNoteText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    heatmapCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    heatmapCard: { borderTopColor: t.colors.borderSubtle },
     muscleName: { ...t.type.label, color: t.colors.textSecondary },
     provenanceCaption: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     barTrack: { backgroundColor: t.colors.surface3 },

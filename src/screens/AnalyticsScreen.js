@@ -935,7 +935,7 @@ const styles = StyleSheet.create({
   navGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   navTile: {
     flex: 1, minWidth: '45%',
-    backgroundColor: colors.surface, borderRadius: radius.lg,
+    backgroundColor: colors.surface, borderRadius: radius.control,
     padding: spacing.lg, alignItems: 'center', gap: spacing.sm,
     borderWidth: 1, borderColor: colors.border,
   },

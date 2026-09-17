@@ -3,6 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import SvgBarSparkline from './SvgBarSparkline';
+import Card from './Card';
 import InfoTooltip from './InfoTooltip';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { localDayKeysEndingAt } from '../lib/dayKey';
@@ -22,7 +23,7 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
 
   if (!meso) {
     return (
-      <TouchableOpacity style={[styles.card, live.card, styles.mesoEmpty]} onPress={onBuild} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Browse plans">
+      <TouchableOpacity style={[styles.mesoEmpty, live.mesoEmpty]} onPress={onBuild} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Browse plans">
         <Ionicons name="layers-outline" size={32} color={t.colors.textMuted} />
         <Text style={[styles.mesoEmptyTitle, live.mesoEmptyTitle]}>No plan running yet</Text>
         <Text style={[styles.mesoEmptySub, live.mesoEmptySub]}>Browse the plan library or build your own. Your progress will appear right here once you start.</Text>
@@ -48,11 +49,9 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
       : `Week ${currentWeek}${meso.durationWeeks ? ` of ${meso.durationWeeks}` : ''}${meso.focus ? `, ${meso.focus}` : ''}`;
 
   return (
-    <TouchableOpacity
-      style={[styles.card, live.card, styles.mesoCard]}
+    <Card
+      style={styles.mesoCard}
       onPress={onPress}
-      activeOpacity={0.85}
-      accessibilityRole="button"
       accessibilityLabel={`${meso.name ?? 'Training block'}, ${mesoWeekText}`}
       accessibilityHint="Opens training block"
     >
@@ -101,7 +100,7 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
           </View>
         </View>
       )}
-    </TouchableOpacity>
+    </Card>
   );
 }
 
@@ -334,18 +333,19 @@ export function WorkloadCard({ data }) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-  },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
   // ── Mesocycle card ──
   mesoCard:         { gap: spacing.md },
-  mesoEmpty:        { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl },
+  // D165 law 2, the founder's test, applied twice in one component. The
+  // training block IS an object -- it has a name, a duration, a week you are
+  // on -- so it became the real `Card` above. The ABSENCE of one is not an
+  // object, so this branch lost the box: a hairline above and the content on
+  // the page's ground, which is what D172 did to all 99 empty states.
+  mesoEmpty:        {
+    alignItems: 'center', gap: spacing.md, paddingVertical: spacing.xl,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
+  },
   mesoEmptyTitle:   { ...type.bodyStrong, color: colors.textPrimary },
   mesoEmptySub:     { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
   mesoEmptyBtn:     {
@@ -372,10 +372,12 @@ const styles = StyleSheet.create({
   sparkChartCentered:  { alignItems: 'center', paddingTop: spacing.xs },
 
   // ── Calendar ──
+  // D165 law 2: a calendar chart, not an object -- no box, a borderSubtle hairline above (D171/D172).
   calWrap: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
+    padding: spacing.md,
     gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   calGrid:       { flexDirection: 'row', gap: 3 },
   calCol:        { flex: 1, gap: 3 },
@@ -384,10 +386,12 @@ const styles = StyleSheet.create({
   calLegendText: { ...type.caption, color: colors.textMuted },
 
   // ── Session Duration Trend ──
+  // D165 law 2: a chart, not an object -- no box, a borderSubtle hairline above (D171/D172).
   durationWrap: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
+    padding: spacing.md,
     gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   durationBarsRow: {
     flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm,
@@ -416,10 +420,12 @@ const styles = StyleSheet.create({
   },
 
   // ── Muscle Frequency Table ──
+  // D165 law 2: a stat, not an object -- no box, a borderSubtle hairline above (D171/D172).
   freqWrap: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
+    padding: spacing.md,
     gap: spacing.xxs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   freqRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -463,13 +469,12 @@ const styles = StyleSheet.create({
   },
 
   // ── Workload Card (ACWR) ──
+  // D165 law 2: a chart, not an object -- no box, a borderSubtle hairline above (D171/D172).
   workloadCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   workloadTitle: {
     ...type.label,
@@ -523,7 +528,7 @@ const styles = StyleSheet.create({
 // colour from the statusColor variable computed inline against t.colors).
 function buildLiveStyles(t) {
   return {
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    mesoEmpty: { borderTopColor: t.colors.borderSubtle },
     mesoEmptyTitle: { color: t.colors.textPrimary },
     mesoEmptySub: { color: t.colors.textSecondary },
     mesoEmptyBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
@@ -535,13 +540,13 @@ function buildLiveStyles(t) {
     mesoProgressLabel: { color: t.colors.textMuted },
     sparkLabel: { color: t.colors.textMuted },
     sparkValue: { color: t.colors.textPrimary },
-    calWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    calWrap: { borderTopColor: t.colors.borderSubtle },
     calLegendText: { color: t.colors.textMuted },
-    durationWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    durationWrap: { borderTopColor: t.colors.borderSubtle },
     durationBarValue: { color: t.colors.textSecondary },
     durationBarLabel: { color: t.colors.textMuted },
     durationCoach: { color: t.colors.textSecondary },
-    freqWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    freqWrap: { borderTopColor: t.colors.borderSubtle },
     freqRow: { borderBottomColor: withAlpha(t.colors.border, alpha.strong) },
     freqMuscle: { color: t.colors.textPrimary },
     freqCounts: { color: t.colors.textSecondary },
@@ -550,7 +555,7 @@ function buildLiveStyles(t) {
     freqDivider: { color: t.colors.textMuted },
     freqLastWeek: { color: t.colors.textMuted },
     freqToggleText: { color: t.colors.textSecondary },
-    workloadCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    workloadCard: { borderTopColor: t.colors.borderSubtle },
     workloadTitle: { color: t.colors.textMuted },
     workloadBarBg: { backgroundColor: t.colors.surface2 },
     workloadStatValue: { color: t.colors.textPrimary },

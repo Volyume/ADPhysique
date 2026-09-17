@@ -65,15 +65,19 @@ describe('CP-10 stage 3 (Settings family): useSettingsStyles() flips live, no re
     }
     let tree;
     act(() => { tree = create(<Probe />); });
-    expect(captured.section.backgroundColor).toBe(theme.resolveTheme({ theme: 'dark' }).colors.surface);
-    const darkBg = captured.section.backgroundColor;
+    // RE-ANCHORED (card sweep, D165 law 2, 2026-09-17): a settings section is
+    // a hairline-separated group on the page's ground now, not a filled box,
+    // so the live colour it carries is the hairline's. The contract this case
+    // pins -- fresh colours from the live theme, no remount -- is unchanged.
+    expect(captured.section.borderTopColor).toBe(theme.resolveTheme({ theme: 'dark' }).colors.borderSubtle);
+    const darkRule = captured.section.borderTopColor;
 
     // Flip the SAME store, without unmounting/re-requiring anything -- the
     // still-mounted Probe re-renders and `captured` is overwritten in place,
     // same "restart-free" contract as Card.test.js / cp10Stage1LiveTheme.
     setTheme('light');
-    expect(captured.section.backgroundColor).toBe(theme.resolveTheme({ theme: 'light' }).colors.surface);
-    expect(captured.section.backgroundColor).not.toBe(darkBg);
+    expect(captured.section.borderTopColor).toBe(theme.resolveTheme({ theme: 'light' }).colors.borderSubtle);
+    expect(captured.section.borderTopColor).not.toBe(darkRule);
     act(() => { tree.unmount(); });
   });
 
@@ -99,23 +103,29 @@ describe('CP-10 stage 3 (Settings family): useSettingsStyles() flips live, no re
     useAppStore.setState({ user: { id: 'u1', email: 'a@b.com' }, tier: 'free' });
     let tree;
     act(() => { tree = create(<SettingsAccountScreen navigation={{ navigate: jest.fn() }} />); });
+    // RE-ANCHORED (card sweep, D165 law 2, 2026-09-17): the section used to be
+    // found by its card radius; it has none now. It is the group carrying the
+    // hairline in the dark theme's borderSubtle, and the live contract is that
+    // the hairline recolours on the flip.
+    const darkRule = theme.resolveTheme({ theme: 'dark' }).colors.borderSubtle;
     const sections = tree.root.findAll(
       (n) => typeof n.type !== 'string' && n.props.style && Array.isArray(n.props.style)
-        && StyleSheet.flatten(n.props.style).borderRadius === theme.radius.lg,
+        && StyleSheet.flatten(n.props.style).borderTopColor === darkRule,
     );
-    // Fall back to any host View carrying the section's borderRadius if the
+    // Fall back to any host View carrying the section's hairline if the
     // composite-node search above finds nothing (react-test-renderer host
     // nodes use string types).
     const hostSections = tree.root.findAll(
-      (n) => n.props.style && StyleSheet.flatten(n.props.style).borderRadius === theme.radius.lg,
+      (n) => n.props.style && StyleSheet.flatten(n.props.style).borderTopColor === darkRule,
     );
     const target = sections.length ? sections[0] : hostSections[0];
-    const darkBg = flat(target).backgroundColor;
-    expect(darkBg).toBe(theme.resolveTheme({ theme: 'dark' }).colors.surface);
+    expect(target).toBeTruthy();
+    expect(flat(target).borderTopColor).toBe(darkRule);
 
     setTheme('light');
-    const lightBg = flat(target).backgroundColor;
-    expect(lightBg).not.toBe(darkBg);
+    const lightRule = flat(target).borderTopColor;
+    expect(lightRule).toBe(theme.resolveTheme({ theme: 'light' }).colors.borderSubtle);
+    expect(lightRule).not.toBe(darkRule);
     act(() => { tree.unmount(); });
   });
 

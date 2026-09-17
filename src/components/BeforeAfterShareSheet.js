@@ -644,13 +644,12 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   subtitle: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
+  // D165 law 2: a privacy receipt is content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   privacyReceipt: {
     gap: spacing.sm,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     padding: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   receiptRow: {
     flexDirection: 'row',
@@ -701,26 +700,27 @@ const styles = StyleSheet.create({
   // spinning preview when the two-photo card can't be built.
   previewErrorBox: { gap: spacing.sm, padding: spacing.md },
   previewErrorText: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
-  togglesCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+  // D165 law 2: a list of toggles, not an object -- no box, a borderSubtle hairline above (D171/D172).
+  togglesCard: { overflow: 'hidden',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.lg,
   },
   toggleRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   toggleRowLast: { borderBottomWidth: 0 },
   toggleLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
+  // D165 law 2: a receipt is content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   exportReceipt: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface,
     padding: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   exportReceiptCol: { flexGrow: 1, flexBasis: '48%', minWidth: 136, gap: spacing.xxs },
   // An eyebrow over the two receipt columns: D174 sends a label tint to
@@ -759,7 +759,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     subtitle: { ...t.type.caption, color: t.colors.textMuted },
-    privacyReceipt: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    privacyReceipt: { borderTopColor: t.colors.borderSubtle },
     receiptText: { ...t.type.caption, color: t.colors.textPrimary },
     thumb: { backgroundColor: t.colors.surface },
     thumbOn: { borderColor: t.colors.textPrimary },
@@ -772,10 +772,10 @@ function buildLiveStyles(t) {
     segmentTextActive: { color: t.colors.textPrimary },
     previewPlaceholder: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     previewErrorText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    togglesCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    togglesCard: { borderTopColor: t.colors.borderSubtle },
     toggleRow: { borderBottomColor: t.colors.borderSubtle },
     toggleLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    exportReceipt: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    exportReceipt: { borderTopColor: t.colors.borderSubtle },
     exportReceiptTitle: { ...t.type.caption, color: t.colors.textMuted },
     exportReceiptLine: { ...t.type.captionTight, color: t.colors.textPrimary },
     privacyNote: { ...t.type.captionTight, color: t.colors.textMuted },

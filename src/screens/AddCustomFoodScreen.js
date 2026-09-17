@@ -18,7 +18,7 @@ import { View, Text, StyleSheet } from 'react-native';
 // keyboard handling, matching iOS's native behaviour on Android too.
 import { KeyboardAwareScrollView, KeyboardGestureArea } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import ModalHeader from '../components/ModalHeader';
@@ -600,12 +600,12 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: -spacing.md, marginBottom: spacing.lg,
   },
+  // D165 law 2: a banner, not an object -- no box, a borderSubtle hairline above (D171/D172).
   dupeBanner: {
     gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.md, marginBottom: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   dupeText: { ...type.bodySm, color: colors.textSecondary },
 
@@ -640,7 +640,7 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     contextLabel: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
     barcodeHint: { ...t.type.label, color: t.colors.textSecondary },
-    dupeBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    dupeBanner: { borderTopColor: t.colors.borderSubtle },
     dupeText: { ...t.type.bodySm, color: t.colors.textSecondary },
     numSuffix: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
     numWrapUnsure: { borderColor: t.colors.warning },

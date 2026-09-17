@@ -123,7 +123,7 @@ function NavRow({ icon, label, sub, onPress }) {
 function NavGroup({ children }) {
   const t = useTheme();
   return (
-    <View style={[styles.navGroup, { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle }]}>
+    <View style={[styles.navGroup, { borderTopColor: t.colors.borderSubtle }]}>
       {children}
     </View>
   );
@@ -699,18 +699,23 @@ const styles = StyleSheet.create({
   statusTitle: { ...type.bodyStrong, color: colors.textPrimary },
   statusBody: { ...type.bodySm, color: colors.textSecondary },
   section: { gap: spacing.md },
+  // D165 law 2, the founder's test: a list of navigation rows is not an
+  // object, so the fill, the card radius and the outline go. The rows sit on
+  // the page's own ground, divided by the hairline they already carried, with
+  // one more hairline above the group -- the same shape SettingsPrimitives'
+  // `section` now draws, so the two nav surfaces still read as one system.
   navGroup: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     overflow: 'hidden',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    padding: spacing.lg,
+    // The group's box came off with law 2, so the row stops paying a second
+    // gutter inside it (one gutter, paid once by the page -- CR-17/D163).
+    paddingVertical: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },

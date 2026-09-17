@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, fontFamily, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import SectionLabel from './SectionLabel';
 import BottomSheet from './BottomSheet';
@@ -215,8 +215,12 @@ const styles = StyleSheet.create({
     marginHorizontal: -spacing.xl,
     paddingHorizontal: spacing.xl,
   },
+  // Not a card and never was: a 40 dp circular badge carrying one letter.
+  // `radius.xl` happened to equal half its size, so it read as a card radius
+  // to any census of hand-rolled card shells; `circle(40)` is the same twenty
+  // pixels and says what the shape is. Law 3 (geometry carries meaning).
   dayBadge: {
-    width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.surface2,
+    width: 40, height: 40, borderRadius: circle(40), backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
   dayBadgeActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },

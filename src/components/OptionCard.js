@@ -49,7 +49,7 @@ export default function OptionCard({ icon, label, detail, active, onPress, iconS
 const styles = StyleSheet.create({
   card: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.lg,
+    backgroundColor: colors.surface, borderRadius: radius.control,
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.lg, marginBottom: spacing.sm,
   },

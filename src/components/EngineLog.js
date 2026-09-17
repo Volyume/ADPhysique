@@ -13,7 +13,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getRecentAdaptationEvents, getCompletedWorkoutSets, getAllExercises } from '../lib/database';
@@ -157,9 +157,10 @@ export default function EngineLog({ userId }) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle, padding: spacing.lg, gap: spacing.md,
+  // D165 law 2: a debug panel, not an object -- no box, a borderSubtle hairline above (D171/D172).
+  card: { padding: spacing.lg, gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
@@ -185,7 +186,7 @@ const styles = StyleSheet.create({
 // regTitleRow have no colour tokens.
 function buildLiveStyles(t) {
   return {
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    card: { borderTopColor: t.colors.borderSubtle },
     headerLabel: { color: t.colors.textPrimary },
     headerSub: { ...t.type.caption, color: t.colors.textSecondary },
     body: { borderTopColor: t.colors.border },

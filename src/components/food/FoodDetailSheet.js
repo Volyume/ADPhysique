@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     flex: 1,
     paddingVertical: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: radius.control,
     backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border,
     alignItems: 'center',
   },

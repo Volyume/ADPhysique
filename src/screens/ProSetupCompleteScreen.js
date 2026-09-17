@@ -670,12 +670,19 @@ const styles = StyleSheet.create({
   // Card 3 (the collapsible split card) stays a hand-rolled TouchableOpacity:
   // it needs accessibilityState={{expanded}} which Card doesn't forward, so
   // it keeps its own full chrome rather than going through Card.
+  // D165 law 2, the founder's test. A ROUTINE is an object, but this is not
+  // one: it is step 2 of a numbered hand-off ("2. Train your split"), and a
+  // step in a checklist is a section of content. So the fill, the card radius
+  // and the box go, and a borderSubtle hairline above separates it from step 1.
+  // The `routineCardOpen` edge stays as the expanded-state cue it always was.
   routineCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1.5, borderColor: colors.borderSubtle,
-    padding: spacing.lg, marginBottom: spacing.md,
+    paddingVertical: spacing.lg, marginBottom: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
   },
-  routineCardOpen: { borderColor: colors.borderLight },
+  // The expanded cue moves onto the hairline that replaced the box, so the
+  // state still reads; a `borderColor` with no `borderWidth` left would have
+  // been a cue that draws nothing.
+  routineCardOpen: { borderTopColor: colors.borderLight },
   routineHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   // D174: was a 36dp `primaryBg` disc behind a stock glyph. Fixed glyph
   // column now, no fill.
@@ -787,8 +794,8 @@ function buildLiveStyles(t) {
     readyItem: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     readyText: { ...t.type.label, color: t.colors.textPrimary },
     routineCardChrome: { borderColor: t.colors.border },
-    routineCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    routineCardOpen: { borderColor: t.colors.borderLight },
+    routineCard: { borderTopColor: t.colors.borderSubtle },
+    routineCardOpen: { borderTopColor: t.colors.borderLight },
     routineTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     routineBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     ring: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface2 },

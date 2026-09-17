@@ -380,9 +380,10 @@ function RecoveryGauge({ label, value, samples = 0, invertGood = false }) {
 
 const styles = StyleSheet.create({
   section: { gap: spacing.md },
-  milestoneCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
+  // D165 law 2: a stat, not an object -- no box, a borderSubtle hairline above (D171/D172).
+  milestoneCard: { padding: spacing.lg, gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   milestoneTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   milestoneUnlocked: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
@@ -392,9 +393,11 @@ const styles = StyleSheet.create({
   // KEEP: a meter whose width tracks a live value.
   milestoneBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
 
+  // D165 law 2: a reading, not an object -- no box, a borderSubtle hairline above (D171/D172).
   recoveryCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.lg, borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
+    padding: spacing.lg, gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   recoveryGrid: {
     flexDirection: 'row', gap: spacing.sm,
@@ -419,9 +422,10 @@ const styles = StyleSheet.create({
   trendInsightWarn: { backgroundColor: colors.warningBg, borderColor: withAlpha(colors.warning, alpha.edge) },
   trendInsightText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
-  mfCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
+  // D165 law 2: a reading, not an object -- no box, a borderSubtle hairline above (D171/D172).
+  mfCard: { padding: spacing.lg, gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   mfHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   // §3.2, "a tint behind a glyph": the amber disc lost its fill (applied
@@ -451,12 +455,12 @@ const styles = StyleSheet.create({
 // this batch's concern) but is mirrored here too for completeness.
 function buildLiveStyles(t) {
   return {
-    milestoneCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    milestoneCard: { borderTopColor: t.colors.borderSubtle },
     milestoneUnlockedText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     milestoneNext: { ...t.type.caption, color: t.colors.textMuted },
     milestoneBarTrack: { backgroundColor: t.colors.surface2 },
     milestoneBarFill: { backgroundColor: t.colors.primary },
-    recoveryCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    recoveryCard: { borderTopColor: t.colors.borderSubtle },
     recoveryDivider: { backgroundColor: t.colors.border },
     gaugeValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     gaugeLabel: { ...t.type.caption, color: t.colors.textMuted },
@@ -465,7 +469,7 @@ function buildLiveStyles(t) {
     trendInsightGood: { backgroundColor: t.colors.successBg ?? t.colors.surface, borderColor: withAlpha(t.colors.success, alpha.edge) },
     trendInsightWarn: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, alpha.edge) },
     trendInsightText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    mfCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    mfCard: { borderTopColor: t.colors.borderSubtle },
     mfTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     mfSub: { ...t.type.captionTight, color: t.colors.textMuted },
     mfChipName: { ...t.type.captionStrong },

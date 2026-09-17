@@ -39,8 +39,15 @@ describe('AnalyticsScreen cohesion census (R2)', () => {
     expect(SRC).toMatch(/navTileLabel:\s*\{\s*\.\.\.t\.type\.captionStrong/);
   });
 
-  test('nav tiles are card-class (radius.lg)', () => {
-    expect(SRC).toMatch(/navTile:\s*\{[\s\S]{0,140}?borderRadius: radius\.lg/);
+  // RE-ANCHORED 2026-09-17 under D165 law 3 (geometry carries meaning): "a
+  // control is 10 px and never a pill; a card stays 16 px". A nav tile is a
+  // BUTTON -- you press it and a screen opens -- and the founder's own worked
+  // examples end "a button definitely isn't [an object]". The intent of the R2
+  // case is kept: the tile must sit on a named class rather than invent a
+  // corner. The class it belongs to has moved from card to control.
+  test('nav tiles are control-class (radius.control), because a tile is a button', () => {
+    expect(SRC).toMatch(/navTile:\s*\{[\s\S]{0,140}?borderRadius: radius\.control/);
+    expect(SRC).not.toMatch(/navTile:\s*\{[\s\S]{0,140}?borderRadius: radius\.lg/);
   });
 
   test('recapCard keeps its RECORDED radius.md ephemeral-banner exception (R9/D70)', () => {

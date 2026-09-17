@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, fontSize, radius, type } from '../styles/theme';
+import { colors, spacing, fontSize, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { touchTarget } from '../styles/layout';
 
@@ -37,13 +37,12 @@ export default function CollapsibleSection({ title, body, open, onToggle, childr
 }
 
 const styles = StyleSheet.create({
+  // D165 law 2: a section, not an object -- no box, a borderSubtle hairline above (D171/D172).
   section: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   // ≥44px header tap target (U-B-1 §5).
   sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: touchTarget.minimum },
@@ -58,7 +57,7 @@ const styles = StyleSheet.create({
 // sectionHeader/sectionChildren have no colour tokens.
 function buildLiveStyles(t) {
   return {
-    section: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    section: { borderTopColor: t.colors.borderSubtle },
     sectionTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     sectionBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
   };

@@ -2,7 +2,7 @@ import { cloneElement, isValidElement } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, spacing, radius, type, iconSize } from '../styles/theme';
+import { colors, fontSize, spacing, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import PressableCard from './PressableCard';
 import BackHeader from './BackHeader';
@@ -134,7 +134,7 @@ export function useSettingsStyles() {
   const t = useTheme();
   return {
     safe: { backgroundColor: t.colors.background },
-    section: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    section: { borderTopColor: t.colors.borderSubtle },
     settingRow: { borderBottomColor: t.colors.borderSubtle },
     // D174: the row glyph carries no tint at all now, so this override has
     // nothing theme-dependent left to carry. Kept as an explicit empty object
@@ -159,27 +159,34 @@ export const settingsStyles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
-  // Quiet edges (premium UI pass). `border` (#6E6E6E, 3.45:1 on surface) is
-  // the WCAG 1.4.11 edge for a CONTROL that needs an identifiable boundary; a
-  // settings SECTION is a grouping container and its rows are identified by
-  // their own label, icon and chevron, so the strong edge drew a bright grey
-  // outline around every group and a bright rule between every row. That is
-  // the wireframe look. `borderSubtle` is the token documented for exactly
-  // this job ("hairline dividers INSIDE a card") and is what the shared Card
-  // primitive already uses for its own edge, so this also makes Settings
-  // consistent with every other card surface in the app.
+  // D165 law 2, the founder's test, applied to the shape ~14 Settings screens
+  // are made of: "a card should mean: this thing is an object", and a LIST OF
+  // SETTINGS is not an object. The fill, the card radius and the outline go;
+  // what is left is the rows themselves on the page's own ground, divided by
+  // the borderSubtle hairline they already carried, with one more hairline
+  // above the group to separate it from its heading. That is the treatment
+  // Community landed under CR-17/D163 and Today, the diary and the empty
+  // states have carried since D171/D172.
+  //
+  // The note this replaces is kept in substance because it still decides the
+  // hairline COLOUR: `border` (#6E6E6E) is the WCAG 1.4.11 edge for a control
+  // that needs an identifiable boundary, and a settings row is identified by
+  // its own label, icon and chevron; `borderSubtle` is the token documented
+  // for a hairline divider, and drawing these in `border` is what produced the
+  // wireframe look.
   section: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     overflow: 'hidden',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
-    padding: spacing.lg,
+    // The group's box came off with law 2, so the row stops paying a second
+    // gutter inside it and sits at the page's own 16 dp edge. One gutter,
+    // paid once by the page (CR-17/D163).
+    paddingVertical: spacing.lg,
     // Explicit platform floor. Padding plus a 34dp icon chip already put
     // this near 66dp, so this is a no-op at rest -- but it makes the touch
     // target a GUARANTEE of the primitive rather than a side effect of its

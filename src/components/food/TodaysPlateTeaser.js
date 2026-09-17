@@ -75,12 +75,12 @@ export default function TodaysPlateTeaser() {
 }
 
 const styles = StyleSheet.create({
+  // D165 law 2: a teaser, not an object -- no box, a borderSubtle hairline above (D171/D172).
   card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg, gap: spacing.xs, alignSelf: 'stretch',
     marginBottom: spacing.lg,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   // D174: an eyebrow tint is decoration, so it drops to the muted label ink.
   eyebrow: { ...type.captionStrong, color: colors.textMuted },
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
 // no colour tokens.
 function buildLiveStyles(t) {
   return {
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    card: { borderTopColor: t.colors.borderSubtle },
     eyebrow: { color: t.colors.textMuted },
     title: { color: t.colors.textPrimary },
     sub: { color: t.colors.textSecondary },

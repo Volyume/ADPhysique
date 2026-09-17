@@ -956,13 +956,15 @@ const styles = StyleSheet.create({
   // spinning preview when the card can't be rendered.
   previewErrorBox: { gap: spacing.sm, padding: spacing.md },
   previewErrorText: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
-  togglesCard: {
-    backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+  // D165 law 2: a list of toggles, not an object -- no box, a borderSubtle hairline above (D171/D172).
+  togglesCard: { overflow: 'hidden',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.lg,
   },
   toggleRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   toggleRowLast: { borderBottomWidth: 0 },
@@ -1013,7 +1015,7 @@ function buildLiveStyles(t) {
     segmentTextActive: { color: t.colors.textPrimary },
     previewPlaceholder: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     previewErrorText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    togglesCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    togglesCard: { borderTopColor: t.colors.borderSubtle },
     toggleRow: { borderBottomColor: t.colors.borderSubtle },
     toggleLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     privacyNote: { ...t.type.captionTight, color: t.colors.textMuted },

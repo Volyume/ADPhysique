@@ -1159,12 +1159,14 @@ const styles = StyleSheet.create({
   suggestNote: {
     ...type.caption, color: colors.textMuted, flex: 1, lineHeight: fontSize.sm + 5,
   },
+  // D165 law 2, the founder's test: a suggestion is a message the screen is
+  // making, not an object the user owns, so the fill, the card radius and the
+  // box go. The 3 dp left rule STAYS and is now the whole mark: it is what
+  // distinguishes a suggested row from the search results below it, and
+  // stripping it would have removed a signal rather than a decoration.
   suggestCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.borderSubtle,
     borderLeftWidth: 3, borderLeftColor: colors.border,
-    borderRadius: radius.lg,
     marginHorizontal: spacing.md, marginTop: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
@@ -1180,7 +1182,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginHorizontal: spacing.md,
     marginBottom: spacing.md,
-    borderRadius: radius.lg,
+    borderRadius: radius.control,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface2,
@@ -1249,11 +1251,7 @@ function buildLiveStyles(t) {
     ctaText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     suggestHint: { ...t.type.caption, color: t.colors.textMuted },
     suggestNote: { ...t.type.caption, color: t.colors.textMuted, lineHeight: t.fontSize.sm + 5 },
-    suggestCard: {
-      backgroundColor: t.colors.surface,
-      borderColor: t.colors.border,
-      borderLeftColor: t.colors.border,
-    },
+    suggestCard: { borderLeftColor: t.colors.border },
     suggestName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     suggestMacros: { ...t.type.caption, color: t.colors.textSecondary },
     footerBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },

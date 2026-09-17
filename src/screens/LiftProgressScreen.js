@@ -11,7 +11,6 @@ import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, fontFami
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import AnimatedEntrance from '../components/AnimatedEntrance';
-import PressableCard from '../components/PressableCard';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import PeekMenu from '../components/PeekMenu';
@@ -474,8 +473,8 @@ export default function LiftProgressScreen({ navigation }) {
           const prIndices = derivePRIndices(series);
           return (
             <AnimatedEntrance index={index}>
-            <PressableCard
-              style={[styles.card, live.card]}
+            <Card
+              style={styles.card}
               // Origin-aware hero zoom (D31): the pushed ExerciseDetail grows
               // from this row's measured rect; a null rect (unmeasurable
               // handle) falls back to the app's centre zoom.
@@ -552,7 +551,7 @@ export default function LiftProgressScreen({ navigation }) {
                 )}
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </View>
-            </PressableCard>
+            </Card>
             </AnimatedEntrance>
           );
         }}
@@ -695,14 +694,13 @@ const styles = StyleSheet.create({
   searchBar: { marginBottom: spacing.md },
 
   // ── Strength standing header ──
+  // D165 law 2: a stat, not an object -- no box, a borderSubtle hairline above (D171/D172).
   standingCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     marginBottom: spacing.md,
     gap: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   standingHeadline: {
     alignItems: 'flex-start',
@@ -743,16 +741,15 @@ const styles = StyleSheet.create({
   levelBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.full, flexShrink: 0, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
   levelBadgeText: { ...type.captionStrong, color: colors.textSecondary },
 
+  // D165 law 2: a prompt, not an object -- no box, a borderSubtle hairline above (D171/D172).
   bwPromptCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
     padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     marginBottom: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   bwPromptTitle: { ...type.bodyStrong, color: colors.textPrimary },
   bwPromptText: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
@@ -791,14 +788,15 @@ const styles = StyleSheet.create({
   metricChipTextActive: { color: colors.textPrimary },
 
   // ── Lift row ──
+  // D165 law 2, the founder's test: a LIFT is an object -- a named exercise
+  // you track, open, long-press for options and push a detail screen from. It
+  // keeps a card and it is now the real one, which already owns the surface,
+  // the radius.lg, the edge and the padding this shell hand-rolled, and which
+  // wraps the same PressableCard (so the origin-aware hero zoom below is
+  // unchanged). Only the row layout it does not own stays.
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
     gap: spacing.md,
   },
   cardMain: { flex: 1, gap: spacing.xxs },
@@ -853,7 +851,7 @@ function buildLiveStyles(t) {
     heroUnit: { ...t.type.title, color: t.colors.textSecondary },
     heroSub: { ...t.type.num('caption'), color: t.colors.textMuted },
     heroAxisLabel: { ...t.type.captionTight, color: t.colors.textMuted },
-    standingCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    standingCard: { borderTopColor: t.colors.borderSubtle },
     standingHeadline: { borderBottomColor: t.colors.borderSubtle },
     standingLabel: { color: t.colors.textPrimary, fontSize: t.fontSize.xxxl },
     standingSub: { ...t.type.caption, color: t.colors.textMuted },
@@ -864,7 +862,7 @@ function buildLiveStyles(t) {
     strengthNarrative: { ...t.type.num('caption'), color: t.colors.textMuted },
     levelBadge: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     levelBadgeText: { ...t.type.captionStrong, color: t.colors.textSecondary },
-    bwPromptCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    bwPromptCard: { borderTopColor: t.colors.borderSubtle },
     bwPromptTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     bwPromptText: { ...t.type.captionTight, color: t.colors.textSecondary },
     filterTab: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
@@ -875,7 +873,6 @@ function buildLiveStyles(t) {
     metricChipActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
     metricChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
     metricChipTextActive: { color: t.colors.textPrimary },
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     prTag: { backgroundColor: t.colors.surface3 },
     prTagText: { fontSize: t.fontSize.micro, color: t.colors.primary },

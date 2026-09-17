@@ -36,7 +36,8 @@ plan section 4c.
 CURRENT POSITION, 2026-09-17: **stages 1-4 are complete, landed and merged
 to main** (main `cda29707` before today's landings). **The ledger is built as
 specified (D184)** on the logger, the summary and exercise detail, hands-on,
-landing today; **the card sweep** -- stage 3's one unrun unit -- is landing
+landed `3002d2da` and on main (`e8c42f42`, four gates green: lint 0, tsc 0,
+imports OK, 1328 suites / 20,763 tests); **the card sweep** -- stage 3's one unrun unit -- is landing
 with it from an agent lane against the objecthood test. The board section
 "APP-WIDE VISUAL REDESIGN (2026-09-14)" carries the per-stage detail with every
 commit hash; read it with **D173-D184** (the last nine sections of
