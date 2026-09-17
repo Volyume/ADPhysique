@@ -262,8 +262,14 @@ describe('credential validation and exchange failures', () => {
   });
 
   test('expired admission latches fail closed and are removed', async () => {
-    const now = Date.now();
+    // Anchored AFTER staging (mirrors the clock-rollback case above): the
+    // latch records its own Date.now() first, so this reading is always at
+    // or after it, and adding the window keeps the margin growing in the
+    // same direction as any real delay between the two reads. Read before
+    // staging, the two could land in different milliseconds and the window
+    // would not reliably clear the expiry threshold.
     await stageAuthCallbackAdmission('recovery', 'victim@example.com');
+    const now = Date.now();
     jest.spyOn(Date, 'now').mockReturnValue(now + AUTH_FLOW_WINDOW_MS + 1);
     expect(await validatePendingAuthCallbackAdmission({
       id: 'victim-id', email: 'victim@example.com',
