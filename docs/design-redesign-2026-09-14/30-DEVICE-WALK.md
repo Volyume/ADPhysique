@@ -319,6 +319,10 @@ of them. 8. Section K, every step.
     sits under a hairline with no box or fill, in dark and in light.
 54p. **Onboarding, the sequence panel** (D186 tail). *Expect:* unchanged, a
     charcoal surface with a hairline. That is your D147 verdict and it stands.
+54q. **Avatar presets** (D187). *Expect:* on the profile's avatar picker, in
+    any Community list and on the join screen, every preset glyph is plain
+    ink. No amber Strength, no red Conditioning, no yellow Power. Selection
+    shows only as the ring and the tick.
 54g. ★ **Look for orphan rules.** A hairline directly under a screen title,
     two hairlines with nothing between them, or a hairline at the very top
     of a screen with nothing above it is a defect of this sweep. Report the

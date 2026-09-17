@@ -441,10 +441,13 @@ in the shape of the other four.
   `ProOnboardingScreen.seqPanel`. RECOVERY PATH: the rule table is complete in
   D186; a partial tree is reviewed hunk by hunk and finished or reverted, never
   committed blind, never discarded.
-- OPEN, NAMED (not this sweep's): `src/__tests__/authCallbackSecurity.test.js`
-  is intermittently red under a full parallel run only (green in isolation and
-  in two other full runs). Root-cause as its own small lane (Sonnet); never
-  skip or quarantine.
+- CLOSED (`330a7c01`): the `authCallbackSecurity` intermittent was a
+  same-millisecond race in the test itself (its clock anchor read before the
+  latch's own), the sibling of a case fixed 2026-09-13; two statements
+  reordered, window and assertion untouched. Sonnet lane, 23 reproduction
+  attempts, root cause by derivation and precedent.
+- LANDED (D187): the avatar presets draw their glyph in ink; no borrowed state
+  colour. Walk step 54q.
 **STAGE 4 IS LANDED AND MERGED** (`4a8d7653`; rulings **D180**, landing record
 **D182**): the personal best states a fact -- the share card's own gold, its
 trophy moment, PR glow and "NEW PR" plate rewritten, and RENDERED through

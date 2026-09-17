@@ -25,10 +25,10 @@ export default function ProfileAvatarMark({
   const live = buildLiveStyles(t);
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const preset = presetKey ? avatarPresetFor(presetKey) : null;
-  const accent = t.colors[preset?.tone || 'primary'] || t.colors.primary;
+  // D187: the glyph is the identity and draws in ink; no borrowed state colour.
   // Lead visual review 2026-09-06, ruling V5: an unselected preset's ring is
-  // neutral (`border` at `alpha.edge`), never the preset's own accent -- the
-  // accent stays in the glyph. D174 A4 then took the selected ring off the
+  // neutral (`border` at `alpha.edge`), never the preset's own accent (the
+  // accent then lived in the glyph; D187 retired it). D174 A4 then took the selected ring off the
   // accent too: choosing an avatar in a picker is A2's category, so the
   // selected ring is `borderLight`, exactly as AthleteProfileScreen's own
   // preset tile now draws it.
@@ -78,13 +78,13 @@ export default function ProfileAvatarMark({
   if (preset) {
     return (
       <View style={baseStyle}>
-        <Ionicons name={preset.icon} size={iconSize} color={accent} />
+        <Ionicons name={preset.icon} size={iconSize} color={t.colors.textPrimary} />
         {showBadge ? (
           <View style={[styles.badge, live.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: selected ? t.colors.surface3 : t.colors.surface }]}>
             <Ionicons
               name={selected ? 'checkmark' : preset.badgeIcon}
               size={Math.max(10, Math.round(badgeSize * 0.6))}
-              color={selected ? t.colors.textPrimary : accent}
+              color={selected ? t.colors.textPrimary : t.colors.textSecondary}
             />
           </View>
         ) : null}

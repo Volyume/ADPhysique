@@ -182,10 +182,6 @@ const SURVIVORS = {
     { line: 'lockedBtn: { backgroundColor: t.colors.primaryFill },',
       why: 'The live twin of that committing button; both halves must move together.' },
   ],
-  'ProfileAvatarMark.js': [
-    { line: "const accent = t.colors[preset?.tone || 'primary'] || t.colors.primary;",
-      why: 'STOPPED: one of the six avatar presets ("Strength") carries `tone: \'primary\'`, so its glyph is amber. D174 A4 named the badges, the tint and the initial and did NOT name the preset glyph, and greying only this one would leave a single grey preset among five coloured ones -- the exact defect D178 refused for the macro legend. Reported for a ruling on the preset palette as a whole.' },
-  ],
   'ProgressGhostCapture.js': [
     { line: 'backgroundColor: colors.primary,',
       why: 'sliderFill -- a meter whose width tracks the live overlay strength. De-washed from 90% alpha to the solid token, which is what D174 asks of an alpha\'d keep.' },
@@ -400,12 +396,15 @@ describe('D174/D175/D176/D178: every amber site left in src/components is a reco
     const total = LANE.reduce((n, f) => n + amberLines(f).length, 0);
     // 60 at the sweep; 61 with D191, which splits today's ribbon cell into an
     // outline (not yet trained) and a fill (trained). Both are today's.
-    expect(total).toBe(61);
+    // 60 with D187, which took the avatar preset glyph's amber fallback out
+    // of ProfileAvatarMark.js entirely (the presets lose `tone`; ink now).
+    expect(total).toBe(60);
     const community = LANE.filter((f) => f.startsWith('community/'))
       .reduce((n, f) => n + amberLines(f).length, 0);
     expect(community).toBe(11);
     const stopped = Object.values(SURVIVORS).flat().filter((e) => e.why.startsWith('STOPPED')).length;
-    expect(stopped).toBe(2);
+    // 1 with D187: the avatar-preset STOPPED entry is ruled and removed.
+    expect(stopped).toBe(1);
   });
 
   test('the matcher actually matches, and actually rejects', () => {

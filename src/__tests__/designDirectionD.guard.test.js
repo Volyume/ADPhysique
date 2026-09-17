@@ -324,3 +324,16 @@ describe('D184: the ledger is built as specified, on the three surfaces the foun
     expect(c).toMatch(/index=\{isWarmup \? warmupMark : progressNum\}/);
   });
 });
+
+describe('D187: the avatar presets stop borrowing state colours', () => {
+  test('no preset carries a tone, and the mark reads no borrowed state colour for its glyphs', () => {
+    // The six presets used to decorate their glyph with a `tone` borrowed from
+    // the semantic palette (primary/macroFat/success/macroCarb/warning/error).
+    // The glyph is the identity now; it draws in ink, and nothing in either
+    // file may reintroduce a state colour under a new name.
+    const presets = code(read('src/lib/profileAvatarPresets.js'));
+    expect(presets).not.toMatch(/\btone\s*:/);
+    const mark = code(read('src/components/ProfileAvatarMark.js'));
+    expect(mark).not.toMatch(/t\.colors\.(primary|success|warning|error|macroFat|macroCarb)\b/);
+  });
+});
