@@ -253,6 +253,43 @@ of them. 8. Section K, every step.
     side or the bottom. And nothing is DELETED: the log-flash still appears
     and clears, the personal-best toast still appears, the row-grown
     transition of step 31c becomes a plain cross-fade rather than vanishing.
+
+### J2. The card sweep (D186, 2026-09-17) -- what is a card now and what is not
+
+54a. ★ **Any Settings sub-page, and You.** *Expect:* the rows sit directly on
+    the page, with one hairline above each group and hairlines between rows.
+    **No box around a group, no fill, no rounded corner.** Rows start at the
+    same left edge as the page title (they no longer pay a second gutter).
+    Tap targets unchanged.
+54b. **Coach tab, a week with something to apply.** *Expect:* the verdict is an
+    elevated card with its amber outline (unchanged). Below it, the plan-edit
+    note, the lead sentence, the focus and the countdown are **hairline
+    sections, not boxes**. Then a hold week ("Nothing to change"): *Expect:*
+    the verdict is the **same elevated card**, without amber. One slot, one
+    shape. If a card in that slot looks wrong to you in either state, say so:
+    that is the one Coach-tab question this sweep leaves open.
+54c. **Diary.** *Expect:* each MEAL is still a card (a meal is a thing you add
+    to), now with the app's one card edge; the "today's plate" teaser and the
+    empty-diary state are hairline sections on the page.
+54d. **Plans.** *Expect:* a plan is a card; folders and the unfiled list are
+    hairline groups with their rows on the page's edge. **Lifts:** each lift
+    row is a card (you open it, long-press it); the standing header and the
+    body-weight prompt are hairline sections. **Progress:** the training-block
+    card stays a card; the calendar, duration, frequency and workload panels
+    are hairline sections, and a fresh install's "No plan running yet" is a
+    hairline section, not a box.
+54e. **Home.** *Expect:* the constraint group and the quick-start row are
+    hairline sections; the day badges in "change workout" are circles.
+54f. **Weekly check-in, onboarding, body metrics, wellbeing.** *Expect:* the
+    gate state, the scan prompt, the questions, the confirm and log forms and
+    the sequence panel are hairline sections on the page's ground. Every
+    button that used to wear a card corner has the tighter control corner.
+    **Nothing about what these screens SAY or SUPPRESS changed** (section K
+    still proves that).
+54g. ★ **Look for orphan rules.** A hairline directly under a screen title,
+    two hairlines with nothing between them, or a hairline at the very top
+    of a screen with nothing above it is a defect of this sweep. Report the
+    screen.
 54. **TalkBack.** Swipe a switch, a chip and a stat. *Expect:* state announced
     correctly; the big numbers read as one sentence with their units.
 

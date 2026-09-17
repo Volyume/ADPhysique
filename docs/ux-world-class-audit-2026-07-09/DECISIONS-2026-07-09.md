@@ -8745,3 +8745,77 @@ model, not a specific one).
 tier it started on (killing it would waste what it has spent). Everything
 dispatched after this entry follows the order. Recorded in CLAUDE.md under
 the agent-tier block.
+
+---
+
+## D186 — The card sweep landed, and how (2026-09-17)
+
+**What happened to the lane.** The sweep ran as an agent against the
+objecthood test (D165 law 2, plan section 4a) with the four ledger files
+fenced out. The founder's chat interrupt at 20:14 UTC stopped the agent in
+its final phase (55 files edited, the suite run, three pinned tests
+re-anchored, a fourth mid-edit). Its diff was on disk, so the lead finished
+the lane hands-on rather than relaunching it: three red suites re-anchored,
+the lead review applied, the four gates run, landed as `586da555` on main.
+
+**The verdicts, in one table.**
+- KEEP A CARD, and it becomes the real `Card`: a meal (`MealSection`), the
+  running training block (`MesocyclePulseCard`), a lift you track
+  (`LiftProgressScreen` row, still wrapping `PressableCard` so the hero zoom
+  is unchanged), an exercise in a routine or a build (`RoutineDetail`,
+  `BuildWorkout`), a plan and a block in the builder (`MesocycleBuilder`),
+  the best session of a block (`BlockReflection`).
+- NO CARD: one `borderSubtle` hairline above, on the page's ground, the
+  box, fill and corner gone -- forms, prompts, gate states, confirm panels,
+  sections of coach copy, readings and charts, empty states, settings
+  sections (the 104-row `SettingsPrimitives.section`) and nav groups
+  (`YouScreen`), Home's constraint group, quick-start and coaching nudge,
+  the share sheets' receipts and toggle groups, the diary teaser, the
+  wellbeing questions, onboarding's panels.
+- CONTROLS take `radius.control` (law 3): about twenty buttons, and the
+  Analytics nav tiles ("a button definitely isn't" an object). The
+  change-workout day badge becomes `circle(40)`, which is what it was.
+- KEPT ON PURPOSE: the food-search suggestion's 3 dp left rule (it is the
+  signal, not decoration); the setup-complete routine card's open cue, moved
+  onto the hairline so a `borderColor` with no width does not draw nothing;
+  tinted banners (`exclusionNotice` and the D69/D70 class) keep their shape.
+
+**Lead rulings at review.**
+1. **The hold-week coach hero is the same real `Card elevated` as the
+   applyable verdict**, not a hairline section. The sweep un-carded it as "a
+   content section" while its twin in the same slot stayed an elevated Card,
+   so the slot would have changed shape depending on whether there was an
+   Apply. One slot, one shape (Wave A B6's stated intent). Whether the
+   verdict slot should be a card at all is a Coach-tab question for the walk.
+2. **A guard the sweep wrote was unbounded.** The re-anchored coach cohesion
+   case matched `[\s\S]*?borderTopColor` from a key's opening brace, so a
+   key that lost its hairline would have passed on the next key's -- the same
+   flaw the sweep had just fixed in that file's `radiusOf`. Bounded to
+   `[^}]*`.
+3. **Fifty-seven copies of a four-line comment became one line each.** The
+   reasoning belongs in this register and in the file's bespoke comments,
+   not stamped on every key.
+4. **Re-anchors, intent kept, none deleted:** Progress cohesion (four chart
+   surfaces share one hairline; the block is the real Card), Analytics
+   cohesion (nav tiles are control-class), Home live-theme (TodayStrip's
+   hairline flips; CoachBriefCard's title corrected to what it always
+   asserted), Settings live-theme (the section's hairline flips, found by its
+   colour rather than a radius it no longer has), the food-search footer
+   button (`radius.control`, following Button since stage 1).
+
+**Observed, not this sweep's:** `authCallbackSecurity.test.js` was red in
+one full run and green in the next full run, in isolation, and in the clean
+worktree run of the ledger tip. Intermittent under a full parallel run only.
+Named on the board as its own item; not skipped, not quarantined.
+
+**The census after landing.** A scan for one frozen key carrying a surface
+fill AND a card corner AND a border finds 32 survivors, classified: sheets,
+dialogs, toasts, tooltips and preview placeholders (their shape is the
+surface, not a card -- 14, kept); dormant billing surfaces (5, untouched by
+rule); a dead `offerCard` with no consumer; `WelcomeScreen`'s product-shot
+frame (deliberate); the tinted `exclusionNotice`; and **the four ledger
+files the sweep was fenced from** -- `ActiveWorkoutScreen` (five buttons,
+one plain banner, two sheets), `WorkoutSummaryScreen` (the stat tiles and
+the feedback toggle), `ExerciseDetailScreen` (the chart container). Those
+are the follow-up lane, dispatched under D185 to Sonnet with the complete
+rule table and a STOP rule on any pin it cannot re-anchor with intent kept.

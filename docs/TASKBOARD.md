@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## APP-WIDE VISUAL REDESIGN (2026-09-14) — DIRECTION RULED BY THE FOUNDER (D165); STAGES 1-4 LANDED AND MERGED; THE LEDGER BUILT AS SPECIFIED (D184) LANDING 2026-09-17 WITH THE CARD SWEEP; NO BUILD YET (D181)
+## APP-WIDE VISUAL REDESIGN (2026-09-14) — DIRECTION RULED BY THE FOUNDER (D165); STAGES 1-4 LANDED AND MERGED; THE LEDGER (D184) AND THE CARD SWEEP (D186) LANDED 2026-09-17; ONE SMALL TAIL LANE IN FLIGHT; NO BUILD YET (D181)
 
 Plan: `docs/design-redesign-2026-09-14/20-DIRECTION-AND-PLAN.md` (**v3, live**).
 Research: files 10-13 in that folder (README = map). Decisions: **D164** (the
@@ -428,16 +428,23 @@ in the shape of the other four.
   findings), **D178** (the nine sites the lanes refused to guess at), **D179**
   (the components lane and the A3 scope question; `ProfileAvatarMark`'s
   six-colour preset palette named as its own item).
-- IN FLIGHT 2026-09-17 (agent lane, fenced from `LoggedSetRow.js`,
-  `ActiveWorkoutScreen.js`, `WorkoutSummaryScreen.js`, `ExerciseDetailScreen.js`
-  while the lead holds them): **the card sweep** -- the hand-rolled cards across
-  `src/screens` and `src/components` against the OBJECTHOOD test (law 2 as the
-  founder corrected it: "a card should mean: this thing is an object"). Expects
-  `src/__tests__/cardObjecthood.guard.test.js`. RECOVERY PATH if the agent
-  dies: the ruling is complete (D165 law 2, plan section 4a), so the sweep is
-  re-runnable from the plan alone; a partial tree is reviewed hunk by hunk
-  against the objecthood test and either finished or reverted -- never
+- LANDED AND MERGED (`586da555`, **D186**): **the card sweep** against the
+  OBJECTHOOD test, 62 files. The agent was stopped by the founder's chat
+  interrupt in its final phase; the lead finished the lane hands-on (three
+  suites re-anchored, four lead rulings, four gates: lint 0, tsc 0, imports OK,
+  1328 suites / 20,765 tests). Objects became the real `Card`; non-objects
+  are hairline sections; buttons took `radius.control`. Walk: steps 54a-54g.
+- IN FLIGHT 2026-09-17 (Sonnet, D185): **the card sweep's tail** -- the four
+  files fenced for the ledger (`ActiveWorkoutScreen`: five buttons, one plain
+  banner; `WorkoutSummaryScreen`: the stat tiles and the feedback toggle;
+  `ExerciseDetailScreen`: the chart container) plus a duplicate-key check on
+  `ProOnboardingScreen.seqPanel`. RECOVERY PATH: the rule table is complete in
+  D186; a partial tree is reviewed hunk by hunk and finished or reverted, never
   committed blind, never discarded.
+- OPEN, NAMED (not this sweep's): `src/__tests__/authCallbackSecurity.test.js`
+  is intermittently red under a full parallel run only (green in isolation and
+  in two other full runs). Root-cause as its own small lane (Sonnet); never
+  skip or quarantine.
 **STAGE 4 IS LANDED AND MERGED** (`4a8d7653`; rulings **D180**, landing record
 **D182**): the personal best states a fact -- the share card's own gold, its
 trophy moment, PR glow and "NEW PR" plate rewritten, and RENDERED through

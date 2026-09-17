@@ -1,7 +1,7 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-09-14/17 — APP-WIDE VISUAL REDESIGN: STAGES 1-4 LANDED; THE LEDGER BUILT AS SPECIFIED (D184); THE CARD SWEEP LANDING ★
+## ★ 2026-09-14/17 — APP-WIDE VISUAL REDESIGN: STAGES 1-4, THE LEDGER (D184) AND THE CARD SWEEP (D186) ALL ON MAIN ★
 
 RESUME HERE for the redesign. Live plan:
 `docs/design-redesign-2026-09-14/20-DIRECTION-AND-PLAN.md` **v3**. Research
@@ -37,8 +37,10 @@ CURRENT POSITION, 2026-09-17: **stages 1-4 are complete, landed and merged
 to main** (main `cda29707` before today's landings). **The ledger is built as
 specified (D184)** on the logger, the summary and exercise detail, hands-on,
 landed `3002d2da` and on main (`e8c42f42`, four gates green: lint 0, tsc 0,
-imports OK, 1328 suites / 20,763 tests); **the card sweep** -- stage 3's one unrun unit -- is landing
-with it from an agent lane against the objecthood test. The board section
+imports OK, 1328 suites / 20,763 tests); **the card sweep** -- stage 3's one unrun unit -- is landed
+(`586da555`, D186; the agent was stopped by a chat interrupt and the lead
+finished it hands-on); its tail on the four fenced files runs as a Sonnet
+lane under D185. The board section
 "APP-WIDE VISUAL REDESIGN (2026-09-14)" carries the per-stage detail with every
 commit hash; read it with **D173-D184** (the last nine sections of
 `DECISIONS-2026-07-09.md`). The walk to run on the next build is
@@ -157,9 +159,8 @@ the ED-safety rule". The lead resolved it in NEITHER direction; the founder's
 decision stands unchanged and `WorkoutSummaryScreen.summarySpec.guard.test.js`
 pins it in place with a comment saying why. Asked 2026-09-15, unanswered.
 
-NEXT (as of 2026-09-17): land the card sweep (lead review of the agent's diff,
-the four gates over the settled tree, merge, push); then offer the founder the
-build and the walk. The 2026-09-15 "next" was Nutrition, then stages 3 and 4;
+NEXT (as of 2026-09-17, evening): land the card sweep's tail lane (four fenced
+files), then the build is the founder's call -- the walk is ready. The 2026-09-15 "next" was Nutrition, then stages 3 and 4;
 all of that is landed.
 ===============================================================================
 ## ★ 2026-09-14 — COMMUNITY LOOK AND FEEL: THE LAYOUT LAW FIXED AND GUARDED ★
