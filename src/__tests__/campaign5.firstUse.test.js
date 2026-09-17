@@ -1780,8 +1780,12 @@ describe('WEIGH-IN: day 0 never claims a weigh-in the user did not take (C5-P22-
     const home = read('screens/HomeScreen.js');
     expect(home).toMatch(/setTodayWeight\(entry\?\.weightKg \?\? null\);/);
     expect(home).not.toMatch(/isEnrolmentSeedWeight\(entry\) \? null :/);
-    // The first-use sentence still retires only on a REAL weigh-in.
-    expect(home).toMatch(/setHasEverLoggedWeight\(recent14\.some\(\(w\) => !isEnrolmentSeedWeight\(w\)\)\)/);
+    // RE-ANCHORED (D190, founder order 2026-09-17): the first-use sentence
+    // this line used to retire is gone outright, and its everLogged gate
+    // with it, so Home no longer reads the seed flag at all. The rule that
+    // matters here -- Today SHOWS a typed enrolment figure and never nulls
+    // it -- is the assertion above and is unchanged.
+    expect(home).not.toMatch(/setHasEverLoggedWeight/);
   });
 
   test('what counts toward the check-in gate is deliberately unchanged', () => {
@@ -1800,10 +1804,15 @@ describe('WEIGH-IN: day 0 never claims a weigh-in the user did not take (C5-P22-
     expect(copies).not.toMatch(/you haven't logged|you missed|behind/i);
   });
 
-  test('the weigh-in strip says why, on the empty state only, with no count', () => {
+  // RE-ANCHORED (D190, founder order 2026-09-17, from the live build: the
+  // caption "looks ugly, bloated and unnecessary"). The strip no longer says
+  // why. What this case still protects is the ED-adjacent half of its old
+  // name: the weigh-in strip carries NO count, streak or frequency in either
+  // state, so nothing on it can read as pressure to weigh.
+  test('the weigh-in strip carries no explanation and, still, no count', () => {
     const src = stripComments(read('components/TodayStrip.js'));
     const empty = src.slice(src.indexOf('function WeightEmpty'), src.indexOf('if (editing)'));
-    expect(empty).toMatch(/each reading is comparable/);
+    expect(empty).not.toMatch(/each reading is comparable|Before breakfast/);
     expect(empty).not.toMatch(/streak|days in a row|of 3/i);
     const logged = src.slice(src.indexOf('function WeightLogged'), src.indexOf('function WeightEmpty'));
     expect(logged).not.toMatch(/several mornings/);

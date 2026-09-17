@@ -291,6 +291,9 @@ of them. 8. Section K, every step.
     reserve" paragraph** (founder order 2026-09-17, D189). TalkBack on the
     chip says "See the shape of your training block" and nothing about the
     effort target.
+54i. **Today, before any weigh-in.** *Expect:* the morning-weight row reads
+    "Morning weight / Not logged yet / Log" and nothing else. **No "Before
+    breakfast" sentence** (founder order 2026-09-17, D190).
 54g. ★ **Look for orphan rules.** A hairline directly under a screen title,
     two hairlines with nothing between them, or a hairline at the very top
     of a screen with nothing above it is a defect of this sweep. Report the

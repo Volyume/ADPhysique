@@ -50,7 +50,6 @@ import * as haptics from '../lib/haptics';
 import { buildCoachBrief, constraintLineText } from '../lib/homeCoachBrief';
 import { isCompletedCoachDecision } from '../lib/coachDecision';
 import { resolveHasUnseenCoachChange, COACH_OUTPUT_VIEWED_KEY_FOR } from '../lib/home/unseenCoachChange';
-import { isEnrolmentSeedWeight } from '../lib/checkinDerive';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
   recordSessionResolution,
@@ -333,7 +332,6 @@ export default function HomeScreen({ navigation, route }) {
   // (non-enrolment-seed) morning weight. Gates TodayStrip's first-use
   // tutorial sentence -- defaults true so the line never flashes for an
   // established user while this loads.
-  const [hasEverLoggedWeight, setHasEverLoggedWeight] = useState(true);
   // First-launch welcome guide. Defaults to hidden so it never flashes before the
   // saved flag is read; the loader reveals it for a brand-new user (no sessions
   // logged) who hasn't dismissed it. Auto-clears once totalSessions > 0.
@@ -943,8 +941,8 @@ export default function HomeScreen({ navigation, route }) {
         // tutorial sentence retires once a REAL weigh-in has ever been
         // logged -- the Pro-enrolment seed row (a typed starting point, not
         // a morning the user weighed) never counts, mirroring the same
-        // isEnrolmentSeedWeight filter used for todayWeight above.
-        setHasEverLoggedWeight(recent14.some((w) => !isEnrolmentSeedWeight(w)));
+        // (The isEnrolmentSeedWeight gate that fed the strip's first-use
+        // caption went with the caption, founder order 2026-09-17, D190.)
       } catch (_) {}
     } catch (_) {}
   }
@@ -2917,7 +2915,6 @@ export default function HomeScreen({ navigation, route }) {
             // here with a fresh timestamp; the strip opens its weight input.
             openWeightSignal={route?.params?.openWeightLog ?? null}
             onOpenTrend={() => navigateCrossTab(navigation, 'ProgressTab', 'Analytics', { focusWeightTrend: true })}
-            everLogged={hasEverLoggedWeight}
           />
         )}
         {user?.id && evidencePanelItem && (

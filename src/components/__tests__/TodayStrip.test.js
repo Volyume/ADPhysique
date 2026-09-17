@@ -127,23 +127,22 @@ describe('R2 radius cohesion (2026-07-11)', () => {
   });
 });
 
-describe('Campaign 22 Phase 2 Stage 2: first-use tutorial copy retires after the first ever log', () => {
-  test('everLogged=false (default): the why-line shows on the empty state', async () => {
-    const tree = await render({ todayWeight: null, everLogged: false });
-    expect(json(tree)).toContain('each reading is comparable');
-  });
-
-  test('everLogged=true: the why-line never renders once a real weigh-in exists', async () => {
-    const tree = await render({ todayWeight: null, everLogged: true });
+describe('the empty weight state carries no explanation (founder order 2026-09-17, D190)', () => {
+  // The first-use caption ("Before breakfast, after the bathroom, so each
+  // reading is comparable") and its everLogged gate are gone: the founder
+  // saw it on the live build and called it "ugly, bloated and unnecessary".
+  // The empty state is label, prompt and Log; the logged state is unchanged.
+  test('empty state: label, prompt and Log, and no caption', async () => {
+    const tree = await render({ todayWeight: null });
     expect(json(tree)).not.toContain('each reading is comparable');
-    // The rest of the empty state is unaffected: label, prompt and Log stay.
+    expect(json(tree)).not.toContain('Before breakfast');
     expect(json(tree)).toContain('Morning weight');
     expect(json(tree)).toContain('Not logged yet');
     expect(findByLabel(tree, 'Log morning weight')).toBeTruthy();
   });
 
-  test('the logged state never shows the tutorial line either way', async () => {
-    const tree = await render({ todayWeight: 82.4, everLogged: false });
+  test('logged state: no caption either', async () => {
+    const tree = await render({ todayWeight: 82.4 });
     expect(json(tree)).not.toContain('each reading is comparable');
   });
 });

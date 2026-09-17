@@ -8903,3 +8903,27 @@ all in block info." Executed the same hour.
 - Consequence, stated plainly: nothing in the app now explains "stop N
   short". The gloss had no other consumer. If the founder wants the term
   glossed somewhere other than block info, that is a new item.
+
+---
+
+## D190 — The morning-weight row carries no explanation (founder order, 2026-09-17)
+
+Founder, from Today on the new build: "I don't think the explanation on
+morning weight is needed either. Looks ugly, bloated and unnecessary."
+Executed the same hour.
+
+- `TodayStrip`'s empty weight state is label, prompt and Log. The first-use
+  caption ("Before breakfast, after the bathroom, so each reading is
+  comparable", C5-P22-04) is removed outright, with its `everLogged` gate,
+  its style key in both halves, and the `hasEverLoggedWeight` flag Home
+  derived only to feed it (a derivation from rows already loaded, not a
+  read).
+- Pins re-anchored with intent kept: the strip's own cases now pin the
+  absence; the first-use case that pinned the caption keeps its ED-adjacent
+  half (no count, streak or frequency on the strip in either state); the
+  case that pinned Home's seed-flag gate keeps its real rule (Today shows a
+  typed enrolment figure and never nulls it).
+- Not touched, named for the founder: `ProSetupCompleteScreen`'s hand-off
+  card says "Every morning before food, after the bathroom. Three seconds.
+  Feeds your weight trend so Coach can make calmer weekly decisions." It is
+  a one-time surface, not Today; it goes the moment the founder says so.

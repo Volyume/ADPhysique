@@ -40,7 +40,6 @@ export default function TodayStrip({
   // caller (HomeScreen knows the user's real logging history); defaults to
   // true so a not-yet-loaded caller never flashes the tutorial line to an
   // established user for a frame.
-  everLogged = true,
 }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
@@ -55,7 +54,6 @@ export default function TodayStrip({
     loggedPill: { borderColor: t.colors.success, backgroundColor: t.colors.surface2 },
     loggedPillText: { ...t.type.caption, color: t.colors.textPrimary },
     logPrompt: { ...t.type.label, color: t.colors.textPrimary },
-    logWhy: { ...t.type.captionTight, color: t.colors.textMuted },
     unit: { ...t.type.caption, color: t.colors.textMuted },
     logBtnText: { ...t.type.label, color: t.colors.textPrimary },
   };
@@ -219,22 +217,11 @@ export default function TodayStrip({
           <View style={styles.metricCopy}>
             <Text style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
             <Text style={[styles.logPrompt, live.logPrompt]} numberOfLines={1}>Not logged yet</Text>
-            {/* C5-P22-04 (D96): the surface a user touches every morning said
-                only "Morning weight / Not logged yet / Log". The why lives
-                three screens away. One caption, in the register already
-                approved on the hand-off card, on the EMPTY state only: never
-                on the logged state, never a count, never a streak or a
-                frequency, so nothing here can read as pressure to weigh.
-                Campaign 22 Phase 2 Stage 2 (§11/R1): first-use education,
-                not a daily fixture -- retires for good once the caller
-                reports a real weigh-in has ever been logged. */}
-            {!everLogged && (
-              // Campaign 27 Pillar A (D104): sentence-length copy never
-              // carries a line clamp - it wraps, and the row grows.
-              <Text style={[styles.logWhy, live.logWhy]}>
-                Before breakfast, after the bathroom, so each reading is comparable.
-              </Text>
-            )}
+            {/* The first-use caption that stood here ("Before breakfast, after
+                the bathroom, so each reading is comparable", C5-P22-04) was
+                removed on the founder's order of 2026-09-17: "looks ugly,
+                bloated and unnecessary". The empty state is label, prompt
+                and Log. */}
           </View>
         </View>
         {/* C5-P37-01 (D96, applied by the lead at the Wave D/E landing): this
@@ -333,7 +320,6 @@ const styles = StyleSheet.create({
   },
   loggedPillText: { ...type.caption, color: colors.textPrimary },
   logPrompt: { ...type.label, color: colors.textPrimary },
-  logWhy: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   // R9/D70: fill/radius/label now come from the shared <Button
   // variant="primary">; the compact strip keeps its own minHeight/vertical
   // padding so the pill stays this row's height, not Button's roomier default.
