@@ -164,7 +164,17 @@ describe('WorkoutSummary food-design-standard compliance (remediation 2026-07-11
     // would have pinned a dead style key and blocked the cleanup.
     expect(summary).toMatch(/statValue:\s*\{ \.\.\.type\.num\('h3'\)/);
     expect(summary).toMatch(/exerciseListMeta:\s*\{\s*\n\s*\.\.\.type\.num\('caption'\)/);
-    expect(summary).toMatch(/exerciseSetChip:\s*\{\s*\n\s*\.\.\.type\.num\('caption'\)/);
+    // RE-POINTED (D184, 2026-09-17). The set/weight readouts used to be
+    // `exerciseSetChip` at type.num('caption'). They are LedgerRow lines now,
+    // and LedgerRow's figure is type.num('bodyStrong') -- still the numerals
+    // role, still tabular, which is the property this case exists for. The
+    // chip key is gone from both halves, so the pin follows the readout to
+    // where it is drawn.
+    expect(summary).toContain("import LedgerRow from '../components/LedgerRow';");
+    expect(summary).toMatch(/workingSets\.map\(\(s, si\) => \(\s*<LedgerRow/);
+    expect(summary).not.toMatch(/exerciseSetChip/);
+    const ledger = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'LedgerRow.js'), 'utf8');
+    expect(ledger).toMatch(/primary: \{\s*\n\s*\.\.\.t\.type\.num\('bodyStrong'\)/);
   });
 
   test('named card-class surfaces use radius.lg (checklist 1)', () => {

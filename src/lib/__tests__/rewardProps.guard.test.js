@@ -153,6 +153,11 @@ describe('D173 T2/T3: the flame, trophy, medal, ribbon and sparkle glyphs are go
     // goes. If a later sweep removes these, the ledger loses its alignment
     // and the logger loses the warm-up cue, which is the opposite of what
     // T2 ruled. Pinned positively so the re-encoding cannot quietly lapse.
+    //
+    // D184 (2026-09-17): `warmupMark` is no longer a style key -- the row's
+    // presentation moved onto LedgerRow, and the mark is the constant passed
+    // as that row's `index`. Same column, same dot, same intent; this pin
+    // still holds without edit because the identifier survived on purpose.
     const loggedRow = code(
       fs.readFileSync(path.join(SRC, 'components', 'workout', 'LoggedSetRow.js'), 'utf8'),
     );

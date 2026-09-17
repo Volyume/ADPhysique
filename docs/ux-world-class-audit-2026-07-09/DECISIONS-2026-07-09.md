@@ -7403,6 +7403,14 @@ the collapse-after-three fold was built to stop from the founder's own device
 screenshots. The ledger belongs where sets are READ (history, Progress, the
 summary), not where they are entered.
 
+> **SUPERSEDED by D184 (founder ruling 2026-09-17, "Build it as specified").**
+> The 48 dp objection was real and is met by a style override rather than
+> ignored: the logger's line keeps its 36 dp and the previews 26 dp, because
+> the caller's style is last in `LedgerRow`'s style array. The
+> workspace-not-a-log argument was the lead deciding to do less on the surface
+> the plan named first, and the founder overruled it. The ledger is on the
+> logger, the summary and exercise detail.
+
 **2. The rest timer was never in scope and needed no founder answer.** The
 lead had told the founder the logger was "gated" on confirming the rest-timer
 verdict. That was wrong: the verdict pins the timer SMALL and law 1 wants it
@@ -8620,3 +8628,86 @@ which the old spelling could not express.
   acceptance test (D176).
 - **Founder-facing, unchanged:** the logger outline's static amber top edge, a
   named device order of 2026-08-22.
+
+---
+
+## D184 — The ledger is built as specified (founder ruling, 2026-09-17)
+
+**The question, put honestly.** The plan (§5, "the two signature devices") says:
+"**The ledger.** Every set, everywhere, as hairline-ruled rows of tabular
+figures: the set you are on in amber, everything behind it grey. A training log
+that looks like a log book." `LedgerRow.js` was built in stage 1 and, at the end
+of stage 4, had **one consumer** (`BlockReflectionScreen`). The logger -- the
+screen the device was designed for -- kept its existing `LoggedSetRow`, and the
+lead recorded that in stage 1 as "ruled off the logger". Reading it back, that
+was the lead deciding to do less on the surface the plan named first, and it
+was not surfaced as a fork until 2026-09-17. It is surfaced now, with the
+reduction named as a reduction.
+
+**The founder's answer: "Build it as specified."** Three surfaces move onto
+`LedgerRow`: the logger's logged-set rows, the workout summary's set breakdown,
+and exercise detail's history. The current logger rows already carry the
+ledger's ideas (hairlines, tabular figures, the middle-dot warm-up mark, amber
+only on the current set), which is why the rebuild is a careful hands-on job
+and not a sweep: the logger is the most-pinned surface in the app -- founder
+device verdicts, ED guards, the R2 architecture tests -- and every one of those
+pins keeps its intent through the change.
+
+**Sequencing.** The card sweep (stage 3's one unrun unit) runs as an agent lane
+at the same time, with the four ledger files fenced out of it:
+`LoggedSetRow.js`, `ActiveWorkoutScreen.js`, `WorkoutSummaryScreen.js`,
+`ExerciseDetailScreen.js`. The lead takes the ledger hands-on. Then a build.
+
+**Landed 2026-09-17, hands-on (the commit hash is on the board).**
+
+- `LedgerRow` gains two ADDITIVE props, defaults preserving stage 1 (the one
+  existing consumer, `BlockReflectionScreen`, renders byte-identically):
+  `muted` -- a quieter DONE line, the figure in `textMuted`, which exists so a
+  logged warm-up is never rendered as `state="upcoming"` to borrow the grey
+  (a misnamed state, the kind this campaign has been removing); and
+  `accessible` -- `false` when a wrapping pressable owns the accessibility
+  node, so the logger's row is spoken once, by the pressable that has always
+  spoken it, not twice and not by a nested View that swallows the outer one.
+- **The logger** (`LoggedSetRow`): presentation delegates to `LedgerRow`; the
+  behaviour layer stays OUTSIDE the line and untouched -- the tap-to-edit
+  `TouchableOpacity`, the spoken label, the `SetRowMenu rowStyle` zeego
+  contract (Sentry-pinned), the in-place editor, `React.memo`. **The D168
+  objection is met, not waved through:** `LedgerRow` puts the caller's style
+  last, so the logger's `loggedSetMinHeight` (36 dp) and `paddingVertical: 0`
+  override the 48 dp floor; the upcoming previews in `ActiveWorkoutScreen`
+  draw `state="upcoming"` lines at 26 dp. Nothing moves the input further from
+  the top of the screen than before, and the walk (step 13a) says to check
+  exactly that. The set-number badge, the warm-up wash and both text keys are
+  deleted from BOTH halves; the middle-dot warm-up mark (D173 T2) keeps its
+  column. `first` suppresses the top rule on the first visible row.
+- **The summary**: `workingSets.map` renders `LedgerRow` lines;
+  `exerciseSetChip` deleted from both halves; the wrapping
+  `Card padding="none"` stays, because the exercise breakdown is the object and
+  a set is not (law 2).
+- **Exercise detail**: history sets render `LedgerRow` with `muted` on warm-ups;
+  `historySetText` deleted from both halves; one `Card` per session kept, the
+  lines inside it at `gap: 0` so the hairlines meet.
+- **Guards.** `designDirectionD.guard.test.js` D184 block, five cases: the three
+  named surfaces plus the previews draw through `LedgerRow`; the behaviour
+  layer wraps the line rather than living inside it; a warm-up is a quiet DONE
+  line and never `upcoming`; both props are additive; the middle dot survives.
+  Mutation-tested six ways (warm-up as upcoming; preview loses its state;
+  summary and detail off the ledger; `muted` stops greying; the child claims
+  the a11y node), **0 survivors**. `workoutSummaryFooterBand.guard`'s
+  tabular-figures case RE-POINTED to where the readout is now drawn (the
+  property is unchanged: `type.num`). `loggerVisualArchitecture.guard`'s
+  upcoming case made real (`upcomingLedgerLine`: 26 dp, no border, no fill).
+  Verified before commit: 15 suites / 798 tests on the touched surfaces,
+  eslint 0 on the nine files, tsc strict 0.
+- **One reading of the plan's sentence is RULED, not assumed (D33).** The plan
+  says "the set you are on in amber, everything behind it grey". The primitive
+  draws: current in amber; a done figure in `textPrimary` with its index in
+  `textMuted`; upcoming and warm-up figures in `textMuted`. Ruled that way
+  because on the summary every row is done and nothing is current, so an
+  all-grey list would be a list with no primary element on it at all; a log's
+  figures ARE its content; and the quiet the sentence asks for comes from the
+  hairline, the tabular face and the grey index column rather than from
+  greying the data. This is the one judgement the change leaves to the
+  founder's eye: it is flagged on the device walk as step 21a, and overruling
+  it is one token in `buildStyles`.
+- D168 ruling 1 is superseded; a note at D168 says so.

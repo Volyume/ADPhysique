@@ -1,7 +1,7 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-09-14/15 — APP-WIDE VISUAL REDESIGN: STAGES 1 AND 2 LANDED, STAGE 3 IN PROGRESS ★
+## ★ 2026-09-14/17 — APP-WIDE VISUAL REDESIGN: STAGES 1-4 LANDED; THE LEDGER BUILT AS SPECIFIED (D184); THE CARD SWEEP LANDING ★
 
 RESUME HERE for the redesign. Live plan:
 `docs/design-redesign-2026-09-14/20-DIRECTION-AND-PLAN.md` **v3**. Research
@@ -33,12 +33,28 @@ centre of the product while Progress ends in a DECISION line ("that last thing
 is the reason Volyume exists"). Both screens are specified in their own words at
 plan section 4c.
 
-CURRENT POSITION, 2026-09-15: **stages 1 and 2 are complete, landed and
-merged to main. Stage 3 (the long tail and the props) is in progress.** The
-board section "APP-WIDE VISUAL REDESIGN (2026-09-14)" carries the per-stage
-detail and the in-flight lanes; read it with **D173** (the last section of
-`DECISIONS-2026-07-09.md`), which is the substitution table stage 3's props
-sweep is built from. Both previously held design questions are answered: the
+CURRENT POSITION, 2026-09-17: **stages 1-4 are complete, landed and merged
+to main** (main `cda29707` before today's landings). **The ledger is built as
+specified (D184)** on the logger, the summary and exercise detail, hands-on,
+landing today; **the card sweep** -- stage 3's one unrun unit -- is landing
+with it from an agent lane against the objecthood test. The board section
+"APP-WIDE VISUAL REDESIGN (2026-09-14)" carries the per-stage detail with every
+commit hash; read it with **D173-D184** (the last nine sections of
+`DECISIONS-2026-07-09.md`). The walk to run on the next build is
+`docs/design-redesign-2026-09-14/30-DEVICE-WALK.md` -- every lane's checklist
+consolidated, kept accumulating on the founder's order (D181), with section K
+(ED-safety) not optional. **No build has been started** (D181: "No build, keep
+working"); when the founder gives the go, the Android workflow dispatches from
+main and the walk is ready. Open for the founder's eye on device, not blocking:
+walk step 21a (a done ledger figure is ink with a grey index, D184's one ruled
+reading of the plan's "everything behind it grey"). Named and still open:
+`ProfileAvatarMark`'s preset palette (D179), the selection-style migration as
+its own unit (D176), the Community list-to-detail transition set (D182 section
+3), the logger outline's amber top edge (founder device order 2026-08-22, a
+founder call), and cloud migration 176 awaiting "run against production".
+
+WHAT THE 2026-09-15 POSITION SAID, kept for the record: stages 1 and 2 complete,
+stage 3 in progress, D173 the substitution table for the props sweep. Both previously held design questions are answered: the
 founder delegated them ("You are to make the decisions on what brings the best
 app") and the lead ruled both as **D170** -- the milestone moment survives
 without its gold burst or reward haptic, and the macro ring survives without
@@ -50,8 +66,11 @@ minutes in, inside `Setup Android SDK`, with `Failed to find package 'tools'`:
 `android-actions/setup-android` defaults its `packages` input to "tools
 platform-tools" and Google has removed the legacy `tools` package from the SDK
 repository. Nothing in the app caused it. The fix pins `packages:
-'platform-tools'`. 3581 does NOT yet carry `829c9f46` (Nutrition) or
-`27d37946` (the empty states), which landed after it.
+'platform-tools'`. **3581 predates everything from `829c9f46` (Nutrition)
+onwards**: the empty states, the props removal, the whole amber sweep, stage 4,
+the Reduce Motion and recycled-row fixes, the ledger and the card sweep. Main
+is more than twenty commits past its head. The founder chose no build on
+2026-09-15 (D181); the offer stands whenever they want to walk it.
 
 HELD OPENLY, needs a founder answer: the specified Progress screen makes
 bodyweight the single largest element in the product and adds a headline
@@ -124,10 +143,11 @@ the summary how it went. Rulings: **D167** (seven stage-2 forks) and **D168**
 
 THE LOGGER WAS NEVER GATED -- the lead said it was and was wrong. The rest-timer
 verdict pins it SMALL and law 1 wants it quiet, so they agree and nothing needed
-asking. The ledger is REFUSED on the logger (D168 ruling 1): its set sequence is
-an interactive workspace, not a log, and a 48dp presentational row would push
-the input away, which is the exact failure the collapse-after-three fold exists
-to stop.
+asking. The ledger was REFUSED on the logger (D168 ruling 1) on the grounds
+that its set sequence is an interactive workspace and a 48dp row would push the
+input away. **SUPERSEDED 2026-09-17 (D184):** the founder ruled "Build it as
+specified"; the height objection is met by a style override (36dp rows, 26dp
+previews) and the ledger is on the logger, the summary and exercise detail.
 
 **ONE THING IS OPEN AND MUST NOT BE RESOLVED QUIETLY:** the 50/100-session
 milestone gold burst and reward haptic are a standing founder decision (D2) that
@@ -136,8 +156,10 @@ the ED-safety rule". The lead resolved it in NEITHER direction; the founder's
 decision stands unchanged and `WorkoutSummaryScreen.summarySpec.guard.test.js`
 pins it in place with a comment saying why. Asked 2026-09-15, unanswered.
 
-NEXT: Nutrition (`DiaryScreen.js`), the last stage-2 screen; recon dispatched
-2026-09-15. Then stage 3 and stage 4.
+NEXT (as of 2026-09-17): land the card sweep (lead review of the agent's diff,
+the four gates over the settled tree, merge, push); then offer the founder the
+build and the walk. The 2026-09-15 "next" was Nutrition, then stages 3 and 4;
+all of that is landed.
 ===============================================================================
 ## ★ 2026-09-14 — COMMUNITY LOOK AND FEEL: THE LAYOUT LAW FIXED AND GUARDED ★
 

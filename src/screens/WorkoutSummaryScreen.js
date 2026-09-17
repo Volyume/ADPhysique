@@ -25,6 +25,7 @@ import RollingNumber from '../components/RollingNumber';
 import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import LedgerRow from '../components/LedgerRow';
 import BottomSheet from '../components/BottomSheet';
 import TextField from '../components/TextField';
 import { useFeedback } from '../components/FeedbackSheet';
@@ -1521,11 +1522,18 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   <View key={ex.exerciseId || i} style={[styles.exerciseListRow, live.exerciseListRow]}>
                     <Text style={[styles.exerciseListName, live.exerciseListName]} numberOfLines={1}>{ex.name}</Text>
                     {workingSets.length > 0 ? (
+                      /* D184: the session's working sets are ledger lines, the
+                         same row the logger drew them with -- the plan's "every
+                         set, everywhere". The string is byte-for-byte what the
+                         old wrapping chips printed; only the shape changed. */
                       <View style={styles.exerciseSetsList}>
                         {workingSets.map((s, si) => (
-                          <Text key={si} style={[styles.exerciseSetChip, live.exerciseSetChip]}>
-                            {s.weight > 0 ? `${s.weight}${units}` : 'BW'} x {s.reps}
-                          </Text>
+                          <LedgerRow
+                            key={si}
+                            index={si + 1}
+                            primary={`${s.weight > 0 ? `${s.weight}${units}` : 'BW'} x ${s.reps}`}
+                            first={si === 0}
+                          />
                         ))}
                       </View>
                     ) : (
@@ -2508,22 +2516,13 @@ const styles = StyleSheet.create({
     ...type.num('caption'),
     color: colors.textSecondary,
   },
+  // D184: a column of ledger lines that stretches to the row's full width
+  // (the parent row is `alignItems: 'flex-start'`), so each line's hairline
+  // and figure span the card. The chip key that followed this is gone from
+  // both halves; LedgerRow draws the figure.
   exerciseSetsList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-  },
-  exerciseSetChip: {
-    ...type.num('caption'),
-    color: colors.textSecondary,
-    backgroundColor: colors.surface2 ?? colors.background,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xxs,
-    // R2 (lead ruling): a chip is a pill, per the standard's chip idiom.
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
+    alignSelf: 'stretch',
+    gap: 0,
   },
 
   // Template-name prompt (now inside the shared BottomSheet; the sheet owns the
@@ -2633,7 +2632,6 @@ function buildLiveStyles(t) {
     exerciseListRow: { borderBottomColor: t.colors.borderSubtle },
     exerciseListName: { ...t.type.label, color: t.colors.textPrimary },
     exerciseListMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
-    exerciseSetChip: { ...t.type.num('caption'), color: t.colors.textSecondary, backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
     templateModalTitle: { ...t.type.title, color: t.colors.textPrimary },
     templateModalInput: { ...t.type.body },
     templateModalCancel: { borderColor: t.colors.border },

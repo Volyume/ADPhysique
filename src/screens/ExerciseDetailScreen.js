@@ -20,6 +20,7 @@ import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import LedgerRow from '../components/LedgerRow';
 import EmptyState from '../components/EmptyState';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
@@ -994,18 +995,32 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               return (
                 <Card radius="md" style={styles.historyCard} key={i}>
                   <Text style={[styles.historyDate, live.historyDate]}>{safeFormatDate(firstSet.createdAt, 'MMM d')}</Text>
+                  {/* D184: each set in a past session is a ledger line, the same
+                      row the logger draws -- the log book the plan promised,
+                      read back. The string is byte-for-byte what the old
+                      wrapping chips printed; only the shape changed. A warm-up
+                      is a quiet done line, same as in the logger. */}
                   <View style={styles.historySets}>
-                    {sessionSets.map((s, j) => (
-                      <Text key={j} style={[styles.historySetText, live.historySetText]}>
-                        {s.weight}{units} x {s.actualReps}
-                        {s.set_type === 'warmup' || s.setType === 'warmup' ? ' - Warm-up' : ''}
-                        {s.set_type === 'dropset' || s.setType === 'dropset' ? ' - Drop set' : ''}
-                        {/* EL-7: truthful label only, same mechanism as warm-up/drop-set above. */}
-                        {(s.evidenceClass ?? s.evidence_class) === 'circuit_ballistic' ? ' - Circuit, Ballistic'
-                          : (s.evidenceClass ?? s.evidence_class) === 'circuit' ? ' - Circuit'
-                          : (s.evidenceClass ?? s.evidence_class) === 'ballistic' ? ' - Ballistic' : ''}
-                      </Text>
-                    ))}
+                    {sessionSets.map((s, j) => {
+                      const isWarmup = s.set_type === 'warmup' || s.setType === 'warmup';
+                      const ev = s.evidenceClass ?? s.evidence_class;
+                      const line = `${s.weight}${units} x ${s.actualReps}`
+                        + (isWarmup ? ' - Warm-up' : '')
+                        + (s.set_type === 'dropset' || s.setType === 'dropset' ? ' - Drop set' : '')
+                        // EL-7: truthful label only, same mechanism as warm-up/drop-set above.
+                        + (ev === 'circuit_ballistic' ? ' - Circuit, Ballistic'
+                          : ev === 'circuit' ? ' - Circuit'
+                          : ev === 'ballistic' ? ' - Ballistic' : '');
+                      return (
+                        <LedgerRow
+                          key={j}
+                          index={j + 1}
+                          primary={line}
+                          muted={isWarmup}
+                          first={j === 0}
+                        />
+                      );
+                    })}
                   </View>
                   {sessionEst1RM > 0 && (
                     <Text style={[styles.historyEst, live.historyEst]}>Est. max: ~{sessionEst1RM.toFixed(0)}{units}</Text>
@@ -1367,8 +1382,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   historyDate: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  historySets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  historySetText: { fontSize: fontSize.sm, color: colors.textSecondary },
+  // D184: a column of ledger lines, not a wrapping strip of chips. The
+  // per-set text key is gone from both halves; LedgerRow draws it.
+  historySets: { gap: 0 },
   historyEst: { ...type.num('caption'), color: colors.textMuted },
   prRow: {
     flexDirection: 'row',
@@ -1628,7 +1644,6 @@ function buildLiveStyles(t) {
     e1rmNote: { ...t.type.caption, color: t.colors.textMuted },
     chartContainer: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     historyDate: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    historySetText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     historyEst: { ...t.type.num('caption'), color: t.colors.textMuted },
     prLabel: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     prValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },

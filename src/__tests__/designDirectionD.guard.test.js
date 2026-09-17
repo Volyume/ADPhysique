@@ -261,3 +261,61 @@ describe('D166 law 7: a number states what it is', () => {
     expect(c).toContain('s.unit');
   });
 });
+
+describe('D184: the ledger is built as specified, on the three surfaces the founder named', () => {
+  // The plan's second signature device -- "every set, everywhere, as
+  // hairline-ruled rows of tabular figures" -- was built in stage 1 and used on
+  // ONE screen until 2026-09-17, when the lead surfaced that as the reduction it
+  // was and the founder ruled "Build it as specified." These cases pin that
+  // the three named surfaces draw their sets through LedgerRow, and that the two
+  // props added to make that possible keep the primitive honest.
+  const LOGGED_ROW = read('src/components/workout/LoggedSetRow.js');
+  const ACTIVE = read('src/screens/ActiveWorkoutScreen.js');
+  const SUMMARY = read('src/screens/WorkoutSummaryScreen.js');
+  const DETAIL = read('src/screens/ExerciseDetailScreen.js');
+
+  test.each([
+    ['the logger\'s logged sets', LOGGED_ROW, /<LedgerRow[\s\S]*?accessible=\{false\}[\s\S]*?muted=\{isWarmup\}/],
+    ['the logger\'s upcoming previews', ACTIVE, /<LedgerRow[\s\S]*?state="upcoming"/],
+    ['the summary\'s set breakdown', SUMMARY, /workingSets\.map\(\(s, si\) => \(\s*<LedgerRow/],
+    ['exercise detail\'s history', DETAIL, /sessionSets\.map\(\(s, j\) => \{[\s\S]*?<LedgerRow/],
+  ])('%s draws through LedgerRow', (label, src, re) => {
+    expect({ label, ledger: re.test(code(src)) }).toEqual({ label, ledger: true });
+  });
+
+  test('the logger keeps its behaviour layer around the ledger line, not inside it', () => {
+    // The tap-to-edit pressable, the spoken label, the long-press menu wrap and
+    // the zeego rowStyle clobber contract all predate D184 and are founder- and
+    // Sentry-pinned elsewhere. The ledger is the CHILD of the pressable; the
+    // pressable still owns the accessibility node, which is why the child is
+    // `accessible={false}`.
+    const c = code(LOGGED_ROW);
+    expect(/<TouchableOpacity[\s\S]*?accessibilityRole="button"[\s\S]*?<LedgerRow/.test(c)).toBe(true);
+    expect(c).toContain('<SetRowMenu rowStyle={rowStyle}');
+  });
+
+  test('a warm-up is a quiet DONE line, never called upcoming', () => {
+    // `muted` exists so the primitive does not have to lie. A warm-up that was
+    // logged is done; rendering it as `state="upcoming"` to get the grey would
+    // have been exactly the kind of misnamed state this campaign has removed.
+    const c = code(LOGGED_ROW);
+    expect(c).toContain('muted={isWarmup}');
+    expect(c).not.toMatch(/state=\{isWarmup/);
+    const ledger = code(LEDGER_ROW);
+    expect(ledger).toMatch(/\(isUpcoming \|\| muted\) \? t\.colors\.textMuted/);
+  });
+
+  test('the two new props are additive and default to the old behaviour', () => {
+    const ledger = code(LEDGER_ROW);
+    expect(ledger).toMatch(/muted = false,/);
+    expect(ledger).toMatch(/accessible = true,/);
+    // A11y label only when the row owns its node.
+    expect(ledger).toMatch(/accessibilityLabel=\{accessible\s*\?/);
+  });
+
+  test('the middle dot still holds the warm-up index column (D173 T2 survives D184)', () => {
+    const c = code(LOGGED_ROW);
+    expect(c).toContain("const warmupMark = '\\u00B7';");
+    expect(c).toMatch(/index=\{isWarmup \? warmupMark : progressNum\}/);
+  });
+});

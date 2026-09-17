@@ -46,21 +46,32 @@ export default function LedgerRow({
   primary,               // the figure: "100 kg x 8"
   secondary = null,      // a quieter trailing fact: "est. 1RM 125 kg"
   state = 'done',        // 'done' | 'current' | 'upcoming'
+  muted = false,         // a quieter DONE line (a warm-up): figure in textMuted
   trailing = null,       // a control belonging to this row
   first = false,         // suppress the top rule on the first row of a block
+  accessible = true,     // false when a wrapping pressable owns the a11y node
   accessibilityLabel,
   style,
   testID,
 }) {
+  // D184 (the ledger built as specified, 2026-09-17) added two props, both
+  // additive. `accessible={false}` exists because the logger wraps this row
+  // in a TouchableOpacity that already carries the spoken label and the
+  // button role; a nested accessible View would announce twice or swallow
+  // the outer node. `muted` exists because a warm-up is a DONE line that
+  // should read quieter than a working set, and the only other way to get
+  // textMuted on the figure was to lie and call it "upcoming".
   const t = useTheme();
-  const s = useMemo(() => buildStyles(t, state), [t, state]);
+  const s = useMemo(() => buildStyles(t, state, muted), [t, state, muted]);
 
   return (
     <View
       style={[styles.row, s.row, !first && s.rule, style]}
       testID={testID}
-      accessible
-      accessibilityLabel={accessibilityLabel ?? [index, primary, secondary].filter(Boolean).join(', ')}
+      accessible={accessible}
+      accessibilityLabel={accessible
+        ? (accessibilityLabel ?? [index, primary, secondary].filter(Boolean).join(', '))
+        : undefined}
     >
       {index != null && <Text style={s.index}>{index}</Text>}
       <Text style={s.primary} numberOfLines={1}>{primary}</Text>
@@ -70,7 +81,7 @@ export default function LedgerRow({
   );
 }
 
-function buildStyles(t, state) {
+function buildStyles(t, state, muted) {
   const isCurrent = state === 'current';
   const isUpcoming = state === 'upcoming';
   return {
@@ -87,7 +98,7 @@ function buildStyles(t, state) {
       minWidth: 0,
       color: isCurrent
         ? t.colors.primary
-        : isUpcoming ? t.colors.textMuted : t.colors.textPrimary,
+        : (isUpcoming || muted) ? t.colors.textMuted : t.colors.textPrimary,
     },
     secondary: { ...t.type.num('bodySm'), color: t.colors.textSecondary },
   };

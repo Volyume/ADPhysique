@@ -1,4 +1,4 @@
-# 30 — THE DEVICE WALK (redesign, stages 1-4)
+# 30 — THE DEVICE WALK (redesign, stages 1-4, plus the ledger)
 
 _Created 2026-09-15 on the founder's instruction (D181): "keep the checklists
 accumulating so whenever you do build, you have the full walk list ready."_
@@ -17,6 +17,11 @@ be "nothing changed".
 **What to report back.** Anything that does not match "expect". Also anything
 that looks *wrong but not listed* -- the value of a device walk is the founder's
 eye, not the checklist's coverage. Screenshots beat descriptions.
+
+**Lettered steps** (13a, 21a, 31a ...) were added after the walk was first
+numbered, on the founder's instruction to keep it accumulating. The letters keep
+the earlier cross-references (steps 4, 31, 37, 41, 43) valid. Anything dated
+2026-09-16 or 2026-09-17 is not in build 3581.
 
 **The one-line summary of what changed**, so the walk has a frame: the app's
 ground moved to a warm charcoal; one element per screen got large; the category
@@ -76,6 +81,23 @@ of them. 8. Section K, every step.
     set's number would be, **in the same column**, and the row text still ends
     " - Warm-up". Nothing shifts left or right. The row is **not** on a yellow
     wash any more.
+13a. ★ **The logged sets are ledger lines** (D184, 2026-09-17). *Expect:* each
+    logged set is ONE hairline-ruled line: a grey set number in a fixed column,
+    the figure ("100kg × 8", exactly as it read before) in ink, tabular, then a
+    grey chevron at the right edge. **No badge behind the number, no border or fill around the row.** The
+    rule between rows is the subtle hairline, full width, and the first row of
+    the block has none above it. The lines are the same height they were (36 dp)
+    -- if the input has moved further from the top of the screen than it did
+    before, that is a defect (the D168 objection, and the reason the primitive's
+    48 dp floor is overridden here).
+13b. **Behaviour on those lines is unchanged.** Tap one: the edit sheet opens.
+    Long-press one: the menu opens, and the row keeps its own edges while the
+    menu is up. TalkBack reads the row ONCE, beginning "Edit set 2" and then the
+    figure -- not twice, and not silently (the ledger line inside the pressable
+    is deliberately not its own accessibility node).
+13c. **The upcoming sets** below the logged ones. *Expect:* a grey set number
+    and "8-12 reps" (or "Set 4") in grey, shorter than a done line, no rule, no
+    fill, nothing amber. They read as the quietest thing in the column.
 14. Open the warm-up ramp sheet. *Expect:* a grey upward-trend arrow, not a
     yellow flame.
 15. **The set steppers.** *Expect:* the − and + glyphs are grey, not amber. Touch
@@ -97,6 +119,16 @@ of them. 8. Section K, every step.
 21. *Expect:* the four-week verdict is the one large element. The stat grid's
     first tile shows a chart glyph, not a flame, and every figure states its
     unit.
+21a. ★ **The set breakdown under each exercise** (D184). *Expect:* each working
+    set is one hairline-ruled line -- "1" in a grey column, then "100kg x 8" in
+    ink, tabular -- **no chips, no pills, no borders**. Warm-ups are not listed
+    here (they never were). **Judge the density, and say so either way:** a
+    five-exercise session shows twenty-odd ink lines under the stat grid. The
+    plan's sentence is "everything behind it grey"; the primitive draws a done
+    figure in ink with a grey index, so that the summary -- where every row is
+    done and nothing is current -- is not a list where nothing is primary. If
+    it reads as a wall rather than a log, that is the one design question this
+    change leaves open, and it is yours.
 22. **If a PR was set.** *Expect:* an amber barbell on a **plain card** -- not a
     yellow caution panel with a yellow label.
 23. **Cross a milestone (5/10/25/50/100 sessions).** *Expect:* the card, the
@@ -127,6 +159,21 @@ of them. 8. Section K, every step.
 31. **Exercise detail.** *Expect:* the hero PR number is amber and is the ONLY
     amber figure on the card. The "Estimated max" chip has **no gold background**
     and its text is readable.
+31a. **Exercise detail, the history list** (D184). *Expect:* every past
+    session's sets as the same hairline-ruled lines the logger draws: set number
+    in a grey column, "100kg x 8" in ink (the string is byte-for-byte what the
+    old chips printed), a warm-up's figure in grey with its " - Warm-up"
+    suffix. One session per card, lines inside it with no gaps.
+31b. **Lifts** (Progress → Lifts). *Expect:* every level badge -- Beginner
+    through **Elite** -- is the same neutral outline pill with grey text. Until
+    2026-09-15 the Elite badge read its colour from a token that no longer
+    existed and fell through to the Beginner grey, so an Elite lift was badged
+    like a beginner's.
+31c. ★ **Tap an exercise row in Lifts, and a plan card in Plans.** *Expect:* the
+    detail screen **grows from the row you tapped**, not from the centre. Then
+    scroll a long list fast and tap a row that has just come into view.
+    *Expect:* it opens **every time**. A recycled row used to be able to eat
+    the tap (fixed 2026-09-16).
 
 ## F. Nutrition and the diary
 
@@ -200,6 +247,12 @@ of them. 8. Section K, every step.
 52. **Colour-blind safe mode.** *Expect:* switches look identical to step 43.
 53. **Reduce Motion on.** *Expect:* the log-flash cross-fades rather than
     animating; the amber still appears and clears. No celebration anywhere.
+53a. **Reduce Motion on, then move around the whole app** (2026-09-16).
+    *Expect:* every push and every sheet-style screen (share, the exercise
+    picker, settings sub-pages) **cross-fades**; nothing slides in from the
+    side or the bottom. And nothing is DELETED: the log-flash still appears
+    and clears, the personal-best toast still appears, the row-grown
+    transition of step 31c becomes a plain cross-fade rather than vanishing.
 54. **TalkBack.** Swipe a switch, a chip and a stat. *Expect:* state announced
     correctly; the big numbers read as one sentence with their units.
 

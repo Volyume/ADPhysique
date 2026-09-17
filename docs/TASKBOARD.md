@@ -33,7 +33,7 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## APP-WIDE VISUAL REDESIGN (2026-09-14) — DIRECTION RULED BY THE FOUNDER (D165); STAGES 1 AND 2 LANDED AND MERGED; STAGE 3 IN PROGRESS; BOTH HELD QUESTIONS ANSWERED (D170)
+## APP-WIDE VISUAL REDESIGN (2026-09-14) — DIRECTION RULED BY THE FOUNDER (D165); STAGES 1-4 LANDED AND MERGED; THE LEDGER BUILT AS SPECIFIED (D184) LANDING 2026-09-17 WITH THE CARD SWEEP; NO BUILD YET (D181)
 
 Plan: `docs/design-redesign-2026-09-14/20-DIRECTION-AND-PLAN.md` (**v3, live**).
 Research: files 10-13 in that folder (README = map). Decisions: **D164** (the
@@ -316,7 +316,7 @@ pressables to `radius.control`, the off-card and planned banner un-carded to a
 hairline (both frozen AND live halves), `DiaryScreen.nutritionSpec.guard.test.js`
 in the shape of the other four.
 
-**STAGE 3 IS IN PROGRESS (the long tail and the props).**
+**STAGE 3 (the long tail and the props): LANDED, except the card sweep, which is landing 2026-09-17 (below).**
 - LANDED (`27d37946`): **the empty states.** `EmptyState.js` is one component
   on 87 call sites, so the 52 dp amber disc with its 1 dp amber edge around a
   stock glyph -- the single most-repeated object in the product -- came out in
@@ -419,8 +419,58 @@ in the shape of the other four.
   campaign. Its own three draft bugs are recorded in its header because each
   made it pass by measuring nothing; a coverage case now pins that it reaches
   100+ files.
-- QUEUED: the hand-rolled cards swept into the real `Card` against the
-  objecthood test.
+- LANDED AND MERGED (`be11d318`): **the amber sweep, every screen and every
+  component** -- A-M 482 raw references to 72, N-Z 423 to 48, components 299
+  amber-bearing lines in 76 files to 68 in 37. Every survivor is pinned by
+  exact line (`amberScreensAM` / `amberScreensNZ` / `amberComponents` guards +
+  `rows.amber.guard` counts). Rulings: **D176** (the ~120 hand-rolled selection
+  styles neutralised now, migrated as their own unit), **D177** (three tail
+  findings), **D178** (the nine sites the lanes refused to guess at), **D179**
+  (the components lane and the A3 scope question; `ProfileAvatarMark`'s
+  six-colour preset palette named as its own item).
+- IN FLIGHT 2026-09-17 (agent lane, fenced from `LoggedSetRow.js`,
+  `ActiveWorkoutScreen.js`, `WorkoutSummaryScreen.js`, `ExerciseDetailScreen.js`
+  while the lead holds them): **the card sweep** -- the hand-rolled cards across
+  `src/screens` and `src/components` against the OBJECTHOOD test (law 2 as the
+  founder corrected it: "a card should mean: this thing is an object"). Expects
+  `src/__tests__/cardObjecthood.guard.test.js`. RECOVERY PATH if the agent
+  dies: the ruling is complete (D165 law 2, plan section 4a), so the sweep is
+  re-runnable from the plan alone; a partial tree is reviewed hunk by hunk
+  against the objecthood test and either finished or reverted -- never
+  committed blind, never discarded.
+**STAGE 4 IS LANDED AND MERGED** (`4a8d7653`; rulings **D180**, landing record
+**D182**): the personal best states a fact -- the share card's own gold, its
+trophy moment, PR glow and "NEW PR" plate rewritten, and RENDERED through
+`scripts/render-share-card.cjs` (CanvasKit, the device's JsiSk API) so the
+lane's visual claims are observed, not inferred; the origin-aware transition
+grows from the row on Lifts, Plans, the plan library and Analytics through
+`PressableCard`'s `onPressWithLayout`. Fixed in the same landing: the Lifts
+Elite badge read a deleted token and fell through to the Beginner grey.
+**Its two open items are CLOSED** (`cda29707`, **D183**): Reduce Motion now
+REPLACES motion everywhere -- cross-fade, never `animationEnabled: false`,
+including the seven modal routes and the row-grown transition -- and a recycled
+list row can no longer eat a tap (`measureHeroOrigin`: fire-once, validity
+check, 100 ms watchdog).
+**FOUNDER ANSWERS (D181):** "No build, keep working", with "keep the checklists
+accumulating so whenever you do build, you have the full walk list ready" --
+hence `docs/design-redesign-2026-09-14/30-DEVICE-WALK.md` (`be13e681`), the one
+consolidated walk, now 62 numbered steps plus the lettered additions below; and
+"Right call, keep the tone" on the share card's tonal grounds.
+**THE LEDGER, BUILT AS SPECIFIED (founder ruling 2026-09-17, D184) -- LANDING
+2026-09-17, hands-on (hash recorded at the card-sweep landing):** the lead
+surfaced that `LedgerRow` had ONE consumer at the end of stage 4 and that
+"ruled off the logger" (D168) was the lead doing less on the surface the plan
+named first; the founder ruled "Build it as specified". Three surfaces now draw
+their sets through `LedgerRow`: the logger's logged rows (behaviour layer
+untouched, the 36 dp / 26 dp heights kept by style override so the D168
+objection is met, spoken once by the pressable), the summary's set breakdown
+(chips gone), exercise detail's history (warm-ups `muted`). Two additive props
+(`muted`, `accessible`). Guard: `designDirectionD.guard` D184 block, five
+cases, six mutations, 0 survivors; two incidental pins re-pointed, none
+deleted. D168 ruling 1 superseded with a note. ONE JUDGEMENT RULED UNDER D33
+and flagged for the founder's eye (walk step 21a): a done figure is ink with a
+grey index, not grey -- on the summary nothing is current, so an all-grey list
+would have no primary element. Walk: steps 13a-13c, 21a, 31a-31c, 53a.
 **SEQUENCED TO STAGE 4, NOT PARKED (D173):** `src/lib/shareCard/drawShareCard.js`
 carries its own `PALETTE.gold`, a trophy moment, a PR glow and a "NEW PR" plate.
 Stage 4 is "one properly made personal best moment that states a fact rather

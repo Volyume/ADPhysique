@@ -25,6 +25,7 @@ import Card from '../components/Card';
 // src/components/workout/. `export { LoggedSetRow }` below keeps existing
 // imports of it from this screen working.
 import { LoggedSetRow } from '../components/workout/LoggedSetRow';
+import LedgerRow from '../components/LedgerRow';
 import EmptyExerciseView from '../components/workout/EmptyExerciseView';
 import StatusStrip from '../components/workout/StatusStrip';
 // R3 (founder order 2026-07-12, full logger rebuild): the page composes from
@@ -4750,11 +4751,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     </Text>
                   </TouchableOpacity>
                 )}
-                {visible.map((s) => {
+                {visible.map((s, visibleIdx) => {
                   const i = loggedSets.indexOf(s);
                   return (
                     <AnimatedRow key={s.id ?? `row-${i}`}>
                       <LoggedSetRow
+                        first={visibleIdx === 0}
                         set={s}
                         units={units}
                         progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
@@ -5028,13 +5030,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 : (routineExercise?.recommendedRepsMin != null
                   ? `${routineExercise.recommendedRepsMin}-${routineExercise.recommendedRepsMax}`
                   : null);
+              // D184: an upcoming set is a ledger line in the `upcoming`
+              // state -- the same row the completed sets above the NowCard
+              // draw, muted because it has not happened yet. Same index
+              // column, same rule, so the whole sequence reads as one log.
               rows.push(
-                <View key={`upcoming-${n}`} style={styles.upcomingSetRow}>
-                  <Text style={[styles.upcomingSetNum, live.upcomingSetNum]}>{n}</Text>
-                  <Text style={[styles.upcomingSetText, live.upcomingSetText]}>
-                    {range ? `${range} reps` : `Set ${n}`}
-                  </Text>
-                </View>,
+                <LedgerRow
+                  key={`upcoming-${n}`}
+                  state="upcoming"
+                  index={n}
+                  primary={range ? `${range} reps` : `Set ${n}`}
+                  style={styles.upcomingLedgerLine}
+                />,
               );
             }
             return rows.length ? <View style={styles.upcomingSection}>{rows}</View> : null;
@@ -6590,13 +6597,11 @@ const styles = StyleSheet.create({
   // sequence - phase 2B retired the dashed bordered cards (an unperformed
   // future set must never carry the visual mass of the active one).
   upcomingSection: { gap: 0, marginTop: spacing.xxs },
-  upcomingSetRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs2,
-    minHeight: 26,
-    paddingHorizontal: spacing.sm,
-  },
-  upcomingSetNum: { ...type.num('caption'), color: colors.textMuted, minWidth: 22, textAlign: 'center' },
-  upcomingSetText: { ...type.caption, color: colors.textMuted },
+  // D184: the upcoming previews are LedgerRow lines now; only the logger's
+  // own density survives here (26 dp, the "light lines, never the mass of the
+  // active set" verdict). Palette-invariant, so frozen only -- the old
+  // upcomingSetRow/Num/Text keys are gone from both halves.
+  upcomingLedgerLine: { minHeight: 26, paddingVertical: 0, paddingHorizontal: spacing.sm },
   // Phase 2B: the fold line for earlier completed sets (active-set
   // stability). One quiet row, constant height whatever it hides.
   historyToggle: {
@@ -6876,8 +6881,6 @@ function buildLiveStyles(t) {
     circuitMissedLine: { ...t.type.caption, color: t.colors.textSecondary },
     loggedTitle: { ...t.type.captionStrong, color: t.colors.textMuted },
     // Phase 2B live-theme mirrors for the sequence additions.
-    upcomingSetNum: { ...t.type.num('caption'), color: t.colors.textMuted },
-    upcomingSetText: { ...t.type.caption, color: t.colors.textMuted },
     historyToggleText: { ...t.type.caption, color: t.colors.textMuted },
     // D43 S1: LoggedSetRow-exclusive (loggedSetRow/loggedSetRowWarmup/
     // loggedSetTextWarmup/setNumBadge/setNumText/loggedSetText/loggedEst1RM)
