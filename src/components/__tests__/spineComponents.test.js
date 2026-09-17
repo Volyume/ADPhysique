@@ -108,17 +108,29 @@ describe('WeekRibbon', () => {
     expect(cells(render(<WeekRibbon days={null} todayKey={null} />))).toHaveLength(7);
   });
 
-  test('today is amber and wins over trained, so "now" is never ambiguous', () => {
+  // RE-ANCHORED (D191, 2026-09-17): today trained = amber FILL, today not
+  // yet trained = amber OUTLINE. Either way exactly one cell is amber, and
+  // a filled cell always means a session.
+  test('today, once trained, is the one amber fill and wins over trained', () => {
     const tree = render(<WeekRibbon days={['mon', 'wed']} todayKey="wed" />);
     const amber = cells(tree).filter((c) => flat(c).backgroundColor === colors.primary);
     expect(amber).toHaveLength(1);
+    expect(cells(tree).filter((c) => flat(c).borderColor === colors.primary)).toHaveLength(0);
+  });
+
+  test('today, before training, is an amber outline on the quiet fill, never a slab', () => {
+    const tree = render(<WeekRibbon days={['mon']} todayKey="thu" />);
+    const outlined = cells(tree).filter((c) => flat(c).borderColor === colors.primary);
+    expect(outlined).toHaveLength(1);
+    expect(flat(outlined[0]).backgroundColor).toBe(colors.surface);
+    expect(cells(tree).filter((c) => flat(c).backgroundColor === colors.primary)).toHaveLength(0);
   });
 
   test('a trained day that is not today reads as trained, not as now', () => {
     const tree = render(<WeekRibbon days={['mon']} todayKey="thu" />);
     const fills = cells(tree).map((c) => flat(c).backgroundColor);
     expect(fills.filter((c) => c === colors.borderLight)).toHaveLength(1);
-    expect(fills.filter((c) => c === colors.primary)).toHaveLength(1);
+    expect(fills.filter((c) => c === colors.primary)).toHaveLength(0);
   });
 
   test('the whole band is one accessibility node, naming the days in full', () => {

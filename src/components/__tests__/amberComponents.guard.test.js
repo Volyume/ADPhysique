@@ -255,8 +255,10 @@ const SURVIVORS = {
       why: 'The frozen twin of that unread dot; both halves must move together.' },
   ],
   'WeekRibbon.js': [
-    { line: 'cellToday: { backgroundColor: t.colors.primary },',
-      why: "Today's ribbon cell: discipline 1's first named instance, and the file's own comment says it is the only place this component spends amber. The trained fill beside it is `borderLight`." },
+    { line: 'cellToday: { borderWidth: 1.5, borderColor: t.colors.primary },',
+      why: "Today's ribbon cell before you have trained today (D191): an amber outline, discipline 1's first named instance. A solid slab every morning was the loudest thing on Today before anything had happened." },
+    { line: 'cellTodayTrained: { backgroundColor: t.colors.primary },',
+      why: "Today's ribbon cell once you have trained today (D191): the fill, so a filled cell always means a session. Still the only amber in the band." },
   ],
   'community/ActivityItemRow.js': [
     { line: '<View style={[styles.ringDot, { backgroundColor: t.colors.primary, borderColor: t.colors.background }]} />',
@@ -396,7 +398,9 @@ describe('D174/D175/D176/D178: every amber site left in src/components is a reco
     // reserves amber for TODAY. The app's own signature disagreed with itself
     // across two surfaces.
     const total = LANE.reduce((n, f) => n + amberLines(f).length, 0);
-    expect(total).toBe(60);
+    // 60 at the sweep; 61 with D191, which splits today's ribbon cell into an
+    // outline (not yet trained) and a fill (trained). Both are today's.
+    expect(total).toBe(61);
     const community = LANE.filter((f) => f.startsWith('community/'))
       .reduce((n, f) => n + amberLines(f).length, 0);
     expect(community).toBe(11);

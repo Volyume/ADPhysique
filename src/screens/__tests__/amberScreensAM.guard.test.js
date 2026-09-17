@@ -363,6 +363,11 @@ const SURVIVORS = {
     // ActivityIndicator and RefreshControl explicitly: a spinner is the app
     // telling you it is working RIGHT NOW, which is discipline 1 exactly.
     "refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}",
+    // KEEP (D191, 2026-09-17) -- the screen's one committing action, "Start
+    // workout", carries the screen's one amber mark: D148's amber leading
+    // icon, on this button alone. Its "Options" neighbour had become its
+    // twin once D174 took the amber off every primary's icon.
+    "iconFg={t.colors.primary}",
   ],
   "HowYouTrainAddScreen.js": [
     // KEEP -- the wizard's you-are-here progress: the segments fill up to the
@@ -464,7 +469,8 @@ describe('D174/D175: the amber left on screens A-M is exactly this list', () => 
     expect(files.length).toBeGreaterThan(50);
     const withAmber = files.filter((f) => SURVIVORS[f].length > 0);
     expect(withAmber.length).toBeGreaterThan(20);
-    expect(files.reduce((n, f) => n + SURVIVORS[f].length, 0)).toBe(65);
+    // 65 at the sweep; 66 with D191's one amber mark on Today's Start workout.
+    expect(files.reduce((n, f) => n + SURVIVORS[f].length, 0)).toBe(66);
   });
 
   test('every pinned survivor carries a stated reason in the table above', () => {

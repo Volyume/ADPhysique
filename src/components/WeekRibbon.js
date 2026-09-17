@@ -81,8 +81,13 @@ export default function WeekRibbon({
                 isTrained && s.cellTrained,
                 // Amber means one thing: now (law 6). Today's cell is the only
                 // place this component spends it, and it wins over the trained
-                // fill so "now" is never ambiguous.
-                isToday && s.cellToday,
+                // fill so "now" is never ambiguous. D191 (founder screenshot,
+                // 2026-09-17): a solid amber slab was the loudest thing on
+                // Today every morning, before anything had happened. Today is
+                // an amber OUTLINE until you have trained today, and an amber
+                // FILL after -- so a filled cell always means a session, and
+                // "now" is still the one amber cell in the band.
+                isToday && (isTrained ? s.cellTodayTrained : s.cellToday),
               ]}
             />
           );
@@ -103,7 +108,8 @@ function buildStyles(t, height) {
   return {
     cell: { height, backgroundColor: t.colors.surface },
     cellTrained: { backgroundColor: t.colors.borderLight },
-    cellToday: { backgroundColor: t.colors.primary },
+    cellToday: { borderWidth: 1.5, borderColor: t.colors.primary },
+    cellTodayTrained: { backgroundColor: t.colors.primary },
     initial: {
       ...t.type.micro,
       color: t.colors.textMuted,

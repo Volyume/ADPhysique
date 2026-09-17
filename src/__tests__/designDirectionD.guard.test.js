@@ -177,10 +177,15 @@ describe('D166: the spine components are written to the migrated pattern, not th
 
 describe('D166 law 6: amber means now', () => {
   test('the week ribbon spends amber on today and nothing else', () => {
+    // RE-ANCHORED (D191, 2026-09-17): today is an amber OUTLINE until you
+    // have trained today and an amber FILL after, so the two amber lines
+    // are both today's. Nothing else in the file may spend it.
     const c = code(WEEK_RIBBON);
     const amber = c.match(/t\.colors\.primary/g) || [];
-    expect({ count: amber.length }).toEqual({ count: 1 });
-    expect(c).toContain('cellToday: { backgroundColor: t.colors.primary }');
+    expect({ count: amber.length }).toEqual({ count: 2 });
+    expect(c).toContain('cellToday: { borderWidth: 1.5, borderColor: t.colors.primary }');
+    expect(c).toContain('cellTodayTrained: { backgroundColor: t.colors.primary }');
+    expect(c).toContain('isToday && (isTrained ? s.cellTodayTrained : s.cellToday)');
   });
 
   test('the ledger spends amber on the current row only, as ink and never as a fill', () => {

@@ -8927,3 +8927,53 @@ Executed the same hour.
   card says "Every morning before food, after the bathroom. Three seconds.
   Feeds your weight trend so Coach can make calmer weekly decisions." It is
   a one-time surface, not Today; it goes the moment the founder says so.
+
+---
+
+## D191 — Today, after the founder's screenshot of build 3582 (lead rulings under D33, 2026-09-17)
+
+The founder sent Today from build 3582 (head `cda29707`, dispatched 19:59 UTC,
+so it predates the ledger, the card sweep and everything after) with "it
+looks a mess" and "I'm not convinced it's a complete product". Three things
+on that screenshot are defects of hierarchy rather than of the build's age,
+and are ruled and fixed now; the rest of the review runs on renders of main.
+
+1. **Start workout and Options had become twins.** D148 marked the routine
+   forward action with an amber leading icon on a raised surface; D174 then
+   took the amber off every primary's icon, so Today's one committing action
+   read exactly like the options button beside it. Ruling: `Button` gains an
+   ADDITIVE per-instance `iconFg`, and Today's Start workout alone passes the
+   amber. D148's pin that Start workout is not `emphatic` stands: this is the
+   mark D148 designed for it, restored on one button, not a promotion.
+2. **Today's ribbon cell was the loudest thing on the screen.** A solid
+   amber slab at cell size, every morning, before anything had happened. The
+   founder's spec ("filled for a session, amber for today") is kept and made
+   consistent: today is an amber OUTLINE until you have trained today and an
+   amber FILL after, so a filled cell always means a session and "now" is
+   still the one amber cell in the band. Flagged for the founder's eye: the
+   ribbon is their favourite component and this changes how it looks at
+   9 am.
+3. **The nutrition line shouted a zero.** "0 / 2,580 kcal" at h3 before
+   anything is logged made the second-loudest thing on the screen a nothing.
+   Before the first entry the line states the target with its unit and says
+   plainly that nothing is logged; the founder's "eaten / target" figure
+   returns with the first entry. The ED gate on the section is untouched.
+
+Guards re-anchored with intent kept: the ribbon's amber count (two lines,
+both today's), its render cases (outline before, fill after, one amber cell
+either way), the Button ink pin, and the two amber ceilings (+1 each, with
+the reason on the line). Walk: steps 54j-54l.
+
+**Seen, not changed yet, for the review:** the readiness chip's no-session
+fallback "See how this block works." sits inside the hero card as a third
+control; the morning-weight card and the check-in card in the screenshot
+are already hairline sections on main (card sweep).
+
+**The card sweep's tail (D186) landed** in the same landing: the four fenced
+files against the objecthood test (five logger buttons and the cluster
+prompt, the summary's stat tiles under one shared hairline and its feedback
+toggle, exercise detail's chart panel), three pins re-anchored with the
+mutation proved, and one STOP ruled: `ProOnboardingScreen.seqPanel` keeps
+its charcoal surface because D147 is a founder device verdict on that exact
+surface, and a general law does not quietly reverse a specific founder
+ruling. Walk: steps 54m-54p.

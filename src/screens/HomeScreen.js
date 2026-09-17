@@ -2707,6 +2707,10 @@ export default function HomeScreen({ navigation, route }) {
                 <Button
                   title={isStartingWorkout ? 'Starting...' : 'Start workout'}
                   icon="play"
+                  // D191: the screen's one committing action carries the
+                  // screen's one amber mark (D148's amber leading icon, on
+                  // this button alone). Not emphatic: D148's pin stands.
+                  iconFg={t.colors.primary}
                   onPress={() => handleStartNextWorkout(false)}
                   disabled={isStartingWorkout}
                   accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
@@ -2841,16 +2845,39 @@ export default function HomeScreen({ navigation, route }) {
             style={styles.todaySection}
             onPress={() => navigateCrossTab(navigation, 'DiaryTab', 'Diary')}
             accessibilityRole="button"
-            accessibilityLabel={`Nutrition. ${todayNutrition.kcal} of ${todayNutrition.kcalTarget} calories. Protein ${todayNutrition.protein} of ${todayNutrition.proteinTarget} grams.`}
+            accessibilityLabel={todayNutrition.kcal === 0 && todayNutrition.protein === 0
+              ? `Nutrition. Nothing logged yet. Target ${todayNutrition.kcalTarget} calories, protein ${todayNutrition.proteinTarget} grams.`
+              : `Nutrition. ${todayNutrition.kcal} of ${todayNutrition.kcalTarget} calories. Protein ${todayNutrition.protein} of ${todayNutrition.proteinTarget} grams.`}
           >
             <SectionLabel tone="muted">Nutrition</SectionLabel>
-            <Text style={[styles.todayValue, live.todayValue]}>
-              {`${formatNumber(todayNutrition.kcal)} / ${formatNumber(todayNutrition.kcalTarget)} kcal`}
-            </Text>
-            {todayNutrition.proteinTarget > 0 && (
-              <Text style={[styles.todayFact, live.todayFact]}>
-                {`Protein ${todayNutrition.protein} / ${todayNutrition.proteinTarget} g`}
-              </Text>
+            {/* D191 (founder screenshot, 2026-09-17): before anything is
+                logged the founder's "eaten / target" figure rendered a zero
+                at h3 -- the second-loudest thing on the screen was nothing.
+                The zero state states the target (law 7: every figure with
+                its unit) and says plainly that nothing is logged; the
+                founder's figure returns with the first entry. */}
+            {todayNutrition.kcal === 0 && todayNutrition.protein === 0 ? (
+              <>
+                <Text style={[styles.todayValue, live.todayValue]}>
+                  {`${formatNumber(todayNutrition.kcalTarget)} kcal target`}
+                </Text>
+                <Text style={[styles.todayFact, live.todayFact]}>
+                  {todayNutrition.proteinTarget > 0
+                    ? `Nothing logged yet · Protein ${todayNutrition.proteinTarget} g`
+                    : 'Nothing logged yet'}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.todayValue, live.todayValue]}>
+                  {`${formatNumber(todayNutrition.kcal)} / ${formatNumber(todayNutrition.kcalTarget)} kcal`}
+                </Text>
+                {todayNutrition.proteinTarget > 0 && (
+                  <Text style={[styles.todayFact, live.todayFact]}>
+                    {`Protein ${todayNutrition.protein} / ${todayNutrition.proteinTarget} g`}
+                  </Text>
+                )}
+              </>
             )}
           </TouchableOpacity>
         )}

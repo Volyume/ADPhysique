@@ -47,7 +47,12 @@ describe('the button variant table', () => {
   });
   test('the default variant is the standard primary, and icons take the variant ink', () => {
     expect(BUTTON).toMatch(/variant = 'primary',/);
-    expect(BUTTON).toMatch(/const iconFg = v\.iconFg \?\? v\.fg;/);
+    // RE-ANCHORED (D191, 2026-09-17): icons take the variant ink unless ONE
+    // instance is handed the screen's amber mark through the additive
+    // `iconFg` prop (Today's "Start workout"). The variant table is still the
+    // default and the only source of colour for every button that does not
+    // pass it.
+    expect(BUTTON).toMatch(/const iconFg = iconFgProp \?\? v\.iconFg \?\? v\.fg;/);
     expect(BUTTON).toMatch(/<Ionicons name=\{icon\} size=\{s\.icon\} color=\{iconFg\} \/>/);
   });
   test('the haptic tick fires for primary and emphatic only', () => {

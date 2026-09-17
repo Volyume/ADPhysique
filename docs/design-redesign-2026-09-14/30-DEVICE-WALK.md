@@ -294,6 +294,31 @@ of them. 8. Section K, every step.
 54i. **Today, before any weigh-in.** *Expect:* the morning-weight row reads
     "Morning weight / Not logged yet / Log" and nothing else. **No "Before
     breakfast" sentence** (founder order 2026-09-17, D190).
+54j. ★ **Today, the hero card** (D191). *Expect:* "Start workout" carries a
+    small **amber play glyph**; "Options" is quieter, with a grey glyph. The
+    two no longer read as twins. Start workout is still a raised grey button,
+    not an amber-filled one.
+54k. ★ **Today, the week ribbon, before you train** (D191). *Expect:* today's
+    cell is an **amber outline** on the quiet fill, not a solid amber block.
+    Then finish a session. *Expect:* today's cell **fills amber**. Any other
+    trained day is the neutral fill. Say whether the outline reads as "today"
+    at a glance; this is your favourite component and the change is mine.
+54l. **Today, before any food is logged** (D191). *Expect:* the Nutrition line
+    reads "2,580 kcal target" with "Nothing logged yet · Protein 192 g" under
+    it, in the same sizes as before. Log one food. *Expect:* it returns to
+    "N / 2,580 kcal" and "Protein N / 192 g".
+54m. **Logger buttons** (D186 tail). *Expect:* Log set, the swap-browse
+    button, the superset and keep-training buttons and the auto-advance
+    action all have the slightly tighter control corner; colours and heights
+    unchanged. A cluster or per-side prompt is a hairline section, not a box.
+54n. **Workout summary, the stat tiles** (D186 tail). *Expect:* the tiles
+    are plain figures on the page under **one** hairline above the row, not
+    one box each; the "Rate this workout" button has the control corner; the
+    save-error banner (if you ever see it) keeps its tinted shape.
+54o. **Exercise detail, the chart** (D186 tail). *Expect:* the strength chart
+    sits under a hairline with no box or fill, in dark and in light.
+54p. **Onboarding, the sequence panel** (D186 tail). *Expect:* unchanged, a
+    charcoal surface with a hairline. That is your D147 verdict and it stands.
 54g. ★ **Look for orphan rules.** A hairline directly under a screen title,
     two hairlines with nothing between them, or a hairline at the very top
     of a screen with nothing above it is a defect of this sweep. Report the

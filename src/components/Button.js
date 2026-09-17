@@ -132,6 +132,12 @@ export default function Button({
   // paired buttons always match height. Off by default so no existing
   // button changes.
   singleLine = false,
+  // D191 (2026-09-17): a per-instance leading-icon colour. D148 marked the
+  // routine forward action with an amber leading icon; D174 then took the
+  // amber off every primary's icon, which left Today's "Start workout" and
+  // its "Options" neighbour as twins. This lets ONE button on a screen carry
+  // that mark without a new variant and without touching the other 300.
+  iconFg: iconFgProp,
   children,
 }) {
   const t = useTheme();
@@ -209,7 +215,7 @@ export default function Button({
   const handlePress = onPress && (v === VARIANTS.primary || v === VARIANTS.emphatic)
     ? (e) => { haptics.selection(); return onPress(e); }
     : onPress;
-  const iconFg = v.iconFg ?? v.fg;
+  const iconFg = iconFgProp ?? v.iconFg ?? v.fg;
 
   const content = phase === 'loading' ? (
     <ActivityIndicator color={v.fg} />
