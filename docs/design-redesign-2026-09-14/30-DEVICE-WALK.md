@@ -286,6 +286,11 @@ of them. 8. Section K, every step.
     button that used to wear a card corner has the tighter control corner.
     **Nothing about what these screens SAY or SUPPRESS changed** (section K
     still proves that).
+54h. **Today, tap the block chip ("stop N short" / week line).** *Expect:* the
+    "Your block" sheet ends after the recovery-week paragraph. **No "Reps in
+    reserve" paragraph** (founder order 2026-09-17, D189). TalkBack on the
+    chip says "See the shape of your training block" and nothing about the
+    effort target.
 54g. ★ **Look for orphan rules.** A hairline directly under a screen title,
     two hairlines with nothing between them, or a hairline at the very top
     of a screen with nothing above it is a defect of this sweep. Report the

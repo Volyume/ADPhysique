@@ -8819,3 +8819,87 @@ one plain banner, two sheets), `WorkoutSummaryScreen` (the stat tiles and
 the feedback toggle), `ExerciseDetailScreen` (the chart container). Those
 are the follow-up lane, dispatched under D185 to Sonnet with the complete
 rule table and a STOP rule on any pin it cannot re-anchor with intent kept.
+
+---
+
+## D187 — The avatar presets stop borrowing state colours (lead ruling under D33, 2026-09-17)
+
+**The question (D179, queued whole).** `ProfileAvatarMark`'s six presets are
+six Ionicons glyphs (barbell, body, calendar, trending-up, flash, pulse), each
+coloured by a `tone` borrowed from the semantic palette: `primary` (amber),
+`macroFat`, `success`, `macroCarb`, `warning`, `error`. So a "Conditioning"
+avatar is drawn in the error red, "Power" in the caution yellow and "Strength"
+in the amber that the founder's law reserves for "now / action / meaningful
+change". D179 refused to grey only the amber one, correctly: one grey preset
+among five coloured ones is the defect D178 refused for the macro legend.
+
+**Ruling: no tone at all. The glyph is the identity; it draws in ink.** Six
+distinct glyphs already distinguish six presets; the colour was decoration
+laid over that, and it was decoration made of state tokens, which is the one
+kind of decoration the redesign has removed everywhere else (D174, D178). The
+alternative -- six new dedicated avatar hues across six palettes with their
+own contrast suite -- would reintroduce decorative colour into a product whose
+law is "use typography, spacing, hierarchy and data to create visual
+interest", to solve a distinguishability problem the glyphs already solve.
+Photo avatars are untouched. The preset KEYS are a persisted contract
+(`avatarPreset` stores the key, synced with the profile) and do not change;
+only the colour goes.
+
+**The build (Sonnet, D185).** `profileAvatarPresets.js` loses `tone`;
+`ProfileAvatarMark` draws the glyph in `textPrimary` and the picker badge glyph
+in `textSecondary` (the selected tick stays `textPrimary`); any consumer
+reading `preset.tone` follows. `amberComponents.guard` pins the mark's amber
+fallback by exact line and is re-anchored by removing that entry, with the
+mutation proved. `community.layout.guard`'s scaling floors are untouched.
+Walk step: any Community list and the avatar picker -- glyphs in ink, no
+coloured avatars, the selected preset still marked by its ring and tick.
+
+---
+
+## D188 — The Community list-to-detail set gets the origin-aware transition (lead ruling under D33, 2026-09-17)
+
+**Authority.** Plan section 7 stage 4 ("the origin-aware hero-zoom transition
+the app already has but uses on only 9 of 137 screens") and D180's object
+test for where it belongs: a row that IS an object opening its own detail.
+D182 section 3 found "a Community set that qualifies on the object test but
+sits outside D180's enumeration and would need shared row components
+threaded", and left it, correctly, as its own unit.
+
+**Ruling: thread it.** A person and a group are objects in exactly the sense
+a lift or a plan is, and Community is the one part of the product where a
+list-to-detail push still zooms from the centre while the rest of the app
+grows from the row. The pattern is already written: `PressableCard`'s
+`onPressWithLayout` and `measureHeroOrigin` (fire-once, validity check,
+100 ms watchdog, D183), consumed as
+`navigation.navigate(..., { __heroOrigin: rect || undefined })`.
+
+**Bounds.** The shared rows (`PersonRow`, `CohortRow`, and whichever activity
+row opens a person or group) gain an `onPressWithLayout` slot alongside their
+existing `onPress`; behaviour, gutters, hairlines, accessibility roles and
+labels are unchanged and `community.layout.guard` must stay green untouched.
+Reduce Motion is already app-wide (cross-fade), so no new motion branch is
+written. A guard pins every threaded call site so the set cannot silently
+shrink. Walk step: tap a person and a group from the Hub, Search and a gym
+page; the detail grows from the row, and under Reduce Motion it cross-fades.
+
+---
+
+## D189 — Block info does not explain reps in reserve (founder order, 2026-09-17)
+
+Founder, from the live "Your block" sheet on device: "Get rid of the reps in
+reserve content at the bottom. We don't need to explain reps in reserve at
+all in block info." Executed the same hour.
+
+- `HomeBlockShapeSheet` no longer renders the reps-in-reserve paragraph. It
+  was `GLOSSARY.rir`'s only call site, so the entry is deleted rather than
+  left dead behind a pinned test.
+- The Home block chip's spoken label promised "and what the effort target
+  means"; the sheet no longer holds that, so the label names the block and
+  nothing else (a door names only what is behind it).
+- Three pins re-anchored with intent kept: the sheet's render test now pins
+  the absence; the comprehension case that pinned the gloss's register pins
+  the removal; the first-use "door" case pins that the label promises only
+  what the sheet holds.
+- Consequence, stated plainly: nothing in the app now explains "stop N
+  short". The gloss had no other consumer. If the founder wants the term
+  glossed somewhere other than block info, that is a new item.
