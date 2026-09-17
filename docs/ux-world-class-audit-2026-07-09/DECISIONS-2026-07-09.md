@@ -8711,3 +8711,37 @@ at the same time, with the four ledger files fenced out of it:
   founder's eye: it is flagged on the device walk as step 21a, and overruling
   it is one token in `buildStyles`.
 - D168 ruling 1 is superseded; a note at D168 says so.
+
+---
+
+## D185 — Lowest capable tier (founder order, 2026-09-17)
+
+Founder, verbatim, in chat: "I have applied Fable 5.1. Use yourself for all
+serious reasoning and design but the lowest possible agent for all relevant
+work that can be used to preserve tokens. Ensure the app is elite without
+huge token cost."
+
+**What changes.** The agent-tier block in CLAUDE.md already said "pick the
+tier by what the work needs, not by default" and made Opus the default for
+anything that must land at Fable standard. This order moves the default DOWN:
+the dispatch tier is the lowest that can do the work to standard -- Haiku for
+mechanical and bounded passes (renames, sweeps against a complete rule table,
+comment compression, triage), Sonnet for well-specified builds and
+test-writing against a clear spec, Opus only where the quality bar genuinely
+demands it, with the reason stated in the brief. The main loop keeps what
+cannot be delegated without losing quality: design and architecture calls,
+safety-adjacent code, the lead review of every diff before commit, and the
+rulings. Recon ("what exists", "which files") goes to cheap read agents, not
+the main loop.
+
+**What does not change.** The quality bar. "Elite without huge token cost"
+is both halves: a cheap agent that produces work the lead has to redo is the
+expensive option. Every landing still runs the four gates; every agent diff
+is still read hands-on before commit; safety-adjacent hunks are still the
+lead's. The agent-tier guard hook is unchanged (it enforces an explicit
+model, not a specific one).
+
+**Applied from this point.** The card sweep already in flight finishes on the
+tier it started on (killing it would waste what it has spent). Everything
+dispatched after this entry follows the order. Recorded in CLAUDE.md under
+the agent-tier block.

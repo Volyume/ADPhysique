@@ -380,6 +380,17 @@ default:
   loop: architecture calls, safety-adjacent code, and judgement the founder
   is relying on directly.
 
+**Lowest capable tier (founder order 2026-09-17, standing).** Verbatim: "Use
+yourself for all serious reasoning and design but the lowest possible agent
+for all relevant work that can be used to preserve tokens. Ensure the app is
+elite without huge token cost." So the dispatch default is the LOWEST tier
+that can do the work to standard, not Opus: Haiku for mechanical and bounded
+passes, Sonnet for well-specified builds and test-writing, Opus only where
+the quality bar genuinely demands it, and the brief says why. The main loop
+keeps design, architecture, safety-adjacent code and the review of every
+diff. Recon and surveys go to cheap read agents, never to the main loop.
+Register: D185.
+
 **SESSION OPERATING MODEL (PERMANENT — founder order 2026-07-11; applies
 to EVERY session on this repo from now on).** This block codifies the
 campaign operating model as standing law; it is not campaign-scoped.
