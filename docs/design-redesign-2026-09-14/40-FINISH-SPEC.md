@@ -67,6 +67,11 @@ lifted to clear 4.5:1 on the lighter ladder. Light: the hairline darkens to
    title 16 semibold; ONE secondary line at 13, optional; a 20 dp glyph in
    textSecondary at the left, never boxed; chevron in textMuted; hairline
    between rows; no box round the group. The page pays the gutter once.
+   Measured cap (2026-09-18, from the Settings render): a row with a glyph
+   and a chevron leaves about 314 dp for text at 360 dp wide, and bodySm
+   sets about 5.8 dp per character, so a secondary line fits one line at
+   **50 characters or fewer**; a full-width meta line (a card, no glyph or
+   chevron) at 56. The earlier "under 60" allowed lines that wrapped.
 4. **Card** (only for an object: the plan, the session ahead, a meal, a lift,
    a person): surface fill, 1 px hairline, radius 16, padding 16; one
    headline (h2 or title), one meta line, controls at the foot; never a
