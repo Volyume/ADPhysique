@@ -14,7 +14,7 @@
  *
  * Rules obeyed (section 1 preamble; `docs/rules/styling.md`): function
  * component, `useTheme`, tokens only (`circle(6)` for the dots,
- * `spacing.xs` gap, `borderLight`/`border` with amber for today, no raw hex/spacing/
+ * `spacing.xs` gap, `colors.primary`/`colors.border`, no raw hex/spacing/
  * font-size literals), `StyleSheet.create` at the bottom. `c.primary`
  * appears only for a trained dot's fill and the not-yet-trained-today
  * ring (pinned by `rows.amber.guard.test.js`). Never imports
@@ -32,14 +32,24 @@ import { View, StyleSheet } from 'react-native';
 import { spacing, colors, circle } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { daysLabel } from '../../lib/community';
-import { DAY_ORDER, currentDayKey } from '../../lib/weekDays';
 
-// The weekday vocabulary moved to `src/lib/weekDays.js` when the week ribbon
-// (D166) put a week on Today and on Progress as well, so a shared component no
-// longer has to import from `components/community/`. Re-exported here so this
-// file's existing callers (PersonRow, and this component's own test) are
-// unchanged.
-export { currentDayKey };
+const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+/**
+ * Today's short day key ('mon'..'sun'), the local-device weekday in
+ * `boards.js`'s vocabulary. No existing helper produces this form
+ * (`dayKey.js` keys by calendar date, not weekday, for a different job);
+ * named and kept here since DayDots owns this vocabulary and `PersonRow`
+ * (the only other caller that needs "today") already imports from this
+ * file.
+ *
+ * @param {Date} [now]
+ * @returns {string}
+ */
+export function currentDayKey(now = new Date()) {
+  return WEEKDAY_KEYS[now.getDay()];
+}
 
 export default function DayDots({ days, todayKey }) {
   const t = useTheme();
@@ -64,14 +74,7 @@ export default function DayDots({ days, todayKey }) {
             style={[
               styles.dot,
               {
-                // D174 A3 scope ruling. A3 protects the UNREAD and today marks;
-                // a trained-day FILL is the week-ribbon idiom, and `WeekRibbon`
-                // -- the signature device D165 specified -- fills a trained day
-                // with `borderLight` and reserves amber for TODAY. This filled
-                // every trained day amber, so the app's own signature disagreed
-                // with itself across two surfaces. The today ring below is
-                // untouched and stays amber.
-                backgroundColor: isTrained ? t.colors.borderLight : t.colors.border,
+                backgroundColor: isTrained ? t.colors.primary : t.colors.border,
                 borderColor: ringToday ? t.colors.primary : 'transparent',
                 borderWidth: ringToday ? 1 : 0,
               },

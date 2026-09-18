@@ -28,26 +28,15 @@ const summary = read('lib/capability/summary.js');
 const settings = read('screens/SettingsScreen.js');
 
 describe('1. Train tab: first row of Plan tools, always shown', () => {
-  // RE-ANCHORED 2026-09-18 (D192, finish spec section 4.3): the row lost
-  // its <Card> wrapper -- Plan tools are rows now, no card, no box -- so
-  // the marker moves from a <Card>...</Card> tag pair to the row's own
-  // "the FIRST row, always shown" comment (still literally there, still
-  // immediately above this exact row) through its onPress. The intent
-  // this test pins is unchanged: first entry after the label, always
-  // shown unconditionally, the live hytSummary.sub line, opens
-  // HowYouTrain.
-  test('the row is the first row after the Plan tools label and carries the live line', () => {
+  test('the row is the first card after the Plan tools label and carries the live line', () => {
     const tools = plans.slice(plans.indexOf('<SectionLabel>Plan tools</SectionLabel>'));
-    const firstRow = tools.indexOf('the FIRST row, always shown');
-    expect(firstRow).toBeGreaterThan(-1);
-    const rowIdx = tools.indexOf("onPress={() => navigation.navigate('HowYouTrain')}", firstRow);
-    expect(rowIdx).toBeGreaterThan(firstRow);
-    const block = tools.slice(firstRow, firstRow + 900);
+    const firstCard = tools.indexOf('<Card');
+    const block = tools.slice(firstCard, tools.indexOf('</Card>', firstCard));
     expect(block).toContain("onPress={() => navigation.navigate('HowYouTrain')}");
     expect(block).toContain('>Injuries & limitations</Text>');
     expect(block).toContain('{hytSummary.sub}');
     // Always shown: no count or state condition wraps it (unlike Avoided movements, D109-3).
-    const before = tools.slice(0, firstRow);
+    const before = tools.slice(0, firstCard);
     expect(before).not.toMatch(/&&\s*\($/m);
     expect(before).not.toContain('hytSummary.empty');
   });
@@ -104,10 +93,7 @@ describe('3. Home: one calm, one-time offer', () => {
 
 describe('the live line and the entries that stay', () => {
   test('the summary never uses diagnosis or restriction vocabulary and offers rather than asks', () => {
-    // RE-ANCHORED 2026-09-18 (D192, row-line cap): the offer line was cut to
-    // fit one row line. Intent kept: it still offers ("Injuries, pain,
-    // conditions or disabilities"), never asks, never diagnoses.
-    expect(summary).toContain("export const HOW_YOU_TRAIN_OFFER = 'Injuries, pain, conditions or disabilities';");
+    expect(summary).toContain("export const HOW_YOU_TRAIN_OFFER = 'Injuries, pain, long-term conditions or disabilities that affect your training.';");
     // Scoped to what a person can read: the string literals, not the
     // comments that explain the law.
     const text = (summary.match(/'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g) ?? []).join(' ');

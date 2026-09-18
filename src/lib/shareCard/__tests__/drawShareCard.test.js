@@ -121,14 +121,9 @@ describe('drawShareCard renders to a non-blank PNG (CanvasKit)', () => {
   // ELITE-SHARE-SPEC pillar 2: the PR card's numeral scales up specifically to
   // close the ~250px empty band the audit reported between the exercise name
   // and the footer. Pinned quantitatively: scan the card's vertical body band
-  // (below the header, above the footer) for rows containing a bright text
-  // pixel, and assert the longest unbroken empty run stays under a stated
-  // tolerance -- a real dead zone would show up here as a tall gap.
-  //
-  // D180 (stage 4) deleted the halo behind the numeral and the gold pill round
-  // the eyebrow, so this scan now answers to TYPE alone. That is the stricter
-  // reading of the same contract, not a weaker one: the two brightest things
-  // it used to be able to count are gone and the tolerance is unchanged.
+  // (below the header, above the footer) for rows containing a bright (text
+  // or glow) pixel, and assert the longest unbroken empty run stays under a
+  // stated tolerance -- a real dead zone would show up here as a tall gap.
   test('PR card has no dead zone beyond a stated tolerance (square)', () => {
     if (!env) return;
     const width = 540;

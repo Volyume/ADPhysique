@@ -68,31 +68,26 @@ const BLOCK_SNOOZE_KEY_FOR = (uid) => `@volyume_block_snooze_${uid ?? 'anon'}`;
 // training-only PlanUpdate screen. Goal and calorie/macro changes live in the
 // Coach tab (Update goal and phase / Nutrition targets), so this Train-side flow never
 // touches nutrition targets.
-// D192 (2026-09-18, finish spec section 4 rule 7): a row carries ONE
-// secondary line under 60 characters, plain fact, no paragraph -- these
-// three replace the two-sentence descriptions the founder's build-3583
-// walk called "a two-line description" on a bordered card. The actions
-// and destinations below are unchanged.
 const ACTION_CARDS_PRO_SWITCH = [
   {
     id: 'goals',
     icon: 'flag-outline',
     title: 'Adjust training plan',
-    description: 'Schedule, equipment, experience and goals',
+    description: 'Change schedule, equipment, experience, division or weak points. Volyume previews the rebuild before it replaces your active plan.',
     screen: 'PlanUpdate',
   },
   {
     id: 'library',
     icon: 'library-outline',
     title: 'Pick from the plan library',
-    description: 'Ready-made plans for any goal or experience level',
+    description: "Choose a ready-made plan. Your coach keeps adjusting whichever plan you're on.",
     screen: 'PlanLibrary',
   },
   {
     id: 'manual',
     icon: 'create-outline',
     title: 'Create your own',
-    description: 'Every exercise, chosen and ordered by you',
+    description: 'Create your own plan and choose every exercise. Your coach keeps reading your training the same way.',
     screen: 'ManualBuilder',
   },
 ];
@@ -119,20 +114,14 @@ const BLOCK_ICON = {
 // long-press = options), the previous-only "Set active" button, then the
 // options button. None nests inside another.
 //
-// Props: plan, meta (workout-count string or null), onPressWithLayout,
-// onLongPress, onOptions, onSetActive (null for archived rows -- activation
-// stays inside the archived options sheet, unchanged), archived (muted name
+// Props: plan, meta (workout-count string or null), onPress, onLongPress,
+// onOptions, onSetActive (null for archived rows -- activation stays
+// inside the archived options sheet, unchanged), archived (muted name
 // styling variant, matching the old archivedPlanCardName treatment),
 // isLast (drops the row's own hairline divider on the final row of its
 // section body).
-//
-// D180 part 2 (origin-aware hero zoom): the row press is origin-aware. This
-// row IS the plan and the screen it opens IS that plan, which is the only
-// case the zoom is honest, so it hands PlanDetail the row's measured rect and
-// the screen grows out of the row. An unmeasurable handle arrives as null and
-// the push is the ordinary one.
 function CompactPlanRow({
-  plan, meta, onPressWithLayout, onLongPress, onOptions, onSetActive, archived = false, isLast = false,
+  plan, meta, onPress, onLongPress, onOptions, onSetActive, archived = false, isLast = false,
 }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -141,7 +130,7 @@ function CompactPlanRow({
     <View style={[styles.compactRow, live.compactRow, isLast && styles.compactRowLast]}>
       <PressableCard
         style={styles.compactRowPress}
-        onPressWithLayout={onPressWithLayout}
+        onPress={onPress}
         onLongPress={onLongPress}
         accessibilityLabel={name}
       >
@@ -1163,7 +1152,7 @@ export default function PlansScreen({ navigation }) {
   // wording/logic byte-identical, only the token SOURCE moved from the
   // frozen import to the live theme.
   function blockIconColor(action) {
-    if (action === 'in_recovery') return t.colors.textSecondary;
+    if (action === 'in_recovery') return t.colors.primary;
     if (action === 'post_recovery') return t.colors.success;
     return t.colors.warning;
   }
@@ -1237,15 +1226,6 @@ export default function PlansScreen({ navigation }) {
     }
   }
 
-  // D192 (2026-09-18, finish spec section 4 rule 4): the active-plan card
-  // carries one headline and one meta line now, never two -- this is the
-  // workout-count half of that line, computed ahead of the render so the
-  // block-position ternary stays short where it renders, right beside the
-  // meta row's own style key (pinned by PlansScreen.d139.guard.test.js).
-  const activePlanWorkoutsText = activePlan && planWorkoutCounts[activePlan.id]
-    ? `${planWorkoutCounts[activePlan.id]} workout${planWorkoutCounts[activePlan.id] !== 1 ? 's' : ''}`
-    : null;
-
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ScrollView
@@ -1291,12 +1271,9 @@ export default function PlansScreen({ navigation }) {
           <View style={styles.section}>
             <Card style={[styles.activePlanCard, live.activePlanCard]}>
               <View style={styles.activePlanHeader}>
-                {/* D192 (2026-09-18, finish spec section 4 rule 4 / founder
-                    build-3583 walk): the "Active" pill goes -- the state is
-                    the label now, an overline over the plan name, in the
-                    exact spot the pill held. The overflow menu beside it is
-                    untouched. */}
-                <SectionLabel>Active plan</SectionLabel>
+                <View style={[styles.activeBadge, live.activeBadge]}>
+                  <Text style={[styles.activeBadgeText, live.activeBadgeText]}>Active</Text>
+                </View>
                 <TouchableOpacity onPress={() => handlePlanOptions(activePlan)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Plan options">
                   <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
                 </TouchableOpacity>
@@ -1305,12 +1282,11 @@ export default function PlansScreen({ navigation }) {
                   "N×/Week" frequency baked into activePlan.name (see planDisplay.js);
                   the raw name is unchanged everywhere else it is read. */}
               <Text style={[styles.activePlanName, live.activePlanName]}>{planHeadingName(activePlan.name)}</Text>
-              {/* D192 (2026-09-18): ONE meta line -- a card carries one
-                  headline and one meta line, never two (finish spec section
-                  4 rule 4). The workout count and the block position join
-                  on a middot; either half is independently optional, so an
-                  absent one drops out of the join rather than leaving a
-                  stray separator. */}
+              {planWorkoutCounts[activePlan.id] ? (
+                <Text style={[styles.activePlanMeta, live.activePlanMeta]}>
+                  {planWorkoutCounts[activePlan.id]} workout{planWorkoutCounts[activePlan.id] !== 1 ? 's' : ''}
+                </Text>
+              ) : null}
               {/* D139 (finding: "the one good block definition sat behind a
                   tooltip on a secondary screen while 'Week N of M' hid
                   whenever the advisor was not on 'continue'"): the block
@@ -1319,20 +1295,18 @@ export default function PlansScreen({ navigation }) {
                   label (recovery week; block finished, awaiting a decision)
                   and the same block definition MesocycleBuilderScreen's own
                   tooltip carries, from the one shared constant. */}
-              {(activePlanWorkoutsText || blockAdvice?.blockStatus) ? (
+              {blockAdvice?.blockStatus && (
                 <View style={styles.activePlanWeekRow}>
-                  <Text style={[styles.activePlanMeta, live.activePlanMeta]} numberOfLines={1}>
-                    {[activePlanWorkoutsText, blockAdvice?.blockStatus && (
-                      blockAdvice.blockStatus.status === 'recovery' ? `Recovery week, week ${blockAdvice.blockStatus.currentWeek} of ${blockAdvice.blockStatus.totalWeeks}`
-                        : blockAdvice.blockStatus.status === 'completed_awaiting_decision' ? 'Block finished'
-                        : `Week ${blockAdvice.blockStatus.currentWeek} of ${blockAdvice.blockStatus.totalWeeks}`
-                    )].filter(Boolean).join(' · ')}
+                  <Text style={[styles.activePlanWeek, live.activePlanWeek]}>
+                    {blockAdvice.blockStatus.status === 'recovery'
+                      ? `Recovery week, week ${blockAdvice.blockStatus.currentWeek} of ${blockAdvice.blockStatus.totalWeeks}`
+                      : blockAdvice.blockStatus.status === 'completed_awaiting_decision'
+                        ? 'Block finished'
+                        : `Week ${blockAdvice.blockStatus.currentWeek} of ${blockAdvice.blockStatus.totalWeeks}`}
                   </Text>
-                  {blockAdvice?.blockStatus && (
-                    <InfoTooltip text={BLOCK_DEFINITION} size={20} />
-                  )}
+                  <InfoTooltip text={BLOCK_DEFINITION} size={13} />
                 </View>
-              ) : null}
+              )}
               {/* FB-04 (D96): the only forward warning in the product --
                   "One more week before your recovery week. Push hard this
                   week. It's your peak." -- was composed by the advisor's
@@ -1345,6 +1319,11 @@ export default function PlansScreen({ navigation }) {
               {blockAdvice?.action === 'continue' && showPeakWeekNote && (
                 <Text style={[styles.proCoachNote, live.proCoachNote]}>{blockAdvice.body}</Text>
               )}
+              {/* FOUNDER DECISION (fully free, no tier split): this note
+                  renders for every account now. */}
+              <Text style={[styles.proCoachNote, live.proCoachNote]}>
+                Your coach reviews this plan each week and suggests changes for you to apply. Change training setup or switch plans from the options below.
+              </Text>
               {/* B-1 (F-18): once every required session this week is
                   resolved there is no "next workout" to start, and the row
                   used to start session 1 again. It states the position and
@@ -1357,14 +1336,10 @@ export default function PlansScreen({ navigation }) {
               ) : null}
               <View style={styles.activePlanActions}>
                 {/* R9 (D70): startNextBtn -> shared Button primary (fires its
-                    own selection() tick on press). D191 pattern (Today's
-                    "Start workout"): the ONE amber mark on this screen sits
-                    on this button's leading glyph. */}
+                    own selection() tick on press). */}
                 <Button
                   variant="primary"
-                  size="md"
                   icon={weekComplete ? 'list-outline' : 'play'}
-                  iconFg={t.colors.primary}
                   title={weekComplete ? 'Do another session' : 'Start next workout'}
                   onPress={() => (weekComplete
                     ? navigation.navigate('PlanDetail', { planId: activePlan.id, isLibrary: false })
@@ -1379,7 +1354,6 @@ export default function PlansScreen({ navigation }) {
                 {weekComplete ? null : (
                   <Button
                     variant="secondary"
-                    size="md"
                     title="View plan"
                     onPress={() => navigation.navigate('PlanDetail', { planId: activePlan.id, isLibrary: false })}
                     accessibilityLabel="View plan"
@@ -1726,95 +1700,89 @@ export default function PlansScreen({ navigation }) {
             from the page bottom, one SectionLabel over the training-blocks
             row and the action cards -- same components, same destinations,
             same tier logic (actionCards, above), only position and the
-            unifying label change.
-            RE-ANCHORED 2026-09-18 (D192, finish spec section 4.3): every
-            row below lost its <Card> wrapper and boxed icon disc -- the
-            founder's build-3583 walk named this section by that old shape
-            ("150 dp bordered cards, each with a boxed glyph"). Same
-            destinations, same live lines, same data; only the chrome (Card
-            -> plain row) and the two-sentence descriptions (-> one-line
-            facts) changed. */}
+            unifying label change. */}
         <View style={styles.section}>
           <SectionLabel>Plan tools</SectionLabel>
-          <View style={[styles.toolRowGroup, live.toolRowGroup]}>
-            {/* D134 (founder 2026-09-03): the FIRST row, always shown - the
-                thing every plan is built from lives where plans are built.
-                Same row as the tools beneath; only the live line is new. */}
-            <PressableCard
-              style={[styles.toolRow, live.toolRow]}
-              onPress={() => navigation.navigate('HowYouTrain')}
-              accessibilityRole="button"
-              accessibilityLabel={`Injuries & limitations. ${hytSummary.sub}`}
-            >
+          {/* D134 (founder 2026-09-03): the FIRST row, always shown - the
+              thing every plan is built from lives where plans are built.
+              Same card as the rows beneath; only the live line is new. */}
+          <Card
+            style={styles.trainingBlocksRow}
+            onPress={() => navigation.navigate('HowYouTrain')}
+            accessibilityLabel={`Injuries & limitations. ${hytSummary.sub}`}
+          >
+            <View style={[styles.trainingBlocksIcon, live.trainingBlocksIcon]}>
               <Ionicons name="body-outline" size={20} color={hytSummary.attention ? t.colors.primary : t.colors.textSecondary} />
-              <View style={styles.toolRowBody}>
-                <Text style={[styles.toolRowTitle, live.toolRowTitle]}>Injuries & limitations</Text>
-                <Text style={[styles.toolRowSub, live.toolRowSub]}>{hytSummary.sub}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-            </PressableCard>
-            <PressableCard
-              style={[styles.toolRow, live.toolRow]}
-              onPress={() => navigation.navigate('MesocycleBuilder')}
-              accessibilityRole="button"
-              accessibilityLabel="Training blocks"
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>Injuries & limitations</Text>
+              <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>{hytSummary.sub}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </Card>
+          <Card
+            style={styles.trainingBlocksRow}
+            onPress={() => navigation.navigate('MesocycleBuilder')}
+            accessibilityLabel="Training blocks"
+          >
+            <View style={[styles.trainingBlocksIcon, live.trainingBlocksIcon]}>
+              <Ionicons name="layers-outline" size={20} color={t.colors.textSecondary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>Training blocks</Text>
+              <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>View completed blocks and long-term progress</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </Card>
+          {/* D109-3: only renders when the count is > 0 - no empty-state
+              entry point in Plan tools for a feature most users never touch.
+              Set/clear stays on the exercise long-press (RoutineDetailScreen);
+              this is the list home. */}
+          {avoidedMovementsCount > 0 && (
+            <Card
+              style={styles.trainingBlocksRow}
+              onPress={() => navigation.navigate('AvoidedMovements')}
+              accessibilityLabel={`Avoided movements, ${avoidedMovementsCount}`}
             >
-              <Ionicons name="layers-outline" size={iconSize.md} color={t.colors.textSecondary} />
-              <View style={styles.toolRowBody}>
-                <Text style={[styles.toolRowTitle, live.toolRowTitle]}>Training blocks</Text>
-                <Text style={[styles.toolRowSub, live.toolRowSub]}>Completed blocks and long-term progress</Text>
+              <View style={[styles.trainingBlocksIcon, live.trainingBlocksIcon]}>
+                <Ionicons name="shield-outline" size={20} color={t.colors.textSecondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>
+                  Avoided movements · {avoidedMovementsCount}
+                </Text>
+                <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>Movement patterns Volyume is leaving out of suggestions</Text>
               </View>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-            </PressableCard>
-            {/* D109-3: only renders when the count is > 0 - no empty-state
-                entry point in Plan tools for a feature most users never touch.
-                Set/clear stays on the exercise long-press (RoutineDetailScreen);
-                this is the list home. */}
-            {avoidedMovementsCount > 0 && (
-              <PressableCard
-                style={[styles.toolRow, live.toolRow]}
-                onPress={() => navigation.navigate('AvoidedMovements')}
-                accessibilityRole="button"
-                accessibilityLabel={`Avoided movements, ${avoidedMovementsCount}`}
+            </Card>
+          )}
+          {actionCards.map(card => {
+            const featured = card.featured !== undefined ? card.featured : Boolean(card.badge);
+            return (
+              <Card
+                key={card.id}
+                style={[styles.actionCard, featured && [styles.actionCardFeatured, live.actionCardFeatured]]}
+                onPress={() => navigation.navigate(card.screen)}
+                accessibilityLabel={card.title}
               >
-                <Ionicons name="shield-outline" size={iconSize.md} color={t.colors.textSecondary} />
-                <View style={styles.toolRowBody}>
-                  <Text style={[styles.toolRowTitle, live.toolRowTitle]}>
-                    Avoided movements · {avoidedMovementsCount}
-                  </Text>
-                  <Text style={[styles.toolRowSub, live.toolRowSub]}>Movement patterns Volyume is leaving out of suggestions</Text>
+                <View style={[styles.actionCardIcon, live.actionCardIcon, featured && [styles.actionCardIconFeatured, live.actionCardIconFeatured]]}>
+                  <Ionicons name={card.icon} size={24} color={t.colors.primary} />
                 </View>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-              </PressableCard>
-            )}
-            {actionCards.map((card, i) => {
-              const featured = card.featured !== undefined ? card.featured : Boolean(card.badge);
-              const isLast = i === actionCards.length - 1;
-              return (
-                <PressableCard
-                  key={card.id}
-                  style={[styles.toolRow, live.toolRow, isLast && styles.toolRowLast, featured && [styles.actionCardFeatured, live.actionCardFeatured]]}
-                  onPress={() => navigation.navigate(card.screen)}
-                  accessibilityRole="button"
-                  accessibilityLabel={card.title}
-                >
-                  <Ionicons name={card.icon} size={iconSize.md} color={t.colors.textSecondary} />
-                  <View style={styles.toolRowBody}>
-                    <View style={styles.actionCardTitleRow}>
-                      <Text style={[styles.toolRowTitle, live.toolRowTitle]}>{card.title}</Text>
-                      {card.badge ? (
-                        <View style={[styles.actionCardBadge, live.actionCardBadge]}>
-                          <Text style={[styles.actionCardBadgeText, live.actionCardBadgeText]}>{card.badge}</Text>
-                        </View>
-                      ) : null}
-                    </View>
-                    <Text style={[styles.toolRowSub, live.toolRowSub]}>{card.description}</Text>
+                <View style={styles.actionCardBody}>
+                  <View style={styles.actionCardTitleRow}>
+                    <Text style={[styles.actionCardTitle, live.actionCardTitle]}>{card.title}</Text>
+                    {card.badge ? (
+                      <View style={[styles.actionCardBadge, live.actionCardBadge]}>
+                        <Text style={[styles.actionCardBadgeText, live.actionCardBadgeText]}>{card.badge}</Text>
+                      </View>
+                    ) : null}
                   </View>
-                  <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-                </PressableCard>
-              );
-            })}
-          </View>
+                  <Text style={[styles.actionCardDesc, live.actionCardDesc]}>{card.description}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={featured ? t.colors.primary : t.colors.textMuted} />
+              </Card>
+            );
+          })}
         </View>
 
         {/* Previous plans. Campaign 25 (PLANS-SCREEN-SPEC.md §2 item 4): the
@@ -1905,7 +1873,7 @@ export default function PlansScreen({ navigation }) {
                                   key={plan.id}
                                   plan={plan}
                                   meta={planWorkoutCounts[plan.id] ? `${planWorkoutCounts[plan.id]} workout${planWorkoutCounts[plan.id] !== 1 ? 's' : ''}` : null}
-                                  onPressWithLayout={(rect) => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false, __heroOrigin: rect || undefined })}
+                                  onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
                                   onLongPress={() => handlePlanOptions(plan)}
                                   onOptions={() => handlePlanOptions(plan)}
                                   onSetActive={() => handleSetActive(plan)}
@@ -1931,7 +1899,7 @@ export default function PlansScreen({ navigation }) {
                         key={plan.id}
                         plan={plan}
                         meta={planWorkoutCounts[plan.id] ? `${planWorkoutCounts[plan.id]} workout${planWorkoutCounts[plan.id] !== 1 ? 's' : ''}` : null}
-                        onPressWithLayout={(rect) => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false, __heroOrigin: rect || undefined })}
+                        onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
                         onLongPress={() => handlePlanOptions(plan)}
                         onOptions={() => handlePlanOptions(plan)}
                         onSetActive={() => handleSetActive(plan)}
@@ -1980,7 +1948,7 @@ export default function PlansScreen({ navigation }) {
                     key={plan.id}
                     plan={plan}
                     meta={planWorkoutCounts[plan.id] ? `${planWorkoutCounts[plan.id]} workout${planWorkoutCounts[plan.id] !== 1 ? 's' : ''}` : null}
-                    onPressWithLayout={(rect) => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false, __heroOrigin: rect || undefined })}
+                    onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
                     onLongPress={() => handleArchivedPlanOptions(plan)}
                     onOptions={() => handleArchivedPlanOptions(plan)}
                     onSetActive={null}
@@ -2313,15 +2281,13 @@ const styles = StyleSheet.create({
   foldersHeaderRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  // D165 law 2: a list section, not an object -- no box, a borderSubtle hairline above (D171/D172).
-  folderBlock: { overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    paddingTop: spacing.lg,
+  folderBlock: {
+    borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radius.lg,
+    backgroundColor: colors.surface, overflow: 'hidden',
   },
   folderHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
   },
   // AX-11: the toggle-pressable's own row, sibling to moreBtn inside
   // folderHeader. flex: 1 takes the same remaining width the whole row used
@@ -2369,26 +2335,16 @@ const styles = StyleSheet.create({
   folderSheetSaveButton: { borderRadius: radius.md },
   folderSheetSave: { ...type.label },
 
-  // D192 (2026-09-18, finish spec section 4.3): the shared Plan tools row
-  // anatomy -- no card, no box, no boxed icon -- replacing
-  // trainingBlocksRow/Icon/Label/Sub and actionCard/Icon/Title/Desc below,
-  // which each drew a bordered Card with a 40-48dp icon disc. One row
-  // serves Injuries & limitations, Training blocks, Avoided movements and
-  // the three action cards alike. `toolRowGroup` carries the one hairline
-  // above the group (D165 law 2: a list of tools is not an object); each
-  // row carries its own hairline below, except the last (`toolRowLast`).
-  toolRowGroup: {
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
-  },
-  toolRow: {
+  trainingBlocksRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle,
   },
-  toolRowLast: { borderBottomWidth: 0 },
-  toolRowBody: { flex: 1 },
-  toolRowTitle: { ...type.title, color: colors.textPrimary },
-  toolRowSub: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
+  trainingBlocksIcon: {
+    width: 40, height: 40, borderRadius: radius.md,
+    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  trainingBlocksLabel: { ...type.bodyStrong, color: colors.textPrimary },
+  trainingBlocksSub: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   proCoachNote: {
     fontSize: fontSize.xs, color: colors.textMuted, lineHeight: 18,
     borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm,
@@ -2400,21 +2356,20 @@ const styles = StyleSheet.create({
   noActivePlanText: { ...type.bodySm, flex: 1, color: colors.textMuted },
 
   activePlanCard: {
-    borderColor: colors.borderLight, gap: spacing.md,
+    borderColor: withAlpha(colors.primary, alpha.edge), gap: spacing.md,
   },
   activePlanHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  // D192 (2026-09-18, finish spec section 4 rule 4): the "Active" pill
-  // (activeBadge/activeBadgeText) is retired -- the state is now the
-  // SectionLabel overline above the name, not a pill beside it.
-  activePlanName: { ...type.h2, color: colors.textPrimary },
-  // D192: the ONE meta line (workout count + block position, joined on a
-  // middot) -- activePlanWeek (the separate week-only line) is retired,
-  // this carries both halves now.
-  activePlanMeta: { ...type.bodySm, color: colors.textSecondary },
-  // D139: the meta line plus its InfoTooltip, as true row siblings (AX-11
-  // law: never nest a touchable inside another). RE-ANCHORED 2026-09-18
-  // (D192): same row, now carrying the combined workout-count/block-
-  // position line rather than the block position alone.
+  activeBadge: {
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.strong),
+  },
+  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black },
+  activePlanName: { fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  activePlanMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
+  activePlanWeek: { ...type.num('caption'), color: colors.textMuted },
+  // D139: the block-position line plus its InfoTooltip, as true row
+  // siblings (AX-11 law: never nest a touchable inside another).
   activePlanWeekRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   activePlanActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   // R9 (D70): startNextBtn/startNextBtnText/viewPlanBtn/viewPlanBtnText
@@ -2438,15 +2393,13 @@ const styles = StyleSheet.create({
   // idiom, without a header above it) used by the unfiled list and the
   // archived list; folder bodies reuse the existing folderBlock/folderBody
   // pair instead, since they already carry a header.
-  // D165 law 2: a list body, not an object -- no box, a borderSubtle hairline above (D171/D172).
-  compactListBody: { overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    paddingTop: spacing.lg,
+  compactListBody: {
+    borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radius.lg,
+    backgroundColor: colors.surface, overflow: 'hidden',
   },
   compactRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle,
   },
   // The last row in any section body drops its own divider so the body's
@@ -2469,22 +2422,31 @@ const styles = StyleSheet.create({
   // R9 (D70): startTemplateBtn/startTemplateBtnText deleted - converted to
   // the shared Button primitive (secondary sm).
 
-  // actionCard/actionCardIcon/actionCardTitle/actionCardDesc/
-  // actionCardIconFeatured retired under D192 -- toolRow/toolRowBody/
-  // toolRowTitle/toolRowSub now draw these rows (above). actionCardTitleRow/
-  // actionCardBadge/actionCardBadgeText/actionCardFeatured stay: the
-  // (currently unused) badge/featured mechanism still composes onto a row
-  // exactly as it did onto a card.
-  actionCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs },
-  actionCardBadge: {
-    backgroundColor: colors.surface3, borderRadius: radius.full,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: colors.borderLight,
+  actionCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
   },
-  actionCardBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
+  actionCardIcon: {
+    width: 48, height: 48, borderRadius: radius.md,
+    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: colors.border,
+  },
+  actionCardBody: { flex: 1 },
+  actionCardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xxs },
+  actionCardTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  actionCardBadge: {
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
+  },
+  actionCardBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.primary },
+  actionCardDesc: { ...type.captionTight, color: colors.textMuted },
   actionCardFeatured: {
-    borderColor: colors.borderLight,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.primaryBg,
+  },
+  actionCardIconFeatured: {
     backgroundColor: colors.surface,
+    borderColor: withAlpha(colors.primary, alpha.edge),
   },
   // Block advisor card
   blockCard: {
@@ -2500,7 +2462,7 @@ const styles = StyleSheet.create({
   },
   blockCardRecovery: {
     backgroundColor: colors.surface,
-    borderColor: colors.border,
+    borderColor: withAlpha(colors.primary, alpha.mid),
   },
   blockCardComplete: {
     backgroundColor: colors.surface,
@@ -2581,7 +2543,7 @@ const styles = StyleSheet.create({
   blockOption: { gap: spacing.xs },
   blockOptionTags: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   blockOptionFlag: {
-    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textMuted,
+    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary,
   },
   blockOptionDetail: { ...type.caption, color: colors.textSecondary },
 
@@ -2607,7 +2569,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     sectionSubtitle: { ...t.type.caption, color: t.colors.textMuted },
-    folderBlock: { borderTopColor: t.colors.borderSubtle },
+    folderBlock: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
     folderName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     folderCount: { ...t.type.num('caption'), color: t.colors.textMuted },
     folderBody: { borderTopColor: t.colors.border },
@@ -2620,18 +2582,17 @@ function buildLiveStyles(t) {
     folderInput: { fontSize: t.fontSize.md },
     folderSheetCancel: { ...t.type.label, color: t.colors.textSecondary },
     folderSheetSave: { ...t.type.label },
-    // D192 (2026-09-18): the shared Plan tools row anatomy's live twins.
-    toolRowGroup: { borderTopColor: t.colors.borderSubtle },
-    toolRow: { borderBottomColor: t.colors.borderSubtle },
-    toolRowTitle: { ...t.type.title, color: t.colors.textPrimary },
-    toolRowSub: { ...t.type.bodySm, color: t.colors.textSecondary },
+    trainingBlocksIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    trainingBlocksLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    trainingBlocksSub: { ...t.type.caption, color: t.colors.textMuted },
     proCoachNote: { fontSize: t.fontSize.xs, color: t.colors.textMuted, borderTopColor: t.colors.border },
     noActivePlanText: { ...t.type.bodySm, color: t.colors.textMuted },
-    activePlanCard: { borderColor: t.colors.borderLight },
-    // D192: activeBadge/activeBadgeText retired with the "Active" pill;
-    // activePlanWeek retired with the separate week-only line.
-    activePlanName: { ...t.type.h2, color: t.colors.textPrimary },
-    activePlanMeta: { ...t.type.bodySm, color: t.colors.textSecondary },
+    activePlanCard: { borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    activeBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.strong) },
+    activeBadgeText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    activePlanName: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    activePlanMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    activePlanWeek: { ...t.type.num('caption'), color: t.colors.textMuted },
     // R9 (D70): startNextBtn/startNextBtnText/viewPlanBtn/viewPlanBtnText/
     // planCardFooterGhost/planCardFooterPrimary/startTemplateBtn/
     // startTemplateBtnText live twins deleted alongside their frozen styles -
@@ -2643,24 +2604,23 @@ function buildLiveStyles(t) {
     // its own useTheme() (sibling scope, matching NavRow's precedent), so
     // its tokens live here once and both callers (this screen and the row
     // component) read the identical entries.
-    compactListBody: { borderTopColor: t.colors.borderSubtle },
+    compactListBody: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
     compactRow: { borderBottomColor: t.colors.borderSubtle },
     compactRowName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     compactRowNameArchived: { color: t.colors.textSecondary },
     compactRowMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
     templateName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     templateMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
-    // D192: actionCardIcon/actionCardTitle/actionCardDesc/
-    // actionCardIconFeatured retired with their frozen keys (toolRow* now
-    // draws these rows); actionCardBadge/actionCardBadgeText/
-    // actionCardFeatured stay live for the still-composed badge/featured
-    // mechanism.
-    actionCardBadge: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
-    actionCardBadgeText: { fontSize: t.fontSize.micro, color: t.colors.textPrimary },
-    actionCardFeatured: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface },
+    actionCardIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    actionCardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    actionCardBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    actionCardBadgeText: { fontSize: t.fontSize.micro, color: t.colors.primary },
+    actionCardDesc: { ...t.type.captionTight, color: t.colors.textMuted },
+    actionCardFeatured: { borderColor: withAlpha(t.colors.primary, alpha.edge), backgroundColor: t.colors.primaryBg },
+    actionCardIconFeatured: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     blockCardHeadsUp: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.warning, alpha.mid) },
     blockCardWarning: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.warning, alpha.strong) },
-    blockCardRecovery: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    blockCardRecovery: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     blockCardComplete: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.success, alpha.mid) },
     blockCardIconWrap: { backgroundColor: t.colors.surface2 },
     blockCardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -2679,7 +2639,7 @@ function buildLiveStyles(t) {
     nextBlockBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     ledgerStoryLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     // FQ-2 (D96): the two next-block options' flag and description lines.
-    blockOptionFlag: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    blockOptionFlag: { fontSize: t.fontSize.xs, color: t.colors.primary },
     blockOptionDetail: { ...t.type.caption, color: t.colors.textSecondary },
     // R9 (D70): blockRestartBtn/blockRestartBtnText/blockNewBtn/
     // blockNewBtnText live twins deleted alongside their frozen styles - the

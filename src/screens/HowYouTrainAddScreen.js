@@ -34,7 +34,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
-import { type, spacing, radius, circle, iconSize } from '../styles/theme';
+import { type, spacing, radius, iconSize } from '../styles/theme';
 import { touchTarget } from '../styles/layout';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -553,7 +553,7 @@ export default function HowYouTrainAddScreen() {
         onBack={postSave ? finish : goBackStep}
         right={postSave ? null : (
           <PressableCard onPress={confirmLeave} accessibilityRole="button" accessibilityLabel="Cancel adding this" style={styles.cancelBtn}>
-            <Text style={[styles.cancelText, { color: t.colors.textPrimary }]}>Cancel</Text>
+            <Text style={[styles.cancelText, { color: t.colors.primary }]}>Cancel</Text>
           </PressableCard>
         )}
       />
@@ -576,8 +576,8 @@ export default function HowYouTrainAddScreen() {
 
       <ScrollView ref={scrollRef} style={styles.scroll} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {draft.from && step === planSteps(draft, ctx)[0] ? (
-          <View style={[styles.fromRow, { backgroundColor: t.colors.surface }]}>
-            <Ionicons name="information-circle-outline" size={iconSize.sm} color={t.colors.textSecondary} />
+          <View style={[styles.fromRow, { backgroundColor: t.colors.primaryBg }]}>
+            <Ionicons name="information-circle-outline" size={iconSize.sm} color={t.colors.primary} />
             <Text style={[styles.fromText, { color: t.colors.textPrimary }]}>
               {draft.from.question ? `From ${draft.from.name}: ${draft.from.question}` : `From ${draft.from.name}`}
             </Text>
@@ -644,8 +644,8 @@ export default function HowYouTrainAddScreen() {
                 <Switch
                   value={!!draft.clinician}
                   onValueChange={(v) => { haptics.selection(); setDraft((d) => ({ ...d, clinician: v })); }}
-                  trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-                  thumbColor={draft.clinician ? t.colors.surface : t.colors.textMuted}
+                  trackColor={{ false: t.colors.borderSubtle, true: t.colors.primary }}
+                  thumbColor={t.colors.textPrimary}
                 />
               )}
             />
@@ -695,7 +695,7 @@ export default function HowYouTrainAddScreen() {
                   showArrow={false}
                   accessibilityLabel={`${l.label}: ${l.value}${l.step ? '. Change' : ''}`}
                   onPress={l.step ? () => { haptics.selection(); setReturnToCheck(true); setStep(l.step); } : undefined}
-                  rightElement={l.step ? <Text style={[styles.changeText, { color: t.colors.textPrimary }]}>Change</Text> : null}
+                  rightElement={l.step ? <Text style={[styles.changeText, { color: t.colors.primary }]}>Change</Text> : null}
                 />
               ))}
             </View>
@@ -721,8 +721,8 @@ export default function HowYouTrainAddScreen() {
             {plan.lines.length ? (
               <PressableCard onPress={() => { haptics.selection(); setShowLines((v) => !v); }} accessibilityRole="button"
                 accessibilityState={{ expanded: showLines }} style={styles.disclosure}>
-                <Text style={[styles.changeText, { color: t.colors.textPrimary }]}>{showLines ? 'Hide each exercise' : 'Choose per exercise'}</Text>
-                <Ionicons name={showLines ? 'chevron-up' : 'chevron-down'} size={iconSize.sm} color={t.colors.textMuted} />
+                <Text style={[styles.changeText, { color: t.colors.primary }]}>{showLines ? 'Hide each exercise' : 'Choose per exercise'}</Text>
+                <Ionicons name={showLines ? 'chevron-up' : 'chevron-down'} size={iconSize.sm} color={t.colors.primary} />
               </PressableCard>
             ) : null}
             {showLines ? (
@@ -763,12 +763,8 @@ export default function HowYouTrainAddScreen() {
         {step === ADD_STEP.DONE ? (
           <>
             <View style={styles.doneIconWrap}>
-              {/* D174: the saved tick sat in a `primaryBg` disc. Law 5 forbids a
-                  celebratory treatment anyway, so the wash goes and the tick is a
-                  calm neutral mark. `doneIcon` keeps its geometry: the wrap is the
-                  centring frame for a 32dp glyph, not a tint behind it. */}
-              <View style={styles.doneIcon}>
-                <Ionicons name="checkmark" size={32} color={t.colors.textSecondary} />
+              <View style={[styles.doneIcon, { backgroundColor: t.colors.primaryBg }]}>
+                <Ionicons name="checkmark" size={32} color={t.colors.primary} />
               </View>
             </View>
             <Card>
@@ -953,7 +949,7 @@ const styles = StyleSheet.create({
   lineText: { ...type.body },
   lineChips: { flexDirection: 'row', gap: spacing.sm },
   doneIconWrap: { alignItems: 'center', marginBottom: spacing.md },
-  doneIcon: { width: 64, height: 64, borderRadius: circle(64), alignItems: 'center', justifyContent: 'center' },
+  doneIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
   footer: { padding: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, gap: spacing.sm },
   retryWrap: { gap: spacing.sm, marginTop: spacing.md },
   footerHint: { ...type.captionTight, textAlign: 'center' },

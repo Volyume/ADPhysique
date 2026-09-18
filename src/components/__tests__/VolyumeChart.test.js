@@ -12,7 +12,7 @@
  *                               below). Regression: commit 9c44e2d
  *                               already removed the stray `opacity={0.5}`
  *                               this suite guards against reappearing.
- *   CP-5 (PR markers)         — the line variant renders a small amber
+ *   CP-5 (PR markers)         — the line variant renders a small gold
  *                               ring-and-dot marker at each index named in
  *                               `highlightIndices`, out-of-range indices
  *                               are ignored (bounds safety), and the scrub
@@ -114,13 +114,8 @@ describe('LT-6: gridline contrast', () => {
     expect(r1).toBeGreaterThanOrEqual(3);
     expect(r2).toBeGreaterThanOrEqual(3);
     // Pin the computed values so a token change is a deliberate, visible diff.
-    // D165 (2026-09-14): the ground moved to warm charcoal #111110 and `border`
-    // to #757169, which RAISED both ratios (3.45 -> 3.62, 3.81 -> 3.89). This
-    // test did its job: the change was visible rather than silent.
-    // RE-ANCHORED (D192): the ladder re-tune moved `border` to #878279;
-    // recorded as measured, 4.06:1 on surface and 4.95:1 on the ground.
-    expect(r1).toBeCloseTo(4.06, 1);
-    expect(r2).toBeCloseTo(4.95, 1);
+    expect(r1).toBeCloseTo(3.45, 1);
+    expect(r2).toBeCloseTo(3.81, 1);
   });
 
   test('light: theme.border clears the 3:1 non-text bar against surface AND background', () => {
@@ -171,20 +166,14 @@ describe('CP-5: highlightIndices PR markers', () => {
     return plotPoints(values, box, min, max);
   }
 
-  // D173 T1 retired the gold trophy token; the PB marker is now the amber
-  // primary (discipline 1 grants amber "a personal best" by name). The radius
-  // filter keeps this matching ONLY the marker dot, never the line's own dots
-  // or the scrub dot, which draw in the same token.
-  function prDots(tree) {
-    return tree.root.findAllByType('Circle').filter(
-      (c) => c.props.fill === colors.primary && c.props.r === 1.5,
-    );
+  function goldDots(tree) {
+    return tree.root.findAllByType('Circle').filter((c) => c.props.fill === colors.gold);
   }
 
-  test('renders an amber ring-and-dot marker at exactly the highlighted indices', () => {
+  test('renders a gold ring-and-dot marker at exactly the highlighted indices', () => {
     const points = expectedPoints();
     const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} highlightIndices={[1, 3]} />);
-    const dots = prDots(tree);
+    const dots = goldDots(tree);
     expect(dots).toHaveLength(2);
     const positions = dots.map((c) => ({ x: c.props.cx, y: c.props.cy })).sort((a, b) => a.x - b.x);
     expect(positions[0]).toEqual({ x: points[1].x, y: points[1].y });
@@ -192,19 +181,19 @@ describe('CP-5: highlightIndices PR markers', () => {
 
     // A ring (stroke, no fill) accompanies each dot.
     const rings = tree.root.findAllByType('Circle').filter(
-      (c) => c.props.stroke === colors.primary && c.props.fill === 'none',
+      (c) => c.props.stroke === colors.gold && c.props.fill === 'none',
     );
     expect(rings).toHaveLength(2);
   });
 
   test('no markers render when highlightIndices is omitted (default behaviour unchanged)', () => {
     const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} />);
-    expect(prDots(tree)).toHaveLength(0);
+    expect(goldDots(tree)).toHaveLength(0);
   });
 
   test('an out-of-range highlight index is ignored (bounds safety)', () => {
     const tree = create(<VolyumeChart data={DATA} width={WIDTH} height={HEIGHT} highlightIndices={[-1, 99]} />);
-    expect(prDots(tree)).toHaveLength(0);
+    expect(goldDots(tree)).toHaveLength(0);
   });
 
   test('the scrub announcement mechanism folds in "Personal record" for a highlighted point (source-level)', () => {

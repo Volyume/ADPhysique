@@ -15,21 +15,16 @@ describe('bandColour (adherence-neutral, founder decision 2026-05-29)', () => {
   // STROKE, so it takes the bright fill token (`primaryFill`), not the
   // muted text-ink token (`primary`) - see MacroRings.js's bandColour comment.
   test('always the brand amber fill, regardless of under or over target', () => {
-    // D170: the token moved from primaryFill to borderLight (law 6 -- amber
-    // means "now", and an arc that is amber at 10% of the day and at 90% of
-    // it is amber as decoration). The RULE this case pins is untouched and is
-    // the safety one: ONE colour at every value, under or over, so the ring
-    // never congratulates adherence or flags a deviation by colour.
-    expect(bandColour(0, 100)).toBe(colors.borderLight);
-    expect(bandColour(80, 100)).toBe(colors.borderLight);
-    expect(bandColour(100, 100)).toBe(colors.borderLight);
-    expect(bandColour(150, 100)).toBe(colors.borderLight);
+    expect(bandColour(0, 100)).toBe(colors.primaryFill);
+    expect(bandColour(80, 100)).toBe(colors.primaryFill);
+    expect(bandColour(100, 100)).toBe(colors.primaryFill);
+    expect(bandColour(150, 100)).toBe(colors.primaryFill);
   });
 
-  test('no target resolves to the same neutral arc token', () => {
-    expect(bandColour(100, null)).toBe(colors.borderLight);
-    expect(bandColour(0, undefined)).toBe(colors.borderLight);
-    expect(bandColour()).toBe(colors.borderLight);
+  test('no target also resolves to the brand amber fill', () => {
+    expect(bandColour(100, null)).toBe(colors.primaryFill);
+    expect(bandColour(0, undefined)).toBe(colors.primaryFill);
+    expect(bandColour()).toBe(colors.primaryFill);
   });
 
   test('never signals success-green or warning-amber (no colour judgement)', () => {
@@ -50,15 +45,15 @@ describe('bandColour (adherence-neutral, founder decision 2026-05-29)', () => {
 // bandColour() itself is untouched, still frozen-singleton, still covered
 // by the describe block above.
 describe('buildBandColour (CP-10 stage 4, live-theme variant)', () => {
-  test('resolves the same token as the legacy singleton, for the current (dark) palette', () => {
+  test('resolves the same primaryFill token as the legacy singleton, for the current (dark) palette', () => {
     expect(buildBandColour(colors)).toBe(bandColour());
   });
 
   test('reads off the PASSED-IN colour table, not the frozen singleton -- tracks a live theme flip', () => {
     const darkColors = resolveTheme({ theme: 'dark' }).colors;
     const lightColors = resolveTheme({ theme: 'light' }).colors;
-    expect(buildBandColour(darkColors)).toBe(darkColors.borderLight);
-    expect(buildBandColour(lightColors)).toBe(lightColors.borderLight);
+    expect(buildBandColour(darkColors)).toBe(darkColors.primaryFill);
+    expect(buildBandColour(lightColors)).toBe(lightColors.primaryFill);
   });
 });
 
@@ -110,24 +105,11 @@ describe('remaining-as-hero (founder decision 2026-06-29)', () => {
     // host in tests); its resting text is defaultValue.
     const numerals = tree.root.findAll((n) => n.props?.defaultValue != null)
       .map((n) => n.props.defaultValue);
-    // 2100 - 1840 = 260 left; eaten reference shows "1840" + "of 2,100 kcal"
+    // 2100 - 1840 = 260 left; eaten reference shows "1840" + "of 2100 kcal"
     expect(numerals).toContain('260');
     expect(numerals).toContain('1,840');
-    // D169, law 7: the sub-label was bare "left" and now carries the unit.
-    // The RULE this case pins is unchanged -- remaining is the hero, eaten
-    // and target are the quiet reference -- so the assertion follows the
-    // label rather than being dropped. Previously the largest number on the
-    // Nutrition tab was the one number in the product that did not say what
-    // it was.
-    expect(texts).toContain('kcal left');
-    expect(texts).not.toContain('left');
-    // RE-ANCHORED 2026-09-18 (D192, finish spec item 1): was 'of 2100 kcal'.
-    // The target now shares the same en-GB thousands formatter
-    // (formatNumber) as the eaten value beside it (RollingNumber's own
-    // grouping) -- it was the one figure on this screen without a
-    // separator. Intent kept: this still pins "of <target> <unit>" as the
-    // quiet reference text next to the hero.
-    expect(texts).toContain('of 2,100 kcal');
+    expect(texts).toContain('left');
+    expect(texts).toContain('of 2100 kcal');
   });
 
   test('over target reads "over" with the magnitude, never a separate alarm', () => {
@@ -139,9 +121,7 @@ describe('remaining-as-hero (founder decision 2026-06-29)', () => {
     const numerals = tree.root.findAll((n) => n.props?.defaultValue != null)
       .map((n) => n.props.defaultValue);
     expect(numerals).toContain('200'); // |2100 - 2300|
-    // D169, law 7, as above. Still the magnitude and the word, never an alarm.
-    expect(texts).toContain('kcal over');
-    expect(texts).not.toContain('over');
+    expect(texts).toContain('over');
   });
 });
 

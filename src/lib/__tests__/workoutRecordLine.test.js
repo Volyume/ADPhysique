@@ -28,14 +28,10 @@ const HISTORY = [
 
 const base = { historySets: HISTORY, units: 'kg', exerciseType: 'weight_reps' };
 
-// RE-ANCHORED 2026-09-18 (D192, one unit format): a space before the unit in
-// every bestLabel/reasons string below ("90 kg", not "90kg"). Intent kept:
-// the bar to beat is still named by estimated max, still keeps a half-plate
-// decimal, and still claims nothing before anything is dialled in.
 describe('the bar to beat', () => {
   test('names the best set by estimated max, not merely the heaviest', () => {
     // 90x12 (est ~126) beats 85x8 and 80x10, and is also the heaviest here.
-    expect(buildRecordLine({ ...base, weight: 90, reps: 12 }).bestLabel).toBe('Best 90 kg × 12');
+    expect(buildRecordLine({ ...base, weight: 90, reps: 12 }).bestLabel).toBe('Best 90kg × 12');
   });
 
   test('a half-plate best keeps its decimal', () => {
@@ -45,13 +41,13 @@ describe('the bar to beat', () => {
       weight: 60,
       reps: 5,
     });
-    expect(line.bestLabel).toBe('Best 92.5 kg × 10');
+    expect(line.bestLabel).toBe('Best 92.5kg × 10');
   });
 
   test('shows the bar but claims nothing before anything is dialled in', () => {
     const line = buildRecordLine({ ...base, weight: '', reps: '' });
     expect(line.isRecord).toBe(false);
-    expect(line.bestLabel).toBe('Best 90 kg × 12');
+    expect(line.bestLabel).toBe('Best 90kg × 12');
     expect(line.reasons).toEqual([]);
   });
 });
@@ -76,16 +72,12 @@ describe('agreement with the celebration (the contract that matters)', () => {
   });
 });
 
-// RE-ANCHORED 2026-09-18 (D192, one unit format): a space before the unit in
-// every reason string below. Intent kept: each record type is still named
-// separately, never a bare "PR", and the estimated-max record is still
-// withheld when not earned.
 describe('each record type is named, never a bare "PR"', () => {
   test('one more rep at the same weight reads as a reps record', () => {
     const line = buildRecordLine({ ...base, weight: 90, reps: 13 });
     expect(line.isRecord).toBe(true);
     expect(line.headline).toBe('New PR if you complete this set');
-    expect(line.reasons.join(' · ')).toMatch(/Most reps at 90 kg · Previous best 12 reps/);
+    expect(line.reasons.join(' · ')).toMatch(/Most reps at 90kg · Previous best 12 reps/);
   });
 
   test('a heavier weight for fewer reps is a heaviest-weight record and says so, WITHOUT claiming an estimated-max record it does not have', () => {
@@ -94,19 +86,19 @@ describe('each record type is named, never a bare "PR"', () => {
     const line = buildRecordLine({ ...base, weight: 92.5, reps: 10 });
     expect(line.isRecord).toBe(true);
     const joined = line.reasons.join(' · ');
-    expect(joined).toMatch(/Heaviest weight yet · Previous best 90 kg/);
+    expect(joined).toMatch(/Heaviest weight yet · Previous best 90kg/);
     expect(joined).not.toMatch(/Est\. max/);
   });
 
   test('a genuinely bigger set names the estimated-max record with both numbers', () => {
     const line = buildRecordLine({ ...base, weight: 95, reps: 12 });
-    expect(line.reasons.join(' · ')).toMatch(/Est\. max ~\d+ kg · Previous best ~126 kg/);
+    expect(line.reasons.join(' · ')).toMatch(/Est\. max ~\d+kg · Previous best ~126kg/);
   });
 
   test('the spoken label carries the headline and every reason', () => {
     const line = buildRecordLine({ ...base, weight: 90, reps: 13 });
     expect(line.a11y).toContain('New PR if you complete this set');
-    expect(line.a11y).toContain('Most reps at 90 kg');
+    expect(line.a11y).toContain('Most reps at 90kg');
   });
 });
 
@@ -126,12 +118,10 @@ describe('D150 copy contract: natural language, one pattern per line, never raw 
     }
   });
 
-  // RE-ANCHORED 2026-09-18 (D192, one unit format): space before the unit;
-  // intent kept -- the reps line still says what the number is.
   test('the reps line says what the number is', () => {
     // 90x13 is also an estimated-max record; the reps line is one of two.
     const line = buildRecordLine({ ...base, weight: 90, reps: 13 });
-    expect(line.reasons).toContain('Most reps at 90 kg · Previous best 12 reps');
+    expect(line.reasons).toContain('Most reps at 90kg · Previous best 12 reps');
   });
 
   test('none of the retired phrasing survives', () => {
@@ -172,27 +162,21 @@ describe('EL-7: ballistic evidence class (docs/exercise-library-expansion-2026-0
     expect(buildRecordLine({ ...base, weight: 999, reps: 999, evidenceClass: 'circuit_ballistic' })).toBeNull();
   });
 
-  // RE-ANCHORED 2026-09-18 (D192, one unit format): space before the unit;
-  // intent kept -- a plain circuit set is still a full record candidate.
   test('a plain circuit set stays a full record candidate', () => {
     const line = buildRecordLine({ ...base, weight: 90, reps: 12, evidenceClass: 'circuit' });
-    expect(line.bestLabel).toBe('Best 90 kg × 12');
+    expect(line.bestLabel).toBe('Best 90kg × 12');
   });
 
-  // RE-ANCHORED 2026-09-18 (D192, one unit format): space before the unit;
-  // intent kept -- a ballistic row in HISTORY still never sets the bar.
   test('a ballistic row in HISTORY never sets the bar to beat', () => {
     const history = [
       { weight: 200, actualReps: 30, evidenceClass: 'ballistic' }, // would dominate if counted
       { weight: 90, actualReps: 12, evidenceClass: null },
     ];
     const line = buildRecordLine({ ...base, historySets: history, weight: 90, reps: 12 });
-    expect(line.bestLabel).toBe('Best 90 kg × 12');
+    expect(line.bestLabel).toBe('Best 90kg × 12');
   });
 });
 
-// RE-ANCHORED 2026-09-18 (D192, one unit format): space before the unit;
-// intent kept -- actual_reps is still read the same as actualReps.
 describe('history shape tolerance (rows arrive from the DB in snake_case too)', () => {
   test('actual_reps is read the same as actualReps', () => {
     const line = buildRecordLine({
@@ -201,7 +185,7 @@ describe('history shape tolerance (rows arrive from the DB in snake_case too)', 
       weight: 90,
       reps: 13,
     });
-    expect(line.bestLabel).toBe('Best 90 kg × 12');
+    expect(line.bestLabel).toBe('Best 90kg × 12');
     expect(line.isRecord).toBe(true);
   });
 });

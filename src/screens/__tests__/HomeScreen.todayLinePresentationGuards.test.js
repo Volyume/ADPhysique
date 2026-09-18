@@ -24,7 +24,7 @@
  *    (real day-of-week + real weigh-in-window gating, trial-ending
  *    simultaneously eligible, check-in wins) plus the arbiter's rank-4
  *    isolation test.
- *  - Tutorial-copy retirement (everLogged gate; the caption itself was removed outright on the founder's order of 2026-09-17, D190): src/components/__tests__/
+ *  - Tutorial-copy retirement (everLogged gate): src/components/__tests__/
  *    TodayStrip.test.js's "first-use tutorial copy retires after the first
  *    ever log" block already covers everLogged=false/true/logged-state in
  *    full. Read in full before writing this file; nothing to extend.

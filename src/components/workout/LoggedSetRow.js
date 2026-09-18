@@ -6,8 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 // added to weight/nutrition surfaces.
 import SetRowMenu from './SetRowMenu';
 
-import { colors, spacing, radius, type, iconSize } from '../../styles/theme';
-import LedgerRow from '../LedgerRow';
+import { colors, spacing, radius, fontWeight, type, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { workoutLoggerSize } from '../../styles/layout';
 import { formatPerSide } from '../../lib/unilateral';
@@ -47,7 +46,6 @@ import Button from '../Button';
 export const LoggedSetRow = React.memo(function LoggedSetRow({
   set, units, progressNum, exerciseType = 'weight_reps', loadSemantics = 'total', onEdit, onDelete,
   isEditing = false, editValue, onChangeEditValue, onSaveEdit, onCancelEdit, onDeleteEdit, saving = false, weightStepKg,
-  first = false,
 }) {
   // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
   // See buildLiveStyles' header comment (defined further down this
@@ -153,28 +151,7 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
   // `style` on the Trigger means the clobber re-applies the SAME styling, so
   // the row is correct whether or not zeego clobbers -- deterministic either
   // way, and lossless if zeego ever stops clobbering.
-  // `styles.loggedSetRow` is pure layout (flex, gap, minHeight, radius,
-  // padding), so it correctly has no buildLiveStyles twin and the `live`
-  // reference that used to sit here resolved undefined. The warm-up override
-  // beside it DOES carry colour, so it keeps both halves.
-  const rowStyle = [styles.loggedSetRow, isWarmup && [styles.loggedSetRowWarmup, live.loggedSetRowWarmup]];
-  // D184 (2026-09-17): the at-rest row IS the ledger now. Presentation
-  // delegates to LedgerRow, the second signature device of direction D
-  // ("every set, everywhere, as hairline-ruled rows of tabular figures");
-  // behaviour stays here untouched -- the tap-to-edit TouchableOpacity, the
-  // spoken label, the zeego long-press wrap and its rowStyle clobber
-  // contract, the in-place editor above, the React.memo. The 22 dp number
-  // badge (a mini-card round a figure) is retired for the ledger's bare
-  // index column, which is what D173 T2's warm-up dot already assumed.
-  //
-  // The middle dot is still the warm-up's index mark (D173 T2): it holds the
-  // index column so warm-ups line up with numbered rows, and the row's own
-  // text still ends " - Warm-up". A warm-up is a quiet DONE line (`muted`),
-  // never an "upcoming" one.
-  const warmupMark = '\u00B7';
-  const primaryLine = `${fmt.text}${perSide ? ` - ${perSide}` : ''}${
-    isWarmup ? ' - Warm-up' : (isCircuitSet ? ` - Round ${progressNum}${evidenceLabel}` : evidenceLabel)
-  }`;
+  const rowStyle = [styles.loggedSetRow, live.loggedSetRow, isWarmup && [styles.loggedSetRowWarmup, live.loggedSetRowWarmup]];
   const row = (
     <TouchableOpacity
       style={rowStyle}
@@ -186,15 +163,19 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
       accessibilityLabel={spokenSetLabel}
       accessibilityHint="Opens a sheet to change or delete this logged set"
     >
-      <LedgerRow
-        accessible={false}
-        index={isWarmup ? warmupMark : progressNum}
-        primary={primaryLine}
-        muted={isWarmup}
-        first={first}
-        style={styles.ledgerLine}
-        trailing={<Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />}
-      />
+      {isWarmup ? (
+        <Ionicons name="flame-outline" size={14} color={t.colors.warning} style={{ width: 22, textAlign: 'center' }} />
+      ) : (
+        <View style={[styles.setNumBadge, live.setNumBadge]}>
+          <Text style={[styles.setNumText, live.setNumText]}>{progressNum}</Text>
+        </View>
+      )}
+      <Text style={[styles.loggedSetText, live.loggedSetText, isWarmup && [styles.loggedSetTextWarmup, live.loggedSetTextWarmup]]} numberOfLines={1}>
+        {fmt.text}
+        {perSide ? ` - ${perSide}` : ''}
+        {isWarmup ? ' - Warm-up' : (isCircuitSet ? ` - Round ${progressNum}${evidenceLabel}` : evidenceLabel)}
+      </Text>
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>
   );
 
@@ -228,22 +209,18 @@ const styles = StyleSheet.create({
   // retired - a completed set is one quiet LINE in the sequence, not a
   // container. Radius kept for the warm-up tint variant below.
   loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2, minHeight: workoutLoggerSize.loggedSetMinHeight, borderRadius: radius.md, paddingVertical: spacing.xxs, paddingHorizontal: spacing.sm },
-  // D173 T2, extended by lead review: the glyph left `warning` but the row it
-  // sits in did not, so a warm-up row was a neutral dot inside a yellow wash --
-  // inconsistent with itself, and still the state-colour grammar violation the
-  // glyph change was made to fix (a warm-up is not a warning). The wash goes
-  // (law 2: rows on the canvas) and the text drops to `textMuted`, which is
-  // what the ledger wants anyway: a warm-up is a quieter row than a working
-  // set. Two non-colour cues survive -- the dot instead of a number, and the
-  // row's own " - Warm-up" text -- so nothing depends on the colour alone.
-  loggedSetRowWarmup: { backgroundColor: 'transparent' },
-  // D184: the ledger line fills the pressable and keeps the LOGGER's density
-  // (36 dp, a founder device verdict for active-set stability) rather than
-  // the primitive's 48 dp default -- the pressable's own hitSlop carries the
-  // target. Palette-invariant, so frozen only. The number badge, its text,
-  // the standalone warm-up mark and the row text that used to live here are
-  // all drawn by LedgerRow now; their keys are gone from both halves.
-  ledgerLine: { flex: 1, minHeight: workoutLoggerSize.loggedSetMinHeight, paddingVertical: 0 },
+  loggedSetRowWarmup: { backgroundColor: colors.warningBg || colors.surface },
+  loggedSetTextWarmup: { color: colors.warning },
+  setNumBadge: { width: workoutLoggerSize.setNumberBadge, height: workoutLoggerSize.setNumberBadge, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
+  // D43 S5 (D60 call 3): logged-set data numerals (set number, weight x
+  // reps, est. 1RM) move onto the house numerals role (type.num(<role>)),
+  // matching the app-wide "numerals as hero" system (see e.g.
+  // src/screens/DiaryScreen.js, src/components/SetEntry.js) so the house
+  // numeral fontFamily + tabular-nums apply and stacked logged sets align.
+  // setNumText keeps its bold emphasis (captionStrong is the nearest xs/
+  // semibold house role; fontWeight.bold restores the original weight).
+  setNumText: { ...type.num('captionStrong'), fontWeight: fontWeight.bold, color: colors.textSecondary },
+  loggedSetText: { ...type.num('bodySm'), flex: 1, color: colors.textPrimary, minWidth: 0 },
   // D43 S4: in-place editor block, replaces the modal sheet's chrome with a
   // house Card-adjacent surface local to the row -- same radius/border
   // language as loggedSetRow, no new one-off idiom.
@@ -269,15 +246,12 @@ const styles = StyleSheet.create({
 // omitted, there is nothing to unfreeze for them.
 function buildLiveStyles(t) {
   return {
-    loggedSetRowWarmup: { backgroundColor: 'transparent' },
-    // D166 part 3: this read `t.colors.border` while the frozen half sets
-    // `colors.borderSubtle`. The live half wins at runtime, so the in-place set
-    // editor drew the bright control-edge grey that SettingsPrimitives names as
-    // "the wireframe look", against its own frozen intent and against the
-    // hairline rule Community's layout guard pins. Two writes, thirty lines
-    // apart, with nothing comparing them -- the exact drift the double-write
-    // pattern makes invisible, which is why new components do not use it.
-    editingWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    loggedSetRowWarmup: { backgroundColor: t.colors.warningBg || t.colors.surface },
+    loggedSetTextWarmup: { color: t.colors.warning },
+    setNumBadge: { backgroundColor: t.colors.surface2 },
+    setNumText: { ...t.type.num('captionStrong'), fontWeight: fontWeight.bold, color: t.colors.textSecondary },
+    loggedSetText: { ...t.type.num('bodySm'), color: t.colors.textPrimary },
+    editingWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     editingTitle: { ...t.type.label, color: t.colors.textPrimary },
     editingDeleteText: { ...t.type.label, color: t.colors.error },
     editingCancelText: { ...t.type.label, color: t.colors.textSecondary },

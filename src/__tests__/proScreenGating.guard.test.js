@@ -29,25 +29,17 @@ const NAV = fs.readFileSync(
 );
 
 // Isolate the fenced "Formerly Pro-only screens" block: from its header
-// comment to the next top-level comment after the declarations it fences.
-//
-// RE-ANCHORED 2026-09-15 (D180 part 2): the end anchor used to be the
-// `heroZoomTransition` declaration that happened to sit below the block. That
-// const was deleted when the hero-zoom mechanism moved to
-// src/navigation/heroTransition.js, which is nothing to do with tier gating --
-// the anchor was incidental, so it has been moved to the comment that has
-// always closed this block. The fence's INTENT is unchanged: bound the guard
-// to exactly the formerly-Pro screen declarations, and fail loudly rather
-// than silently inspecting nothing if the block is restructured.
+// comment to the `heroZoomTransition` declaration that immediately follows
+// it (same anchor the pre-D137 guard used).
 const blockStart = NAV.indexOf('// Formerly Pro-only screens.');
-const blockEnd = NAV.indexOf('\n\n// CP-10 stage 2:', blockStart);
+const blockEnd = NAV.indexOf('\nconst heroZoomTransition', blockStart);
 if (blockStart === -1 || blockEnd === -1) {
   throw new Error(
     'proScreenGating.guard.test.js: could not locate the fenced "Formerly ' +
     'Pro-only screens" block in RootNavigator.js (expected between the ' +
-    '"// Formerly Pro-only screens." comment and the "// CP-10 stage 2:" ' +
-    'comment that follows its declarations). Has it been renamed or ' +
-    'restructured? Update this guard to match before trusting it.'
+    '"// Formerly Pro-only screens." comment and the `heroZoomTransition` ' +
+    'declaration). Has it been renamed or restructured? Update this guard ' +
+    'to match before trusting it.'
   );
 }
 const FORMER_PRO_BLOCK = NAV.slice(blockStart, blockEnd);

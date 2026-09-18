@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, fontFamily, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import SectionLabel from './SectionLabel';
 import BottomSheet from './BottomSheet';
@@ -36,18 +36,19 @@ function HomeChangeWorkoutSheet({
   const live = {
     sheetTitle: { ...t.type.h3, color: t.colors.textPrimary },
     sheetSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    sheetActionIcon: { backgroundColor: t.colors.primaryBg },
     sheetActionTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     sheetActionSub: { ...t.type.caption, color: t.colors.textSecondary },
     pickerRow: { borderBottomColor: t.colors.borderSubtle },
-    pickerRowActive: { backgroundColor: t.colors.surface3 },
+    pickerRowActive: { backgroundColor: t.colors.primaryBg },
     dayBadge: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    dayBadgeActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
+    dayBadgeActive: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.strong) },
     dayNum: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
-    dayNumActive: { color: t.colors.textPrimary },
+    dayNumActive: { color: t.colors.primary },
     pickerName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     pickerMeta: { ...t.type.caption, color: t.colors.textMuted },
-    nextBadge: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
-    nextBadgeText: { fontSize: t.fontSize.xs, color: t.colors.textPrimary },
+    nextBadge: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    nextBadgeText: { fontSize: t.fontSize.xs, color: t.colors.primary },
     sheetCancelText: { ...t.type.body, color: t.colors.textSecondary },
   };
   return (
@@ -75,8 +76,8 @@ function HomeChangeWorkoutSheet({
               accessibilityRole="button"
               accessibilityLabel={`View ${displayWorkout?.routine?.name || 'workout'} before starting`}
             >
-              <View style={styles.sheetActionIcon}>
-                <Ionicons name="reader-outline" size={18} color={t.colors.textSecondary} />
+              <View style={[styles.sheetActionIcon, live.sheetActionIcon]}>
+                <Ionicons name="reader-outline" size={18} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.sheetActionTitle, live.sheetActionTitle]}>View workout</Text>
@@ -94,8 +95,8 @@ function HomeChangeWorkoutSheet({
             accessibilityRole="button"
             accessibilityLabel="Start a blank workout"
           >
-            <View style={styles.sheetActionIcon}>
-              <Ionicons name="add-circle-outline" size={18} color={t.colors.textSecondary} />
+            <View style={[styles.sheetActionIcon, live.sheetActionIcon]}>
+              <Ionicons name="add-circle-outline" size={18} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.sheetActionTitle, live.sheetActionTitle]}>Blank workout</Text>
@@ -110,8 +111,8 @@ function HomeChangeWorkoutSheet({
               accessibilityRole="button"
               accessibilityLabel={skipAccessibilityLabel || 'Skip this workout this time'}
             >
-              <View style={styles.sheetActionIcon}>
-                <Ionicons name="play-skip-forward-outline" size={18} color={t.colors.textSecondary} />
+              <View style={[styles.sheetActionIcon, live.sheetActionIcon]}>
+                <Ionicons name="play-skip-forward-outline" size={18} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.sheetActionTitle, live.sheetActionTitle]}>Skip this workout</Text>
@@ -156,7 +157,7 @@ function HomeChangeWorkoutSheet({
                     <Text style={[styles.nextBadgeText, live.nextBadgeText]}>Next up</Text>
                   </View>
                 )}
-                {isSel && <Ionicons name="checkmark-circle" size={20} color={t.colors.textPrimary} />}
+                {isSel && <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />}
               </TouchableOpacity>
             );
           })}
@@ -189,14 +190,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     marginBottom: spacing.xs,
   },
-  // D174 §3.2 forbids "a tint behind a glyph", so the amber disc behind
-  // these three stock icons lost its fill AND its disc geometry. What is
-  // left is a fixed-width glyph column, the same shape SettingsPrimitives
-  // and YouScreen's nav rows kept, so the row's left edge does not move.
   sheetActionIcon: {
     width: 38,
+    height: 38,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
   },
   sheetActionTitle: { ...type.bodyStrong, color: colors.textPrimary },
   sheetActionSub: { ...type.caption, color: colors.textSecondary, marginTop: 2 },
@@ -208,35 +208,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
-  // D174 A2: the selected routine's row was an amber wash. It is the
-  // neutral raised fill now; the day badge and the tick carry the rest.
   pickerRowActive: {
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.primaryBg,
     marginHorizontal: -spacing.xl,
     paddingHorizontal: spacing.xl,
   },
-  // Not a card and never was: a 40 dp circular badge carrying one letter.
-  // `radius.xl` happened to equal half its size, so it read as a card radius
-  // to any census of hand-rolled card shells; `circle(40)` is the same twenty
-  // pixels and says what the shape is. Law 3 (geometry carries meaning).
   dayBadge: {
-    width: 40, height: 40, borderRadius: circle(40), backgroundColor: colors.surface2,
+    width: 40, height: 40, borderRadius: radius.xl, backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
-  dayBadgeActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
+  dayBadgeActive: { backgroundColor: colors.primaryBg, borderColor: withAlpha(colors.primary, alpha.strong) },
   dayNum: { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  dayNumActive: { color: colors.textPrimary },
+  dayNumActive: { color: colors.primary },
   pickerName: { ...type.bodyStrong, color: colors.textPrimary },
   pickerMeta: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
-  // "Next up" is a recommendation, not the user's live moment, so it sits
-  // outside discipline 1's ceiling (D174: a completed step, a chosen filter
-  // and a recommendation are all "not now").
   nextBadge: {
-    backgroundColor: colors.surface3, borderRadius: radius.full,
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: colors.borderLight,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
   },
-  nextBadgeText: { fontSize: fontSize.xs, color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  nextBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   sheetCancel: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.md },
   sheetCancelText: { ...type.body, color: colors.textSecondary },
 });

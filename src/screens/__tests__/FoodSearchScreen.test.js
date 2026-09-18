@@ -235,15 +235,13 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     // CP-10 batch E (2026-07-10): live-themed, so style now carries the
     // style-array form [styles.footerBtn, live.footerBtn]. Same pin, new shape.
     expect(SCREEN_SOURCE).toMatch(/style=\{\[styles\.footerBtn, live\.footerBtn\]\}/);
-    // footerBtn is a style override ON the shared <Button variant="secondary">.
-    // Pinning md here once forced the primitive to a radius it does not use
-    // anywhere else, so a small Button rendered a different corner depending
-    // on whether the screen overrode it. The rule this test states -- a
-    // bordered button surface, not an orange text link -- is unchanged; the
-    // radius agrees with the component, and since stage 1 of the redesign the
-    // component's corner is `radius.control` (law 3: a button is a control,
-    // not a card), which the card sweep carried onto this override.
-    expect(SCREEN_SOURCE).toMatch(/footerBtn: \{[\s\S]*borderRadius: radius\.control[\s\S]*backgroundColor: colors\.surface2/);
+    // footerBtn is a style override ON the shared <Button variant="secondary">,
+    // which draws radius.lg. Pinning md here forced the primitive to a radius
+    // it does not use anywhere else, so a small Button rendered a different
+    // corner depending on whether the screen overrode it. The rule this test
+    // states -- a bordered button surface, not an orange text link -- is
+    // unchanged; only the radius now agrees with the component.
+    expect(SCREEN_SOURCE).toMatch(/footerBtn: \{[\s\S]*borderRadius: radius\.lg[\s\S]*backgroundColor: colors\.surface2/);
     expect(SCREEN_SOURCE).toMatch(/footerBtnText: \{ \.\.\.type\.bodyStrong, color: colors\.textPrimary \}/);
   });
 });

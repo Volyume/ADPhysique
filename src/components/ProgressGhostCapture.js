@@ -703,7 +703,7 @@ export default function ProgressGhostCapture({
             accessibilityLabel={showGrid ? 'Hide framing grid' : 'Show framing grid'}
             accessibilityHint="Turns the camera framing grid on or off"
           >
-            <Ionicons name="grid-outline" size={iconSize.md} color={showGrid ? t.colors.textPrimary : t.colors.textSecondary} />
+            <Ionicons name="grid-outline" size={iconSize.md} color={showGrid ? t.colors.primary : t.colors.textSecondary} />
           </Pressable>
 
           <Pressable
@@ -900,16 +900,12 @@ const styles = StyleSheet.create({
     height: 28,
     justifyContent: 'center',
   },
-  // A KEEP: the fill's width tracks the live overlay strength, which is the
-  // one thing on this screen a meter is for. De-washed from 90% alpha to the
-  // solid token, because the campaign's rule is that the accent is never
-  // alpha'd (D174, the de-washed focus rings).
   sliderFill: {
     position: 'absolute',
     left: 0,
     height: 4,
     borderRadius: radius.hair,
-    backgroundColor: colors.primary,
+    backgroundColor: withAlpha(colors.primary, 0.9),
   },
   sliderThumb: {
     position: 'absolute',
@@ -942,19 +938,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: withAlpha(colors.textPrimary, 0.16),
   },
-  // D174 A2: choosing an overlay strength picks a VIEW of the camera
-  // preview, so the selected preset carries the three neutral cues.
   opacityPresetActive: {
-    backgroundColor: colors.surface3,
-    borderColor: colors.borderLight,
+    backgroundColor: colors.primaryFill,
+    borderColor: colors.primary,
   },
   opacityPresetText: {
     ...type.label,
     color: withAlpha(colors.textPrimary, 0.86),
   },
   opacityPresetTextActive: {
-    ...type.w('label', 'semibold'),
-    color: colors.textPrimary,
+    color: colors.onPrimary,
   },
   controlRow: {
     flexDirection: 'row',
@@ -993,15 +986,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   timerChipActive: {
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.primaryFill,
   },
   timerChipText: {
     ...type.label,
     color: colors.textSecondary,
   },
   timerChipTextActive: {
-    ...type.w('label', 'semibold'),
-    color: colors.textPrimary,
+    color: colors.onPrimary,
   },
   pillBtn: {
     width: 48,
@@ -1105,7 +1097,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
-    borderRadius: radius.control,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1151,18 +1143,18 @@ function buildLiveStyles(t) {
     modeChip: { color: withAlpha(t.colors.textPrimary, 0.82) },
     subtitle: { color: withAlpha(t.colors.textPrimary, 0.85) },
     iconBtn: { backgroundColor: withAlpha(t.colors.background, 0.5) },
-    sliderFill: { backgroundColor: t.colors.primary },
+    sliderFill: { backgroundColor: withAlpha(t.colors.primary, 0.9) },
     sliderThumb: { backgroundColor: t.colors.textPrimary },
     sliderPct: { color: withAlpha(t.colors.textPrimary, 0.85) },
     opacityPreset: { backgroundColor: withAlpha(t.colors.background, 0.46), borderColor: withAlpha(t.colors.textPrimary, 0.16) },
-    opacityPresetActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
+    opacityPresetActive: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
     opacityPresetText: { color: withAlpha(t.colors.textPrimary, 0.86) },
-    opacityPresetTextActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
+    opacityPresetTextActive: { color: t.colors.onPrimary },
     selfieAdvice: { color: withAlpha(t.colors.textPrimary, 0.92), backgroundColor: withAlpha(t.colors.background, 0.55) },
     timerRow: { backgroundColor: withAlpha(t.colors.background, 0.5) },
-    timerChipActive: { backgroundColor: t.colors.surface3 },
+    timerChipActive: { backgroundColor: t.colors.primaryFill },
     timerChipText: { color: t.colors.textSecondary },
-    timerChipTextActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
+    timerChipTextActive: { color: t.colors.onPrimary },
     pillBtn: { backgroundColor: withAlpha(t.colors.background, 0.5) },
     captureBtn: { borderColor: t.colors.textPrimary, backgroundColor: withAlpha(t.colors.textPrimary, 0.15) },
     captureInner: { backgroundColor: t.colors.textPrimary },

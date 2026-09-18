@@ -30,16 +30,6 @@
  *   - the folder header's own AX-11 sibling shape (folderHeaderPress /
  *     options button), untouched by this campaign, stays pinned as before.
  *
- * RE-ANCHORED 2026-09-15 (D180 part 2, the origin-aware hero zoom): the row's
- * primary press is now `onPressWithLayout`, which hands PlanDetail the row's
- * measured rect so the screen grows out of the row the user tapped. The AX-11
- * intent is untouched and still pinned in full -- the primary action is still
- * the row pressable's own prop, still wired per call site, still independent
- * of the options action, and the options button is still a sibling. The
- * assertions gain a clause rather than losing one: each call site must also
- * pass the rect through, with `rect || undefined` so an unmeasurable row is
- * an ordinary push.
- *
  * PlansScreen has no existing real-render test harness (only source guards
  * -- see PlansScreen.loadErrorState.guard.test.js), so this follows the same
  * fs.readFileSync + regex convention.
@@ -108,11 +98,7 @@ describe('CompactPlanRow AX-11: the row pressable and its options button are sib
   });
 
   test('the row press and long-press stay generic props, wired per call site, independent of the options action', () => {
-    // D180 part 2: the press prop is the origin-aware one, so the row can hand
-    // its measured rect to PlanDetail. It is still a prop passed straight
-    // through, still per call site, and still nothing to do with onOptions.
-    expect(pressableSpan).toMatch(/onPressWithLayout=\{onPressWithLayout\}/);
-    expect(pressableSpan).not.toMatch(/onPressWithLayout=\{onOptions\}/);
+    expect(pressableSpan).toMatch(/onPress=\{onPress\}/);
     expect(pressableSpan).toMatch(/onLongPress=\{onLongPress\}/);
     expect(pressableSpan).toMatch(/accessibilityLabel=\{name\}/);
   });
@@ -126,24 +112,12 @@ describe('CompactPlanRow AX-11: the row pressable and its options button are sib
   });
 });
 
-// The single <CompactPlanRow ... /> element at a call site, bounded by its own
-// self-closing tag rather than by a fixed character count: a fixed window
-// silently truncated a row's last prop the moment a prop above it got longer
-// (D180 part 2 lengthened the press prop), which is a test artefact rather
-// than a real regression. Bounding on the element is also strictly tighter --
-// nothing from the next element can satisfy an assertion.
-function rowElementAt(marker) {
-  const idx = source.indexOf(marker);
-  expect(idx).toBeGreaterThan(-1);
-  const end = source.indexOf('/>', idx);
-  expect(end).toBeGreaterThan(idx);
-  return source.slice(idx, end + 2);
-}
-
 describe('CompactPlanRow call sites: every retired capability is still wired', () => {
   test('folder-body rows: View plan, options and Set active all reach the same handlers renderPlanCard used', () => {
-    const block = rowElementAt('{filed.map((plan, i) => (');
-    expect(block).toMatch(/onPressWithLayout=\{\(rect\) => navigation\.navigate\('PlanDetail', \{ planId: plan\.id, isLibrary: false, __heroOrigin: rect \|\| undefined \}\)\}/);
+    const folderRowIdx = source.indexOf('{filed.map((plan, i) => (');
+    expect(folderRowIdx).toBeGreaterThan(-1);
+    const block = source.slice(folderRowIdx, folderRowIdx + 700);
+    expect(block).toMatch(/onPress=\{\(\) => navigation\.navigate\('PlanDetail', \{ planId: plan\.id, isLibrary: false \}\)\}/);
     expect(block).toMatch(/onLongPress=\{\(\) => handlePlanOptions\(plan\)\}/);
     expect(block).toMatch(/onOptions=\{\(\) => handlePlanOptions\(plan\)\}/);
     expect(block).toMatch(/onSetActive=\{\(\) => handleSetActive\(plan\)\}/);
@@ -151,16 +125,20 @@ describe('CompactPlanRow call sites: every retired capability is still wired', (
   });
 
   test('unfiled rows: the same four handlers, inside the compactListBody section wrapper', () => {
-    const block = rowElementAt('{unfiledPlans.map((plan, i) => (');
-    expect(block).toMatch(/onPressWithLayout=\{\(rect\) => navigation\.navigate\('PlanDetail', \{ planId: plan\.id, isLibrary: false, __heroOrigin: rect \|\| undefined \}\)\}/);
+    const unfiledRowIdx = source.indexOf('{unfiledPlans.map((plan, i) => (');
+    expect(unfiledRowIdx).toBeGreaterThan(-1);
+    const block = source.slice(unfiledRowIdx, unfiledRowIdx + 700);
+    expect(block).toMatch(/onPress=\{\(\) => navigation\.navigate\('PlanDetail', \{ planId: plan\.id, isLibrary: false \}\)\}/);
     expect(block).toMatch(/onLongPress=\{\(\) => handlePlanOptions\(plan\)\}/);
     expect(block).toMatch(/onOptions=\{\(\) => handlePlanOptions\(plan\)\}/);
     expect(block).toMatch(/onSetActive=\{\(\) => handleSetActive\(plan\)\}/);
   });
 
   test('archived rows: View plan and options reach handleArchivedPlanOptions; Set active is explicitly null, not inline', () => {
-    const block = rowElementAt('{archivedPlans.map((plan, i) => (');
-    expect(block).toMatch(/onPressWithLayout=\{\(rect\) => navigation\.navigate\('PlanDetail', \{ planId: plan\.id, isLibrary: false, __heroOrigin: rect \|\| undefined \}\)\}/);
+    const archivedRowIdx = source.indexOf('{archivedPlans.map((plan, i) => (');
+    expect(archivedRowIdx).toBeGreaterThan(-1);
+    const block = source.slice(archivedRowIdx, archivedRowIdx + 700);
+    expect(block).toMatch(/onPress=\{\(\) => navigation\.navigate\('PlanDetail', \{ planId: plan\.id, isLibrary: false \}\)\}/);
     expect(block).toMatch(/onLongPress=\{\(\) => handleArchivedPlanOptions\(plan\)\}/);
     expect(block).toMatch(/onOptions=\{\(\) => handleArchivedPlanOptions\(plan\)\}/);
     expect(block).toMatch(/onSetActive=\{null\}/);

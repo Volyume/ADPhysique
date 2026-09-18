@@ -44,7 +44,7 @@ import GymDetailSheet from '../components/community/GymDetailSheet';
 import { useToast } from '../components/Toast';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type, iconSize } from '../styles/theme';
+import { colors, spacing, type, iconSize, withAlpha, alpha } from '../styles/theme';
 import { AVATAR_PRESETS } from '../lib/profileAvatarPresets';
 import { setGyms, venueLine } from '../lib/gyms';
 import {
@@ -604,8 +604,8 @@ export default function CommunityJoinScreen({ navigation, route }) {
                       onValueChange={(next) => toggleBand(row.key, next)}
                       disabled={tpLoading}
                       accessibilityLabel={`Share ${row.label.toLowerCase()}`}
-                      trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-                      thumbColor={tpShare[row.key] ? t.colors.surface : t.colors.textMuted}
+                      trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+                      thumbColor={t.colors.primary}
                       ios_backgroundColor={t.colors.surface2}
                     />
                   </View>

@@ -76,12 +76,6 @@ describe('D15: adherence-why once-ever line', () => {
     expect(setterSites.length).toBe(1);
   });
 
-  // RE-ANCHORED 2026-09-18 (D192, item C1): the copy this test pins is
-  // screen-local chrome copy (not engine output), and D192's finish spec
-  // explicitly rules it down to one line: "More logged sessions sharpen
-  // next week's coaching". The protective intent -- this is the ONE
-  // approved line, gated on showAdherenceWhy, shown once ever -- is
-  // unchanged; only the string matches the currently-ruled copy.
   test('the rendered line is gated on showAdherenceWhy and carries the exact approved copy', () => {
     const renderMatch = SCREEN.match(
       /\{showAdherenceWhy \? \([\s\S]*?\) : null\}/,
@@ -89,7 +83,7 @@ describe('D15: adherence-why once-ever line', () => {
     expect(renderMatch).toBeTruthy();
     const block = renderMatch[0];
     expect(block).toContain(
-      'More logged sessions sharpen next week&apos;s coaching',
+      'Consistency is what your coach reads best. The more sessions you log, the better it understands how your body responds, and the more precisely it can adjust your plan.',
     );
   });
 

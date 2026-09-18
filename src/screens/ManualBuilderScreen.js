@@ -82,9 +82,7 @@ function formatRest(secs) {
   if (secs < 60) return `${secs}s`;
   const m = Math.floor(secs / 60);
   const s = secs % 60;
-  // D192 (one unit format): whole minutes read "m min"; the "m Ys" compound
-  // form is this stepper's own compact convention and is unchanged.
-  return s === 0 ? `${m} min` : `${m}m ${s}s`;
+  return s === 0 ? `${m}m` : `${m}m ${s}s`;
 }
 
 // D139 (lead programme ruling): a day's session length, so the builder can
@@ -1328,7 +1326,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
                             <Text style={[styles.exName, live.exName]}>{ex.name}</Text>
                             {groupIdx >= 0 && (
                               <View style={[styles.ssChip, live.ssChip]}>
-                                <Ionicons name={isCircuit ? 'repeat' : 'link'} size={11} color={t.colors.textSecondary} />
+                                <Ionicons name={isCircuit ? 'repeat' : 'link'} size={11} color={t.colors.primary} />
                                 <Text style={[styles.ssChipText, live.ssChipText]}>
                                   {isCircuit ? 'Circuit' : 'Superset'} {String.fromCharCode(65 + groupIdx)}
                                 </Text>
@@ -1748,11 +1746,10 @@ const styles = StyleSheet.create({
   dayHeaderLabel: {
     minWidth: 44,
   },
-  // D174: a day number is an index, not the user's live moment.
   dayNumber: {
     fontSize: fontSize.xs,
     fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
-    color: colors.textMuted,
+    color: colors.primary,
   },
   dayDuration: {
     ...type.captionTight,
@@ -1790,10 +1787,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.surface3,
   },
-  // D174 A2: a row picked for grouping is a selection. The tick beside it is
-  // the amber mark discipline 1 keeps; the ground takes the neutral fill.
   exRowSelected: {
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.primaryBg,
     borderRadius: radius.sm,
   },
   exRowLeft: {
@@ -1831,12 +1826,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
     borderRadius: radius.sm,
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.primaryBg,
   },
   ssChipText: {
     fontSize: fontSize.xs,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
+    color: colors.primary,
   },
   groupBtnRow: {
     flexDirection: 'row',
@@ -1854,7 +1849,7 @@ const styles = StyleSheet.create({
   },
   groupBtnText: {
     ...type.label,
-    color: colors.textSecondary,
+    color: colors.primary,
   },
   exName: {
     fontSize: fontSize.md,
@@ -1887,7 +1882,7 @@ const styles = StyleSheet.create({
   },
   addExText: {
     ...type.label,
-    color: colors.textSecondary,
+    color: colors.primary,
   },
   addDayBtn: {
     flexDirection: 'row',
@@ -1895,7 +1890,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: radius.control,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.borderLight,
     borderStyle: 'dashed',
@@ -1941,7 +1936,7 @@ const styles = StyleSheet.create({
   },
   successName: {
     ...type.title,
-    color: colors.textPrimary,
+    color: colors.primary,
     textAlign: 'center',
   },
   successSub: {
@@ -1993,24 +1988,24 @@ function buildLiveStyles(t) {
     planNameField: { borderBottomColor: t.colors.borderLight },
     planNameInput: { ...t.type.h2 },
     dayHeader: { borderBottomColor: t.colors.border },
-    dayNumber: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    dayNumber: { fontSize: t.fontSize.xs, color: t.colors.primary },
     dayDuration: { ...t.type.captionTight, color: t.colors.textMuted },
     dayNameInput: { ...t.type.bodyStrong },
     exRow: { borderBottomColor: t.colors.surface3 },
-    exRowSelected: { backgroundColor: t.colors.surface3 },
+    exRowSelected: { backgroundColor: t.colors.primaryBg },
     reorderBtn: { backgroundColor: t.colors.surface2 },
-    ssChip: { backgroundColor: t.colors.surface2 },
-    ssChipText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
-    groupBtnText: { ...t.type.label, color: t.colors.textSecondary },
+    ssChip: { backgroundColor: t.colors.primaryBg },
+    ssChipText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    groupBtnText: { ...t.type.label, color: t.colors.primary },
     exName: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     controlLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    addExText: { ...t.type.label, color: t.colors.textSecondary },
+    addExText: { ...t.type.label, color: t.colors.primary },
     addDayBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.borderLight },
     addDayText: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
     draftBtnText: { ...t.type.bodyStrong, color: t.colors.textSecondary },
     activateBtnText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     successTitle: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
-    successName: { ...t.type.title, color: t.colors.textPrimary },
+    successName: { ...t.type.title, color: t.colors.primary },
     successSub: { ...t.type.bodySm, color: t.colors.textSecondary },
     successSecondaryText: { ...t.type.bodyStrong, color: t.colors.textSecondary },
     successPrimaryText: { ...t.type.bodyStrong, color: t.colors.textPrimary },

@@ -97,13 +97,7 @@ describe('D139 item 3: the block position always states, state-aware, with the s
 
   test('the tooltip carries the shared BLOCK_DEFINITION constant', () => {
     expect(source).toContain("buildSeedReceipt, BLOCK_DEFINITION } from '../lib/blockExplain';");
-    // RE-ANCHORED 2026-09-18 (D192): the glyph is a measurement, not the
-    // fact this test pins -- it grows from 13 to 20 to match the finish
-    // spec's row anatomy (section 4.3: "a 20 dp glyph in textMuted" at the
-    // end of a meta line, the option this screen's brief took over making
-    // the whole line tappable). The shared constant and the tooltip itself
-    // are unchanged and still asserted above.
-    expect(source).toContain('<InfoTooltip text={BLOCK_DEFINITION} size={20} />');
+    expect(source).toContain('<InfoTooltip text={BLOCK_DEFINITION} size={13} />');
   });
 });
 

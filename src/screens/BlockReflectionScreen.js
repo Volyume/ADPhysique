@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
-import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -43,7 +42,7 @@ function StatBlock({ icon, value, label, tooltip = null }) {
   const live = buildLiveStyles(t);
   return (
     <View style={styles.statBlock}>
-      <Ionicons name={icon} size={20} color={t.colors.textSecondary} style={styles.statIcon} />
+      <Ionicons name={icon} size={20} color={t.colors.primary} style={styles.statIcon} />
       <Text style={[styles.statValue, live.statValue]}>{value}</Text>
       <View style={styles.statLabelRow}>
         <Text style={[styles.statLabel, live.statLabel]}>{label}</Text>
@@ -205,7 +204,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Play block story"
           >
-            <Ionicons name="play-circle-outline" size={24} color={t.colors.textSecondary} />
+            <Ionicons name="play-circle-outline" size={24} color={t.colors.primary} />
           </TouchableOpacity>
         ) : null}
       />
@@ -271,7 +270,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
                 tooltip={GLOSSARY.tonnage}
               />
               {data.avgDuration > 0 && (
-                <StatBlock icon="time-outline" value={`${data.avgDuration} min`} label="Avg session" />
+                <StatBlock icon="time-outline" value={`${data.avgDuration}m`} label="Avg session" />
               )}
             </View>
 
@@ -286,7 +285,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
             {data.prs?.length > 0 && (
               <View style={[styles.section, live.section]}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="barbell-outline" size={16} color={t.colors.textSecondary} />
+                  <Ionicons name="barbell-outline" size={16} color={t.colors.primary} />
                   {/* FB-16 (D96): these rows are the best estimated max per
                       exercise WITHIN this block (database.js's
                       blockBestByExercise), never compared against a prior
@@ -313,7 +312,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
                           {recordType === '1rm_estimate' && <InfoTooltip text={GLOSSARY.estMax} size={11} />}
                         </View>
                       </View>
-                      <Text style={[styles.blockBestValue, live.blockBestValue]}>{safeToFixed(pr.value, 1)}{units}</Text>
+                      <Text style={[styles.prValue, live.prValue]}>{safeToFixed(pr.value, 1)}{units}</Text>
                     </View>
                   );
                 })}
@@ -325,7 +324,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
             {ledgerRows.length > 0 && (
               <View style={[styles.section, live.section]}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="analytics-outline" size={16} color={t.colors.textSecondary} />
+                  <Ionicons name="analytics-outline" size={16} color={t.colors.primary} />
                   <SectionLabel accessibilityRole="header">What this block showed</SectionLabel>
                 </View>
                 {ledgerRows.map((row) => (
@@ -338,8 +337,8 @@ export default function BlockReflectionScreen({ navigation, route }) {
 
             {/* Best session */}
             {data.bestSession?.volume > 0 && (
-              <Card style={styles.bestSessionCard}>
-                <Ionicons name="flash-outline" size={16} color={t.colors.textSecondary} />
+              <View style={[styles.bestSessionCard, live.bestSessionCard]}>
+                <Ionicons name="flash-outline" size={16} color={t.colors.primary} />
                 <View style={styles.bestSessionInfo}>
                   <Text style={[styles.bestSessionLabel, live.bestSessionLabel]}>Best session</Text>
                   <Text style={[styles.bestSessionDate, live.bestSessionDate]}>{fmtDate(data.bestSession.startedAt)}</Text>
@@ -349,7 +348,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
                       swapped for the store's units, mirroring :309. */}
                   {Math.round(data.bestSession.volume).toLocaleString('en-GB')} {units}
                 </Text>
-              </Card>
+              </View>
             )}
 
             {/* What's next.
@@ -408,13 +407,11 @@ const styles = StyleSheet.create({
   blockName: { fontSize: fontSize.xxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
   blockDates: { fontSize: fontSize.sm, color: colors.textMuted },
 
-  // D165 law 2: stats, not an object -- no box, a borderSubtle hairline above (D171/D172).
   statsRow: {
     flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
     overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    paddingTop: spacing.lg,
   },
   statBlock: {
     flex: 1, alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.xs,
@@ -424,19 +421,17 @@ const styles = StyleSheet.create({
   statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   statLabel: { ...type.caption, color: colors.textMuted },
 
-  // D165 law 2: narrative content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   narrativeCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg, gap: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   narrativeLine: { ...type.body, color: colors.textSecondary },
 
-  // D165 law 2: a section, not an object -- no box, a borderSubtle hairline above (D171/D172).
   section: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg, gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
 
@@ -451,36 +446,27 @@ const styles = StyleSheet.create({
   prExercise: { ...type.label, color: colors.textPrimary },
   prTypeRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   prType: { ...type.caption, color: colors.textMuted },
-  // D174 lead ruling, and the RENAME is the substantive half. This was called
-  // `prValue`, so it read as a personal best -- the one figure discipline 1
-  // grants amber by name -- and the sweep had to stop on it. But FB-16's own
-  // comment above the rows says they are the best estimated max WITHIN this
-  // block, "never compared against a prior block, a prior best or any record
-  // store", and the copy deliberately refuses to call them records. A style
-  // name that contradicts the component it styles is how the next reader gets
-  // it wrong again, so the name goes with the colour.
-  blockBestValue: { ...type.num('bodyStrong'), color: colors.textPrimary },
+  prValue: { ...type.num('bodyStrong'), color: colors.primary },
 
-  // D165 law 2, the founder's test: a SESSION is an object -- a dated
-  // training session with its own volume -- and the founder's own list names
-  // "a session summary" as one. It keeps a card, and it is now the real one,
-  // which already owns the surface, the radius.lg and the edge this shell
-  // hand-rolled. Only the row layout it does not own stays.
   bestSessionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.soft),
+    padding: spacing.lg,
   },
   bestSessionInfo: { flex: 1, gap: spacing.xxs },
   bestSessionLabel: { ...type.label, color: colors.textPrimary },
   bestSessionDate: { ...type.num('caption'), color: colors.textMuted },
-  bestSessionVolume: { ...type.num('title'), color: colors.textPrimary },
+  bestSessionVolume: { ...type.num('title'), color: colors.primary },
 
-  // D165 law 2: a section, not an object -- no box, a borderSubtle hairline above (D171/D172).
   nextSection: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg, gap: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   nextTitle: { ...type.bodyStrong, color: colors.textPrimary },
   nextBody: { ...type.bodySm, color: colors.textSecondary },
@@ -496,21 +482,22 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     blockName: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
     blockDates: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    statsRow: { borderTopColor: t.colors.borderSubtle },
+    statsRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     statValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     statLabel: { ...t.type.caption, color: t.colors.textMuted },
-    narrativeCard: { borderTopColor: t.colors.borderSubtle },
+    narrativeCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     narrativeLine: { ...t.type.body, color: t.colors.textSecondary },
-    section: { borderTopColor: t.colors.borderSubtle },
+    section: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     prRow: { borderTopColor: t.colors.borderSubtle },
     ledgerLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     prExercise: { ...t.type.label, color: t.colors.textPrimary },
     prType: { ...t.type.caption, color: t.colors.textMuted },
-    blockBestValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
+    prValue: { ...t.type.num('bodyStrong'), color: t.colors.primary },
+    bestSessionCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.soft) },
     bestSessionLabel: { ...t.type.label, color: t.colors.textPrimary },
     bestSessionDate: { ...t.type.num('caption'), color: t.colors.textMuted },
-    bestSessionVolume: { ...t.type.num('title'), color: t.colors.textPrimary },
-    nextSection: { borderTopColor: t.colors.borderSubtle },
+    bestSessionVolume: { ...t.type.num('title'), color: t.colors.primary },
+    nextSection: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     nextTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     nextBody: { ...t.type.bodySm, color: t.colors.textSecondary },
   };

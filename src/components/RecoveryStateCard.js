@@ -25,7 +25,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import {
-  colors, spacing, radius, fontWeight, type, iconSize,
+  colors, spacing, radius, fontWeight, type, withAlpha, iconSize, alpha,
 } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { RECOVERY_STATE, recoveryStateCard } from '../lib/recoveryState';
@@ -38,13 +38,13 @@ export default function RecoveryStateCard({ recoveryState, expanded = false, onT
   const planned = card.state === RECOVERY_STATE.PLANNED_BLOCK_RECOVERY;
   const live = {
     card: {
-      backgroundColor: t.colors.surface,
-      borderColor: t.colors.border,
+      backgroundColor: t.colors.primaryBg,
+      borderColor: withAlpha(t.colors.primary, alpha.mid),
     },
     title: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.textPrimary },
     body: { ...t.type.bodySm, color: t.colors.textSecondary },
     next: { ...t.type.caption, color: t.colors.textMuted },
-    action: { ...t.type.caption, color: t.colors.textSecondary, fontWeight: fontWeight.semibold },
+    action: { ...t.type.caption, color: t.colors.primary, fontWeight: fontWeight.semibold },
   };
 
   // Compact once read, and still unmistakably present.
@@ -63,14 +63,14 @@ export default function RecoveryStateCard({ recoveryState, expanded = false, onT
         <Ionicons
           name={planned ? 'moon-outline' : 'pulse-outline'}
           size={18}
-          color={t.colors.textSecondary}
+          color={t.colors.primary}
           style={{ marginTop: spacing.hair }}
         />
         <Text style={[styles.title, live.title]} numberOfLines={2}>{title}</Text>
         <Ionicons
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={iconSize.sm}
-          color={t.colors.textSecondary}
+          color={t.colors.primary}
         />
       </View>
       {expanded ? (
@@ -86,14 +86,11 @@ export default function RecoveryStateCard({ recoveryState, expanded = false, onT
 }
 
 const styles = StyleSheet.create({
-  // D174: a coaching-state card is a callout, so the wash and the tinted
-  // edge both go and the hairline carries it. Nothing about WHAT the card
-  // says, when it appears or how long it stays changed -- only its colour.
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primaryBg,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: withAlpha(colors.primary, alpha.mid),
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     gap: spacing.xs,
@@ -103,5 +100,5 @@ const styles = StyleSheet.create({
   detail: { gap: spacing.xs },
   body: { ...type.bodySm, color: colors.textSecondary },
   next: { ...type.caption, color: colors.textMuted },
-  action: { ...type.caption, color: colors.textSecondary, fontWeight: fontWeight.semibold },
+  action: { ...type.caption, color: colors.primary, fontWeight: fontWeight.semibold },
 });

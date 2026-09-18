@@ -32,17 +32,6 @@ const FAMILIES = [
   ['radius', radius],
 ];
 
-// Comments are stripped before every scan below. Without this, PROSE that
-// names a removed token fails the build -- which is exactly what happened on
-// 2026-09-15: a comment explaining why `colors.gold` had been deleted, written
-// at the site where it was deleted, tripped this guard. A guard that punishes
-// you for documenting a removal teaches people not to document removals.
-function code(source) {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-}
-
 describe('theme token guard: no component spreads a type role that does not exist', () => {
   // The same failure as the colours case above, one family later: PlansScreen
   // spread `type.labelSm`, which buildTypeRoles never defined. Spreading
@@ -61,7 +50,7 @@ describe('theme token guard: no component spreads a type role that does not exis
   test('every type.* role resolves', () => {
     const offences = [];
     for (const file of files) {
-      const text = code(fs.readFileSync(file, 'utf8'));
+      const text = fs.readFileSync(file, 'utf8');
       const importsType = /^import\s*\{[^}]*\btype\b[^}]*\}\s*from\s*'[^']*styles\/theme'/m.test(text);
       const re = /\b(t\.)?type\.([a-zA-Z0-9_]+)/g;
       let m;
@@ -75,22 +64,6 @@ describe('theme token guard: no component spreads a type role that does not exis
   });
 });
 
-// KNOWN LIMIT, recorded 2026-09-15 rather than left for someone to trip over.
-// These scans are anchored on the literal family name (`colors.`, `spacing.`),
-// so a file that ALIASES the palette hides from them. `LiftProgressScreen.js`
-// does exactly that (`buildLevelColor(c)` then `c.gold`), which is how a
-// reference to a token deleted in D173 survived this guard, the amber lane
-// guards and a full sweep -- and rendered an Elite lifter's badge in a
-// Beginner's grey, because the lookup resolved undefined and fell through a
-// `||` default.
-//
-// A generic fix is not available here: this guard cannot know which local
-// identifiers are palettes. The specific hole is closed by
-// `src/lib/__tests__/rewardProps.guard.test.js`, which bans the PROPERTY
-// (`.gold` / `.silver` / `.bronze` on anything at all) rather than the object,
-// because those three words are only ever the deleted medal roles. If another
-// token is ever deleted, it needs the same property-level ban; this scan alone
-// will not catch an aliased read of it.
 describe('theme token guard: no component references a token that does not exist', () => {
   const files = listJsFiles(SRC);
 
@@ -99,7 +72,7 @@ describe('theme token guard: no component references a token that does not exist
     const re = new RegExp(`\\b${family}\\.([a-zA-Z0-9_]+)`, 'g');
     const offences = [];
     for (const file of files) {
-      const text = code(fs.readFileSync(file, 'utf8'));
+      const text = fs.readFileSync(file, 'utf8');
       let m;
       while ((m = re.exec(text)) !== null) {
         const key = m[1];

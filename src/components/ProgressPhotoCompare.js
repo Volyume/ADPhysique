@@ -91,7 +91,7 @@ function Segmented({ options, value, onChange, groupLabel }) {
               <Ionicons
                 name={opt.icon}
                 size={iconSize.sm}
-                color={active ? t.colors.textPrimary : t.colors.textMuted}
+                color={active ? t.colors.onPrimary : t.colors.textMuted}
               />
             ) : null}
             <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{opt.label}</Text>
@@ -578,7 +578,7 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
                 style={[styles.setupStatus, live.setupStatus]}
                 accessibilityLabel={`Compare setup status: ${setupStatus.title}. ${setupStatus.body}`}
               >
-                <Ionicons name={setupStatus.icon} size={iconSize.sm} color={t.colors.textSecondary} />
+                <Ionicons name={setupStatus.icon} size={iconSize.sm} color={t.colors.primary} />
                 <View style={styles.setupStatusCopy}>
                   <Text style={[styles.setupStatusTitle, live.setupStatusTitle]}>{setupStatus.title}</Text>
                   <Text style={[styles.setupStatusBody, live.setupStatusBody]}>{setupStatus.body}</Text>
@@ -673,12 +673,9 @@ const styles = StyleSheet.create({
     flex: 1, minWidth: 0, paddingVertical: spacing.sm, borderRadius: radius.sm,
     backgroundColor: colors.surface2,
   },
-  // D174 A2: a segmented control picks a VIEW, so its selected segment is
-  // the neutral raised fill, full ink and the semibold face -- three cues
-  // where the amber ground was one.
-  segmentActive: { backgroundColor: colors.surface3 },
+  segmentActive: { backgroundColor: colors.primaryFill },
   segmentText: { ...type.label, color: colors.textMuted, textAlign: 'center', flexShrink: 1 },
-  segmentTextActive: { ...type.w('label', 'semibold'), color: colors.textPrimary },
+  segmentTextActive: { color: colors.onPrimary },
 
   quickRow: {
     flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
@@ -728,10 +725,6 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 0, bottom: 0, width: 2,
     backgroundColor: withAlpha(colors.background, 0.85),
   },
-  // KEEP: the reveal handle's POSITION is a live value the user is dragging
-  // right now -- the you-are-here mark of the slider mode, and the only amber
-  // that mode spends. (The overlay mode's track below is the other; they never
-  // render together.)
   handleGrip: {
     width: HANDLE, height: HANDLE, borderRadius: radius.full,
     backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center',
@@ -748,8 +741,6 @@ const styles = StyleSheet.create({
     height: 4, borderRadius: radius.hair, backgroundColor: colors.surface3,
     justifyContent: 'center',
   },
-  // KEEP: a meter fill whose width tracks a live value, and its thumb, which
-  // is the head of the same single mark rather than a second one.
   trackFill: { height: 4, borderRadius: radius.hair, backgroundColor: colors.primaryFill },
   trackThumb: {
     position: 'absolute', width: HANDLE / 2, height: HANDLE / 2, borderRadius: radius.full,
@@ -762,12 +753,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, marginTop: spacing.sm,
   },
   thumb: { width: THUMB, height: THUMB, borderRadius: radius.sm, backgroundColor: colors.surface },
-  // The chosen photo's ring is the ONLY cue that thumbnail carries (no fill,
-  // no label), and it is drawn over arbitrary photo content, so it takes
-  // D178 #4's `textPrimary` selection mark rather than A2's quieter
-  // `borderLight` edge, which would weaken selection with nothing to
-  // compensate.
-  thumbChosen: { borderWidth: 2, borderColor: colors.textPrimary },
+  thumbChosen: { borderWidth: 2, borderColor: colors.primary },
 
   fallback: {
     alignItems: 'center', justifyContent: 'center', padding: spacing.md,
@@ -804,9 +790,9 @@ function buildLiveStyles(t) {
     title: { ...t.type.h3, color: t.colors.textPrimary },
     subtitle: { ...t.type.caption, color: t.colors.textMuted },
     segment: { backgroundColor: t.colors.surface2 },
-    segmentActive: { backgroundColor: t.colors.surface3 },
+    segmentActive: { backgroundColor: t.colors.primaryFill },
     segmentText: { ...t.type.label, color: t.colors.textMuted },
-    segmentTextActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
+    segmentTextActive: { color: t.colors.onPrimary },
     quick: { borderColor: t.colors.borderSubtle },
     quickText: { ...t.type.label, color: t.colors.textPrimary },
     setupStatus: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
@@ -822,7 +808,7 @@ function buildLiveStyles(t) {
     trackFill: { backgroundColor: t.colors.primaryFill },
     trackThumb: { backgroundColor: t.colors.primaryFill },
     thumb: { backgroundColor: t.colors.surface },
-    thumbChosen: { borderColor: t.colors.textPrimary },
+    thumbChosen: { borderColor: t.colors.primary },
     fallback: { backgroundColor: t.colors.surface },
     fallbackText: { ...t.type.bodySm, color: t.colors.textMuted },
     placeholderText: { ...t.type.bodyStrong, color: t.colors.textPrimary },

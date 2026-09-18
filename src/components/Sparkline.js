@@ -38,10 +38,9 @@ export default function Sparkline({
   color,
   showDots = false,
   // Item 10 (campaign 2026-07-10, CP-5 residue): personal-best markers.
-  // VolyumeChart's highlightIndices drew a small ring-and-dot on
+  // VolyumeChart's highlightIndices drew a small gold ring-and-dot on
   // ExerciseDetail's chart; LiftProgress's row sparkline (this component)
-  // never got the same treatment. Same idiom, same token (t.colors.primary
-  // since D173 T1 retired the gold trophy token),
+  // never got the same treatment. Same idiom, same token (t.colors.gold),
   // same ring/dot radii as VolyumeChart.js. Indices are into `data` as
   // passed in (pre-filter); an index whose value got filtered out (non-
   // finite) or is out of range draws nothing rather than the wrong point.
@@ -51,11 +50,7 @@ export default function Sparkline({
   accessibilitySummary,
 }) {
   const t = useTheme();
-  // D174: a whole series is not "now", so the DEFAULT line/dot colour is the
-  // neutral fill token. The personal-best ring-and-dot below keeps the
-  // accent, which discipline 1 grants by name. An explicit `color` prop
-  // still wins.
-  const resolvedColor = color ?? t.colors.borderLight;
+  const resolvedColor = color ?? t.colors.primary;
   const values = useMemo(
     () => (data || []).filter(v => Number.isFinite(v)),
     [data],
@@ -119,7 +114,7 @@ export default function Sparkline({
           {showDots && points.map((p, i) => (
             <Circle key={i} cx={p.x} cy={p.y} r={2} fill={resolvedColor} />
           ))}
-          {/* Item 10: same amber ring-and-dot idiom as VolyumeChart's CP-5
+          {/* Item 10: same gold ring-and-dot idiom as VolyumeChart's CP-5
               personal-best markers. */}
           {Array.isArray(highlightIndices) && highlightIndices.map((idx) => {
             const pointIdx = dataIndexToPointIndex.get(idx);
@@ -127,8 +122,8 @@ export default function Sparkline({
             if (!p) return null;
             return (
               <Fragment key={`pr-${idx}`}>
-                <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={t.colors.primary} strokeWidth={1.5} />
-                <Circle cx={p.x} cy={p.y} r={1.5} fill={t.colors.primary} />
+                <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={t.colors.gold} strokeWidth={1.5} />
+                <Circle cx={p.x} cy={p.y} r={1.5} fill={t.colors.gold} />
               </Fragment>
             );
           })}

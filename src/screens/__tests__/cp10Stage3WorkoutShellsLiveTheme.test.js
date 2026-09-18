@@ -172,38 +172,25 @@ describe('CP-10 stage 3 (workout shells FINAL batch): flips live, no remount', (
     act(() => { tree.unmount(); });
   });
 
-  // RE-ANCHORED 2026-09-17 (D186): D165 law 2 (a number is not an object)
-  // removed StatBox's own fill/corner/border -- the tile no longer carries a
-  // `borderColor` at all, so "the box background flips live" has nothing
-  // left to find (the hairline moved to the parent statsGrid row, outside
-  // this standalone mount). Same pattern as LoggedSetRow's own re-anchor
-  // above ("the row's own surface fill is deliberately GONE ... the
-  // live-flip contract is pinned on the inks that remain"): the icon ink
-  // flip stays, the label ink flip stands in for the box, and a new
-  // assertion pins the absence itself so a reverted sweep is caught.
-  test('WorkoutSummaryScreen/StatBox: icon and label ink flip live on the same mounted instance; the tile itself carries no fill or border', () => {
+  test('WorkoutSummaryScreen/StatBox: icon ink and box background flip live on the same mounted instance', () => {
     setTheme('dark', { reduceMotion: true });
     let tree;
     act(() => {
-      tree = create(<StatBox icon="stats-chart-outline" value="8,432 kg" label="Total volume" />);
+      tree = create(<StatBox icon="flame-outline" value="8,432 kg" label="Total volume" />);
     });
-    const icon = tree.root.findByProps({ name: 'stats-chart-outline' });
+    const icon = tree.root.findByProps({ name: 'flame-outline' });
     const darkIconColor = icon.props.color;
     expect(darkIconColor).toBe(theme.resolveTheme({ theme: 'dark' }).colors.textSecondary);
-    const label = tree.root.findByProps({ children: 'Total volume' });
-    const darkLabelColor = flat(label).color;
-    expect(darkLabelColor).toBe(theme.resolveTheme({ theme: 'dark' }).colors.textSecondary);
-    // D186: no node in the tile carries a borderColor any more -- the fill,
-    // corner and border are gone outright, not just re-coloured.
-    expect(tree.root.findAll((n) => n.props.style && StyleSheet.flatten(n.props.style).borderColor).length).toBe(0);
+    const box = tree.root.findAll((n) => n.props.style && StyleSheet.flatten(n.props.style).borderColor)[0];
+    const darkBoxBg = flat(box).backgroundColor;
+    expect(darkBoxBg).toBe(theme.resolveTheme({ theme: 'dark' }).colors.surface);
 
     setTheme('light', { reduceMotion: true });
-    const lightIconColor = tree.root.findByProps({ name: 'stats-chart-outline' }).props.color;
+    const lightIconColor = tree.root.findByProps({ name: 'flame-outline' }).props.color;
     expect(lightIconColor).not.toBe(darkIconColor);
     expect(lightIconColor).toBe(theme.resolveTheme({ theme: 'light' }).colors.textSecondary);
-    const lightLabelColor = flat(tree.root.findByProps({ children: 'Total volume' })).color;
-    expect(lightLabelColor).not.toBe(darkLabelColor);
-    expect(lightLabelColor).toBe(theme.resolveTheme({ theme: 'light' }).colors.textSecondary);
+    const lightBoxBg = flat(tree.root.findAll((n) => n.props.style && StyleSheet.flatten(n.props.style).borderColor)[0]).backgroundColor;
+    expect(lightBoxBg).not.toBe(darkBoxBg);
     act(() => { tree.unmount(); });
   });
 });

@@ -13,7 +13,7 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import { storeName } from '../lib/storeName';
@@ -78,7 +78,7 @@ export default function SubscriptionPolicyScreen() {
 
         <Section
           icon="barbell-outline"
-          tint={t.colors.textSecondary}
+          tint={t.colors.primary}
           title="What Pro adds"
         >
           <Body>
@@ -129,7 +129,7 @@ export default function SubscriptionPolicyScreen() {
 
         <Section
           icon="time-outline"
-          tint={t.colors.textSecondary}
+          tint={t.colors.primary}
           title="Your free trial"
         >
           <Body>
@@ -169,14 +169,14 @@ function Section({ icon, tint, title, children }) {
   // prop-drilled `live`/`t` from SubscriptionPolicyScreen, matching
   // AddCustomFoodScreen's Field/NumField precedent from batch D), own
   // useTheme() call and shared buildLiveStyles(t). `tint` itself already
-  // arrives live from the caller (t.colors.*), so the icon needs no separate
-  // live entry here. D174 removed the withAlpha() disc behind it.
+  // arrives live from the caller (t.colors.*), so the icon and its
+  // withAlpha() wash need no separate live entry here.
   const t = useTheme();
   const live = buildLiveStyles(t);
   return (
     <View style={[styles.section, live.section]}>
       <View style={styles.sectionHeader}>
-        <View style={styles.sectionIconWrap}>
+        <View style={[styles.sectionIconWrap, { backgroundColor: withAlpha(tint, alpha.tint) }]}>
           <Ionicons name={icon} size={18} color={tint} />
         </View>
         <Text style={[styles.sectionTitle, live.sectionTitle]} accessibilityRole="header">{title}</Text>
@@ -223,7 +223,7 @@ function KeyPoint({ children }) {
   const live = buildLiveStyles(t);
   return (
     <View style={[styles.keypoint, live.keypoint]}>
-      <Ionicons name="bookmark" size={14} color={t.colors.textSecondary} />
+      <Ionicons name="bookmark" size={14} color={t.colors.primary} />
       <Text style={[styles.keypointText, live.keypointText]}>{children}</Text>
     </View>
   );
@@ -238,8 +238,7 @@ const styles = StyleSheet.create({
 
   section: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  // D174: was a 32dp tinted disc. Fixed glyph column now, no fill.
-  sectionIconWrap: { width: 32, alignItems: 'center', justifyContent: 'center' },
+  sectionIconWrap: { width: 32, height: 32, borderRadius: circle(32), alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { ...type.title, color: colors.textPrimary, flex: 1 },
   sectionBody: { gap: spacing.sm },
 
@@ -247,10 +246,10 @@ const styles = StyleSheet.create({
   strong: { color: colors.textPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingLeft: spacing.xs },
-  bulletDot: { width: 5, height: 5, borderRadius: circle(5), backgroundColor: colors.textMuted, marginTop: spacing.sm },
+  bulletDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.primary, marginTop: spacing.sm },
   bulletText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
 
-  keypoint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.xs },
+  keypoint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.xs },
   keypointText: { ...type.bodySm, color: colors.textPrimary, flex: 1, fontWeight: fontWeight.medium },
 
   footer: { ...type.captionTight, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm, fontStyle: 'italic' },
@@ -263,8 +262,9 @@ const styles = StyleSheet.create({
 // Section, Body, Strong, Bullet, KeyPoint) so they can never drift out of
 // step with each other or the frozen block. Pure layout keys
 // (flex/gap/padding/width, no token) are correctly omitted -- there is
-// nothing to unfreeze for them. `sectionIconWrap` needs no live entry: after
-// D174 removed its fill it carries no colour at all. fontWeight.* is not part of useTheme()'s returned shape
+// nothing to unfreeze for them. `sectionIconWrap` needs no live entry: its
+// colour comes entirely from the `tint` prop, itself already live at the
+// call site. fontWeight.* is not part of useTheme()'s returned shape
 // (src/hooks/useTheme.js) because it never varies by theme/contrast, so it
 // stays frozen wherever the source style spreads it (styles.strong,
 // styles.keypointText). Same pattern as AddCustomFoodScreen.js's
@@ -277,9 +277,9 @@ function buildLiveStyles(t) {
     sectionTitle: { ...t.type.title, color: t.colors.textPrimary },
     body: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
     strong: { color: t.colors.textPrimary },
-    bulletDot: { backgroundColor: t.colors.textMuted },
+    bulletDot: { backgroundColor: t.colors.primary },
     bulletText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    keypoint: { backgroundColor: t.colors.surface2 },
+    keypoint: { backgroundColor: t.colors.primaryBg },
     keypointText: { ...t.type.bodySm, color: t.colors.textPrimary },
     footer: { ...t.type.captionTight, color: t.colors.textMuted },
   };

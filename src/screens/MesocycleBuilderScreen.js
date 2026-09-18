@@ -20,7 +20,6 @@ import { SkeletonCard } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
-import Card from '../components/Card';
 import {
   getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets, getAllExercises,
   getActivePlan, getRoutinesForPlan,
@@ -142,13 +141,9 @@ export default function MesocycleBuilderScreen({ navigation }) {
         return {
           value: Math.round(calculateTonnage(wkSets, null, loadSemanticsById)),
           label: `W${wk + 1}`,
-          // D174: the CURRENT week is discipline 1's "now" and keeps the amber;
-          // every week behind it was `primaryDim`, a whole amber series, so it
-          // takes the neutral fill. The recovery week keeps `warning`, which is
-          // the state-colour grammar section 8 protects.
           frontColor: wk + 1 === active.deloadWeek ? colors.warning
             : wk + 1 === currentWeek ? colors.primary
-            : colors.borderLight,
+            : colors.primaryDim,
         };
       });
 
@@ -206,9 +201,9 @@ export default function MesocycleBuilderScreen({ navigation }) {
           <>
             {/* ── Active plan (coach / manual built) ───── */}
             {activePlan && (
-              <Card style={styles.planCard}>
+              <View style={[styles.planCard, live.planCard]}>
                 <View style={styles.planCardHead}>
-                  <Ionicons name="barbell" size={18} color={t.colors.textSecondary} />
+                  <Ionicons name="barbell" size={18} color={t.colors.primary} />
                   <Text style={[styles.planCardTag, live.planCardTag]}>Your active plan</Text>
                   {/* C5-P11-03 / C5-P11-05 / FB-20 (D96): this was the one
                       place on the Train side that defined a block, and it
@@ -290,7 +285,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                     recovery week. There is nothing to set up.
                   </Text>
                 )}
-              </Card>
+              </View>
             )}
 
             {/* ── Active block dashboard ───────────────── */}
@@ -312,7 +307,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
           const currentWeek = getCurrentWeek(meso);
           const totalWeeks = meso.durationWeeks || 4;
           return (
-            <Card style={[styles.mesoCard, isActive && [styles.mesoCardActive, live.mesoCardActive]]}>
+            <View style={[styles.mesoCard, live.mesoCard, isActive && [styles.mesoCardActive, live.mesoCardActive]]}>
               {isActive && (
                 <View style={[styles.activeBadge, live.activeBadge]}>
                   <Text style={[styles.activeBadgeText, live.activeBadgeText]}>Active</Text>
@@ -380,7 +375,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                   )}
                 </View>
               )}
-            </Card>
+            </View>
           );
         }}
         ListEmptyComponent={
@@ -445,7 +440,7 @@ function ActiveMesoDashboard({ stats, currentWeek, finished = false }) {
         <View style={[styles.activeBadge, live.activeBadge]}>
           <Text style={[styles.activeBadgeText, live.activeBadgeText]}>Active</Text>
         </View>
-        <Ionicons name="layers" size={16} color={t.colors.textSecondary} />
+        <Ionicons name="layers" size={16} color={t.colors.primary} />
       </View>
       <Text style={[styles.dashName, live.dashName]} numberOfLines={1}>{active.name}</Text>
       <Text style={[styles.dashWeek, live.dashWeek]}>
@@ -476,7 +471,7 @@ function ActiveMesoDashboard({ stats, currentWeek, finished = false }) {
               label: b.label,
               color: i + 1 === active.deloadWeek ? t.colors.warning
                 : i + 1 === currentWeek ? t.colors.primary
-                : t.colors.borderLight,
+                : t.colors.primaryDim,
             }))}
             width={tonnageBars.length * 30}
             height={60}
@@ -538,10 +533,9 @@ const styles = StyleSheet.create({
   },
 
   // Active dashboard
-  // D165 law 2: a dashboard panel, not an object -- no box, a borderSubtle hairline above (D171/D172).
-  dashCard: { padding: spacing.lg, gap: spacing.md, marginBottom: spacing.xl,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
+  dashCard: {
+    backgroundColor: colors.surface, borderRadius: radius.xl, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.primary, gap: spacing.md, marginBottom: spacing.xl,
   },
   dashHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   dashName:   { ...type.title, color: colors.textPrimary },
@@ -558,40 +552,31 @@ const styles = StyleSheet.create({
   recovLabel: { fontSize: fontSize.micro, color: colors.textMuted },
 
   // Meso list cards
-  // D165 law 2, the founder's test: a BLOCK is an object -- it has a name,
-  // dates, a focus and a week you are on, and it can be active. It keeps a
-  // card and it is now the real one, which already owns the surface, the
-  // radius.lg, the edge and the padding this shell hand-rolled. Only the gap
-  // and the ACTIVE edge (a state Card has no prop for) stay here.
   mesoCard: {
-    gap: spacing.md,
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    gap: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
   },
-  // D174 A2: the active card among siblings separates by edge, not accent.
-  mesoCardActive: { borderColor: colors.borderLight },
-  // D174: the badge says "Active" in words; the wash behind it was the accent
-  // becoming a ground (discipline 2). Fill and ink move one step up the
-  // ladder instead.
+  mesoCardActive: { borderColor: colors.primary },
   activeBadge: {
-    alignSelf: 'flex-start', backgroundColor: colors.surface3,
+    alignSelf: 'flex-start', backgroundColor: colors.primaryBg,
     borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
   activeBadgeText: {
-    fontSize: fontSize.xs, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary,
+    fontSize: fontSize.xs, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.primary,
   },
   mesoName:   { ...type.title, color: colors.textPrimary },
   mesoMeta:   { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
   metaItem:   { fontSize: fontSize.sm, color: colors.textSecondary },
 
-  // D165 law 2, the founder's test: a PLAN is an object -- the founder's own
-  // list names one. It keeps a card and it is now the real one; only the gap
-  // and the margin it does not own stay.
   planCard: {
-    gap: spacing.xs, marginBottom: spacing.lg,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
+    padding: spacing.lg, gap: spacing.xs, marginBottom: spacing.lg,
   },
   planCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, justifyContent: 'space-between' },
   planCardTag: {
     fontSize: fontSize.xs, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
-    color: colors.textMuted,
+    color: colors.primary,
   },
   planCardName: { ...type.h3, color: colors.textPrimary },
   planCardMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
@@ -603,9 +588,7 @@ const styles = StyleSheet.create({
   weekLabel:  { ...type.num('label'), color: colors.textSecondary },
   weekBar:    { flexDirection: 'row', gap: spacing.sm },
   weekDot:    { flex: 1, height: 8, borderRadius: radius.xs, backgroundColor: colors.surface2 },
-  // D174: a completed week is the week ribbon's trained-day cell, and
-  // `borderLight` is the token that fills one.
-  weekDotActive: { backgroundColor: colors.borderLight },
+  weekDotActive: { backgroundColor: colors.primary },
   weekDotDeload: { backgroundColor: withAlpha(colors.warning, 0.502) },
   deloadLabel: { ...type.num('caption'), color: colors.warning },
 
@@ -616,18 +599,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     alignSelf: 'flex-start', marginTop: spacing.sm,
     paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border,
-    backgroundColor: 'transparent',
+    borderRadius: radius.sm, borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
+    backgroundColor: colors.primaryBg,
   },
-  summaryBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  summaryBtnText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   // Plan card week indicator
   planWeekRow:       { gap: spacing.xs, marginTop: spacing.sm },
-  planWeekLabel:     { ...type.num('label'), color: colors.textSecondary },
+  planWeekLabel:     { ...type.num('label'), color: colors.primary },
   planWeekLabelDeload: { color: colors.warning },
   planWeekBar:       { flexDirection: 'row', gap: spacing.xs },
   planWeekDot:       { flex: 1, height: 6, borderRadius: radius.hair, backgroundColor: colors.surface2 },
-  planWeekDotActive: { backgroundColor: colors.borderLight },
+  planWeekDotActive: { backgroundColor: colors.primary },
   planWeekDotDeload: { backgroundColor: withAlpha(colors.warning, 0.502) },
 });
 
@@ -641,7 +624,7 @@ const styles = StyleSheet.create({
 // correctly omitted -- there is nothing to unfreeze for them.
 //
 // NOTE (flag resolved at lead review, batch G): loadActiveStats() above
-// bakes colors.warning/colors.primary/colors.borderLight into each
+// bakes colors.warning/colors.primary/colors.primaryDim into each
 // tonnageBars[].frontColor at DATA-LOAD time. Converting those literals in
 // place would have left the chart on stale colours until the next screen
 // focus, so instead the SvgBarSparkline call site in ActiveMesoDashboard
@@ -651,7 +634,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     historyLabel: { ...t.type.label, color: t.colors.textSecondary },
-    dashCard: { borderTopColor: t.colors.borderSubtle },
+    dashCard: { backgroundColor: t.colors.surface, borderColor: t.colors.primary },
     dashName: { ...t.type.title, color: t.colors.textPrimary },
     dashWeek: { ...t.type.num('caption'), color: t.colors.textSecondary },
     progTrack: { backgroundColor: t.colors.surface2 },
@@ -659,26 +642,28 @@ function buildLiveStyles(t) {
     tonnageLabel: { ...t.type.caption, color: t.colors.textMuted },
     recovValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     recovLabel: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
-    mesoCardActive: { borderColor: t.colors.borderLight },
-    activeBadge: { backgroundColor: t.colors.surface3 },
-    activeBadgeText: { fontSize: t.fontSize.xs, color: t.colors.textPrimary },
+    mesoCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    mesoCardActive: { borderColor: t.colors.primary },
+    activeBadge: { backgroundColor: t.colors.primaryBg },
+    activeBadgeText: { fontSize: t.fontSize.xs, color: t.colors.primary },
     mesoName: { ...t.type.title, color: t.colors.textPrimary },
     metaItem: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    planCardTag: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    planCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, 0.251) },
+    planCardTag: { fontSize: t.fontSize.xs, color: t.colors.primary },
     planCardName: { ...t.type.h3, color: t.colors.textPrimary },
     planCardMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     planCardNote: { ...t.type.bodySm, color: t.colors.textMuted },
     weekLabel: { ...t.type.num('label'), color: t.colors.textSecondary },
     weekDot: { backgroundColor: t.colors.surface2 },
-    weekDotActive: { backgroundColor: t.colors.borderLight },
+    weekDotActive: { backgroundColor: t.colors.primary },
     weekDotDeload: { backgroundColor: withAlpha(t.colors.warning, 0.502) },
     deloadLabel: { ...t.type.num('caption'), color: t.colors.warning },
-    summaryBtn: { borderColor: t.colors.border, backgroundColor: 'transparent' },
-    summaryBtnText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
-    planWeekLabel: { ...t.type.num('label'), color: t.colors.textSecondary },
+    summaryBtn: { borderColor: withAlpha(t.colors.primary, 0.314), backgroundColor: t.colors.primaryBg },
+    summaryBtnText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    planWeekLabel: { ...t.type.num('label'), color: t.colors.primary },
     planWeekLabelDeload: { color: t.colors.warning },
     planWeekDot: { backgroundColor: t.colors.surface2 },
-    planWeekDotActive: { backgroundColor: t.colors.borderLight },
+    planWeekDotActive: { backgroundColor: t.colors.primary },
     planWeekDotDeload: { backgroundColor: withAlpha(t.colors.warning, 0.502) },
   };
 }

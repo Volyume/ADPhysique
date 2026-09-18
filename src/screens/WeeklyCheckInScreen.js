@@ -40,17 +40,11 @@ import {
 // (audit 03b §3.3b), so this screen no longer calls the vocabulary itself.
 import Button from '../components/Button';
 import BackHeader from '../components/BackHeader';
-// D192 (item 3): the shared overline primitive, aliased because this file
-// already defines its own local `SectionLabel` (question-label + hint) used
-// throughout the wizard steps and the fast card. Default tone/variant give
-// the plain textSecondary overline the finish spec's "Section" pattern asks
-// for.
-import SharedSectionLabel from '../components/SectionLabel';
 import Chip from '../components/Chip';
 import TextField from '../components/TextField';
 import { getRollupsForRange, getPlannedDaysInRange, confirmPlannedDay } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle, fontFamily, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady, scheduleMissedCheckinFollowups } from '../lib/notifications';
 import { logError, logWarn } from '../lib/errorLog';
@@ -94,7 +88,7 @@ function StepBar({ current, total }) {
   );
 }
 
-function SectionLabel({ children, hint, style }) {
+function SectionLabel({ children, hint }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
   // See buildLiveStyles' header comment (defined below the frozen `styles`
   // block) for why.
@@ -102,64 +96,34 @@ function SectionLabel({ children, hint, style }) {
   const live = buildLiveStyles(t);
   return (
     <View style={styles.sectionLabelWrap}>
-      {/* D192 (item 5): additive `style` override, undefined for every
-          existing caller (byte-identical render). Only the fast card's two
-          question labels (energy, soreness) pass one, to reach `type.title`
-          without moving this component's own default off the wizard's
-          other 13 call sites. */}
-      <Text style={[styles.sectionLabel, live.sectionLabel, style]}>{children}</Text>
+      <Text style={[styles.sectionLabel, live.sectionLabel]}>{children}</Text>
       {hint ? <Text style={[styles.sectionHint, live.sectionHint]}>{hint}</Text> : null}
     </View>
   );
 }
 
-// D192 (item 5): the five boxed Chip tiles become a five-cell scale -- one
-// bordered row, each cell showing only its number, with the words moved to
-// a single anchor line underneath (first label left, last label right).
-// This component is shared by the long-form wizard's three 1-5 ratings
-// (energy/stress/soreness) and the fast card's two, so restyling it once
-// gives every 1-5 scale in the screen the new anatomy, per the brief's
-// explicit "shared component" carve-out. State/setters/values (1-5) and the
-// accessibilityLabel format ("Below normal, 2 of 5") are unchanged; only the
-// visual tile and the underlying Chip primitive are replaced with a plain
-// TouchableOpacity per cell so the segmented-row look (radius 10, surface2
-// fill, hairline dividers) can be drawn without Chip's pill styling.
-function capitaliseFirst(text) {
-  return typeof text === 'string' && text.length ? text.charAt(0).toUpperCase() + text.slice(1) : text;
-}
-
 function ChipRow({ options, selected, onSelect }) {
-  const t = useTheme();
-  const live = buildLiveStyles(t);
-  const cells = options.reduce((nodes, opt, i) => {
-    const isSelected = selected === opt.value;
-    if (i > 0) {
-      nodes.push(<View key={`div-${opt.value}`} style={[styles.scaleDivider, live.scaleDivider]} />);
-    }
-    nodes.push(
-      <TouchableOpacity
-        key={opt.value}
-        onPress={() => onSelect(isSelected ? null : opt.value)}
-        activeOpacity={0.75}
-        accessibilityRole="radio"
-        accessibilityState={{ selected: isSelected }}
-        // C5-P20-04 (D96) preserved verbatim: the word leads, the number
-        // follows, so the screen reader still speaks the word first.
-        accessibilityLabel={`${opt.label}, ${opt.value} of 5`}
-        style={[styles.scaleCell, isSelected && [styles.scaleCellSelected, live.scaleCellSelected]]}
-      >
-        <Text style={[styles.scaleCellText, live.scaleCellText]}>{opt.value}</Text>
-      </TouchableOpacity>,
-    );
-    return nodes;
-  }, []);
   return (
-    <View>
-      <View style={[styles.scaleRow, live.scaleRow]}>{cells}</View>
-      <View style={styles.scaleAnchors}>
-        <Text style={[styles.scaleAnchorText, live.scaleAnchorText]}>{options[0]?.label}</Text>
-        <Text style={[styles.scaleAnchorText, live.scaleAnchorText]}>{options[options.length - 1]?.label}</Text>
-      </View>
+    <View style={styles.chipRow}>
+      {options.map((opt) => {
+        const isSelected = selected === opt.value;
+        return (
+          <Chip
+            key={opt.value}
+            // C5-P20-04 (D96): the word leads, the number follows. Leading
+            // with the digit made the first check-in read as a clinical
+            // intake form rather than coaching. The stored value is
+            // unchanged, and the screen reader already spoke the word.
+            label={`${opt.label}\n${opt.value}`}
+            selected={isSelected}
+            onPress={() => onSelect(isSelected ? null : opt.value)}
+            accessibilityLabel={`${opt.label}, ${opt.value} of 5`}
+            style={styles.ratingChip}
+            labelStyle={styles.ratingChipLabel}
+            numberOfLines={3}
+          />
+        );
+      })}
     </View>
   );
 }
@@ -204,28 +168,14 @@ function ScanPromptCard({ onScan, onDismiss }) {
     <View style={[styles.scanPromptCard, live.scanPromptCard]}>
       <View style={{ flex: 1, gap: spacing.xxs }}>
         <Text style={[styles.scanPromptTitle, live.scanPromptTitle]}>Add a progress scan first?</Text>
-        {/* D192 (item 2): the explanatory paragraph is now one line under
-            60 characters (component language item 7, "no paragraphs"). */}
         <Text style={[styles.scanPromptBody, live.scanPromptBody]}>
-          Adds a visual read to this week&apos;s check-in
+          A recent scan gives this check-in extra visual context. It is optional and skipping it changes nothing.
         </Text>
         <View style={styles.scanPromptActions}>
-          <TouchableOpacity
-            onPress={onScan}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel="Do a scan"
-            style={styles.scanPromptActionTouchable}
-          >
+          <TouchableOpacity onPress={onScan} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Do a scan">
             <Text style={[styles.scanPromptActionPrimary, live.scanPromptActionPrimary]}>Do a scan</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={onDismiss}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel="Not now"
-            style={styles.scanPromptActionTouchable}
-          >
+          <TouchableOpacity onPress={onDismiss} activeOpacity={0.75} accessibilityRole="button" accessibilityLabel="Not now">
             <Text style={[styles.scanPromptActionSecondary, live.scanPromptActionSecondary]}>Not now</Text>
           </TouchableOpacity>
         </View>
@@ -1461,7 +1411,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   <Ionicons
                     name={opt.icon}
                     size={22}
-                    color={isSelected ? t.colors.textPrimary : t.colors.textSecondary}
+                    color={isSelected ? t.colors.primary : t.colors.textSecondary}
                   />
                   <Text style={[styles.perfCardText, isSelected && styles.perfCardTextSelected, live.perfCardText, isSelected && live.perfCardTextSelected]}>
                     {opt.label}
@@ -1489,10 +1439,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         key: 'training',
         icon: 'barbell-outline',
         label: 'Training',
-        // D192 landing (2026-09-18): the verdict text lives in checkinDerive.js
-        // (engine-adjacent, lower-case because the coach's sentence splices it
-        // mid-line), so the row capitalises it at render only.
-        value: trainingPerformance ? capitaliseFirst(PERF_VERDICT_TEXT[trainingPerformance]) : null,
+        value: trainingPerformance ? PERF_VERDICT_TEXT[trainingPerformance] : null,
       },
       hasNutritionTarget && {
         key: 'cals',
@@ -1504,7 +1451,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         key: 'weight',
         icon: 'scale-outline',
         label: 'Weight',
-        value: `${weighInsThisWeek} ${weighInsThisWeek === 1 ? 'day' : 'days'} logged${trendKg ? ` \u00B7 trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}`,
+        value: `${weighInsThisWeek} ${weighInsThisWeek === 1 ? 'day' : 'days'} logged${trendKg ? ` - trend ${formatBodyWeightShort(trendKg, bwu)}` : ''}`,
       },
       // Progress scan context row (integration-plan.md §5): read-only,
       // shown only when a valid packet exists for this window; absent
@@ -1519,51 +1466,37 @@ export default function WeeklyCheckInScreen({ navigation }) {
 
     return (
       <>
-        {/* D192 (item 3): "Quick check-in" heading + narration paragraph go.
-            The date line above (shared `weekLabel`, styled as this
-            section's title) now carries the heading role; this overline
-            marks the auto-read block below it. Section gap 12
-            (spacing.md) per the finish spec's Section pattern. */}
-        <SharedSectionLabel style={{ marginBottom: spacing.md }}>From your logs</SharedSectionLabel>
+        <Text style={[styles.stepHeading, live.stepHeading]}>Quick check-in</Text>
+        <Text style={[styles.stepSubtitle, live.stepSubtitle]}>
+          Volyume has read your week from your logs. Confirm energy and recovery, then submit.
+        </Text>
 
         <View style={[styles.fastSummaryCard, live.fastSummaryCard]}>
-          {summaryRows.map((row, i) => (
-            <View
-              key={row.key}
-              style={[styles.fastSummaryRow, i > 0 && [styles.fastSummaryRowDivider, live.fastSummaryRowDivider]]}
-            >
-              {/* D192 (item 4): 20dp glyph (was 16); the trailing green
-                  checkmark-circle is removed entirely, nothing replaces it. */}
-              <Ionicons name={row.icon} size={iconSize.md} color={t.colors.textSecondary} style={styles.fastSummaryIcon} />
+          {summaryRows.map(row => (
+            <View key={row.key} style={styles.fastSummaryRow}>
+              <Ionicons name={row.icon} size={16} color={t.colors.textSecondary} style={styles.fastSummaryIcon} />
               <Text style={[styles.fastSummaryLabel, live.fastSummaryLabel]} numberOfLines={1}>{row.label}</Text>
-              <Text style={[styles.fastSummaryValue, live.fastSummaryValue]} numberOfLines={2}>{row.value}</Text>
+              <Text style={[styles.fastSummaryValue, live.fastSummaryValue]} numberOfLines={1}>{row.value}</Text>
+              <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
             </View>
           ))}
           {/* Wave A B6: the fastest path was the least transparent, one
               muted provenance line so the confirm-not-recall promise is
-              visibly grounded in the user's own logs.
-              D192 (item 4): one line, same numbers/sources, joined with a
-              middle dot (U+00B7) instead of " - ". */}
+              visibly grounded in the user's own logs. */}
           <Text style={[styles.fastSummaryProvenance, live.fastSummaryProvenance]}>
-            {(() => {
-              const parts = [
-                autoDerived.trainingMeta
-                  ? `${autoDerived.trainingMeta.completed} of ${autoDerived.trainingMeta.planned} sessions`
-                  : null,
-                autoDerived.calsMeta
-                  ? `${autoDerived.calsMeta.daysLogged} of 7 diary days`
-                  : null,
-              ].filter(Boolean);
-              return parts.length ? `From your logs: ${parts.join(' \u00B7 ')}` : 'Read from your logs this week.';
-            })()}
+            {[
+              autoDerived.trainingMeta
+                ? `From your logged sessions: ${autoDerived.trainingMeta.completed} of ${autoDerived.trainingMeta.planned}`
+                : null,
+              autoDerived.calsMeta
+                ? `from your diary: ${autoDerived.calsMeta.daysLogged} of 7 days logged`
+                : null,
+            ].filter(Boolean).join(' - ') || 'Read from your logs this week.'}
           </Text>
         </View>
 
         <View style={styles.section}>
-          {/* D192 (item 5): question label stays, resized to type.title
-              via the additive `style` override (component default
-              untouched for the other 13 callers). */}
-          <SectionLabel style={[styles.questionLabel, live.questionLabel]}>Energy and motivation this week</SectionLabel>
+          <SectionLabel>Energy and motivation this week</SectionLabel>
           <ChipRow
             options={[
               { value: 1, label: 'Low' },
@@ -1578,7 +1511,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         </View>
 
         <View style={styles.section}>
-          <SectionLabel style={[styles.questionLabel, live.questionLabel]}>Overall muscle soreness this week</SectionLabel>
+          <SectionLabel>Overall muscle soreness this week</SectionLabel>
           <ChipRow
             options={[
               { value: 1, label: 'None' },
@@ -1763,7 +1696,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         <BackHeader title="Weekly check-in" onBack={() => navigation.goBack()} />
         <ScrollView contentContainerStyle={styles.gateCenterScroll}>
           <View style={[styles.gateIconWrap, live.gateIconWrap]}>
-            <Ionicons name="time-outline" size={32} color={t.colors.textSecondary} />
+            <Ionicons name="time-outline" size={32} color={t.colors.primary} />
           </View>
           <Text style={[styles.gateTitle, live.gateTitle]}>First check-in needs more data</Text>
           {hasStartedBaseline ? (
@@ -1909,11 +1842,9 @@ export default function WeeklyCheckInScreen({ navigation }) {
           accessibilityLabel={fastEligible ? `${checkinDayLabel}, quick check-in` : `${checkinDayLabel}, step ${step + 1} of ${TOTAL_STEPS}`}
         >
           <Text style={[styles.headerTitle, live.headerTitle]}>{checkinDayLabel}</Text>
-          {/* D192 (item 1): the "Quick check-in" tag under the title goes;
-              the title itself stays "Weekly check-in" (checkinDayLabel is
-              that literal string). The long form's step dots are unrelated
-              to the tag and keep rendering exactly as before. */}
-          {!fastEligible && <StepBar current={step} total={TOTAL_STEPS} />}
+          {fastEligible
+            ? <Text style={[styles.headerQuickTag, live.headerQuickTag]}>Quick check-in</Text>
+            : <StepBar current={step} total={TOTAL_STEPS} />}
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -1982,70 +1913,56 @@ export default function WeeklyCheckInScreen({ navigation }) {
             </>
           )}
 
-          {/* Navigation CTA. D192 (item 6): the fast path's own order is now
-              [the two questions above] -> "Add more detail" row -> the one
-              amber primary button -> its disabled-only helper line. The
-              long form's Next/final-step button below is untouched. */}
-          {fastEligible ? (
-            <>
-              {/* COMP-008: escape from the fast card into the full wizard,
-                  now a plain Row (no pencil icon, trailing chevron-forward)
-                  ahead of the primary action rather than a bordered button
-                  below it. Same handler and accessibilityLabel as before. */}
-              <TouchableOpacity
-                style={[styles.addDetailRow, live.addDetailRow]}
-                onPress={() => { setForceFullWizard(true); setStep(0); }}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Add more detail"
-                // M4 review: same as the back chevron, do not let the fast card
-                // jump into the wizard mid-submit-beat and strand the marker.
-                disabled={busy || submitSuccess}
-                accessibilityState={{ disabled: busy || submitSuccess }}
-              >
-                <Text style={[styles.addDetailRowText, live.addDetailRowText]}>Add more detail</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-              </TouchableOpacity>
+          {/* Navigation CTA */}
+          <View style={styles.ctaRow}>
+            {fastEligible ? (
+              <Button
+                title={hasPriorReview === false ? 'See my first review' : "See this week's coaching"}
+                onPress={handleSubmit}
+                disabled={!fastCanSubmit}
+                state={submitSuccess ? 'success' : busy ? 'loading' : 'idle'}
+                onSettled={handleSubmitSettled}
+              />
+            ) : step < TOTAL_STEPS - 1 ? (
+              <Button
+                title="Next"
+                trailingIcon="arrow-forward"
+                onPress={() => setStep(s => s + 1)}
+                disabled={!stepCanAdvance(step)}
+                accessibilityState={{ disabled: !stepCanAdvance(step) }}
+                accessibilityLabel="Next"
+              />
+            ) : (
+              <Button
+                title={hasPriorReview === false ? 'See my first review' : "See this week's coaching"}
+                onPress={handleSubmit}
+                disabled={!stepCanAdvance(step)}
+                state={submitSuccess ? 'success' : busy ? 'loading' : 'idle'}
+                onSettled={handleSubmitSettled}
+              />
+            )}
+          </View>
 
-              <View style={styles.fastPrimaryAction}>
-                <Button
-                  title={hasPriorReview === false ? 'See my first review' : "See this week's coaching"}
-                  size="lg"
-                  variant="primary"
-                  onPress={handleSubmit}
-                  disabled={!fastCanSubmit}
-                  state={submitSuccess ? 'success' : busy ? 'loading' : 'idle'}
-                  onSettled={handleSubmitSettled}
-                />
-                {!fastCanSubmit && (
-                  <Text style={[styles.fastCtaHint, live.fastCtaHint]}>Rate your energy and soreness to continue</Text>
-                )}
-              </View>
-            </>
-          ) : (
-            <View style={styles.ctaRow}>
-              {step < TOTAL_STEPS - 1 ? (
-                <Button
-                  title="Next"
-                  trailingIcon="arrow-forward"
-                  onPress={() => setStep(s => s + 1)}
-                  disabled={!stepCanAdvance(step)}
-                  accessibilityState={{ disabled: !stepCanAdvance(step) }}
-                  accessibilityLabel="Next"
-                />
-              ) : (
-                <Button
-                  title={hasPriorReview === false ? 'See my first review' : "See this week's coaching"}
-                  // D192 landing (2026-09-18): the same committing action as the
-                  // quick path's button, so the same size; it sat a step smaller.
-                  size="lg"
-                  onPress={handleSubmit}
-                  disabled={!stepCanAdvance(step)}
-                  state={submitSuccess ? 'success' : busy ? 'loading' : 'idle'}
-                  onSettled={handleSubmitSettled}
-                />
-              )}
-            </View>
+          {/* COMP-008: escape from the fast card into the full wizard. */}
+          {fastEligible && (
+            <TouchableOpacity
+              style={[styles.fastExpandBtn, live.fastExpandBtn]}
+              onPress={() => { setForceFullWizard(true); setStep(0); }}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Add more detail"
+              // M4 review: same as the back chevron, do not let the fast card
+              // jump into the wizard mid-submit-beat and strand the marker.
+              disabled={busy || submitSuccess}
+              accessibilityState={{ disabled: busy || submitSuccess }}
+            >
+              <Ionicons name="create-outline" size={16} color={t.colors.textSecondary} />
+              <Text style={[styles.fastExpandText, live.fastExpandText]}>Add more detail</Text>
+            </TouchableOpacity>
+          )}
+
+          {fastEligible && !fastCanSubmit && (
+            <Text style={[styles.ctaHint, live.ctaHint]}>Rate your energy and soreness to continue.</Text>
           )}
 
           {!fastEligible && !stepCanAdvance(step) && step !== 1 && (
@@ -2095,10 +2012,9 @@ const styles = StyleSheet.create({
   gateScroll: {
     padding: spacing.lg, gap: spacing.lg,
   },
-  // D165 law 2: a gate state, not an object -- no box, a borderSubtle hairline above (D171/D172).
-  gateCard: { padding: spacing.xxl, alignItems: 'center', gap: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
+  gateCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xxl,
+    borderWidth: 1, borderColor: colors.border, alignItems: 'center', gap: spacing.md,
   },
   gateTitle: {
     ...type.title, color: colors.textSecondary,
@@ -2136,7 +2052,7 @@ const styles = StyleSheet.create({
     width: 20, height: 4, borderRadius: radius.hair,
     backgroundColor: colors.surface3,
   },
-  stepDotDone: { backgroundColor: colors.borderLight },
+  stepDotDone: { backgroundColor: withAlpha(colors.primary, alpha.strong) },
   stepDotActive: { backgroundColor: colors.primary },
 
   scroll: { flex: 1 },
@@ -2146,11 +2062,9 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.xxl,
   },
 
-  // D192 (item 3): promoted from a muted caption to the section's own
-  // title (shared by the long form, which renders the same date line).
   weekLabel: {
-    ...type.title,
-    color: colors.textPrimary,
+    ...type.label,
+    color: colors.primary,
     marginBottom: spacing.lg,
   },
   alreadyInRow: {
@@ -2182,44 +2096,18 @@ const styles = StyleSheet.create({
     ...type.caption,
     color: colors.textMuted,
   },
-  // D192 (item 5): additive override for the fast card's two question
-  // labels only (SectionLabel's `style` prop), passed alongside
-  // styles.sectionLabel/live.sectionLabel so it wins as the last style.
-  questionLabel: { ...type.title, color: colors.textPrimary },
 
-  // D192 (item 5): the five boxed Chip tiles (ratingChip/ratingChipLabel,
-  // now removed) became the five-cell scale below (scaleRow/scaleCell...).
-  // chipRow (the tiles' old wrapping View, also now unused) removed with them.
-  scaleRow: {
-    flexDirection: 'row',
-    height: 44,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    overflow: 'hidden',
-  },
-  scaleCell: {
+  chipRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
+  ratingChip: {
     flex: 1,
-    alignItems: 'center',
+    minWidth: 52,
+    minHeight: 58,
+    alignSelf: 'stretch',
     justifyContent: 'center',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.xs,
   },
-  scaleCellSelected: {
-    backgroundColor: colors.surface3,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  scaleCellText: { ...type.title, color: colors.textPrimary },
-  scaleDivider: {
-    width: StyleSheet.hairlineWidth,
-    backgroundColor: colors.borderSubtle,
-  },
-  scaleAnchors: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.xs,
-  },
-  scaleAnchorText: { ...type.caption, color: colors.textMuted },
+  ratingChipLabel: { textAlign: 'center', lineHeight: 16 },
 
   optionRow: { flexDirection: 'row', gap: spacing.sm },
   optionChip: {
@@ -2248,53 +2136,49 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   skipNoteTappable: {
-    fontSize: fontSize.sm, color: colors.textPrimary,
+    fontSize: fontSize.sm, color: colors.primary,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
   },
 
   // -- Progress scan evidence (integration-plan.md §5) ------------------------
   scanEvidenceHeadline: { ...type.bodySm, color: colors.textPrimary },
   scanEvidenceDetail: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   scanEvidenceConfidence: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
-  // D165 law 2: a prompt, not an object -- no box, hairline above AND
-  // below on borderSubtle (D171/D172; D192 item 2 adds the bottom edge).
   scanPromptCard: {
     flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     marginBottom: spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle,
   },
-  // D192 (item 2): title promoted to type.title; the two text actions move
-  // from a hand-picked semibold/muted pairing onto the shared type.label
-  // role (textPrimary / textSecondary).
-  scanPromptTitle: { ...type.title, color: colors.textPrimary },
-  scanPromptBody: { ...type.bodySm, color: colors.textSecondary },
+  scanPromptTitle: { ...type.label, color: colors.textPrimary },
+  scanPromptBody: { ...type.captionTight, color: colors.textSecondary },
   scanPromptActions: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.xs,
   },
-  // D192 (item 2): each action's own touch target is at least
-  // touchTarget.minimum tall, centring the (shorter) label inside it.
-  scanPromptActionTouchable: { minHeight: touchTarget.minimum, justifyContent: 'center' },
-  scanPromptActionPrimary: { ...type.label, color: colors.textPrimary },
-  scanPromptActionSecondary: { ...type.label, color: colors.textSecondary },
+  scanPromptActionPrimary: {
+    fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary,
+  },
+  scanPromptActionSecondary: {
+    fontSize: fontSize.sm, color: colors.textMuted,
+  },
   autoDerivedNote: {
     ...type.caption, color: colors.textSecondary,
     paddingVertical: spacing.xs,
     marginBottom: spacing.xs,
     fontStyle: 'italic',
   },
-  // D165 law 2: content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   plannedBackstop: {
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.primary,
+    borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
     gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   plannedBackstopText: { ...type.caption, color: colors.textPrimary },
   plannedBackstopBtn: { alignSelf: 'flex-start', borderRadius: radius.md },
@@ -2329,72 +2213,52 @@ const styles = StyleSheet.create({
   perfCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
-    backgroundColor: colors.surface2, borderRadius: radius.control,
+    backgroundColor: colors.surface2, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.borderSubtle,
   },
-  perfCardSelected: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
+  perfCardSelected: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   perfCardText: { ...type.label, color: colors.textSecondary, flex: 1 },
-  perfCardTextSelected: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  perfCardTextSelected: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   ctaRow: { marginTop: spacing.lg },
   ctaHint: { textAlign: 'center', fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.sm },
 
   // -- COMP-008 Fast Check-In ------------------------------------------------
-  // D192 (item 1): headerQuickTag removed -- the "Quick check-in" tag under
-  // the title is gone; the title itself is unaffected.
-  // D165 law 2: a summary, not an object -- no box, a borderSubtle hairline above (D171/D172).
-  // Left exactly as before (item 4 only specifies the ROWS' own anatomy,
-  // not this container): the D171/D172 hairline-above and padding stay.
+  headerQuickTag: { fontSize: fontSize.xs, color: colors.textMuted },
   fastSummaryCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     marginBottom: spacing.xl,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   fastSummaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     paddingVertical: spacing.sm,
-    minHeight: 44,
   },
-  // D192 (item 4): hairline between rows -- applied to every row except
-  // the first (i > 0), on borderSubtle.
-  fastSummaryRowDivider: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-  },
-  fastSummaryIcon: { width: iconSize.md },
-  // D192 landing (2026-09-18): the render clipped "Training" in a fixed 76
-  // column and cut the value to one line; the label column has a floor
-  // instead and the value may take two lines.
-  fastSummaryLabel: { ...type.bodySm, color: colors.textSecondary, minWidth: 80 },
-  fastSummaryValue: { ...type.body, flex: 1, color: colors.textPrimary },
+  fastSummaryIcon: { width: 18 },
+  fastSummaryLabel: { fontSize: fontSize.sm, color: colors.textSecondary, width: 76 },
+  fastSummaryValue: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary },
   // Wave A B6: muted provenance line under the fast summary rows.
   fastSummaryProvenance: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs },
-
-  // D192 (item 6): "Add more detail" is now a plain Row (title + trailing
-  // chevron, no pencil icon, no border/fill) instead of a bordered button;
-  // fastExpandBtn/fastExpandText (removed) drew that old look.
-  addDetailRow: {
+  fastExpandBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 56,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle,
+    justifyContent: 'center',
+    gap: spacing.xs,
+    minHeight: touchTarget.minimum,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
   },
-  addDetailRowText: { ...type.title, color: colors.textPrimary },
-  // Gap between the row group above and the primary button (item 6).
-  fastPrimaryAction: { marginTop: spacing.md },
-  // D192 (item 6): "Rate your energy and soreness to continue" (no full
-  // stop), spacing.sm under the button, shown only while it is disabled.
-  // Dedicated key (not the shared `ctaHint`, which the long form's own
-  // per-step hints still use) so the long form's styling is untouched.
-  fastCtaHint: { ...type.bodySm, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm },
+  fastExpandText: { ...type.label, color: colors.textPrimary },
 
   bottomPad: { height: spacing.xxl },
 
@@ -2428,80 +2292,69 @@ const styles = StyleSheet.create({
 
 // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): buildLiveStyles
 // is the shared "frozen base + live override" map for this screen's function-
-// component scopes (StepBar, SectionLabel, ChipRow, OptionRow,
-// ScanPromptCard, WeeklyCheckInScreen) -- each calls `const t = useTheme();
-// const live = buildLiveStyles(t);` and appends `live.KEY` after
-// `styles.KEY` in every style array, same pattern as
-// WorkoutSummaryScreen.js's buildLiveStyles. Extracted to one function so
-// the scopes can never drift out of step with each other or with the
-// frozen `styles` block above -- every key here mirrors only the
-// colour/fontSize/type-bearing sub-properties of the matching frozen
-// style, at identical rest values; pure layout keys (flex/gap/padding/
-// width, no token) are correctly omitted, there is nothing to unfreeze for
-// them. D192 (item 5): ChipRow's own unselected cell shape (`scaleCell`)
-// and the anchor-line row (`scaleAnchors`) still carry no colour/
-// fontSize/type token, so they stay unfrozen the same way; the cell's
-// selected state, its number and the divider between cells now do, and
-// each has a live twin below (scaleCellSelected/scaleCellText/
-// scaleDivider).
+// component scopes (StepBar, SectionLabel, OptionRow, ScanPromptCard,
+// WeeklyCheckInScreen) -- each calls `const t = useTheme(); const live =
+// buildLiveStyles(t);` and appends `live.KEY` after `styles.KEY` in every
+// style array, same pattern as WorkoutSummaryScreen.js's buildLiveStyles.
+// Extracted to one function so the scopes can never drift out of step with
+// each other or with the frozen `styles` block above -- every key here
+// mirrors only the colour/fontSize/type-bearing sub-properties of the
+// matching frozen style, at identical rest values; pure layout keys (flex/
+// gap/padding/width, no token) are correctly omitted, there is nothing to
+// unfreeze for them. ChipRow has no colour/fontSize/type tokens at all in
+// its own styles, so it stays untouched -- there is nothing for it to
+// unfreeze.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     gateIconWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    gateCard: { borderTopColor: t.colors.borderSubtle },
+    gateCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     gateTitle: { ...t.type.title, color: t.colors.textSecondary },
     gateBody: { ...t.type.bodySm, color: t.colors.textMuted },
     headerBar: { borderBottomColor: t.colors.border, backgroundColor: t.colors.background },
     headerTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     stepDot: { backgroundColor: t.colors.surface3 },
-    stepDotDone: { backgroundColor: t.colors.borderLight },
+    stepDotDone: { backgroundColor: withAlpha(t.colors.primary, alpha.strong) },
     stepDotActive: { backgroundColor: t.colors.primary },
-    weekLabel: { ...t.type.title, color: t.colors.textPrimary },
+    weekLabel: { ...t.type.label, color: t.colors.primary },
     alreadyInRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     alreadyInText: { ...t.type.bodySm, color: t.colors.textSecondary },
     stepHeading: { ...t.type.h3, color: t.colors.textPrimary },
     stepSubtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
     sectionLabel: { ...t.type.label, color: t.colors.textSecondary },
     sectionHint: { ...t.type.caption, color: t.colors.textMuted },
-    questionLabel: { ...t.type.title, color: t.colors.textPrimary },
-    scaleRow: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    scaleCellSelected: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
-    scaleCellText: { ...t.type.title, color: t.colors.textPrimary },
-    scaleDivider: { backgroundColor: t.colors.borderSubtle },
-    scaleAnchorText: { ...t.type.caption, color: t.colors.textMuted },
     optionChipLabel: { ...t.type.label },
     weightSummaryRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     weightSummaryText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     weightSummaryMissed: { ...t.type.caption, color: t.colors.textMuted },
     skipNote: { ...t.type.bodySm, color: t.colors.textMuted, backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    skipNoteTappable: { fontSize: t.fontSize.sm, color: t.colors.textPrimary, backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    skipNoteTappable: { fontSize: t.fontSize.sm, color: t.colors.primary, backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     scanEvidenceHeadline: { ...t.type.bodySm, color: t.colors.textPrimary },
     scanEvidenceDetail: { ...t.type.caption, color: t.colors.textSecondary },
     scanEvidenceConfidence: { ...t.type.caption, color: t.colors.textMuted },
-    scanPromptCard: { borderTopColor: t.colors.borderSubtle, borderBottomColor: t.colors.borderSubtle },
-    scanPromptTitle: { ...t.type.title, color: t.colors.textPrimary },
-    scanPromptBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    scanPromptActionPrimary: { ...t.type.label, color: t.colors.textPrimary },
-    scanPromptActionSecondary: { ...t.type.label, color: t.colors.textSecondary },
+    scanPromptCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    scanPromptTitle: { ...t.type.label, color: t.colors.textPrimary },
+    scanPromptBody: { ...t.type.captionTight, color: t.colors.textSecondary },
+    scanPromptActionPrimary: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    scanPromptActionSecondary: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     autoDerivedNote: { ...t.type.caption, color: t.colors.textSecondary },
-    plannedBackstop: { borderTopColor: t.colors.borderSubtle },
+    plannedBackstop: { backgroundColor: t.colors.surface2, borderColor: t.colors.primary },
     plannedBackstopText: { ...t.type.caption, color: t.colors.textPrimary },
     plannedBackstopBtnText: { fontSize: t.fontSize.sm },
     shortFieldInput: { fontSize: t.fontSize.lg },
     charCount: { ...t.type.num('caption'), color: t.colors.textMuted },
     perfCard: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    perfCardSelected: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
+    perfCardSelected: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
     perfCardText: { ...t.type.label, color: t.colors.textSecondary },
-    perfCardTextSelected: { color: t.colors.textPrimary },
+    perfCardTextSelected: { color: t.colors.primary },
     ctaHint: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    fastSummaryCard: { borderTopColor: t.colors.borderSubtle },
-    fastSummaryRowDivider: { borderTopColor: t.colors.borderSubtle },
-    fastSummaryLabel: { ...t.type.bodySm, color: t.colors.textSecondary },
-    fastSummaryValue: { ...t.type.body, color: t.colors.textPrimary },
+    headerQuickTag: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    fastSummaryCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    fastSummaryLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    fastSummaryValue: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     fastSummaryProvenance: { ...t.type.caption, color: t.colors.textMuted },
-    addDetailRow: { borderTopColor: t.colors.borderSubtle, borderBottomColor: t.colors.borderSubtle },
-    addDetailRowText: { ...t.type.title, color: t.colors.textPrimary },
-    fastCtaHint: { ...t.type.bodySm, color: t.colors.textMuted },
+    fastExpandBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    fastExpandText: { ...t.type.label, color: t.colors.textPrimary },
     ritualIntroTitle: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
     ritualIntroSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
   };

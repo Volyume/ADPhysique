@@ -74,21 +74,12 @@ describe('share copy polish', () => {
     const credits = read('CreditsScreen.js');
 
     // Founder spec 2026-09-04 (D145): Welcome's sign-in is a TEXT action,
-    // not a pill: a full touch target, no underline, and a distinct treatment
-    // on the verb. The pin's intent (a deliberate, accessible secondary
-    // control rather than an underlined link) is unchanged.
+    // not a pill: a full touch target, no underline, and the accent only on
+    // the verb. The pin's intent (a deliberate, accessible secondary control
+    // rather than an underlined link) is unchanged.
     expect(welcome).toMatch(/signInLink: \{ minHeight: touchTarget\.minimum/);
     expect(welcome).not.toContain("textDecorationLine: 'underline'");
-    // D174 re-anchor: this line read `color: colors.primary`. The amber was
-    // incidental to what the case is about -- it pins that the verb is
-    // SEPARATELY treated inside a quieter sentence, not which colour does it.
-    // Discipline 1 grants amber to "the one committing button", which on this
-    // screen is the Get started CTA above, so the sign-in verb now carries the
-    // bodyStrong face at full ink against the `textSecondary` sentence around
-    // it. The case still fails if the verb stops being distinguished.
-    expect(welcome).toMatch(/signInAction: \{[^}]*color: colors\.textPrimary/);
-    expect(welcome).toMatch(/signInAction: \{ \.\.\.type\.bodyStrong/);
-    expect(welcome).toMatch(/signInText: \{[^}]*color: colors\.textSecondary/);
+    expect(welcome).toMatch(/signInAction: \{[^}]*color: colors\.primary/);
 
     expect(upgrade).toContain('title="Skip for now"');
     expect(upgrade).toContain('variant="outline"');

@@ -43,14 +43,9 @@ export default function ConsentCheckboxRow({
       ]}>
         {checked ? (
           <Ionicons
-            /* The box is `textPrimary` now (D178 #4), so the tick inverts to
-               the page ground rather than staying on `onPrimary`, which is
-               near-black ink built for an AMBER fill and would vanish on the
-               light theme's near-black ink. Same inversion D175 ruling 1 gave
-               the switch thumb. */
             name="checkmark"
             size={compact ? 13 : 18}
-            color={t.colors.background}
+            color={t.colors.onPrimary}
           />
         ) : null}
       </View>
@@ -106,13 +101,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginTop: spacing.hair,
   },
-  // D178 #4: a tick is a selection mark and takes full ink, the same way the
-  // shipped OptionCard draws its own. (Article 9 consent surface: colour
-  // only -- nothing about the gate, its order or its fail-closed behaviour
-  // is touched here.)
   checkboxChecked: {
-    borderColor: colors.textPrimary,
-    backgroundColor: colors.textPrimary,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryFill,
   },
   label: {
     flex: 1,
@@ -135,7 +126,7 @@ function buildLiveStyles(t) {
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     checkboxSm: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface2 },
     checkboxMd: { borderColor: t.colors.border },
-    checkboxChecked: { borderColor: t.colors.textPrimary, backgroundColor: t.colors.textPrimary },
+    checkboxChecked: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryFill },
     label: { color: t.colors.textPrimary },
   };
 }

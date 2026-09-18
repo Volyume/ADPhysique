@@ -28,13 +28,10 @@
  * never mistaken for a live use), pins each rule whether or not a test
  * happens to render the branch that would break it.
  *
- * (a) No `type.display`, `type.h1` or `type.h3` in any
- *     `src/screens/Community*.js`. `type.h2` is used on
- *     `CommunityHubScreen.js` ONLY (the not-joined hero title, moved off
- *     h3 by D192's finish spec -- `docs/design-redesign-2026-09-14/
- *     40-FINISH-SPEC.md` section 5 item 9) and nowhere else. RE-ANCHORED
- *     2026-09-18 (D192, item 1): this rule read "h3 reserved for the
- *     Hub" before the finish spec moved that title to h2.
+ * (a) No `type.display`, `type.h1` or `type.h2` in any
+ *     `src/screens/Community*.js`. `type.h3` is used on
+ *     `CommunityHubScreen.js` ONLY (the not-joined hero title) and
+ *     nowhere else.
  * (b) `<Card` appears at most twice in `CommunityHubScreen.js` (the
  *     not-joined hero and the legacy partner card; the moderated-person
  *     notice is a plain styled `View`, not the `Card` component, so it
@@ -79,15 +76,7 @@ function communityScreenFiles() {
     .map((f) => path.join(SCREENS_DIR, f));
 }
 
-// RE-ANCHORED 2026-09-18 (D192, item 1): the finish spec's type re-cut
-// (40-FINISH-SPEC.md section 2; section 5 item 9) moves the Hub's
-// not-joined hero title from h3 to h2 ("a section's one big line", the
-// role the finish spec gives a card headline). type.h1 and type.display
-// stay banned everywhere in Community, including the Hub. type.h2 stays
-// banned on every OTHER Community screen and is allowed only on the Hub,
-// only for that one title. type.h3 is retired from Community entirely --
-// nothing reserves it any more, on the Hub or elsewhere.
-describe('presentation law (a): no display/h1/h3 anywhere in Community, h2 only on the Hub', () => {
+describe('presentation law (a): no display/h1/h2 anywhere in Community, h3 only on the Hub', () => {
   test('there is Community screen source to guard', () => {
     // If this ever fails, the guard has quietly stopped guarding
     // anything (a folder rename, a moved file) rather than passing.
@@ -95,10 +84,10 @@ describe('presentation law (a): no display/h1/h3 anywhere in Community, h2 only 
   });
 
   test.each(communityScreenFiles().map((f) => [path.relative(ROOT, f), f]))(
-    '%s never uses type.display, type.h1 or type.h3',
+    '%s never uses type.display, type.h1 or type.h2',
     (rel, full) => {
       const source = code(fs.readFileSync(full, 'utf8'));
-      for (const pattern of [/\btype\.display\b/, /\btype\.h1\b/, /\btype\.h3\b/]) {
+      for (const pattern of [/\btype\.display\b/, /\btype\.h1\b/, /\btype\.h2\b/]) {
         expect({ rel, pattern: String(pattern), matched: pattern.test(source) })
           .toEqual({ rel, pattern: String(pattern), matched: false });
       }
@@ -106,16 +95,16 @@ describe('presentation law (a): no display/h1/h3 anywhere in Community, h2 only 
   );
 
   test.each(communityScreenFiles().filter((f) => f !== HUB).map((f) => [path.relative(ROOT, f), f]))(
-    '%s never uses type.h2 (reserved for the Hub\'s not-joined hero, D192)',
+    '%s never uses type.h3 (reserved for the Hub\'s not-joined hero)',
     (rel, full) => {
       const source = code(fs.readFileSync(full, 'utf8'));
-      expect({ rel, matched: /\btype\.h2\b/.test(source) }).toEqual({ rel, matched: false });
+      expect({ rel, matched: /\btype\.h3\b/.test(source) }).toEqual({ rel, matched: false });
     },
   );
 
-  test('CommunityHubScreen.js is the one screen that does use type.h2, for the not-joined hero (D192 moved it off h3)', () => {
+  test('CommunityHubScreen.js is the one screen that does use type.h3, for the not-joined hero', () => {
     const source = code(fs.readFileSync(HUB, 'utf8'));
-    expect(/\btype\.h2\b/.test(source)).toBe(true);
+    expect(/\btype\.h3\b/.test(source)).toBe(true);
   });
 });
 

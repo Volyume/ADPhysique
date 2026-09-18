@@ -95,7 +95,7 @@ export const PHYSIQUE_GOALS = [
     value: 'womens_physique',
     label: "Women's Physique",
     group: 'Female',
-    icon: 'triangle-outline',
+    icon: 'ribbon-outline',
     subtitle: 'Balanced muscle development with feminine lines. More muscular than figure.',
     weakPointsEnabled: true,
     coachingNote: "Judged on muscle balance, conditioning and overall presentation. Full body development with all groups on show.",

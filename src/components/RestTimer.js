@@ -92,15 +92,10 @@ export default function RestTimer() {
     countdownNum: { color: t.colors.warning },
     label: { ...t.type.overline, color: t.colors.textMuted },
     skipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    adjBtnText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    adjBtnText: { fontSize: t.fontSize.sm, color: t.colors.primary },
     adjBtnTextNeg: { color: t.colors.textSecondary },
     drainTrack: { backgroundColor: t.colors.surface3 },
-    // KEEP: the drain bar's width tracks the live rest countdown.
     drainFill: { backgroundColor: t.colors.primaryFill },
-    // D192: the drain is a live meter only while the rest is counting. Idle,
-    // it sat at full width in amber above the strip, a second amber edge
-    // framing the logger with the outline's own; idle it takes the track's ink.
-    drainFillIdle: { backgroundColor: t.colors.surface3 },
     drainFillWarm: { backgroundColor: t.colors.warning },
     doneText: { fontSize: t.fontSize.sm, color: t.colors.onSuccessBg },
     doneContainer: { backgroundColor: t.colors.successBg },
@@ -473,7 +468,6 @@ export default function RestTimer() {
             styles.drainFill,
             live.drainFill,
             { transform: [{ scaleX: drain }] },
-            !restTimerActive && [styles.drainFillIdle, live.drainFillIdle],
             isAlmostDone && [styles.drainFillWarm, live.drainFillWarm],
           ]}
         />
@@ -592,13 +586,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
-  // The add-time label is a quiet control, not the one committing button, so
-  // it drops off the accent to full ink; the minus label stays a step quieter
-  // and the +/- sign is what actually names the direction (D174).
   adjBtnText: {
     fontSize: fontSize.sm,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
+    color: colors.primary,
     fontVariant: ['tabular-nums'],
   },
   adjBtnTextNeg: { color: colors.textSecondary },
@@ -612,7 +603,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFill,
     transformOrigin: 'left',
   },
-  drainFillIdle: { backgroundColor: colors.surface3 },
   drainFillWarm: { backgroundColor: colors.warning },
   doneContainer: {
     flexDirection: 'row',

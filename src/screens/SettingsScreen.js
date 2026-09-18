@@ -42,8 +42,8 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="body"
           label="Injuries & limitations"
-          sub="Injuries, pain, conditions or disabilities"
-          accessibilityLabel="Injuries & limitations. Injuries, pain, conditions or disabilities"
+          sub="Injuries, pain, long-term conditions or disabilities that affect your training."
+          accessibilityLabel="Injuries & limitations. Injuries, pain, long-term conditions or disabilities that affect your training."
           onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
         />
         <SettingRow
@@ -55,13 +55,13 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="person-outline"
           label="Profile"
-          sub="Name, sex, height, birth date, diet preference"
+          sub="Name, sex, height, date of birth and diet preference"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsProfile'); }}
         />
         <SettingRow
           icon="barbell-outline"
           label="Coaching"
-          sub="Calmer coaching, readiness and preferences"
+          sub="Calmer coaching, session readiness and coaching preferences"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsCoaching'); }}
         />
         {/* CP-6 (2026-07-09 UX audit): this used to render inline on this
@@ -72,7 +72,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="body-outline"
           label="Workout & units"
-          sub="Body weight unit, rest timer and rest alerts"
+          sub="Body weight unit, default rest timer and rest alerts"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
         />
         <SettingRow
@@ -101,7 +101,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="notifications-outline"
           label="Notifications and reminders"
-          sub="Training and meal reminders, quiet hours"
+          sub="Training reminder, meal reminders and quiet hours"
           onPress={() => { haptics.selection(); navigation.navigate('NotificationSettings'); }}
         />
         <SettingRow
@@ -113,7 +113,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="contrast-outline"
           label="Display and accessibility"
-          sub="Appearance, units, text size, contrast, motion"
+          sub="Appearance, energy units, text size, contrast, motion"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsDisplay'); }}
         />
         <SettingRow

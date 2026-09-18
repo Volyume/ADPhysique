@@ -12,7 +12,7 @@ import { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
@@ -35,7 +35,8 @@ export default function NutritionEducationScreen() {
         </Text>
 
         <Section
-          icon="nutrition-outline"
+          icon="flame-outline"
+          tint={t.colors.warning}
           title="1. Calories. Your energy budget"
         >
           <Body>
@@ -61,22 +62,26 @@ export default function NutritionEducationScreen() {
 
         <Section
           icon="restaurant-outline"
+          tint={t.colors.primary}
           title="2. The three macros"
         >
           <Body>
             All food is made of three macronutrients. Each does a different job.
           </Body>
           <MacroLine
+            color={t.colors.primary}
             name="Protein"
             kcalPerG="4 kcal/g"
             role="Builds and protects muscle. The non-negotiable. Get this right and the rest is much more forgiving."
           />
           <MacroLine
+            color={t.colors.warning}
             name="Fat"
             kcalPerG="9 kcal/g"
             role="Hormones, vitamins, joint health. Keep above a minimum. Don't go ultra-low."
           />
           <MacroLine
+            color={t.colors.success}
             name="Carbs"
             kcalPerG="4 kcal/g"
             role="Training fuel. Higher carbs = better performance in the gym, especially in a bulk."
@@ -85,6 +90,7 @@ export default function NutritionEducationScreen() {
 
         <Section
           icon="podium-outline"
+          tint={t.colors.primary}
           title="3. How to set your numbers"
         >
           <Body>
@@ -104,6 +110,7 @@ export default function NutritionEducationScreen() {
 
         <Section
           icon="scale-outline"
+          tint={t.colors.success}
           title="4. How to actually track"
         >
           <Body>
@@ -134,6 +141,7 @@ export default function NutritionEducationScreen() {
 
         <Section
           icon="checkmark-circle-outline"
+          tint={t.colors.success}
           title="5. Adherence beats perfection"
         >
           <Body>
@@ -149,6 +157,7 @@ export default function NutritionEducationScreen() {
 
         <Section
           icon="trending-up-outline"
+          tint={t.colors.primary}
           title="6. The coach does the adjustments"
         >
           <Body>
@@ -191,23 +200,14 @@ export default function NutritionEducationScreen() {
 // so its own useTheme() call is cleaner than threading two extra props
 // through every call site. Same shared buildLiveStyles(t) as the screen.
 
-// D174/D175 (amber census, 2026-09-15): `tint` is gone. It was spent twice on
-// one header -- as the glyph ink AND as a `withAlpha(tint, 0.125)` ground
-// behind it (plan section 3 discipline 2, "a tint behind a glyph") -- and the
-// mapping borrowed the STATE colours section 8 protects: calories = warning,
-// fat = warning, carbs = success. That legend also disagreed with the same
-// legend on NutritionTargetsScreen (fat = success, carbs = primary) and with
-// the macro bars both screens already draw in macroProtein/macroCarb/macroFat,
-// so it was retired rather than re-encoded. Each section's numbered title
-// carries its topic; no copy changed.
-function Section({ icon, title, children }) {
+function Section({ icon, tint, title, children }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <Card style={styles.section}>
       <View style={styles.sectionHeader}>
-        <View style={styles.sectionIconWrap}>
-          <Ionicons name={icon} size={18} color={t.colors.textSecondary} />
+        <View style={[styles.sectionIconWrap, { backgroundColor: withAlpha(tint, 0.125) }]}>
+          <Ionicons name={icon} size={18} color={tint} />
         </View>
         <Text style={[styles.sectionTitle, live.sectionTitle]} accessibilityRole="header">{title}</Text>
       </View>
@@ -233,18 +233,18 @@ function KeyPoint({ children }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={[styles.keypoint, live.keypoint]}>
-      <Ionicons name="bookmark" size={14} color={t.colors.textSecondary} />
+      <Ionicons name="bookmark" size={14} color={t.colors.primary} />
       <Text style={[styles.keypointText, live.keypointText]}>{children}</Text>
     </View>
   );
 }
 
-function MacroLine({ name, kcalPerG, role }) {
+function MacroLine({ color, name, kcalPerG, role }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={[styles.macroLine, live.macroLine]}>
-      <View style={[styles.macroDot, { backgroundColor: t.colors.textMuted }]} />
+      <View style={[styles.macroDot, { backgroundColor: color }]} />
       <View style={{ flex: 1 }}>
         <View style={styles.macroHead}>
           <Text style={[styles.macroName, live.macroName]}>{name}</Text>
@@ -292,15 +292,14 @@ const styles = StyleSheet.create({
 
   section: { gap: spacing.md },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  // D174: was a 32dp tinted disc. Fixed glyph column now, no fill.
-  sectionIconWrap: { width: 32, alignItems: 'center', justifyContent: 'center' },
+  sectionIconWrap: { width: 32, height: 32, borderRadius: circle(32), alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { ...type.title, color: colors.textPrimary, flex: 1 },
   sectionBody: { gap: spacing.sm },
 
   body: { ...type.bodySm, color: colors.textPrimary },
   strong: { color: colors.textPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 
-  keypoint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.xs },
+  keypoint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.xs },
   keypointText: { ...type.bodySm, color: colors.textPrimary, flex: 1, fontWeight: fontWeight.medium },
 
   macroLine: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.xs, borderTopWidth: 1, borderTopColor: colors.borderSubtle, paddingTop: spacing.sm },
@@ -313,12 +312,12 @@ const styles = StyleSheet.create({
   phaseLine: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, gap: spacing.xxs },
   phaseHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm, flexWrap: 'wrap' },
   phaseName: { ...type.bodyStrong, color: colors.textPrimary },
-  phaseRate: { color: colors.textSecondary, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  phaseRate: { color: colors.primary, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   phaseGist: { ...type.bodySm, color: colors.textSecondary },
 
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.xs },
-  bulletChip: { width: 22, height: 22, borderRadius: circle(22), backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' },
-  bulletChipText: { color: colors.textSecondary, fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  bulletChip: { width: 22, height: 22, borderRadius: circle(22), backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center' },
+  bulletChipText: { color: colors.onPrimary, fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 
   footer: { ...type.captionTight, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm, fontStyle: 'italic' },
 });
@@ -329,9 +328,9 @@ const styles = StyleSheet.create({
 // screen carries no static island under a live theme toggle. Pure layout
 // keys (flex/padding/gap/margin/width/height/borderRadius/borderLeftWidth,
 // no token) and fontWeight (not part of useTheme()'s shape) are correctly
-// omitted. sectionIconWrap/macroDot need no live entry: neither carries a
-// frozen colour (the glyph column has no fill, and the dot's ink is inline
-// from `t`). Every word of copy is untouched -- colours only.
+// omitted. sectionIconWrap/macroDot need no live entry: their colour is
+// already fully inline (withAlpha(tint,...) / the `color` prop), never
+// frozen. Every word of copy is untouched -- colours only.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
@@ -339,7 +338,7 @@ function buildLiveStyles(t) {
     sectionTitle: { ...t.type.title, color: t.colors.textPrimary },
     body: { ...t.type.bodySm, color: t.colors.textPrimary },
     strong: { color: t.colors.textPrimary },
-    keypoint: { backgroundColor: t.colors.surface2 },
+    keypoint: { backgroundColor: t.colors.primaryBg },
     keypointText: { ...t.type.bodySm, color: t.colors.textPrimary },
     macroLine: { borderTopColor: t.colors.borderSubtle },
     macroName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -347,10 +346,10 @@ function buildLiveStyles(t) {
     macroRole: { ...t.type.bodySm, color: t.colors.textSecondary },
     phaseLine: { backgroundColor: t.colors.surface2 },
     phaseName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    phaseRate: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
+    phaseRate: { color: t.colors.primary, fontSize: t.fontSize.xs },
     phaseGist: { ...t.type.bodySm, color: t.colors.textSecondary },
-    bulletChip: { backgroundColor: t.colors.surface3 },
-    bulletChipText: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
+    bulletChip: { backgroundColor: t.colors.primaryFill },
+    bulletChipText: { color: t.colors.onPrimary, fontSize: t.fontSize.xs },
     footer: { ...t.type.captionTight, color: t.colors.textMuted },
   };
 }

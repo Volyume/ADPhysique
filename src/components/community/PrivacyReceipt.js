@@ -1,7 +1,5 @@
 /**
- * PrivacyReceipt (D192 finish spec: `docs/design-redesign-2026-09-14/
- * 40-FINISH-SPEC.md` section 5 item 9, "day zero as one line per
- * section"; re-cut 2026-09-18)
+ * PrivacyReceipt (blueprint sections 2, 6)
  *
  * The promise the whole feature rests on: nothing about the body, food,
  * scans, injuries, coaching or check-ins ever enters Community.
@@ -10,24 +8,19 @@
  * again on the Community privacy screen, so the promise is readable
  * before the decision and after it.
  *
- * D192 re-cut (was: lead visual review 2026-09-06 ruling V9's
- * `Card surface="surface2"` plus a separate `tertiary` "What is shared"
- * Button). The card fill, border and radius are gone: this is now a
- * hairline-bounded row group -- one hairline above, one below, no fill,
- * no radius, no border (finish spec section 4 rule 3, "Row") -- collapsed
- * by default to a single 56 dp row: the shield glyph, `PRIVACY_RECEIPT_
- * LINE`, a chevron. The row itself IS the disclosure now; there is no
- * separate button. Tapping it expands the same two "Others can see" /
- * "Never shared" columns as before, unchanged, beneath the row.
- *
- * Every string in `SHOWN`, `NEVER` and `PRIVACY_RECEIPT_LINE` is the GDPR
- * receipt and stays byte for byte identical through this and every
- * future visual pass.
+ * Lead visual review 2026-09-06, ruling V9: composes `Card surface="surface2"
+ * radius="md" padding="md"`. Compact by default: a `shield-checkmark-outline`
+ * glyph in amber, one `caption` line, and a `tertiary` sm "What is shared"
+ * that expands the full "Others can see" / "Never shared" columns in
+ * place. Nothing in the list is removed; it is only collapsed until asked
+ * for. On a narrow width the expanded columns stack rather than truncate.
  */
 
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Card from '../Card';
+import Button from '../Button';
 import SectionLabel from '../SectionLabel';
 import {
   colors, spacing, type, iconSize, withAlpha, alpha,
@@ -70,21 +63,23 @@ export default function PrivacyReceipt() {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <View style={[styles.group, { borderTopColor: t.colors.borderSubtle, borderBottomColor: t.colors.borderSubtle }]}>
-      <TouchableOpacity
-        style={styles.row}
-        onPress={() => setExpanded((v) => !v)}
-        accessibilityRole="button"
-        accessibilityLabel="What is shared. Expands the full list."
-        accessibilityState={{ expanded }}
-      >
-        <Ionicons name="shield-checkmark-outline" size={iconSize.md} color={t.colors.textSecondary} />
-        <Text style={[styles.line, { ...t.type.bodySm, color: t.colors.textPrimary }]}>
+    <Card surface="surface2" radius="md" padding="md" style={styles.card}>
+      <View style={styles.compact}>
+        <Ionicons name="shield-checkmark-outline" size={iconSize.md} color={t.colors.primary} />
+        <Text style={[styles.line, { ...t.type.caption, color: t.colors.textPrimary }]}>
           {PRIVACY_RECEIPT_LINE}
         </Text>
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={iconSize.sm} color={t.colors.textMuted} />
-      </TouchableOpacity>
-      {expanded ? (
+      </View>
+      {!expanded ? (
+        <Button
+          variant="tertiary"
+          size="sm"
+          fullWidth={false}
+          title="What is shared"
+          onPress={() => setExpanded(true)}
+          accessibilityLabel="What is shared. Expands the full list."
+        />
+      ) : (
         <View style={[styles.columns, stack && styles.columnsStack]}>
           <View style={styles.col}>
             <SectionLabel>Others can see</SectionLabel>
@@ -116,26 +111,15 @@ export default function PrivacyReceipt() {
             ))}
           </View>
         </View>
-      ) : null}
-    </View>
+      )}
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  group: {
-    gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    borderBottomColor: colors.borderSubtle,
-  },
-  row: {
-    minHeight: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  line: { ...type.bodySm, color: colors.textPrimary, flex: 1 },
+  card: { gap: spacing.sm },
+  compact: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  line: { ...type.caption, color: colors.textPrimary, flex: 1 },
   columns: { flexDirection: 'row', alignItems: 'flex-start' },
   columnsStack: { flexDirection: 'column' },
   col: { flex: 1, gap: spacing.xs },

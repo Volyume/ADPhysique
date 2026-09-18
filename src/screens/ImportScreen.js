@@ -202,7 +202,7 @@ export default function ImportScreen({ navigation }) {
               {SOURCES.map(src => (
                 <Card key={src.key}>
                   <View style={styles.sourceHead}>
-                    <Ionicons name="cloud-download-outline" size={18} color={t.colors.textSecondary} />
+                    <Ionicons name="cloud-download-outline" size={18} color={t.colors.primary} />
                     <Text style={[styles.sourceName, live.sourceName]}>{src.name}</Text>
                   </View>
                   <Text style={[styles.sourceText, live.sourceText]}>{src.instructions}</Text>

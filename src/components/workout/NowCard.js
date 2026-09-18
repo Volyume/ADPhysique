@@ -74,19 +74,12 @@ export default function NowCard({
 
   const noteVisible = noteOpen || (noteText ?? '').length > 0;
 
-
-  // D173 T2: a warm-up ramp is literally a ramp, so it is described rather
-  // than punned with a flame; and the ink moves off `warning`, which is a
-  // state colour (a warm-up is not a warning). D174 then took it off the
-  // accent as well: the glyph is the same colour whatever the context kind,
-  // which is decoration by discipline 4's own test. The card's log-flash
-  // border below is the one amber this component still spends.
   const contextIcon = context?.kind === 'group'
     ? 'swap-horizontal'
     : context?.kind === 'warmup'
-      ? 'trending-up-outline'
+      ? 'flame-outline'
       : 'pulse-outline';
-  const contextColor = t.colors.textSecondary;
+  const contextColor = context?.kind === 'warmup' ? t.colors.warning : t.colors.primary;
 
   // Phase 2B (physical-device corrective redesign, screenshot failure 3):
   // the "huge detached NowCard" is retired. The active set renders as the
@@ -139,7 +132,7 @@ export default function NowCard({
         >
           <Ionicons name={contextIcon} size={14} color={contextColor} style={styles.contextIcon} />
           <Text
-            style={[styles.contextText, { ...t.type.caption, color: t.colors.textSecondary }]}
+            style={[styles.contextText, { ...t.type.caption, color: context.kind === 'warmup' ? t.colors.warning : t.colors.textSecondary }]}
             numberOfLines={3}
           >
             {context.text}
@@ -190,34 +183,6 @@ export default function NowCard({
           </View>
         )
       ) : null}
-
-      {/* D165/D167 law 1: the working weight is the ONE loud element on the
-          logger. It was 16 px -- the number you are about to lift, on the
-          screen you read at arm's length with a bar in your hands, in the
-          same size as the rest of the row. The logging surface's largest
-          type was 17 px (the elapsed clock).
-
-          This is a READOUT; the steppers below remain the control. They are
-          not two representations of one fact: one is glanceable mid-set, the
-          other is a two-field editor you look down at.
-
-          STABILITY, and it is the reason for the minHeight. A height change
-          in this column while a field is focused fires Android's
-          scroll-into-view, which is indistinguishable from a drag and drops
-          the keyboard -- the defect `keyboardDismissMode='none'` and
-          `SetEntry.inputFocusStability` exist to hold shut. Reserving the
-          line box means an empty weight and a typed one occupy exactly the
-          same space, so no keystroke can ever change the layout.
-
-          It also carries no line clamp: a guard slices this exact span and
-          forbids one, so that the quiet first-time prefill line above stays
-          the only clamped thing between here and the entry fields. */}
-      {/* Founder order 2026-09-18 (from the live logger): the working weight
-          is not repeated above the steppers. The SetEntry below is the
-          instrument; a second copy of the same number at display size was
-          out of place, and on a first-time lift it shouted a default. The
-          reserved hero line went with it, so nothing here mounts or shifts
-          when a weight is typed. */}
 
       <SetEntry
         value={setValue}

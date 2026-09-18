@@ -38,10 +38,8 @@ export default function WellbeingCheckScreen({ navigation }) {
   // AddCustomFoodScreen's own precedent (batch D). ED-SAFETY-ADJACENT:
   // theming only -- every string and the calm-mode/threshold logic below are
   // byte-identical; the selected/unselected colours here are a plain UI
-  // selection indicator (the same pair for either a "Yes" or a "No" tap),
-  // not a valence mapping, so they convert mechanically. D174: that pair was
-  // `primary`/`primaryBg` and is now the three neutral cues Chip/OptionCard
-  // use -- a `surface3` fill, a `borderLight` edge and the semibold label.
+  // selection indicator (same primary/primaryBg pair for either a "Yes" or
+  // "No" tap), not a valence mapping, so they convert mechanically.
   const t = useTheme();
   const live = buildLiveStyles(t);
 
@@ -197,12 +195,13 @@ const styles = StyleSheet.create({
 
   list: { gap: spacing.lg },
 
-  // D165 law 2: a form question, not an object -- no box, a borderSubtle hairline above (D171/D172).
   item: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
     gap: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
 
   question: {
@@ -215,23 +214,22 @@ const styles = StyleSheet.create({
   btn: {
     flex: 1,
     paddingVertical: spacing.md,
-    borderRadius: radius.control,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface2,
     alignItems: 'center',
   },
   btnSelected: {
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surface3,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
   },
   btnText: {
     ...type.label,
     color: colors.textMuted,
   },
   btnTextSelected: {
-    ...type.w('label', 'semibold'),
-    color: colors.textPrimary,
+    color: colors.primary,
   },
 
 
@@ -261,12 +259,12 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     intro: { ...t.type.bodySm, color: t.colors.textSecondary },
-    item: { borderTopColor: t.colors.borderSubtle },
+    item: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     question: { ...t.type.bodySm, color: t.colors.textPrimary },
     btn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    btnSelected: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
+    btnSelected: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     btnText: { ...t.type.label, color: t.colors.textMuted },
-    btnTextSelected: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
+    btnTextSelected: { color: t.colors.primary },
     saveHint: { ...t.type.captionTight, color: t.colors.textSecondary },
     privacy: { ...t.type.captionTight, color: t.colors.textMuted },
   };

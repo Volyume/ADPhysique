@@ -723,8 +723,8 @@ export default function NotificationSettingsScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Coaching reminders"
         >
-          <View style={styles.toggleIconWrap}>
-            <Ionicons name="pulse-outline" size={18} color={t.colors.textSecondary} />
+          <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+            <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[styles.crossLinkTitle, live.crossLinkTitle]}>Coaching reminders</Text>
@@ -741,15 +741,15 @@ export default function NotificationSettingsScreen({ navigation }) {
         <Card style={styles.card}>
           {/* Toggle row */}
           <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="barbell-outline" size={18} color={t.colors.textSecondary} />
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Remind me to train</Text>
             <Switch
               value={trainingEnabled}
               onValueChange={handleTrainingToggle}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={trainingEnabled ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={t.colors.primary}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Training reminder toggle"
             />
@@ -795,15 +795,15 @@ export default function NotificationSettingsScreen({ navigation }) {
         <SectionLabel style={styles.sectionLabel}>Getting started</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="rocket-outline" size={18} color={t.colors.textSecondary} />
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="rocket-outline" size={18} color={t.colors.primary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Getting-started nudges</Text>
             <Switch
               value={activationNudgeEnabled}
               onValueChange={handleActivationNudgeToggle}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={activationNudgeEnabled ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={t.colors.primary}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Getting-started nudge toggle"
             />
@@ -817,15 +817,15 @@ export default function NotificationSettingsScreen({ navigation }) {
               opening the app; never repeated, never under calm mode or an
               open wellbeing flag. */}
           <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="leaf-outline" size={18} color={t.colors.textSecondary} />
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="leaf-outline" size={18} color={t.colors.primary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Welcome-back note</Text>
             <Switch
               value={returnNudgeEnabled}
               onValueChange={handleReturnNudgeToggle}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={returnNudgeEnabled ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={t.colors.primary}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Welcome-back note toggle"
             />
@@ -843,15 +843,15 @@ export default function NotificationSettingsScreen({ navigation }) {
         <SectionLabel style={styles.sectionLabel}>Community</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="people-outline" size={18} color={t.colors.textSecondary} />
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="people-outline" size={18} color={t.colors.primary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>New followers</Text>
             <Switch
               value={communityFollowEnabled}
               onValueChange={handleCommunityFollowToggle}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={communityFollowEnabled ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={t.colors.primary}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="New followers toggle"
             />
@@ -862,15 +862,15 @@ export default function NotificationSettingsScreen({ navigation }) {
             </Text>
           </View>
           <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="chatbubble-outline" size={18} color={t.colors.textSecondary} />
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="chatbubble-outline" size={18} color={t.colors.primary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Reactions and comments</Text>
             <Switch
               value={communityActivityEnabled}
               onValueChange={handleCommunityActivityToggle}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={communityActivityEnabled ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={t.colors.primary}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Reactions and comments toggle"
             />
@@ -881,15 +881,15 @@ export default function NotificationSettingsScreen({ navigation }) {
             </Text>
           </View>
           <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="mail-outline" size={18} color={t.colors.textSecondary} />
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="mail-outline" size={18} color={t.colors.primary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Messages</Text>
             <Switch
               value={communityMessageEnabled}
               onValueChange={handleCommunityMessageToggle}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={communityMessageEnabled ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={t.colors.primary}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Messages toggle"
             />
@@ -906,15 +906,15 @@ export default function NotificationSettingsScreen({ navigation }) {
           </View>
           <View style={[styles.divider, live.divider]} />
           <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="moon-outline" size={18} color={t.colors.textSecondary} />
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="moon-outline" size={18} color={t.colors.primary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Community quiet hours</Text>
             <Switch
               value={communityQuietHours.enabled}
               onValueChange={(v) => persistCommunityQuietHours({ enabled: v })}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={communityQuietHours.enabled ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={t.colors.primary}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Community quiet hours toggle"
             />
@@ -964,15 +964,15 @@ export default function NotificationSettingsScreen({ navigation }) {
             <View key={r.id}>
               {i > 0 ? <View style={[styles.divider, live.divider]} /> : null}
               <View style={styles.toggleRow}>
-                <View style={styles.toggleIconWrap}>
-                  <Ionicons name="restaurant-outline" size={18} color={t.colors.textSecondary} />
+                <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+                  <Ionicons name="restaurant-outline" size={18} color={t.colors.primary} />
                 </View>
                 <Text style={[styles.toggleLabel, live.toggleLabel]}>{r.label}</Text>
                 <Switch
                   value={r.enabled}
                   onValueChange={(v) => toggleMealReminder(r.id, v)}
-                  trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-                  thumbColor={r.enabled ? t.colors.surface : t.colors.textMuted}
+                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+                  thumbColor={t.colors.primary}
                   ios_backgroundColor={t.colors.surface2}
                   accessibilityLabel={`${r.label} reminder toggle`}
                 />
@@ -1010,15 +1010,15 @@ export default function NotificationSettingsScreen({ navigation }) {
         <SectionLabel style={styles.sectionLabel}>Quiet hours</SectionLabel>
         <Card style={styles.card}>
           <View style={styles.toggleRow}>
-            <View style={styles.toggleIconWrap}>
-              <Ionicons name="moon-outline" size={18} color={t.colors.textSecondary} />
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="moon-outline" size={18} color={t.colors.primary} />
             </View>
             <Text style={[styles.toggleLabel, live.toggleLabel]}>Quiet hours</Text>
             <Switch
               value={quietHours.enabled !== false}
               onValueChange={(v) => persistQuietHours({ enabled: v })}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={quietHours.enabled !== false ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={t.colors.primary}
               ios_backgroundColor={t.colors.surface2}
               accessibilityLabel="Quiet hours toggle"
             />
@@ -1149,11 +1149,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.lg,
   },
-  // D174: was a 34dp `primaryBg` disc behind a stock glyph -- the same
-  // decoration SettingsPrimitives lost on its 104 rows. Fixed glyph column
-  // now, so every row keeps one left edge with no amber ground.
   toggleIconWrap: {
     width: 34,
+    height: 34,
+    borderRadius: 9,
+    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1206,7 +1206,7 @@ const styles = StyleSheet.create({
   },
   timePickerValue: {
     ...type.num('bodyStrong'),
-    color: colors.textPrimary,
+    color: colors.primary,
   },
 
   // Bottom note
@@ -1256,12 +1256,13 @@ function buildLiveStyles(t) {
     permissionBanner: { backgroundColor: withAlpha(t.colors.warning, alpha.tint), borderColor: withAlpha(t.colors.warning, 0.35) },
     bannerText: { ...t.type.bodySm, color: t.colors.warning },
     bannerActionText: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.warning },
+    toggleIconWrap: { backgroundColor: t.colors.primaryBg },
     toggleLabel: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     divider: { backgroundColor: t.colors.border },
     helperRow: { borderTopColor: t.colors.borderSubtle },
     helperText: { ...t.type.bodySm, color: t.colors.textMuted },
     timePickerLabel: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
-    timePickerValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
+    timePickerValue: { ...t.type.num('bodyStrong'), color: t.colors.primary },
     bottomNoteText: { ...t.type.bodySm, color: t.colors.textMuted },
     crossLink: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     crossLinkTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },

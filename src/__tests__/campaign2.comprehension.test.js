@@ -29,12 +29,8 @@ describe('TRAINING comprehension', () => {
   test('the block sheet teaches the mental model: definition, climb why, next-block learning', () => {
     const src = read('components/HomeBlockShapeSheet.js');
     expect(src).toContain('GLOSSARY.mesocycle');
-    // RE-ANCHORED 2026-09-18 (D192, block sheet): the five-sentence
-    // paragraph became three one-line facts; same climb-and-next-block
-    // facts, fewer words (see HomeBlockShapeSheet.test.js for the full
-    // rendered-text pin, including the deload line's recovery fact).
-    expect(src).toMatch(/Each week the effort target steps closer to failure/);
-    expect(src).toMatch(/How each muscle goes shapes where its sets start next block/);
+    expect(src).toMatch(/Each week the effort target moves a step closer to failure/);
+    expect(src).toMatch(/How each muscle goes this block shapes where its sets start in the next one/);
   });
 
   test('peak week explains expected fatigue without pretending recovery is excellent', () => {
@@ -109,16 +105,9 @@ describe('TRAINING comprehension', () => {
 });
 
 describe('EFFORT comprehension', () => {
-  // RE-ANCHORED on the founder's order of 2026-09-17, from the live block
-  // sheet: "We don't need to explain reps in reserve at all in block info."
-  // The sheet was the gloss's only call site, so the gloss and its GLOSSARY
-  // entry are gone. This case now pins the removal, so neither comes back
-  // as a well-meant "explainer".
-  test('reps in reserve is not explained in block info, and the gloss is gone', () => {
-    expect(GLOSSARY.rir).toBeUndefined();
-    const sheet = read('components/HomeBlockShapeSheet.js');
-    expect(sheet).not.toMatch(/\{GLOSSARY\.rir\}/);
-    expect(sheet).not.toMatch(/Reps in reserve/);
+  test('the reps-short instruction is explained in the founder\'s register, without failure worship', () => {
+    expect(GLOSSARY.rir).toMatch(/finish the set when you believe you could still do about 2 good reps/);
+    expect(GLOSSARY.rir).toMatch(/never depends on taking every set to failure/);
   });
 
   test('the working-sets count is by set type, never by how the set felt', () => {

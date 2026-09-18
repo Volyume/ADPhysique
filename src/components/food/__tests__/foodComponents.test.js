@@ -65,13 +65,7 @@ describe('EmptyDiary', () => {
     const txt = JSON.stringify(tree);
     expect(txt).toContain('Meal builder');
     expect(txt).toContain('Add food');
-    // RE-ANCHORED 2026-09-18 (D192, finish spec item 6): this used to also
-    // assert `"backgroundColor":"${colors.surface}"`, the meal-builder
-    // row's boxed icon disc. The row is now unboxed (spec 4.3, "never
-    // boxed") by design, so that node no longer exists; the test's real
-    // intent -- this prop combination shows the meal-builder promo and Add
-    // food, without Copy yesterday or a suggested-meal chip -- is unchanged
-    // and still fully covered by the assertions around this one.
+    expect(txt).toContain(`"backgroundColor":"${colors.surface}"`);
     expect(txt).not.toContain('Copy yesterday');
     expect(txt).not.toContain('Try a suggested meal');
   });

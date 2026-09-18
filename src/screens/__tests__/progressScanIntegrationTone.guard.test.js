@@ -33,14 +33,9 @@ function assertClean(str) {
 // retired from Home (collapsed to one sentence in the unified Today line);
 // "the scan invitation lives on the check-in screen it belongs to", i.e.
 // WeeklyCheckInScreen's own scan-prompt strings below, unchanged.
-// RE-ANCHORED 2026-09-18 (D192, item 2): the scan-prompt body paragraph was
-// replaced by a one-line body under 60 characters (component language item
-// 7, "no paragraphs"); the title, CTA and dismiss strings are untouched.
-// Intent kept: every NEW literal string here stays clean (no banned words,
-// no em dash, no exclamation) and verbatim-present in the real source.
 const NEW_STRINGS = {
   'WeeklyCheckInScreen.js (scan prompt title)': 'Add a progress scan first?',
-  'WeeklyCheckInScreen.js (scan prompt body)': "Adds a visual read to this week's check-in",
+  'WeeklyCheckInScreen.js (scan prompt body)': 'A recent scan gives this check-in extra visual context. It is optional and skipping it changes nothing.',
   'WeeklyCheckInScreen.js (scan prompt CTA)': 'Do a scan',
   'WeeklyCheckInScreen.js (scan prompt dismiss)': 'Not now',
   'WeeklyCheckInScreen.js (no-scan-this-period line)': 'No photo set this period.',
@@ -59,9 +54,7 @@ describe('progress-scan integration wave: new user-facing strings are clean', ()
       ProgressPhotosScreen: fs.readFileSync(path.resolve(__dirname, '../ProgressPhotosScreen.js'), 'utf8'),
     };
     expect(files.WeeklyCheckInScreen).toMatch(/Add a progress scan first\?/);
-    // RE-ANCHORED 2026-09-18 (D192, item 2): matches the real JSX text node,
-    // which carries the apostrophe as the &apos; entity (not a raw ').
-    expect(files.WeeklyCheckInScreen).toMatch(/Adds a visual read to this week&apos;s check-in/);
+    expect(files.WeeklyCheckInScreen).toMatch(/A recent scan gives this check-in extra visual context\. It is optional and skipping it changes nothing\./);
     expect(files.WeeklyCheckInScreen).toMatch(/No photo set this period\./);
     // The Home check-in nudge's scan subline is retired (see the NEW_STRINGS
     // comment above); pin its absence instead of its presence.

@@ -68,23 +68,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
-  // D174 A2: choosing a billing period is a selection, so it takes the three
-  // neutral cues. (Dormant billing surface under D137: colour only -- no
-  // purchase, restore, entitlement or cascade path is touched here.)
-  buttonActive: { borderColor: colors.borderLight, backgroundColor: colors.surface3 },
+  buttonActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
   label: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textSecondary },
   price: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  textActive: { color: colors.textPrimary },
+  textActive: { color: colors.primary },
   saveBadge: {
     position: 'absolute',
     top: -9,
     alignSelf: 'center',
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.primaryFill,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: 1,
   },
-  saveBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
+  saveBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.onPrimary },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
@@ -93,11 +90,11 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     button: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    buttonActive: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
+    buttonActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     label: { color: t.colors.textSecondary },
     price: { color: t.colors.textPrimary },
-    textActive: { color: t.colors.textPrimary },
-    saveBadge: { backgroundColor: t.colors.surface3 },
-    saveBadgeText: { color: t.colors.textPrimary },
+    textActive: { color: t.colors.primary },
+    saveBadge: { backgroundColor: t.colors.primaryFill },
+    saveBadgeText: { color: t.colors.onPrimary },
   };
 }

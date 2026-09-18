@@ -28,18 +28,14 @@ import {
 } from '../lib/database';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
 
-// D173 T1: the milestone-unlocked ICON is removed (the label already says
-// which rung), so the per-rung `icon` keys went with it rather than sitting
-// here unread. The trophy/medal/ribbon ladder they carried is the trophy-tier
-// game mechanic T1 and T3 retire.
 const MILESTONES = [
-  { sessions: 1,    label: 'First session' },
-  { sessions: 10,   label: '10 sessions' },
-  { sessions: 25,   label: '25 sessions' },
-  { sessions: 50,   label: '50 sessions' },
-  { sessions: 100,  label: '100 sessions' },
-  { sessions: 250,  label: '250 sessions' },
-  { sessions: 500,  label: '500 sessions' },
+  { sessions: 1,    label: 'First session',  icon: 'star-outline' },
+  { sessions: 10,   label: '10 sessions',    icon: 'fitness-outline' },
+  { sessions: 25,   label: '25 sessions',    icon: 'flash-outline' },
+  { sessions: 50,   label: '50 sessions',    icon: 'trophy-outline' },
+  { sessions: 100,  label: '100 sessions',   icon: 'trophy' },
+  { sessions: 250,  label: '250 sessions',   icon: 'medal-outline' },
+  { sessions: 500,  label: '500 sessions',   icon: 'ribbon-outline' },
 ];
 
 function nextMilestone(total) {
@@ -255,6 +251,7 @@ export default function ReadinessCards({ userId }) {
           <View style={styles.milestoneTop}>
             {lastUnlocked && (
               <View style={styles.milestoneUnlocked}>
+                <Ionicons name={lastUnlocked.icon} size={16} color={t.colors.gold} />
                 <Text style={[styles.milestoneUnlockedText, live.milestoneUnlockedText]}>{lastUnlocked.label}</Text>
               </View>
             )}
@@ -296,8 +293,8 @@ export default function ReadinessCards({ userId }) {
             <>
               <View style={[styles.recoveryDivider, live.recoveryDivider]} />
               <View style={styles.mfHeaderRow}>
-                <View style={styles.mfIconWrap}>
-                  <Ionicons name="flash-outline" size={20} color={t.colors.textSecondary} />
+                <View style={[styles.mfIconWrap, { backgroundColor: t.colors.primaryBg }]}>
+                  <Ionicons name="flash-outline" size={20} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.mfTitle, live.mfTitle]}>Training recency</Text>
@@ -380,24 +377,20 @@ function RecoveryGauge({ label, value, samples = 0, invertGood = false }) {
 
 const styles = StyleSheet.create({
   section: { gap: spacing.md },
-  // D165 law 2: a stat, not an object -- no box, a borderSubtle hairline above (D171/D172).
-  milestoneCard: { padding: spacing.lg, gap: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
+  milestoneCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
   },
   milestoneTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   milestoneUnlocked: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  milestoneUnlockedText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  milestoneUnlockedText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.gold },
   milestoneNext: { ...type.caption, color: colors.textMuted },
   milestoneBarTrack: { height: 4, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
-  // KEEP: a meter whose width tracks a live value.
   milestoneBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
 
-  // D165 law 2: a reading, not an object -- no box, a borderSubtle hairline above (D171/D172).
   recoveryCard: {
-    padding: spacing.lg, gap: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.lg, borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
   },
   recoveryGrid: {
     flexDirection: 'row', gap: spacing.sm,
@@ -416,22 +409,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     borderRadius: radius.lg, borderWidth: 1, padding: spacing.md,
   },
-  // The `??` fallback used to land on the amber wash if a palette ever
-  // shipped without `successBg`; a neutral surface is the safe default now.
-  trendInsightGood: { backgroundColor: colors.successBg ?? colors.surface, borderColor: withAlpha(colors.success, alpha.edge) },
+  trendInsightGood: { backgroundColor: colors.successBg ?? colors.primaryBg, borderColor: withAlpha(colors.success, alpha.edge) },
   trendInsightWarn: { backgroundColor: colors.warningBg, borderColor: withAlpha(colors.warning, alpha.edge) },
   trendInsightText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
-  // D165 law 2: a reading, not an object -- no box, a borderSubtle hairline above (D171/D172).
-  mfCard: { padding: spacing.lg, gap: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
+  mfCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
   },
   mfHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  // §3.2, "a tint behind a glyph": the amber disc lost its fill (applied
-  // inline at the call site) and its disc geometry, leaving a fixed glyph
-  // column so the row's left edge does not move.
-  mfIconWrap: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  mfIconWrap: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   mfTitle: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   mfSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   mfChipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
@@ -455,21 +442,21 @@ const styles = StyleSheet.create({
 // this batch's concern) but is mirrored here too for completeness.
 function buildLiveStyles(t) {
   return {
-    milestoneCard: { borderTopColor: t.colors.borderSubtle },
-    milestoneUnlockedText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    milestoneCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    milestoneUnlockedText: { fontSize: t.fontSize.sm, color: t.colors.gold },
     milestoneNext: { ...t.type.caption, color: t.colors.textMuted },
     milestoneBarTrack: { backgroundColor: t.colors.surface2 },
     milestoneBarFill: { backgroundColor: t.colors.primary },
-    recoveryCard: { borderTopColor: t.colors.borderSubtle },
+    recoveryCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     recoveryDivider: { backgroundColor: t.colors.border },
     gaugeValue: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     gaugeLabel: { ...t.type.caption, color: t.colors.textMuted },
     gaugeScale: { ...t.type.caption, color: t.colors.textMuted },
     recoveryNote: { ...t.type.caption, color: t.colors.textMuted },
-    trendInsightGood: { backgroundColor: t.colors.successBg ?? t.colors.surface, borderColor: withAlpha(t.colors.success, alpha.edge) },
+    trendInsightGood: { backgroundColor: t.colors.successBg ?? t.colors.primaryBg, borderColor: withAlpha(t.colors.success, alpha.edge) },
     trendInsightWarn: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, alpha.edge) },
     trendInsightText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    mfCard: { borderTopColor: t.colors.borderSubtle },
+    mfCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     mfTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     mfSub: { ...t.type.captionTight, color: t.colors.textMuted },
     mfChipName: { ...t.type.captionStrong },

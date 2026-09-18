@@ -91,11 +91,7 @@ describe('weight cell', () => {
     expect(SOURCE).toContain('metricRow: {');
     expect(SOURCE).toContain('metricIcon: {');
     expect(SOURCE).toContain('metricAction: {');
-    // RE-ANCHORED 2026-09-18 (D192): the bordered literal this asserted lived
-    // on the glyph's box, which is gone (a row's glyph is never boxed). The
-    // rule is pinned on the control itself: the Log action rides the Button
-    // primitive in a contained variant, never a bare text link.
-    expect(SOURCE).toMatch(/variant="secondary"[\s\S]{0,400}title="Log"/);
+    expect(SOURCE).toContain('borderColor: colors.border');
     expect(SOURCE).toContain('backgroundColor: colors.surface2');
     // C5-P37-01 (D96): the Log button dropped from primary to secondary so
     // the session hero owns Home's single primary action. The law this pin
@@ -125,31 +121,29 @@ describe('R2 radius cohesion (2026-07-11)', () => {
   // deliberately stay radius.sm; pinned here so neither side drifts.
   test('loggedPill is a full-radius badge; density-exception radii stay sm', () => {
     expect(SOURCE).toMatch(/loggedPill:\s*\{[\s\S]*?borderRadius:\s*radius\.full/);
-    // RE-ANCHORED 2026-09-18 (D192): the glyph is no longer boxed, so it has
-    // no radius, fill or border to pin; the other density radii stand.
-    expect(SOURCE).toMatch(/metricIcon:\s*\{[^}]*\}/);
-    expect(SOURCE).not.toMatch(/metricIcon:\s*\{[^}]*(borderRadius|backgroundColor|borderWidth)/);
+    expect(SOURCE).toMatch(/metricIcon:\s*\{[\s\S]*?borderRadius:\s*radius\.sm/);
     expect(SOURCE).toMatch(/weightField:\s*\{[\s\S]*?borderRadius:\s*radius\.sm/);
     expect(SOURCE).toMatch(/logBtn:\s*\{[\s\S]*?borderRadius:\s*radius\.sm/);
   });
 });
 
-describe('the empty weight state carries no explanation (founder order 2026-09-17, D190)', () => {
-  // The first-use caption ("Before breakfast, after the bathroom, so each
-  // reading is comparable") and its everLogged gate are gone: the founder
-  // saw it on the live build and called it "ugly, bloated and unnecessary".
-  // The empty state is label, prompt and Log; the logged state is unchanged.
-  test('empty state: label, prompt and Log, and no caption', async () => {
-    const tree = await render({ todayWeight: null });
+describe('Campaign 22 Phase 2 Stage 2: first-use tutorial copy retires after the first ever log', () => {
+  test('everLogged=false (default): the why-line shows on the empty state', async () => {
+    const tree = await render({ todayWeight: null, everLogged: false });
+    expect(json(tree)).toContain('each reading is comparable');
+  });
+
+  test('everLogged=true: the why-line never renders once a real weigh-in exists', async () => {
+    const tree = await render({ todayWeight: null, everLogged: true });
     expect(json(tree)).not.toContain('each reading is comparable');
-    expect(json(tree)).not.toContain('Before breakfast');
+    // The rest of the empty state is unaffected: label, prompt and Log stay.
     expect(json(tree)).toContain('Morning weight');
     expect(json(tree)).toContain('Not logged yet');
     expect(findByLabel(tree, 'Log morning weight')).toBeTruthy();
   });
 
-  test('logged state: no caption either', async () => {
-    const tree = await render({ todayWeight: 82.4 });
+  test('the logged state never shows the tutorial line either way', async () => {
+    const tree = await render({ todayWeight: 82.4, everLogged: false });
     expect(json(tree)).not.toContain('each reading is comparable');
   });
 });

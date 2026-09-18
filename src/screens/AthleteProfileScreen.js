@@ -223,13 +223,8 @@ function Row({ icon, label, sub, onPress, status = null, t, live }) {
       accessibilityLabel={accessibility.accessibilityLabel}
       accessibilityHint={accessibility.accessibilityHint}
     >
-      {/* D174 (amber census, 2026-09-15): this glyph sat on a 36dp
-          `primaryBg` disc, the "tint behind a glyph" plan section 3.2 forbids
-          by name. Fill and disc geometry both go, the same answer
-          SettingsPrimitives' 104 rows took, and the glyph takes the secondary
-          ink. `rowIcon` now carries no token, so it has no live twin. */}
-      <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={18} color={t.colors.textSecondary} />
+      <View style={[styles.rowIcon, live.rowIcon]}>
+        <Ionicons name={icon} size={18} color={t.colors.primary} />
       </View>
       <View style={{ flex: 1 }}>
         <View style={styles.rowLabelLine}>
@@ -409,25 +404,10 @@ export default function AthleteProfileScreen({ navigation }) {
     ? (summary.weightLoggedAt ? `Logged ${formatDate(summary.weightLoggedAt)}` : 'Current profile weight')
     : 'Open Progress to add body weight';
   const bodyFatText = summary.bodyFat != null ? `${Number(summary.bodyFat).toFixed(1)}%` : 'Not logged';
-  // Suppressed (calm mode or an open ED-pattern flag) means this tile shows no
-  // body-composition figure AT ALL: not the Volyume Score, and not the body-fat
-  // percentage underneath it. It falls straight through to the unscored
-  // placeholder.
-  //
-  // DEFECT FIXED 2026-09-15. The comment that stood here said suppression
-  // "behaves exactly like no scored scan at all: the tile falls through to the
-  // body-fat log, then the unscored placeholder", and only `showPhysiqueScore`
-  // carried the `!photoSuppressed` guard. So a user under calm mode or an open
-  // ED-pattern flag lost the SCORE and was shown a raw body-fat percentage in
-  // its place -- strictly worse for the at-risk reader than the thing the
-  // suppression existed to withhold, and the exact figure the founder ruled
-  // against surfacing (D166: the tile shows the scan's band and score, never a
-  // body-fat percent). `usePhotoSuppression`'s own docstring says it gates
-  // "any bodyweight display". "No scan" and "flagged" are not the same state:
-  // showing someone their own logged body fat when there is simply nothing
-  // scored is fine; showing it to someone who is flagged is not. Only the
-  // second branch changes, and it changes in one direction -- strictly more is
-  // withheld, never less.
+  // Suppressed (calm mode or an open ED-pattern flag) behaves exactly like no
+  // scored scan at all: the tile falls through to the body-fat log, then the
+  // unscored placeholder, same as `shouldShowPhysiqueScore` already does when
+  // there is nothing to show.
   const showPhysiqueScore = !photoSuppressed && shouldShowPhysiqueScore({
     scan: summary.scan,
     bodyFat: summary.bodyFat,
@@ -437,7 +417,7 @@ export default function AthleteProfileScreen({ navigation }) {
     label: 'Volyume Score',
     value: physiqueScoreTileValue(summary.scan),
     sub: physiqueScoreTileSub(summary.scan),
-  } : (!photoSuppressed && summary.bodyFatLoggedAt) ? {
+  } : summary.bodyFatLoggedAt ? {
     label: 'Body fat',
     value: bodyFatText,
     sub: `Logged ${formatDate(summary.bodyFatLoggedAt)}`,
@@ -618,7 +598,7 @@ export default function AthleteProfileScreen({ navigation }) {
             live={live}
             icon="person-outline"
             label="Edit profile details"
-            sub="Name, sex, height, birth date, diet preference"
+            sub="Name, sex, height, date of birth and diet preference."
             onPress={() => navigation.navigate('SettingsProfile')}
           />
           <Row
@@ -666,10 +646,8 @@ export default function AthleteProfileScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel={avatarUri ? 'Change profile photo' : 'Choose profile photo'}
         >
-          {/* D174: the amber disc behind the glyph goes, fill and geometry
-              together; `photoOptionIcon` is layout-only now. */}
-          <View style={styles.photoOptionIcon}>
-            <Ionicons name="image-outline" size={20} color={t.colors.textSecondary} />
+          <View style={[styles.photoOptionIcon, live.photoOptionIcon]}>
+            <Ionicons name="image-outline" size={20} color={t.colors.primary} />
           </View>
           <View style={styles.photoOptionCopy}>
             <Text style={[styles.photoOptionTitle, live.photoOptionTitle]}>Photo from phone</Text>
@@ -755,28 +733,25 @@ const styles = StyleSheet.create({
   },
   liftName: { ...type.bodyStrong, color: colors.textPrimary },
   liftSub: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
-  // D174: a strength level is a RANK, not the user's live moment, so it sits
-  // outside amber discipline 1's ceiling. The pill keeps its objecthood from
-  // the surface ladder (one step up from the card it sits on) and its ordinary
-  // border, and the label takes the secondary ink.
   levelPill: {
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+    backgroundColor: colors.primaryBg,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  levelPillText: { ...type.caption, color: colors.textSecondary, fontWeight: fontWeight.black },
+  levelPillText: { ...type.caption, color: colors.primary, fontWeight: fontWeight.black },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  // D174: was a 36dp `primaryBg` disc; now a fixed glyph column with no fill,
-  // so every row's label keeps the same left edge without an amber ground.
   rowIcon: {
-    width: iconSize.lg,
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -832,11 +807,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  // D174: same disc, same answer as rowIcon above.
   photoOptionIcon: {
-    width: iconSize.lg,
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
   },
   photoOptionCopy: { flex: 1, minWidth: 0 },
   photoOptionTitle: { ...type.bodyStrong, color: colors.textPrimary },
@@ -859,16 +836,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xs,
   },
-  // D174 A2: a chosen avatar is a selection in a picker, not a live moment.
-  // It takes the same three simultaneous cues Chip/OptionCard now use -- a
-  // `surface3` fill, a `borderLight` edge and the primary ink at the semibold
-  // face -- so selection reads stronger than the single amber border did.
   avatarPresetOptionSelected: {
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surface3,
+    borderColor: colors.primary,
+    backgroundColor: colors.surfaceElevated,
   },
   avatarPresetOptionText: { ...type.captionTight, color: colors.textSecondary },
-  avatarPresetOptionTextSelected: { ...type.w('captionTight', 'semibold'), color: colors.textPrimary },
+  avatarPresetOptionTextSelected: { color: colors.textPrimary },
 });
 
 // CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
@@ -893,8 +866,9 @@ function buildLiveStyles(t) {
     statSub: { ...t.type.captionTight, color: t.colors.textSecondary },
     liftName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     liftSub: { ...t.type.caption, color: t.colors.textSecondary },
-    levelPill: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    levelPillText: { ...t.type.caption, color: t.colors.textSecondary },
+    levelPill: { borderColor: withAlpha(t.colors.primary, alpha.edge), backgroundColor: t.colors.primaryBg },
+    levelPillText: { ...t.type.caption, color: t.colors.primary },
+    rowIcon: { backgroundColor: t.colors.primaryBg },
     rowLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     rowSub: { ...t.type.caption, color: t.colors.textSecondary },
     statusPill_fresh: { backgroundColor: t.colors.successBg, borderColor: withAlpha(t.colors.success, alpha.edge) },
@@ -910,11 +884,12 @@ function buildLiveStyles(t) {
     avatarClearText: { ...t.type.label, color: t.colors.error },
     avatarGalleryLabel: { ...t.type.label, color: t.colors.textSecondary },
     photoOption: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    photoOptionIcon: { backgroundColor: t.colors.primaryBg },
     photoOptionTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     photoOptionSub: { ...t.type.caption, color: t.colors.textSecondary },
     avatarPresetOption: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
-    avatarPresetOptionSelected: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
+    avatarPresetOptionSelected: { borderColor: t.colors.primary, backgroundColor: t.colors.surfaceElevated },
     avatarPresetOptionText: { ...t.type.captionTight, color: t.colors.textSecondary },
-    avatarPresetOptionTextSelected: { ...t.type.w('captionTight', 'semibold'), color: t.colors.textPrimary },
+    avatarPresetOptionTextSelected: { color: t.colors.textPrimary },
   };
 }

@@ -74,12 +74,7 @@ describe('CP-10 stage 3 (Home family): flips live, no remount', () => {
     expect(lightBg).not.toBe(darkBg);
   });
 
-  // Title corrected 2026-09-17 (card sweep): this case only ever asserted the
-  // HEADLINE ink -- it never probed a border. The brief's tone-tinted edge went
-  // with its box under D165 law 2 (the glyph beside the text already carries
-  // the same tone), so the old title now describes something that does not
-  // exist. The assertion is untouched.
-  test('CoachBriefCard: headline ink flips with the theme', () => {
+  test('CoachBriefCard: border tone and headline ink flip with the theme', () => {
     setTheme('dark');
     const brief = { type: 'go', headline: 'Ready to train', body: 'Good signs across the board.' };
     let tree;
@@ -93,24 +88,17 @@ describe('CP-10 stage 3 (Home family): flips live, no remount', () => {
     expect(lightColor).not.toBe(darkColor);
   });
 
-  // RE-ANCHORED 2026-09-17 (card sweep, D165 law 2). The intent of this case
-  // is unchanged and is the only thing it was ever about: TodayStrip's own
-  // chrome follows a live theme flip on the SAME mounted instance. It probed
-  // that through the strip's card BACKGROUND because a background was what the
-  // strip had. A strip of stats is not an object, so the fill and the box came
-  // off and the strip's remaining theme-bearing chrome is the hairline above
-  // it; the probe moves to that. Same contract, same component, same flip.
-  test('TodayStrip: the strip hairline flips live', () => {
+  test('TodayStrip: the empty-state card background flips live', () => {
     setTheme('dark');
     let tree;
     act(() => { tree = create(<TodayStrip bwu="kg" todayWeight={null} onLogWeight={() => {}} />); });
     const card = tree.root.findAllByType('View')[0];
-    const darkLine = flat(card).borderTopColor;
-    expect(darkLine).toBe(theme.resolveTheme({ theme: 'dark' }).colors.borderSubtle);
+    const darkBg = flat(card).backgroundColor;
+    expect(darkBg).toBe(theme.resolveTheme({ theme: 'dark' }).colors.surface);
 
     setTheme('light');
-    const lightLine = flat(tree.root.findAllByType('View')[0]).borderTopColor;
-    expect(lightLine).not.toBe(darkLine);
+    const lightBg = flat(tree.root.findAllByType('View')[0]).backgroundColor;
+    expect(lightBg).not.toBe(darkBg);
   });
 });
 

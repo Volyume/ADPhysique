@@ -220,11 +220,7 @@ describe('WeeklyCheckInScreen optional scan prompt', () => {
     const tree = await render({ scan: null });
     const text = flattenText(tree.toJSON());
     expect(text).toContain(VALUE_LINE_PROMPT_TITLE);
-    // RE-ANCHORED 2026-09-18 (D192, item 2): the explanatory paragraph was
-    // replaced by a one-line body under 60 characters (component language
-    // item 7, "no paragraphs"); intent kept is that the prompt still shows
-    // its title and body text before "Not now" is exercised below.
-    expect(text).toContain("Adds a visual read to this week's check-in");
+    expect(text).toContain('A recent scan gives this check-in extra visual context. It is optional and skipping it changes nothing.');
     const dismiss = findPressable(tree, 'Not now')[0];
     expect(dismiss).toBeTruthy();
     await act(async () => { dismiss.props.onPress(); });

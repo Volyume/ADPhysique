@@ -79,7 +79,7 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
   const t = useTheme();
   const live = {
     bar: { backgroundColor: t.colors.surfaceElevated, borderTopColor: t.colors.borderSubtle },
-    pill: { backgroundColor: t.colors.surface3 },
+    pill: { backgroundColor: t.colors.primaryBg },
     badgeDot: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.surfaceElevated },
     label: { ...t.type.caption, fontFamily: t.type.label.fontFamily },
   };
@@ -135,7 +135,7 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
         {state.routes.map((route, index) => {
           const { options } = descriptors[route.key];
           const isFocused = state.index === index;
-          const color = isFocused ? t.colors.textPrimary : t.colors.textMuted;
+          const color = isFocused ? t.colors.primary : t.colors.textMuted;
           const label = options.title ?? route.name;
           // T2: CoachOutput lives in ProfileStack only (RootNavigator), so
           // the Coach tab is the one that carries the unseen-review badge.
@@ -198,10 +198,7 @@ const styles = StyleSheet.create({
     top: PILL_TOP, left: 0,
     height: PILL_HEIGHT,
     borderRadius: radius.lg,
-    // D174 A2: the focused tab is a chosen VIEW, not the user's live moment,
-    // so the cushion is the neutral raised fill and the icon and label move
-    // to full ink. Two cues, neither of them the accent.
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.primaryBg,
   },
   // Centred in the 49pt content zone, matching the stock BottomTabBar the
   // founder's "sat perfectly" build used (the E15 bar top-aligned this,
@@ -211,10 +208,6 @@ const styles = StyleSheet.create({
   // T2: a calm amber dot, not an alarm-red one (the theme defines no such
   // treatment). It matches the coach-update colour; the hairline border cuts
   // it out from the icon glyph underneath it.
-  // D174 A3 KEEPS this one: "new since you looked" is the one thing that
-  // genuinely IS now -- earned by data, transient by construction, and gone
-  // the moment you look. Same reasoning, same shape and same treatment as
-  // CommunityHeaderAction's unread dot, which A3 pins unchanged.
   badgeDot: {
     position: 'absolute',
     top: -spacing.xxs,

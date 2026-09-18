@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, spacing, type } from '../../styles/theme';
+import { colors, fontSize, radius, spacing, type } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import BottomSheet from '../BottomSheet';
 import OAuthButtons from './OAuthButtons';
@@ -503,22 +503,17 @@ const styles = StyleSheet.create({
   heading: { ...type.h2, fontSize: fontSize.xl, lineHeight: Math.round(fontSize.xl * 1.35), color: colors.textPrimary },
   support: { ...type.bodySm, color: colors.textSecondary },
   oauthWaiting: { ...type.caption, color: colors.textSecondary, textAlign: 'center' },
-  // D165 law 2: a notice, not an object -- no box, a borderSubtle hairline above (D171/D172).
   notice: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    padding: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
+    padding: spacing.md, borderRadius: radius.lg, borderWidth: 1,
+    borderColor: colors.borderSubtle, backgroundColor: colors.surface2,
   },
   noticeText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   emailForm: { gap: spacing.md },
   // Text actions: no pill, a full touch target, the accent only on the verb.
   textAction: { minHeight: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
   textActionLabel: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
-  // A text link inside a sentence: it is already `bodyStrong` beside a
-  // `textSecondary` line, so full ink is the distinction and the accent is
-  // not needed (D174 -- a link is not the user's live moment).
-  textActionAccent: { ...type.bodyStrong, fontSize: fontSize.sm, color: colors.textPrimary },
+  textActionAccent: { ...type.bodyStrong, fontSize: fontSize.sm, color: colors.primary },
   legal: { minHeight: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
   legalText: { ...type.caption, color: colors.textMuted },
   eyeBtn: {
@@ -534,10 +529,10 @@ function buildLiveStyles(t) {
     heading: { ...t.type.h2, fontSize: t.fontSize.xl, lineHeight: Math.round(t.fontSize.xl * 1.35), color: t.colors.textPrimary },
     support: { ...t.type.bodySm, color: t.colors.textSecondary },
     oauthWaiting: { ...t.type.caption, color: t.colors.textSecondary },
-    notice: { borderTopColor: t.colors.borderSubtle },
+    notice: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     noticeText: { ...t.type.bodySm, color: t.colors.textSecondary },
     textActionLabel: { ...t.type.bodySm, color: t.colors.textSecondary },
-    textActionAccent: { ...t.type.bodyStrong, fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    textActionAccent: { ...t.type.bodyStrong, fontSize: t.fontSize.sm, color: t.colors.primary },
     legalText: { ...t.type.caption, color: t.colors.textMuted },
   };
 }

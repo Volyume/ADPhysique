@@ -77,7 +77,7 @@ export default function CuratedMealSheet({
             {additions.length ? (
               <View style={styles.section}>
                 <View style={styles.addHead}>
-                  <Ionicons name="leaf-outline" size={15} color={t.colors.textSecondary} />
+                  <Ionicons name="leaf-outline" size={15} color={t.colors.primary} />
                   <SectionLabel>Optional extras</SectionLabel>
                 </View>
                 <Text style={[styles.intro, live.intro]}>{ADDITIONS_INTRO}</Text>
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   },
   cancelText: { color: colors.textSecondary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   logBtn: {
-    flex: 1, paddingVertical: spacing.md, borderRadius: radius.control,
+    flex: 1, paddingVertical: spacing.md, borderRadius: radius.lg,
     backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, alignItems: 'center',
   },
   logText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },

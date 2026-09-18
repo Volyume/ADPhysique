@@ -13,7 +13,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getRecentAdaptationEvents, getCompletedWorkoutSets, getAllExercises } from '../lib/database';
@@ -91,8 +91,8 @@ export default function EngineLog({ userId }) {
           screen-reader navigable (matches CollapsibleSection.js's convention). */}
       <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: open }} style={styles.header} onPress={() => setOpen(v => !v)} activeOpacity={0.7}>
         <View style={styles.headerLeft}>
-          <View style={styles.iconWrap}>
-            <Ionicons name="pulse" size={18} color={t.colors.textSecondary} />
+          <View style={[styles.iconWrap, live.iconWrap]}>
+            <Ionicons name="pulse" size={18} color={t.colors.primary} />
           </View>
           <View>
             <Text style={[styles.headerLabel, live.headerLabel]}>Coaching log</Text>
@@ -129,7 +129,7 @@ export default function EngineLog({ userId }) {
               event.decision === 'rotate_exercise' ? 'swap-horizontal' :
               'remove-outline';
             const iconColor =
-              event.decision === 'add_set' ? t.colors.textSecondary :
+              event.decision === 'add_set' ? t.colors.primary :
               event.decision === 'drop_set' || event.decision === 'deload_trigger' ? t.colors.error :
               t.colors.textMuted;
             const muscleLabel = MUSCLE_DISPLAY_NAMES[event.muscle] || event.muscle || 'Unknown';
@@ -157,16 +157,14 @@ export default function EngineLog({ userId }) {
 }
 
 const styles = StyleSheet.create({
-  // D165 law 2: a debug panel, not an object -- no box, a borderSubtle hairline above (D171/D172).
-  card: { padding: spacing.lg, gap: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
+  card: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.borderSubtle, padding: spacing.lg, gap: spacing.md,
   },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },
-  // §3.2, "a tint behind a glyph": fill and disc geometry both gone.
   iconWrap: {
-    width: 36, height: 36,
+    width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
   headerLabel: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
@@ -186,7 +184,8 @@ const styles = StyleSheet.create({
 // regTitleRow have no colour tokens.
 function buildLiveStyles(t) {
   return {
-    card: { borderTopColor: t.colors.borderSubtle },
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    iconWrap: { backgroundColor: t.colors.primaryBg },
     headerLabel: { color: t.colors.textPrimary },
     headerSub: { ...t.type.caption, color: t.colors.textSecondary },
     body: { borderTopColor: t.colors.border },

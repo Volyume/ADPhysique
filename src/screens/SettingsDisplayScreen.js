@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { View, Text, Switch, StyleSheet } from 'react-native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, radius, type } from '../styles/theme';
+import { colors, withAlpha, alpha, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { SettingsPage, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 import Chip from '../components/Chip';
@@ -148,8 +148,8 @@ export default function SettingsDisplayScreen() {
             <Switch
               value={accessibility.showFibre !== false}
               onValueChange={(v) => { haptics.selection(); setAccessibilityPref('showFibre', v); }}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={(accessibility.showFibre !== false) ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={(accessibility.showFibre !== false) ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -162,8 +162,8 @@ export default function SettingsDisplayScreen() {
             <Switch
               value={accessibility.showSugar !== false}
               onValueChange={(v) => { haptics.selection(); setAccessibilityPref('showSugar', v); }}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={(accessibility.showSugar !== false) ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={(accessibility.showSugar !== false) ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -176,8 +176,8 @@ export default function SettingsDisplayScreen() {
             <Switch
               value={accessibility.showSodium !== false}
               onValueChange={(v) => { haptics.selection(); setAccessibilityPref('showSodium', v); }}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={(accessibility.showSodium !== false) ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={(accessibility.showSodium !== false) ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -196,8 +196,8 @@ export default function SettingsDisplayScreen() {
                 haptics.selection();
                 await setAccessibilityPref('largerText', v);
               }}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={accessibility.largerText ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={accessibility.largerText ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -213,8 +213,8 @@ export default function SettingsDisplayScreen() {
                 haptics.selection();
                 await setAccessibilityPref('higherContrast', v);
               }}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={accessibility.higherContrast ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={accessibility.higherContrast ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -230,8 +230,8 @@ export default function SettingsDisplayScreen() {
                 haptics.selection();
                 await setAccessibilityPref('colorBlindSafe', v);
               }}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={accessibility.colorBlindSafe ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={accessibility.colorBlindSafe ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -244,8 +244,8 @@ export default function SettingsDisplayScreen() {
             <Switch
               value={!!accessibility.reduceMotionUserPref}
               onValueChange={v => { haptics.selection(); setAccessibilityPref('reduceMotionUserPref', v); }}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={accessibility.reduceMotionUserPref ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={accessibility.reduceMotionUserPref ? t.colors.primary : t.colors.textMuted}
             />
           }
         />

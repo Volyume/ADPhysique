@@ -6,7 +6,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle, motion, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, motion, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
@@ -15,7 +15,7 @@ import SectionLabel from '../components/SectionLabel';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
-import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
+import { GOAL_LABELS, PHASE_LABELS, isCompetitionGoal } from '../lib/coachingGoals';
 import { getSplitRationale, getSetupReceiptLine } from '../lib/whyThisTemplates';
 import { getActivePlan, getRoutinesForPlan, getMorningWeightsLast14Days, getOpenEdPatternFlag } from '../lib/database';
 import { getNotificationPermissionStatus } from '../lib/notifications/permissions';
@@ -258,7 +258,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
             <View style={[styles.progressFill, live.progressFill]} />
           </View>
           <View style={styles.doneRow}>
-            <Ionicons name="checkmark-circle" size={14} color={t.colors.textSecondary} />
+            <Ionicons name="checkmark-circle" size={14} color={t.colors.primary} />
             <Text style={[styles.doneEyebrow, live.doneEyebrow]}>Setup complete</Text>
           </View>
 
@@ -266,11 +266,11 @@ export default function ProSetupCompleteScreen({ navigation }) {
           <Text style={[styles.sub, live.sub]}>{receiptLine || "Here's your daily routine."}</Text>
           <View style={styles.readyGrid} accessibilityLabel="Setup summary">
             <View style={[styles.readyItem, live.readyItem]}>
-              <Ionicons name="nutrition-outline" size={15} color={t.colors.textSecondary} />
+              <Ionicons name="flame-outline" size={15} color={t.colors.primary} />
               <Text style={[styles.readyText, live.readyText]}>Targets saved</Text>
             </View>
             <View style={[styles.readyItem, live.readyItem]}>
-              <Ionicons name="barbell-outline" size={15} color={t.colors.textSecondary} />
+              <Ionicons name="barbell-outline" size={15} color={t.colors.primary} />
               <Text style={[styles.readyText, live.readyText]}>{hasPlan ? 'Plan ready' : 'Plan pending'}</Text>
             </View>
             <TouchableOpacity
@@ -281,7 +281,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
               accessibilityRole={notifPermissionGranted ? undefined : 'button'}
               accessibilityLabel={notifPermissionGranted ? undefined : 'Reminders off. Enable them any time in Settings.'}
             >
-              <Ionicons name="calendar-outline" size={15} color={t.colors.textSecondary} />
+              <Ionicons name="calendar-outline" size={15} color={t.colors.primary} />
               <Text style={[styles.readyText, live.readyText]}>
                 {notifPermissionGranted ? 'Coach reminders set' : 'Reminders off. Enable them any time in Settings.'}
               </Text>
@@ -293,8 +293,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
           <Animated.View entering={stage(1)}>
           <Card style={[styles.routineCardChrome, live.routineCardChrome]}>
             <View style={styles.routineHeader}>
-              <View style={styles.routineIconWrap}>
-                <Ionicons name="scale-outline" size={18} color={t.colors.textSecondary} />
+              <View style={[styles.routineIconWrap, live.routineIconWrap]}>
+                <Ionicons name="scale-outline" size={18} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.routineTitle, live.routineTitle]}>1. Log your weight</Text>
@@ -339,8 +339,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
             {...rowProps}
           >
             <View style={styles.routineHeader}>
-              <View style={styles.routineIconWrap}>
-                <Ionicons name="barbell-outline" size={18} color={t.colors.textSecondary} />
+              <View style={[styles.routineIconWrap, live.routineIconWrap]}>
+                <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.routineTitle, live.routineTitle]}>2. Train your split</Text>
@@ -445,8 +445,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
             <Animated.View entering={stage(3)}>
             <Card style={[styles.routineCardChrome, live.routineCardChrome]}>
               <View style={styles.routineHeader}>
-                <View style={styles.routineIconWrap}>
-                  <Ionicons name="nutrition-outline" size={18} color={t.colors.textSecondary} />
+                <View style={[styles.routineIconWrap, live.routineIconWrap]}>
+                  <Ionicons name="flame-outline" size={18} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.routineTitle, live.routineTitle]}>3. Hit your daily targets</Text>
@@ -463,7 +463,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel="New to calories and macros? Open the five-minute guide"
               >
-                <Ionicons name="book-outline" size={14} color={t.colors.textSecondary} />
+                <Ionicons name="book-outline" size={14} color={t.colors.primary} />
                 <Text style={[styles.eduLearnText, live.eduLearnText]}>
                   New to calories and macros? 5-minute guide
                 </Text>
@@ -496,13 +496,10 @@ export default function ProSetupCompleteScreen({ navigation }) {
               </View>
               <View style={styles.goalRow}>
                 <View style={[styles.goalChip, live.goalChip]}>
-                  {/* D173 T3: the competition branch used to swap in a
-                      trophy. The chip's own text is the goal's name, so the
-                      glyph carried nothing the words do not. */}
                   <Ionicons
-                    name="body-outline"
+                    name={isCompetitionGoal(userProfile?.trainingGoal) ? 'trophy-outline' : 'body-outline'}
                     size={11}
-                    color={t.colors.textMuted}
+                    color={t.colors.primary}
                   />
                   <Text style={[styles.goalChipText, live.goalChipText]}>{goalLabel}</Text>
                 </View>
@@ -542,7 +539,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   accessibilityRole="button"
                   accessibilityLabel="Create my first week of meals to these targets"
                 >
-                  <Ionicons name="restaurant-outline" size={14} color={t.colors.textSecondary} />
+                  <Ionicons name="restaurant-outline" size={14} color={t.colors.primary} />
                   <Text style={[styles.eduLearnText, live.eduLearnText]}>
                     {buildingMeals ? 'Creating your week' : 'Create my first week of meals'}
                   </Text>
@@ -557,8 +554,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
           <Animated.View entering={stage(4)}>
           <Card style={[styles.routineCardChrome, live.routineCardChrome]}>
             <View style={styles.routineHeader}>
-              <View style={styles.routineIconWrap}>
-                <Ionicons name="calendar-outline" size={18} color={t.colors.textSecondary} />
+              <View style={[styles.routineIconWrap, live.routineIconWrap]}>
+                <Ionicons name="calendar-outline" size={18} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.routineTitle, live.routineTitle]}>4. Check in once a week</Text>
@@ -596,7 +593,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
               accessibilityRole="button"
                 accessibilityLabel="How Precision Coaching works"
             >
-              <Ionicons name="bulb-outline" size={14} color={t.colors.textSecondary} />
+              <Ionicons name="bulb-outline" size={14} color={t.colors.primary} />
               <Text style={[styles.eduLearnText, live.eduLearnText]}>How Precision Coaching works</Text>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
@@ -625,9 +622,9 @@ const styles = StyleSheet.create({
     height: 3, borderRadius: radius.hair, backgroundColor: colors.border,
     overflow: 'hidden', marginBottom: spacing.sm,
   },
-  progressFill: { width: '100%', height: '100%', borderRadius: radius.hair, backgroundColor: colors.borderLight },
+  progressFill: { width: '100%', height: '100%', borderRadius: radius.hair, backgroundColor: colors.primary },
   doneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
-  doneEyebrow: { ...type.num('caption'), color: colors.textMuted, fontWeight: fontWeight.semibold },
+  doneEyebrow: { ...type.num('caption'), color: colors.primary, fontWeight: fontWeight.semibold },
 
   headline: {
     ...type.h2,
@@ -670,39 +667,28 @@ const styles = StyleSheet.create({
   // Card 3 (the collapsible split card) stays a hand-rolled TouchableOpacity:
   // it needs accessibilityState={{expanded}} which Card doesn't forward, so
   // it keeps its own full chrome rather than going through Card.
-  // D165 law 2, the founder's test. A ROUTINE is an object, but this is not
-  // one: it is step 2 of a numbered hand-off ("2. Train your split"), and a
-  // step in a checklist is a section of content. So the fill, the card radius
-  // and the box go, and a borderSubtle hairline above separates it from step 1.
-  // The `routineCardOpen` edge stays as the expanded-state cue it always was.
   routineCard: {
-    paddingVertical: spacing.lg, marginBottom: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1.5, borderColor: colors.borderSubtle,
+    padding: spacing.lg, marginBottom: spacing.md,
   },
-  // The expanded cue moves onto the hairline that replaced the box, so the
-  // state still reads; a `borderColor` with no `borderWidth` left would have
-  // been a cue that draws nothing.
-  routineCardOpen: { borderTopColor: colors.borderLight },
+  routineCardOpen: { borderColor: withAlpha(colors.primary, 0.314) },
   routineHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  // D174: was a 36dp `primaryBg` disc behind a stock glyph. Fixed glyph
-  // column now, no fill.
   routineIconWrap: {
-    width: 36,
+    width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
   routineTitle: { ...type.bodyStrong, color: colors.textPrimary, marginBottom: spacing.xs },
   routineBody: { ...type.bodySm, color: colors.textSecondary },
 
-  // A ring drawn as a thick-bordered circle, always full. At full progress a
-  // Skia arc and a bordered circle are visually identical, and this keeps the
-  // native canvas (and its test setup) out of the onboarding flow. The surface2
-  // inner fill matches the Diary ring's track colour. D174: the ring was amber
-  // at every value, which is the same thing D172 ruled out for the Diary arc,
-  // so it takes `borderLight` exactly as that arc and its bars did.
+  // Full amber ring drawn as a thick-bordered circle. At full progress a Skia
+  // arc and a bordered circle are visually identical, and this keeps the native
+  // canvas (and its test setup) out of the onboarding flow. The surface2 inner
+  // fill matches the Diary ring's track colour.
   ringWrap: { alignItems: 'center', marginTop: spacing.lg, marginBottom: spacing.md },
   ring: {
     width: 128, height: 128, borderRadius: circle(128),
-    borderWidth: 13, borderColor: colors.borderLight,
+    borderWidth: 13, borderColor: colors.primary,
     backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -722,15 +708,15 @@ const styles = StyleSheet.create({
   macroBarValue: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
   macroBarValuePrimary: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   macroTrack: { height: 6, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
-  macroFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.borderLight },
+  macroFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   goalRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
   goalChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.surface2, borderRadius: radius.full,
+    backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.188),
   },
-  goalChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  goalChipText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   eduLearnRow: {
     minHeight: touchTarget.minimum,
     flexDirection: 'row',
@@ -762,7 +748,7 @@ const styles = StyleSheet.create({
   whyPlanWrap: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.sm },
   // B-5: whyPlanTitle's typography now comes from SectionLabel (default tone).
   whyPlanItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
-  whyPlanBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.textMuted, marginTop: 7 },
+  whyPlanBullet: { width: 6, height: 6, borderRadius: circle(6), backgroundColor: colors.primary, marginTop: 7 },
   whyPlanText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
 
   startBtn: { marginTop: spacing.md },
@@ -787,29 +773,30 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     progressTrack: { backgroundColor: t.colors.border },
-    progressFill: { backgroundColor: t.colors.borderLight },
-    doneEyebrow: { ...t.type.num('caption'), color: t.colors.textMuted },
+    progressFill: { backgroundColor: t.colors.primary },
+    doneEyebrow: { ...t.type.num('caption'), color: t.colors.primary },
     headline: { ...t.type.h2, color: t.colors.textPrimary },
     sub: { ...t.type.bodySm, color: t.colors.textSecondary },
     readyItem: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     readyText: { ...t.type.label, color: t.colors.textPrimary },
     routineCardChrome: { borderColor: t.colors.border },
-    routineCard: { borderTopColor: t.colors.borderSubtle },
-    routineCardOpen: { borderTopColor: t.colors.borderLight },
+    routineCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    routineCardOpen: { borderColor: withAlpha(t.colors.primary, 0.314) },
+    routineIconWrap: { backgroundColor: t.colors.primaryBg },
     routineTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     routineBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    ring: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface2 },
+    ring: { borderColor: t.colors.primary, backgroundColor: t.colors.surface2 },
     ringValue: { color: t.colors.textPrimary },
     ringSub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     macroBars: { borderTopColor: t.colors.border },
     macroTrack: { backgroundColor: t.colors.surface2 },
-    macroFill: { backgroundColor: t.colors.borderLight },
+    macroFill: { backgroundColor: t.colors.primary },
     macroBarLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     macroBarLabelPrimary: { color: t.colors.textSecondary },
     macroBarValue: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     macroBarValuePrimary: { color: t.colors.textPrimary },
-    goalChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    goalChipText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    goalChip: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.188) },
+    goalChipText: { fontSize: t.fontSize.xs, color: t.colors.primary },
     eduLearnRow: { borderTopColor: t.colors.borderSubtle },
     eduLearnRowTop: { backgroundColor: t.colors.surface2 },
     eduLearnText: { color: t.colors.textPrimary, ...t.type.label },
@@ -821,7 +808,7 @@ function buildLiveStyles(t) {
     splitBadgeText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     splitName: { ...t.type.label, color: t.colors.textPrimary },
     whyPlanWrap: { borderTopColor: t.colors.border },
-    whyPlanBullet: { backgroundColor: t.colors.textMuted },
+    whyPlanBullet: { backgroundColor: t.colors.primary },
     whyPlanText: { ...t.type.bodySm, color: t.colors.textSecondary },
     calmPointer: { ...t.type.bodySm, color: t.colors.textSecondary },
   };

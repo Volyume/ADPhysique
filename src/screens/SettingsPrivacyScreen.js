@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import useAccountActions from '../hooks/useAccountActions';
+import { withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import {
@@ -90,8 +91,8 @@ export default function SettingsPrivacyScreen({ navigation }) {
             <Switch
               value={offConsent}
               onValueChange={toggleOffConsent}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={offConsent ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={offConsent ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -104,8 +105,8 @@ export default function SettingsPrivacyScreen({ navigation }) {
             <Switch
               value={!privacy?.analyticsOptOut}
               onValueChange={v => setAnalyticsOptOut(!v)}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={!privacy?.analyticsOptOut ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={!privacy?.analyticsOptOut ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -140,8 +141,8 @@ export default function SettingsPrivacyScreen({ navigation }) {
               value={appLockOn}
               onValueChange={toggleAppLock}
               disabled={checkingLock || (!appLockOn && !biometricAvailable)}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={appLockOn ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={appLockOn ? t.colors.primary : t.colors.textMuted}
             />
           }
         />

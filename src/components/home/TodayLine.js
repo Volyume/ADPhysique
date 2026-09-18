@@ -31,8 +31,8 @@ function TodayLine({ item, testID }) {
 
   const { text, onPress, onDismiss, accessibilityLabel } = item;
   const live = {
-    row: { borderBottomColor: t.colors.borderSubtle },
-    accent: { backgroundColor: t.colors.textMuted },
+    row: { backgroundColor: t.colors.primaryBg },
+    accent: { backgroundColor: t.colors.primary },
     text: { ...t.type.bodySm, color: t.colors.textPrimary },
   };
 
@@ -45,11 +45,9 @@ function TodayLine({ item, testID }) {
       accessibilityLabel={accessibilityLabel || text}
       testID={testID}
     >
-      {/* The single mark: one dot, one colour. No per-occupant icon set --
+      {/* The single accent: one dot, one colour. No per-occupant icon set —
           that would reintroduce the "five idioms" problem this component
-          exists to close. D174 took the dot and the row off the accent: a
-          nudge is a callout, not the user's live moment, so the wash goes,
-          the hairline carries the row and the bullet drops to muted ink. */}
+          exists to close. */}
       <View style={[styles.accent, live.accent]} />
       <Text style={[styles.text, live.text]} numberOfLines={2}>{text}</Text>
       {onDismiss ? (
@@ -63,7 +61,7 @@ function TodayLine({ item, testID }) {
           <Ionicons name="close" size={16} color={t.colors.textMuted} />
         </TouchableOpacity>
       ) : (
-        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textSecondary} />
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
       )}
     </TouchableOpacity>
   );
@@ -72,22 +70,20 @@ function TodayLine({ item, testID }) {
 export default React.memo(TodayLine);
 
 const styles = StyleSheet.create({
-  // D192 (finish spec 4.7, 2026-09-18): a status line, not a box. It sat at
-  // the top of Today as a filled, bordered, rounded panel; it is one line on
-  // the page's ground with a hairline beneath, the dot and the dismiss kept.
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm + spacing.xxs,
   },
   accent: {
     width: 6,
     height: 6,
     borderRadius: radius.full,
-    backgroundColor: colors.textMuted,
+    backgroundColor: colors.primary,
   },
   text: { ...type.bodySm, flex: 1, color: colors.textPrimary },
 });

@@ -85,10 +85,7 @@ describe('F-13 (b): unlinking a group clears the group KIND with the group id', 
 describe('F-13 (c): rounds, not sets, wherever a circuit is described', () => {
   test('the orientation row reads "Round n of m - Circuit" from the shared derivation', () => {
     expect(SRC).toContain('`Round ${circuitRound.round} of ${circuitRound.targetRounds}`');
-    // RE-ANCHORED 2026-09-18 (D192, day zero 3b): the set header's separator
-    // is the middle dot in every mode now. Intent kept: the circuit header
-    // still names the station "Circuit", never "Working".
-    expect(SRC).toContain('return `${pos} · Circuit`;');
+    expect(SRC).toContain('return `${pos} - Circuit`;');
   });
 
   test('the orientation row never falls through to "- Superset" on a circuit', () => {
@@ -96,11 +93,9 @@ describe('F-13 (c): rounds, not sets, wherever a circuit is described', () => {
       ?? SRC.match(/const orientationLabel = \(\(\) => \{[\s\S]*?\}\)\(\);/);
     const src = label ? label[0] : '';
     expect(src).toBeTruthy();
-    // RE-ANCHORED 2026-09-18 (D192, day zero 3b): the separator is the middle
-    // dot now; the ordering this test pins is unchanged.
-    expect(src.indexOf('· Circuit')).toBeGreaterThan(-1);
+    expect(src.indexOf('- Circuit')).toBeGreaterThan(-1);
     // The circuit branch returns BEFORE the Superset/Working mode line.
-    expect(src.indexOf('· Circuit')).toBeLessThan(src.indexOf("? 'Superset'"));
+    expect(src.indexOf('- Circuit')).toBeLessThan(src.indexOf("? 'Superset'"));
   });
 
   test('the outline navigator labels a circuit station "Circuit"', () => {

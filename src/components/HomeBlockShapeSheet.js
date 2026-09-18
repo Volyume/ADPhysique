@@ -1,6 +1,6 @@
 import React from 'react';
 import { Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, spacing, type } from '../styles/theme';
+import { colors, fontSize, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BlockShapeCard from './BlockShapeCard';
 import Button from './Button';
@@ -26,16 +26,6 @@ import BottomSheet from './BottomSheet';
 // Stage 8 (§3.6): `seedLines` are the block-start explanation, built from
 // the WRITTEN plan rows (blockExplain.buildBlockStartLines) — personalised
 // seeding only, so nothing here can over-claim.
-// D192 (2026-09-18, FINISH-SPEC §2/§4, screen-order item 8): this sheet is
-// still the block's education surface, but its copy is short single facts
-// now, never a paragraph. The five-sentence block-mental-model paragraph
-// became three one-line facts below (the recovery-week sentence dropped --
-// the deload line already carries it), and GLOSSARY.deload -- three
-// sentences, a tooltip elsewhere (CoachOutputScreen.js) -- renders here as
-// its opening fact plus one fact line of this sheet's own. The glossary
-// string itself is untouched; this split is display-only.
-const DELOAD_FIRST_SENTENCE = GLOSSARY.deload.split('. ')[0] + '.';
-
 function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext, seedLines = [] }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
@@ -43,7 +33,7 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext, 
   const t = useTheme();
   const live = {
     sheetTitle: { ...t.type.h3, color: t.colors.textPrimary },
-    sheetSub: { ...t.type.bodySm, color: t.colors.textMuted },
+    sheetSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     sheetDefn: { ...t.type.bodySm, color: t.colors.textSecondary },
     sheetCancelText: { ...t.type.body, color: t.colors.textSecondary },
   };
@@ -73,25 +63,15 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext, 
         {seedLines.length > 0 ? seedLines.map((line) => (
           <Text key={line} style={[styles.sheetDefn, live.sheetDefn]}>{line}</Text>
         )) : null}
-        {/* C5-P11-05 (D96): "nothing rolls over automatically" was stated on
-            no block-start surface anywhere; D93 wants the climb's WHY and
-            the next-block claim stated too. D192: the same three facts, one
-            short line each instead of one five-sentence paragraph. The
-            recovery-week sentence that used to sit between the first and
-            second facts is gone from here -- the deload line below states
-            it. */}
-        <Text style={[styles.sheetDefn, live.sheetDefn]}>Each week the effort target steps closer to failure</Text>
-        <Text style={[styles.sheetDefn, live.sheetDefn]}>When the block ends you choose what comes next. Nothing starts on its own</Text>
-        <Text style={[styles.sheetDefn, live.sheetDefn]}>How each muscle goes shapes where its sets start next block</Text>
-        {/* D192: GLOSSARY.deload is a three-sentence paragraph; only its
-            opening fact renders here, plus one fact line of this sheet's
-            own. The full string is still the tooltip elsewhere
-            (CoachOutputScreen.js), untouched. */}
-        <Text style={[styles.sheetDefn, live.sheetDefn]}>{DELOAD_FIRST_SENTENCE}</Text>
-        <Text style={[styles.sheetDefn, live.sheetDefn]}>Sets logged in the recovery week do not count towards the block</Text>
-        {/* Founder order 2026-09-17, from the live sheet: the block sheet does
-            not explain reps in reserve. This was the gloss's only call site,
-            so the GLOSSARY entry went with it. */}
+        {/* C5-P11-05 (D96): "nothing rolls over automatically" was stated
+            on no block-start surface anywhere. The decision is real and
+            correctly manual (PlansScreen requires an explicit confirm), but
+            the user was not told until they arrived there in week 7. */}
+        <Text style={[styles.sheetDefn, live.sheetDefn]}>
+          Each week the effort target moves a step closer to failure, so the same sets keep asking more of you. The recovery week eases both sets and effort so fatigue clears. When the block finishes, you choose what comes next. Nothing starts on its own. How each muscle goes this block shapes where its sets start in the next one.
+        </Text>
+        <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.deload}</Text>
+        <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.rir}</Text>
         {currentMesoWeek?.awaitingDecision && onChooseNext ? (
           <Button
             variant="primary"
@@ -117,10 +97,7 @@ const styles = StyleSheet.create({
     ...type.h3,
     color: colors.textPrimary, marginBottom: spacing.xs,
   },
-  // D192 (FINISH-SPEC §2): the block name moves off the raw fontSize.sm
-  // literal onto the bodySm role; still textMuted (a secondary line, not
-  // the block-name emphasis textSecondary would read as).
-  sheetSub: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.lg },
+  sheetSub: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.lg },
   sheetDefn: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.sm },
   chooseNextBtn: { marginTop: spacing.md },
   sheetCancel: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.md },

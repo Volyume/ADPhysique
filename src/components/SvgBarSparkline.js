@@ -53,9 +53,7 @@ export default function SvgBarSparkline({
   const t = useTheme();
   if (!data || data.length === 0) return null;
 
-  // D174: a whole bar series is not "now"; the neutral fill token is the
-  // default and an explicit per-point or caller colour still wins.
-  const resolvedDefaultColor = defaultColor ?? t.colors.borderLight;
+  const resolvedDefaultColor = defaultColor ?? t.colors.primary;
   const resolvedLabelColor = labelColor ?? t.colors.textMuted;
 
   const a11yLabel = accessibilityLabel

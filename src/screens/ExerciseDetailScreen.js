@@ -20,7 +20,6 @@ import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import Card from '../components/Card';
-import LedgerRow from '../components/LedgerRow';
 import EmptyState from '../components/EmptyState';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
@@ -728,7 +727,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           )}
 
           {best1RM > 0 && (
-            <View style={styles.est1RM}>
+            <View style={[styles.est1RM, live.est1RM]}>
+              <Ionicons name="trophy-outline" size={16} color={t.colors.gold} />
               {/* D88: an estimate is never exact. One convention everywhere:
                   hedged and whole, matching the session rows below. */}
               <Text style={[styles.est1RMText, live.est1RMText]}>Estimated max: ~{Math.round(best1RM)} {units}</Text>
@@ -769,11 +769,9 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           const displayPR = pr1rm || prHeavy;
           if (!displayPR) return null;
           return (
-            // D192 (item 1a): the amber edge was decoration (the hero PR
-            // figure below stays amber on its own merit, spec 4.9); the
-            // card itself is neutral now.
-            <Card style={styles.prHighlightCard}>
+            <Card tone="primary" style={styles.prHighlightCard}>
               <View style={styles.prHighlightHeader}>
+                <Ionicons name="trophy" size={18} color={t.colors.primary} />
                 <SectionLabel tone="muted">Personal records</SectionLabel>
                 {/* D93 (Campaign 2, Phase 3): the records surfaces carry the
                     PR definition; the celebration toast stays clean. */}
@@ -792,7 +790,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               {displayPR && (
                 <View style={styles.prHeroStat}>
                   <Text style={[styles.prHeroValue, live.prHeroValue]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                    {safeToFixed(displayPR.value, 1)} {units}
+                    {safeToFixed(displayPR.value, 1)}{units}
                   </Text>
                   <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>
                     {displayPR.record_type === '1rm_estimate' ? 'Est. max' : 'Heaviest weight'}
@@ -803,7 +801,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 {prHeavy && displayPR !== prHeavy && (
                   <View style={[styles.prHighlightStat, live.prHighlightStatBordered]}>
                     <Text style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
-                      {finiteOr(prHeavy.value, '-')} {units} × {finiteOr(prHeavy.reps, '-')}
+                      {finiteOr(prHeavy.value, '-')}{units} x {finiteOr(prHeavy.reps, '-')}
                     </Text>
                     <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Heaviest weight</Text>
                   </View>
@@ -811,7 +809,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 {prReps && (
                   <View style={[styles.prHighlightStat, prHeavy && displayPR !== prHeavy ? styles.prHighlightStatBordered : null, live.prHighlightStatBordered]}>
                     <Text style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
-                      {finiteOr(prReps.value, '-')} {units} × {finiteOr(prReps.reps, '-')}
+                      {finiteOr(prReps.value, '-')}{units} x {finiteOr(prReps.reps, '-')}
                     </Text>
                     <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Most reps</Text>
                   </View>
@@ -827,7 +825,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {/* Congratulatory banner, shown briefly when goal is auto-detected as achieved */}
         {congratsBanner && (
           <Animated.View style={[styles.congratsBanner, live.congratsBanner, { opacity: congratsOpacity }]}>
-            <Ionicons name="checkmark-circle" size={18} color={t.colors.textSecondary} />
+            <Ionicons name="checkmark-circle" size={18} color={t.colors.primary} />
             <Text style={[styles.congratsText, live.congratsText]}>You've hit your target. Set a new one.</Text>
           </Animated.View>
         )}
@@ -850,7 +848,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           <Card style={styles.goalCard}>
             <View style={styles.goalCardHeader}>
               <View style={styles.goalCardLeft}>
-                <Ionicons name="flag" size={14} color={t.colors.textSecondary} />
+                <Ionicons name="flag" size={14} color={t.colors.primary} />
                 <SectionLabel tone="muted">Target</SectionLabel>
               </View>
               <TouchableOpacity onPress={openGoalSheet} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel="Edit target">
@@ -860,17 +858,13 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
             <View style={styles.goalWeightRow}>
               <View style={styles.goalWeightItem}>
-                <Text style={[styles.goalWeightValue, live.goalWeightValue]}>{best1RM > 0 ? best1RM.toFixed(1) : '-'}{best1RM > 0 ? ` ${units}` : ''}</Text>
+                <Text style={[styles.goalWeightValue, live.goalWeightValue]}>{best1RM > 0 ? best1RM.toFixed(1) : '-'}{best1RM > 0 ? units : ''}</Text>
                 <Text style={[styles.goalWeightLabel, live.goalWeightLabel]}>Current est. max</Text>
               </View>
               <Ionicons name="arrow-forward" size={14} color={t.colors.textMuted} />
               <View style={styles.goalWeightItem}>
-                {/* D174: the target used to be amber so it read differently from
-                    the current est. max beside it. The two labels and the arrow
-                    between them already say which is which, so the override
-                    goes rather than being recoloured into a second grey. */}
-                <Text style={[styles.goalWeightValue, live.goalWeightValue]}>
-                  {finiteOr(goal.targetWeight, '-')} {units}
+                <Text style={[styles.goalWeightValue, live.goalWeightValue, { color: t.colors.primary }]}>
+                  {finiteOr(goal.targetWeight, '-')}{units}
                 </Text>
                 <Text style={[styles.goalWeightLabel, live.goalWeightLabel]}>
                   Target{goal.targetDate && safeDate(goal.targetDate) ? ` - by ${safeFormatDate(goal.targetDate, 'MMM yyyy')}` : ''}
@@ -885,11 +879,11 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             <Text style={[
               styles.goalBarCaption,
               live.goalBarCaption,
-              goalProgress >= 1 && { color: t.colors.textPrimary },
+              goalProgress >= 1 && { color: t.colors.primary },
             ]}>
               {goalProgress >= 1
                 ? 'Goal reached.'
-                : `${safeToFixed(goalKgToGo, 1)} ${units} to go`}
+                : `${safeToFixed(goalKgToGo, 1)}${units} to go`}
             </Text>
           </Card>
         )}
@@ -908,8 +902,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {allChartPoints.length >= 2 && (
           <View style={styles.chartSection}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              {/* D192 (item 1c): a section, not a bold title. */}
-              <SectionLabel>Strength trend</SectionLabel>
+              <Text style={[styles.chartLabel, live.chartLabel]}>Strength trend</Text>
               {/* T24/O20: plain-English gloss for the total-lifted lenses.
                   Not GLOSSARY.volume -- that entry describes the app's
                   OTHER "Volume" (weekly hard sets), a different concept. */}
@@ -947,7 +940,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   data={windowedPoints.map(d => ({ value: d[activeYKey] }))}
                   width={windowWidth - spacing.lg * 2 - spacing.md * 2}
                   height={96}
-                  color={t.colors.borderLight}
+                  color={t.colors.primary}
                   thickness={2}
                   area
                   areaTopColor={t.colors.chartFill}
@@ -999,36 +992,21 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               return (
                 <Card radius="md" style={styles.historyCard} key={i}>
                   <Text style={[styles.historyDate, live.historyDate]}>{safeFormatDate(firstSet.createdAt, 'MMM d')}</Text>
-                  {/* D184: each set in a past session is a ledger line, the same
-                      row the logger draws -- the log book the plan promised,
-                      read back. The string is byte-for-byte what the old
-                      wrapping chips printed; only the shape changed. A warm-up
-                      is a quiet done line, same as in the logger. */}
                   <View style={styles.historySets}>
-                    {sessionSets.map((s, j) => {
-                      const isWarmup = s.set_type === 'warmup' || s.setType === 'warmup';
-                      const ev = s.evidenceClass ?? s.evidence_class;
-                      // D192 (one unit format): a space before the unit, × not x.
-                      const line = `${s.weight} ${units} × ${s.actualReps}`
-                        + (isWarmup ? ' - Warm-up' : '')
-                        + (s.set_type === 'dropset' || s.setType === 'dropset' ? ' - Drop set' : '')
-                        // EL-7: truthful label only, same mechanism as warm-up/drop-set above.
-                        + (ev === 'circuit_ballistic' ? ' - Circuit, Ballistic'
-                          : ev === 'circuit' ? ' - Circuit'
-                          : ev === 'ballistic' ? ' - Ballistic' : '');
-                      return (
-                        <LedgerRow
-                          key={j}
-                          index={j + 1}
-                          primary={line}
-                          muted={isWarmup}
-                          first={j === 0}
-                        />
-                      );
-                    })}
+                    {sessionSets.map((s, j) => (
+                      <Text key={j} style={[styles.historySetText, live.historySetText]}>
+                        {s.weight}{units} x {s.actualReps}
+                        {s.set_type === 'warmup' || s.setType === 'warmup' ? ' - Warm-up' : ''}
+                        {s.set_type === 'dropset' || s.setType === 'dropset' ? ' - Drop set' : ''}
+                        {/* EL-7: truthful label only, same mechanism as warm-up/drop-set above. */}
+                        {(s.evidenceClass ?? s.evidence_class) === 'circuit_ballistic' ? ' - Circuit, Ballistic'
+                          : (s.evidenceClass ?? s.evidence_class) === 'circuit' ? ' - Circuit'
+                          : (s.evidenceClass ?? s.evidence_class) === 'ballistic' ? ' - Ballistic' : ''}
+                      </Text>
+                    ))}
                   </View>
                   {sessionEst1RM > 0 && (
-                    <Text style={[styles.historyEst, live.historyEst]}>Est. max: ~{sessionEst1RM.toFixed(0)} {units}</Text>
+                    <Text style={[styles.historyEst, live.historyEst]}>Est. max: ~{sessionEst1RM.toFixed(0)}{units}</Text>
                   )}
                 </Card>
               );
@@ -1062,10 +1040,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             {prs.slice(0, 5).map((pr) => (
               <Card radius="md" style={styles.prRow} key={pr.id}>
                 <Ionicons
-                  name={pr.record_type === '1rm_estimate' ? 'barbell-outline' :
+                  name={pr.record_type === '1rm_estimate' ? 'trophy-outline' :
                    pr.record_type === 'heaviest_weight' ? 'barbell-outline' : 'repeat-outline'}
                   size={22}
-                  color={t.colors.textSecondary}
+                  color={t.colors.gold}
                 />
                 <View style={styles.prInfo}>
                   <Text style={[styles.prLabel, live.prLabel]}>
@@ -1073,8 +1051,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                      pr.record_type === 'heaviest_weight' ? 'Heaviest weight' : 'Most reps'}
                   </Text>
                   <Text style={[styles.prValue, live.prValue]}>
-                    {pr.record_type === '1rm_estimate' ? `${safeToFixed(pr.value, 1)} ${units}` :
-                     `${finiteOr(pr.value, '-')} ${units} × ${finiteOr(pr.reps, '-')} reps`}
+                    {pr.record_type === '1rm_estimate' ? `${safeToFixed(pr.value, 1)}${units}` :
+                     `${finiteOr(pr.value, '-')}${units} x ${finiteOr(pr.reps, '-')} reps`}
                   </Text>
                 </View>
                 <Text style={[styles.prDate, live.prDate]}>{safeFormatDate(pr.achieved_date, 'MMM d yyyy')}</Text>
@@ -1160,10 +1138,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 {steps.length >= 2 ? (
                   steps.map((step, i) => (
                     <View key={i} style={[styles.stepRow, i > 0 && styles.stepRowSpaced]}>
-                      {/* D174: the step number sat in a `primaryBg` disc. An
-                          index is not "now": fill and disc geometry go, and the
-                          figure takes the muted ink. */}
-                      <View style={styles.stepNumber}>
+                      <View style={[styles.stepNumber, live.stepNumber]}>
                         <Text style={[styles.stepNumberText, live.stepNumberText]}>{i + 1}</Text>
                       </View>
                       <Text style={[styles.stepText, live.stepText]}>{step}</Text>
@@ -1300,29 +1275,26 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   tags: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  // D174: the primary-muscle tag was a `primaryBg` wash. It keeps its step
-  // above `tagSecondary` from the surface ladder and the ink instead.
   tag: {
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.primaryBg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
   },
-  tagText: { ...type.label, color: colors.textPrimary },
+  tagText: { ...type.label, color: colors.primary },
   tagSecondary: { backgroundColor: colors.surface2 },
   tagTextSecondary: { color: colors.textSecondary },
   secMuscles: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.xs },
   secMuscleLabel: { ...type.label, color: colors.textMuted },
-  // D173 T1: the gold wash and gold ink are gone (an estimated 1RM is a
-  // number, not a prize; amber discipline 2 forbids the tint behind it).
   est1RM: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    backgroundColor: withAlpha(colors.gold, 0.082),
     borderRadius: radius.sm,
     padding: spacing.sm,
   },
-  est1RMText: { ...type.bodyStrong, color: colors.textPrimary },
+  est1RMText: { ...type.bodyStrong, color: colors.gold },
   sfrRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1338,6 +1310,10 @@ const styles = StyleSheet.create({
   chartSection: { gap: spacing.sm },
   chartTakeaway: { ...type.bodySm, color: colors.textSecondary },
   chartEmptyHint: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', paddingVertical: spacing.md },
+  chartLabel: {
+    ...type.captionStrong,
+    color: colors.textMuted,
+  },
   chartToggle: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignSelf: 'flex-start' },
   loadErrorWrap: { flex: 1, padding: spacing.lg, justifyContent: 'center' },
   loadErrorCard: {
@@ -1364,27 +1340,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  // D174 A2: the chart-metric toggle selects a VIEW.
-  chartToggleBtnActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
+  chartToggleBtnActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   chartToggleBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
-  chartToggleBtnTextActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  chartToggleBtnTextActive: { color: colors.primary },
   e1rmNote: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, fontStyle: 'italic' },
-  // D165 law 2: a chart, not an object -- no box, a borderSubtle hairline above (D186).
   chartContainer: {
     height: 120,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   section: { gap: spacing.md },
   historyCard: {
     gap: spacing.sm,
   },
   historyDate: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  // D184: a column of ledger lines, not a wrapping strip of chips. The
-  // per-set text key is gone from both halves; LedgerRow draws it.
-  historySets: { gap: 0 },
+  historySets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  historySetText: { fontSize: fontSize.sm, color: colors.textSecondary },
   historyEst: { ...type.num('caption'), color: colors.textMuted },
   prRow: {
     flexDirection: 'row',
@@ -1454,13 +1429,9 @@ const styles = StyleSheet.create({
     ...type.num('display'),
     color: colors.primary,
   },
-  // D174: `prHeroValue` above is the personal best discipline 1 names in its
-  // own four instances, and it is the ONE amber figure this card is entitled
-  // to. The supporting records take the primary ink; three amber numerals in
-  // one card is the scarcity failure A1 refused by volume.
   prHighlightStatValue: {
     ...type.num('title'),
-    color: colors.textPrimary,
+    color: colors.primary,
   },
   prHighlightStatLabel: {
     ...type.caption,
@@ -1478,11 +1449,14 @@ const styles = StyleSheet.create({
   stepRowSpaced: { marginTop: spacing.md },
   stepNumber: {
     width: 22,
+    height: 22,
+    borderRadius: radius.full,
+    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.hair,
   },
-  stepNumberText: { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textMuted },
+  stepNumberText: { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.primary },
   stepText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   plateauBanner: {
     flexDirection: 'row',
@@ -1558,16 +1532,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primaryBg,
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: withAlpha(colors.primary, 0.251),
   },
   congratsText: {
     ...type.label,
     flex: 1,
-    color: colors.textPrimary,
+    color: colors.primary,
   },
   // Goal modal. BottomSheet supplies the backdrop, panel chrome and drag
   // handle now (D36a migration) -- only the content-level styles remain.
@@ -1621,28 +1595,31 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    tag: { backgroundColor: t.colors.surface3 },
-    tagText: { ...t.type.label, color: t.colors.textPrimary },
+    tag: { backgroundColor: t.colors.primaryBg },
+    tagText: { ...t.type.label, color: t.colors.primary },
     tagSecondary: { backgroundColor: t.colors.surface2 },
     tagTextSecondary: { color: t.colors.textSecondary },
     secMuscleLabel: { ...t.type.label, color: t.colors.textMuted },
-    est1RMText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    est1RM: { backgroundColor: withAlpha(t.colors.gold, 0.082) },
+    est1RMText: { ...t.type.bodyStrong, color: t.colors.gold },
     sfrRow: { borderTopColor: t.colors.borderSubtle },
     sfrValue: { ...t.type.num('title'), color: t.colors.textPrimary },
     sfrLabel: { ...t.type.caption, color: t.colors.textMuted },
     sfrDivider: { backgroundColor: t.colors.border },
     chartTakeaway: { ...t.type.bodySm, color: t.colors.textSecondary },
     chartEmptyHint: { ...t.type.caption, color: t.colors.textMuted },
+    chartLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     loadErrorIcon: { backgroundColor: withAlpha(t.colors.warning, 0.12) },
     loadErrorTitle: { ...t.type.title, color: t.colors.textPrimary },
     loadErrorText: { ...t.type.bodySm, color: t.colors.textSecondary },
     chartToggleBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    chartToggleBtnActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
+    chartToggleBtnActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
     chartToggleBtnText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
-    chartToggleBtnTextActive: { color: t.colors.textPrimary },
+    chartToggleBtnTextActive: { color: t.colors.primary },
     e1rmNote: { ...t.type.caption, color: t.colors.textMuted },
-    chartContainer: { borderTopColor: t.colors.borderSubtle },
+    chartContainer: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     historyDate: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    historySetText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     historyEst: { ...t.type.num('caption'), color: t.colors.textMuted },
     prLabel: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     prValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
@@ -1651,12 +1628,13 @@ function buildLiveStyles(t) {
     subCardEquipment: { ...t.type.caption, color: t.colors.textMuted },
     prHighlightStatBordered: { borderLeftColor: t.colors.border },
     prHeroValue: { ...t.type.num('display'), color: t.colors.primary },
-    prHighlightStatValue: { ...t.type.num('title'), color: t.colors.textPrimary },
+    prHighlightStatValue: { ...t.type.num('title'), color: t.colors.primary },
     prHighlightStatLabel: { ...t.type.caption, color: t.colors.textMuted },
     prHighlightDate: { ...t.type.caption, color: t.colors.textMuted },
     notesText: { ...t.type.bodySm, color: t.colors.textSecondary },
     adaptedLabel: { ...t.type.captionStrong, color: t.colors.textPrimary },
-    stepNumberText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    stepNumber: { backgroundColor: t.colors.primaryBg },
+    stepNumberText: { fontSize: t.fontSize.xs, color: t.colors.primary },
     stepText: { ...t.type.bodySm, color: t.colors.textSecondary },
     plateauBanner: { backgroundColor: t.colors.warningBg },
     plateauTitle: { ...t.type.label, color: t.colors.warning },
@@ -1666,8 +1644,8 @@ function buildLiveStyles(t) {
     goalBarTrack: { backgroundColor: t.colors.surface2 },
     goalBarFill: { backgroundColor: t.colors.primaryFill },
     goalBarCaption: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    congratsBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    congratsText: { ...t.type.label, color: t.colors.textPrimary },
+    congratsBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
+    congratsText: { ...t.type.label, color: t.colors.primary },
     modalTitle: { ...t.type.title, color: t.colors.textPrimary },
     modalSubtitle: { ...t.type.bodySm, color: t.colors.textMuted },
     weightInput: { fontSize: t.fontSize.xxl },

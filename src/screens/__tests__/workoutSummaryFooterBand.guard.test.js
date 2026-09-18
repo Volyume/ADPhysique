@@ -152,47 +152,19 @@ describe('WorkoutSummary food-design-standard compliance (remediation 2026-07-11
   });
 
   test('data numerals carry tabular figures (checklist 5)', () => {
-    // The stat-tile values and the exercise-breakdown set/weight readouts
-    // render through type.num (tabular-nums).
-    //
-    // D167: the `heroValue` assertion that led this list is gone with the key.
-    // The screen's loud element is now the 4-week verdict through BigNumber,
-    // and tonnage is a stat tile, so there was no display-size numeral left
-    // for that line to pin. The rule it protected did not disappear -- it
-    // moved: BigNumber renders its value at `type.num('hero')`, asserted in
-    // `src/components/__tests__/spineComponents.test.js`. Leaving the old line
-    // would have pinned a dead style key and blocked the cleanup.
+    // hero tonnage, the three stat-tile values, and the exercise-breakdown
+    // set/weight readouts all render through type.num (tabular-nums).
+    expect(summary).toMatch(/heroValue:\s*\{ \.\.\.type\.num\('display'\)/);
     expect(summary).toMatch(/statValue:\s*\{ \.\.\.type\.num\('h3'\)/);
     expect(summary).toMatch(/exerciseListMeta:\s*\{\s*\n\s*\.\.\.type\.num\('caption'\)/);
-    // RE-POINTED (D184, 2026-09-17). The set/weight readouts used to be
-    // `exerciseSetChip` at type.num('caption'). They are LedgerRow lines now,
-    // and LedgerRow's figure is type.num('bodyStrong') -- still the numerals
-    // role, still tabular, which is the property this case exists for. The
-    // chip key is gone from both halves, so the pin follows the readout to
-    // where it is drawn.
-    expect(summary).toContain("import LedgerRow from '../components/LedgerRow';");
-    expect(summary).toMatch(/workingSets\.map\(\(s, si\) => \(\s*<LedgerRow/);
-    expect(summary).not.toMatch(/exerciseSetChip/);
-    const ledger = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'LedgerRow.js'), 'utf8');
-    expect(ledger).toMatch(/primary: \{\s*\n\s*\.\.\.t\.type\.num\('bodyStrong'\)/);
+    expect(summary).toMatch(/exerciseSetChip:\s*\{\s*\n\s*\.\.\.type\.num\('caption'\)/);
   });
 
-  // RE-ANCHORED 2026-09-17 (D186): this used to assert the three stat tiles
-  // AND the save-error card were both card-class (checklist 1, remediation
-  // 2026-07-11). D165 law 2 (a number is not an object) reverses that
-  // specifically for the stat tiles -- they are the fenced-out follow-up
-  // named in D186's census -- so statBox lost its fill/corner/border. The
-  // save-error card is untouched: it is a tinted error banner (D186 "tinted
-  // banners keep their shape"), so it keeps radius.lg exactly as this case
-  // always asserted. The intent survives as "named card-class surfaces use
-  // radius.lg, and surfaces that are no longer card-class do not".
-  test('named card-class surfaces use radius.lg (checklist 1); the stat tiles no longer are one (D186)', () => {
-    // Bounded to `[^}]*`, not `[\s\S]*?` -- the greedy-across-braces mistake
-    // D186's own lead review caught and fixed in the coach cohesion guard;
-    // an unbounded scan here would pass by matching some unrelated LATER
-    // key's radius.lg instead of measuring statBox's own object at all.
-    expect(summary).not.toMatch(/statBox:\s*\{[^}]*borderRadius:\s*radius\.lg/);
-    expect(summary).toMatch(/saveErrorCard:\s*\{[^}]*borderRadius:\s*radius\.lg/);
+  test('named card-class surfaces use radius.lg (checklist 1)', () => {
+    // The three stat tiles and the save-error card are card-class per the lead
+    // ruling; both moved off radius.md to the one card radius.
+    expect(summary).toMatch(/statBox:\s*\{[\s\S]*?borderRadius:\s*radius\.lg/);
+    expect(summary).toMatch(/saveErrorCard:\s*\{[\s\S]*?borderRadius:\s*radius\.lg/);
   });
 
   test('raw fontSize+fontWeight pairs that HAVE an exact role now use it (checklist 4)', () => {

@@ -63,9 +63,7 @@ export default function CommunityHeaderAction({ onPress }) {
         { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
       ]}
     >
-      {/* D174 A3 scope ruling: A3 protects the unread dots below, not the
-          header glyph they sit on. An unconditional icon tint is decoration. */}
-      <Ionicons name="people-outline" size={18} color={t.colors.textSecondary} />
+      <Ionicons name="people-outline" size={18} color={t.colors.primary} />
       {unreadMessages ? (
         <View
           style={[

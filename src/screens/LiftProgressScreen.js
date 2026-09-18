@@ -7,10 +7,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { safeDate, safeFormatDate, safeNumber, safeToFixed } from '../lib/safeFormat';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import AnimatedEntrance from '../components/AnimatedEntrance';
+import PressableCard from '../components/PressableCard';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import PeekMenu from '../components/PeekMenu';
@@ -42,26 +43,18 @@ import { logError } from '../lib/errorLog';
 // -- the label -> colour mapping is byte-identical in meaning, only the
 // token SOURCE moved from the frozen import to the live theme. Returns a
 // resolver function, same call shape as before.
-// DEFECT FIXED 2026-09-15, and the chain that produced it is worth recording.
-//
-// This mapped five strength rungs onto five colours: textMuted, textSecondary,
-// success, primary, gold. D173 T1 then DELETED the `gold` role from the theme,
-// so `map.Elite` became `undefined`, fell through the `||` default, and an
-// ELITE lifter's badge rendered in the same muted grey as a BEGINNER's. Top and
-// bottom of the scale, identical.
-//
-// Three guards should have caught it and none did, for one reason: this file
-// aliases the live palette to `c`, and every amber/token matcher in the
-// campaign was written against the literal identifier `colors` (`colors.gold`,
-// `t.colors.primary`). An alias made a deleted token and a live amber both
-// invisible to the sweep. Those regexes are widened alongside this fix.
-//
-// The ladder itself is retired rather than repaired. A strength RANK is not
-// "now", so it sits outside amber discipline 1's ceiling, and borrowing
-// `success` for a middling rung is the state-colour borrowing §8 protects
-// against. `AthleteProfileScreen`'s `levelPill` shows the identical concept and
-// was already ruled neutral in the A-M sweep; the two surfaces now agree, and
-// the WORD names the rung exactly as it always did.
+function buildLevelColor(c) {
+  return function getLevelColor(label) {
+    const map = {
+      Beginner: c.textMuted,
+      Novice: c.textSecondary,
+      Intermediate: c.success,
+      Advanced: c.primary,
+      Elite: c.gold,
+    };
+    return map[label] || c.textMuted;
+  };
+}
 
 // A lift is at a recent best when its latest session is its best estimated max
 // to date (and it has been trained more than once, so "best" means something).
@@ -142,6 +135,7 @@ export default function LiftProgressScreen({ navigation }) {
   // because this is a list-heavy screen (renderItem runs once per row).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
+  const resolveLevelColor = useMemo(() => buildLevelColor(t.colors), [t]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useFocusEffect(useCallback(() => { loadData(); }, [user?.id]));
@@ -335,11 +329,9 @@ export default function LiftProgressScreen({ navigation }) {
         <View style={[styles.standingCard, live.standingCard]}>
           {standing ? (
             <View style={[styles.standingHeadline, live.standingHeadline]}>
-              {/* D192 (item 3): an overline section label ahead of the word. */}
-              <SectionLabel>Overall level</SectionLabel>
               <Text style={[styles.standingLabel, live.standingLabel]}>{standing.overallLabel}</Text>
               <Text style={[styles.standingSub, live.standingSub]}>
-                Across {standing.count} main {standing.count === 1 ? 'lift' : 'lifts'}
+                overall across {standing.count} main {standing.count === 1 ? 'lift' : 'lifts'}
               </Text>
               {standing.nearest ? (
                 <Text style={[styles.standingNext, live.standingNext]}>
@@ -368,8 +360,8 @@ export default function LiftProgressScreen({ navigation }) {
                     : `${Math.round(lvl.ratio * 100)}% of your body weight`}
                 </Text>
               </View>
-              <View style={[styles.levelBadge, live.levelBadge]}>
-                <Text style={[styles.levelBadgeText, live.levelBadgeText]}>{lvl.label}</Text>
+              <View style={[styles.levelBadge, { backgroundColor: withAlpha(resolveLevelColor(lvl.label), alpha.tint) }]}>
+                <Text style={[styles.levelBadgeText, live.levelBadgeText, { color: resolveLevelColor(lvl.label) }]}>{lvl.label}</Text>
               </View>
             </View>
           ))}
@@ -382,7 +374,7 @@ export default function LiftProgressScreen({ navigation }) {
           accessibilityRole="button"
           accessibilityLabel="Add your body weight"
         >
-          <Ionicons name="body-outline" size={20} color={t.colors.textSecondary} />
+          <Ionicons name="body-outline" size={20} color={t.colors.primary} />
           <View style={{ flex: 1 }}>
             <Text style={[styles.bwPromptTitle, live.bwPromptTitle]}>Add your body weight</Text>
             <Text style={[styles.bwPromptText, live.bwPromptText]}>
@@ -475,8 +467,8 @@ export default function LiftProgressScreen({ navigation }) {
           const prIndices = derivePRIndices(series);
           return (
             <AnimatedEntrance index={index}>
-            <Card
-              style={styles.card}
+            <PressableCard
+              style={[styles.card, live.card]}
               // Origin-aware hero zoom (D31): the pushed ExerciseDetail grows
               // from this row's measured rect; a null rect (unmeasurable
               // handle) falls back to the app's centre zoom.
@@ -484,7 +476,7 @@ export default function LiftProgressScreen({ navigation }) {
               onLongPressWithLayout={(rect) => openLiftMenu(item, rect)}
               accessibilityLabel={[
                 item.name,
-                `${item.bestE1rm} ${units} estimated max`,
+                `${item.bestE1rm}${units} estimated max`,
                 (item.deltaPct != null && item.sessions > 1)
                   ? `${item.deltaPct > 0 ? 'up' : item.deltaPct < 0 ? 'down' : 'no change'} ${Math.abs(item.deltaPct)} percent since your first logged session`
                   : null,
@@ -511,7 +503,7 @@ export default function LiftProgressScreen({ navigation }) {
                     session's top weight and its e1RM only (no rep count is
                     computed per session), so the line reports those two. */}
                 <Text style={[styles.lastTime, live.lastTime]}>
-                  Last time: {item.latestWeight} {units} - Est. max {item.latestE1rm} {units}
+                  Last time: {item.latestWeight}{units} - Est. max {item.latestE1rm}{units}
                 </Text>
                 <View style={styles.statRow}>
                   <Text style={[styles.statValue, live.statValue]}>
@@ -519,7 +511,7 @@ export default function LiftProgressScreen({ navigation }) {
                         figures (kg), so it gets an en-GB thousands
                         separator; the other lenses are unaffected. */}
                     {headlineMetric === 'volume' ? Math.round(headlineValue).toLocaleString('en-GB') : headlineValue}
-                    {headlineMeta.isWeight ? ` ${units}` : ''}
+                    {headlineMeta.isWeight ? units : ''}
                   </Text>
                   <Text style={[styles.statLabel, live.statLabel]}>{headlineMeta.label}</Text>
                   {/* U-D-3: plain-English gloss for estimated 1RM on the row.
@@ -553,7 +545,7 @@ export default function LiftProgressScreen({ navigation }) {
                 )}
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </View>
-            </Card>
+            </PressableCard>
             </AnimatedEntrance>
           );
         }}
@@ -620,11 +612,7 @@ function WeightLiftedHero({ series, units, onMakeCard }) {
   const bars = useMemo(
     () => series.map((pt, i) => ({
       value: pt.value,
-      // D174: the LAST bar is this week -- discipline 1's "now", and the one
-      // amber this chart is entitled to. Every bar behind it was `primaryDim`,
-      // i.e. a whole amber series, so history takes the neutral fill the week
-      // ribbon uses for a trained day.
-      color: i === lastIdx ? t.colors.primary : t.colors.borderLight,
+      color: i === lastIdx ? t.colors.primary : t.colors.primaryDim,
     })),
     [series, lastIdx, t],
   );
@@ -696,13 +684,14 @@ const styles = StyleSheet.create({
   searchBar: { marginBottom: spacing.md },
 
   // ── Strength standing header ──
-  // D165 law 2: a stat, not an object -- no box, a borderSubtle hairline above (D171/D172).
   standingCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     marginBottom: spacing.md,
     gap: spacing.xs,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   standingHeadline: {
     alignItems: 'flex-start',
@@ -711,18 +700,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
-  // D174: a strength standing is a rank, not the user's live moment.
-  // D192 (item 3): the word drops to type.h2 behind its own SectionLabel
-  // overline, rather than carrying the loud weight itself; it is a word
-  // ("Novice"), not a number, so tabular figures no longer apply.
   standingLabel: {
-    ...type.h2,
-    color: colors.textPrimary,
+    color: colors.primary,
+    fontSize: fontSize.xxxl,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy,
+    lineHeight: 36,
+    fontVariant: ['tabular-nums'],
   },
-  // D192 (item 3): bodySm; the first line's colour also moves to
-  // textSecondary (from textMuted), matching the second line beside it.
-  standingSub: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
-  standingNext: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm },
+  standingSub: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
+  standingNext: { ...type.label, color: colors.textSecondary, marginTop: spacing.sm },
   sectionSub: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xs },
   strengthRow: {
     flexDirection: 'row',
@@ -737,22 +723,19 @@ const styles = StyleSheet.create({
   // R2 (2026-07-11): badge class -> radius.full; label text -> captionStrong
   // (exact xs+semibold role, FOOD-DESIGN-STANDARD.md sections 3-4). Was
   // radius.sm and a raw fontSize.xs + fontWeight.semibold pair.
-  // Neutral, matching `AthleteProfileScreen.levelPill` -- the same concept on
-  // another screen, already ruled neutral in the A-M sweep. The alpha'd tint
-  // that used to sit behind the label was discipline 2's "a tint behind a
-  // glyph" in its label form, and the label names the rung anyway.
-  levelBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.full, flexShrink: 0, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
-  levelBadgeText: { ...type.captionStrong, color: colors.textSecondary },
+  levelBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.full, flexShrink: 0 },
+  levelBadgeText: { ...type.captionStrong },
 
-  // D165 law 2: a prompt, not an object -- no box, a borderSubtle hairline above (D171/D172).
   bwPromptCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
     marginBottom: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   bwPromptTitle: { ...type.bodyStrong, color: colors.textPrimary },
   bwPromptText: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
@@ -768,12 +751,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  // D174 A2: a filter tab selects a VIEW. Selected takes the three cues
-  // Chip/SegmentedControl now use -- `surface3` fill, `borderLight` edge and
-  // the primary ink at the semibold face.
-  filterTabActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
+  filterTabActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   filterTabText: { ...type.label, color: colors.textSecondary },
-  filterTabTextActive: { ...type.w('label', 'semibold'), color: colors.textPrimary },
+  filterTabTextActive: { color: colors.primary },
 
   // ── Metric switcher (R1) ──
   metricRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.md },
@@ -785,32 +765,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  metricChipActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
+  metricChipActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   // R2 (2026-07-11): raw xs+semibold pair -> captionStrong (exact role match).
   metricChipText: { ...type.captionStrong, color: colors.textSecondary },
-  metricChipTextActive: { color: colors.textPrimary },
+  metricChipTextActive: { color: colors.primary },
 
   // ── Lift row ──
-  // D165 law 2, the founder's test: a LIFT is an object -- a named exercise
-  // you track, open, long-press for options and push a detail screen from. It
-  // keeps a card and it is now the real one, which already owns the surface,
-  // the radius.lg, the edge and the padding this shell hand-rolled, and which
-  // wraps the same PressableCard (so the origin-aware hero zoom below is
-  // unchanged). Only the row layout it does not own stays.
   card: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     gap: spacing.md,
   },
   cardMain: { flex: 1, gap: spacing.xxs },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   name: { ...type.bodyStrong, color: colors.textPrimary, flexShrink: 1 },
-  // D174: the PR MARK stays amber -- discipline 1 names a personal best in
-  // its own four instances. What goes is the second amber mark for the same
-  // state: the alpha'd amber ground behind it, which is discipline 2's wash
-  // (D175 3 made exactly this call about the dropdown chevron).
   prTag: {
-    backgroundColor: colors.surface3,
+    backgroundColor: withAlpha(colors.primary, alpha.soft),
     // R2 (2026-07-11): badge class -> radius.full (FOOD-DESIGN-STANDARD.md
     // section 4). Was radius.sm.
     borderRadius: radius.full,
@@ -854,30 +829,30 @@ function buildLiveStyles(t) {
     heroUnit: { ...t.type.title, color: t.colors.textSecondary },
     heroSub: { ...t.type.num('caption'), color: t.colors.textMuted },
     heroAxisLabel: { ...t.type.captionTight, color: t.colors.textMuted },
-    standingCard: { borderTopColor: t.colors.borderSubtle },
+    standingCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     standingHeadline: { borderBottomColor: t.colors.borderSubtle },
-    standingLabel: { ...t.type.h2, color: t.colors.textPrimary },
-    standingSub: { ...t.type.bodySm, color: t.colors.textSecondary },
-    standingNext: { ...t.type.bodySm, color: t.colors.textSecondary },
+    standingLabel: { color: t.colors.primary, fontSize: t.fontSize.xxxl },
+    standingSub: { ...t.type.caption, color: t.colors.textMuted },
+    standingNext: { ...t.type.label, color: t.colors.textSecondary },
     sectionSub: { ...t.type.caption, color: t.colors.textMuted },
     strengthRow: { borderTopColor: t.colors.borderSubtle },
     strengthName: { ...t.type.label, color: t.colors.textPrimary },
     strengthNarrative: { ...t.type.num('caption'), color: t.colors.textMuted },
-    levelBadge: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    levelBadgeText: { ...t.type.captionStrong, color: t.colors.textSecondary },
-    bwPromptCard: { borderTopColor: t.colors.borderSubtle },
+    levelBadgeText: { ...t.type.captionStrong },
+    bwPromptCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     bwPromptTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     bwPromptText: { ...t.type.captionTight, color: t.colors.textSecondary },
     filterTab: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    filterTabActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
+    filterTabActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
     filterTabText: { ...t.type.label, color: t.colors.textSecondary },
-    filterTabTextActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
+    filterTabTextActive: { color: t.colors.primary },
     metricChip: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    metricChipActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
+    metricChipActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
     metricChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
-    metricChipTextActive: { color: t.colors.textPrimary },
+    metricChipTextActive: { color: t.colors.primary },
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    prTag: { backgroundColor: t.colors.surface3 },
+    prTag: { backgroundColor: withAlpha(t.colors.primary, alpha.soft) },
     prTagText: { fontSize: t.fontSize.micro, color: t.colors.primary },
     meta: { ...t.type.caption, color: t.colors.textMuted },
     lastTime: { ...t.type.caption, color: t.colors.textSecondary },

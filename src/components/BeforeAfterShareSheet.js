@@ -33,7 +33,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, motion, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { useToast } from './Toast';
 import { appAlert } from './AppAlert';
@@ -449,15 +449,15 @@ export default function BeforeAfterShareSheet({
 
         <View style={[styles.privacyReceipt, live.privacyReceipt]}>
           <View style={styles.receiptRow}>
-            <Ionicons name="image-outline" size={16} color={t.colors.textSecondary} />
+            <Ionicons name="image-outline" size={16} color={t.colors.primary} />
             <Text style={[styles.receiptText, live.receiptText]}>Exports one composed PNG, not your raw photos.</Text>
           </View>
           <View style={styles.receiptRow}>
-            <Ionicons name="lock-closed-outline" size={16} color={t.colors.textSecondary} />
+            <Ionicons name="lock-closed-outline" size={16} color={t.colors.primary} />
             <Text style={[styles.receiptText, live.receiptText]}>Nothing leaves the device until you tap Share or Save.</Text>
           </View>
           <View style={styles.receiptRow}>
-            <Ionicons name="shield-checkmark-outline" size={16} color={t.colors.textSecondary} />
+            <Ionicons name="shield-checkmark-outline" size={16} color={t.colors.primary} />
             <Text style={[styles.receiptText, live.receiptText]}>Names, notes, measurements and your photo library never appear.</Text>
           </View>
         </View>
@@ -487,7 +487,7 @@ export default function BeforeAfterShareSheet({
                   />
                   {on ? (
                     <View pointerEvents="none" style={[styles.thumbCheck, live.thumbCheck]}>
-                      <Ionicons name="checkmark-circle" size={20} color={t.colors.textPrimary} />
+                      <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />
                     </View>
                   ) : null}
                   {range ? <Text style={[styles.thumbRange, live.thumbRange]} numberOfLines={1}>{range}</Text> : null}
@@ -558,8 +558,8 @@ export default function BeforeAfterShareSheet({
               <Switch
                 value={showWeight}
                 onValueChange={setShowWeight}
-                trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-                thumbColor={showWeight ? t.colors.surface : t.colors.textMuted}
+                trackColor={{ false: t.colors.surface2, true: withAlpha(t.colors.primary, alpha.strong) }}
+                thumbColor={showWeight ? t.colors.primary : t.colors.textMuted}
               />
             </View>
           </View>
@@ -632,7 +632,7 @@ function SegmentBtn({ label, active, onPress, icon }) {
       accessibilityState={{ selected: active }}
       accessibilityLabel={label}
     >
-      <Ionicons name={icon} size={15} color={active ? t.colors.textPrimary : t.colors.textMuted} />
+      <Ionicons name={icon} size={15} color={active ? t.colors.primary : t.colors.textMuted} />
       <Text style={[styles.segmentText, live.segmentText, active && [styles.segmentTextActive, live.segmentTextActive]]}>{label}</Text>
     </TouchableOpacity>
   );
@@ -644,12 +644,13 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   subtitle: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
-  // D165 law 2: a privacy receipt is content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   privacyReceipt: {
     gap: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     padding: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   receiptRow: {
     flexDirection: 'row',
@@ -663,9 +664,7 @@ const styles = StyleSheet.create({
     width: 72, height: 72, borderRadius: radius.md,
     borderWidth: 2, borderColor: 'transparent', backgroundColor: colors.surface,
   },
-  // D178 #4: the chosen-photo ring and its tick are one selection mark, and
-  // they are drawn over arbitrary photo content, so both take full ink.
-  thumbOn: { borderColor: colors.textPrimary },
+  thumbOn: { borderColor: colors.primary },
   thumbCheck: {
     position: 'absolute', top: spacing.xxs, right: spacing.xxs,
     backgroundColor: colors.background, borderRadius: radius.full,
@@ -700,32 +699,29 @@ const styles = StyleSheet.create({
   // spinning preview when the two-photo card can't be built.
   previewErrorBox: { gap: spacing.sm, padding: spacing.md },
   previewErrorText: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
-  // D165 law 2: a list of toggles, not an object -- no box, a borderSubtle hairline above (D171/D172).
-  togglesCard: { overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    paddingTop: spacing.lg,
+  togglesCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
   },
   toggleRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   toggleRowLast: { borderBottomWidth: 0 },
   toggleLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
-  // D165 law 2: a receipt is content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   exportReceipt: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
     padding: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   exportReceiptCol: { flexGrow: 1, flexBasis: '48%', minWidth: 136, gap: spacing.xxs },
-  // An eyebrow over the two receipt columns: D174 sends a label tint to
-  // `textMuted` and leaves the lines beneath it at full ink.
-  exportReceiptTitle: { ...type.caption, color: colors.textMuted },
+  exportReceiptTitle: { ...type.caption, color: colors.primary },
   exportReceiptLine: { ...type.captionTight, color: colors.textPrimary, lineHeight: 17 },
   // O36: the one receipt line that carries an InfoTooltip (Visible Volyume
   // Score) needs a row wrapper; every other line stays a plain Text.
@@ -759,10 +755,10 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     subtitle: { ...t.type.caption, color: t.colors.textMuted },
-    privacyReceipt: { borderTopColor: t.colors.borderSubtle },
+    privacyReceipt: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     receiptText: { ...t.type.caption, color: t.colors.textPrimary },
     thumb: { backgroundColor: t.colors.surface },
-    thumbOn: { borderColor: t.colors.textPrimary },
+    thumbOn: { borderColor: t.colors.primary },
     thumbCheck: { backgroundColor: t.colors.background },
     thumbRange: { ...t.type.captionTight, color: t.colors.textMuted },
     hint: { ...t.type.bodySm, color: t.colors.textMuted },
@@ -772,11 +768,11 @@ function buildLiveStyles(t) {
     segmentTextActive: { color: t.colors.textPrimary },
     previewPlaceholder: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     previewErrorText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    togglesCard: { borderTopColor: t.colors.borderSubtle },
+    togglesCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     toggleRow: { borderBottomColor: t.colors.borderSubtle },
     toggleLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    exportReceipt: { borderTopColor: t.colors.borderSubtle },
-    exportReceiptTitle: { ...t.type.caption, color: t.colors.textMuted },
+    exportReceipt: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    exportReceiptTitle: { ...t.type.caption, color: t.colors.primary },
     exportReceiptLine: { ...t.type.captionTight, color: t.colors.textPrimary },
     privacyNote: { ...t.type.captionTight, color: t.colors.textMuted },
   };

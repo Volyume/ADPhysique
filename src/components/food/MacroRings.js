@@ -5,7 +5,7 @@ import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import RollingNumber from '../RollingNumber';
 import { colors, fontSize, fontWeight, spacing, radius, motion, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
-import { toEnergy, energyUnitLabel, formatNumber } from '../../lib/format';
+import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 
 const KCAL_SIZE = 132;
@@ -31,10 +31,7 @@ const KCAL_MAX_FONT_SCALE = 1.3;
 // calibrated for text-on-light contrast. Colour choice only, no change to
 // the adherence-neutral behaviour above.
 export function bandColour() {
-  // D170: see buildBandColour below for why the arc left amber. Both forms
-  // move together -- a frozen half and a live half disagreeing about a colour
-  // is the exact defect this codebase has now found seven times.
-  return colors.borderLight;
+  return colors.primaryFill;
 }
 
 // CP-10 stage 4 (theming, Skia/chart consumers, 2026-07-10): live variant of
@@ -46,21 +43,7 @@ export function bandColour() {
 // untouched and stays the frozen-singleton form for any unmigrated caller
 // and its own colocated test.
 export function buildBandColour(c) {
-  // D170 (founder delegated the call 2026-09-15): the arc leaves amber.
-  //
-  // This does NOT reopen the 2026-05-29 adherence-neutral decision above -- it
-  // extends it. That decision's property is that the ring is ONE colour at
-  // every value and makes no judgement about being under or over target. It
-  // still is. What changes is which colour, and why: law 6 spends amber only
-  // on "now", and an arc that is amber at 10% of the day and at 90% of it is
-  // amber as decoration. It was the single largest amber spend in the product
-  // that meant nothing.
-  //
-  // `borderLight` is deliberate rather than merely neutral: it is the same
-  // token the week ribbon fills a trained day with, so "a filled thing" reads
-  // the same in both devices. Shared vocabulary across two unrelated surfaces
-  // is what makes an app read as authored rather than assembled.
-  return c.borderLight;
+  return c.primaryFill;
 }
 
 function arcPath(cx, cy, r, startDeg, sweepDeg) {
@@ -141,36 +124,28 @@ function Ring({ size, stroke, progress, progressTarget, plannedProgress = 0, tin
 // `sub` is an optional quiet descriptive line under the bar (e.g. protein
 // g/kg today), purely factual, never a target judgement.
 //
-// `moreIsFine` marks a macro with no upper-bound shame (fibre). RE-ANCHORED
-// 2026-09-18 (D192, finish spec item 2): it used to gate a "Ng to go" /
-// "Ng over" remaining hint (never "over" for a more-is-fine macro -- more
-// fibre is not a deviation to flag), so it is unused inside this function
-// now that the hint is removed entirely. Left wired -- the fibre call site
-// below still passes it -- because removing the hint for every macro cannot
-// add an "over" readout for this one, so the ED-safety property the
-// parameter existed to protect stays true with nothing left to check.
-function MacroBar({ label, value, target, planned = 0, primary, sub = null, moreIsFine: _moreIsFine = false, tint }) {
+// `moreIsFine` marks a macro with no upper-bound shame (fibre): it shows a
+// "Ng to go" remaining hint while under target but NEVER an "over" readout,
+// since more fibre is not a deviation to flag.
+function MacroBar({ label, value, target, planned = 0, primary, sub = null, moreIsFine = false, tint }) {
   // CP-10 stage 4: `tint` was a default PARAMETER reading the frozen module
   // `colors` singleton (every real caller in this file already passes an
   // explicit tint, so this default is defensive); resolved against the
   // live theme here so a caller that omits it still tracks a theme flip.
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  // D174, applied 2026-09-15. The ruling existed from the day D174 was written
-  // and the file was then excluded from every sweep lane as "settled" -- but
-  // "settled" was the ruling, not the code, and this default sat amber through
-  // four lanes. Caught by the components lane reporting it as a finding outside
-  // its own bounds.
-  const resolvedTint = tint ?? t.colors.borderLight;
+  const resolvedTint = tint ?? t.colors.primary;
   const progress = target && target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
   const plannedProgress = target && target > 0 ? Math.max(0, Math.min(1, (value + planned) / target)) : 0;
-  // RE-ANCHORED 2026-09-18 (D192, finish spec item 2): the "Ng to go" /
-  // "Ng over" remaining hint that used to live here is REMOVED. The row
-  // already prints "127 / 170g" a few lines below; the hint restated the
-  // same fact and roughly doubled the macro block's height. This is a pure
-  // removal, nothing replaces it, so the ED-safety property it used to
-  // enforce (a more-is-fine macro never shows an "over" readout) cannot be
-  // violated by code that no longer exists.
+  // Remaining framing (factual value/target, no colour judgement, matches the
+  // adherence-neutral kcal ring). "Ng to go" while under, "Ng over" while over,
+  // and nothing exactly on target. A more-is-fine macro never shows "over".
+  const remaining = target != null && target > 0 ? target - value : null;
+  let remainingText = null;
+  if (remaining != null) {
+    if (remaining > 0) remainingText = `${Math.round(remaining)}g to go`;
+    else if (remaining < 0 && !moreIsFine) remainingText = `${Math.round(Math.abs(remaining))}g over`;
+  }
   return (
     <View style={styles.macroBar}>
       <View style={styles.macroBarTop}>
@@ -186,9 +161,10 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
         ) : null}
         <View style={[styles.macroFill, live.macroFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: resolvedTint }]} />
       </View>
-      {sub ? (
+      {(sub || remainingText) ? (
         <View style={styles.macroBarSubRow}>
-          <Text style={[styles.macroBarSub, live.macroBarSub]}>{sub}</Text>
+          <Text style={[styles.macroBarSub, live.macroBarSub]}>{sub ?? ''}</Text>
+          {remainingText ? <Text style={[styles.macroBarRemaining, live.macroBarRemaining]}>{remainingText}</Text> : null}
         </View>
       ) : null}
     </View>
@@ -302,14 +278,9 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
   ].filter(Boolean).join(', ');
   const a11yLabel = onPress ? `${a11ySummary}. Tap for the breakdown by meal.` : a11ySummary;
 
-  // D172 stripped this card to `{ gap }` -- palette-invariant, so it correctly
-  // has no `buildLiveStyles` twin any more. The `live.card` that used to sit
-  // in the style array below resolved undefined and was dropped silently,
-  // which reads as if the surface follows the theme when there is nothing left
-  // to follow. `frozenLiveParity.guard.test.js` fails on exactly that mismatch.
   return (
     <TouchableOpacity
-      style={styles.card}
+      style={[styles.card, live.card]}
       onPress={onPress}
       disabled={!onPress}
       activeOpacity={0.9}
@@ -335,16 +306,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
             progressTarget={kcalProgress}
             plannedProgress={kcalPlannedProgress}
             tint={kcalTint}
-            // Finish spec item 7 (D192): at zero the fill sweep is empty, so
-            // the track alone was reading as "a full grey circle of the
-            // trained-day fill" -- surface2 is close in value to the fills
-            // the app uses for a filled control. The hairline token is the
-            // one the app already uses for an empty/unfilled edge, so a
-            // zero day reads as an empty ring, not a filled one. The fill
-            // colour itself (tint, above) is untouched -- D170 keeps the
-            // ring visible at every value, and that is the fill's job, not
-            // the track's.
-            track={t.colors.borderSubtle}
+            track={t.colors.surface2}
           />
           <View style={styles.kcalCentre} pointerEvents="none">
             {kcalTarget != null ? (
@@ -355,16 +317,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
                   accessibilityLabel={`${toEnergy(over ? Math.abs(remaining) : remaining, energyUnit)} ${energyWord} ${over ? 'over' : 'left'}`}
                   maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE}
                 />
-                {/* D169, law 7 (a number states what it is): this read just
-                    "left" or "over". The unit was in the spoken label and on
-                    the quiet eaten reference beside it, but not on the figure
-                    itself -- so the largest number on the Nutrition tab was
-                    the one number in the product that did not say what it
-                    was. The target-less branch below already spelled its
-                    unit; the two now agree. */}
-                <Text style={[styles.kcalSubLabel, live.kcalSubLabel]} numberOfLines={1}>
-                  {`${energyUnitLabel(energyUnit)} ${over ? 'over' : 'left'}`}
-                </Text>
+                <Text style={[styles.kcalSubLabel, live.kcalSubLabel]} numberOfLines={1}>{over ? 'over' : 'left'}</Text>
               </>
             ) : (
               <>
@@ -373,22 +326,14 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
               </>
             )}
             {hasPlanned ? (
-              <Text style={[styles.kcalPlanned, live.kcalPlanned]} numberOfLines={1}>{`+${formatNumber(toEnergy(plannedKcal, energyUnit))} planned`}</Text>
+              <Text style={[styles.kcalPlanned, live.kcalPlanned]} numberOfLines={1}>{`+${toEnergy(plannedKcal, energyUnit)} planned`}</Text>
             ) : null}
           </View>
         </View>
         {kcalTarget != null ? (
           <View style={styles.kcalEatenWrap}>
             <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalEatenValue, live.kcalEatenValue]} maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE} />
-            {/* RE-ANCHORED 2026-09-18 (D192, finish spec item 1): the target
-                was the one figure on this screen without a thousands
-                separator, on the same screen as the comma-grouped eaten
-                value beside it (RollingNumber's own en-GB grouping,
-                groupDigits() in RollingNumber.js). formatNumber is the
-                app's shared en-GB display formatter (src/lib/format.js);
-                this is a plain Text, not a RollingNumber, so it is applied
-                directly here rather than animated. */}
-            <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${formatNumber(toEnergy(kcalTarget, energyUnit))} ${energyUnitLabel(energyUnit)}`}</Text>
+            <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${toEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
           </View>
         ) : null}
       </View>
@@ -421,7 +366,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
       </View>
       {macroSplit ? (
         <Text style={[styles.macroSplit, live.macroSplit]}>
-          {`P ${macroSplit.p}% · C ${macroSplit.c}% · F ${macroSplit.f}%`}
+          {`P ${macroSplit.p}% - C ${macroSplit.c}% - F ${macroSplit.f}%`}
           <Text style={[styles.macroSplitCaption, live.macroSplitCaption]}> of calories</Text>
         </Text>
       ) : null}
@@ -430,13 +375,11 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
 }
 
 const styles = StyleSheet.create({
-  // D170, law 2 as the founder stated it: "a card should mean: this thing is
-  // an object", and their own worked example of what is NOT one is "a macro
-  // number". This is a reading of today, not a thing you can pick up, so the
-  // fill, the border and the radius go and it becomes a block on the canvas.
-  // It keeps its vertical rhythm and its whole touch surface; the precedent is
-  // Today's own nutrition block, which is a tappable section with no chrome.
   card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.borderSubtle,
+    padding: spacing.lg,
     gap: spacing.lg,
   },
   kcalRow: {
@@ -465,7 +408,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
   },
   kcalPlanned: {
-    color: colors.textMuted,
+    color: colors.primary,
     fontSize: fontSize.xs,
     fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     marginTop: spacing.xxs,
@@ -537,26 +480,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
-  // D174: the bars follow the arc off amber, which is D172's own sentence
-  // applied to the half its wording did not reach -- "an arc that is amber at
-  // 10% of the day and at 90% of it is amber as decoration". `borderLight` is
-  // the token the week ribbon fills a trained day with, so a filled thing reads
-  // the same across unrelated surfaces. The SAFETY property is untouched and is
-  // the reason this is a recolour rather than a redesign: the bar is ONE colour
-  // at every value, under and over target alike, so it never congratulates
-  // adherence or flags a deviation (2026-05-29). `MacroRings.test.js` still
-  // asserts exactly that.
   macroFill: {
     position: 'absolute', left: 0, top: 0,
     height: '100%',
     borderRadius: radius.full,
-    backgroundColor: colors.borderLight,
+    backgroundColor: colors.primary,
   },
   macroFillPlanned: {
     position: 'absolute', left: 0, top: 0,
     height: '100%',
     borderRadius: radius.full,
-    backgroundColor: colors.borderLight,
+    backgroundColor: colors.primary,
     opacity: 0.32,
   },
   macroBarPlanned: {
@@ -564,16 +498,19 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
-  // Quiet descriptive sub-row under a bar: protein g/kg today, the only
-  // thing it shows now. RE-ANCHORED 2026-09-18 (D192, finish spec item 2):
-  // used to also carry the factual remaining ("Ng to go" / "Ng over") on
-  // the right; removed, so macroBarRemaining (its Text style) is removed
-  // with it. Still adherence-neutral (textMuted), never a colour judgement.
+  // Quiet descriptive sub-row under a bar: protein g/kg on the left, the
+  // factual remaining ("Ng to go" / "Ng over") on the right. Both adherence-
+  // neutral (textMuted), never a colour judgement.
   macroBarSubRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     marginTop: spacing.xxs,
   },
   macroBarSub: {
+    color: colors.textMuted,
+    fontSize: fontSize.xs,
+    fontVariant: ['tabular-nums'],
+  },
+  macroBarRemaining: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
     fontVariant: ['tabular-nums'],
@@ -606,9 +543,10 @@ const styles = StyleSheet.create({
 // they stay untouched with no `live.*` entry.
 function buildLiveStyles(t) {
   return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     kcalValue: { color: t.colors.textPrimary, fontSize: t.fontSize.xxxl, lineHeight: Math.round(t.fontSize.xxxl * 1.1) },
     kcalSubLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
-    kcalPlanned: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+    kcalPlanned: { color: t.colors.primary, fontSize: t.fontSize.xs },
     kcalEatenValue: { color: t.colors.textSecondary, fontSize: t.fontSize.xl },
     kcalEatenLabel: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     plannedHint: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
@@ -619,10 +557,11 @@ function buildLiveStyles(t) {
     macroBarValue: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     macroBarValuePrimary: { color: t.colors.textPrimary },
     macroTrack: { backgroundColor: t.colors.surface2 },
-    macroFill: { backgroundColor: t.colors.borderLight },
-    macroFillPlanned: { backgroundColor: t.colors.borderLight },
+    macroFill: { backgroundColor: t.colors.primary },
+    macroFillPlanned: { backgroundColor: t.colors.primary },
     macroBarPlanned: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     macroBarSub: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
+    macroBarRemaining: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     macroSplit: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     macroSplitCaption: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
   };

@@ -118,14 +118,11 @@ describe('detectPR: the assisted inversion', () => {
 describe('buildRecordLine agrees with detectPR on the assisted branch (D87)', () => {
   const history = [{ weight: 30, actualReps: 8, setType: 'straight' }, { weight: 25, actualReps: 6, setType: 'straight' }];
 
-  // RE-ANCHORED 2026-09-18 (D192, one unit format): space before the unit;
-  // intent kept -- the bar to beat is still the LOWEST assistance, labelled
-  // as assistance.
   test('the bar to beat is the LOWEST assistance, labelled as assistance', () => {
     const line = buildRecordLine({
       weight: 0, reps: 0, historySets: history, units: 'kg', loadSemantics: 'assisted',
     });
-    expect(line.bestLabel).toBe('Best 25 kg assistance × 6');
+    expect(line.bestLabel).toBe('Best 25kg assistance × 6');
   });
 
   test('the line flags exactly when detectPR would award (lower assistance, >= reps)', () => {

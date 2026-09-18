@@ -5,7 +5,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, circle, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
@@ -98,7 +98,7 @@ export default function ProGate({ children, feature = 'This feature', style }) {
           accessibilityLabel="Upgrade to Pro"
         >
           <View style={[styles.lockChip, live.lockChip]}>
-            <Ionicons name="lock-closed" size={13} color={t.colors.textPrimary} />
+            <Ionicons name="lock-closed" size={13} color={t.colors.onPrimary} />
             <Text style={[styles.lockChipText, live.lockChipText]}>Pro</Text>
           </View>
         </TouchableOpacity>
@@ -110,8 +110,8 @@ export default function ProGate({ children, feature = 'This feature', style }) {
         accessibilityLabel={`${feature} Pro upgrade`}
       >
         <View style={styles.sheetContent}>
-          <View style={styles.sheetIconWrap} accessibilityElementsHidden importantForAccessibility="no">
-            <Ionicons name="lock-closed-outline" size={28} color={t.colors.textSecondary} />
+          <View style={[styles.sheetIconWrap, live.sheetIconWrap]} accessibilityElementsHidden importantForAccessibility="no">
+            <Ionicons name="lock-closed-outline" size={28} color={t.colors.primary} />
           </View>
 
           <Text style={[styles.sheetTitle, live.sheetTitle]}>{feature}</Text>
@@ -209,8 +209,8 @@ export function ProLocked({ feature = 'This' }) {
             piece of show-don't-tell, then the CTA. The full sell (prices,
             comparison, FAQ, held-seat reassurance) lives on ProUpgrade, which
             the CTA opens, duplicating it here read as a mess. */}
-        <View style={styles.lockedIcon}>
-          <Ionicons name="lock-closed" size={28} color={t.colors.textSecondary} />
+        <View style={[styles.lockedIcon, live.lockedIcon]}>
+          <Ionicons name="lock-closed" size={28} color={t.colors.primary} />
         </View>
         <Text style={[styles.lockedTitle, live.lockedTitle]}>{feature} is part of Pro</Text>
         {/* COMP-CLARITY: per-feature benefit line so each Pro route explains
@@ -347,7 +347,7 @@ export function ProBadge({ size = 'sm' }) {
   const isSmall = size === 'sm';
   return (
     <View style={[styles.badge, live.badge, isSmall ? styles.badgeSm : styles.badgeMd]}>
-      <Ionicons name="barbell" size={isSmall ? 8 : 10} color={t.colors.textPrimary} />
+      <Ionicons name="barbell" size={isSmall ? 8 : 10} color={t.colors.onPrimary} />
       <Text style={[styles.badgeText, live.badgeText, isSmall ? styles.badgeTextSm : styles.badgeTextMd]}>PRO</Text>
     </View>
   );
@@ -360,20 +360,17 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
     alignItems: 'center', justifyContent: 'center',
   },
-  // D174: a "Pro" chip is a label, not the user's live moment, so it lost
-  // the amber ground. The ink follows it off `onPrimary`, which only reads
-  // against an amber fill.
   lockChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    backgroundColor: colors.surface3, borderRadius: radius.sm,
+    backgroundColor: colors.primaryFill, borderRadius: radius.sm,
     paddingHorizontal: 10, paddingVertical: 5,
   },
-  lockChipText: { ...type.captionStrong, color: colors.textPrimary },
+  lockChipText: { ...type.captionStrong, color: colors.onPrimary },
 
   sheetContent: { alignItems: 'center', gap: spacing.md },
-  // §3.2, "a tint behind a glyph": the disc lost its fill and its geometry.
   sheetIconWrap: {
-    width: 60, height: 60, alignItems: 'center', justifyContent: 'center',
+    width: 60, height: 60, borderRadius: circle(60),
+    backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
   },
   sheetTitle: {
     fontSize: fontSize.xl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary,
@@ -389,9 +386,9 @@ const styles = StyleSheet.create({
     flexGrow: 1, alignItems: 'center', justifyContent: 'center',
     padding: spacing.xl, gap: spacing.md,
   },
-  // §3.2, "a tint behind a glyph": the disc lost its fill and its geometry.
   lockedIcon: {
-    width: 64, height: 64,
+    width: 64, height: 64, borderRadius: circle(64),
+    backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
     marginBottom: spacing.sm,
   },
@@ -432,11 +429,11 @@ const styles = StyleSheet.create({
 
   badge: {
     flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: colors.surface3, borderRadius: radius.xs,
+    backgroundColor: colors.primaryFill, borderRadius: 4,
   },
   badgeSm: { paddingHorizontal: 5, paddingVertical: spacing.xxs },
   badgeMd: { paddingHorizontal: 7, paddingVertical: 3 },
-  badgeText: { fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
+  badgeText: { fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.onPrimary },
   badgeTextSm: { fontSize: fontSize.micro },
   badgeTextMd: { fontSize: fontSize.micro },
 });
@@ -448,11 +445,13 @@ const styles = StyleSheet.create({
 // badgeMd have no colour tokens.
 function buildLiveStyles(t) {
   return {
-    lockChip: { backgroundColor: t.colors.surface3 },
-    lockChipText: { ...t.type.captionStrong, color: t.colors.textPrimary },
+    lockChip: { backgroundColor: t.colors.primaryFill },
+    lockChipText: { ...t.type.captionStrong, color: t.colors.onPrimary },
+    sheetIconWrap: { backgroundColor: t.colors.primaryBg },
     sheetTitle: { color: t.colors.textPrimary },
     sheetBody: { color: t.colors.textSecondary },
     lockedSafe: { backgroundColor: t.colors.background },
+    lockedIcon: { backgroundColor: t.colors.primaryBg },
     lockedTitle: { color: t.colors.textPrimary },
     lockedBody: { color: t.colors.textSecondary },
     lockedBtn: { backgroundColor: t.colors.primaryFill },
@@ -460,7 +459,7 @@ function buildLiveStyles(t) {
     lockedBackText: { color: t.colors.textMuted },
     lockedRestore: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     lockedRestoreText: { ...t.type.caption, color: t.colors.textSecondary },
-    badge: { backgroundColor: t.colors.surface3 },
-    badgeText: { color: t.colors.textPrimary },
+    badge: { backgroundColor: t.colors.primaryFill },
+    badgeText: { color: t.colors.onPrimary },
   };
 }

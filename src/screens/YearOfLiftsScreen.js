@@ -78,6 +78,8 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
   // 1. Intro: period framing
   cards.push({
     type: 'intro',
+    icon: 'sparkles',
+    tone: 'gold',
     headline: 'Your year of lifts',
     subline: `${fmtDate(data.yearStart)} to ${fmtDate(data.yearEnd)}`,
   });
@@ -87,7 +89,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
     cards.push({
       type: 'stat',
       icon: 'barbell',
-      tone: 'neutral',
+      tone: 'primary',
       value: data.totalSessions.toLocaleString('en-GB'),
       unit: data.totalSessions === 1 ? 'session' : 'sessions',
       caption: data.avgSessionsPerWeek >= 3
@@ -128,7 +130,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
     cards.push({
       type: 'stat',
       icon: 'layers',
-      tone: 'neutral',
+      tone: 'primary',
       value: data.totalSets.toLocaleString('en-GB'),
       unit: data.totalSets === 1 ? 'set' : 'sets',
       caption: data.uniqueExercises > 0
@@ -142,7 +144,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
     cards.push({
       type: 'stat',
       icon: 'calendar',
-      tone: 'neutral',
+      tone: 'primary',
       value: data.topMonth,
       unit: 'busiest month',
       caption: 'The month you put in the most work.',
@@ -153,7 +155,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
   if (data.topExercises?.[0]) {
     cards.push({
       type: 'list',
-      icon: 'repeat',
+      icon: 'flame',
       tone: 'warning',
       headline: 'Your top lifts',
       subline: 'Most-trained exercises this year',
@@ -168,13 +170,13 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
   if (data.topPRs?.length > 0) {
     cards.push({
       type: 'list',
-      icon: 'barbell',
-      tone: 'neutral',
+      icon: 'trophy',
+      tone: 'gold',
       headline: 'Personal records',
       subline: 'Estimated max lifts logged this year',
       rows: data.topPRs.slice(0, 5).map(pr => ({
         primary: pr.exerciseName ?? pr.exercise_name,
-        secondary: `${safeToFixed(pr.value, 1)} ${units}`,
+        secondary: `${safeToFixed(pr.value, 1)}${units}`,
       })),
     });
   }
@@ -188,7 +190,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
     cards.push({
       type: 'stat',
       icon: 'infinite',
-      tone: 'neutral',
+      tone: 'primary',
       value: lifetime.sessions.toLocaleString('en-GB'),
       unit: lifetime.sessions === 1 ? 'session, lifetime' : 'sessions, lifetime',
       caption: `${lifetime.tonnage.toLocaleString('en-GB')} ${u} lifted and ${lifetime.reps.toLocaleString('en-GB')} reps, all time.`,
@@ -199,6 +201,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
   cards.push({
     type: 'outro',
     icon: 'checkmark-circle',
+    tone: 'gold',
     headline: 'Here\'s to the year ahead.',
     subline: 'Keep turning up, keep adding a little, and the rest takes care of itself.',
   });
@@ -223,7 +226,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
   // WAVE-D-FINDINGS.md UNIT_DEFECT: see buildCards' identical fix above.
   const u = units === 'lbs' ? 'lbs' : 'kg';
   cards.push({
-    type: 'intro',
+    type: 'intro', icon: 'sparkles', tone: 'gold',
     headline: `${label}, in numbers.`,
     subline: `${fmtDate(data.startMs)} to ${fmtDate(data.endMs - 86400000)}`,
   });
@@ -242,7 +245,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
         : `That's roughly ${data.avgSessionsPerWeek} sessions a week.`;
     }
     content.push({
-      type: 'stat', icon: 'barbell', tone: 'neutral',
+      type: 'stat', icon: 'barbell', tone: 'primary',
       value: data.totalSessions.toLocaleString('en-GB'),
       unit: data.totalSessions === 1 ? 'session' : 'sessions',
       caption,
@@ -262,7 +265,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
 
   if (data.topExercises?.[0]) {
     content.push({
-      type: 'list', icon: 'repeat', tone: 'warning',
+      type: 'list', icon: 'flame', tone: 'warning',
       headline: 'Your top lifts', subline: 'Most-trained this month',
       rows: data.topExercises.slice(0, 5).map(ex => ({ primary: ex.name, secondary: `${ex.sets.toLocaleString('en-GB')} sets` })),
     });
@@ -270,15 +273,15 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
 
   if (data.topPRs?.length > 0) {
     content.push({
-      type: 'list', icon: 'barbell', tone: 'neutral',
+      type: 'list', icon: 'trophy', tone: 'gold',
       headline: 'Personal records', subline: 'Estimated max lifts this month',
-      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)} ${units}` })),
+      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
 
   if (data.bestSession) {
     content.push({
-      type: 'stat', icon: 'flash', tone: 'neutral',
+      type: 'stat', icon: 'flash', tone: 'primary',
       value: data.bestSession.tonnage.toLocaleString('en-GB'), unit: `${u}, best session`,
       caption: `Your biggest session was on ${fmtDate(data.bestSession.startedAt)}.`,
     });
@@ -297,7 +300,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
   }
 
   cards.push({
-    type: 'outro', icon: 'checkmark-circle',
+    type: 'outro', icon: 'checkmark-circle', tone: 'gold',
     headline: 'A fresh month ahead.', subline: 'Keep turning up and the numbers will follow.',
   });
   return cards;
@@ -316,7 +319,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
   // WAVE-D-FINDINGS.md UNIT_DEFECT: see buildCards' identical fix above.
   const u = units === 'lbs' ? 'lbs' : 'kg';
   cards.push({
-    type: 'intro',
+    type: 'intro', icon: 'sparkles', tone: 'gold',
     headline: `${label}, in numbers.`,
     subline: `${fmtDate(data.startMs)} to ${fmtDate(data.endMs - 86400000)}`,
   });
@@ -333,7 +336,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
       caption = `${data.totalSessions} session${data.totalSessions === 1 ? '' : 's'} this week.`;
     }
     content.push({
-      type: 'stat', icon: 'barbell', tone: 'neutral',
+      type: 'stat', icon: 'barbell', tone: 'primary',
       value: data.totalSessions.toLocaleString('en-GB'),
       unit: data.totalSessions === 1 ? 'session' : 'sessions',
       caption,
@@ -353,7 +356,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
 
   if (data.topExercises?.[0]) {
     content.push({
-      type: 'list', icon: 'repeat', tone: 'warning',
+      type: 'list', icon: 'flame', tone: 'warning',
       headline: 'Your top lifts', subline: 'Most-trained this week',
       rows: data.topExercises.slice(0, 5).map(ex => ({ primary: ex.name, secondary: `${ex.sets.toLocaleString('en-GB')} sets` })),
     });
@@ -361,15 +364,15 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
 
   if (data.topPRs?.length > 0) {
     content.push({
-      type: 'list', icon: 'barbell', tone: 'neutral',
+      type: 'list', icon: 'trophy', tone: 'gold',
       headline: 'Personal records', subline: 'Estimated max lifts this week',
-      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)} ${units}` })),
+      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
 
   if (data.bestSession) {
     content.push({
-      type: 'stat', icon: 'flash', tone: 'neutral',
+      type: 'stat', icon: 'flash', tone: 'primary',
       value: data.bestSession.tonnage.toLocaleString('en-GB'), unit: `${u}, best session`,
       caption: `Your biggest session was on ${fmtDate(data.bestSession.startedAt)}.`,
     });
@@ -388,7 +391,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
   }
 
   cards.push({
-    type: 'outro', icon: 'checkmark-circle',
+    type: 'outro', icon: 'checkmark-circle', tone: 'gold',
     headline: 'A fresh week ahead.', subline: 'Keep turning up and the numbers will follow.',
   });
   return cards;
@@ -408,7 +411,7 @@ export function buildBlockCards(data, units) {
   const shapeBits = [];
   if (weeks) shapeBits.push(`${weeks} week${weeks === 1 ? '' : 's'}`);
   if (startMs && endMs) shapeBits.push(`${fmtDate(startMs)} to ${fmtDate(endMs)}`);
-  cards.push({ type: 'intro', headline: name, subline: shapeBits.join(' - ') });
+  cards.push({ type: 'intro', icon: 'sparkles', tone: 'gold', headline: name, subline: shapeBits.join(' - ') });
 
   // FB-17 (D96): the figure now compares the first week with the last
   // BUILD week, not with the deliberately halved recovery week, so a gold
@@ -431,14 +434,14 @@ export function buildBlockCards(data, units) {
   // records. Same rows, same maths, honest label.
   if (data.prs?.length > 0) {
     cards.push({
-      type: 'list', icon: 'barbell', tone: 'neutral',
+      type: 'list', icon: 'barbell', tone: 'primary',
       headline: 'Your best lifts', subline: 'Estimated max lifts this block',
-      rows: data.prs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)} ${units}` })),
+      rows: data.prs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
 
   cards.push({
-    type: 'stat', icon: 'layers', tone: 'neutral',
+    type: 'stat', icon: 'layers', tone: 'primary',
     value: data.totalSessions.toLocaleString('en-GB'),
     unit: data.totalSessions === 1 ? 'session' : 'sessions',
     caption: `${data.totalSets.toLocaleString('en-GB')} sets - ${data.tonnage.toLocaleString('en-GB')} ${u} moved.`,
@@ -449,7 +452,7 @@ export function buildBlockCards(data, units) {
   // is inside" pointed at a screen this deck does not link to (the link
   // runs the other way, from BlockReflection into the story).
   cards.push({
-    type: 'outro', icon: 'checkmark-circle',
+    type: 'outro', icon: 'checkmark-circle', tone: 'gold',
     headline: 'That block is done, recovery week included.', subline: 'Choosing your next block is the next step, on the Train tab.',
   });
   return cards;
@@ -469,26 +472,14 @@ function StoryCard({ card, width }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={[styles.cardWrap, { width }]}>
-      {/* D173 T1: `tone` is now opt-in. Every builder above used to name one,
-          so the old `card.tone || 'primary'` never actually fell back; the
-          intro and outro cards now name none, and `?? null` is what lets that
-          reach Card as "no accent" rather than being defaulted back to amber.
-          A card that names no icon draws none, too: the intro hero is a
-          headline and a date range, which is the whole of what it says.
-          D174: the cards that DO name a tone now name `neutral`. An accent
-          border on every card of a year in review is the tinted-border case
-          the amber census names, and Card's `neutral` resolves to exactly the
-          `border` token the rule sends it to. */}
       <GradientCard
-        tone={card.tone ?? null}
+        tone={card.tone || 'primary'}
         intensity={0.28}
         style={styles.card}
       >
-        {card.icon ? (
-          <View style={[styles.iconWrap, live.iconWrap]}>
-            <Ionicons name={card.icon} size={32} color={t.colors.textPrimary} />
-          </View>
-        ) : null}
+        <View style={[styles.iconWrap, live.iconWrap]}>
+          <Ionicons name={card.icon} size={32} color={t.colors.textPrimary} />
+        </View>
 
         {card.type === 'stat' && (
           <>
@@ -969,7 +960,7 @@ const styles = StyleSheet.create({
     // preserved). R2 (2026-07-11): the rank (1-5) is a pure readout -> tabular.
     fontSize: fontSize.lg,
     fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
-    color: colors.textMuted,
+    color: colors.primary,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
   },
@@ -1030,7 +1021,7 @@ function buildLiveStyles(t) {
     heroSubline: { ...t.type.body, color: t.colors.textSecondary },
     listHeadline: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
     listSubline: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    listRank: { fontSize: t.fontSize.lg, color: t.colors.textMuted, fontVariant: ['tabular-nums'] },
+    listRank: { fontSize: t.fontSize.lg, color: t.colors.primary, fontVariant: ['tabular-nums'] },
     listPrimary: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     listSecondary: { fontSize: t.fontSize.sm, color: t.colors.textSecondary, fontVariant: ['tabular-nums'] },
     tapPressed: { backgroundColor: withAlpha(t.colors.textPrimary, 0.08) },

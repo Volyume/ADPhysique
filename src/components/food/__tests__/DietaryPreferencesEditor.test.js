@@ -123,44 +123,14 @@ describe('DietaryPreferencesEditor — ED-safe soft exclusion nudge (tier-blind,
     act(() => { tree.unmount(); });
   });
 
-  // The serialised render tree includes STYLE props as well as copy, and one
-  // style key is spelled `fontWeight`. So a component in this subtree adopting
-  // the house `type.w(role, 'semibold')` helper -- which sets the Inter face
-  // AND the numeric weight, the numeric half being what "still reads to
-  // accessibility services" (theme.js:724-726) -- trips the substring scan
-  // below on a style property, not on a word anyone can read.
-  //
-  // That happened during the D174 amber sweep: `Chip` gained a semibold
-  // selected label and this ED case went red. The sweep worked around it by
-  // spelling the face without the weight, which silently dropped the semantic
-  // weight from 114 chips to satisfy a string match.
-  //
-  // LEAD RULING 2026-09-15: the workaround is the wrong way round, so the scan
-  // is made precise instead and Chip keeps `type.w`. This CANNOT weaken the
-  // assertion, and the reason is worth stating rather than trusting: the only
-  // text removed is the value of a `fontWeight` style key, which is a weight
-  // name or a number. No sentence shown to a user, no accessibilityLabel and
-  // no testID can live inside one. Everything else -- all copy, every spoken
-  // label, every prop -- is still scanned exactly as before. The positive
-  // assertion immediately below proves the strip did not eat the subject:
-  // the nudge sentence is still found in the stripped string.
-  const STYLE_WEIGHT_KEY = /"fontWeight":\s*(?:"[^"]*"|\d+)/g;
-
   test('past the 15-food threshold, the calm plain-voice nudge appears, mentioning neither weight nor calories', () => {
     setStore({ userProfile: { dietPreference: 'omnivore', mealPlanExcludeTags: [], mealPlanExcludeFoods: foodsList(16) } });
     let tree;
     act(() => { tree = create(<DietaryPreferencesEditor />); });
-    const raw = JSON.stringify(tree.toJSON());
-    const text = raw.replace(STYLE_WEIGHT_KEY, '');
-    // The subject survives the strip, so a scan that finds no "weight" below is
-    // scanning the real tree and not an emptied string.
+    const text = JSON.stringify(tree.toJSON());
     expect(text).toContain("A longer list narrows what Volyume can suggest. Keep it to foods you really won't eat.");
     expect(text.toLowerCase()).not.toContain('weight');
     expect(text.toLowerCase()).not.toContain('calorie');
-    // And nothing but a style key was removed: whatever the strip took out,
-    // every occurrence of it was a fontWeight declaration.
-    expect((raw.match(/weight/gi) || []).length - (text.match(/weight/gi) || []).length)
-      .toBe((raw.match(STYLE_WEIGHT_KEY) || []).length);
     act(() => { tree.unmount(); });
   });
 });

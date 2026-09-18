@@ -105,15 +105,7 @@ describe('the eight-week bars belong to the strip, not to one cell', () => {
   });
 
   test('a zero week is drawn in a colour that exists on the ground it sits on', () => {
-    // RE-ANCHORED (D174 A3 scope ruling, 2026-09-15). This case is about the
-    // ZERO week -- that a week with nothing in it still draws in a token you can
-    // see on the ground, rather than vanishing. The non-zero colour was
-    // incidental to that, and it was the ACCENT on every bar with a value, which
-    // is a whole series in amber and so amber meaning nothing. It is the
-    // ribbon's filled token now. The property this case exists for is unchanged
-    // and is asserted more precisely: two distinct visible tokens, neither of
-    // them the background.
-    expect(SRC).toContain('v > 0 ? t.colors.borderLight : t.colors.border');
+    expect(SRC).toContain('v > 0 ? t.colors.primary : t.colors.border');
     expect(SRC).not.toContain('BAR_MIN_HEIGHT = StyleSheet.hairlineWidth');
   });
 });

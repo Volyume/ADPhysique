@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, KeyboardAvoidingView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, shadow, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { track as trackEvent } from '../lib/engineTelemetry';
 import Button from '../components/Button';
@@ -436,7 +436,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
       <SafeAreaView style={[styles.safe, live.safe]}>
         <View style={styles.successWrap}>
           <View style={[styles.successCircle, live.successCircle]}>
-            <Ionicons name="checkmark" size={40} color={t.colors.textPrimary} />
+            <Ionicons name="checkmark" size={40} color={t.colors.onPrimary} />
           </View>
           <Text style={[styles.successTitle, live.successTitle]}>You're Pro.</Text>
           <Text style={[styles.successBody, live.successBody]}>
@@ -472,8 +472,8 @@ export default function ProUpgradeScreen({ navigation, route }) {
       <ModalHeader title="Upgrade" onClose={() => { trackCta('dismiss'); navigation.goBack(); }} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-          <View style={styles.iconWrap}>
-            <Ionicons name="barbell-outline" size={30} color={t.colors.textSecondary} />
+          <View style={[styles.iconWrap, live.iconWrap]}>
+            <Ionicons name="barbell-outline" size={30} color={t.colors.primary} />
           </View>
           <Text style={[styles.title, live.title]}>Go Pro</Text>
           <Text style={[styles.subtitle, live.subtitle]}>
@@ -483,8 +483,8 @@ export default function ProUpgradeScreen({ navigation, route }) {
           <View style={styles.perks}>
             {PRO_PERKS.map(p => (
               <View key={p.text} style={styles.perkRow}>
-                <View style={styles.perkIcon}>
-                  <Ionicons name={p.icon} size={16} color={t.colors.textSecondary} />
+                <View style={[styles.perkIcon, live.perkIcon]}>
+                  <Ionicons name={p.icon} size={16} color={t.colors.primary} />
                 </View>
                 <Text style={[styles.perkText, live.perkText]}>{p.text}</Text>
               </View>
@@ -503,7 +503,7 @@ export default function ProUpgradeScreen({ navigation, route }) {
             <View style={[styles.reviewCard, live.reviewCard]} accessible accessibilityLabel={`${excerpt.stars} star review. ${excerpt.quote}. ${excerpt.name}, ${excerpt.source}, ${excerpt.date}.`}>
               <View style={styles.reviewStars} accessibilityElementsHidden importantForAccessibility="no">
                 {Array.from({ length: Math.max(0, Math.min(5, excerpt.stars)) }).map((_, i) => (
-                  <Ionicons key={i} name="star" size={13} color={t.colors.textSecondary} />
+                  <Ionicons key={i} name="star" size={13} color={t.colors.primary} />
                 ))}
               </View>
               <Text style={[styles.reviewQuote, live.reviewQuote]} numberOfLines={3}>{`"${excerpt.quote}"`}</Text>
@@ -675,9 +675,9 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flexGrow: 1, padding: spacing.xl, paddingBottom: spacing.xxxl },
 
-  // D174: was a 64dp `primaryBg` disc behind a stock glyph. No fill now.
   iconWrap: {
-    width: 64, height: 64,
+    width: 64, height: 64, borderRadius: circle(64),
+    backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
     alignSelf: 'center', marginBottom: spacing.lg,
   },
@@ -695,10 +695,9 @@ const styles = StyleSheet.create({
   policyLink: { alignSelf: 'center', marginBottom: spacing.lg },
   restoreLink: { alignSelf: 'center', marginTop: spacing.sm },
   perkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  // D174: was a 32dp `primaryBg` disc behind a stock glyph. Fixed glyph
-  // column now, no fill.
   perkIcon: {
-    width: 32,
+    width: 32, height: 32, borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
   perkText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
@@ -743,7 +742,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, borderRadius: radius.md,
     borderWidth: 1.5, borderColor: colors.border,
   },
-  fieldWrapFocused: { borderColor: colors.primary },
+  fieldWrapFocused: { borderColor: withAlpha(colors.primary, 0.502) },
   fieldInput: {
     flex: 1, paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md + 2, fontSize: fontSize.md,
@@ -756,7 +755,7 @@ const styles = StyleSheet.create({
 
   switchBtn: { alignItems: 'center', paddingVertical: spacing.md },
   switchText: { fontSize: fontSize.sm, color: colors.textMuted },
-  switchAction: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  switchAction: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   laterBtn: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
   // C7: the paywall's legal links row (terms of use + privacy policy).
@@ -775,12 +774,9 @@ const styles = StyleSheet.create({
   },
   successCircle: {
     width: 80, height: 80, borderRadius: circle(80),
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
-    // D174: `...shadow.glow` removed with the token. A shadow property on a
-    // decorative circle; no purchase, restore, entitlement or cascade path is
-    // in this hunk, so the billing discipline is not engaged, and the surface
-    // stays dormant and unregistered either way.
+    ...shadow.glow,
   },
   successTitle: {
     fontSize: fontSize.xxxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
@@ -811,11 +807,13 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     legalLink: { color: t.colors.textSecondary },
     legalDot: { color: t.colors.textMuted },
+    iconWrap: { backgroundColor: t.colors.primaryBg },
     title: { fontSize: t.fontSize.xxxl, color: t.colors.textPrimary },
     subtitle: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
     reviewCard: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     reviewQuote: { ...t.type.bodySm, color: t.colors.textPrimary },
     reviewMeta: { ...t.type.caption, color: t.colors.textMuted },
+    perkIcon: { backgroundColor: t.colors.primaryBg },
     perkText: { ...t.type.bodySm, color: t.colors.textSecondary },
     credentialNote: { ...t.type.captionTight, color: t.colors.textMuted },
     faqTitle: { ...t.type.label, color: t.colors.textSecondary },
@@ -823,7 +821,7 @@ function buildLiveStyles(t) {
     faqA: { ...t.type.bodySm, color: t.colors.textSecondary },
     accountNote: { ...t.type.bodySm, color: t.colors.textMuted },
     laterText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    successCircle: { backgroundColor: t.colors.surface3 },
+    successCircle: { backgroundColor: t.colors.primary },
     successTitle: { fontSize: t.fontSize.xxxl, color: t.colors.textPrimary },
     successBody: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
   };

@@ -112,16 +112,7 @@ async function renderAndSave(eatenValue) {
 
 describe('AddCustomFoodScreen OCR low-confidence highlighting (item 5)', () => {
   const CONFIDENCE_HINT = 'Not certain, check this value';
-  // RE-ANCHORED (D174 lead ruling). This read "Amber figures aren't certain",
-// naming a colour the reader may not be able to see -- an accessibility fault
-// independent of the amber sweep, and the reason the sweep had to stop on the
-// border rather than just recolour it. The border moved to the `warning` role
-// (a scanned figure that may be wrong IS a caution, so the role is correct
-// rather than borrowed) and the copy stopped naming a colour. THIS SUITE'S
-// INTENT IS UNCHANGED: a low-confidence field is still marked, still named in
-// the banner, and still carries its own accessibility hint -- which is checked
-// two lines below and is the non-colour cue a screen-reader user relies on.
-const BANNER = "Highlighted figures aren't certain, check them.";
+  const BANNER = "Amber figures aren't certain, check them.";
 
   function ocrRoute(prefillMacros, prefillConfidence) {
     return {

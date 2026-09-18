@@ -4,6 +4,7 @@ import { View, Text, Switch } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
+import { withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
@@ -181,8 +182,8 @@ export default function SettingsHealthScreen() {
               value={healthWeightStatus === 'granted'}
               onValueChange={handleToggleWeight}
               disabled={healthSyncing}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={healthWeightStatus === 'granted' ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={healthWeightStatus === 'granted' ? t.colors.primary : t.colors.textMuted}
             />
           }
         />
@@ -200,8 +201,8 @@ export default function SettingsHealthScreen() {
               value={healthWorkoutStatus === 'granted'}
               onValueChange={handleToggleWorkout}
               disabled={healthSyncing}
-              trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-              thumbColor={healthWorkoutStatus === 'granted' ? t.colors.surface : t.colors.textMuted}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={healthWorkoutStatus === 'granted' ? t.colors.primary : t.colors.textMuted}
             />
           }
         />

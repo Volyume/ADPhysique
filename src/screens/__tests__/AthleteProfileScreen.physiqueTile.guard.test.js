@@ -50,41 +50,6 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).not.toMatch(/<StatTile label="Physique Scan"/);
   });
 
-  // Comment-stripped so the prose in AthleteProfileScreen.js explaining the
-  // defect (which necessarily quotes the old fall-through) cannot satisfy or
-  // defeat these patterns. Same helper as NowCard.workingWeight.guard.
-  function code(source) {
-    return source
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
-  }
-
-  test('withholds the body-fat percentage under calm mode or an open ED flag, not just the score', () => {
-    // ED-SAFETY REGRESSION GUARD (defect found and fixed 2026-09-15).
-    //
-    // The tile is a three-way fall-through: Volyume Score, then the user's
-    // logged body fat, then an unscored placeholder. Only the FIRST branch
-    // carried `!photoSuppressed`, so a user under calm mode or an open
-    // ED-pattern flag lost the score and was handed a raw body-fat percentage
-    // instead -- worse for the at-risk reader than the figure being withheld,
-    // and the exact number D166 ruled against surfacing. The second branch now
-    // carries the same guard.
-    //
-    // This suite FAILS if that guard is ever removed from the body-fat branch.
-    // There is no version of this screen where a suppressed user sees a body
-    // composition figure; if the tile is restructured, the replacement has to
-    // keep that property and this test has to be re-anchored to prove it, not
-    // deleted.
-    const src = code(source);
-    expect(src).toMatch(/\} : \(!photoSuppressed && summary\.bodyFatLoggedAt\) \? \{/);
-    // The unguarded spelling must never come back.
-    expect(src).not.toMatch(/\} : summary\.bodyFatLoggedAt \? \{/);
-    // And the score branch keeps its own guard, so BOTH composition branches
-    // are gated by the one hook rather than one of them drifting.
-    expect(src).toMatch(/const showPhysiqueScore = !photoSuppressed && shouldShowPhysiqueScore\(\{/);
-    expect(src).toMatch(/const photoSuppressed = usePhotoSuppression\(user\?\.id\);/);
-  });
-
   test('keeps gym avatar presets behind the tappable profile image', () => {
     const presetSource = fs.readFileSync(path.join(__dirname, '..', '..', 'lib', 'profileAvatarPresets.js'), 'utf8');
     expect(source).toMatch(/import \{ AVATAR_PRESETS, avatarPresetFor \} from '\.\.\/lib\/profileAvatarPresets';/);
@@ -105,16 +70,8 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/Photo from phone/);
     expect(source).toMatch(/avatarPresetGrid: \{[\s\S]*justifyContent: 'space-between'/);
     expect(source).toMatch(/avatarPresetOption: \{[\s\S]*flexBasis: '30\.5%'[\s\S]*backgroundColor: colors\.surface/);
-    // Re-anchored under D174 A2 (2026-09-15). What these three lines pin is
-    // that a CHOSEN preset has a visible selected treatment and that the
-    // treatment is not an amber wash -- the amber border was incidental to
-    // that intent, and A2 ruled a picker selection outside amber discipline
-    // 1's ceiling. The selected state is now three simultaneous cues instead
-    // of one colour (surface3 fill, borderLight edge, primary ink at the
-    // semibold face), so it is STRONGER than what this used to pin, and the
-    // no-wash assertion below is unchanged and still the point.
-    expect(source).toMatch(/avatarPresetOptionSelected: \{[\s\S]*borderColor: colors\.borderLight,[\s\S]*backgroundColor: colors\.surface3/);
-    expect(source).toMatch(/avatarPresetOptionTextSelected: \{ \.\.\.type\.w\('captionTight', 'semibold'\), color: colors\.textPrimary \}/);
+    expect(source).toMatch(/avatarPresetOptionSelected: \{[\s\S]*borderColor: colors\.primary,[\s\S]*backgroundColor: colors\.surfaceElevated/);
+    expect(source).toMatch(/avatarPresetOptionTextSelected: \{ color: colors\.textPrimary \}/);
     expect(source).not.toMatch(/avatarPresetOptionSelected: \{[\s\S]*backgroundColor: colors\.primaryBg/);
     expect(source).not.toMatch(/\.\.\.AVATAR_PRESETS\.map\(\(preset\) => \(\{ text: preset\.label/);
     expect(source).toMatch(/Add profile picture or Volyume avatar/);

@@ -34,7 +34,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet, AccessibilityInfo } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { spacing, fontWeight, circle } from '../../styles/theme';
+import { spacing, fontWeight } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { workoutLoggerSize } from '../../styles/layout';
 import { selection as hapticSelection } from '../../lib/haptics';
@@ -128,10 +128,6 @@ export default function WorkoutOutline({
       // same amber at the same weight, but STATIC and full width - it reads
       // as the separation between the navigator and the timer above it,
       // while the line below stays the one that means something.
-      // AMBER SWEEP (D174), STOPPED AND REPORTED rather than changed: a
-      // static full-width amber edge is decoration under discipline 4, but
-      // this exact edge is a named founder device order, so reversing it is
-      // the founder's call and not a sweep's. Left as it is, deliberately.
       borderTopColor: t.colors.primaryFill,
       borderBottomColor: t.colors.border,
     }]}>
@@ -157,7 +153,7 @@ export default function WorkoutOutline({
           ? 'Shows every exercise in this workout. Hold to reorder.'
           : 'Shows every exercise in this workout.'}
       >
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={t.colors.textSecondary} />
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={t.colors.primary} />
         <Text style={[styles.stripText, { ...t.type.label, fontWeight: fontWeight.semibold, color: t.colors.textPrimary }]} numberOfLines={1}>
           {`Exercise ${currentIndex + 1} of ${items.length}`}
         </Text>
@@ -275,8 +271,8 @@ const styles = StyleSheet.create({
   },
   rowSkipped: { opacity: 0.5 },
   marker: { width: 16, alignItems: 'center' },
-  currentDot: { width: 8, height: 8, borderRadius: circle(8) },
-  upcomingDot: { width: 7, height: 7, borderRadius: circle(7), borderWidth: 1.5 },
+  currentDot: { width: 8, height: 8, borderRadius: 4 },
+  upcomingDot: { width: 7, height: 7, borderRadius: 4, borderWidth: 1.5 },
   name: { flex: 1, minWidth: 0 },
   count: { minWidth: 30, textAlign: 'right' },
 });

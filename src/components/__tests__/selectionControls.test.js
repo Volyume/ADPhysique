@@ -48,7 +48,7 @@ describe('OptionCard', () => {
   test('fires onPress when tapped', () => {
     const onPress = jest.fn();
     const tree = create(
-      <OptionCard icon="barbell-outline" label="Advanced" detail="3 to 5 years" active={false} onPress={onPress} />,
+      <OptionCard icon="trophy-outline" label="Advanced" detail="3 to 5 years" active={false} onPress={onPress} />,
     );
     press(tree.root.findByType(TouchableOpacity));
     expect(onPress).toHaveBeenCalledTimes(1);
@@ -56,7 +56,7 @@ describe('OptionCard', () => {
 
   test('reports selected state for accessibility when active', () => {
     const tree = create(
-      <OptionCard icon="barbell-outline" label="Advanced" detail="3 to 5 years" active onPress={() => {}} />,
+      <OptionCard icon="trophy-outline" label="Advanced" detail="3 to 5 years" active onPress={() => {}} />,
     );
     const card = tree.root.findByType(TouchableOpacity);
     expect(card.props.accessibilityState.selected).toBe(true);

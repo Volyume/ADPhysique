@@ -559,7 +559,7 @@ export default function VolumeHeatmapScreen() {
                 style={[
                   styles.windowBtn,
                   active
-                    ? { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight }
+                    ? { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary }
                     : { backgroundColor: t.colors.surface, borderColor: t.colors.border },
                 ]}
                 onPress={() => setWindowWeeks(opt.weeks)}
@@ -571,9 +571,7 @@ export default function VolumeHeatmapScreen() {
                 <Text
                   style={[
                     styles.windowBtnText, live.windowBtnText,
-                    active
-                      ? { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary }
-                      : { color: t.colors.textSecondary },
+                    { color: active ? t.colors.primary : t.colors.textSecondary },
                   ]}
                 >
                   {opt.label}
@@ -951,7 +949,7 @@ function MuscleTrendRow({ muscle, trendData, customLandmarks }) {
           height={SPARK_MAX_HEIGHT}
           barWidth={SPARK_BAR_WIDTH}
           barGap={SPARK_BAR_GAP}
-          color={t.colors.borderLight}
+          color={t.colors.primary}
           interactive
           onScrubIndex={setScrubIdx}
           accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} weekly volume trend`}
@@ -1053,12 +1051,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: spacing.md,
   },
-  // D165 law 2: a chart, not an object -- no box, a borderSubtle hairline above (D171/D172).
   heatmapCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: spacing.lg,
     gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
   muscleRow: {
     flexDirection: 'row',
@@ -1162,7 +1161,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
   },
-  editRowClear: { ...type.caption, color: colors.textSecondary },
+  editRowClear: { ...type.caption, color: colors.primary },
   editInputs: { flexDirection: 'row', gap: spacing.sm },
   editInputGroup: { flex: 1, gap: spacing.xs },
   editInputLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
@@ -1189,7 +1188,7 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     windowBtnText: { ...t.type.label },
     windowNoteText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    heatmapCard: { borderTopColor: t.colors.borderSubtle },
+    heatmapCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     muscleName: { ...t.type.label, color: t.colors.textSecondary },
     provenanceCaption: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     barTrack: { backgroundColor: t.colors.surface3 },
@@ -1205,7 +1204,7 @@ function buildLiveStyles(t) {
     editSubtitle: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     editRow: { borderBottomColor: t.colors.borderSubtle },
     editMuscleName: { ...t.type.label, color: t.colors.textSecondary },
-    editRowClear: { ...t.type.caption, color: t.colors.textSecondary },
+    editRowClear: { ...t.type.caption, color: t.colors.primary },
     editInputLabel: { ...t.type.caption, color: t.colors.textMuted },
   };
 }

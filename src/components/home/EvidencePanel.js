@@ -15,7 +15,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, type } from '../../styles/theme';
+import { colors, spacing, radius, type } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 
 function EvidencePanel({ panel, onPress, testID }) {
@@ -49,26 +49,18 @@ function EvidencePanel({ panel, onPress, testID }) {
             <Text style={[styles.countdown, live.countdown]}>{panel.countdown}</Text>
           ) : null}
         </>
-      ) : panel.countdown ? (
+      ) : (
         <View style={styles.headerRow}>
           <Text style={[styles.countdown, live.countdown]}>{panel.countdown}</Text>
           <Ionicons name="chevron-forward" size={14} color={t.colors.textMuted} />
         </View>
-      ) : null}
-      {/* D192 landing (2026-09-18): with neither a title nor a countdown (day
-          zero before any review is scheduled) the header row used to render
-          as a bare chevron beside nothing. The founder's 2026-08-17 order
-          stands (no coach-voiced title), so the block simply starts at its
-          rows; the whole panel is still the tap target. */}
+      )}
       {panel.rows.map((row) => (
         <View key={row.key} style={styles.row}>
           <Ionicons
             name={row.done ? 'checkmark-circle' : 'ellipse-outline'}
             size={14}
-            // D192 landing (2026-09-18): a static list mark is ink, not green
-            // (the same ruling as the coaching ledger's ticks); done reads as
-            // the filled glyph against the outline, not as a colour.
-            color={row.done ? t.colors.textSecondary : t.colors.textMuted}
+            color={row.done ? t.colors.success : t.colors.textMuted}
           />
           <Text style={[styles.rowText, live.rowText, row.done && [styles.rowTextDone, live.rowTextDone]]}>
             {row.label}
@@ -82,12 +74,13 @@ function EvidencePanel({ panel, onPress, testID }) {
 export default React.memo(EvidencePanel);
 
 const styles = StyleSheet.create({
-  // D165 law 2: evidence content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   wrap: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     padding: spacing.md,
     gap: spacing.xs,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   headerRow: {
     flexDirection: 'row',
@@ -106,12 +99,7 @@ const styles = StyleSheet.create({
 // values (the CP-10 convention CoachDailyBrief used).
 function buildLiveStyles(t) {
   return {
-    // D167: this read `t.colors.border` while the frozen half sets
-    // `colors.borderSubtle` twenty lines above. The live half wins at runtime,
-    // so the pane drew the bright control-edge grey against its own intent --
-    // the same two-halves-disagree defect as LoggedSetRow (D166 part 3), and
-    // the reason new components no longer use this pattern at all.
-    wrap: { borderTopColor: t.colors.borderSubtle },
+    wrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     title: { ...t.type.caption, color: t.colors.textMuted },
     countdown: { ...t.type.bodySm, color: t.colors.textSecondary },
     rowText: { ...t.type.bodySm, color: t.colors.textSecondary },

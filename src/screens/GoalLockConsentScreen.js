@@ -202,11 +202,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  // D174 A2 + D175 3: a chosen option is a selection in a picker. The radio
-  // DOT below is the selection mark discipline 1 keeps; the card edge and the
-  // radio ring are not second and third amber marks for the same state.
   optionCardActive: {
-    borderColor: colors.borderLight,
+    borderColor: colors.primary,
   },
   optionText: {
     ...type.bodySm,
@@ -222,7 +219,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.hair,
   },
-  radioActive: { borderColor: colors.borderLight },
+  radioActive: { borderColor: colors.primary },
   radioDot: {
     width: 10, height: 10, borderRadius: circle(10),
     backgroundColor: colors.primary,
@@ -253,10 +250,10 @@ function buildLiveStyles(t) {
     body: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
     fieldLabel: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     optionCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    optionCardActive: { borderColor: t.colors.borderLight },
+    optionCardActive: { borderColor: t.colors.primary },
     optionText: { ...t.type.bodySm, color: t.colors.textPrimary },
     radio: { borderColor: t.colors.border },
-    radioActive: { borderColor: t.colors.borderLight },
+    radioActive: { borderColor: t.colors.primary },
     radioDot: { backgroundColor: t.colors.primary },
     noteText: { ...t.type.caption, color: t.colors.textMuted },
   };

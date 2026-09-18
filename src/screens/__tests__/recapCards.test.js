@@ -262,11 +262,7 @@ describe('YearOfLiftsScreen — R2 (2026-07-11) design-cohesion census (chrome o
     expect(YEAR_OF_LIFTS_SOURCE).toMatch(/listRank: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
     expect(YEAR_OF_LIFTS_SOURCE).toMatch(/listSecondary: \{[\s\S]*?fontVariant: \['tabular-nums'\]/);
     expect(YEAR_OF_LIFTS_SOURCE).toMatch(/statValue: \{ color: t\.colors\.textPrimary, fontVariant: \['tabular-nums'\] \}/);
-    // D174 re-anchor: this line read `color: t.colors.primary`. The colour was
-    // incidental to the case, which is about TABULAR FIGURES and about the live
-    // twin existing at all; the rank is the rule table's rank/index tint and
-    // took `textMuted`. The tabular assertion is unchanged.
-    expect(YEAR_OF_LIFTS_SOURCE).toMatch(/listRank: \{ fontSize: t\.fontSize\.lg, color: t\.colors\.textMuted, fontVariant: \['tabular-nums'\] \}/);
+    expect(YEAR_OF_LIFTS_SOURCE).toMatch(/listRank: \{ fontSize: t\.fontSize\.lg, color: t\.colors\.primary, fontVariant: \['tabular-nums'\] \}/);
     expect(YEAR_OF_LIFTS_SOURCE).toMatch(/listSecondary: \{ fontSize: t\.fontSize\.sm, color: t\.colors\.textSecondary, fontVariant: \['tabular-nums'\] \}/);
   });
 

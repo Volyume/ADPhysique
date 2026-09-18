@@ -14,7 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 // D134 (founder 2026-09-03): the tier-blind Injuries & limitations row's live line.
 import { loadCapabilityState } from '../lib/capability/store';
 import { howYouTrainSummary } from '../lib/capability/summary';
-import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import ScreenHeader from '../components/ScreenHeader';
@@ -91,8 +91,8 @@ function NavRow({ icon, label, sub, onPress }) {
       onPress={handlePress}
       accessibilityLabel={label}
     >
-      <View style={styles.navRowIcon}>
-        <Ionicons name={icon} size={18} color={t.colors.textSecondary} />
+      <View style={[styles.navRowIcon, live.navRowIcon]}>
+        <Ionicons name={icon} size={18} color={t.colors.primary} />
       </View>
       <View style={styles.navRowText}>
         <View style={styles.navRowLabelRow}>
@@ -123,7 +123,7 @@ function NavRow({ icon, label, sub, onPress }) {
 function NavGroup({ children }) {
   const t = useTheme();
   return (
-    <View style={[styles.navGroup, { borderTopColor: t.colors.borderSubtle }]}>
+    <View style={[styles.navGroup, { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle }]}>
       {children}
     </View>
   );
@@ -375,6 +375,7 @@ export default function YouScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader
           title="Coach"
+          subtitle="Weekly coaching from your logs."
           right={(
             <Pressable
               onPress={() => navigation.navigate('Settings')}
@@ -469,13 +470,13 @@ export default function YouScreen({ navigation }) {
         {latestReview ? (
           <Card
             style={styles.statusCard}
-            tone="neutral"
+            tone="primary"
             onPress={() => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)}
             accessibilityLabel={`Open your weekly coach update${reviewDate ? ` from ${reviewDate}` : ''}`}
           >
             <View style={styles.statusTop}>
-              <View style={styles.statusIcon}>
-                <Ionicons name="git-branch-outline" size={20} color={t.colors.textSecondary} />
+              <View style={[styles.statusIcon, live.statusIcon]}>
+                <Ionicons name="git-branch-outline" size={20} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 {/* The "COACH" kicker that sat here is gone. It restated the
@@ -490,7 +491,7 @@ export default function YouScreen({ navigation }) {
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </View>
             <Text style={[styles.statusBody, live.statusBody]}>
-              What changed, what held, and the signals behind it
+              What changed, what was held, and the exact signals behind it.
             </Text>
           </Card>
         ) : null}
@@ -498,7 +499,7 @@ export default function YouScreen({ navigation }) {
         {/* D134 (founder 2026-09-03): tier-blind, above Setup. The first
             thing the coach builds from is free by law (CAP-19), so every
             account sees it here, with its live line. */}
-        <View style={styles.sectionLabelled}>
+        <View style={styles.section}>
           <SectionLabel>Your body</SectionLabel>
           <NavGroup>
             <NavRow
@@ -513,7 +514,7 @@ export default function YouScreen({ navigation }) {
         {/* FOUNDER DECISION (fully free, no tier split): "This week" is the
             only version of this section now -- the Free "Coach"/"Coaching
             history" branch is retired. */}
-        <View style={styles.sectionLabelled}>
+        <View style={styles.section}>
           <SectionLabel>This week</SectionLabel>
           <NavGroup>
           {/* R2-7 (remediation 2026-07-11, founder device walk build 2684):
@@ -528,7 +529,7 @@ export default function YouScreen({ navigation }) {
             icon="clipboard-outline"
             label="Weekly check-in"
             sub={latestReview
-              ? "This week's questions, so the coach has context"
+              ? "Answer this week's questions so the coach has context."
               : pendingCoachCopy.title}
             onPress={() => navigation.navigate('WeeklyCheckIn')}
           />
@@ -548,7 +549,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="book-outline"
             label="Your week"
-            sub="Training, eating, weigh-ins and the decision"
+            sub="Training, eating, weighing in and the coach's decision, in one place."
             onPress={() => navigation.navigate('WeeklyStory')}
           />
           </NavGroup>
@@ -562,7 +563,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="people-outline"
             label="Community"
-            sub="Other lifters, gyms and groups"
+            sub="Connect with other lifters and share your training progress."
             onPress={openCommunity}
           />
           </NavGroup>
@@ -570,25 +571,25 @@ export default function YouScreen({ navigation }) {
 
         {/* FOUNDER DECISION (fully free, no tier split): Setup renders for
             everyone now. */}
-        <View style={styles.sectionLabelled}>
+        <View style={styles.section}>
           <SectionLabel>Setup</SectionLabel>
           <NavGroup>
           <NavRow
             icon="flag-outline"
             label="Update goal and phase"
-            sub="Goal, phase, schedule, equipment, experience"
+            sub="Change goal, phase, schedule, equipment or experience."
             onPress={() => navigation.navigate('ProGoalSetup')}
           />
           <NavRow
             icon="nutrition-outline"
             label="Nutrition targets"
-            sub="Calories, macros, protein level and rationale"
+            sub="Calories, macros, protein level and target rationale."
             onPress={() => navigation.navigate('NutritionTargets')}
           />
           <NavRow
             icon="notifications-outline"
             label="Coaching reminders"
-            sub="Check-in, weigh-in and adherence reminders"
+            sub="Check-in, weigh-in and adherence reminders that feed the weekly loop."
             onPress={() => navigation.navigate('CoachingReminders')}
           />
           {/* D94 (Campaign 3, Phase 9): the volume-target editor's only
@@ -599,7 +600,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="stats-chart-outline"
             label="Volume targets"
-            sub="Set ranges per muscle. Yours take precedence"
+            sub="Weekly set ranges per muscle. Your own numbers take precedence."
             // Review A finding 3: VolumeHeatmap lives in the Home and Progress
             // stacks, not ProfileTab; cross-tab helper or the tap is dead.
             onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'VolumeHeatmap')}
@@ -618,7 +619,7 @@ export default function YouScreen({ navigation }) {
             proGate.js are explicit that guardrails never consult tier, so the
             section is tier-blind here too. No screen, question, score,
             threshold, flag or floor is changed by this move. */}
-        <View style={styles.sectionLabelled}>
+        <View style={styles.section}>
           <SectionLabel>Safety checks</SectionLabel>
           <NavGroup>
           <NavRow
@@ -666,10 +667,7 @@ const styles = StyleSheet.create({
   profileInfo: { flex: 1, gap: spacing.xxs },
   profileNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   profileName: { ...type.h3, color: colors.textPrimary, flexShrink: 1 },
-  // D192 finish spec 4.1 table: a card's meta line is a "secondary line
-  // under a title", which is bodySm (13/18), not caption (12/16) -- was
-  // reading a size step small for its role.
-  profileStat: { ...type.num('bodySm'), color: colors.textSecondary },
+  profileStat: { ...type.num('caption'), color: colors.textSecondary },
   profileFocus: { ...type.captionTight, color: colors.textMuted },
   loadErrorCard: {
     flexDirection: 'row',
@@ -690,50 +688,40 @@ const styles = StyleSheet.create({
   loadErrorBody: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   statusCard: { gap: spacing.md },
   statusTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  // D174: was a 40dp `primaryBg` disc with a tinted edge behind a stock
-  // glyph. Fixed glyph column now, no fill and no edge.
   statusIcon: {
     width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
   },
   // B-5: statusEyebrow's typography now comes from SectionLabel (tone="primary").
   statusTitle: { ...type.bodyStrong, color: colors.textPrimary },
   statusBody: { ...type.bodySm, color: colors.textSecondary },
   section: { gap: spacing.md },
-  // D192 finish spec (40-FINISH-SPEC.md 4.1 rule 2, "an overline label sits
-  // 24 to 28dp below the previous section's last row"): YouScreen hand-rolls
-  // its own section rhythm (no SettingsPrimitives here), and the ScrollView's
-  // `content.gap` (spacing.lg, 16) is the only air the page puts between its
-  // top-level children. A section that opens with a SectionLabel needs the
-  // difference (spacing.sm, 8) added on top, so it totals spacing.xl (24)
-  // below whatever precedes it. Community carries no label of its own and
-  // keeps the plain `section` gap.
-  sectionLabelled: { gap: spacing.md, marginTop: spacing.sm },
-  // D165 law 2, the founder's test: a list of navigation rows is not an
-  // object, so the fill, the card radius and the outline go. The rows sit on
-  // the page's own ground, divided by the hairline they already carried, with
-  // one more hairline above the group -- the same shape SettingsPrimitives'
-  // `section` now draws, so the two nav surfaces still read as one system.
   navGroup: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    // The group's box came off with law 2, so the row stops paying a second
-    // gutter inside it (one gutter, paid once by the page -- CR-17/D163).
-    paddingVertical: spacing.lg,
+    padding: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
-  // D174: was a 36dp `primaryBg` disc behind a stock glyph -- the same
-  // decoration SettingsPrimitives lost on its 104 rows. Fixed glyph column.
   navRowIcon: {
     width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -758,15 +746,17 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     settingsGear: { backgroundColor: t.colors.surface2 },
     profileName: { ...t.type.h3, color: t.colors.textPrimary },
-    profileStat: { ...t.type.num('bodySm'), color: t.colors.textSecondary },
+    profileStat: { ...t.type.num('caption'), color: t.colors.textSecondary },
     profileFocus: { ...t.type.captionTight, color: t.colors.textMuted },
     loadErrorCard: { borderColor: t.colors.warning },
     loadErrorIcon: { backgroundColor: t.colors.warningBg },
     loadErrorTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     loadErrorBody: { ...t.type.caption, color: t.colors.textSecondary },
+    statusIcon: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     statusTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     statusBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     navRow: { borderBottomColor: t.colors.borderSubtle },
+    navRowIcon: { backgroundColor: t.colors.primaryBg },
     navRowLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     navRowSub: { ...t.type.caption, color: t.colors.textSecondary },
     aboutName: { fontSize: t.fontSize.sm, color: t.colors.textMuted },

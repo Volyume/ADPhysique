@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Button from './Button';
-import { colors, spacing, radius, type } from '../styles/theme';
+import { colors, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 /**
@@ -70,21 +70,13 @@ export default function EmptyState({
         </TouchableOpacity>
       )}
 
-      {/* D172. This was a 52 dp amber disc with a 1 dp amber edge around a
-          stock outline glyph, repeated identically on 87 screens -- the single
-          most-repeated object in the product and, in the redesign audit's own
-          words, one of the things critics name first.
-
-          Law 6 settles the colour: amber means "now", and an empty state is
-          the absence of anything happening. Law 2 settles the disc: a ring
-          drawn round a glyph is decoration, not an object. So the glyph stays
-          for wayfinding, quietly, and the disc goes. */}
-      <Ionicons
-        name={icon}
-        size={compact ? 24 : 28}
-        color={t.colors.textMuted}
-        style={styles.icon}
-      />
+      <View style={[styles.iconWrap, live.iconWrap, compact && styles.iconWrapCompact, ghost && [styles.iconWrapGhost, live.iconWrapGhost]]}>
+        <Ionicons
+          name={icon}
+          size={compact ? 24 : 28}
+          color={ghost ? t.colors.textMuted : t.colors.primary}
+        />
+      </View>
 
       {!!title && (
         <Text style={[styles.title, live.title, ghost && [styles.titleGhost, live.titleGhost]]}>{title}</Text>
@@ -125,34 +117,43 @@ export default function EmptyState({
 }
 
 const styles = StyleSheet.create({
-  // D172, law 2: a card means an object you can pick up, and an empty state is
-  // the absence of one. A bordered box in the middle of an otherwise blank
-  // screen is the "poster" the Community pass named (CR-17/D163) and then
-  // fixed at section level; this finishes the same job at screen level. The
-  // earlier note about matching Card's radius is left below because it
-  // explains why the radius WAS lg, and there is no radius here now.
   card: {
+    backgroundColor: colors.surface,
+    // radius.lg, not md: Card's own docblock records the 2026-07-09 fix (A-1)
+    // that moved the card radius to lg precisely so two different corner radii
+    // never sit side by side on one screen. EmptyState was missed by that
+    // sweep and kept md, so on every screen that shows an empty state beside
+    // a Card the two boxes had visibly different corners.
+    borderRadius: radius.lg,
     padding: spacing.xxl,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     alignItems: 'center',
     gap: spacing.md,
   },
   cardCompact: { padding: spacing.lg },
-  // The GHOST variant keeps its outline, and that is not an exception to law 2
-  // being sloppy. Ghost means "your data will look like this": the dashed edge
-  // is doing real work, marking a placeholder as not-yet-real. It now carries
-  // its own borderWidth, because the base no longer sets one -- without that
-  // the dashed style had nothing to draw and the variant would have gone
-  // silently blank.
   cardGhost: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderRadius: radius.lg,
     borderStyle: 'dashed',
     borderColor: colors.borderSubtle,
     opacity: 0.75,
   },
   dismiss: { position: 'absolute', top: spacing.md, right: spacing.md, padding: spacing.xxs },
-  icon: { marginBottom: spacing.xxs },
+  iconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
+  },
+  iconWrapCompact: { width: 44, height: 44 },
+  iconWrapGhost: {
+    backgroundColor: colors.surface2,
+    borderColor: colors.borderSubtle,
+  },
   title: {
     ...type.title,
     color: colors.textPrimary,
@@ -179,6 +180,8 @@ function buildLiveStyles(t) {
   return {
     card: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     cardGhost: { borderColor: t.colors.borderSubtle },
+    iconWrap: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    iconWrapGhost: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
     title: { ...t.type.title, color: t.colors.textPrimary },
     titleGhost: { color: t.colors.textMuted },
     text: { ...t.type.bodySm, color: t.colors.textSecondary },

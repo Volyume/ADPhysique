@@ -120,11 +120,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
   },
-  // D174 A2: a highlighted column is a selection, not the user's live
-  // moment. (Dormant billing surface under D137: colour only.)
   colHighlighted: {
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surface3,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
   },
   colHeader: {
     color: colors.textPrimary,
@@ -155,7 +153,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     col: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    colHighlighted: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
+    colHighlighted: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     colHeader: { color: t.colors.textPrimary },
     colPrice: { color: t.colors.textPrimary },
     colCadence: { color: t.colors.textMuted },

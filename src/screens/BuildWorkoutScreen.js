@@ -15,7 +15,6 @@ import Stepper from '../components/Stepper';
 import TextField from '../components/TextField';
 import BottomSheet from '../components/BottomSheet';
 import Chip from '../components/Chip';
-import Card from '../components/Card';
 import { getAllExercises, createWorkout, getActiveBlock, uid } from '../lib/database';
 import { loadExerciseIntentState } from '../lib/exercise/intent';
 import { filterLibraryForGeneration } from '../lib/exercise/generation';
@@ -312,9 +311,7 @@ export default function BuildWorkoutScreen({ navigation }) {
     if (secs < 60) return `${secs}s`;
     const m = Math.floor(secs / 60);
     const s = secs % 60;
-    // D192 (one unit format): whole minutes read "m min"; the "m Ys" compound
-    // form is this stepper's own compact convention and is unchanged.
-    return s === 0 ? `${m} min` : `${m}m ${s}s`;
+    return s === 0 ? `${m}m` : `${m}m ${s}s`;
   }
 
   return (
@@ -331,7 +328,7 @@ export default function BuildWorkoutScreen({ navigation }) {
         <Text style={[styles.subtitle, live.subtitle]}>Start blank and add whatever you want to do today. You can adjust sets, reps, rest and starting weight before you train.</Text>
 
         {exercises.map((item, index) => (
-          <Card key={item.key} style={styles.exerciseCard}>
+          <View key={item.key} style={[styles.exerciseCard, live.exerciseCard]}>
             <View style={styles.exerciseCardHeader}>
               <View style={[styles.indexBadge, live.indexBadge]}>
                 <Text style={[styles.indexNum, live.indexNum]}>{index + 1}</Text>
@@ -440,7 +437,7 @@ export default function BuildWorkoutScreen({ navigation }) {
                 />
               </View>
             </View>
-          </Card>
+          </View>
         ))}
 
         <Button
@@ -602,12 +599,12 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     lineHeight: 20,
   },
-  // D165 law 2, the founder's test: an EXERCISE in a workout you are building
-  // is an object -- it has a name, sets, reps, a rest and a starting weight,
-  // and you reorder and remove it. It keeps a card and it is now the real one,
-  // which already owns the surface, the radius.lg, the edge and the padding
-  // this shell hand-rolled. Only the gap it does not own stays.
   exerciseCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     gap: spacing.lg,
   },
   exerciseCardHeader: {
@@ -699,14 +696,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primary,
     borderStyle: 'dashed',
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
   },
   addBtnText: {
     fontSize: fontSize.md,
-    color: colors.textSecondary,
+    color: colors.primary,
     fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
   footer: {
@@ -750,6 +747,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     subtitle: { ...t.type.bodySm, color: t.colors.textMuted },
+    exerciseCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     indexBadge: { backgroundColor: t.colors.surface2 },
     indexNum: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     exerciseName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -758,8 +756,8 @@ function buildLiveStyles(t) {
     repInput: { fontSize: t.fontSize.sm },
     repSep: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     weightInput: { fontSize: t.fontSize.sm },
-    addBtn: { borderColor: t.colors.border },
-    addBtnText: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+    addBtn: { borderColor: t.colors.primary },
+    addBtnText: { fontSize: t.fontSize.md, color: t.colors.primary },
     footer: { borderTopColor: t.colors.border },
     quickFillText: { ...t.type.label, color: t.colors.textSecondary },
     travelTitle: { ...t.type.title, color: t.colors.textPrimary },

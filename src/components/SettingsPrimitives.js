@@ -2,7 +2,7 @@ import { cloneElement, isValidElement } from 'react';
 import { View, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, spacing, type, iconSize } from '../styles/theme';
+import { colors, fontSize, spacing, radius, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import PressableCard from './PressableCard';
 import BackHeader from './BackHeader';
@@ -34,17 +34,14 @@ export function SettingRow({ icon, label, sub, value, onPress, destructive, righ
       // override; every existing call site is byte-identical without it.
       accessibilityLabel={accessibilityLabel ?? (value ? `${label}: ${value}` : label)}
     >
-      {/* D174 (amber census, 2026-09-15): the glyph used to sit on a 34dp
-          amber-tinted disc -- `primaryBg` behind a stock Ionicon on 104 rows
-          across 17 screens. Plan section 3.2 forbids the accent becoming "a
-          tint behind a glyph" and D174's REMOVE-decoration definition names
-          "an icon in a settings list" word for word, so the fill and the disc
-          geometry both go and the glyph takes the secondary ink. The
-          `destructive` branch keeps `error`: that is the state-colour grammar
-          section 8 protects, and it is the one thing on a settings row that a
-          colour genuinely has to say. */}
-      <View style={styles.settingIcon}>
-        <Ionicons name={icon} size={18} color={destructive ? t.colors.error : t.colors.textSecondary} />
+      <View
+        style={[
+          styles.settingIcon,
+          { backgroundColor: t.colors.primaryBg },
+          destructive && { backgroundColor: t.colors.errorBg },
+        ]}
+      >
+        <Ionicons name={icon} size={18} color={destructive ? t.colors.error : t.colors.primary} />
       </View>
       {/* Campaign 27 Pillar A (D104): minWidth: 0 added so the label column
           uses the codebase's safe flex:1 + minWidth:0 wrapping idiom. */}
@@ -134,15 +131,9 @@ export function useSettingsStyles() {
   const t = useTheme();
   return {
     safe: { backgroundColor: t.colors.background },
-    section: { borderTopColor: t.colors.borderSubtle },
+    section: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     settingRow: { borderBottomColor: t.colors.borderSubtle },
-    // D174: the row glyph carries no tint at all now, so this override has
-    // nothing theme-dependent left to carry. Kept as an explicit empty object
-    // rather than deleted because ~8 call sites outside this file append it as
-    // `[settingsStyles.settingIcon, live.settingIcon]`; a missing key there
-    // would read as the one-sided frozen/live defect this campaign has spent
-    // itself closing, rather than as a deliberate absence.
-    settingIcon: {},
+    settingIcon: { backgroundColor: t.colors.primaryBg },
     settingLabel: { ...t.type.body, color: t.colors.textPrimary },
     settingSub: { ...t.type.captionTight, color: t.colors.textMuted },
     dataPrivacyNote: { ...t.type.captionTight, color: t.colors.textMuted },
@@ -159,34 +150,27 @@ export const settingsStyles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
-  // D165 law 2, the founder's test, applied to the shape ~14 Settings screens
-  // are made of: "a card should mean: this thing is an object", and a LIST OF
-  // SETTINGS is not an object. The fill, the card radius and the outline go;
-  // what is left is the rows themselves on the page's own ground, divided by
-  // the borderSubtle hairline they already carried, with one more hairline
-  // above the group to separate it from its heading. That is the treatment
-  // Community landed under CR-17/D163 and Today, the diary and the empty
-  // states have carried since D171/D172.
-  //
-  // The note this replaces is kept in substance because it still decides the
-  // hairline COLOUR: `border` (#6E6E6E) is the WCAG 1.4.11 edge for a control
-  // that needs an identifiable boundary, and a settings row is identified by
-  // its own label, icon and chevron; `borderSubtle` is the token documented
-  // for a hairline divider, and drawing these in `border` is what produced the
-  // wireframe look.
+  // Quiet edges (premium UI pass). `border` (#6E6E6E, 3.45:1 on surface) is
+  // the WCAG 1.4.11 edge for a CONTROL that needs an identifiable boundary; a
+  // settings SECTION is a grouping container and its rows are identified by
+  // their own label, icon and chevron, so the strong edge drew a bright grey
+  // outline around every group and a bright rule between every row. That is
+  // the wireframe look. `borderSubtle` is the token documented for exactly
+  // this job ("hairline dividers INSIDE a card") and is what the shared Card
+  // primitive already uses for its own edge, so this also makes Settings
+  // consistent with every other card surface in the app.
   section: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.lg,
-    // The group's box came off with law 2, so the row stops paying a second
-    // gutter inside it and sits at the page's own 16 dp edge. One gutter,
-    // paid once by the page (CR-17/D163).
-    paddingVertical: spacing.lg,
+    padding: spacing.lg,
     // Explicit platform floor. Padding plus a 34dp icon chip already put
     // this near 66dp, so this is a no-op at rest -- but it makes the touch
     // target a GUARANTEE of the primitive rather than a side effect of its
@@ -196,17 +180,15 @@ export const settingsStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
-  // D174: was a 34dp `primaryBg` disc. It is now a fixed 24dp column with no
-  // fill, so the glyph keeps every row's label on the same left edge (the
-  // ledger alignment) without an amber ground behind it. `settingIconDestructive`
-  // went with the fill: it was an `errorBg` wash for the same disc, it had no
-  // consumer outside this file, and SettingRow's destructive branch says what
-  // it needs to say in the glyph ink.
   settingIcon: {
-    width: iconSize.lg,
+    width: 34,
+    height: 34,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  settingIconDestructive: { backgroundColor: colors.errorBg },
   settingLabel: { ...type.body, color: colors.textPrimary },
   settingSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   settingLabelDestructive: { color: colors.error },

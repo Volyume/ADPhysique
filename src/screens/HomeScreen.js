@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform,
 } from 'react-native';
@@ -8,9 +8,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import { touchTarget } from '../styles/layout';
 import ScreenHeader from '../components/ScreenHeader';
 import CommunityHeaderAction from '../components/community/CommunityHeaderAction';
 import HomeCommunityIntroCard from '../components/HomeCommunityIntroCard';
@@ -37,8 +36,9 @@ import { nextWorkoutRecoveryLabel, isLighterTrainingState } from '../lib/recover
 import { useToast } from '../components/Toast';
 // Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §17 R3, hero merge):
 // CoachBriefCard's card-in-card render is retired -- the hero now renders
-// its content as one quiet line inline. D192 then took the tone glyph off
-// the readiness line too, so nothing here reads CoachBriefCard's colours.
+// its content as one quiet line inline. buildBriefIconColor is still the
+// shared tone-colour source for the readiness chip below and stays imported.
+import { buildBriefIconColor } from '../components/CoachBriefCard';
 import HomeWelcomeCard from '../components/HomeWelcomeCard';
 import HomeHowYouTrainOfferCard from '../components/HomeHowYouTrainOfferCard';
 import HomeLastSessionCard from '../components/HomeLastSessionCard';
@@ -50,6 +50,7 @@ import * as haptics from '../lib/haptics';
 import { buildCoachBrief, constraintLineText } from '../lib/homeCoachBrief';
 import { isCompletedCoachDecision } from '../lib/coachDecision';
 import { resolveHasUnseenCoachChange, COACH_OUTPUT_VIEWED_KEY_FOR } from '../lib/home/unseenCoachChange';
+import { isEnrolmentSeedWeight } from '../lib/checkinDerive';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
   recordSessionResolution,
@@ -57,7 +58,7 @@ import {
   getWorkoutSetsForWorkout, getExerciseById, uid,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
   getMorningWeightToday, getMorningWeights, logMorningWeight,
-  getRecentWorkoutFeedback, getLatestCoachOutput, getNutritionTargets,
+  getRecentWorkoutFeedback, getLatestCoachOutput,
   getMorningWeightsLast14Days, getOpenEdPatternFlag,
   getLatestCheckin,
   getAllWeeklyCheckinsForUser,
@@ -87,13 +88,7 @@ import { summariseCircuitGroups, formatCircuitPreviewLine } from '../lib/circuit
 import EvidencePanel from '../components/home/EvidencePanel';
 import { resolveEvidencePanel } from '../lib/home/evidencePanel';
 import { formatBodyWeight } from '../lib/units';
-import { estimateWorkoutMinutes } from '../lib/planEngine';
-import BigNumber from '../components/BigNumber';
-import WeekRibbon from '../components/WeekRibbon';
-import { computeConsistency } from '../lib/community/trainingConsistency';
-import { readLatestDecision, decisionAgeCaption } from '../lib/coachLatestDecision';
-import { formatNumber, formatWithUnit } from '../lib/format';
-import { getRecentIntakeSummary, getRollupForDay } from '../lib/food/db';
+import { getRecentIntakeSummary } from '../lib/food/db';
 // D139: the no-plan "Start with a plan" action previews before it commits.
 // prepareStartWithPlan owns the capability pre-flight (CC27 section 9.6 red-team
 // finding 1: every generation surface runs it first, never a silent fail-open)
@@ -105,6 +100,7 @@ import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, buildLoadSemanticsById, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
 import { buildReadinessSummary } from '../lib/readinessSummary';
+import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -171,8 +167,8 @@ export default function HomeScreen({ navigation, route }) {
   // FOUNDER DECISION (fully free, no tier split): `tier` is no longer read
   // here -- every branch that used to fork on it now runs the single
   // full-access behaviour for everyone (see proGate.js FULL_ACCESS_FOR_ALL).
-  const { user, userProfile, startWorkout, activeWorkout, bodyWeightUnits, units, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, bodyWeightUnits: s.bodyWeightUnits, units: s.units, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
+  const { user, userProfile, startWorkout, activeWorkout, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
   );
 
   // CP-10 stage 3 (theming batch 2): live theme (src/hooks/useTheme.js).
@@ -189,57 +185,62 @@ export default function HomeScreen({ navigation, route }) {
     continueIcon: { backgroundColor: withAlpha(t.colors.background, alpha.soft) },
     continueTitle: { ...t.type.bodyStrong, color: t.colors.onPrimary },
     continueSub: { ...t.type.caption, color: withAlpha(t.colors.onPrimary, alpha.half) },
-    readinessLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    heroSentence: { ...t.type.h2, color: t.colors.textPrimary },
+    workoutName: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
+    workoutMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    heroBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    mesoBriefChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    mesoBriefText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     workoutOptionsText: { color: t.colors.textSecondary },
     // Campaign 22 Phase 2 Stage 2 (§7/§17 R5): the "Progress at a glance"
     // card is removed (3-way duplication fix); its live styles go with it.
     coachBriefLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
     // D112 R5 (closes audit T1-14/T2-31, T1-15/T2-24): standalone
     // constraint / AWAITING rows, same live-theme shape as the brief line.
-    constraintGroup: { borderTopColor: t.colors.borderSubtle },
+    constraintGroup: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     constraintLineRow: { borderBottomColor: t.colors.borderSubtle },
     constraintLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    coachingNudge: { borderTopColor: t.colors.borderSubtle },
+    coachingNudge: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    coachingNudgeLeft: { backgroundColor: t.colors.primaryBg },
     coachingNudgeTitle: { ...t.type.label, color: t.colors.textPrimary },
     coachingNudgeBody: { ...t.type.captionTight, color: t.colors.textSecondary },
     coachingNudgeScanSubline: { ...t.type.captionTight, color: t.colors.textMuted },
     intentTitle: { ...t.type.h3, color: t.colors.textPrimary },
     intentSub: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     intentOption: { backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
+    intentOptionIcon: { backgroundColor: t.colors.primaryBg },
     readinessGroupLabel: { ...t.type.overline, color: t.colors.textMuted },
     intentOptionLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     intentOptionSub: { ...t.type.caption, color: t.colors.textSecondary },
     readinessLabel: { ...t.type.caption, color: t.colors.textSecondary },
     readinessChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 ?? t.colors.background },
-    readinessChipActive: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
+    readinessChipActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     readinessChipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    readinessChipTextActive: { color: t.colors.textPrimary },
+    readinessChipTextActive: { color: t.colors.primary },
     intentSkipText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     skipSessionText: { ...t.type.caption, color: t.colors.textMuted },
     intentOptOutText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     intentOptOutSub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    coachBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    coachBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    coachBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    coachBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.primary },
     coachBannerBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    deloadBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    deloadBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    deloadBanner: { backgroundColor: withAlpha(t.colors.primary, alpha.tint), borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    deloadBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.primary },
     deloadBannerBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    plateauBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    plateauBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     plateauBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
-    activationBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    activationBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     activationBannerTitle: { ...t.type.bodySm, color: t.colors.textPrimary },
     activationBannerBody: { ...t.type.bodySm, color: t.colors.textMuted },
-    phaseBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    phaseBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     phaseBannerText: { ...t.type.captionTight, color: t.colors.textSecondary },
-    // D192 (finish spec 1b): the boxed-icon circle is gone, so its live
-    // twin (quickStartIcon) goes with it; the row now spends its type on
-    // title (16 semibold) rather than bodyStrong.
-    quickStartCard: { borderTopColor: t.colors.borderSubtle, borderBottomColor: t.colors.borderSubtle },
-    quickStartTitle: { ...t.type.title, color: t.colors.textPrimary },
+    quickStartCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
+    quickStartIcon: { backgroundColor: t.colors.surface2 },
+    quickStartTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     quickStartSub: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
   // S15#7 readiness chip's tone colours, built live so it stays in the same
+  // theme generation as CoachBriefCard (buildBriefIconColor, imported above).
+  const BRIEF_ICON_COLOR = buildBriefIconColor(t.colors);
 
   // WK-1: recover an in-progress workout after an app kill/crash. The store
   // holds the session in memory only, so a kill stranded the logged sets
@@ -310,14 +311,6 @@ export default function HomeScreen({ navigation, route }) {
   // by loadFirstReviewFacts. Null until loaded, so the line never flashes
   // before real data is read.
   const [firstReviewFacts, setFirstReviewFacts] = useState(null);
-  // D165 law: the week ribbon's seven cells, 'mon'..'sun'.
-  const [trainedDaysThisWeek, setTrainedDaysThisWeek] = useState([]);
-  // D166 answer 3 / the founder's Today spec: today's intake against target.
-  const [todayNutrition, setTodayNutrition] = useState(null);
-  // D165: the coaching decision as a SENTENCE, not the pointer line the Today
-  // arbiter shows. Read through `readLatestDecision`, which takes it from
-  // `buildDecision` whole so the ED lockout branch cannot be skipped (D166).
-  const [coachDecision, setCoachDecision] = useState(null);
   // First-load flag, flipped false in loadData. While true, the
   // home screen renders skeleton cards in place of the main cards so
   // the user sees structure instantly on cold launch rather than a
@@ -331,6 +324,7 @@ export default function HomeScreen({ navigation, route }) {
   // (non-enrolment-seed) morning weight. Gates TodayStrip's first-use
   // tutorial sentence -- defaults true so the line never flashes for an
   // established user while this loads.
+  const [hasEverLoggedWeight, setHasEverLoggedWeight] = useState(true);
   // First-launch welcome guide. Defaults to hidden so it never flashes before the
   // saved flag is read; the loader reveals it for a brand-new user (no sessions
   // logged) who hasn't dismissed it. Auto-clears once totalSessions > 0.
@@ -503,8 +497,6 @@ export default function HomeScreen({ navigation, route }) {
         loadTodayWeight(),
         loadLatestCoachOutput(),
         loadFirstReviewFacts(),
-        loadTodayNutrition(),
-        loadCoachDecision(),
       ]);
       // FOUNDER DECISION (fully free, no tier split): activation-funnel
       // marker for a signed-in user's first successful Home render.
@@ -633,48 +625,6 @@ export default function HomeScreen({ navigation, route }) {
       });
     } catch (_) {
       setFirstReviewFacts(null);
-    }
-  }
-
-  // D165, the founder's Today spec: "Nutrition / 2,840 / 3,200 kcal / Protein
-  // 218 / 230 g". Two local SQLite reads, the same pair the Diary screen uses.
-  //
-  // NO NEW ED READ. This block is food-adjacent and must suppress, but
-  // `edFlagFailClosed.guard` pins `getOpenEdPatternFlag` to EXACTLY two
-  // occurrences in this file, and its header records that the count "follows
-  // the surviving loaders rather than being weakened: it is now pinned
-  // exactly". Home already derives the four-term suppression above and carries
-  // it on `firstReviewFacts.edFlagOpen`; the render reads that. A third read
-  // would have been the lazy path.
-  async function loadTodayNutrition() {
-    try {
-      if (!user?.id) { setTodayNutrition(null); return; }
-      const [rollup, targets] = await Promise.all([
-        getRollupForDay(user.id, localDayKey(Date.now())).catch(() => null),
-        getNutritionTargets(user.id).catch(() => null),
-      ]);
-      if (!targets?.targetKcal) { setTodayNutrition(null); return; }
-      setTodayNutrition({
-        kcal: Math.round(Number(rollup?.kcalTotal) || 0),
-        kcalTarget: Math.round(Number(targets.targetKcal)),
-        protein: Math.round(Number(rollup?.proteinG) || 0),
-        proteinTarget: Math.round(Number(targets.proteinG) || 0),
-      });
-    } catch (_) {
-      setTodayNutrition(null);
-    }
-  }
-
-  // D165: the week's decision as a sentence. `readLatestDecision` takes it
-  // from `buildDecision` WHOLE, so the ED-pattern lockout branch travels with
-  // it (D166); it also reports whether the week was actually checked in, which
-  // is the app's existing test for a real decision rather than a computed one.
-  async function loadCoachDecision() {
-    try {
-      if (!user?.id) { setCoachDecision(null); return; }
-      setCoachDecision(await readLatestDecision(user.id));
-    } catch (_) {
-      setCoachDecision(null);
     }
   }
 
@@ -940,8 +890,8 @@ export default function HomeScreen({ navigation, route }) {
         // tutorial sentence retires once a REAL weigh-in has ever been
         // logged -- the Pro-enrolment seed row (a typed starting point, not
         // a morning the user weighed) never counts, mirroring the same
-        // (The isEnrolmentSeedWeight gate that fed the strip's first-use
-        // caption went with the caption, founder order 2026-09-17, D190.)
+        // isEnrolmentSeedWeight filter used for todayWeight above.
+        setHasEverLoggedWeight(recent14.some((w) => !isEnrolmentSeedWeight(w)));
       } catch (_) {}
     } catch (_) {}
   }
@@ -999,24 +949,6 @@ export default function HomeScreen({ navigation, route }) {
       const weekSets = recentSets.filter(s => workoutIds.has(s.workoutId) && s.setType !== 'warmup');
       const totalVol = weekSets.reduce((t, s) => t + (s.weight || 0) * (s.actualReps || 0), 0);
       setWeekStats({ sessions: thisWeek.length, sets: weekSets.length, volume: totalVol });
-
-      // D165/D166: the week ribbon's trained days, derived by the SAME pure
-      // function Community uses, over workouts this loader has already read.
-      // Deliberately not a second week derivation on this screen: one exists
-      // above (weekStartMs/weekEndMs) and `weekBoundaryConsistency.guard` is
-      // there precisely to stop a third. It is training-only data, which the
-      // engine documents as never calm-gated ("the base weekly push signal ...
-      // stays unsuppressed like every other training-only surface").
-      try {
-        const counters = computeConsistency({
-          workouts: allWorkouts.filter(w => w.isCompleted).map(w => w.startedAt),
-          plan: null,
-          now: Date.now(),
-        });
-        setTrainedDaysThisWeek(counters.c_trained_days_week ?? []);
-      } catch (_e) {
-        setTrainedDaysThisWeek([]);
-      }
 
 
       const completed = allWorkouts.filter(w => w.isCompleted).sort((a, b) => b.startedAt - a.startedAt);
@@ -1739,53 +1671,20 @@ export default function HomeScreen({ navigation, route }) {
   // rounds · 90s between rounds"), or '' when the session has no circuit.
   // Read once per displayed routine; a failed read leaves the count line.
   const [circuitLine, setCircuitLine] = useState('');
-  // D167 law 1: the founder's Today spec reads "6 exercises . 18 sets . about
-  // 52 min". The set count and the duration are derived from the SAME rows
-  // this effect already fetches, so the fuller meta line costs no extra I/O.
-  //
-  // The duration is not a new claim. `estimateWorkoutMinutes` is the engine's
-  // own pure estimator and is already user-facing on plan cards
-  // (PlanLibraryScreen), whose comment records that the figure is "honest
-  // about the plan's actual sets/rest rather than a guess from its name". The
-  // input chain here is that screen's, unchanged: `recommendedSets ?? 3` and
-  // `restSeconds ?? 90`, the same fallback the rest timer documents. A person
-  // who chose this plan was shown this number; Today showing a different one,
-  // or none, would be the inconsistency.
-  const [sessionShape, setSessionShape] = useState({ sets: null, minutes: null });
   const displayRoutineIdForCircuit = displayWorkout?.routine?.id ?? null;
   useEffect(() => {
     let alive = true;
     setCircuitLine('');
-    setSessionShape({ sets: null, minutes: null });
     if (!displayRoutineIdForCircuit) return undefined;
     getRoutineExercisesWithDetails(displayRoutineIdForCircuit)
       .then((rows) => {
         if (!alive) return;
-        const res = (rows ?? []).map((r) => r.routineExercise);
-        const groups = summariseCircuitGroups(res);
+        const groups = summariseCircuitGroups((rows ?? []).map((r) => r.routineExercise));
         setCircuitLine(groups.length ? groups.map(formatCircuitPreviewLine).filter(Boolean).join(' · ') : '');
-        const shape = res.map((re) => ({ sets: re?.recommendedSets ?? 3, restSec: re?.restSeconds ?? 90 }));
-        const sets = shape.reduce((a, e) => a + e.sets, 0);
-        setSessionShape({
-          sets: sets > 0 ? sets : null,
-          minutes: shape.length ? estimateWorkoutMinutes(shape) : null,
-        });
       })
       .catch(() => { /* best effort: the count line stands */ });
     return () => { alive = false; };
   }, [displayRoutineIdForCircuit]);
-
-  // The whole meta line, assembled once. Each part appears only when it is
-  // genuinely known: a failed read leaves the exercise count standing alone
-  // rather than printing a guess beside it.
-  const heroMetaLine = useMemo(() => {
-    const exercises = effectiveSessionCount ?? exerciseCounts[displayWorkout?.routine?.id];
-    const parts = [];
-    if (exercises) parts.push(`${exercises} exercise${exercises === 1 ? '' : 's'}`);
-    if (sessionShape.sets) parts.push(`${sessionShape.sets} sets`);
-    if (sessionShape.minutes) parts.push(`about ${sessionShape.minutes} min`);
-    return parts.length ? parts.join(' · ') : null;
-  }, [effectiveSessionCount, exerciseCounts, displayWorkout?.routine?.id, sessionShape]);
   // ── HERO PRECEDENCE (F-18; evidence B-1, B-2, B-3). Stated once, here,
   // because three regions of this screen used to answer "what is today?"
   // independently and could contradict one another (the Today line said
@@ -2252,17 +2151,6 @@ export default function HomeScreen({ navigation, route }) {
     haptics.selection();
     navigateCrossTab(navigation, 'ProfileTab', 'You');
   }, [navigation]);
-  // D167 review finding: the Today line's rank-3 occupant is a POINTER --
-  // "This week's coaching decision. See why." -- and it existed because the
-  // sentence itself was unreachable from Today. It is reachable now: the Coach
-  // section below renders the sentence in full. Leaving both would put a
-  // signpost and its destination on the same screen, which is the three-way
-  // duplication Campaign 22 Phase 2 already had to unpick once.
-  //
-  // So the pointer stands down exactly when the sentence renders, and both read
-  // the SAME expression, so they can never disagree about which is showing.
-  const coachSentenceShown = !!(coachDecision?.sentence && coachDecision.isCompleted);
-
   const todayLineItem = resolveTodayLine({
     // Rank 1 is reserved: no positive Home safety banner exists to feed it
     // yet (today ED/calm suppression only SUPPRESSES other content, inside
@@ -2273,7 +2161,7 @@ export default function HomeScreen({ navigation, route }) {
       onPress: () => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'Plans'); },
     },
     coachDecision: {
-      eligible: showCoachBanner && !coachSentenceShown,
+      eligible: showCoachBanner,
       caloriesKcal: latestCoachOutput?.adjustments?.calories?.applied
         ? latestCoachOutput.adjustments.calories.newKcal
         : null,
@@ -2322,32 +2210,6 @@ export default function HomeScreen({ navigation, route }) {
   // pure renderer of already-derived data rather than importing the helper.
   const lastSessionRelativeDay = lastSession ? getRelativeDay(lastSession.startedAt) : null;
 
-  // D166 law 7 (a number states what it is). This label used to be hard-coded
-  // inside HomeLastSessionCard; it is composed here instead so the unit is
-  // stated in one place.
-  //
-  // CORRECTION 2026-09-15: when this moved, the note here claimed the old
-  // hard-coding meant "a user training in pounds was shown the wrong unit".
-  // That was wrong. Gym weights are kg-ONLY (UK): `useAppStore.js:2220-2227`
-  // initialises `units: 'kg'`, `setUnits` coerces ANY argument to 'kg', and
-  // the cloud-hydration path at `:1161` forces 'kg' while ignoring a legacy
-  // lbs value. There is no lbs user to mislead, and the same correction
-  // applies to every other "hard-codes kg" finding in the register. The
-  // read below is kept because it is defensive and free, not because it
-  // fixes anything. (`bodyWeightUnits` is a SEPARATE preference and does
-  // vary: st/kg/lbs. This figure is not bodyweight.)
-  //
-  // The figure is session TONNAGE. It is labelled "Total lifted", never
-  // "Volume": the app
-  // defines Volume app-wide as a muscle's weekly hard sets
-  // (`coachGlossary.js`), and this exact lens was renamed once already because
-  // colliding the two names misled users (`LiftProgressScreen.js`).
-  const lastSessionTonnageLabel = (() => {
-    const tonnage = lastSession?.totalVolume || lastSessionTonnage;
-    if (!tonnage) return null;
-    return `${formatWithUnit(formatNumber(Math.round(tonnage)), units === 'lbs' ? 'lbs' : 'kg')} lifted`;
-  })();
-
   // Stable handler identities for the memoised (React.memo) extracted
   // components below, so passing them as props doesn't defeat the memo.
   // (openFirstReviewSurface lives above the arbiter call with the line it
@@ -2356,19 +2218,25 @@ export default function HomeScreen({ navigation, route }) {
   // day, on a complete week and on a finished block (F-18 hero precedence),
   // and all three must read the same one calm line and open the same
   // block-shape sheet.
-  // D192 (finish spec 4.4, 4.7): the readiness read is one quiet LINE under
-  // the session's meta, not a pill with a tone-coloured glyph sitting inside
-  // the hero card as a third control. Text and a chevron; the line wraps; it
-  // still opens the block sheet. The tone no longer colours anything here:
-  // the words carry it, and the card's one amber mark is Start workout.
   const readinessChipEl = readinessSummary ? (
     <TouchableOpacity
-      style={styles.readinessLine}
+      style={[styles.mesoBriefChip, live.mesoBriefChip]}
       onPress={() => { haptics.selection(); setShowBlockShape(true); }}
       accessibilityRole="button"
-      accessibilityLabel="See the shape of your training block"
+      /* C5-P34-04 (D96): the chip is where "stop 2 short of
+         failure" is defined, but its label named only the block,
+         so a screen-reader user heard an offer to explain
+         something else entirely and had no reason to open the one
+         sheet that answers the phrase they just heard. The
+         definition stays exactly one tap away. */
+      accessibilityLabel="See the shape of your training block and what the effort target means"
     >
-      <Text style={[styles.readinessLineText, live.readinessLineText]}>{readinessSummary.line}</Text>
+      <Ionicons
+        name={READINESS_ICON[readinessSummary.tone] ?? READINESS_ICON.go}
+        size={12}
+        color={BRIEF_ICON_COLOR[readinessSummary.tone] ?? BRIEF_ICON_COLOR.go}
+      />
+      <Text style={[styles.mesoBriefText, live.mesoBriefText]}>{readinessSummary.line}</Text>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>
   ) : null;
@@ -2542,14 +2410,9 @@ export default function HomeScreen({ navigation, route }) {
             <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
               Block complete
             </SectionLabel>
-            {/* Law 1: on a block-complete day the screen is FOR this fact, so
-                it is the loud thing, exactly as the session name is on a
-                training day. Three hero branches, one treatment. */}
-            {/* D192 (finish spec section 2): the hero step carries a name or a
-                number, never a sentence. This branch's loud line is a sentence,
-                so it sets in h2: still the loudest thing on the screen, still
-                the screen's fact, no longer three lines of display type. */}
-            <Text style={[styles.heroSentence, live.heroSentence]}>Every week of this block is done</Text>
+            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={3}>
+              Every week of this block is done
+            </Text>
             {readinessChipEl}
             <View style={styles.startWorkoutRow}>
               <View style={styles.startBtnSplit}>
@@ -2601,13 +2464,12 @@ export default function HomeScreen({ navigation, route }) {
             <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
               Week complete
             </SectionLabel>
-            {/* Law 1, as above: the week being done IS what this screen is
-                for today, so it carries the scale. Its supporting sentence
-                becomes the caption rather than a separate line. */}
-            {/* D192: a sentence sets in h2, not at the hero step (see the
-                block-complete branch above). */}
-            <Text style={[styles.heroSentence, live.heroSentence]}>Every session done this week</Text>
-            <Text style={[styles.todayFact, live.todayFact]}>{weekCompleteLine(planAllWorkouts[0]?.name)}</Text>
+            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={3}>
+              Every session done this week
+            </Text>
+            <Text style={[styles.heroBody, live.heroBody]}>
+              {weekCompleteLine(planAllWorkouts[0]?.name)}
+            </Text>
             {readinessChipEl}
             <TouchableOpacity
               onPress={() => { haptics.selection(); setShowChangeWorkout(true); }}
@@ -2627,46 +2489,36 @@ export default function HomeScreen({ navigation, route }) {
                 so a single clamped line ellipsised mid-word on longer
                 names/larger text scales. Raised to 2 lines, the same fix
                 already applied to workoutName below for the same reason. */}
-            {/* D192: the eyebrow is the block sheet's door. It used to be the
-                readiness chip alone, which is null before the first session,
-                so a new user had no way into the sheet. */}
-            <TouchableOpacity
-              onPress={() => { haptics.selection(); setShowBlockShape(true); }}
-              accessibilityRole="button"
-              accessibilityLabel="See the shape of your training block"
-              style={styles.heroEyebrowTap}
-            >
-              <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={2}>
-                {recoveryLabel ? `${recoveryLabel} · ${planProgress}` : planProgress}
-              </SectionLabel>
-            </TouchableOpacity>
-            {/* D165/D166 law 1: this session IS what the screen is for, so it
-                is the one loud element on it, at type.hero (56) through
-                BigNumber rather than the 24px it was. The founder's hierarchy
-                is "what am I doing / what do I need to know / what do I do",
-                and this is the first of the three.
-
-                Campaign 27 Pillar A (D104): the name is an IDENTIFIER, so a
-                clamp stays honest, but two lines truncated real names at large
-                text scale. BigNumber does not clamp; the name wraps. */}
-            <BigNumber
-              testID="hero-session-name"
-              value={
-                /* C18: where a display name repeats inside one programme week
-                   (the bikini Glute Focus split lists "Glutes" twice) the
-                   session is qualified by its programme position, so the
-                   athlete can tell which occurrence this is. A unique name is
-                   left alone. */
-                sessionDisplayName(
-                  programmePosition?.nextSession && programmePosition.nextSession.routineId === displayWorkout?.routine?.id
-                    ? programmePosition.nextSession
-                    : { name: displayWorkout?.routine?.name ?? '', order: 0 },
-                  programmePosition?.sessions ?? [],
-                ) || displayWorkout?.routine?.name
-              }
-              caption={circuitLine || heroMetaLine}
-              style={styles.heroName}
-            />
+            <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={2}>
+              {recoveryLabel ? `${recoveryLabel} · ${planProgress}` : planProgress}
+            </SectionLabel>
+            {/* Campaign 27 Pillar A (D104): workoutName is a session NAME, an
+                identifier, so a clamp stays honest - but two lines truncated
+                real names at large text scale, so it's raised to three. */}
+            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={3}>
+              {/* C18: where a display name repeats inside one programme week
+                  (the bikini Glute Focus split lists "Glutes" twice) the
+                  session is qualified by its programme position, so the
+                  athlete can tell which occurrence this is. A unique name is
+                  left alone. */}
+              {sessionDisplayName(
+                programmePosition?.nextSession && programmePosition.nextSession.routineId === displayWorkout?.routine?.id
+                  ? programmePosition.nextSession
+                  : { name: displayWorkout?.routine?.name ?? '', order: 0 },
+                programmePosition?.sessions ?? [],
+              ) || displayWorkout?.routine?.name}
+            </Text>
+            {/* D112 R2 (closes audit T1-17): the served count, not the base
+                routine's raw row count. effectiveSessionCount is null until
+                resolved (or on a read failure), so the raw exerciseCounts
+                figure (already loaded) shows first rather than nothing. */}
+            {circuitLine ? (
+              <Text style={[styles.workoutMeta, live.workoutMeta]}>{circuitLine}</Text>
+            ) : (effectiveSessionCount ?? exerciseCounts[displayWorkout?.routine?.id]) ? (
+              <Text style={[styles.workoutMeta, live.workoutMeta]}>
+                {effectiveSessionCount ?? exerciseCounts[displayWorkout.routine.id]} exercises
+              </Text>
+            ) : null}
             {/* S15#7 readiness aggregate: tells the user where they are in
                 the training block PLUS whatever recovery/soreness/sleep/
                 energy/fatigue signal outranks a plain phase read this week,
@@ -2713,10 +2565,6 @@ export default function HomeScreen({ navigation, route }) {
                 <Button
                   title={isStartingWorkout ? 'Starting...' : 'Start workout'}
                   icon="play"
-                  // D191: the screen's one committing action carries the
-                  // screen's one amber mark (D148's amber leading icon, on
-                  // this button alone). Not emphatic: D148's pin stands.
-                  iconFg={t.colors.primary}
                   onPress={() => handleStartNextWorkout(false)}
                   disabled={isStartingWorkout}
                   accessibilityLabel={isStartingWorkout ? 'Starting workout' : `Start ${displayWorkout?.routine?.name || 'workout'}`}
@@ -2766,54 +2614,31 @@ export default function HomeScreen({ navigation, route }) {
         ) : (
           <View style={styles.noPlanSection}>
             {/* FOUNDER DECISION (fully free, no tier split): the free
-                no-plan branch (FreeStarter quiz) is retired -- this is the
-                only no-plan state now.
-                D192 (finish spec 1a, 2026-09-18, founder device verdict on
-                build 3583): the "No active plan yet" EmptyState (a large
-                glyph, a four-sentence paragraph, two buttons) is named
-                directly as part of "day zero never designed". It is
-                replaced by the SAME anatomy every other hero state on this
-                screen uses -- title + one line inside the hero slot's own
-                Card, left-aligned, no glyph -- rather than the shared
-                EmptyState primitive (still used two branches up, for "Your
-                plan has no sessions yet", which is unchanged).
-                The six-week block sentence (BLOCK_START_SENTENCE) is
-                dropped from here: PlanPreviewSheet ("the block sheet",
-                rendered below and opened by this SAME "Start with a plan"
-                action) already carries it, so nothing is lost, only
-                de-duplicated. The former "may still be arriving" sentence
-                is also dropped, per the rule's own fallback: HomeScreen has
-                no pull-IN-PROGRESS flag to gate it on. `cloudSyncVersion`
-                (read above, S15#7) only increments AFTER a pull finishes
-                (success or error alike); `cloudSyncStatus` is written here
-                via imperative `getState()` calls in `handleRefresh` below
-                but never subscribed to for render (the reactive "restoring"
-                banner that once read it was already removed, per the
-                comment on the cloud-restore banner further down this
-                file) -- so there is no existing flag to read, and the rule
-                says drop the sentence rather than invent one. */}
-            <Card surface="surfaceElevated" style={styles.heroCard}>
-              <Text style={[styles.heroSentence, live.heroSentence]}>No active plan yet</Text>
-              <Text style={[styles.todayFact, live.todayFact]}>Your coach builds a plan from your setup</Text>
-              <View style={styles.heroActions}>
-                <Button
-                  title="Start with a plan"
-                  onPress={handleStartWithPlanPress}
-                  loading={preparingPlan}
-                  size="md"
-                  fullWidth={false}
-                  accessibilityLabel="Start with a plan"
-                />
-                <Button
-                  title="Browse plans"
-                  variant="secondary"
-                  size="md"
-                  fullWidth={false}
-                  onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary'); }}
-                  accessibilityLabel="Browse plans"
-                />
-              </View>
-            </Card>
+                no-plan branch (FreeStarter quiz) is retired -- the full-tier
+                EmptyState below is the only no-plan state now, via the
+                shared EmptyState primitive (D1 sweep, DD40). */}
+            <EmptyState
+              icon="barbell-outline"
+              title="No active plan yet"
+              /* C5-P10-01 (D96): the "Start with a plan" action creates a
+                 training block too, so it says so first. */
+              /* D141 item 10a: unified with PlansScreen's own no-plan copy.
+                 Voice rule applied: COACHING_VOICE_SYNTHESIS_LOCKED.md
+                 addendum "actor-naming rule (two registers)" (line ~836) --
+                 "Volyume" names the app only (saving, syncing, reminders),
+                 never the coaching decider; building the plan is Precision
+                 Coaching's call, so the actor here is "your coach", the
+                 locked informal actor for running prose (line ~829-830),
+                 not "Volyume" and not collaborative "we". Noun unified to
+                 "setup" (was "setup" here already, "profile" on Plans).
+                 Home's own extra clause (the cloud-arrival note) is kept. */
+              text={`Start with a plan and your coach builds one from your setup. If you just signed in on this phone, your existing plan may still be arriving. ${BLOCK_START_SENTENCE}`}
+              actionLabel="Start with a plan"
+              onAction={handleStartWithPlanPress}
+              busy={preparingPlan}
+              secondaryLabel="Browse plans"
+              onSecondary={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary'); }}
+            />
 
             {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §7/§17 R5,
                 the 3-way duplication fix): "Progress at a glance" is
@@ -2826,130 +2651,22 @@ export default function HomeScreen({ navigation, route }) {
 
             {/* FOUNDER DECISION (fully free, no tier split): everyone keeps
                 the quick-start escape hatch while cloud restore lands; the
-                Free-only text-link variant is retired.
-                D192 (finish spec 1b, 2026-09-18): the boxed glyph circle and
-                three-line paragraph become a plain row (spec 4.3): a 20 dp
-                unboxed glyph, one secondary line, hairline above and below.
-                Same handler and accessibility label. */}
+                Free-only text-link variant is retired. */}
             <PressableCard
               style={[styles.quickStartCard, live.quickStartCard]}
               onPress={() => startBlankSession()}
               accessibilityLabel="Start your first workout"
             >
-              <Ionicons name="barbell-outline" size={iconSize.md} color={t.colors.textSecondary} />
+              <View style={[styles.quickStartIcon, live.quickStartIcon]}>
+                <Ionicons name="barbell-outline" size={28} color={t.colors.primary} />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
-                <Text style={[styles.quickStartSub, live.quickStartSub]}>Log your sets as you go, no plan needed</Text>
+                <Text style={[styles.quickStartSub, live.quickStartSub]}>Log your sets as you go. You don't need a plan to start, and next time Volyume will start you at the weights you log today.</Text>
               </View>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </PressableCard>
           </View>
-        )}
-
-        {/* ══ D165/D166, the founder's Today specification (plan section 4c).
-            Four quiet sections under the hero, in their order: the week, then
-            nutrition, then progress, then the coach. Rows on the canvas, not
-            cards: none of these is an object you can pick up (law 2), so none
-            of them is boxed. The one loud thing on this screen is the session
-            name above; everything here is deliberately small so that holds. ══ */}
-
-        {!initialLoading && user?.id && (
-          <View style={styles.todaySection}>
-            <SectionLabel tone="muted">Your week</SectionLabel>
-            <WeekRibbon days={trainedDaysThisWeek} testID="home-week-ribbon" />
-            <Text style={[styles.todayFact, live.todayFact]}>
-              {weekStats.sessions === 0
-                ? 'No sessions yet this week.'
-                : `${weekStats.sessions} session${weekStats.sessions === 1 ? '' : 's'} this week.`}
-            </Text>
-          </View>
-        )}
-
-        {/* Food-adjacent, so it takes the suppression Home already derives
-            (`firstReviewFacts.edFlagOpen`, a four-term chain including SCOFF).
-            An unread or failed derivation counts as suppressed: `!firstReviewFacts`
-            leads the condition, so this fails CLOSED rather than showing intake
-            figures to someone the app has flagged because a read did not land. */}
-        {!initialLoading && user?.id && todayNutrition
-          && firstReviewFacts && !firstReviewFacts.edFlagOpen && (
-          <TouchableOpacity
-            style={styles.todaySection}
-            onPress={() => navigateCrossTab(navigation, 'DiaryTab', 'Diary')}
-            accessibilityRole="button"
-            accessibilityLabel={todayNutrition.kcal === 0 && todayNutrition.protein === 0
-              ? `Nutrition. Nothing logged yet. Target ${todayNutrition.kcalTarget} calories, protein ${todayNutrition.proteinTarget} grams.`
-              : `Nutrition. ${todayNutrition.kcal} of ${todayNutrition.kcalTarget} calories. Protein ${todayNutrition.protein} of ${todayNutrition.proteinTarget} grams.`}
-          >
-            <SectionLabel tone="muted">Nutrition</SectionLabel>
-            {/* D191 (founder screenshot, 2026-09-17): before anything is
-                logged the founder's "eaten / target" figure rendered a zero
-                at h3 -- the second-loudest thing on the screen was nothing.
-                The zero state states the target (law 7: every figure with
-                its unit) and says plainly that nothing is logged; the
-                founder's figure returns with the first entry. */}
-            {todayNutrition.kcal === 0 && todayNutrition.protein === 0 ? (
-              <>
-                <Text style={[styles.todayValue, live.todayValue]}>
-                  {`${formatNumber(todayNutrition.kcalTarget)} kcal target`}
-                </Text>
-                <Text style={[styles.todayFact, live.todayFact]}>
-                  {todayNutrition.proteinTarget > 0
-                    ? `Nothing logged yet · Protein ${todayNutrition.proteinTarget} g`
-                    : 'Nothing logged yet'}
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={[styles.todayValue, live.todayValue]}>
-                  {`${formatNumber(todayNutrition.kcal)} / ${formatNumber(todayNutrition.kcalTarget)} kcal`}
-                </Text>
-                {todayNutrition.proteinTarget > 0 && (
-                  <Text style={[styles.todayFact, live.todayFact]}>
-                    {`Protein ${todayNutrition.protein} / ${todayNutrition.proteinTarget} g`}
-                  </Text>
-                )}
-              </>
-            )}
-          </TouchableOpacity>
-        )}
-
-        {/* D167 ruling: the non-scale signal is TOTAL LIFTED, never the weekly
-            kg delta (D166 answer 3) and never "sessions", which the ribbon's
-            own caption above already says. "Total lifted", never "Volume" --
-            Volume means a muscle's weekly hard sets app-wide, and this lens
-            was renamed once already because colliding the two misled users. */}
-        {!initialLoading && user?.id && weekStats.volume > 0 && (
-          <View style={styles.todaySection}>
-            <SectionLabel tone="muted">Progress</SectionLabel>
-            <Text style={[styles.todayValue, live.todayValue]}>
-              {`${formatWithUnit(formatNumber(Math.round(weekStats.volume)), units === 'lbs' ? 'lbs' : 'kg')} lifted`}
-            </Text>
-            <Text style={[styles.todayFact, live.todayFact]}>This week.</Text>
-          </View>
-        )}
-
-        {/* The coach's own sentence, which until now was reachable only from
-            the Coach tab behind a "See why" pointer. `readLatestDecision` takes
-            it from `buildDecision` WHOLE, so the ED-pattern lockout is the
-            first branch and cannot be skipped (D166). `isCompleted` is the
-            app's existing test for a real decision rather than a computation
-            the engine happened to run for an unchecked-in week. */}
-        {!initialLoading && coachSentenceShown && (
-          <TouchableOpacity
-            style={styles.todaySection}
-            onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput')}
-            accessibilityRole="button"
-            accessibilityLabel={`Coach. ${coachDecision.sentence}`}
-            testID="home-coach-sentence"
-          >
-            <SectionLabel tone="muted">Coach</SectionLabel>
-            <Text style={[styles.todayCoach, live.todayCoach]}>{coachDecision.sentence}</Text>
-            {!!decisionAgeCaption(coachDecision.weeksAgo) && (
-              <Text style={[styles.todayFact, live.todayFact]}>
-                {decisionAgeCaption(coachDecision.weeksAgo)}
-              </Text>
-            )}
-          </TouchableOpacity>
         )}
 
         {/* ── Campaign 26 (founder device order 2026-08-17): the post-hero
@@ -2973,6 +2690,7 @@ export default function HomeScreen({ navigation, route }) {
             // here with a fresh timestamp; the strip opens its weight input.
             openWeightSignal={route?.params?.openWeightLog ?? null}
             onOpenTrend={() => navigateCrossTab(navigation, 'ProgressTab', 'Analytics', { focusWeightTrend: true })}
+            everLogged={hasEverLoggedWeight}
           />
         )}
         {user?.id && evidencePanelItem && (
@@ -2993,7 +2711,7 @@ export default function HomeScreen({ navigation, route }) {
         {lastSession && (
           <HomeLastSessionCard
             lastSession={lastSession}
-            tonnageLabel={lastSessionTonnageLabel}
+            lastSessionTonnage={lastSessionTonnage}
             relativeDay={lastSessionRelativeDay}
             onOpenHistory={goToWorkoutHistory}
             onRepeat={handleRepeatLastSession}
@@ -3025,11 +2743,11 @@ export default function HomeScreen({ navigation, route }) {
             accessibilityLabel={plateauBanner.line}
           >
             <View style={styles.plateauBannerLeft}>
-              <Ionicons name="analytics-outline" size={18} color={t.colors.textSecondary} />
+              <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
               {/* Campaign 27 Pillar A (D104): sentence-length copy never carries
                   a line clamp - it wraps, and the row grows. */}
               <Text style={[styles.plateauBannerText, live.plateauBannerText]}>{plateauBanner.line}</Text>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
             </View>
             <TouchableOpacity
               onPress={dismissPlateauBanner}
@@ -3053,7 +2771,7 @@ export default function HomeScreen({ navigation, route }) {
             accessibilityLabel={activationBannerLine(activationNudge.stage)?.title}
           >
             <View style={styles.activationBannerLeft}>
-              <Ionicons name="barbell-outline" size={18} color={t.colors.textSecondary} />
+              <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.activationBannerTitle, live.activationBannerTitle]} numberOfLines={1}>
                   {activationBannerLine(activationNudge.stage)?.title}
@@ -3352,11 +3070,8 @@ export default function HomeScreen({ navigation, route }) {
             onPress={() => { haptics.selection(); confirmStart(opt.key); }}
             accessibilityLabel={`${opt.label}. ${opt.sub}. Starts the workout.`}
           >
-            {/* D174: the glyph sat on a 40dp `primaryBg` disc -- section 3.2's
-                "a tint behind a glyph". Fill and disc geometry both go; the
-                key carries no token now, so it has no live twin. */}
-            <View style={styles.intentOptionIcon}>
-              <Ionicons name={opt.icon} size={20} color={t.colors.textSecondary} />
+            <View style={[styles.intentOptionIcon, live.intentOptionIcon]}>
+              <Ionicons name={opt.icon} size={20} color={t.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.intentOptionLabel, live.intentOptionLabel]}>{opt.label}</Text>
@@ -3444,8 +3159,15 @@ function getRelativeDay(ts) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 // CoachBriefCard moved to src/components/CoachBriefCard.js (behaviour-
-// preserving decomposition). The S15#7 readiness chip that once shared its
-// tone icons and colours is a plain line since D192 and reads neither.
+// preserving decomposition), imported at the top of this file. BRIEF_ICON_COLOR
+// is re-exported from there since the readiness-summary chip below reuses its
+// tone colours.
+
+// S15#7 readiness aggregate chip: its own icon set (kept distinct from
+// CoachBriefCard's BRIEF_ICON card-sized icons) but the SAME tone colours
+// (BRIEF_ICON_COLOR, imported above) so the chip and the coaching brief card
+// read as one family.
+const READINESS_ICON = { go: 'trending-up-outline', caution: 'alert-circle-outline', recover: 'bed-outline' };
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -3486,23 +3208,27 @@ const styles = StyleSheet.create({
   },
   // B-5: typography now comes from SectionLabel (tone="muted"); only
   // structural overrides remain local.
-  heroName: { marginTop: spacing.xs },
-  heroSentence: { ...type.h2, color: colors.textPrimary, marginTop: spacing.xs },
-  todaySection: { gap: spacing.xs },
-  todayValue: { ...type.num('h3'), color: colors.textPrimary },
-  todayFact: { ...type.bodySm, color: colors.textSecondary },
-  todayCoach: { ...type.body, color: colors.textPrimary },
   heroEyebrow: {},
-  heroEyebrowTap: { alignSelf: 'flex-start' },
-  // D167: `workoutName` (24px + a raw lineHeight: 30), `workoutMeta` and
-  // `heroBody` are retired. All three hero branches now carry their one loud
-  // fact through BigNumber at type.hero, with the supporting line as its
-  // caption, so there is nothing left for these keys to style.
-  readinessLine: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    alignSelf: 'stretch', marginTop: spacing.xs, minHeight: touchTarget.minimum,
+  workoutName: {
+    fontSize: fontSize.xxl,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
+    color: colors.textPrimary,
+    lineHeight: 30,
   },
-  readinessLineText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
+  workoutMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
+  // F-18: the hero's one body sentence (week-complete state). A
+  // sentence, so no line clamp - it wraps and the card grows.
+  heroBody: { ...type.bodySm, color: colors.textSecondary },
+  mesoBriefChip: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs2,
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
+    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface2,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  mesoBriefText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   // B-5/Button adoption: box, fill, radius, padding and label typography now
   // come from the shared <Button> primitive; only the local margin survives.
   primaryBtn: {
@@ -3525,15 +3251,6 @@ const styles = StyleSheet.create({
 
   // No plan, plan-first section
   noPlanSection: { gap: spacing.md },
-  // D192 (finish spec 1a): the no-plan hero card's two buttons -- left-
-  // aligned (law 2: this is a screen section, not a dialog, so it never
-  // centres), wrapping if the labels ever need the room.
-  heroActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-  },
 
   // Campaign 22 Phase 2 Stage 2 (§7/§17 R5): "Progress at a glance" removed,
   // absorbed into the last-session row (3-way duplication fix).
@@ -3564,21 +3281,19 @@ const styles = StyleSheet.create({
   // section and the Coach tab's NavGroup: one container, hairline-divided
   // rows, heading outside the box.
   constraintSection: { gap: spacing.md },
-  // D165 law 2: a list of rows, not an object -- no box, a borderSubtle hairline above (D171/D172).
   constraintGroup: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    paddingTop: spacing.lg,
   },
   constraintLineRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    // The group's box came off (law 2), so the row no longer pays a second
-    // gutter inside it: it sits at the page's own 16 dp edge like every other
-    // line on the screen. One gutter, paid once by the page (CR-17/D163).
+    paddingHorizontal: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
     paddingVertical: spacing.xs,
@@ -3597,21 +3312,19 @@ const styles = StyleSheet.create({
 
   // Block progress card
   // Pro coaching discovery nudge
-  // D165 law 2: a nudge (dead, swept anyway), not an object -- no box, a borderSubtle hairline above (D171/D172).
   coachingNudge: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.edge),
   },
-  // D174: was a 36dp `primaryBg` disc behind a glyph; fill and disc geometry
-  // both go. (This key and `coachingNudge` above have had no render consumer
-  // since the nudge's JSX was removed -- swept anyway so a future revival
-  // cannot bring the wash back with it.)
   coachingNudgeLeft: {
-    width: iconSize.lg,
+    width: 36, height: 36, borderRadius: radius.sm,
+    backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
   coachingNudgeTitle: {
@@ -3647,18 +3360,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     backgroundColor: colors.surface2 ?? colors.background,
-    borderRadius: radius.control,
-    // D192: a control sits at 52 dp, not 72; the three answers were the
-    // tallest buttons in the product.
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  // D174: was a 40dp `primaryBg` disc; a fixed glyph column now, so every
-  // intent row's label keeps one left edge.
   intentOptionIcon: {
-    width: iconSize.lg,
+    width: 40, height: 40,
+    borderRadius: radius.md,
+    backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
   intentOptionLabel: {
@@ -3712,18 +3422,16 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface2 ?? colors.background,
   },
-  // D174 A2: a readiness chip selects an answer, and selection is carried by
-  // fill, edge and weight together rather than by the accent.
   readinessChipActive: {
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surface3,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
   },
   readinessChipText: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
   },
   readinessChipTextActive: {
-    color: colors.textPrimary,
+    color: colors.primary,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   intentSkip: {
@@ -3757,8 +3465,8 @@ const styles = StyleSheet.create({
   // extra bottom margin (the content gap carries the rhythm).
   coachBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.md,
   },
   // COMP-023 trial value banner, grown into the A3 coach ledger card,
@@ -3766,24 +3474,24 @@ const styles = StyleSheet.create({
   // D3: the trial-banner and free-coach-line styles moved to AttentionCard
   // with their JSX (one card class, internal priority recorded there).
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  coachBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xxs },
+  coachBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
   coachBannerBody: { ...type.bodySm, color: colors.textSecondary },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface, borderRadius: radius.md,
+    backgroundColor: withAlpha(colors.primary, alpha.tint), borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  deloadBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xxs },
+  deloadBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
   deloadBannerBody: { ...type.bodySm, color: colors.textSecondary },
 
   // B3 lift plateau banner; one line plus tap-through, matches the banner
   // system's tokens (trial-banner top row shape).
   plateauBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     gap: spacing.md,
   },
@@ -3797,8 +3505,8 @@ const styles = StyleSheet.create({
   // S6 activation nudge banner (shares the plateau banner's card shape)
   activationBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     gap: spacing.md,
   },
@@ -3815,10 +3523,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primaryBg,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: withAlpha(colors.primary, alpha.edge),
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
@@ -3831,30 +3539,35 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.xs,
   },
 
-  // Quick-start row (empty state fast path).
-  // D192 (2026-09-18, finish spec 1b/4.3): a plain row, not a callout card --
-  // the boxed glyph circle and three-line paragraph both go. 56 dp, a
-  // hairline above AND below (borderSubtle), so it reads as one row in the
-  // section rather than an object of its own (was: D165 law 2's callout,
-  // padding.lg on all sides with a hairline above only).
+  // Quick-start card (empty state fast path)
   quickStartCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    minHeight: 56,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.borderSubtle,
+    backgroundColor: colors.primaryBg,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    // D3: tinted edge, not a solid amber border (amber-inflation rule),
+    // "Start with a plan" above is the no-plan state's one amber fill.
+    borderColor: withAlpha(colors.primary, alpha.edge),
+    padding: spacing.lg,
     marginBottom: spacing.lg,
   },
+  quickStartIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: circle(48),
+    backgroundColor: colors.surface2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   quickStartTitle: {
-    ...type.title,
+    ...type.bodyStrong,
     color: colors.textPrimary,
+    marginBottom: spacing.xs,
   },
   quickStartSub: {
     ...type.bodySm,
     color: colors.textSecondary,
-    marginTop: 2,
   },
 });

@@ -346,7 +346,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
           <Ionicons
             name={torch ? 'flashlight' : 'flashlight-outline'}
             size={22}
-            color={torch ? t.colors.textPrimary : t.colors.textSecondary}
+            color={torch ? t.colors.primary : t.colors.textPrimary}
           />
         </TouchableOpacity>
         )}

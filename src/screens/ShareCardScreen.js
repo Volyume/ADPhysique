@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -647,25 +647,25 @@ export default function ShareCardScreen({ navigation, route }) {
               label="Story"
               active={format === 'story'}
               onPress={() => setFormat('story')}
-              icon={<Ionicons name="phone-portrait-outline" size={15} color={format === 'story' ? t.colors.textPrimary : t.colors.textMuted} />}
+              icon={<Ionicons name="phone-portrait-outline" size={15} color={format === 'story' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Square"
               active={format === 'square'}
               onPress={() => setFormat('square')}
-              icon={<Ionicons name="square-outline" size={15} color={format === 'square' ? t.colors.textPrimary : t.colors.textMuted} />}
+              icon={<Ionicons name="square-outline" size={15} color={format === 'square' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="4:5"
               active={format === 'portrait'}
               onPress={() => setFormat('portrait')}
-              icon={<Ionicons name="tablet-portrait-outline" size={15} color={format === 'portrait' ? t.colors.textPrimary : t.colors.textMuted} />}
+              icon={<Ionicons name="tablet-portrait-outline" size={15} color={format === 'portrait' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Sticker"
               active={isSticker}
               onPress={() => setFormat('sticker')}
-              icon={<Ionicons name="pricetag-outline" size={15} color={isSticker ? t.colors.textPrimary : t.colors.textMuted} />}
+              icon={<Ionicons name="pricetag-outline" size={15} color={isSticker ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
           {isSticker ? (
@@ -688,7 +688,7 @@ export default function ShareCardScreen({ navigation, route }) {
               label="My photo"
               active={!!bgPhoto}
               onPress={pickGymPhoto}
-              icon={<Ionicons name="images-outline" size={15} color={bgPhoto ? t.colors.textPrimary : t.colors.textMuted} />}
+              icon={<Ionicons name="images-outline" size={15} color={bgPhoto ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
               label="Camera"
@@ -700,7 +700,7 @@ export default function ShareCardScreen({ navigation, route }) {
               label="Dark"
               active={!bgPhoto}
               onPress={() => setBgPhoto(null)}
-              icon={<Ionicons name="moon-outline" size={15} color={!bgPhoto ? t.colors.textPrimary : t.colors.textMuted} />}
+              icon={<Ionicons name="moon-outline" size={15} color={!bgPhoto ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
         </View>
@@ -751,7 +751,7 @@ export default function ShareCardScreen({ navigation, route }) {
                   const active = i === selectedPrIndex;
                   const name = pr.exerciseName || pr.exercise || 'Exercise';
                   const detail = pr.weight
-                    ? `${pr.weight} ${pr.units || 'kg'}${pr.reps ? ` × ${pr.reps}` : ''}`
+                    ? `${pr.weight}${pr.units || 'kg'}${pr.reps ? ` × ${pr.reps}` : ''}`
                     : '';
                   return (
                     <TouchableOpacity
@@ -902,8 +902,8 @@ function ToggleRow({ label, value, onChange, last }) {
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: t.colors.surface3, true: t.colors.textMuted }}
-        thumbColor={value ? t.colors.surface : t.colors.textMuted}
+        trackColor={{ false: t.colors.surface2, true: withAlpha(t.colors.primary, alpha.strong) }}
+        thumbColor={value ? t.colors.primary : t.colors.textMuted}
       />
     </View>
   );
@@ -916,23 +916,22 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   section: { gap: spacing.md },
   // Template strip (Campaign 30 pillar 5): live card thumbnails as the
-  // type picker. Tiles are quiet cards. D174 A2: picking a template picks a
-  // VIEW, not a live moment, so the active tile stopped carrying the accent
-  // and took the same three neutral cues the segments below it use.
+  // type picker. Tiles are quiet cards; the active tile carries the accent
+  // border the segmented control used to express with a fill.
   templateStrip: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
   templateTile: {
     borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border,
     backgroundColor: colors.surface, padding: spacing.xs, gap: spacing.xs,
     alignItems: 'center',
   },
-  templateTileActive: { borderColor: colors.borderLight, backgroundColor: colors.surface3 },
+  templateTileActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
   templateThumb: { width: 96, height: 96, borderRadius: radius.sm },
   templateThumbEmpty: {
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: colors.surface2,
   },
   templateLabel: { ...type.caption, color: colors.textMuted },
-  templateLabelActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  templateLabelActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   formatHint: { ...type.captionTight, color: colors.textMuted },
   segmentRow: {
     flexDirection: 'row', gap: spacing.xs,
@@ -956,15 +955,13 @@ const styles = StyleSheet.create({
   // spinning preview when the card can't be rendered.
   previewErrorBox: { gap: spacing.sm, padding: spacing.md },
   previewErrorText: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
-  // D165 law 2: a list of toggles, not an object -- no box, a borderSubtle hairline above (D171/D172).
-  togglesCard: { overflow: 'hidden',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    paddingTop: spacing.lg,
+  togglesCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
   },
   toggleRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   toggleRowLast: { borderBottomWidth: 0 },
@@ -977,17 +974,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surface, gap: 2,
   },
-  // D174 A2, ruled at lead review. The brief's KEEP list named `prChipTextActive`
-  // among the personal-best sites, and that was the lead's error: this chip does
-  // not MARK a personal best, it picks WHICH one goes on the card, and its text
-  // is an exercise name. A2 sends a chip that selects a view to the neutral
-  // treatment, and the agent was right to stop rather than follow the wrong half
-  // of a brief that contradicted itself.
-  prChipActive: { borderColor: colors.borderLight, backgroundColor: colors.surface3 },
+  prChipActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
   prChipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
-  prChipTextActive: { color: colors.textPrimary },
+  prChipTextActive: { color: colors.primary },
   prChipSub: { fontSize: fontSize.xs, color: colors.textMuted },
-  prChipSubActive: { color: colors.textSecondary },
+  prChipSubActive: { color: colors.primary },
   secondaryAction: { marginTop: spacing.md },
 });
 
@@ -1004,10 +995,10 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     templateTile: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    templateTileActive: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
+    templateTileActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     templateThumbEmpty: { backgroundColor: t.colors.surface2 },
     templateLabel: { ...t.type.caption, color: t.colors.textMuted },
-    templateLabelActive: { color: t.colors.textPrimary },
+    templateLabelActive: { color: t.colors.primary },
     formatHint: { ...t.type.captionTight, color: t.colors.textMuted },
     segmentRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     segmentActive: { backgroundColor: t.colors.surface3 },
@@ -1015,15 +1006,15 @@ function buildLiveStyles(t) {
     segmentTextActive: { color: t.colors.textPrimary },
     previewPlaceholder: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     previewErrorText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    togglesCard: { borderTopColor: t.colors.borderSubtle },
+    togglesCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     toggleRow: { borderBottomColor: t.colors.borderSubtle },
     toggleLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     privacyNote: { ...t.type.captionTight, color: t.colors.textMuted },
     prChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    prChipActive: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
+    prChipActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     prChipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    prChipTextActive: { color: t.colors.textPrimary },
+    prChipTextActive: { color: t.colors.primary },
     prChipSub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    prChipSubActive: { color: t.colors.textSecondary },
+    prChipSubActive: { color: t.colors.primary },
   };
 }

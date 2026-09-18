@@ -89,16 +89,13 @@ function resolveCoachDecision(facts) {
 
 // Rank 4 — weekly check-in due. Copy item 5: three sentences + optional scan
 // subline collapse to ONE sentence; the scan invitation moves to the
-// check-in screen it belongs to (not carried here). D192 (2026-09-18, finish
-// spec 4.7 "Copy"): trimmed again to the fact alone -- "the line is a fact;
-// the tap is the explanation" -- so the former second sentence ("It shapes
-// this week's coaching decision") is dropped rather than carried forward.
+// check-in screen it belongs to (not carried here).
 function resolveCheckIn(facts) {
   const f = facts?.checkIn;
   if (!f?.eligible) return null;
   return {
     key: 'check_in',
-    text: "Your weekly check-in is ready",
+    text: "Your weekly check-in is ready. It shapes this week's coaching decision.",
     onPress: f.onPress,
     onDismiss: f.onDismiss,
     accessibilityLabel: 'Your weekly check-in is ready. Tap to open.',

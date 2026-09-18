@@ -46,11 +46,6 @@ const KEY = (userId) => `@volyume_milestones_v1_${userId}`;
  * The ladder, ascending. Order doubles as significance: when more than one rung
  * is newly earned at once (only really a first-run / imported-history case), the
  * LAST earned rung is the one shown. Copy is calm and identity-framed.
- *
- * D173 T3: the rungs used to climb flame -> ribbon -> medal -> trophy, which is
- * a trophy tier, which is a game mechanic. Every rung now carries the thing
- * that actually happened. `first_week` keeps `calendar-outline`, which was
- * already literal.
  */
 export const MILESTONES = Object.freeze([
   Object.freeze({
@@ -60,37 +55,37 @@ export const MILESTONES = Object.freeze([
     heroValue: '1', heroUnit: 'week in',
   }),
   Object.freeze({
-    key: 'sessions_5', kind: 'sessions', threshold: 5, icon: 'barbell-outline',
+    key: 'sessions_5', kind: 'sessions', threshold: 5, icon: 'flame-outline',
     title: 'Five sessions in',
     body: 'Five sessions logged. The habit is starting to hold.',
     heroValue: '5', heroUnit: 'sessions logged',
   }),
   Object.freeze({
-    key: 'sessions_10', kind: 'sessions', threshold: 10, icon: 'barbell-outline',
+    key: 'sessions_10', kind: 'sessions', threshold: 10, icon: 'flame-outline',
     title: 'Ten sessions',
     body: "Ten in the book. You're not just trying the gym any more, you train.",
     heroValue: '10', heroUnit: 'sessions logged',
   }),
   Object.freeze({
-    key: 'sessions_25', kind: 'sessions', threshold: 25, icon: 'barbell-outline',
+    key: 'sessions_25', kind: 'sessions', threshold: 25, icon: 'ribbon-outline',
     title: 'Twenty-five sessions',
     body: 'Twenty-five sessions logged. That is a genuine training history behind you now.',
     heroValue: '25', heroUnit: 'sessions logged',
   }),
   Object.freeze({
-    key: 'sessions_50', kind: 'sessions', threshold: 50, icon: 'barbell-outline',
+    key: 'sessions_50', kind: 'sessions', threshold: 50, icon: 'ribbon-outline',
     title: 'Fifty sessions',
     body: "Fifty times you've turned up. That takes some doing.",
     heroValue: '50', heroUnit: 'sessions logged',
   }),
   Object.freeze({
-    key: 'sessions_100', kind: 'sessions', threshold: 100, icon: 'barbell-outline',
+    key: 'sessions_100', kind: 'sessions', threshold: 100, icon: 'medal-outline',
     title: 'One hundred sessions',
     body: "One hundred sessions logged. You've built something most people only talk about.",
     heroValue: '100', heroUnit: 'sessions logged',
   }),
   Object.freeze({
-    key: 'first_pr', kind: 'first_pr', icon: 'barbell-outline',
+    key: 'first_pr', kind: 'first_pr', icon: 'trophy-outline',
     title: 'Your first personal record',
     body: 'Your first logged PR. Proof the work is paying off.',
     heroValue: '1', heroUnit: 'PR banked',

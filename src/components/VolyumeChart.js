@@ -114,10 +114,7 @@ export default function VolyumeChart({
   // CP-10 stage 4: an explicit prop always wins; an omitted prop falls back
   // to the LIVE theme (t.colors.*) instead of the frozen module `theme`
   // singleton, so it tracks a theme flip once this component re-renders.
-  // D174: a whole series is not "now", so an omitted `color` now falls back
-  // to the neutral fill token rather than the accent. The CP-5 personal-best
-  // ring-and-dot below is the one amber mark this chart spends.
-  const resolvedColor = color ?? t.colors.borderLight;
+  const resolvedColor = color ?? t.colors.primary;
   const resolvedColor2 = color2 ?? withAlpha(t.colors.textMuted, alpha.strong);
   const resolvedAxisColor = axisColor ?? t.colors.border;
   const resolvedRulesColor = rulesColor ?? t.colors.border;
@@ -387,18 +384,16 @@ export default function VolyumeChart({
             <Circle key={`dot-${i}`} cx={p.x} cy={p.y} r={dotRadius} fill={resolvedColor} />
           ))}
 
-          {/* CP-5 personal-best markers: a ring-and-dot in the amber primary
-              token (D173 T1 retired the gold trophy token; discipline 1 grants
-              amber "a personal best" by name), bounded by points.length so a
-              stale index (e.g. a narrower window) marks nothing rather than the
-              wrong point. */}
+          {/* CP-5 personal-best markers: a ring-and-dot in the gold trophy token,
+              bounded by points.length so a stale index (e.g. a narrower window)
+              marks nothing rather than the wrong point. */}
           {Array.isArray(highlightIndices) && highlightIndices.map((idx) => {
             const p = idx >= 0 && idx < points.length ? points[idx] : null;
             if (!p) return null;
             return (
               <React.Fragment key={`pr-${idx}`}>
-                <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={t.colors.primary} strokeWidth={1.5} />
-                <Circle cx={p.x} cy={p.y} r={1.5} fill={t.colors.primary} />
+                <Circle cx={p.x} cy={p.y} r={5} fill="none" stroke={t.colors.gold} strokeWidth={1.5} />
+                <Circle cx={p.x} cy={p.y} r={1.5} fill={t.colors.gold} />
               </React.Fragment>
             );
           })}
@@ -444,7 +439,7 @@ export default function VolyumeChart({
   return (
     <View>
       {gestureWrapped}
-      <View style={styles.viewDataWrap}>
+      <View style={[styles.viewDataWrap, live.viewDataWrap]}>
         <Button
           title={showTable ? 'Hide data' : 'View data'}
           onPress={() => setShowTable(v => !v)}

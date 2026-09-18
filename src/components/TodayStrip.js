@@ -40,6 +40,7 @@ export default function TodayStrip({
   // caller (HomeScreen knows the user's real logging history); defaults to
   // true so a not-yet-loaded caller never flashes the tutorial line to an
   // established user for a frame.
+  everLogged = true,
 }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
@@ -47,12 +48,14 @@ export default function TodayStrip({
   // WeightLogged/WeightEmpty helpers below (unchanged decomposition).
   const t = useTheme();
   const live = {
-    card: { borderTopColor: t.colors.borderSubtle },
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    metricIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     cellLabel: { ...t.type.caption, color: t.colors.textMuted },
     cellValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     loggedPill: { borderColor: t.colors.success, backgroundColor: t.colors.surface2 },
     loggedPillText: { ...t.type.caption, color: t.colors.textPrimary },
     logPrompt: { ...t.type.label, color: t.colors.textPrimary },
+    logWhy: { ...t.type.captionTight, color: t.colors.textMuted },
     unit: { ...t.type.caption, color: t.colors.textMuted },
     logBtnText: { ...t.type.label, color: t.colors.textPrimary },
   };
@@ -216,11 +219,22 @@ export default function TodayStrip({
           <View style={styles.metricCopy}>
             <Text style={[styles.cellLabel, live.cellLabel]}>Morning weight</Text>
             <Text style={[styles.logPrompt, live.logPrompt]} numberOfLines={1}>Not logged yet</Text>
-            {/* The first-use caption that stood here ("Before breakfast, after
-                the bathroom, so each reading is comparable", C5-P22-04) was
-                removed on the founder's order of 2026-09-17: "looks ugly,
-                bloated and unnecessary". The empty state is label, prompt
-                and Log. */}
+            {/* C5-P22-04 (D96): the surface a user touches every morning said
+                only "Morning weight / Not logged yet / Log". The why lives
+                three screens away. One caption, in the register already
+                approved on the hand-off card, on the EMPTY state only: never
+                on the logged state, never a count, never a streak or a
+                frequency, so nothing here can read as pressure to weigh.
+                Campaign 22 Phase 2 Stage 2 (§11/R1): first-use education,
+                not a daily fixture -- retires for good once the caller
+                reports a real weigh-in has ever been logged. */}
+            {!everLogged && (
+              // Campaign 27 Pillar A (D104): sentence-length copy never
+              // carries a line clamp - it wraps, and the row grows.
+              <Text style={[styles.logWhy, live.logWhy]}>
+                Before breakfast, after the bathroom, so each reading is comparable.
+              </Text>
+            )}
           </View>
         </View>
         {/* C5-P37-01 (D96, applied by the lead at the Wave D/E landing): this
@@ -264,16 +278,17 @@ export default function TodayStrip({
 }
 
 const styles = StyleSheet.create({
-  // D165 law 2: a strip of stats, not an object -- no box, a borderSubtle hairline above (D171/D172).
   card: {
+    backgroundColor: colors.surface,
     // R9/D70 (design-cohesion sweep): app-wide card class is radius.lg
     // (16px, FOOD-DESIGN-STANDARD.md section 2); this strip's compact
     // padding/gap stays as-is, the density is deliberate.
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   metricRow: {
     minHeight: 54,
@@ -283,11 +298,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   metricLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  // D192 landing (2026-09-18): a row's glyph is never boxed (spec 4.3); the
-  // fill, border and radius are gone, the 34 dp frame keeps the row's rhythm.
   metricIcon: {
     width: 34,
     height: 34,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface2,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -317,6 +334,7 @@ const styles = StyleSheet.create({
   },
   loggedPillText: { ...type.caption, color: colors.textPrimary },
   logPrompt: { ...type.label, color: colors.textPrimary },
+  logWhy: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   // R9/D70: fill/radius/label now come from the shared <Button
   // variant="primary">; the compact strip keeps its own minHeight/vertical
   // padding so the pill stays this row's height, not Button's roomier default.

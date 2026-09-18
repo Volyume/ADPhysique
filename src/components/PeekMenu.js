@@ -160,7 +160,7 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
                 <Ionicons
                   name={item.icon || 'ellipse-outline'}
                   size={18}
-                  color={item.destructive ? t.colors.error : t.colors.textSecondary}
+                  color={item.destructive ? t.colors.error : t.colors.primary}
                 />
                 <Text
                   style={[

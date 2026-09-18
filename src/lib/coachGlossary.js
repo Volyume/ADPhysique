@@ -42,9 +42,11 @@ export const GLOSSARY = {
     'A smoothed version of your weight that ignores day-to-day noise.',
   mesocycle:
     'A training block: a few weeks that ease in, build, push, then recover.',
-  // `rir` (the reps-in-reserve gloss, D93) was removed on the founder's order
-  // of 2026-09-17: the block sheet was its only call site and the block sheet
-  // does not explain reps in reserve.
+  // D93 (Campaign 2, Phase 5): the why is the block's effort ladder - a
+  // PRESCRIPTION, not a user report (per-set RIR entry is settled-removed),
+  // so the gloss claims planning, never measurement.
+  rir:
+    "Reps in reserve: how many reps you'd have left; “stop 2 short” means finish the set when you believe you could still do about 2 good reps. Most weeks leave reps in reserve, building effort as the block goes on, so progress never depends on taking every set to failure.",
   strengthLevel:
     'Where your estimated max sits against typical lifters at your bodyweight.',
   // U-E-1 onboarding term (drafted 2026-06-13, grounded in the methods themselves;

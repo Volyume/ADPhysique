@@ -22,9 +22,7 @@ import { shortDate } from './addFlow';
 
 /** The invitation shown when nothing is set up: an offer, never a question
  *  that asks the person to classify themselves (banked research, DfE). */
-// D192 (2026-09-18): cut to the row cap (50 characters beside a glyph and a
-// chevron); the Settings root row carries the same words.
-export const HOW_YOU_TRAIN_OFFER = 'Injuries, pain, conditions or disabilities';
+export const HOW_YOU_TRAIN_OFFER = 'Injuries, pain, long-term conditions or disabilities that affect your training.';
 
 /**
  * @param {{ baseline: any[], episodes: any[], history: any[], unavailable?: boolean } | null} state

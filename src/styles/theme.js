@@ -25,20 +25,15 @@ export { fontFamily };
 // mini-bar, the tab bar). BLUR is not used on Android and is not installed
 // (expo-blur declined, Android-first rule); on iOS, blur may be introduced
 // only per-surface and only after profiling on a mid-range device, never
-// as a default. NO glow, gradient orb or bloom is permitted anywhere: the
-// founder's design law says "No glow", and amber discipline 3 names a glow
-// among the co-occurring tells. D174 closed the two exceptions this comment
-// used to record -- the Skia glow reserved for the Home Start button was
-// never built, and `shadow.glow` (a brand-tinted soft shadow for the
-// Pro-moment hero surfaces) had only dead or unreachable consumers left, so
-// the token went with them. All surface motion uses the motion.* tokens; Reduce Motion
+// as a default. ONE surface in the app may carry a Skia glow (the Home
+// Start button, E15 element 3); no other glow, gradient orb or bloom is
+// permitted, with a single recorded exception (2026-07-09): shadow.glow, a
+// brand-tinted soft shadow reserved for the three Pro-moment hero surfaces,
+// applied only via that token, never inline. All surface motion uses the motion.* tokens; Reduce Motion
 // flattens it. Chart verdict (E15 element 5, accepted): VolyumeChart is
 // the app's one chart engine; no second engine (Victory et al.), no
 // rebuild. Optional S-effort uplifts on record: a once-per-mount draw-in
-// on the Analytics focal chart and a dashed goal band. (The second of those
-// named WeightTrendCard, a component deleted under D177 because nothing ever
-// imported it. The uplift remains on record against whatever renders the
-// band; today that is BodyMetricsScreen's own WeightTrendChart.)
+// on the Analytics focal chart and the WeightTrendCard dashed goal band.
 const baseColors = {
   // Core backgrounds, dark charcoal, not pure black.
   // Pure black (#000000) causes halation (blurring) for users with astigmatism.
@@ -49,18 +44,14 @@ const baseColors = {
   // points below red/green) so layered surfaces read as distinct depths and
   // tie subtly to the amber brand, the way premium dark UIs separate
   // elevation by lightening each layer rather than relying on shadows.
-  // D165 (founder, 2026-09-14): the ground is "very dark charcoal rather than
-  // absolute black ... around #111110", with warm off-white ink over it, so the
-  // product reads as a premium instrument rather than a developer terminal.
-  // Every ratio below is recomputed and asserted in theme.test.js.
-  background: '#111110',
-  surface: '#252422', // D192: 1.22:1 on the ground. Cards and sheets. Was #191917 (1.07:1), which read as the same black as the page.
-  surfaceElevated: '#2D2C29', // D192: 1.35:1 on the ground, 1.11:1 on surface. Nested cards, the raised tier.
-  surface2: '#363531', // D192: 1.54:1 on the ground. Inputs, chips, secondary cards.
-  surface3: '#403E3A', // D192: 1.77:1 on the ground. Skeletons, fills, highest. textMuted still 4.68:1 on it.
-  border: '#878279', // D192: 4.95:1 on the ground, 4.06:1 on surface. The edge of a CONTROL (WCAG 1.4.11 wants 3:1).
-  borderLight: '#999288', // D192: 6.14:1 on the ground. The selected edge.
-  borderSubtle: '#3D3B37', // D192: 1.69:1 on the ground, 1.39:1 on surface. The hairline: rows, card edges, section rules. Was #2E2E2C (1.39:1), near-invisible.
+  background: '#0D0D0D',
+  surface: '#191917',          // 1st elevation: cards, sheets
+  surfaceElevated: '#222220',  // nested cards / raised tier (new)
+  surface2: '#2A2A27',         // inputs, chips, secondary cards
+  surface3: '#343431',         // skeletons, fills, highest
+  border: '#6E6E6E',       // 3.81:1 on background, meets WCAG 1.4.11 (3:1 for UI separators)
+  borderLight: '#7A7A7A',  // 4.53:1 on background
+  borderSubtle: '#2E2E2C', // hairline dividers INSIDE a card (low-contrast, not a card edge)
 
   // Primary accent, amber gold. `primary` is the bright amber for small
   // marks, icons, text and key data values; `primaryFill` is a slightly
@@ -123,22 +114,24 @@ const baseColors = {
   // badge is safe at any elevation, verified in theme.test.js. `warning` is
   // not given one: `warningBg` already clears 4.5:1 at every elevation in
   // both themes (Okabe-Ito yellow is bright enough).
-  onSuccessBg: '#8CD08F', // D192: 4.77:1 worst case on the lighter ladder (was #77C27A, 4.05)
-  onErrorBg: '#FBA39C', // D192: 4.89:1 worst case on the lighter ladder (was #F88A82, 4.04)
+  onSuccessBg: '#77C27A',
+  onErrorBg: '#F88A82',
 
-  // Text hierarchy. D165: warm off-white rather than pure white, muted warm
-  // grey beneath it. The hue bias is the same one the surface ladder already
-  // carries (blue channel a few points below red/green), so ink and ground
-  // belong to one family instead of a neutral ramp sitting on a warm ground.
-  textPrimary: '#F2EFE7',  // 16.4:1 on bg, AAA
-  textSecondary: '#B7B0A4', // D192: warm grey, 8.78:1 on the ground, 4.96:1 on surface3 (AA everywhere).
-  textMuted: '#B2AB9F', // D192: 8.29:1 on the ground, 4.68:1 on surface3 (AA everywhere).
-  textDisabled: '#7D786F', // D192: 4.31:1 on the ground, deliberately under 4.5. Disabled state only.
+  // Text hierarchy
+  textPrimary: '#FFFFFF',  // 19.44:1 on bg, AAA
+  textSecondary: '#9E9E9E', // 7.25:1 on bg, AAA body, AA on raised surfaces
+  textMuted: '#9C9C9C',    // 7.08:1 on bg, AAA at body-text bar; >=4.54:1 on every surface (AA)
+  textDisabled: '#727272', // 4.04:1 on bg, disabled state only, no WCAG body-text requirement
 
   // Tab bar
   tabBar: '#111111',
   tabBarBorder: '#222222',
   inputBg: '#1E1E1E',
+
+  // Trophy tier
+  gold: '#FFD700',
+  silver: '#C0C0C0',
+  bronze: '#CD7F32',
 
   // Brand-locked OAuth button colours per Apple's Sign in with Apple
   // guidelines. Not part of the visual system; required for store
@@ -165,12 +158,8 @@ const baseColors = {
   // Celebration particle colours (PRCelebration confetti). Fixed festive hues
   // on the dark celebration scrim in both themes; never used as semantic
   // status. Tokenised from the two remaining raw hexes (design audit 03, D0).
-  // D173 T4, lead review: `celebrationEmber` / `celebrationViolet` were the
-  // confetti palette, and their ONLY consumers were PRCelebration's
-  // buildPrPalette / buildGoldPalette, which T4 deleted with the particle
-  // machinery. Removed rather than left as dead brand colours a later sweep
-  // would have to re-reason about. Law 5 forbids the celebratory animation
-  // they existed for, so nothing can legitimately want them back.
+  celebrationEmber: '#FF6B35',
+  celebrationViolet: '#9C27B0',
 
   // Chart tokens
   chartLine: '#F59E0B',
@@ -218,7 +207,7 @@ const lightColors = {
   surface3: '#E7E7E1',         // skeletons, fills, highest emphasis
   border: '#8F8F8B',           // 3:1+ on surface/bg (WCAG 1.4.11)
   borderLight: '#767672',      // ~4.5:1
-  borderSubtle: '#D9D8D2', // D192: 1.41:1 on white. The hairline has to be seen to do its job.
+  borderSubtle: '#E4E4DF',     // hairline inside cards (low-contrast by role)
   primary: '#8A5200',          // amber INK, >=4.5:1 on every surface
   primaryFill: '#F5A623',      // the bright brand amber is the fill on light (ink = onPrimary)
   primaryBg: 'rgba(245, 166, 35, 0.18)',
@@ -245,6 +234,9 @@ const lightColors = {
   tabBar: '#FFFFFF',
   tabBarBorder: '#E4E4DF',
   inputBg: '#EFEFEA',
+  gold: '#8A6D00',             // trophy INK (bright gold is a fill, keeps onPrimary)
+  silver: '#6E6E6E',
+  bronze: '#8C5318',
   chartLine: '#B45309',        // clears the 3:1 non-text graphical bar
   chartFill: 'rgba(180, 83, 9, 0.10)',
   // Macro CATEGORY colours, darkened for the light track (≥3:1 graphical on the
@@ -258,23 +250,16 @@ const lightColors = {
 };
 
 // Higher-contrast and colour-blind-safe modifier tables, now theme-keyed
-// (blueprint §4b). The light tables apply the same proportional lift / the same
-// Okabe-Ito hue families darkened for a light surface.
-//
-// D165 (2026-09-14): the dark HC greys carried the same hue bias as the rest of
-// the dark ramp when the ground moved to warm charcoal. Each value keeps its
-// luminance (so every HC contrast ratio is unchanged to two decimal places and
-// every assertion in theme.test.js still holds) and only gains the blue-below-
-// red/green bias the surface ladder has always had. Leaving them neutral would
-// have put a cool grey ramp on a warm ground for exactly the users who can
-// least afford an unconsidered palette. The CVD table is NOT warmed: those are
-// Okabe-Ito hue families chosen for discriminability, not ramp greys.
+// (blueprint §4b). The dark tables reproduce the previous inline values exactly
+// (zero behavioural change for existing HC/CVD users); the light tables apply
+// the same proportional lift / the same Okabe-Ito hue families darkened for a
+// light surface.
 const darkHC = {
-  textSecondary: '#D5D0C6',
-  textMuted:     '#CDC8BE',
-  textDisabled:  '#938E85',
-  border:        '#9E9990',
-  borderLight:   '#AFAAA1',
+  textSecondary: '#D0D0D0',
+  textMuted:     '#C8C8C8',
+  textDisabled:  '#8E8E8E',
+  border:        '#999999',
+  borderLight:   '#AAAAAA',
 };
 const lightHC = {
   textSecondary: '#3D3D3B',
@@ -296,8 +281,8 @@ const darkCVD = {
   // onSuccessBg/onErrorBg ink sitting on the swapped blue/pink tint, which
   // is both a colour mismatch and, for the error case, a fresh contrast
   // fail. Same >=4.5:1-at-every-elevation method as the base tokens.
-  onSuccessBg: '#86CBF1', // D192: 4.70:1 worst case on the lighter ladder
-  onErrorBg:   '#E7B7D1', // D192: 5.07:1 worst case on the lighter ladder
+  onSuccessBg: '#6ABDEC',
+  onErrorBg:   '#DA9FC0',
 };
 const lightCVD = {
   success:   '#0072B2',
@@ -413,21 +398,6 @@ export const radius = {
   lg: 16,    // card radius (MFP-parity premium-feel bump 14 -> 16, 2026-06-29)
   xl: 20,
   full: 999,
-
-  // D165/D166 law 3 (geometry carries meaning). `control` is the radius of
-  // anything you PRESS -- buttons, and the hand-rolled CTAs that copy them.
-  // It exists as a NAMED token rather than a reuse of `md` so that the class a
-  // call site belongs to is legible at the call site, and so that moving the
-  // control class later does not disturb the logger's inputs, which are pinned
-  // at `md` by four separate suites.
-  //
-  // Why this is the FIRST thing the redesign changes: `lg` was simultaneously
-  // the card, the button, the empty state, the tooltip and the tab pill, so a
-  // button and a card were geometrically identical. Until they are different
-  // shapes, nothing else makes the product stop looking machine-made.
-  // `control` deliberately equals `md` in value today; they are separate names
-  // for separate jobs, not an alias.
-  control: 10,
 };
 
 // Helper for perfect circles (avatars, FABs, round icon buttons) so call
@@ -437,28 +407,15 @@ export function circle(size) {
 }
 
 const baseFontSize = {
-  // D192 (2026-09-18): the scale re-cut for a premium, consistent read.
-  // Body 15, row and card titles 16 semibold, headings 18/22/28, one display
-  // step at 34 and the hero at 40. The old scale ran 16/17/20/24/32/40/56:
-  // too many neighbouring steps in the middle, every row title at 20, and a
-  // 56 hero that dwarfed everything beside it. Consumers read roles, so the
-  // change lands everywhere at once.
   micro: 10, // dense chart axis / data micro-labels only, below body min (replaces hand-rolled 8-10px)
-  xs: 12,
+  xs: 11,
   sm: 13,
-  md: 15,   // body
-  lg: 16,   // titles of rows, cards and buttons (semibold through the role)
-  xl: 18,
-  xxl: 22,
-  xxxl: 28,
-  display: 34,
-  // D166 law 1: one loud thing per screen, at a size that reads at arm's
-  // length mid-set. `display` at 40 was the ceiling and had a single call site
-  // in the whole product (a photo countdown), so where a screen actually needed
-  // to be loud it reached PAST the scale with a raw literal -- 96 and 44 in
-  // YearOfLifts, both carrying a source comment reading "Theme gap: no
-  // display-size + black type role exists". This is that missing step.
-  hero: 40, // D192: was 56.
+  md: 16,   // body (design premium audit 2026-05-30: 16 is the premium body size; was 15)
+  lg: 17,
+  xl: 20,
+  xxl: 24,
+  xxxl: 32,
+  display: 40,
 };
 
 export const fontSize = { ...baseFontSize };
@@ -498,7 +455,6 @@ export function resolveTheme(prefs) {
       xxl:     Math.round(baseFontSize.xxl     * 1.2),
       xxxl:    Math.round(baseFontSize.xxxl    * 1.2),
       display: Math.round(baseFontSize.display * 1.2),
-      hero:    Math.round(baseFontSize.hero    * 1.2),
     });
   }
 
@@ -510,6 +466,17 @@ export function resolveTheme(prefs) {
     // Theme-invariant (LT-3) — same static object the legacy `shadow.card`
     // export uses below, never mutated by either system.
     card: cardShadow,
+    // Getter (same pattern as the legacy `shadow.glow`) so shadowColor tracks
+    // resolvedColors.primary, which the HC/CVD tables above may have changed.
+    get glow() {
+      return {
+        shadowColor: resolvedColors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.18,
+        shadowRadius: 16,
+        elevation: 8,
+      };
+    },
   };
 
   return {
@@ -574,12 +541,10 @@ export const fontWeight = {
 // round(fontSize * multiplier), computed in the type roles below so it
 // tracks the larger-text fontSize swap.
 export const lineHeight = {
-  // D192: tightened one notch across the board. Body at 1.4 sets paragraphs
-  // and rows at a premium density; headings at 1.15 sit on their line.
-  tight: 1.15,
-  snug: 1.3,
-  normal: 1.4,
-  relaxed: 1.55,
+  tight: 1.2,
+  snug: 1.35,
+  normal: 1.5,
+  relaxed: 1.6,
 };
 
 // Letter-spacing stays neutral on Android for running text. Negative
@@ -596,7 +561,7 @@ export const letterSpacing = {
   body: 0,
   label: 0,
   caption: 0,
-  overline: 0.6, // D192: a touch more air in small caps
+  overline: 0.5,
   wordmark: 2,
 };
 
@@ -610,20 +575,6 @@ export const letterSpacing = {
 // style={{ ...type.body, color: ... }}.
 function buildTypeRoles(fontSizeTable) {
   const roles = {
-    // D166 law 1. The ONE loud element on a screen: the session on Today, the
-    // working weight in the logger, the decision on Progress.
-    //
-    // It uses `displayHeavy` (InterDisplay-ExtraBold), which already shipped in
-    // fonts.js with zero call sites. Two things follow from that choice. A
-    // display optical size is drawn tighter and with smaller apertures than a
-    // text cut, so the optical tightening comes from the TYPEFACE rather than
-    // from negative tracking -- letterSpacing stays 0, which D3 requires and
-    // theme.test.js pins. And no new font file ships: the Archivo proposal was
-    // withdrawn under D164 because "scoreboard" is a sports cue.
-    get hero() {
-      return { fontFamily: fontFamily.displayHeavy, fontSize: fontSizeTable.hero,
-        lineHeight: Math.round(fontSizeTable.hero * lineHeight.tight), letterSpacing: letterSpacing.display };
-    },
     get display() {
       return { fontFamily: fontFamily.displayBold, fontSize: fontSizeTable.display,
         lineHeight: Math.round(fontSizeTable.display * lineHeight.tight), letterSpacing: letterSpacing.display };
@@ -637,11 +588,11 @@ function buildTypeRoles(fontSizeTable) {
         lineHeight: Math.round(fontSizeTable.xxl * lineHeight.snug), letterSpacing: letterSpacing.heading };
     },
     get h3() {
-      return { fontFamily: fontFamily.semibold, fontSize: fontSizeTable.xl,
+      return { fontFamily: fontFamily.medium, fontSize: fontSizeTable.xl,
         lineHeight: Math.round(fontSizeTable.xl * lineHeight.snug), letterSpacing: letterSpacing.heading };
     },
     get title() {
-      return { fontFamily: fontFamily.semibold, fontSize: fontSizeTable.lg,
+      return { fontFamily: fontFamily.medium, fontSize: fontSizeTable.lg,
         lineHeight: Math.round(fontSizeTable.lg * lineHeight.snug), letterSpacing: letterSpacing.body };
     },
     get body() {
@@ -807,6 +758,21 @@ export const shadow = {
   card: cardShadow,
 
   // The one sanctioned brand-tinted shadow (decision 2026-07-09, recorded in
+  // docs/design-usability-audit-2026-07-09/DECISIONS-2026-07-09.md): a soft
+  // amber halo reserved for Pro-moment hero surfaces (Welcome Pro card,
+  // ProOnboarding offer card, ProUpgrade success circle). One value set so
+  // the three sites cannot drift apart again. Getter so shadowColor reads
+  // colors.primary AFTER applyAccessibility's boot-time palette swap, the
+  // same pattern as the type.* roles.
+  get glow() {
+    return {
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.18,
+      shadowRadius: 16,
+      elevation: 8,
+    };
+  },
 };
 
 // The state-colour grammar (COMP-027): one learned-once vocabulary for every

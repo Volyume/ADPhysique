@@ -110,10 +110,9 @@ export function buildRecordLine({
   }
   if (!best) return null;
 
-  // D192 (one unit format): a space before the unit, everywhere.
   const bestLabel = assisted
-    ? `Best ${formatWeight(best.weight)} ${units} assistance × ${best.reps}`
-    : `Best ${formatWeight(best.weight)} ${units} × ${best.reps}`;
+    ? `Best ${formatWeight(best.weight)}${units} assistance × ${best.reps}`
+    : `Best ${formatWeight(best.weight)}${units} × ${best.reps}`;
 
   const w = Number(weight) || 0;
   const r = Number(reps) || 0;
@@ -144,16 +143,16 @@ export function buildRecordLine({
   for (const pr of prs) {
     if (pr.type === 'heaviest_weight') {
       reasons.push(pr.previousValue
-        ? `Heaviest weight yet · Previous best ${formatWeight(pr.previousValue)} ${units}`
+        ? `Heaviest weight yet · Previous best ${formatWeight(pr.previousValue)}${units}`
         : 'Heaviest weight yet on this exercise');
     } else if (pr.type === 'most_reps_at_weight') {
       reasons.push(assisted
-        ? `Most reps at ${formatWeight(w)} ${units} assistance · Previous best ${pr.previousValue} reps`
-        : `Most reps at ${formatWeight(w)} ${units} · Previous best ${pr.previousValue} reps`);
+        ? `Most reps at ${formatWeight(w)}${units} assistance · Previous best ${pr.previousValue} reps`
+        : `Most reps at ${formatWeight(w)}${units} · Previous best ${pr.previousValue} reps`);
     } else if (pr.type === '1rm_estimate') {
-      reasons.push(`Est. max ~${Math.round(pr.value)} ${units} · Previous best ~${Math.round(pr.previousValue)} ${units}`);
+      reasons.push(`Est. max ~${Math.round(pr.value)}${units} · Previous best ~${Math.round(pr.previousValue)}${units}`);
     } else if (pr.type === 'least_assistance') {
-      reasons.push(`Least assistance yet · Previous best ${formatWeight(pr.previousValue)} ${units}`);
+      reasons.push(`Least assistance yet · Previous best ${formatWeight(pr.previousValue)}${units}`);
     }
   }
 

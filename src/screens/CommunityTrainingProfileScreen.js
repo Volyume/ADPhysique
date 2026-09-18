@@ -37,7 +37,7 @@ import { useToast } from '../components/Toast';
 import { appAlert } from '../components/AppAlert';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
-import { colors, spacing, type } from '../styles/theme';
+import { colors, spacing, type, withAlpha, alpha } from '../styles/theme';
 import {
   TP_DAYS, TP_TIME_BANDS, TP_SESSIONS_BANDS, TP_EXPERIENCE_BANDS, TP_AGE_BANDS,
   TP_DEFAULT_SHARE, dayListLabel, timeBandsLabel, previewLine, shareablePayload,
@@ -321,13 +321,9 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
     };
   }
 
-  // D174 A1: a switch's on-state is a stored preference, not a live moment, so
-  // it sits outside amber discipline 1's ceiling. The on-track is the neutral
-  // fill and the thumb is the ink; `thumbColor` is NOT held here because it has
-  // to read the switch's own value -- held flat, it painted the thumb the
-  // on-colour while the switch was off, which is discipline 4 broken.
   const switchColours = {
-    trackColor: { false: t.colors.surface3, true: t.colors.textMuted },
+    trackColor: { false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) },
+    thumbColor: t.colors.primary,
     ios_backgroundColor: t.colors.surface2,
   };
 
@@ -381,7 +377,6 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
                           onValueChange={(next) => (isShareSessions ? toggleShareSessions(next) : toggleBand(row.key, next))}
                           accessibilityLabel={`Share ${row.label.toLowerCase()}`}
                           {...switchColours}
-                          thumbColor={share[row.key] ? t.colors.surface : t.colors.textMuted}
                         />
                       </View>
                       {/* Spec section 1: the audience Chip radio row under
@@ -468,7 +463,6 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
                 }}
                 accessibilityLabel="Open to training together"
                 {...switchColours}
-                thumbColor={partnerOpen ? t.colors.surface : t.colors.textMuted}
               />
             </View>
 
@@ -531,7 +525,6 @@ export default function CommunityTrainingProfileScreen({ navigation }) {
                     }}
                     accessibilityLabel="Same gym only"
                     {...switchColours}
-                    thumbColor={sameGymOnly ? t.colors.surface : t.colors.textMuted}
                   />
                 </View>
               </>

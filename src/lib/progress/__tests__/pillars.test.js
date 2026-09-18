@@ -134,11 +134,7 @@ describe('buildVisualPillarCopy', () => {
     // capture-flow word "scan" a brand-new user has not met yet.
     const copy = buildVisualPillarCopy({ hasScan: false, hasNote: false, packet: null, capturedAt: null });
     expect(copy.state).toBe('No photos yet');
-    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
-    // fact under 60 characters (spec 4.8), not a two-line apology. Intent
-    // kept: still the honest empty state with a single next action named.
-    expect(copy.evidence).toBe('Two photos show what changed');
-    expect(copy.evidence.length).toBeLessThanOrEqual(60);
+    expect(copy.evidence).toMatch(/first progress photos/i);
   });
 
   test('scan exists but confidence too low for a note: distinct from "never scanned"', () => {

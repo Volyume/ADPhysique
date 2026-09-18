@@ -489,10 +489,8 @@ describe('HOME: zero history has one clear next action and claims no history (C5
       fatigueHistory: [],
       lastSession: null,
     });
-    // RE-ANCHORED (D192, 2026-09-18): the zero-history case gets NO line.
-    // The intent is untouched and stronger: no claimed track record, no
-    // counter, nothing that could duplicate the eyebrow.
-    expect(summary).toBeNull();
+    expect(summary.line).toBe('See how this block works.');
+    expect(summary.line).not.toMatch(/\d+ of \d+/);
 
     // The default block-phase read still holds, counter-free, once a
     // session exists (RE-PINNED AGAIN, founder device order 2026-08-17: the
@@ -617,11 +615,7 @@ describe('WORKOUT: the first session completes honestly with no history (C5-P13-
 describe('BLOCK: the first block explains itself and never advances on its own (C5-P11-*, FB-*, D96)', () => {
   test('block start explains build then recovery, and that nothing rolls over', () => {
     const sheet = read('components/HomeBlockShapeSheet.js');
-    // RE-ANCHORED 2026-09-18 (D192, block sheet): reworded from "finishes,"
-    // to "ends" as part of the paragraph-to-three-lines rewrite; same fact
-    // kept -- the block finishing hands the decision to the user and
-    // nothing starts on its own.
-    expect(sheet).toMatch(/When the block ends you choose what comes next\. Nothing starts on its own/);
+    expect(sheet).toMatch(/When the block finishes, you choose what comes next\. Nothing starts on its own/);
     // C5-P11-06: the definition is read before the provenance lines.
     expect(sheet.indexOf('GLOSSARY.mesocycle')).toBeLessThan(sheet.indexOf('seedLines.map'));
     // C5-P11-07: the countdown carries its unit noun.
@@ -1073,9 +1067,7 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
     const coach = stripComments(read('screens/YouScreen.js'));
     expect(coach).not.toContain('Coach is available on Pro');
     expect(coach).not.toMatch(/navigation\.navigate\('ProUpgrade', \{ source: 'coach_pitch_card' \}\)/);
-    // RE-ANCHORED 2026-09-18 (D192, row-line cap): the card's meta line was cut
-    // to fit one line. Intent kept: the real status card's content is here.
-    expect(coach).toContain('What changed, what held, and the signals behind it');
+    expect(coach).toContain('What changed, what was held, and the exact signals behind it.');
   });
 
   test('the free column carries the tier word, never a hardcoded currency (C5-P8-01)', () => {
@@ -1106,16 +1098,10 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
   // FOUNDER DECISION (fully free, no tier split): every destination is
   // genuinely open to every account now, so there is one sentence, not a
   // tier fork -- the old Free-only "consistency, lifts" sentence is retired.
-  // RE-ANCHORED 2026-09-18 (D192, finding 4): the "same real destinations"
-  // premise described the two-part copy that named them; that box is one
-  // factual line now, no promised destinations, no paragraph (spec 4.8).
-  // Intent kept: still one sentence, not a tier fork -- there is no tier
-  // branch left to fork.
-  test('the Progress empty state is one fact, not a tier fork (C5-P35-01 / D192 finding 4 superseded)', () => {
+  test('the Progress empty state promises the same, real destinations to every account (C5-P35-01 superseded)', () => {
     const src = read('screens/AnalyticsScreen.js');
-    expect(src).toContain('Trends appear after your first sessions');
+    expect(src).toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
     expect(src).not.toContain('Your consistency, lifts and full history are still available below.');
-    expect(src).not.toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
   });
 
   test('the safety screener is reachable on every tier (W-8 / C5-P7-07)', () => {
@@ -1168,16 +1154,8 @@ describe('PRO: setup hands over live features only, and no removed one (D96)', (
     // path) is deleted outright; HomeScreen.js and PlansScreen.js's merged
     // "Start with a plan" no-plan state (see noPlanJourneyCopy.guard.test.js)
     // is the one surviving hand-off surface and carries the same sentence.
-    // RE-ANCHORED 2026-09-18 (D192, day zero 1a): HomeScreen's no-plan copy
-    // no longer carries BLOCK_START_SENTENCE inline (lead ruling, finish
-    // spec 1a) -- the sentence is dropped from Home's own text because it
-    // is de-duplicated, not deleted. Intent kept: the block-just-started
-    // fact still reaches the athlete in this hand-off -- HomeScreen's
-    // "Start with a plan" action opens PlanPreviewSheet ("the block
-    // sheet", imported and rendered lower in the same file), which itself
-    // carries BLOCK_START_SENTENCE (src/components/PlanPreviewSheet.js).
     expect(read('screens/ProSetupCompleteScreen.js')).toContain('BLOCK_START_SENTENCE');
-    expect(read('screens/HomeScreen.js')).toContain('<PlanPreviewSheet');
+    expect(read('screens/HomeScreen.js')).toContain('BLOCK_START_SENTENCE');
     expect(read('screens/PlansScreen.js')).toContain('BLOCK_START_SENTENCE');
   });
 
@@ -1353,16 +1331,12 @@ describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, 
     expect(celebration).toContain('New heaviest weight');
   });
 
-  // RE-ANCHORED on the founder's order of 2026-09-17 ("We don't need to
-  // explain reps in reserve at all in block info"). The sheet no longer
-  // defines the effort target, so the chip's label may not promise that it
-  // does: a door must name only what is behind it. The label names the
-  // block and nothing else, which is what it said before C5-P34-04.
-  test('the block chip names only what its sheet holds (C5-P34-04, re-anchored)', () => {
+  test('the effort instruction names its own door (C5-P34-04)', () => {
     const home = read('screens/HomeScreen.js');
-    expect(home).toContain('accessibilityLabel="See the shape of your training block"');
-    expect(home).not.toContain('and what the effort target means');
-    expect(read('components/HomeBlockShapeSheet.js')).not.toContain('{GLOSSARY.rir}');
+    // The chip publishes "stop N short of failure" and opens the only sheet
+    // that defines it; its label named the block and nothing else.
+    expect(home).toContain('accessibilityLabel="See the shape of your training block and what the effort target means"');
+    expect(read('components/HomeBlockShapeSheet.js')).toContain('GLOSSARY.rir');
   });
 
   test('Est. max claims only the evidence it has (C5-P14-03, re-pinned for phase 2B)', () => {
@@ -1802,12 +1776,8 @@ describe('WEIGH-IN: day 0 never claims a weigh-in the user did not take (C5-P22-
     const home = read('screens/HomeScreen.js');
     expect(home).toMatch(/setTodayWeight\(entry\?\.weightKg \?\? null\);/);
     expect(home).not.toMatch(/isEnrolmentSeedWeight\(entry\) \? null :/);
-    // RE-ANCHORED (D190, founder order 2026-09-17): the first-use sentence
-    // this line used to retire is gone outright, and its everLogged gate
-    // with it, so Home no longer reads the seed flag at all. The rule that
-    // matters here -- Today SHOWS a typed enrolment figure and never nulls
-    // it -- is the assertion above and is unchanged.
-    expect(home).not.toMatch(/setHasEverLoggedWeight/);
+    // The first-use sentence still retires only on a REAL weigh-in.
+    expect(home).toMatch(/setHasEverLoggedWeight\(recent14\.some\(\(w\) => !isEnrolmentSeedWeight\(w\)\)\)/);
   });
 
   test('what counts toward the check-in gate is deliberately unchanged', () => {
@@ -1826,15 +1796,10 @@ describe('WEIGH-IN: day 0 never claims a weigh-in the user did not take (C5-P22-
     expect(copies).not.toMatch(/you haven't logged|you missed|behind/i);
   });
 
-  // RE-ANCHORED (D190, founder order 2026-09-17, from the live build: the
-  // caption "looks ugly, bloated and unnecessary"). The strip no longer says
-  // why. What this case still protects is the ED-adjacent half of its old
-  // name: the weigh-in strip carries NO count, streak or frequency in either
-  // state, so nothing on it can read as pressure to weigh.
-  test('the weigh-in strip carries no explanation and, still, no count', () => {
+  test('the weigh-in strip says why, on the empty state only, with no count', () => {
     const src = stripComments(read('components/TodayStrip.js'));
     const empty = src.slice(src.indexOf('function WeightEmpty'), src.indexOf('if (editing)'));
-    expect(empty).not.toMatch(/each reading is comparable|Before breakfast/);
+    expect(empty).toMatch(/each reading is comparable/);
     expect(empty).not.toMatch(/streak|days in a row|of 3/i);
     const logged = src.slice(src.indexOf('function WeightLogged'), src.indexOf('function WeightEmpty'));
     expect(logged).not.toMatch(/several mornings/);

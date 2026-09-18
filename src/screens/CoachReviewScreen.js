@@ -238,10 +238,7 @@ function RecommendationRow({ index, text }) {
   const live = buildLiveStyles(t);
   return (
     <View style={styles.recRow}>
-      {/* D174: the step number sat in a `primaryBg` disc with a tinted
-          edge. An index is not "now" -- the fill and the disc geometry go,
-          and the figure takes the muted ink. `recIndex` is layout-only now. */}
-      <View style={styles.recIndex}>
+      <View style={[styles.recIndex, live.recIndex]}>
         <Text style={[styles.recIndexText, live.recIndexText]}>{index + 1}</Text>
       </View>
       <Text style={[styles.recText, live.recText]}>{text}</Text>
@@ -600,7 +597,7 @@ export default function CoachReviewScreen() {
                     <InsightRow
                       key={`win-${i}`}
                       icon="trending-up-outline"
-                      iconColor={t.colors.textSecondary}
+                      iconColor={t.colors.primary}
                       text={`${win.exerciseName} - ${win.detail}`}
                       subtext="Consistent small improvements are the foundation of long-term progress."
                     />
@@ -838,6 +835,11 @@ const styles = StyleSheet.create({
   },
   recIndex: {
     width: 22,
+    height: 22,
+    borderRadius: circle(22),
+    backgroundColor: colors.primaryBg,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.primary, alpha.mid),
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: spacing.hair,
@@ -846,7 +848,7 @@ const styles = StyleSheet.create({
   recIndexText: {
     fontSize: fontSize.xs,
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
-    color: colors.textMuted,
+    color: colors.primary,
   },
   recText: {
     ...type.bodySm,
@@ -879,7 +881,8 @@ function buildLiveStyles(t) {
     volumeSetCount: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     insightText: { ...t.type.bodySm, color: t.colors.textPrimary },
     insightSubtext: { ...t.type.captionTight, color: t.colors.textSecondary },
-    recIndexText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    recIndex: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
+    recIndexText: { fontSize: t.fontSize.xs, color: t.colors.primary },
     recText: { ...t.type.bodySm, color: t.colors.textSecondary },
     emptySubText: { ...t.type.bodySm, color: t.colors.textMuted },
   };

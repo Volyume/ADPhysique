@@ -99,18 +99,8 @@ describe('one continuous set sequence (failure 3)', () => {
 
   test('upcoming previews are light lines, never dashed cards with the mass of the active set', () => {
     expect(SRC).not.toContain("borderStyle: 'dashed'");
-    // RE-ANCHORED (D184, 2026-09-17). This matched the `upcomingSetRow` style
-    // block and asserted it carried no borderWidth. That key is gone -- the
-    // previews are LedgerRow lines in the `upcoming` state now -- so the old
-    // match returned '' and the assertion passed by reading nothing. The
-    // property it protected (a light line, not a boxed card) is asserted where
-    // it now lives: the rows go through LedgerRow, whose only rule is a
-    // hairline, and the logger-side style that survives is density only.
-    expect(SRC).toMatch(/<LedgerRow[\s\S]*?state="upcoming"/);
-    const dens = SRC.match(/upcomingLedgerLine: \{[^}]*\}/s)?.[0] ?? '';
-    expect(dens).toContain('minHeight: 26');
-    expect(dens).not.toContain('borderWidth');
-    expect(dens).not.toContain('backgroundColor');
+    const upcomingBlock = SRC.match(/upcomingSetRow: \{[^}]*\}/s)?.[0] ?? '';
+    expect(upcomingBlock).not.toContain('borderWidth');
   });
 });
 

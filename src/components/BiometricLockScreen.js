@@ -15,7 +15,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, circle, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from './Button';
 
@@ -27,8 +27,8 @@ export default function BiometricLockScreen({ authenticating = false, lastFailed
     <View style={[styles.overlay, live.overlay]} pointerEvents="auto">
       <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
         <View style={styles.content}>
-          <View style={styles.iconWrap}>
-            <Ionicons name="lock-closed" size={32} color={t.colors.textSecondary} />
+          <View style={[styles.iconWrap, live.iconWrap]}>
+            <Ionicons name="lock-closed" size={32} color={t.colors.primary} />
           </View>
           <Text style={[styles.title, live.title]}>Volyume is locked</Text>
           <Text style={[styles.body, live.body]}>
@@ -60,10 +60,11 @@ const styles = StyleSheet.create({
   content: {
     flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl, gap: spacing.md,
   },
-  // §3.2, "a tint behind a glyph": fill and disc geometry both gone.
   iconWrap: {
     width: 64,
     height: 64,
+    borderRadius: circle(64),
+    backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
@@ -84,6 +85,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     overlay: { backgroundColor: t.colors.background },
+    iconWrap: { backgroundColor: t.colors.primaryBg },
     title: { color: t.colors.textPrimary },
     body: { ...t.type.body, color: t.colors.textSecondary },
   };

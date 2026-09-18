@@ -151,9 +151,7 @@ describe('Train mirrors the week-complete state (B-1)', () => {
 
 describe('D-2 — the Manual-mode ownership note renders on hold weeks too', () => {
   test('the same one line stands in both hero branches', () => {
-    // RE-ANCHORED 2026-09-18 (D192, coaching decision C3): the note is one
-    // line now. Intent kept: the SAME line stands in both hero branches.
-    const note = 'Manual mode: recommendations only. Changes are yours to make';
+    const note = 'Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.';
     expect((coachOutput.split(note).length - 1)).toBe(2);
     // Both occurrences are gated on the same fact, in the same place.
     expect((coachOutput.match(/\{applyDisabled \? \(\n\s*<Text style=\{\[styles\.manualModeNote, live\.manualModeNote\]\}>/g) || []).length).toBe(2);

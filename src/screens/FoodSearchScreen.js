@@ -750,7 +750,7 @@ export default function FoodSearchScreen({ navigation, route }) {
           accessibilityRole="button"
           accessibilityLabel={item.label}
         >
-          <Ionicons name={item.icon} size={20} color={t.colors.textSecondary} />
+          <Ionicons name={item.icon} size={20} color={t.colors.primary} />
           <Text style={[styles.ctaText, live.ctaText]}>{item.label}</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </TouchableOpacity>
@@ -899,7 +899,7 @@ export default function FoodSearchScreen({ navigation, route }) {
               </View>
               {loggingMealId === busyKey
                 ? <ActivityIndicator size="small" color={t.colors.primary} />
-                : <Ionicons name={isFood ? 'add-circle' : 'chevron-forward'} size={isFood ? 26 : 22} color={t.colors.textSecondary} />}
+                : <Ionicons name={isFood ? 'add-circle' : 'chevron-forward'} size={isFood ? 26 : 22} color={t.colors.primary} />}
             </TouchableOpacity>
           );
         }}
@@ -1129,9 +1129,7 @@ const styles = StyleSheet.create({
     height: 2, width: '100%', backgroundColor: 'transparent',
     borderRadius: radius.hair,
   },
-  // D174 A2: a tab selects a VIEW. The label already carries the state twice
-  // (textPrimary at the semibold face); the rule becomes the neutral fill.
-  tabUnderlineActive: { backgroundColor: colors.borderLight },
+  tabUnderlineActive: { backgroundColor: colors.primary },
 
   searchBar: {
     margin: spacing.md,
@@ -1159,14 +1157,12 @@ const styles = StyleSheet.create({
   suggestNote: {
     ...type.caption, color: colors.textMuted, flex: 1, lineHeight: fontSize.sm + 5,
   },
-  // D165 law 2, the founder's test: a suggestion is a message the screen is
-  // making, not an object the user owns, so the fill, the card radius and the
-  // box go. The 3 dp left rule STAYS and is now the whole mark: it is what
-  // distinguishes a suggested row from the search results below it, and
-  // stripping it would have removed a signal rather than a decoration.
   suggestCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    borderLeftWidth: 3, borderLeftColor: colors.border,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.borderSubtle,
+    borderLeftWidth: 3, borderLeftColor: colors.primary,
+    borderRadius: radius.lg,
     marginHorizontal: spacing.md, marginTop: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
@@ -1182,7 +1178,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     marginHorizontal: spacing.md,
     marginBottom: spacing.md,
-    borderRadius: radius.control,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface2,
@@ -1245,13 +1241,17 @@ function buildLiveStyles(t) {
     tabBar: { borderBottomColor: t.colors.border },
     tabLabel: { ...t.type.label, color: t.colors.textMuted },
     tabLabelActive: { color: t.colors.textPrimary },
-    tabUnderlineActive: { backgroundColor: t.colors.borderLight },
+    tabUnderlineActive: { backgroundColor: t.colors.primary },
     provenanceNote: { ...t.type.captionTight, color: t.colors.textMuted },
     ctaRow: { borderBottomColor: t.colors.borderSubtle },
     ctaText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     suggestHint: { ...t.type.caption, color: t.colors.textMuted },
     suggestNote: { ...t.type.caption, color: t.colors.textMuted, lineHeight: t.fontSize.sm + 5 },
-    suggestCard: { borderLeftColor: t.colors.border },
+    suggestCard: {
+      backgroundColor: t.colors.surface,
+      borderColor: t.colors.border,
+      borderLeftColor: t.colors.primary,
+    },
     suggestName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     suggestMacros: { ...t.type.caption, color: t.colors.textSecondary },
     footerBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },

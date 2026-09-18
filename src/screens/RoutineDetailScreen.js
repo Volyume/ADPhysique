@@ -1068,7 +1068,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       accessibilityRole="button"
       accessibilityLabel={isReordering ? 'Done reordering' : 'Reorder exercises'}
     >
-      <Text style={{ fontSize: t.fontSize.md, color: isReordering ? t.colors.textPrimary : t.colors.textSecondary, fontFamily: isReordering ? fontFamily.bold : fontFamily.regular, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
+      <Text style={{ fontSize: t.fontSize.md, color: isReordering ? t.colors.primary : t.colors.textSecondary, fontFamily: isReordering ? fontFamily.bold : fontFamily.regular, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
         {isReordering ? 'Done' : 'Reorder'}
       </Text>
     </TouchableOpacity>
@@ -1105,9 +1105,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // branches internally on `isReordering` for its trailing action column, so
   // nothing here needs to change between the two containers below.
   const renderExerciseRow = ({ item: { routineExercise, exercise }, index }) => (
-          <Card
-            style={[styles.exerciseCard, exercise.unresolved && [styles.exerciseCardUnresolved, live.exerciseCardUnresolved]]}
-            onPress={isReordering ? undefined : () => {
+          <TouchableOpacity
+            style={[styles.exerciseCard, live.exerciseCard, exercise.unresolved && [styles.exerciseCardUnresolved, live.exerciseCardUnresolved]]}
+            onPress={() => {
+              if (isReordering) return;
               if (exercise.unresolved) {
                 // Broken-FK row left over from the pre-deterministic-ID
                 // sync era. Open the existing swap modal so the user
@@ -1127,6 +1128,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               }
               openEdit(routineExercise, exercise);
             }}
+            activeOpacity={isReordering ? 1 : 0.8}
             accessibilityRole={isReordering ? undefined : 'button'}
             accessibilityLabel={isReordering ? undefined : (exercise.unresolved ? `Re-link ${exercise.name}` : `Edit ${exercise.name}`)}
           >
@@ -1155,7 +1157,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   return (
                     <>
                       <View style={[styles.supersetChip, live.supersetChip]}>
-                        <Ionicons name={isCircuit ? 'repeat' : 'link'} size={11} color={t.colors.textSecondary} />
+                        <Ionicons name={isCircuit ? 'repeat' : 'link'} size={11} color={t.colors.primary} />
                         <Text style={[styles.supersetChipText, live.supersetChipText]}>
                           {isCircuit ? 'Circuit' : 'Superset'} {String.fromCharCode(65 + gIdx)}
                         </Text>
@@ -1303,7 +1305,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 </TouchableOpacity>
               </View>
             )}
-          </Card>
+          </TouchableOpacity>
   );
 
   const addExerciseFooter = (
@@ -1532,7 +1534,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
               library picker. */}
           <ModalHeader title="Swap exercise" onClose={() => { setSwapState(null); setSwapCandidates([]); setSwapStylePoolKey(null); setSwapStyleShowAll(false); setPendingSwapPicker(false); }} />
           <Text style={[styles.swapSubtitle, live.swapSubtitle]}>
-            Replacing: <Text style={{ color: t.colors.textPrimary }}>{swapState?.exercise?.name}</Text>
+            Replacing: <Text style={{ color: t.colors.primary }}>{swapState?.exercise?.name}</Text>
           </Text>
           <Text style={[styles.swapNote, live.swapNote]}>
             Choose a substitute. Your routine will be updated. Your set, rep and rest targets stay the same.
@@ -1559,7 +1561,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 accessibilityRole="button"
                 accessibilityLabel="Show all exercises"
               >
-                <Text style={[styles.swapNote, live.swapNote, { marginBottom: 0, color: t.colors.textPrimary, fontFamily: fontFamily.bold }]}>Show all exercises</Text>
+                <Text style={[styles.swapNote, live.swapNote, { marginBottom: 0, color: t.colors.primary, fontFamily: fontFamily.bold }]}>Show all exercises</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -1651,17 +1653,15 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
   startBtn: { marginBottom: spacing.xl },
-  // D165 law 2, the founder's test: an EXERCISE in a routine is an object --
-  // it has an order, sets, reps and a rest, and you swap, reorder and remove
-  // it. It keeps a card and it is now the real one, which already owns the
-  // surface, the radius.lg, the edge and the padding this shell hand-rolled.
-  // Only the row layout it does not own stays. While the list is REORDERING
-  // the row passes no `onPress`, so `Card` renders a plain View with no role
-  // and no label -- exactly the tree the conditional role built before.
   exerciseCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
   },
   // Visual variant for rows whose exercise_id couldn't be resolved
   // against the local exercises table (cloud-restored from a build
@@ -1714,12 +1714,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
     borderRadius: radius.sm,
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.primaryBg,
   },
   supersetChipText: {
     fontSize: fontSize.xs,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
+    color: colors.primary,
   },
   // R9 (D70): tabular numerals ("3 sets, 6-12 reps" is data), and colour
   // moves from colors.primary to colors.textSecondary - a meta line is
@@ -1733,7 +1733,7 @@ const styles = StyleSheet.create({
   exerciseCapabilityNote: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   splitRationale: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.sm },
   divisionLine: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs },
-  exerciseStartWeight: { ...type.num('caption'), color: colors.textSecondary },
+  exerciseStartWeight: { ...type.num('caption'), color: colors.primary },
   cardActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   reorderActions: { flexDirection: 'column', alignItems: 'center', gap: spacing.xs },
   reorderBtn: {
@@ -1771,13 +1771,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.primary,
     borderStyle: 'dashed',
     borderRadius: radius.lg,
     paddingVertical: spacing.lg,
     marginTop: spacing.md,
   },
-  addBtnText: { fontSize: fontSize.md, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  addBtnText: { fontSize: fontSize.md, color: colors.primary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   empty: { alignItems: 'center', paddingVertical: spacing.xl },
   emptyText: { ...type.body, color: colors.textMuted },
   swapSafe: { flex: 1, backgroundColor: colors.background },
@@ -1807,12 +1807,12 @@ const styles = StyleSheet.create({
   swapItemReason: { ...type.captionTight, color: colors.textMuted },
   // C9: the personal reason sits above the structural one and reads as the
   // app's own voice, not as a badge shouting for attention.
-  swapItemTag: { ...type.captionTight, color: colors.textSecondary },
+  swapItemTag: { ...type.captionTight, color: colors.primary },
   swapSearchAll: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     paddingVertical: spacing.lg, marginTop: spacing.sm,
   },
-  swapSearchAllText: { ...type.label, color: colors.textSecondary },
+  swapSearchAllText: { ...type.label, color: colors.primary },
 });
 
 const tagStyles = StyleSheet.create({
@@ -1835,10 +1835,10 @@ const tagStyles = StyleSheet.create({
     backgroundColor: colors.surface2,
   },
   chipMid: {
-    backgroundColor: colors.surface3,
+    backgroundColor: withAlpha(colors.success, 0.188),
   },
   chipHigh: {
-    backgroundColor: colors.surface3,
+    backgroundColor: withAlpha(colors.primary, 0.188),
   },
   chipText: {
     fontSize: fontSize.xs,
@@ -1848,10 +1848,10 @@ const tagStyles = StyleSheet.create({
     color: colors.textMuted,
   },
   chipTextMid: {
-    color: colors.textSecondary,
+    color: colors.success,
   },
   chipTextHigh: {
-    color: colors.textPrimary,
+    color: colors.primary,
   },
 });
 
@@ -1865,6 +1865,7 @@ const tagStyles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
+    exerciseCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     exerciseCardUnresolved: { borderColor: t.colors.warning, backgroundColor: t.colors.warningBg },
     orderBadge: { backgroundColor: t.colors.surface2 },
     orderBadgeUnresolved: { backgroundColor: withAlpha(t.colors.warning, 0.251) },
@@ -1873,8 +1874,8 @@ function buildLiveStyles(t) {
     exerciseNameUnresolved: { color: t.colors.warning },
     relinkChip: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, 0.376) },
     relinkChipText: { fontSize: t.fontSize.xs, color: t.colors.warning },
-    supersetChip: { backgroundColor: t.colors.surface2 },
-    supersetChipText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    supersetChip: { backgroundColor: t.colors.primaryBg },
+    supersetChipText: { fontSize: t.fontSize.xs, color: t.colors.primary },
     // R9 (D70): colour matches the frozen exerciseMeta above (textSecondary,
     // not primary - a meta line is supporting text, not brand decoration).
     exerciseMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
@@ -1883,22 +1884,22 @@ function buildLiveStyles(t) {
     exerciseCapabilityNote: { ...t.type.captionTight, color: t.colors.textMuted },
     splitRationale: { ...t.type.bodySm, color: t.colors.textMuted },
     divisionLine: { ...t.type.bodySm, color: t.colors.textMuted },
-    exerciseStartWeight: { ...t.type.num('caption'), color: t.colors.textSecondary },
+    exerciseStartWeight: { ...t.type.num('caption'), color: t.colors.primary },
     reorderBtn: { backgroundColor: t.colors.surface2 },
     editTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     editScopeNote: { ...t.type.captionTight, color: t.colors.textMuted },
     editInput: { fontSize: t.fontSize.md },
     editSaveBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
-    addBtn: { borderColor: t.colors.border },
-    addBtnText: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
+    addBtn: { borderColor: t.colors.primary },
+    addBtnText: { fontSize: t.fontSize.md, color: t.colors.primary },
     emptyText: { ...t.type.body, color: t.colors.textMuted },
     swapSafe: { backgroundColor: t.colors.background },
     swapSubtitle: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     swapNote: { ...t.type.caption, color: t.colors.textMuted },
     swapItemName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     swapItemReason: { ...t.type.captionTight, color: t.colors.textMuted },
-    swapItemTag: { ...t.type.captionTight, color: t.colors.textSecondary },
-    swapSearchAllText: { ...t.type.label, color: t.colors.textSecondary },
+    swapItemTag: { ...t.type.captionTight, color: t.colors.primary },
+    swapSearchAllText: { ...t.type.label, color: t.colors.primary },
   };
 }
 
@@ -1908,11 +1909,11 @@ function buildLiveStyles(t) {
 function buildTagLiveStyles(t) {
   return {
     chipLow: { backgroundColor: t.colors.surface2 },
-    chipMid: { backgroundColor: t.colors.surface3 },
-    chipHigh: { backgroundColor: t.colors.surface3 },
+    chipMid: { backgroundColor: withAlpha(t.colors.success, 0.188) },
+    chipHigh: { backgroundColor: withAlpha(t.colors.primary, 0.188) },
     chipText: { fontSize: t.fontSize.xs },
     chipTextLow: { color: t.colors.textMuted },
-    chipTextMid: { color: t.colors.textSecondary },
-    chipTextHigh: { color: t.colors.textPrimary },
+    chipTextMid: { color: t.colors.success },
+    chipTextHigh: { color: t.colors.primary },
   };
 }

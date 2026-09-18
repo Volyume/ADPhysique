@@ -279,7 +279,7 @@ export default function CommunityPeopleListScreen({ navigation, route }) {
             <Ionicons
               name={filters ? 'options' : 'options-outline'}
               size={iconSize.md}
-              color={filters ? t.colors.textPrimary : t.colors.textSecondary}
+              color={filters ? t.colors.primary : t.colors.textSecondary}
             />
           </TouchableOpacity>
         ) : null}

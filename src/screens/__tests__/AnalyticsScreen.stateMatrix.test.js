@@ -32,7 +32,7 @@
  * identity changes while focused — this file's mock is corrected to
  * `useEffect(() => cb(), [cb])` to match that real dependency array. Every
  * loader in this screen's tree memoises its focus-effect callback with
- * `useCallback` keyed on stable identifiers (`user?.id`, or `[userId,
+ * `useCallback` keyed on stable identifiers (`user?.id`, or `[userId, tier,
  * suppressed]` for useVisualPillar), so this fix only adds the extra
  * re-fire useVisualPillar genuinely needs; it changes no other hook's
  * observed call count.
@@ -494,7 +494,6 @@ function scanSummary({
 // ─────────────────────────────────────────────────────────────────────────
 
 const database = require('../../lib/database');
-const { localWeekStartMs } = require('../../lib/dayKey');
 const progressScanStore = require('../../lib/progressScanStore');
 
 let dbOriginals = null;
@@ -588,20 +587,14 @@ describe('State matrix — A: established Pro, all progressing, photos current',
 
     // Training pillar: real computeTrainingPillarSummary output — 2 of 3
     // lifts improved this month, most recent named best is e1 @ 85kg x 5.
-    // RE-ANCHORED 2026-09-18 (D192, one unit format): × not x; intent kept --
-    // the accessibility label still reports the named best evidence.
     const training = pillarRow(tree, 'Training');
     expect(training.length).toBe(1);
-    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 2 of 3 lifts this month. Bench press 85 kg × 5, new best');
+    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 2 of 3 lifts this month. Bench press 85 kg x 5, new best');
 
     // Body pillar: state 3 (20 entries), the real !hasComparison branch.
     const body = pillarRow(tree, 'Body');
     expect(body.length).toBe(1);
-    // RE-ANCHORED 2026-09-18 (D192, finding 6): the figure is the headline
-    // now (the narration sentence demotes to a short basis line, or drops
-    // past 60 characters, spec 4.7 -- this one is 104, so it drops).
-    expect(body[0].props.accessibilityLabel).not.toMatch(/Your smoothed weight trend is updated/);
-    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. \d/);
+    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your smoothed weight trend is updated\./);
     expect(body[0].props.accessibilityLabel).toMatch(/kg/);
 
     // Visual pillar: eligible, real buildVisualPillarCopy string.
@@ -655,11 +648,7 @@ describe('State matrix — B: training up, weight stalled', () => {
     const training = pillarRow(tree, 'Training');
     expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts this month/);
     const body = pillarRow(tree, 'Body');
-    // RE-ANCHORED 2026-09-18 (D192, finding 6): the figure is the headline
-    // now (the narration sentence demotes to a short basis line, or drops
-    // past 60 characters, spec 4.7 -- this one is 104, so it drops).
-    expect(body[0].props.accessibilityLabel).not.toMatch(/Your smoothed weight trend is updated/);
-    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. \d/);
+    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your smoothed weight trend is updated\./);
     // No instruction/imperative anywhere in the Body pillar's copy.
     expect(body[0].props.accessibilityLabel).not.toMatch(/add|reduce|increase|decrease|deload/i);
   });
@@ -713,11 +702,7 @@ describe('State matrix — D: both training and weight progressing; Visual pilla
     const training = pillarRow(tree, 'Training');
     expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts this month/);
     const body = pillarRow(tree, 'Body');
-    // RE-ANCHORED 2026-09-18 (D192, finding 6): the figure is the headline
-    // now (the narration sentence demotes to a short basis line, or drops
-    // past 60 characters, spec 4.7 -- this one is 104, so it drops).
-    expect(body[0].props.accessibilityLabel).not.toMatch(/Your smoothed weight trend is updated/);
-    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. \d/);
+    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your smoothed weight trend is updated\./);
     const visual = pillarRow(tree, 'Progress photos');
     expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Building your visual trend. 2 more comparable scans until your first assessment.');
     expect(visual[0].props.accessibilityLabel).not.toMatch(/visible change/i);
@@ -762,23 +747,14 @@ describe('State matrix — F/L: zero-data (lead ruling: immature pillar lines AN
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
-    // fact under 60 characters (spec 4.8), not a two-line apology.
-    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions yet. Your first session starts the record');
+    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Log your first session to start your training evidence.');
     const body = pillarRow(tree, 'Body');
-    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
-    // fact under 60 characters (spec 4.8), not a two-line apology.
-    expect(body[0].props.accessibilityLabel).toContain('No weigh-ins yet');
+    expect(body[0].props.accessibilityLabel).toContain('No weigh-ins logged yet');
     const visual = pillarRow(tree, 'Progress photos');
-    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
-    // fact under 60 characters (spec 4.8), not a two-line apology.
-    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Two photos show what changed');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Take your first progress photos to start tracking visible change.');
     // Deliberately BOTH render (lead ruling, §23 state F):
-    // RE-ANCHORED 2026-09-18 (D192, finding 4): the boxed "No training
-    // trends yet" title + two-sentence paragraph is one plain-fact line
-    // now, no box, no glyph, no title (spec 4.8). Intent kept: still
-    // renders TOGETHER WITH the immature pillar lines above.
-    expect(flattenText(tree)).toContain('Trends appear after your first sessions');
+    expect(flattenText(tree)).toContain('No training trends yet');
+    expect(flattenText(tree)).toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
   });
 
   // FOUNDER DECISION (fully free, no tier split): the Free-tier EmptyState
@@ -789,12 +765,8 @@ describe('State matrix — F/L: zero-data (lead ruling: immature pillar lines AN
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
-    // fact under 60 characters (spec 4.8), not a two-line apology.
-    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions yet. Your first session starts the record');
-    // RE-ANCHORED 2026-09-18 (D192, finding 4): see state F's own re-anchor
-    // note above -- the box is one plain-fact line now (spec 4.8).
-    expect(flattenText(tree)).toContain('Trends appear after your first sessions');
+    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Log your first session to start your training evidence.');
+    expect(flattenText(tree)).toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
     expect(flattenText(tree)).not.toMatch(/welcome/i);
     expect(flattenText(tree)).not.toMatch(/get started/i);
   });
@@ -817,9 +789,7 @@ describe('State matrix — G: Pro, training/body evidence present, no photo hist
     expect(errors).toEqual([]);
     const visual = pillarRow(tree, 'Progress photos');
     expect(visual.length).toBe(1);
-    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
-    // fact under 60 characters (spec 4.8), not a two-line apology.
-    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Two photos show what changed');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Take your first progress photos to start tracking visible change.');
     expect(visual[0].props.accessibilityLabel).not.toMatch(/Part of Pro/);
   });
 });
@@ -867,110 +837,16 @@ describe('State matrix — I: recovery week active (isDeload true)', () => {
   });
 });
 
-// ─── State J — recent programme adjustment (MOUNTED, two renders) ─────────
-//
-// This block was a source guard asserting the ABSENCE of any coach-decision
-// read on this screen. Its rationale, in this file's own header, was that
-// "mounting a screen with and without a coach decision fixture would produce
-// byte-identical renders by construction" -- so the absence proof stood in for
-// a mount test that could not have told the two apart.
-//
-// D166 (founder, 2026-09-14) makes that sentence false: Progress now opens
-// with the week's decision as its one loud element. State J is therefore a
-// REAL state with two genuinely different renders, and it gets the mount
-// coverage the source guard was substituting for. D167 ruling 1 records this
-// as a replacement rather than a deletion: dropping the assertions without
-// adding these two cases would have been weakening the suite.
-describe('State matrix — J: recent programme adjustment (mounted, both renders)', () => {
-  const DECIDED_WEEK = localWeekStartMs(Date.now());
-
-  test('a checked-in week renders the decision as the loud element, above the Answer Block', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: {
-        getAllWorkouts: threeWorkouts,
-        getCompletedWorkoutSets: improvingTrainingSets,
-        getAllExercises: EXERCISES,
-        getLatestCoachOutputMeta: () => Promise.resolve({
-          weekStart: DECIDED_WEEK,
-          output: {
-            whyThisWeek: 'Weight is tracking the target rate. No change needed this week.',
-            heldDecisions: [],
-            adjustments: { calories: null },
-          },
-        }),
-        getLatestCheckin: () => Promise.resolve({ weekStart: DECIDED_WEEK, energyScore: 4 }),
-      },
-    });
-    const { tree, errors } = await mountAnalytics({});
-    expect(errors).toEqual([]);
-
-    const block = tree.root.findAll((n) => n.props?.testID === 'progress-decision');
-    expect(block.length).toBeGreaterThan(0);
-    expect(block[0].props.accessibilityLabel).toBe(
-      "This week's decision. Weight is tracking the target rate. No change needed this week.. Opens the full decision.",
-    );
-  });
-
-  test('a week with no check-in renders no decision, because a computation is not one', async () => {
-    // PM-06/D96: an output the engine computed for a week the person never
-    // checked in is not a decision. Home and the Coach tab once disagreed
-    // about this and the one saying "yes" was the one that could be wrong.
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: {
-        getAllWorkouts: threeWorkouts,
-        getCompletedWorkoutSets: improvingTrainingSets,
-        getAllExercises: EXERCISES,
-        getLatestCoachOutputMeta: () => Promise.resolve({
-          weekStart: DECIDED_WEEK,
-          output: {
-            whyThisWeek: 'Weight is tracking the target rate. No change needed this week.',
-            heldDecisions: [],
-            adjustments: { calories: null },
-          },
-        }),
-        getLatestCheckin: () => Promise.resolve(null),
-      },
-    });
-    const { tree, errors } = await mountAnalytics({});
-    expect(errors).toEqual([]);
-    expect(tree.root.findAll((n) => n.props?.testID === 'progress-decision')).toEqual([]);
-  });
-
-  test('an open ED lockout replaces the decision sentence, never sits beside it', async () => {
-    // The binding condition from D166: the renderer takes `buildDecision`'s
-    // answer whole, and that function puts the lockout FIRST. A screen that
-    // read `whyThisWeek` directly would show the cheerful line instead.
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: {
-        getAllWorkouts: threeWorkouts,
-        getCompletedWorkoutSets: improvingTrainingSets,
-        getAllExercises: EXERCISES,
-        getLatestCoachOutputMeta: () => Promise.resolve({
-          weekStart: DECIDED_WEEK,
-          output: {
-            whyThisWeek: 'Weight is tracking the target rate. No change needed this week.',
-            heldDecisions: [{
-              type: 'ed_pattern_lockout',
-              reason: 'Calorie cut held. Multiple safety signals are active. See the held-decision card for details.',
-            }],
-            adjustments: { calories: { change: -150, note: 'Trend is above target.' } },
-          },
-        }),
-        getLatestCheckin: () => Promise.resolve({ weekStart: DECIDED_WEEK, energyScore: 4 }),
-      },
-    });
-    const { tree, errors } = await mountAnalytics({});
-    expect(errors).toEqual([]);
-
-    const block = tree.root.findAll((n) => n.props?.testID === 'progress-decision');
-    expect(block.length).toBeGreaterThan(0);
-    const label = block[0].props.accessibilityLabel;
-    expect(label).toContain('Calorie cut held');
-    expect(label).not.toContain('No change needed');
-    expect(label).not.toContain('150');
+// ─── State J — recent programme adjustment (pure/source-level; see header) ─
+describe('State matrix — J: recent programme adjustment (source guard — see file header rationale)', () => {
+  test('AnalyticsScreen reads no coach-decision/adjustment data for landing display', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.resolve(__dirname, '../AnalyticsScreen.js'), 'utf8');
+    expect(src).not.toMatch(/getLatestCoachOutput/);
+    expect(src).not.toMatch(/coachDecision/i);
+    expect(src).not.toMatch(/adjustments\./);
+    expect(src).not.toMatch(/awaitingDecision/);
   });
 });
 
@@ -1069,9 +945,7 @@ describe('State matrix — N: multiple PR events; only the best 2-3 are named, t
     const training = pillarRow(tree, 'Training');
     expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on 4 of 4 lifts this month\./);
     // Exactly one named-best evidence line, the most recent (e4).
-    // RE-ANCHORED 2026-09-18 (D192, one unit format): × not x; intent kept --
-    // exactly one named-best evidence line, the most recent.
-    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 4 of 4 lifts this month. Overhead press 45 kg × 6, new best');
+    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 4 of 4 lifts this month. Overhead press 45 kg x 6, new best');
   });
 });
 
@@ -1090,9 +964,7 @@ describe('State matrix — O: lb-unit user, unit strings correct throughout', ()
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    // RE-ANCHORED 2026-09-18 (D192, one unit format): × not x; intent kept --
-    // the lbs-unit user still gets lbs throughout, never kg.
-    expect(training[0].props.accessibilityLabel).toMatch(/85 lbs × 5/);
+    expect(training[0].props.accessibilityLabel).toMatch(/85 lbs x 5/);
     expect(training[0].props.accessibilityLabel).not.toMatch(/\bkg\b/);
     const body = pillarRow(tree, 'Body');
     // The EWMA weight figure correctly follows bodyWeightUnits (formatBodyWeight).
@@ -1104,13 +976,9 @@ describe('State matrix — O: lb-unit user, unit strings correct throughout', ()
     // same session: bodyPillarCopy now formats the rate through
     // formatBodyWeightRate (units.js) -- lbs for lbs AND stone users (the
     // stone system's own sub-unit for small changes), kg for kg users.
-    // The sibling of this defect is the Body metrics detail surface's own
-    // rate line (BodyMetricsScreen's "Weight trend" EWMA card, off this
-    // landing). It routes through formatBodyWeightRate too, pinned by
-    // src/screens/__tests__/weightRateUnits.guard.test.js. D177 item 1
-    // (2026-09-15) corrected this note, which used to credit that sibling
-    // literal to src/components/WeightTrendCard.js -- a file nothing
-    // imports, so it renders nowhere and fixes nothing for a user.
+    // WeightTrendCard.js's sibling hard-coded literal (BodyMetrics detail
+    // surface, off this landing) is on record in the campaign notes, not
+    // fixed here (touch only what the task requires).
     expect(body[0].props.accessibilityLabel).toMatch(/lbs\/week/);
     expect(body[0].props.accessibilityLabel).not.toMatch(/kg\/week/);
   });

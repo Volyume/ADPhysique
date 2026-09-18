@@ -47,7 +47,6 @@ import Reanimated, {
   interpolate,
 } from 'react-native-reanimated';
 import useAppStore from '../store/useAppStore';
-import { measureHeroOrigin } from '../navigation/heroTransition';
 import { motion } from '../styles/theme';
 
 const AnimatedPressable = Reanimated.createAnimatedComponent(Pressable);
@@ -84,19 +83,14 @@ export default function PressableCard({
   // Measure this card in window coordinates, then hand the rect to the
   // origin-aware callback. Falls back to a null rect when the native handle
   // isn't measurable so the action still fires (never a lost tap).
-  //
-  // DELEGATED 2026-09-16. This used to call `measureInWindow` directly, which
-  // covered the "no handle" case but NOT the case where the handle exists and
-  // the native callback never arrives -- a node detached between the press and
-  // the measure, which a recycled FlashList row can do. That tap was simply
-  // lost. `measureHeroOrigin` was written for the same job on the newer call
-  // sites and already carries a fire-once guard, a rect validity check and a
-  // 100 ms watchdog, so this delegates rather than growing a second copy that
-  // would drift. Found by the stage 4 transition lane, which reported it and
-  // correctly did not fix it inside a transition-wiring task.
   function measureThen(cb) {
     if (!cb) return;
-    measureHeroOrigin(viewRef.current, cb);
+    const node = viewRef.current;
+    if (node && typeof node.measureInWindow === 'function') {
+      node.measureInWindow((x, y, width, height) => cb({ x, y, width, height }));
+    } else {
+      cb(null);
+    }
   }
 
   // Only used when the origin-aware callbacks are supplied. Consumers that pass

@@ -1384,7 +1384,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           <View style={[styles.heroTextHeader, live.heroTextHeader]}>
             <View style={styles.heroTitleRow}>
               <View style={[styles.heroIcon, live.heroIcon]}>
-                <Ionicons name="images-outline" size={iconSize.md} color={t.colors.textSecondary} />
+                <Ionicons name="images-outline" size={iconSize.md} color={t.colors.primary} />
               </View>
               <View style={styles.heroTitleCopy}>
                 <Text style={[styles.heroTextEyebrow, live.heroTextEyebrow]}>Progress photos</Text>
@@ -1753,7 +1753,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 accessibilityRole="button"
                 accessibilityLabel={`Change photo set date, currently ${formatProgressPhotoDay(scanDateMs)}`}
               >
-                <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.textSecondary} />
+                <Ionicons name="calendar-outline" size={iconSize.md} color={t.colors.primary} />
                 <Text style={[styles.scanDateValue, live.scanDateValue]} numberOfLines={1} ellipsizeMode="tail">{formatProgressPhotoDay(scanDateMs)}</Text>
                 <Ionicons name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
@@ -1841,8 +1841,8 @@ export default function ProgressPhotosScreen({ navigation }) {
                       accessibilityState={{ disabled: !!route.disabled }}
                       accessibilityLabel={route.actionLabel}
                     >
-                      <View style={styles.captureRouteIcon}>
-                        <Ionicons name={route.icon} size={20} color={route.disabled ? t.colors.textMuted : t.colors.textSecondary} />
+                      <View style={[styles.captureRouteIcon, live.captureRouteIcon]}>
+                        <Ionicons name={route.icon} size={20} color={route.disabled ? t.colors.textMuted : t.colors.primary} />
                       </View>
                       <View style={styles.captureRouteCopy}>
                         <View style={styles.captureRouteTopLine}>
@@ -2008,7 +2008,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   scanReviewTitleBlock: { gap: spacing.xxs },
-  scanReviewEyebrow: { ...type.caption, color: colors.textMuted },
+  scanReviewEyebrow: { ...type.caption, color: colors.primary },
   scanReviewTitle: { ...type.title, color: colors.textPrimary },
   scanReviewScroll: { flex: 1 },
   scanReviewContent: {
@@ -2074,7 +2074,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   heroTitleCopy: { flex: 1, minWidth: 0 },
-  heroTextEyebrow: { ...type.caption, color: colors.textMuted },
+  heroTextEyebrow: { ...type.caption, color: colors.primary },
   heroTextTitle: { ...type.title, color: colors.textPrimary },
   heroPrivacyPill: {
     flexDirection: 'row',
@@ -2303,11 +2303,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
   },
   checkInPoseChipDone: {
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surface3,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
   },
   checkInPoseText: { ...type.caption, color: colors.textMuted },
-  checkInPoseTextDone: { ...type.w('caption', 'semibold'), color: colors.textPrimary },
+  checkInPoseTextDone: { color: colors.primary },
   checkInNote: { ...type.bodySm, color: colors.textSecondary },
   checkInHint: { ...type.caption, color: colors.textMuted, lineHeight: 18 },
   completeCheckInButton: {
@@ -2385,12 +2385,13 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   captureRouteCardDisabled: { opacity: 0.55 },
-  // D174: was a 36dp `primaryBg` disc behind a stock glyph. Fixed glyph
-  // column now, no fill.
   captureRouteIcon: {
     width: 36,
+    height: 36,
+    borderRadius: radius.full,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.primaryBg,
   },
   captureRouteCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
   captureRouteTopLine: {
@@ -2401,15 +2402,15 @@ const styles = StyleSheet.create({
   },
   captureRouteEyebrow: {
     ...type.caption,
-    color: colors.textMuted,
+    color: colors.primary,
   },
   captureRoutePill: {
     borderRadius: radius.full,
-    backgroundColor: colors.surface2,
+    backgroundColor: colors.primaryBg,
     paddingHorizontal: spacing.xs,
     paddingVertical: 2,
   },
-  captureRoutePillText: { ...type.caption, color: colors.textSecondary },
+  captureRoutePillText: { ...type.caption, color: colors.primary },
   captureRouteName: { ...type.label, color: colors.textPrimary },
   captureRouteBody: { ...type.captionTight, color: colors.textSecondary },
   captureRouteSteps: {
@@ -2428,7 +2429,7 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: radius.full,
-    backgroundColor: colors.textMuted,
+    backgroundColor: colors.primaryFill,
     marginTop: 7,
     flexShrink: 0,
   },
@@ -2487,14 +2488,14 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     scanReviewSafe: { backgroundColor: t.colors.background },
     scanReviewHeader: { borderBottomColor: t.colors.border },
-    scanReviewEyebrow: { ...t.type.caption, color: t.colors.textMuted },
+    scanReviewEyebrow: { ...t.type.caption, color: t.colors.primary },
     scanReviewTitle: { ...t.type.title, color: t.colors.textPrimary },
     scanReviewImageWrap: { backgroundColor: t.colors.camera },
     scanReviewFooter: { borderTopColor: t.colors.border, backgroundColor: t.colors.background },
     scanReviewCopy: { ...t.type.bodySm, color: t.colors.textSecondary },
     heroTextHeader: { backgroundColor: t.colors.surface },
     heroIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
-    heroTextEyebrow: { ...t.type.caption, color: t.colors.textMuted },
+    heroTextEyebrow: { ...t.type.caption, color: t.colors.primary },
     heroTextTitle: { ...t.type.title, color: t.colors.textPrimary },
     heroPrivacyPill: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     heroPrivacyText: { ...t.type.caption, color: t.colors.textSecondary },
@@ -2528,9 +2529,9 @@ function buildLiveStyles(t) {
     scanRecalibrationNote: { ...t.type.caption, color: t.colors.textMuted },
     scanCheckInValueLine: { ...t.type.caption, color: t.colors.textMuted },
     checkInPoseChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    checkInPoseChipDone: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
+    checkInPoseChipDone: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     checkInPoseText: { ...t.type.caption, color: t.colors.textMuted },
-    checkInPoseTextDone: { ...t.type.w('caption', 'semibold'), color: t.colors.textPrimary },
+    checkInPoseTextDone: { color: t.colors.primary },
     checkInNote: { ...t.type.bodySm, color: t.colors.textSecondary },
     checkInHint: { ...t.type.caption, color: t.colors.textMuted },
     completeCheckInButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
@@ -2541,13 +2542,14 @@ function buildLiveStyles(t) {
     captureRouteTitle: { ...t.type.title, color: t.colors.textPrimary },
     captureRouteIntro: { ...t.type.bodySm, color: t.colors.textMuted },
     captureRouteCard: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
-    captureRouteEyebrow: { ...t.type.caption, color: t.colors.textMuted },
-    captureRoutePill: { backgroundColor: t.colors.surface2 },
-    captureRoutePillText: { ...t.type.caption, color: t.colors.textSecondary },
+    captureRouteIcon: { backgroundColor: t.colors.primaryBg },
+    captureRouteEyebrow: { ...t.type.caption, color: t.colors.primary },
+    captureRoutePill: { backgroundColor: t.colors.primaryBg },
+    captureRoutePillText: { ...t.type.caption, color: t.colors.primary },
     captureRouteName: { ...t.type.label, color: t.colors.textPrimary },
     captureRouteBody: { ...t.type.captionTight, color: t.colors.textSecondary },
     captureRouteSteps: { borderTopColor: t.colors.border },
-    captureRouteStepDot: { backgroundColor: t.colors.textMuted },
+    captureRouteStepDot: { backgroundColor: t.colors.primaryFill },
     captureRouteStepText: { ...t.type.caption, color: t.colors.textSecondary },
     scanDateBackdrop: { backgroundColor: t.colors.scrim },
     scanDateSheet: { backgroundColor: t.colors.surfaceElevated ?? t.colors.surface, borderColor: t.colors.border },

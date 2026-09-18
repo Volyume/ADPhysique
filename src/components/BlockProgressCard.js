@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from './InfoTooltip';
 import PressableCard from './PressableCard';
@@ -61,13 +61,10 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek, onPr
       </View>
       {blockProgress.map(p => {
         const pct = p.planned > 0 ? Math.min(1, p.actual / p.planned) : 0;
-        // D172/D174 (the MacroRings ruling, applied to the same shape): a
-        // meter whose WIDTH already states the value does not also encode it
-        // in colour. The three-step ladder spent amber at 100%, borrowed
-        // `warning` in the middle (the §8 state-colour borrowing A1 refused
-        // for switches) and drew an amber tint below that. One neutral fill
-        // at every value now, exactly as the macro arc and bars were ruled.
-        const fillColor = t.colors.borderLight;
+        const fillColor =
+          pct >= 1 ? t.colors.primary
+          : pct >= 0.7 ? t.colors.warning
+          : withAlpha(t.colors.primary, alpha.edge);
         return (
           <View
             key={p.muscle}
@@ -107,12 +104,13 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek, onPr
 }
 
 const styles = StyleSheet.create({
-  // D165 law 2: a volume stat panel, not an object -- no box, a borderSubtle hairline above (D171/D172).
   card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
     padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   header: {
     flexDirection: 'row',
@@ -171,7 +169,7 @@ const styles = StyleSheet.create({
 // already resolved live via fillColor above).
 function buildLiveStyles(t) {
   return {
-    card: { borderTopColor: t.colors.borderSubtle },
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     title: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     week: { ...t.type.caption, color: t.colors.textMuted },
     muscle: { ...t.type.captionStrong, color: t.colors.textSecondary },

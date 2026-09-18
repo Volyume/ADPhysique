@@ -25,14 +25,12 @@ export default function ProfileAvatarMark({
   const live = buildLiveStyles(t);
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
   const preset = presetKey ? avatarPresetFor(presetKey) : null;
-  // D187: the glyph is the identity and draws in ink; no borrowed state colour.
+  const accent = t.colors[preset?.tone || 'primary'] || t.colors.primary;
   // Lead visual review 2026-09-06, ruling V5: an unselected preset's ring is
-  // neutral (`border` at `alpha.edge`), never the preset's own accent (the
-  // accent then lived in the glyph; D187 retired it). D174 A4 then took the selected ring off the
-  // accent too: choosing an avatar in a picker is A2's category, so the
-  // selected ring is `borderLight`, exactly as AthleteProfileScreen's own
-  // preset tile now draws it.
-  const borderColor = selected ? t.colors.borderLight : withAlpha(t.colors.border, alpha.edge);
+  // neutral (`border` at `alpha.edge`), never the preset's own accent — the
+  // accent stays in the glyph and the tint below. Only the selected ring is
+  // amber.
+  const borderColor = selected ? t.colors.primary : withAlpha(t.colors.border, alpha.edge);
   const baseStyle = [
     styles.avatar,
     {
@@ -40,8 +38,7 @@ export default function ProfileAvatarMark({
       height: size,
       borderRadius: circle(size),
       borderColor,
-      // D174 A4 / §3.2: no tint behind the glyph, whichever branch renders.
-      backgroundColor: t.colors.surface2,
+      backgroundColor: preset ? withAlpha(accent, alpha.tint) : t.colors.primaryBg,
     },
     style,
   ];
@@ -67,8 +64,8 @@ export default function ProfileAvatarMark({
           transition={reduceMotion ? 0 : motion.state}
         />
         {editable ? (
-          <View style={[styles.badge, live.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: t.colors.surface3 }]}>
-            <Ionicons name="camera-outline" size={Math.max(12, Math.round(size * 0.17))} color={t.colors.textPrimary} />
+          <View style={[styles.badge, live.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: t.colors.primaryFill }]}>
+            <Ionicons name="camera-outline" size={Math.max(12, Math.round(size * 0.17))} color={t.colors.onPrimary} />
           </View>
         ) : null}
       </View>
@@ -78,13 +75,13 @@ export default function ProfileAvatarMark({
   if (preset) {
     return (
       <View style={baseStyle}>
-        <Ionicons name={preset.icon} size={iconSize} color={t.colors.textPrimary} />
+        <Ionicons name={preset.icon} size={iconSize} color={accent} />
         {showBadge ? (
-          <View style={[styles.badge, live.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: selected ? t.colors.surface3 : t.colors.surface }]}>
+          <View style={[styles.badge, live.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: selected ? t.colors.primary : t.colors.surface }]}>
             <Ionicons
               name={selected ? 'checkmark' : preset.badgeIcon}
               size={Math.max(10, Math.round(badgeSize * 0.6))}
-              color={selected ? t.colors.textPrimary : t.colors.textSecondary}
+              color={selected ? t.colors.onPrimary : accent}
             />
           </View>
         ) : null}
@@ -96,8 +93,8 @@ export default function ProfileAvatarMark({
     <View style={baseStyle}>
       <Text style={[styles.initial, live.initial, { fontSize: Math.round(size * 0.34) }]}>{initialFor(displayName)}</Text>
       {editable ? (
-        <View style={[styles.badge, live.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: t.colors.surface3 }]}>
-          <Ionicons name="camera-outline" size={Math.max(12, Math.round(size * 0.17))} color={t.colors.textPrimary} />
+        <View style={[styles.badge, live.badge, { width: badgeSize, height: badgeSize, borderRadius: circle(badgeSize), backgroundColor: t.colors.primaryFill }]}>
+          <Ionicons name="camera-outline" size={Math.max(12, Math.round(size * 0.17))} color={t.colors.onPrimary} />
         </View>
       ) : null}
     </View>
@@ -112,7 +109,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   image: { width: '100%', height: '100%' },
-  initial: { ...type.h3, color: colors.textPrimary, fontWeight: fontWeight.black },
+  initial: { ...type.h3, color: colors.primary, fontWeight: fontWeight.black },
   badge: {
     position: 'absolute',
     right: 3,
@@ -132,7 +129,7 @@ const styles = StyleSheet.create({
 // baseStyle above).
 function buildLiveStyles(t) {
   return {
-    initial: { ...t.type.h3, color: t.colors.textPrimary },
+    initial: { ...t.type.h3, color: t.colors.primary },
     badge: { borderColor: t.colors.surface },
   };
 }

@@ -43,7 +43,7 @@ export default function StatusStrip({ items }) {
           return (
             <TouchableOpacity
               key={item.key}
-              style={[styles.chip, { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle }, expanded && { borderColor: item.iconColor || t.colors.borderLight }]}
+              style={[styles.chip, { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle }, expanded && { borderColor: item.iconColor || t.colors.primary }]}
               onPress={() => toggle(item.key)}
               hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
               accessibilityRole="button"

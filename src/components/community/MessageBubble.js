@@ -139,11 +139,7 @@ export default function MessageBubble({
             accessibilityRole={onLongPress ? 'button' : 'text'}
             accessibilityLabel={`${mine ? 'You said' : 'They said'}: ${message.body ?? ''}`}
           >
-            {/* D174 A3 scope ruling: `LinkedBody` underlines its links
-                (`:62`), so the affordance survives without the accent -- which
-                is also the more accessible treatment, since an underline does
-                not depend on colour vision. */}
-            <LinkedBody text={message.body ?? ''} color={t.colors.textPrimary} linkColor={t.colors.textPrimary} />
+            <LinkedBody text={message.body ?? ''} color={t.colors.textPrimary} linkColor={t.colors.primary} />
           </TouchableOpacity>
         </View>
       </View>

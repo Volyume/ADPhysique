@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, circle, type, iconSize } from '../styles/theme';
+import { colors, spacing, radius, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
@@ -187,13 +187,9 @@ const styles = StyleSheet.create({
     minHeight: touchTarget.minimum,
     paddingVertical: spacing.xs,
   },
-  marker: { width: 14, height: 14, borderRadius: circle(14) },
-  // Every scored point on the ladder drew an amber marker, so the accent was
-  // marking a whole series rather than "now" (D174). `borderLight` is the
-  // token the week ribbon fills a trained cell with, so a filled mark reads
-  // the same way here.
-  markerSolid: { backgroundColor: colors.borderLight },
-  markerHollow: { backgroundColor: 'transparent', borderWidth: 2, borderColor: colors.borderLight },
+  marker: { width: 14, height: 14, borderRadius: 7 },
+  markerSolid: { backgroundColor: colors.primary },
+  markerHollow: { backgroundColor: 'transparent', borderWidth: 2, borderColor: colors.primary },
   markerUnscored: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' },
   pointCopy: { flex: 1, minWidth: 0, gap: spacing.xxs },
   pointDate: { ...type.label, color: colors.textPrimary },
@@ -222,8 +218,8 @@ function buildLiveStyles(t) {
     placeholderText: { color: t.colors.textPrimary },
     connector: { backgroundColor: t.colors.border },
     connectorGap: { borderLeftColor: t.colors.border },
-    markerSolid: { backgroundColor: t.colors.borderLight },
-    markerHollow: { borderColor: t.colors.borderLight },
+    markerSolid: { backgroundColor: t.colors.primary },
+    markerHollow: { borderColor: t.colors.primary },
     markerUnscored: { borderColor: t.colors.border },
     pointDate: { color: t.colors.textPrimary },
     pointValue: { color: t.colors.textMuted },

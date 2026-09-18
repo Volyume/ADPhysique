@@ -8,7 +8,6 @@ import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
 import { SwipeableEntryRow } from './EntryRow';
 import AnimatedRow from '../AnimatedRow';
-import Card from '../Card';
 import { touchTarget } from '../../styles/layout';
 
 // One meal as a single contained card (diary-tab redesign 2026-06-01). Replaces
@@ -148,11 +147,11 @@ export default function MealSection({
   // is not currently a multi-select target.
   const showRowEditHint = !selectionMode && !readOnly;
   return (
-    <Card padding="none" style={styles.card}>
+    <View style={[styles.card, live.card]}>
       <View style={styles.header}>
         <Text style={[styles.mealName, live.mealName]}>{slot.label}</Text>
         {hasEntries ? (
-          <Text style={[styles.subtotal, live.subtotal]}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} · {slotProtein}g P</Text>
+          <Text style={[styles.subtotal, live.subtotal]}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} - {slotProtein}g P</Text>
         ) : null}
       </View>
       {showEmptyActions && showUsuals ? (
@@ -177,7 +176,7 @@ export default function MealSection({
             accessibilityRole="button"
             accessibilityLabel={`Add ${mealSuggestion.name ?? 'meal'} to ${slot.label}`}
           >
-            <Ionicons name="add" size={14} color={t.colors.textSecondary} />
+            <Ionicons name="add" size={14} color={t.colors.primary} />
             <Text style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{mealSuggestion.name ?? 'Meal'}</Text>
           </TouchableOpacity>
         </View>
@@ -194,7 +193,7 @@ export default function MealSection({
                 + `${yesterdayCopy.count === 1 ? 'entry' : 'entries'} into ${slot.label}`
               }
             >
-              <Ionicons name="copy-outline" size={14} color={t.colors.textSecondary} />
+              <Ionicons name="copy-outline" size={14} color={t.colors.primary} />
               <Text style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{yesterdayCopy.label}</Text>
             </TouchableOpacity>
           ) : null}
@@ -210,7 +209,7 @@ export default function MealSection({
               accessibilityLabel={usualChipAccessibilityLabel(food, slot.label)}
               accessibilityHint="Hold to change the portion first"
             >
-              <Ionicons name="add" size={14} color={t.colors.textSecondary} />
+              <Ionicons name="add" size={14} color={t.colors.primary} />
               <Text style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{usualChipLabel(food)}</Text>
             </TouchableOpacity>
           )) : null}
@@ -297,19 +296,18 @@ export default function MealSection({
           </TouchableOpacity>
         </View>
       ) : null}
-    </Card>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // D165 law 2, the founder's test: a MEAL is an object -- it has a name, a
-  // subtotal, and foods you add to and remove from it -- so it keeps a card,
-  // and it is now the real one. The hand-rolled shell that used to live here
-  // set its own surface, its own radius.lg and its own borderSubtle edge, all
-  // three of which `Card` already owns; only the layout it does NOT own stays.
-  // `padding="none"` because this card's rows are edge-to-edge and pad
-  // themselves.
   card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    // borderSubtle, matching Card's own edge: a meal card is a content
+    // container, and 5-8 of them stack down the diary. On `border` each one
+    // carried a brighter outline than every real Card beside it.
+    borderWidth: 1, borderColor: colors.borderSubtle,
     overflow: 'hidden',
     marginBottom: spacing.lg,
   },
@@ -356,7 +354,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     flex: 1,
     minHeight: touchTarget.minimum,
-    borderRadius: radius.control,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface2,
@@ -393,7 +391,7 @@ const styles = StyleSheet.create({
   },
   plannedRowText: { ...type.bodySm, color: colors.textMuted, flex: 1 },
   markEatenButton: {
-    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs, minHeight: 36,
     alignItems: 'center', justifyContent: 'center',
   },
@@ -412,6 +410,7 @@ const styles = StyleSheet.create({
 // actionHubDivided/entryRowOuter/entryFlex have no colour tokens.
 function buildLiveStyles(t) {
   return {
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     mealName: { color: t.colors.textPrimary },
     subtotal: { color: t.colors.textMuted },
     usualChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },

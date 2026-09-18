@@ -51,7 +51,7 @@ export default function AvoidedMovementsScreen({ navigation }) {
   const t = useTheme();
   const settings = useSettingsStyles();
   const live = {
-    removeBtnText: { color: t.colors.textPrimary },
+    removeBtnText: { color: t.colors.primary },
     noticeText: { color: t.colors.textMuted },
     crossLaneText: { color: t.colors.textMuted },
   };

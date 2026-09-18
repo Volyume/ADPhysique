@@ -1,6 +1,6 @@
 import { forwardRef, useState, useContext, useId } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Keyboard, InputAccessoryView, Platform } from 'react-native';
-import { spacing, radius } from '../styles/theme';
+import { spacing, radius, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import FieldError from './FieldError';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
@@ -23,10 +23,8 @@ function buildSizes(fs) {
   return {
     // sm (D145): the compact field for dense forms such as the account
     // sheet; still the full touch target high.
-    // D192: body dropped to 15, and an input's text stays at 16 or more (the
-    // legibility floor `inputs.test.js` pins), so the field reads `lg`.
-    sm: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fs.lg, minHeight: touchTarget.minimum },
-    md: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, fontSize: fs.lg, minHeight: 50 },
+    sm: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fs.md, minHeight: touchTarget.minimum },
+    md: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, fontSize: fs.md, minHeight: 50 },
     lg: { paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: fs.lg, minHeight: 54 },
   };
 }
@@ -146,13 +144,7 @@ const TextField = forwardRef(function TextField({
             borderColor: t.colors.border,
           },
           multiline && styles.fieldMultiline,
-          // D174 (amber census): the focus ring STAYS amber -- a focused field
-          // is the user's live moment, which is exactly what discipline 1
-          // grants the accent. What goes is the 40% alpha it was drawn at: a
-          // washed ring is section 3.2's tint and it weakened the one
-          // indicator a keyboard or switch-control user navigates by, so it is
-          // the solid token now.
-          focused && { borderColor: t.colors.primary },
+          focused && { borderColor: withAlpha(t.colors.primary, alpha.strong) },
           error ? { borderColor: t.colors.error } : null,
           disabled && styles.disabled,
           fieldStyle,

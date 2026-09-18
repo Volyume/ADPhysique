@@ -11,7 +11,7 @@ import Button from '../components/Button';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, spacing, fontSize, fontWeight, fontFamily } from '../styles/theme';
+import { colors, spacing, motion, fontSize, fontWeight, fontFamily } from '../styles/theme';
 // CP-10 stage 2 (docs/ux-world-class-audit-2026-07-09/
 // CP-10-restart-free-theming-plan.md, "Stage 2 — Root chrome"): the
 // NavigationContainer theme prop and the stackOptions header/card colours
@@ -24,7 +24,6 @@ import { colors, spacing, fontSize, fontWeight, fontFamily } from '../styles/the
 // this import (not from theme.js itself -- App.js's boot-time
 // bootstrapAccessibility still uses it there).
 import { useNavTheme, useStackOptions } from './navTheme';
-import { heroZoomOptions, crossFadeTransitionSpec, crossFadeCardStyle, reducedMotionOptions } from './heroTransition';
 // D36c (TalkBack sheet isolation, 2026-07-10): SheetIsolationBoundary wraps
 // the screen container below and hides it from TalkBack/VoiceOver while any
 // shared BottomSheet is open, restoring it on close. See that module's
@@ -304,38 +303,93 @@ const RecipeBuilderScreen    = lazyScreen(() => require('../screens/RecipeBuilde
 // The destination fades in while scaling from 0.92 to 1.0
 // so it reads as the source card growing into a full screen rather
 // than a flat slide. Matches the Whoop / Apple Health pattern of
-// "tap a card -> it expands".
-//
-// D180 part 2 (2026-09-15): the mechanism itself moved to
-// ./heroTransition so the fallback path can be pinned by CALLING the real
-// interpolator (RootNavigator is not importable under this jest config), and
-// so Reduce Motion's cross-fade replacement lives beside the zoom it
-// replaces. Behaviour here is unchanged; `heroZoomOptions` is the single
-// entry point for every hero destination, because it produces the identical
-// centre zoom when a route carries no __heroOrigin.
+// "tap a card → it expands".
+// Shared timing for every hero-zoom registration (calm enter, quicker exit).
+const heroZoomTransitionSpec = {
+  open: { animation: 'timing', config: { duration: motion.enter } },
+  close: { animation: 'timing', config: { duration: motion.exit } },
+};
+
+// Builds the card interpolator for a hero-zoom push. When `origin` is a
+// measured rect ({ x, y, width, height } in window coords, supplied by the
+// tapping card via PressableCard's measure API in the destination route's
+// __heroOrigin param, D31), the incoming screen grows FROM that rect: it
+// starts scaled down and offset so it reads as the tapped card expanding
+// into the full screen, then settles to identity. When `origin` is absent
+// (cross-tab pushes, programmatic navigation) this is byte-identical to the
+// original centre zoom (opacity 0->1, scale 0.92->1).
+function makeHeroZoomCardStyle(origin) {
+  return ({ current, layouts }) => {
+    // Defensive: react-navigation can call this with current.progress
+    // missing during certain pop/back gestures, which throws an
+    // "interpolate of undefined" the user reads as an app crash on
+    // first session-start. Fall back to the default opacity behaviour
+    // so the transition still completes cleanly.
+    if (!current?.progress) {
+      return { cardStyle: { opacity: 1 } };
+    }
+    const opacity = current.progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 1],
+    });
+    const screen = layouts?.screen;
+    if (origin && Number.isFinite(origin.width) && origin.width > 0 && screen?.width && screen?.height) {
+      const originCx = origin.x + origin.width / 2;
+      const originCy = origin.y + origin.height / 2;
+      // Uniform scale kept in a calm band so the screen always grows a little
+      // (never a distant, tiny-far zoom, never an overshoot past 1); the
+      // translate carries that growth out of the card's real position on the
+      // previous screen.
+      const startScale = Math.min(0.95, Math.max(0.85, origin.width / screen.width));
+      const translateX = current.progress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [originCx - screen.width / 2, 0],
+      });
+      const translateY = current.progress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [originCy - screen.height / 2, 0],
+      });
+      const scale = current.progress.interpolate({
+        inputRange: [0, 1],
+        outputRange: [startScale, 1],
+      });
+      return { cardStyle: { opacity, transform: [{ translateX }, { translateY }, { scale }] } };
+    }
+    const scale = current.progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0.92, 1],
+    });
+    return { cardStyle: { opacity, transform: [{ scale }] } };
+  };
+}
+
+// Static centre-zoom transition: every registration that never supplies an
+// origin (ActiveWorkout / WorkoutSummary / PlanDetail / RoutineDetail) keeps
+// exactly this behaviour.
+const heroZoomTransition = {
+  cardStyleInterpolator: makeHeroZoomCardStyle(null),
+  transitionSpec: heroZoomTransitionSpec,
+};
+
+// Origin-aware screen options for hero-zoom destinations that CAN receive a
+// tapped-card origin (currently ExerciseDetail). Reads the destination
+// route's __heroOrigin and builds the growing interpolator; with no origin
+// present it produces the identical centre zoom, so this is a safe drop-in
+// for any hero-zoom registration.
+function heroZoomOptions(extra) {
+  return ({ route }) => ({
+    ...(extra || {}),
+    transitionSpec: heroZoomTransitionSpec,
+    cardStyleInterpolator: makeHeroZoomCardStyle(route?.params?.__heroOrigin || null),
+  });
+}
 
 // Pulled from the store at render time so toggling Reduce Motion takes
 // effect on the next navigation push without an app restart. Returns an
 // override merged into the per-stack screenOptions in each navigator.
-// D182 follow-up, 2026-09-16. This returned `{ animationEnabled: false }`,
-// which DELETES the transition rather than replacing it -- the exact thing law
-// 5 forbids ("Reduce Motion replaces motion with a cross-fade rather than
-// removing the feedback"). Stage 4 fixed the hero routes and left every other
-// screen on the old behaviour; this closes the rest.
-//
-// The seven `presentation: 'modal'` screens are NOT covered by this
-// navigator-level override, because a screen's own `options` are applied after
-// `screenOptions` and can win. They carry `reducedMotionOptions()` on their own
-// registrations instead, so the behaviour is uniform rather than depending on
-// merge precedence.
 function useStackMotionOverride() {
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  if (!reduceMotion) return null;
-  return {
-    animationEnabled: true,
-    transitionSpec: crossFadeTransitionSpec,
-    cardStyleInterpolator: crossFadeCardStyle,
-  };
+  return reduceMotion ? { animationEnabled: false } : null;
 }
 
 function DiaryStack({ navigation }) {
@@ -359,22 +413,22 @@ function DiaryStack({ navigation }) {
       <Stack.Screen
         name="FoodSearch"
         component={FoodSearchScreen}
-        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
+        options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="AddCustomFood"
         component={AddCustomFoodScreen}
-        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
+        options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="ScanBarcode"
         component={ScanBarcodeScreen}
-        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
+        options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="ScanLabel"
         component={ScanLabelScreen}
-        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
+        options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="FoodInsights"
@@ -384,17 +438,17 @@ function DiaryStack({ navigation }) {
       <Stack.Screen
         name="MyRecipes"
         component={MyRecipesScreen}
-        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
+        options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="MyMeals"
         component={MyMealsScreen}
-        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
+        options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="RecipeBuilder"
         component={RecipeBuilderScreen}
-        options={reducedMotionOptions({ headerShown: false, presentation: 'modal' })}
+        options={{ headerShown: false, presentation: 'modal' }}
       />
       {/* ProUpgrade is a dormant billing surface (fully-free product) and is
           no longer registered here -- see the dormant-screens comment near
@@ -417,8 +471,8 @@ function HomeStack({ navigation }) {
     <Stack.Navigator screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BuildWorkout" component={BuildWorkoutScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={heroZoomOptions({ headerShown: false })} />
-      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={heroZoomOptions({ headerShown: false })} />
+      <Stack.Screen name="ActiveWorkout" component={ActiveWorkoutScreen} options={{ headerShown: false, ...heroZoomTransition }} />
+      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
@@ -494,8 +548,8 @@ function PlansStack({ navigation }) {
     <Stack.Navigator screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Plans" component={PlansScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanUpdate" component={PlanUpdateScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={heroZoomOptions({ headerShown: false })} />
-      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={heroZoomOptions({ headerShown: false })} />
+      <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
+      <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={heroZoomOptions({ headerShown: false })} />
       <Stack.Screen name="ManualBuilder" component={ManualBuilderScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: false }} />
@@ -534,7 +588,7 @@ function ProgressStack({ navigation }) {
     <Stack.Navigator screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={heroZoomOptions({ headerShown: false })} />
+      <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProgressPhotos" component={ProgressPhotosScreen} options={{ headerShown: false }} />

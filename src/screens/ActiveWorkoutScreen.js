@@ -9,7 +9,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, circle, motion, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, motion, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { workoutLoggerSize } from '../styles/layout';
 import RestTimer from '../components/RestTimer';
@@ -25,7 +25,6 @@ import Card from '../components/Card';
 // src/components/workout/. `export { LoggedSetRow }` below keeps existing
 // imports of it from this screen working.
 import { LoggedSetRow } from '../components/workout/LoggedSetRow';
-import LedgerRow from '../components/LedgerRow';
 import EmptyExerciseView from '../components/workout/EmptyExerciseView';
 import StatusStrip from '../components/workout/StatusStrip';
 // R3 (founder order 2026-07-12, full logger rebuild): the page composes from
@@ -2886,7 +2885,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           reps: setData.actualReps,
           value: setData.weight,
           previousValue: null,
-          label: `${setData.weight} ${units} × ${setData.actualReps} logged as your starting point`,
+          label: `${setData.weight}${units} x ${setData.actualReps} logged as your starting point`,
           exerciseName: exercise.name,
         });
       } else if (prs.length > 0) {
@@ -4195,17 +4194,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const pos = circuitRound.targetRounds
         ? `Round ${circuitRound.round} of ${circuitRound.targetRounds}`
         : `Round ${circuitRound.round}`;
-      return `${pos} · Circuit`;
+      return `${pos} - Circuit`;
     }
     const pos = targetSets ? `Set ${workingLogged + 1} of ${targetSets}` : `Set ${workingLogged + 1}`;
     const mode = (currentSGI != null && pairedExerciseName)
       ? 'Superset'
       : (SET_TYPE_OPTIONS.find(o => o.value === currentSet.setType)?.label ?? 'Working');
-    // D192 (finish spec 3b, 2026-09-18): both the position-mode separator and
-    // the mode-range separator (NowCard.js's own positionLabel/
-    // targetRangeLabel join) are now the one middot -- this line used to be
-    // the sole hyphen against NowCard's already-middot join.
-    return `${pos} · ${mode}`;
+    return `${pos} - ${mode}`;
   })();
 
   // stalledAdvice (the 3-session same-weight nudge with its hard-coded,
@@ -4454,10 +4449,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 key: 'starter',
                 label: 'Starter session',
                 icon: 'flash-outline',
-                iconColor: t.colors.textSecondary,
+                iconColor: t.colors.primary,
                 content: (
                   <View key="starter" style={[styles.starterBanner, live.starterBanner]}>
-                    <Ionicons name="flash-outline" size={16} color={t.colors.textSecondary} />
+                    <Ionicons name="flash-outline" size={16} color={t.colors.primary} />
                     <Text style={[styles.starterBannerText, live.starterBannerText]}>{timeCrunchMsg}</Text>
                     <TouchableOpacity
                       style={[styles.inlineActionPill, live.inlineActionPill]}
@@ -4485,11 +4480,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 key: 'circuit',
                 label: 'Circuit',
                 icon: 'repeat',
-                iconColor: t.colors.textSecondary,
+                iconColor: t.colors.primary,
                 content: (
                   <React.Fragment key="circuit">
                     <View style={[styles.supersetChip, live.supersetChip]}>
-                      <Ionicons name="repeat" size={11} color={t.colors.textSecondary} />
+                      <Ionicons name="repeat" size={11} color={t.colors.primary} />
                       <Text style={[styles.supersetChipText, live.supersetChipText]}>
                         Circuit · Round {roundNum} of {targetSets} · with {partnerNamesText}
                       </Text>
@@ -4507,10 +4502,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 key: 'superset',
                 label: 'Superset',
                 icon: 'link',
-                iconColor: t.colors.textSecondary,
+                iconColor: t.colors.primary,
                 content: (
                   <View key="superset" style={[styles.supersetChip, live.supersetChip]}>
-                    <Ionicons name="link" size={11} color={t.colors.textSecondary} />
+                    <Ionicons name="link" size={11} color={t.colors.primary} />
                     <Text style={[styles.supersetChipText, live.supersetChipText]}>
                       Superset - alternates with {partnerNamesText}
                     </Text>
@@ -4590,10 +4585,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 key: `note-${note.id}`,
                 label: 'Coach note',
                 icon: 'bulb-outline',
-                iconColor: t.colors.textSecondary,
+                iconColor: t.colors.primary,
                 content: (
                   <View key={`note-${note.id}`} style={[styles.nextTimeBanner, live.nextTimeBanner]}>
-                    <Ionicons name="bulb-outline" size={16} color={t.colors.textSecondary} style={{ marginTop: spacing.hair }} />
+                    <Ionicons name="bulb-outline" size={16} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
                     <View style={styles.nextTimeBannerBody}>
                       <Text
                         style={[styles.nextTimeBannerText, live.nextTimeBannerText]}
@@ -4755,12 +4750,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     </Text>
                   </TouchableOpacity>
                 )}
-                {visible.map((s, visibleIdx) => {
+                {visible.map((s) => {
                   const i = loggedSets.indexOf(s);
                   return (
                     <AnimatedRow key={s.id ?? `row-${i}`}>
                       <LoggedSetRow
-                        first={visibleIdx === 0}
                         set={s}
                         units={units}
                         progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
@@ -4838,7 +4832,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               if (isDeloadWeek && currentPrescription?.provenance === PROVENANCE.SENIOR_RECOVERY_HOLD) {
                 prefill = {
                   label: 'Recovery week -',
-                  valueLabel: `${currentPrescription.weight} ${units} × ${currentPrescription.repsTarget}`,
+                  valueLabel: `${currentPrescription.weight}${units} x ${currentPrescription.repsTarget}`,
                   onUse: () => {
                     hapticsVocab.setLogged();
                     audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
@@ -4853,7 +4847,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   // Law A (design section 16): always the factual history,
                   // never the target - unmistakably labelled as history.
                   label: 'Last session:',
-                  valueLabel: `${prev.weight} ${units} × ${prev.actualReps}`,
+                  valueLabel: `${prev.weight}${units} x ${prev.actualReps}`,
                   onUse: () => {
                     hapticsVocab.setLogged();
                     audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
@@ -4924,7 +4918,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 Side one logged
               </Text>
               <Text style={[styles.clusterReps, live.clusterReps]}>
-                {`${perSide.reps} reps${perSide.weight ? ` @ ${perSide.weight} ${units}` : ''} - same on your other side`}
+                {`${perSide.reps} reps${perSide.weight ? ` @ ${perSide.weight}${units}` : ''} - same on your other side`}
               </Text>
               <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
                 {exercise?.compoundIsolation === 'compound'
@@ -4951,7 +4945,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </Text>
               <Text style={[styles.clusterReps, live.clusterReps]}>
                 {cluster.reps.join(' + ')} = {cluster.reps.reduce((a, n) => a + n, 0)} reps
-                {cluster.weight ? ` @ ${cluster.weight} ${units}` : ''}
+                {cluster.weight ? ` @ ${cluster.weight}${units}` : ''}
               </Text>
               <View style={styles.clusterInputRow}>
                 <TextInput
@@ -4972,7 +4966,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   onPress={addMiniSet}
                   accessibilityLabel="Add mini-set"
                 >
-                  <Ionicons name="add" size={20} color={t.colors.textSecondary} />
+                  <Ionicons name="add" size={20} color={t.colors.primary} />
                   <Text style={[styles.clusterAddBtnText, live.clusterAddBtnText]}>Mini-set</Text>
                 </Button>
               </View>
@@ -4983,7 +4977,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 disabled={saving}
                 accessibilityLabel="Finish cluster and log the set"
               >
-                <Ionicons name="checkmark-circle" size={20} color={t.colors.textSecondary} />
+                <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />
                 <Text style={[styles.completeBtnText, live.completeBtnText]}>Finish cluster</Text>
               </Button>
               <TouchableOpacity onPress={cancelCluster} style={[styles.clusterCancel, live.clusterCancel]} accessibilityLabel="Cancel cluster">
@@ -5034,18 +5028,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 : (routineExercise?.recommendedRepsMin != null
                   ? `${routineExercise.recommendedRepsMin}-${routineExercise.recommendedRepsMax}`
                   : null);
-              // D184: an upcoming set is a ledger line in the `upcoming`
-              // state -- the same row the completed sets above the NowCard
-              // draw, muted because it has not happened yet. Same index
-              // column, same rule, so the whole sequence reads as one log.
               rows.push(
-                <LedgerRow
-                  key={`upcoming-${n}`}
-                  state="upcoming"
-                  index={n}
-                  primary={range ? `${range} reps` : `Set ${n}`}
-                  style={styles.upcomingLedgerLine}
-                />,
+                <View key={`upcoming-${n}`} style={styles.upcomingSetRow}>
+                  <Text style={[styles.upcomingSetNum, live.upcomingSetNum]}>{n}</Text>
+                  <Text style={[styles.upcomingSetText, live.upcomingSetText]}>
+                    {range ? `${range} reps` : `Set ${n}`}
+                  </Text>
+                </View>,
               );
             }
             return rows.length ? <View style={styles.upcomingSection}>{rows}</View> : null;
@@ -5157,7 +5146,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 showsVerticalScrollIndicator={false}
               >
                 <View style={styles.supIconRow}>
-                  <Ionicons name={headsUpIsCircuit ? 'repeat' : 'link'} size={24} color={t.colors.textSecondary} />
+                  <Ionicons name={headsUpIsCircuit ? 'repeat' : 'link'} size={24} color={t.colors.primary} />
                   <Text style={[styles.supTitle, live.supTitle]}>
                     {headsUpIsCircuit
                       ? 'Circuit coming up'
@@ -5301,7 +5290,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 showsVerticalScrollIndicator={false}
               >
                 <View style={styles.supIconRow}>
-                  <Ionicons name="repeat" size={24} color={t.colors.textSecondary} />
+                  <Ionicons name="repeat" size={24} color={t.colors.primary} />
                   <Text style={[styles.supTitle, live.supTitle]}>Log this one side at a time?</Text>
                 </View>
                 <Text style={[styles.supSubtitle, live.supSubtitle]}>
@@ -5532,7 +5521,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                           accessibilityLabel={`Empty bar, ${barKg} ${units}, 10 reps. Load as a warm-up set.`}
                         >
                           <View style={styles.overflowOptionRow}>
-                            <Ionicons name="trending-up-outline" size={16} color={t.colors.textSecondary} />
+                            <Ionicons name="flame-outline" size={16} color={t.colors.warning} />
                             <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`${barKg} ${units} x 10`}</Text>
                           </View>
                           <Text style={[styles.rampBarTag, live.rampBarTag]}>Empty bar</Text>
@@ -5571,8 +5560,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                         accessibilityLabel={`${row.isBar ? 'Empty bar' : `${row.weight} ${units}`}, ${row.reps} reps. Load as a warm-up set.`}
                       >
                         <View style={styles.overflowOptionRow}>
-                          <Ionicons name="trending-up-outline" size={16} color={t.colors.textSecondary} />
-                          <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`${row.weight} ${units} × ${row.reps}`}</Text>
+                          <Ionicons name="flame-outline" size={16} color={t.colors.warning} />
+                          <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`${row.weight} ${units} x ${row.reps}`}</Text>
                         </View>
                         {row.isBar ? <Text style={[styles.rampBarTag, live.rampBarTag]}>Empty bar</Text> : null}
                       </TouchableOpacity>
@@ -5737,7 +5726,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <Ionicons
                     name={unilateralExercises.has(exercise.id) ? 'repeat' : 'repeat-outline'}
                     size={18}
-                    color={unilateralExercises.has(exercise.id) ? t.colors.textPrimary : t.colors.textSecondary}
+                    color={unilateralExercises.has(exercise.id) ? t.colors.primary : t.colors.textSecondary}
                   />
                   <View style={styles.sheetOptionText}>
                     <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{unilateralExercises.has(exercise.id) ? 'Logging per side' : 'Log per side'}</Text>
@@ -5769,7 +5758,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityLabel="Warm-up sets"
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name="trending-up-outline" size={18} color={t.colors.textSecondary} />
+                  <Ionicons name="flame-outline" size={18} color={t.colors.textSecondary} />
                   <View style={styles.sheetOptionText}>
                     <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Warm-up sets</Text>
                     <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>Suggested light sets up to today's working weight.</Text>
@@ -5785,7 +5774,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 accessibilityLabel={isPairedWithNext ? 'Unpair from next exercise' : 'Pair as superset with next exercise'}
               >
                 <View style={styles.overflowOptionRow}>
-                  <Ionicons name={isPairedWithNext ? 'link' : 'link-outline'} size={18} color={isPairedWithNext ? t.colors.textPrimary : t.colors.textSecondary} />
+                  <Ionicons name={isPairedWithNext ? 'link' : 'link-outline'} size={18} color={isPairedWithNext ? t.colors.primary : t.colors.textSecondary} />
                   <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{isPairedWithNext ? 'Unpair superset' : 'Pair as superset'}</Text>
                 </View>
               </TouchableOpacity>
@@ -5902,7 +5891,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                           // its group kind here too, with the same repeat icon
                           // the live chip and the builder use.
                           <View style={[styles.reorderSheetSupersetChip, live.reorderSheetSupersetChip]}>
-                            <Ionicons name={rowIsCircuit ? 'repeat' : 'link'} size={11} color={t.colors.textSecondary} />
+                            <Ionicons name={rowIsCircuit ? 'repeat' : 'link'} size={11} color={t.colors.primary} />
                             <Text style={[styles.reorderSheetSupersetChipText, live.reorderSheetSupersetChipText]}>{rowIsCircuit ? 'Circuit' : (groupSize > 2 ? 'Giant set' : 'Superset')}</Text>
                           </View>
                         )}
@@ -5960,7 +5949,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               ) : null}
               {routineExercise?.recommendedSets ? (
                 <View style={styles.infoTargetRow}>
-                  <Ionicons name="checkmark-circle-outline" size={14} color={t.colors.textSecondary} />
+                  <Ionicons name="checkmark-circle-outline" size={14} color={t.colors.primary} />
                   <Text style={[styles.infoTarget, live.infoTarget]}>
                     {adjustedSetCount || routineExercise.recommendedSets} sets of {routineExercise.recommendedRepsMin}-{routineExercise.recommendedRepsMax} reps
                   </Text>
@@ -5973,7 +5962,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               {sessionAdjustment?.show ? (
                 <View style={[styles.adjustedSection, live.adjustedSection]}>
                   <View style={styles.adjustedHeader}>
-                    <Ionicons name="pulse-outline" size={14} color={t.colors.textSecondary} />
+                    <Ionicons name="pulse-outline" size={14} color={t.colors.primary} />
                     <Text style={[styles.adjustedTitle, live.adjustedTitle]}>Adjusted today</Text>
                   </View>
                   <Text style={[styles.adjustedReason, live.adjustedReason]}>{sessionAdjustment.reasonText}</Text>
@@ -5989,7 +5978,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       accessibilityRole="button"
                       accessibilityLabel={`Use planned sets instead. ${routineExercise?.recommendedSets ?? ''} sets as written.`}
                     >
-                      <Ionicons name="arrow-undo-outline" size={15} color={t.colors.textSecondary} />
+                      <Ionicons name="arrow-undo-outline" size={15} color={t.colors.primary} />
                       <Text style={[styles.adjustedRevertText, live.adjustedRevertText]}>Use planned sets instead</Text>
                     </TouchableOpacity>
                   ) : null}
@@ -6003,7 +5992,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               {readinessReduces ? (
                 <View style={[styles.adjustedSection, live.adjustedSection]}>
                   <View style={styles.adjustedHeader}>
-                    <Ionicons name="pulse-outline" size={14} color={t.colors.textSecondary} />
+                    <Ionicons name="pulse-outline" size={14} color={t.colors.primary} />
                     <Text style={[styles.adjustedTitle, live.adjustedTitle]}>Eased for today</Text>
                   </View>
                   <Text style={[styles.adjustedReason, live.adjustedReason]}>{readinessTweak.whySets}</Text>
@@ -6016,7 +6005,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     accessibilityRole="button"
                     accessibilityLabel={`${readinessRestoreLabel}. Applies to the whole session.`}
                   >
-                    <Ionicons name="arrow-undo-outline" size={15} color={t.colors.textSecondary} />
+                    <Ionicons name="arrow-undo-outline" size={15} color={t.colors.primary} />
                     <Text style={[styles.adjustedRevertText, live.adjustedRevertText]}>{readinessRestoreLabel}</Text>
                   </TouchableOpacity>
                 </View>
@@ -6109,7 +6098,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   Showing {styleLabelFor(swapStylePoolKey)} exercises
                 </Text>
                 <TouchableOpacity onPress={() => handleOpenSwap({ relaxStyle: true })} accessibilityRole="button" accessibilityLabel="Show all exercises">
-                  <Text style={[styles.swapNote, live.swapNote, { marginBottom: 0, color: t.colors.textPrimary, fontFamily: fontFamily.bold }]}>Show all exercises</Text>
+                  <Text style={[styles.swapNote, live.swapNote, { marginBottom: 0, color: t.colors.primary, fontFamily: fontFamily.bold }]}>Show all exercises</Text>
                 </TouchableOpacity>
               </View>
             ) : null}
@@ -6274,9 +6263,7 @@ const styles = StyleSheet.create({
   starterBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    // D174: a starter-session strip is a callout, not the user's live
-    // moment. The wash goes; the hairline under it carries the strip.
-    backgroundColor: colors.surface,
+    backgroundColor: withAlpha(colors.primary, alpha.ghost),
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   starterBannerText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
@@ -6291,21 +6278,17 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: withAlpha(colors.primary, alpha.edge),
   },
   inlineActionPillText: { ...type.caption, color: colors.textPrimary },
   exerciseNav: { borderBottomWidth: 1, borderBottomColor: colors.border, maxHeight: workoutLoggerSize.exerciseNavMaxHeight },
   exerciseNavContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, gap: spacing.sm, alignItems: 'center' },
   navTab: { minHeight: workoutLoggerSize.exerciseTabMinHeight, flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, backgroundColor: colors.surface2 },
-  // D174 A2: the exercise tabs select a VIEW, so they separate by fill,
-  // edge and weight rather than by the accent. (This nav has had no render
-  // consumer since the outline replaced it; swept anyway so a revival
-  // cannot bring the wash back with it.)
-  navTabActive: { backgroundColor: colors.surface3 },
+  navTabActive: { backgroundColor: colors.primaryBg },
   navTabText: { ...type.label, color: colors.textSecondary },
-  navTabTextActive: { ...type.w('label', 'semibold'), color: colors.textPrimary },
-  navTabBadge: { width: workoutLoggerSize.exerciseTabBadge, height: workoutLoggerSize.exerciseTabBadge, borderRadius: circle(workoutLoggerSize.exerciseTabBadge), backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' },
-  navTabBadgeText: { ...type.caption, color: colors.textPrimary, fontSize: fontSize.micro },
+  navTabTextActive: { color: colors.primary },
+  navTabBadge: { width: workoutLoggerSize.exerciseTabBadge, height: workoutLoggerSize.exerciseTabBadge, borderRadius: circle(workoutLoggerSize.exerciseTabBadge), backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center' },
+  navTabBadgeText: { ...type.caption, color: colors.onPrimary, fontSize: fontSize.micro },
   scroll: { flex: 1 },
   // R5 (D66): paddingHorizontal md -> lg so the working content shares the
   // same 16px edge as the header, exercise nav and the Food standard
@@ -6402,12 +6385,9 @@ const styles = StyleSheet.create({
   swapItemCopy: { flex: 1, minWidth: 0 },
   swapItemName: { ...type.label, color: colors.textPrimary, marginBottom: spacing.xxs },
   swapItemReason: { ...type.caption, color: colors.textMuted, lineHeight: 16 },
-  // C9: the personal reason, above the structural one. D174 took the accent
-  // off it -- a swap reason is not the user's live moment -- so the ORDER
-  // and the ink step (secondary over the muted structural line) carry it.
-  swapItemTag: { ...type.caption, color: colors.textSecondary, lineHeight: 16 },
-  // D165 law 3: a control, not a card (D186).
-  swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, marginTop: spacing.md, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.sm, borderRadius: radius.control, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface },
+  // C9: the personal reason, in the app's accent, above the structural one.
+  swapItemTag: { ...type.caption, color: colors.primary, lineHeight: 16 },
+  swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, marginTop: spacing.md, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.sm, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface },
   swapBrowseText: { ...type.label, color: colors.textPrimary },
   swapEmpty: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.xs },
   swapEmptyTitle: { ...type.label, color: colors.textPrimary },
@@ -6458,7 +6438,7 @@ const styles = StyleSheet.create({
   // (the token that absorbs exactly this hand-rolled combination, theme.js).
   beatLineLabel: { flex: 1, minWidth: 0, ...type.bodySm, color: colors.textSecondary },
   beatLineValue: { ...type.bodyStrong, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
-  beatLineGlyph: { ...type.bodyStrong, color: colors.textMuted },
+  beatLineGlyph: { ...type.bodyStrong, color: colors.primary },
   beatLineCue: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -6475,14 +6455,13 @@ const styles = StyleSheet.create({
   },
   beatLineCueText: { ...type.caption, color: colors.textSecondary },
   coachLine: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs2 },
-  coachLineText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
+  coachLineText: { ...type.bodySm, flex: 1, color: colors.primary },
   noteInput: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.sm, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, minHeight: 60 },
   // Log set is the primary action on this screen, so it reads as a filled
   // amber button with a clear label rather than a tinted outline. Dark label
   // for contrast on amber (white on amber fails WCAG). Warm-ups stay visually
   // secondary via the tinted-outline override below.
-  // D165 law 3: a control, not a card (D186).
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.control, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.xs, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
+  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.xs, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
   btnDisabled: { opacity: 0.5 },
   completeBtnText: { ...type.bodyStrong, color: colors.textPrimary },
   completeBtnWarmup: { backgroundColor: colors.warningBg || colors.surface, borderWidth: 1, borderColor: colors.warning },
@@ -6513,16 +6492,15 @@ const styles = StyleSheet.create({
   },
   autoAdvanceRowText: { ...type.caption, color: colors.textMuted },
   autoAdvanceRowDot: { ...type.caption, color: colors.textMuted },
-  // D165 law 3: a control, not a card (D186).
   autoAdvanceRowActionBtn: {
     minHeight: workoutLoggerSize.primaryActionMinHeight,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    borderRadius: radius.control,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: withAlpha(colors.primary, alpha.edge),
   },
   autoAdvanceRowAction: { ...type.captionStrong, color: colors.textPrimary },
   // A2: the pinned action bar. Sits above the home indicator; the scroll's
@@ -6539,14 +6517,11 @@ const styles = StyleSheet.create({
   // set at the call site (so a lone primary, the common case, still fills
   // the whole width exactly as it did before this row wrapper existed).
   bottomBarRow: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm },
-  // D174: a cluster banner is a callout; the wash and the half-alpha amber
-  // edge both go and the hairline carries it.
-  // D165 law 2: a cluster prompt, not an object -- no box, a borderSubtle hairline above (D186).
   clusterBanner: {
-    padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
+    backgroundColor: colors.primaryBg, padding: spacing.md, gap: spacing.sm, marginBottom: spacing.sm,
   },
-  clusterTitle: { ...type.label, color: colors.textPrimary },
+  clusterTitle: { ...type.label, color: colors.primary },
   // R2 numerals sweep: the cluster rep tally is data -> tabular figures.
   clusterReps: { ...type.num('bodyStrong'), color: colors.textPrimary },
   clusterInputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -6557,14 +6532,15 @@ const styles = StyleSheet.create({
   },
   clusterAddBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    // Explicit transparent: kept from when the `tertiary` variant filled with
-    // `primaryBg`. D174 made tertiary a transparent bordered ghost, so this
-    // now agrees with the variant rather than overriding it.
+    // Explicit transparent: the Button `tertiary` variant this now renders
+    // as (components/Button.js) fills with colors.primaryBg by default;
+    // this outlined-only look (border, no fill) is a deliberate quieter
+    // treatment for the mini-set add action, so it must override that.
     backgroundColor: 'transparent',
   },
-  clusterAddBtnText: { ...type.label, color: colors.textSecondary },
+  clusterAddBtnText: { ...type.label, color: colors.primary },
   // R2 compliance (2026-07-11): control -> the logger's one small-surface radius.md.
   clusterCancel: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', minHeight: workoutLoggerSize.primaryActionMinHeight, paddingHorizontal: spacing.lg, borderRadius: radius.md, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
   clusterCancelText: { ...type.label, color: colors.textPrimary },
@@ -6592,10 +6568,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     // R2 compliance: chip container -> radius.md (standard section 4).
-    backgroundColor: colors.surface2, borderRadius: radius.md,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
     marginTop: spacing.xs,
   },
-  supersetChipText: { ...type.captionStrong, color: colors.textSecondary },
+  supersetChipText: { ...type.captionStrong, color: colors.primary },
   // F-13 (evidence A8): the one short line under the circuit chip when
   // this station is more than a round behind the circuit.
   circuitMissedLine: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
@@ -6605,11 +6581,13 @@ const styles = StyleSheet.create({
   // sequence - phase 2B retired the dashed bordered cards (an unperformed
   // future set must never carry the visual mass of the active one).
   upcomingSection: { gap: 0, marginTop: spacing.xxs },
-  // D184: the upcoming previews are LedgerRow lines now; only the logger's
-  // own density survives here (26 dp, the "light lines, never the mass of the
-  // active set" verdict). Palette-invariant, so frozen only -- the old
-  // upcomingSetRow/Num/Text keys are gone from both halves.
-  upcomingLedgerLine: { minHeight: 26, paddingVertical: 0, paddingHorizontal: spacing.sm },
+  upcomingSetRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs2,
+    minHeight: 26,
+    paddingHorizontal: spacing.sm,
+  },
+  upcomingSetNum: { ...type.num('caption'), color: colors.textMuted, minWidth: 22, textAlign: 'center' },
+  upcomingSetText: { ...type.caption, color: colors.textMuted },
   // Phase 2B: the fold line for earlier completed sets (active-set
   // stability). One quiet row, constant height whatever it hides.
   historyToggle: {
@@ -6633,9 +6611,7 @@ const styles = StyleSheet.create({
   rampBarTag: { ...type.caption, color: colors.textMuted },
   sheetOptionText: { flex: 1, gap: spacing.xxs },
   sheetOptionLabel: { ...type.bodyStrong, color: colors.textPrimary },
-  // D174: the TICK beside the chosen option is the selection mark discipline
-  // 1 keeps; the label says it again in the semibold face, not in amber.
-  sheetOptionLabelActive: { ...type.w('bodyStrong', 'semibold'), color: colors.textPrimary },
+  sheetOptionLabelActive: { color: colors.primary },
   sheetOptionDesc: { ...type.caption, color: colors.textMuted },
   // D32 (2026-07-10, campaign item 20): the whole-workout reorder sheet.
   reorderSheetRow: {
@@ -6650,9 +6626,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
     // R2 compliance: chip container -> radius.md.
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, borderRadius: radius.md,
-    backgroundColor: colors.surface2, alignSelf: 'flex-start', marginTop: spacing.xxs,
+    backgroundColor: colors.primaryBg, alignSelf: 'flex-start', marginTop: spacing.xxs,
   },
-  reorderSheetSupersetChipText: { ...type.captionStrong, color: colors.textSecondary },
+  reorderSheetSupersetChipText: { ...type.captionStrong, color: colors.primary },
   reorderSheetChevrons: { flexDirection: 'column', alignItems: 'center', gap: spacing.xxs },
   reorderSheetChevronBtn: {
     // R2 compliance: icon button -> radius.md.
@@ -6661,7 +6637,7 @@ const styles = StyleSheet.create({
   },
   reorderSheetChevronBtnDisabled: { opacity: 0.3 },
   infoTargetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.md },
-  infoTarget: { ...type.label, color: colors.textSecondary },
+  infoTarget: { ...type.label, color: colors.primary },
   // D151 sheet polish: metadata one step up from muted so "Back · Cable"
   // reads as information under the title; the instruction sections are a
   // labelled stack (Setup / Execution / Watch), label in the quiet
@@ -6687,22 +6663,23 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   adjustedHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  adjustedTitle: { ...type.captionStrong, color: colors.textSecondary },
+  adjustedTitle: { ...type.captionStrong, color: colors.primary },
   adjustedReason: { ...type.bodySm, color: colors.textPrimary },
   adjustedSignal: { ...type.caption, color: colors.textMuted },
   adjustedRevertBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs, paddingVertical: spacing.xs },
-  adjustedRevertText: { fontSize: fontSize.sm, color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  adjustedRevertText: { fontSize: fontSize.sm, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   targetBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.successBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.success },
   // AY-2/D7: onSuccessBg is the text-on-tint ink (the flat `success` mark
   // fails 4.5:1 composited on successBg in light theme at every elevation).
   targetBannerText: { fontSize: fontSize.sm, color: colors.onSuccessBg, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, flex: 1 },
   // D44: transient banner naming the destination exercise after a
   // superset/giant-set group-driven focus change (forward jump or
-  // round-return). Same shape as targetBanner above; it is a navigation
-  // notice, not a completion, so it borrows neither `success` nor (D174)
-  // the accent -- the card ground, the hairline and the semibold face say it.
-  groupFocusBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.border, marginBottom: spacing.sm },
-  groupFocusBannerText: { fontSize: fontSize.sm, color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, flex: 1 },
+  // round-return). Same shape as targetBanner above, primary tint instead of
+  // success (this isn't a completion, just a navigation notice), and the
+  // primary-on-primaryBg combination already used by navTabActive/
+  // navTabTextActive elsewhere in this file.
+  groupFocusBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.primary, marginBottom: spacing.sm },
+  groupFocusBannerText: { fontSize: fontSize.sm, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, flex: 1 },
   // Superset heads-up modal (shared with the unilateral-suggest modal below
   // -- both use supOverlay/supSheet/supSheetContent). D36a (item 17 modal
   // tails, 2026-07-10): this stays a raw Modal (education moment with its
@@ -6719,20 +6696,18 @@ const styles = StyleSheet.create({
   supIconRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supTitle: { ...type.h3, color: colors.textPrimary },
   supSubtitle: { ...type.bodySm, color: colors.textSecondary },
-  supPairCard: { borderLeftWidth: 3, borderLeftColor: colors.border, gap: spacing.xs },
+  supPairCard: { borderLeftWidth: 3, borderLeftColor: colors.primary, gap: spacing.xs },
   supPairRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  // D174: the station number is an index, not the user's live moment.
-  supPairChip: { width: 22, height: 22, borderRadius: circle(22), backgroundColor: colors.surface3, alignItems: 'center', justifyContent: 'center' },
-  supPairChipText: { ...type.num('captionStrong'), color: colors.textPrimary },
+  supPairChip: { width: 22, height: 22, borderRadius: circle(22), backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center' },
+  supPairChipText: { ...type.num('captionStrong'), color: colors.onPrimary },
   supPairName: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
   supPairConnector: { width: 2, height: 14, backgroundColor: colors.border, marginLeft: 10 },
   supSteps: { gap: spacing.sm, marginTop: spacing.xs },
   supStep: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  supStepNum: { color: colors.textMuted, fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, minWidth: 14 },
+  supStepNum: { color: colors.primary, fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, minWidth: 14 },
   supStepText: { ...type.bodySm, color: colors.textPrimary, flex: 1 },
   supTip: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xs },
-  // D165 law 3: a control, not a card (D186).
-  supPrimaryBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
+  supPrimaryBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
   supPrimaryBtnText: { ...type.bodyStrong, color: colors.textPrimary },
   supSecondaryRow: { flexDirection: 'row', gap: spacing.sm },
   supSecondaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
@@ -6752,8 +6727,7 @@ const styles = StyleSheet.create({
   discardSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%', maxHeight: '88%', gap: spacing.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   discardTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
   discardBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs },
-  // D165 law 3: a control, not a card (D186).
-  keepTrainingBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
+  keepTrainingBtn: { backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
   keepTrainingBtnText: { ...type.bodyStrong, color: colors.textPrimary },
   discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
   discardConfirmBtnText: { ...type.label, color: colors.error },
@@ -6764,11 +6738,11 @@ const styles = StyleSheet.create({
   // carries its own equivalent house-idiom styles local to the row.
   nextTimeBanner: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.primaryBg,
     borderRadius: radius.md,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: withAlpha(colors.primary, 0.251),
   },
   nextTimeBannerText: {
     ...type.bodySm,
@@ -6784,7 +6758,7 @@ const styles = StyleSheet.create({
   },
   nextTimeMoreToggleText: {
     ...type.label,
-    color: colors.textPrimary,
+    color: colors.primary,
   },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -6822,17 +6796,17 @@ function buildLiveStyles(t) {
     timerText: { ...t.type.num('title'), color: t.colors.textPrimary },
     omittedSessionNote: { ...t.type.caption, color: t.colors.textMuted },
     sideCarveNote: { ...t.type.caption, color: t.colors.textMuted },
-    starterBanner: { backgroundColor: t.colors.surface, borderBottomColor: t.colors.border },
+    starterBanner: { backgroundColor: withAlpha(t.colors.primary, alpha.ghost), borderBottomColor: t.colors.border },
     starterBannerText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    inlineActionPill: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    inlineActionPill: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     inlineActionPillText: { ...t.type.caption, color: t.colors.textPrimary },
     exerciseNav: { borderBottomColor: t.colors.border },
     navTab: { backgroundColor: t.colors.surface2 },
-    navTabActive: { backgroundColor: t.colors.surface3 },
+    navTabActive: { backgroundColor: t.colors.primaryBg },
     navTabText: { ...t.type.label, color: t.colors.textSecondary },
-    navTabTextActive: { ...t.type.w('label', 'semibold'), color: t.colors.textPrimary },
-    navTabBadge: { backgroundColor: t.colors.surface3 },
-    navTabBadgeText: { ...t.type.caption, color: t.colors.textPrimary, fontSize: t.fontSize.micro },
+    navTabTextActive: { color: t.colors.primary },
+    navTabBadge: { backgroundColor: t.colors.primaryFill },
+    navTabBadgeText: { ...t.type.caption, color: t.colors.onPrimary, fontSize: t.fontSize.micro },
     // fontWeight is a static token table (not theme-resolved), so the live
     // mirror reads the same import the frozen block does.
     exerciseName: { ...t.type.label, fontWeight: fontWeight.semibold, color: t.colors.textPrimary },
@@ -6846,7 +6820,7 @@ function buildLiveStyles(t) {
     swapItemIcon: { backgroundColor: t.colors.surface2 },
     swapItemName: { ...t.type.label, color: t.colors.textPrimary },
     swapItemReason: { ...t.type.caption, color: t.colors.textMuted },
-    swapItemTag: { ...t.type.caption, color: t.colors.textSecondary },
+    swapItemTag: { ...t.type.caption, color: t.colors.primary },
     swapBrowseBtn: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
     swapBrowseText: { ...t.type.label, color: t.colors.textPrimary },
     swapEmptyTitle: { ...t.type.label, color: t.colors.textPrimary },
@@ -6858,10 +6832,10 @@ function buildLiveStyles(t) {
     orientationTarget: { ...t.type.label, color: t.colors.textMuted },
     beatLineLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     beatLineValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    beatLineGlyph: { ...t.type.bodyStrong, color: t.colors.textMuted },
+    beatLineGlyph: { ...t.type.bodyStrong, color: t.colors.primary },
     beatLineCue: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     beatLineCueText: { ...t.type.caption, color: t.colors.textSecondary },
-    coachLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    coachLineText: { ...t.type.bodySm, color: t.colors.primary },
     noteInput: { backgroundColor: t.colors.surface2, fontSize: t.fontSize.sm, color: t.colors.textPrimary, borderColor: t.colors.border },
     completeBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     completeBtnText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
@@ -6872,25 +6846,27 @@ function buildLiveStyles(t) {
     extraSetBtnPromotedText: { ...t.type.label, color: t.colors.textPrimary },
     autoAdvanceRowText: { ...t.type.caption, color: t.colors.textMuted },
     autoAdvanceRowDot: { ...t.type.caption, color: t.colors.textMuted },
-    autoAdvanceRowActionBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    autoAdvanceRowActionBtn: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     autoAdvanceRowAction: { ...t.type.captionStrong, color: t.colors.textPrimary },
     bottomBar: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
-    clusterBanner: { borderTopColor: t.colors.borderSubtle },
-    clusterTitle: { ...t.type.label, color: t.colors.textPrimary },
+    clusterBanner: { borderColor: withAlpha(t.colors.primary, 0.502), backgroundColor: t.colors.primaryBg },
+    clusterTitle: { ...t.type.label, color: t.colors.primary },
     clusterReps: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     clusterInput: { backgroundColor: t.colors.background, color: t.colors.textPrimary, borderColor: t.colors.border, ...t.type.body },
-    clusterAddBtn: { borderColor: t.colors.border },
-    clusterAddBtnText: { ...t.type.label, color: t.colors.textSecondary },
+    clusterAddBtn: { borderColor: withAlpha(t.colors.primary, 0.502) },
+    clusterAddBtnText: { ...t.type.label, color: t.colors.primary },
     clusterCancel: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     clusterCancelText: { ...t.type.label, color: t.colors.textPrimary },
     overflowHintLabel: { ...t.type.captionStrong, color: t.colors.textSecondary },
     // R2-3: contained note-corner button chrome, live-mirrored.
     noteCornerBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    supersetChip: { backgroundColor: t.colors.surface2 },
-    supersetChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
+    supersetChip: { backgroundColor: t.colors.primaryBg },
+    supersetChipText: { ...t.type.captionStrong, color: t.colors.primary },
     circuitMissedLine: { ...t.type.caption, color: t.colors.textSecondary },
     loggedTitle: { ...t.type.captionStrong, color: t.colors.textMuted },
     // Phase 2B live-theme mirrors for the sequence additions.
+    upcomingSetNum: { ...t.type.num('caption'), color: t.colors.textMuted },
+    upcomingSetText: { ...t.type.caption, color: t.colors.textMuted },
     historyToggleText: { ...t.type.caption, color: t.colors.textMuted },
     // D43 S1: LoggedSetRow-exclusive (loggedSetRow/loggedSetRowWarmup/
     // loggedSetTextWarmup/setNumBadge/setNumText/loggedSetText/loggedEst1RM)
@@ -6902,37 +6878,37 @@ function buildLiveStyles(t) {
     sheetOption: { borderBottomColor: t.colors.border },
     rampBarTag: { ...t.type.caption, color: t.colors.textMuted },
     sheetOptionLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    sheetOptionLabelActive: { ...t.type.w('bodyStrong', 'semibold'), color: t.colors.textPrimary },
+    sheetOptionLabelActive: { color: t.colors.primary },
     sheetOptionDesc: { ...t.type.caption, color: t.colors.textMuted },
     reorderSheetRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     reorderSheetRowName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     reorderSheetRowMeta: { ...t.type.caption, color: t.colors.textMuted },
-    reorderSheetSupersetChip: { backgroundColor: t.colors.surface2 },
-    reorderSheetSupersetChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
+    reorderSheetSupersetChip: { backgroundColor: t.colors.primaryBg },
+    reorderSheetSupersetChipText: { ...t.type.captionStrong, color: t.colors.primary },
     reorderSheetChevronBtn: { backgroundColor: t.colors.surface2 },
-    infoTarget: { ...t.type.label, color: t.colors.textSecondary },
+    infoTarget: { ...t.type.label, color: t.colors.primary },
     infoMuscle: { ...t.type.caption, color: t.colors.textSecondary },
     infoNotesLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     infoNotes: { ...t.type.bodySm, color: t.colors.textPrimary },
     adjustedSection: { backgroundColor: t.colors.surface2, borderColor: t.colors.borderSubtle },
-    adjustedTitle: { ...t.type.captionStrong, color: t.colors.textSecondary },
+    adjustedTitle: { ...t.type.captionStrong, color: t.colors.primary },
     adjustedReason: { ...t.type.bodySm, color: t.colors.textPrimary },
     adjustedSignal: { ...t.type.caption, color: t.colors.textMuted },
-    adjustedRevertText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    adjustedRevertText: { fontSize: t.fontSize.sm, color: t.colors.primary },
     targetBanner: { backgroundColor: t.colors.successBg, borderColor: t.colors.success },
     targetBannerText: { fontSize: t.fontSize.sm, color: t.colors.onSuccessBg },
-    groupFocusBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    groupFocusBannerText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    groupFocusBanner: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
+    groupFocusBannerText: { fontSize: t.fontSize.sm, color: t.colors.primary },
     supOverlay: { backgroundColor: t.colors.scrim },
     supSheet: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     supTitle: { ...t.type.h3, color: t.colors.textPrimary },
     supSubtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
-    supPairCard: { borderLeftColor: t.colors.border },
-    supPairChip: { backgroundColor: t.colors.surface3 },
+    supPairCard: { borderLeftColor: t.colors.primary },
+    supPairChip: { backgroundColor: t.colors.primaryFill },
     supPairChipText: { ...t.type.num('captionStrong'), color: t.colors.onPrimary },
     supPairName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     supPairConnector: { backgroundColor: t.colors.border },
-    supStepNum: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    supStepNum: { color: t.colors.primary, fontSize: t.fontSize.sm },
     supStepText: { ...t.type.bodySm, color: t.colors.textPrimary },
     supTip: { ...t.type.caption, color: t.colors.textMuted },
     supPrimaryBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
@@ -6955,9 +6931,9 @@ function buildLiveStyles(t) {
     keepTrainingBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     keepTrainingBtnText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     discardConfirmBtnText: { ...t.type.label, color: t.colors.error },
-    nextTimeBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    nextTimeBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
     nextTimeBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
-    nextTimeMoreToggleText: { ...t.type.label, color: t.colors.textPrimary },
+    nextTimeMoreToggleText: { ...t.type.label, color: t.colors.primary },
     deloadBanner: { backgroundColor: t.colors.warningBg, borderColor: t.colors.warning },
     deloadBannerTitle: { fontSize: t.fontSize.sm, color: t.colors.warning },
     deloadBannerSub: { ...t.type.caption, color: t.colors.textMuted },

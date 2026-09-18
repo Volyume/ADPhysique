@@ -32,7 +32,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, spacing, type } from '../styles/theme';
+import { colors, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import { SkeletonCard } from '../components/Skeleton';
@@ -132,7 +132,7 @@ export default function WeeklyStoryScreen() {
         {!loading && story.chapters.map((c) => (
           <View key={c.key} style={[styles.chapterCard, live.chapterCard]}>
             <View style={styles.chapterHeaderRow}>
-              <Ionicons name={c.icon} size={18} color={t.colors.textSecondary} />
+              <Ionicons name={c.icon} size={18} color={t.colors.primary} />
               <SectionLabel tone="muted">{c.heading}</SectionLabel>
             </View>
             <Text style={[styles.chapterBody, live.chapterBody, c.empty && [styles.chapterBodyEmpty, live.chapterBodyEmpty]]}>{c.body}</Text>
@@ -157,12 +157,13 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
   },
 
-  // D165 law 2: a chapter of content, not an object -- no box, a borderSubtle hairline above (D171/D172).
   chapterCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
     padding: spacing.lg,
     gap: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
   },
   chapterHeaderRow: {
     flexDirection: 'row',
@@ -189,7 +190,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     intro: { ...t.type.bodySm, color: t.colors.textMuted },
-    chapterCard: { borderTopColor: t.colors.borderSubtle },
+    chapterCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     chapterBody: { ...t.type.body, color: t.colors.textPrimary },
     chapterBodyEmpty: { color: t.colors.textMuted },
   };

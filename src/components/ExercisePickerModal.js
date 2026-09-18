@@ -212,11 +212,11 @@ export default function ExercisePickerModal({
     pickerExName: { ...t.type.label, color: t.colors.textPrimary },
     pickerMuscle: { ...t.type.caption, color: t.colors.textMuted },
     pickerSetAside: { ...t.type.caption, color: t.colors.textMuted },
-    pickerAllowAgain: { ...t.type.caption, color: t.colors.textSecondary },
+    pickerAllowAgain: { ...t.type.caption, color: t.colors.primary },
     showExcludedText: { ...t.type.caption, color: t.colors.textMuted },
     constraintsUnavailableText: { ...t.type.caption, color: t.colors.textMuted },
     existingMatchText: { ...t.type.caption, color: t.colors.textMuted },
-    existingMatchName: { ...t.type.captionStrong, color: t.colors.textPrimary },
+    existingMatchName: { ...t.type.captionStrong, color: t.colors.primary },
     pickerEmptyText: { ...t.type.body, color: t.colors.textMuted },
     separator: { backgroundColor: t.colors.borderSubtle },
     createNewBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
@@ -225,7 +225,7 @@ export default function ExercisePickerModal({
     createNameInputText: { ...t.type.bodyStrong },
     createLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     filterChipText: { ...t.type.label, color: t.colors.textSecondary },
-    filterChipTextActive: { color: t.colors.textPrimary },
+    filterChipTextActive: { color: t.colors.primary },
     createSaveBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     createSaveBtnText: { ...t.type.label, color: t.colors.textPrimary },
   };
@@ -835,7 +835,7 @@ export default function ExercisePickerModal({
                 onPress={() => { haptics.commit(); handleCreate(); }}
                 disabled={creating}
               >
-                <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle'} size={20} color={t.colors.textSecondary} />
+                <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle'} size={20} color={t.colors.primary} />
                 <Text style={[styles.createSaveBtnText, live.createSaveBtnText]} numberOfLines={1}>{buttonLabel}</Text>
               </TouchableOpacity>
             </KeyboardAwareScrollView>
@@ -1095,7 +1095,7 @@ export default function ExercisePickerModal({
                   style={[styles.createNewBtn, live.createNewBtn, { marginTop: spacing.md }]}
                   onPress={() => { haptics.selection(); openCreate(); }}
                 >
-                  <Ionicons name="add-circle-outline" size={18} color={t.colors.textSecondary} />
+                  <Ionicons name="add-circle-outline" size={18} color={t.colors.primary} />
                   <Text style={[styles.createNewBtnText, live.createNewBtnText]}>
                     {query.trim().length > 0
                       ? `Create "${query.trim()}" as custom exercise`
@@ -1169,9 +1169,7 @@ const styles = StyleSheet.create({
   pickerMuscle: { ...type.caption, color: colors.textMuted, textTransform: 'capitalize' },
   // C9: a set-aside row states its own status and offers the way back.
   pickerSetAside: { ...type.caption, color: colors.textMuted },
-  // A quiet text action, so it takes `Button`'s own tertiary ink rather
-  // than the accent (D174: a non-committing action is not "now").
-  pickerAllowAgain: { ...type.caption, color: colors.textSecondary },
+  pickerAllowAgain: { ...type.caption, color: colors.primary },
   pickerAllowAgainBtn: { minHeight: spacing.xxxl, justifyContent: 'center', paddingHorizontal: spacing.xs },
   // Round 15 (R15-2, J2): a caption plus 8dp of slop was ~39dp effective
   // on the only control that reveals what the user's rules removed - the
@@ -1192,7 +1190,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs, paddingTop: spacing.xxs,
   },
   existingMatchText: { ...type.caption, color: colors.textMuted, flex: 1 },
-  existingMatchName: { ...type.captionStrong, color: colors.textPrimary },
+  existingMatchName: { ...type.captionStrong, color: colors.primary },
   pickerEmpty: { alignItems: 'center', paddingTop: spacing.xxxl, gap: spacing.lg, paddingHorizontal: spacing.xl },
   pickerEmptyText: { ...type.body, color: colors.textMuted },
   separator: { height: 1, backgroundColor: colors.borderSubtle },
@@ -1201,7 +1199,7 @@ const styles = StyleSheet.create({
     // Round 14 (J2): 48 effective (the styling law's minimum), on the
     // scale - 44 was both under it and an off-scale literal.
     minHeight: spacing.xxxl,
-    backgroundColor: colors.surface, borderRadius: radius.control,
+    backgroundColor: colors.surface, borderRadius: radius.lg,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderWidth: 1, borderColor: colors.borderSubtle,
   },
@@ -1219,17 +1217,14 @@ const styles = StyleSheet.create({
   },
   filterChip: { paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
   filterChipText: { ...type.label, color: colors.textSecondary },
-  // D174 A2: a filter chip selects a VIEW. This override sits on top of the
-  // shared `Chip`, whose selected label is already full ink at the semibold
-  // face, so it must not put the accent back.
-  filterChipTextActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  filterChipTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   recentSection: { paddingTop: spacing.sm },
   recentLabel: { paddingHorizontal: spacing.lg },
   recentChip: { maxWidth: 180 },
   createSaveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
     minHeight: spacing.xxxl,
-    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.control, paddingVertical: spacing.sm, marginTop: spacing.sm,
+    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingVertical: spacing.sm, marginTop: spacing.sm,
   },
   createSaveBtnText: { ...type.label, color: colors.textPrimary },
 });

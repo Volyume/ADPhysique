@@ -209,7 +209,7 @@ export default function MyMealsScreen({ navigation, route }) {
           </Text>
         </View>
         <View style={styles.rowActions}>
-          <Ionicons name="add-circle-outline" size={22} color={t.colors.textSecondary} />
+          <Ionicons name="add-circle-outline" size={22} color={t.colors.primary} />
           <TouchableOpacity
             onPress={() => { haptics.selection(); setInspecting(item); }}
             hitSlop={10}

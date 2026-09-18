@@ -69,7 +69,7 @@ function hasSetValue(value) {
 }
 
 function formatLoadValue(value, units = 'kg') {
-  return `${value} ${units}`;
+  return `${value}${units}`;
 }
 
 export function formatHistoryExerciseSummary(sets = [], exerciseType = 'weight_reps', units = 'kg') {
@@ -470,8 +470,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
                 <Ionicons name="time-outline" size={14} color={t.colors.textMuted} />
                 {/* D88: was "45m" here and "45 min" once expanded, same value. */}
                 <Text style={[styles.cardMetaText, live.cardMetaText]}>{workout.durationMinutes || 0} min</Text>
-                {/* D192 (item 5a): the separator is a middle dot. */}
-                <Text style={[styles.cardMetaDivider, live.cardMetaDivider]}>·</Text>
+                <Text style={[styles.cardMetaDivider, live.cardMetaDivider]}>-</Text>
                 <Ionicons name="layers-outline" size={14} color={t.colors.textMuted} />
                 <Text style={[styles.cardMetaText, live.cardMetaText]}>{workingSetCount} set{workingSetCount !== 1 ? 's' : ''}</Text>
               </View>
@@ -583,14 +582,13 @@ export default function WorkoutHistoryScreen({ navigation }) {
           </View>
         )}
 
-        {/* Card actions. D192 (item 5b): "View summary" and "Repeat" become
-            text actions (no pill border or fill); delete stays a plain
-            glyph button, now with no border either. Same handlers, same
-            accessibility labels, same order. */}
+        {/* Card actions */}
         <View style={[styles.cardActions, live.cardActions]}>
           {!isExpanded && (
-            <TouchableOpacity
-              style={styles.viewBtn}
+            <Button
+              title="View summary"
+              variant="secondary"
+              size="sm"
               onPress={() =>
                 navigation.navigate('WorkoutSummary', {
                   workoutId: workout.id,
@@ -613,23 +611,27 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   readOnly: true,
                 })
               }
-              accessibilityRole="button"
+              // Campaign item 8 (2026-07-10): pinned by
+              // WorkoutHistoryScreen.loadState.test.js's "history cards
+              // expose expansion state..." guard, which was updated in the
+              // same change to expect this array form.
+              style={[styles.viewBtn, live.viewBtn]}
+              textStyle={[styles.viewBtnText, live.viewBtnText]}
               accessibilityLabel="View summary"
-            >
-              <Text style={[styles.viewBtnText, live.viewBtnText]}>View summary</Text>
-            </TouchableOpacity>
+            />
           )}
-          <TouchableOpacity
-            style={[styles.repeatBtn, isExpanded && styles.repeatBtnFull]}
+          <Button
+            title="Repeat"
+            icon="refresh-outline"
+            variant="secondary"
+            size="sm"
             onPress={() => handleRepeatWorkout(workout)}
-            accessibilityRole="button"
+            style={[styles.repeatBtn, live.repeatBtn, isExpanded && styles.repeatBtnFull]}
+            textStyle={[styles.repeatBtnText, live.repeatBtnText]}
             accessibilityLabel="Repeat workout"
-          >
-            <Ionicons name="refresh-outline" size={iconSize.sm} color={t.colors.textPrimary} />
-            <Text style={[styles.repeatBtnText, live.repeatBtnText]}>Repeat</Text>
-          </TouchableOpacity>
+          />
           <TouchableOpacity
-            style={styles.deleteBtn}
+            style={[styles.deleteBtn, live.deleteBtn]}
             onPress={() => handleDeleteWorkout(workout)}
             accessibilityRole="button"
             accessibilityLabel="Delete workout"
@@ -787,7 +789,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
           <Ionicons
             name={viewMode === 'calendar' ? 'list-outline' : 'calendar-outline'}
             size={18}
-            color={t.colors.textSecondary}
+            color={viewMode === 'calendar' ? t.colors.primary : t.colors.textSecondary}
           />
         </TouchableOpacity>
       </View>
@@ -943,8 +945,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   toggleBtnActive: {
-    borderColor: colors.borderLight,
-    backgroundColor: colors.surface3,
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryBg,
   },
 
   // ── Filter chips ───────────────────────────────────────────────────────────
@@ -961,7 +963,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   filterChipTextActive: {
-    color: colors.textPrimary,
+    color: colors.primary,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
 
@@ -1000,29 +1002,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   dayCircleTrained: {
-    backgroundColor: colors.surface3,
+    backgroundColor: colors.primaryBg,
   },
   dayCircleToday: {
     borderWidth: 1,
     borderColor: colors.primary,
   },
   dayCircleSelected: {
-    backgroundColor: colors.borderLight,
+    backgroundColor: colors.primaryFill,
   },
   dayNum: {
     ...type.num('caption'),
     color: colors.textMuted,
   },
   dayNumTrained: {
-    color: colors.textPrimary,
+    color: colors.primary,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
-  // The selected day inverts against its `borderLight` fill, the same way
-  // D175 ruled the switch thumb: dark-on-light in the dark theme and
-  // light-on-dark in the light one. Measured 4.43 dark / 4.36 light /
-  // 8.18 darkHC / 8.49 lightHC.
   dayNumSelected: {
-    color: colors.background,
+    color: colors.onPrimary,
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
   },
   clearDayBtn: {
@@ -1162,7 +1160,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.control,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface2,
@@ -1174,43 +1172,47 @@ const styles = StyleSheet.create({
 
   cardActions: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: spacing.md,
     paddingTop: spacing.xs,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
-  // D192 (item 5b): a text action, no pill border or fill.
   viewBtn: {
     flex: 1,
-    minHeight: 44,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface2,
     alignItems: 'center',
-    justifyContent: 'center',
   },
   viewBtnText: {
     ...type.label,
-    color: colors.textPrimary,
+    color: colors.textSecondary,
   },
-  // D192 (item 5b): a text action, no pill border or fill.
   repeatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: spacing.xs,
-    minHeight: 44,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface2,
   },
   repeatBtnFull: {
     flex: 1,
+    justifyContent: 'center',
   },
-  // D192 (item 5b): stays a plain glyph button, now with no border either.
   // Quiet destructive affordance: neutral until the confirm dialog, matching
   // the row's secondary-button treatment rather than shouting red.
   deleteBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 44,
-    height: 44,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   repeatBtnText: {
     ...type.label,
@@ -1233,17 +1235,17 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     topBarTitle: { ...t.type.label, color: t.colors.textMuted },
     toggleBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    toggleBtnActive: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
+    toggleBtnActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     filterChipText: { ...t.type.label, color: t.colors.textSecondary },
-    filterChipTextActive: { color: t.colors.textPrimary },
+    filterChipTextActive: { color: t.colors.primary },
     calendarMonthTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     dayHeader: { ...t.type.captionStrong, color: t.colors.textMuted },
-    dayCircleTrained: { backgroundColor: t.colors.surface3 },
+    dayCircleTrained: { backgroundColor: t.colors.primaryBg },
     dayCircleToday: { borderColor: t.colors.primary },
-    dayCircleSelected: { backgroundColor: t.colors.borderLight },
+    dayCircleSelected: { backgroundColor: t.colors.primaryFill },
     dayNum: { ...t.type.num('caption'), color: t.colors.textMuted },
-    dayNumTrained: { color: t.colors.textPrimary },
-    dayNumSelected: { color: t.colors.background },
+    dayNumTrained: { color: t.colors.primary },
+    dayNumSelected: { color: t.colors.onPrimary },
     clearDayBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     clearDayText: { ...t.type.label, color: t.colors.textPrimary },
     cardDate: { fontSize: t.fontSize.md, color: t.colors.textPrimary, fontVariant: ['tabular-nums'] },
@@ -1263,7 +1265,10 @@ function buildLiveStyles(t) {
     fullSummaryBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     fullSummaryBtnText: { ...t.type.label, color: t.colors.textPrimary },
     cardActions: { borderTopColor: t.colors.border },
-    viewBtnText: { ...t.type.label, color: t.colors.textPrimary },
+    viewBtn: { backgroundColor: t.colors.surface2 },
+    viewBtnText: { ...t.type.label, color: t.colors.textSecondary },
+    repeatBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
+    deleteBtn: { borderColor: t.colors.border },
     repeatBtnText: { ...t.type.label, color: t.colors.textPrimary },
   };
 }

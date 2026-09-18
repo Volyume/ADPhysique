@@ -56,7 +56,7 @@ import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceS
 import { robustValues } from '../lib/robustTrend';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { toEnergy, energyUnitLabel, formatEnergy, formatNumber } from '../lib/format';
+import { toEnergy, energyUnitLabel } from '../lib/format';
 import { formatBodyWeight, formatBodyWeightShort, formatBodyWeightRate, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { isCalm, WELLBEING_HELPLINE, WELLBEING_KEY } from '../lib/wellbeing';
 // WAVE-D-FINDINGS.md item 1 (lead ruling, D33/D98-2 precedent): the rate/
@@ -201,12 +201,9 @@ function detectPhase(entries, c = colors, now = Date.now()) {
   // trends are NEVER valence-coloured. The old chip painted Gaining green
   // and Losing amber; all three directions now wear the same neutral chip
   // colour, direction is carried by the icon and the word alone.
-  // D192 (item 2c): that neutral colour was still amber (c.primary) on
-  // every branch -- a colour spent unconditionally is decoration, which
-  // D167 refuses on a body-weight phase. All three now read textSecondary.
-  if (perWeek > 0.2)  return { label: 'Gaining',       color: c.textSecondary, icon: 'trending-up' };
-  if (perWeek < -0.2) return { label: 'Losing weight', color: c.textSecondary, icon: 'trending-down' };
-  return { label: 'Maintaining', color: c.textSecondary, icon: 'remove-outline' };
+  if (perWeek > 0.2)  return { label: 'Gaining',       color: c.primary, icon: 'trending-up' };
+  if (perWeek < -0.2) return { label: 'Losing weight', color: c.primary, icon: 'trending-down' };
+  return { label: 'Maintaining', color: c.primary, icon: 'remove-outline' };
 }
 
 // ─── Weight Trend Chart ───────────────────────────────────────────────────────
@@ -302,7 +299,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
             }))}
             width={chartWidth}
             height={120}
-            color={t.colors.borderLight}
+            color={t.colors.primary}
             thickness={2}
             area
             curved
@@ -387,7 +384,7 @@ function BodyFatTrendChart({ entries }) {
         data2={rawData}
         width={chartWidth}
         height={100}
-        color={t.colors.borderLight}
+        color={t.colors.primary}
         color2={withAlpha(t.colors.textMuted, alpha.strong)}
         thickness={2}
         thickness2={1}
@@ -454,7 +451,7 @@ function MeasurementTrendChart({ entries, measureKey, label }) {
         data={data}
         width={chartWidth}
         height={100}
-        color={t.colors.borderLight}
+        color={t.colors.primary}
         thickness={2}
         area
         curved
@@ -1051,7 +1048,7 @@ export default function BodyMetricsScreen() {
         <BackHeader title="Body metrics" />
         <ScrollView contentContainerStyle={styles.optInContent}>
           <View style={[styles.confirmCard, live.confirmCard]}>
-            <Ionicons name="leaf-outline" size={32} color={t.colors.textSecondary} />
+            <Ionicons name="leaf-outline" size={32} color={t.colors.primary} />
             <Text style={[styles.confirmTitle, live.confirmTitle]}>A gentle pause</Text>
             <Text style={[styles.confirmBody, live.confirmBody]}>
               You asked for a calmer experience. Body measurements can be a
@@ -1102,15 +1099,14 @@ export default function BodyMetricsScreen() {
         keyboardShouldPersistTaps="handled"
       >
 
-        {/* Progress photos (gap #9): private, device-local only. D192
-            (item 2a): a nav row, not a boxed card. */}
+        {/* Progress photos (gap #9): private, device-local only. */}
         <TouchableOpacity
           style={[styles.photosRow, live.photosRow]}
           onPress={() => navigation.navigate('ProgressPhotos')}
           accessibilityRole="button"
           accessibilityLabel="Progress photos, private to this device"
         >
-          <Ionicons name="camera-outline" size={20} color={t.colors.textSecondary} />
+          <Ionicons name="camera-outline" size={20} color={t.colors.primary} />
           <Text style={[styles.photosRowText, live.photosRowText]}>Progress photos</Text>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
@@ -1130,17 +1126,11 @@ export default function BodyMetricsScreen() {
           <Card style={styles.snapshotCard}>
             {/* Header row with phase chip */}
             <View style={styles.snapshotHeader}>
-              {/* D192 (item 2b): the separator is a middle dot. */}
               <SectionLabel>
-                Weight · {safeFormatDate(latest?.metric_date, 'd MMM yyyy') || 'Today'}
+                Weight - {safeFormatDate(latest?.metric_date, 'd MMM yyyy') || 'Today'}
               </SectionLabel>
               {phase && (
-                // D192 (item 2c): the chip is neutral in every phase -- the
-                // border is the fixed control-edge token, not phase.color
-                // (which is itself now always textSecondary; kept on the
-                // icon/label below because that is where the app's ink
-                // ladder, not a state colour, is supposed to live).
-                <View style={[styles.phaseChip, live.phaseChip]}>
+                <View style={[styles.phaseChip, { borderColor: phase.color }]}>
                   <Ionicons name={phase.icon} size={12} color={phase.color} />
                   <Text style={[styles.phaseLabel, live.phaseLabel, { color: phase.color }]}>{phase.label}</Text>
                   {/* T23/O8: the chip's basis is invisible without this -- and it is a
@@ -1155,8 +1145,7 @@ export default function BodyMetricsScreen() {
               <View style={styles.weightRow}>
                 <Text style={[styles.weightValue, live.weightValue]}>{formatBodyWeight(latest.body_weight, bwu)}</Text>
                 {/* WAVE-D-FINDINGS.md UNIT_DEFECT (:1156-1159, minor, same
-                    family as the rate item that was mandatory there; its
-                    example cited WeightTrendCard, deleted under D177): getDelta
+                    family as the mandatory WeightTrendCard item): getDelta
                     always returns a raw-KG difference (body_weight is stored
                     in kg per rowToEntry), so it must convert -- not just
                     relabel -- for an st/lbs display unit, mirroring
@@ -1195,9 +1184,8 @@ export default function BodyMetricsScreen() {
               </Text>
             )}
 
-            {/* EWMA smoothed weight trend card. D192 (item 2d): a section,
-                not a card -- no fill, no border, a hairline above. */}
-            <View style={[styles.ewmaCard, live.ewmaCard]}>
+            {/* EWMA smoothed weight trend card */}
+            <Card radius="md" padding="md" style={styles.ewmaCard}>
               {ewmaData.length >= 7 ? (
                 <>
                   <View style={styles.labelTipRow}>
@@ -1220,15 +1208,12 @@ export default function BodyMetricsScreen() {
                       Weekly change: {formatBodyWeightRate(weeklyChange, bwu)}
                     </Text>
                   )}
-                  {/* D192 (item 2e): one line. */}
                   <Text style={[styles.ewmaMuted, live.ewmaMuted]}>
-                    Smoothed across daily ups and downs
+                    Smoothed out across day-to-day ups and downs, so it's more reliable than a single weigh-in.
                   </Text>
                   {recentIntake?.daysLogged > 0 && (
-                    // D192 (item 2e): the kcal figure gets the app's
-                    // thousands separator; "day" drops its redundant "1".
                     <Text style={[styles.ewmaIntake, live.ewmaIntake]}>
-                      Average intake {formatNumber(toEnergy(recentIntake.avgKcal, energyUnit))} {energyUnitLabel(energyUnit)} over the last {recentIntake.daysLogged === 1 ? 'day' : `${recentIntake.daysLogged} days`}
+                      Average intake {toEnergy(recentIntake.avgKcal, energyUnit)} {energyUnitLabel(energyUnit)} over the last {recentIntake.daysLogged} {recentIntake.daysLogged === 1 ? 'day' : 'days'}.
                     </Text>
                   )}
                 </>
@@ -1237,44 +1222,27 @@ export default function BodyMetricsScreen() {
                   Log your weight for 7 days to see your smoothed trend.
                 </Text>
               )}
-            </View>
+            </Card>
 
             {/* WAVE-D-FINDINGS.md item 1: withheld entirely under an open
                 ED-pattern flag, matching deriveWeightTrend's edFlagOpen
                 branch (`maintenance: null`) exactly -- the same shared
                 derivation the Progress root's card already obeys. */}
             {ewmaData.length >= 7 && !weightTrendVm.edFlagOpen ? (
-              // D192 (item 2d): a section, not a card -- no fill, no
-              // border, a hairline above.
-              <View style={[styles.burnCard, live.burnCard]}>
+              <Card radius="md" padding="md" style={styles.burnCard}>
                 <View style={styles.labelTipRow}>
                   <Text style={[styles.burnLabel, live.burnLabel]}>Effective maintenance</Text>
                   {/* U-D-3: one-tap gloss for the adaptive-TDEE concept. */}
                   <InfoTooltip text={GLOSSARY.adaptiveTdee} size={13} />
                 </View>
                 {adaptiveBurn.confidence === 'insufficient_data' ? (
-                  // D192 (item 2e): one line; the second "keep logging"
-                  // sentence drops (the empty figure already says nothing
-                  // has built yet).
                   <Text style={[styles.burnMuted, live.burnMuted]}>
-                    Logged intake that held your weight steady
+                    This is the logged intake associated with roughly stable weight in your own history, not a direct measurement of metabolism. Keep logging morning weight and meals to build it.
                   </Text>
                 ) : (
                   <>
                     <View style={styles.burnRow}>
-                      {/* DEFECT FIXED 2026-09-15 (D177). This rendered the bare
-                          `toEnergy` return, which is `Math.round(k)` with no
-                          grouping -- so a 2,400 kcal maintenance figure printed
-                          as "2400", and a kJ user's as "10042". P-15 requires
-                          en-GB formatting on every figure, and the only thing
-                          asserting it for this number was a guard pointed at
-                          `WeightTrendCard.js`, which nothing renders. This is
-                          the finding D177's re-point-before-you-delete order
-                          was written to surface. `formatEnergy` is the existing
-                          helper for exactly this (`formatNumber(toEnergy(...))`)
-                          and the unit is the sibling Text below, in a
-                          non-wrapping row, so the pair cannot split. */}
-                      <Text style={[styles.burnValue, live.burnValue]}>{formatEnergy(adaptiveBurn.adjustedTDEE, energyUnit)}</Text>
+                      <Text style={[styles.burnValue, live.burnValue]}>{toEnergy(adaptiveBurn.adjustedTDEE, energyUnit)}</Text>
                       <Text style={[styles.burnUnit, live.burnUnit]}>{energyUnitLabel(energyUnit)}/day</Text>
                     </View>
                     {adaptiveBurn.insight ? (
@@ -1296,7 +1264,7 @@ export default function BodyMetricsScreen() {
                     </View>
                   </>
                 )}
-              </View>
+              </Card>
             ) : null}
 
             {/* Recomposition reframe (ULTIMATE-RECOMP-01): when weight has held
@@ -1642,8 +1610,7 @@ export default function BodyMetricsScreen() {
 // Recomposition reframe card (ULTIMATE-RECOMP-01). Presentation-only: every fact
 // is pre-derived by deriveRecomp; this renders the numbers-first read plus one
 // plain sentence. Class-B body data, no valence colour (COMP-027). Returns null
-// when the reframe is not warranted, the same shape the deleted WeightTrendCard
-// used on !vm.render (D177 removed it; nothing imported it).
+// when the reframe is not warranted, exactly like WeightTrendCard on !vm.render.
 // CP-10 batch G lane 1 (2026-07-11): own useTheme() call, same rationale
 // as the chart components above.
 function RecompCard({ vm, weightUnits = 'kg', onMakeCard }) {
@@ -1727,20 +1694,16 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   keyboardAvoid: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
-  // D192 (item 2a): a nav row, not a boxed card -- hairline above and
-  // below, no fill or border.
   photosRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    minHeight: 56,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
-    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle,
-    paddingHorizontal: spacing.lg,
+    backgroundColor: colors.surface,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
-  photosRowText: { ...type.title, color: colors.textPrimary },
-  // D165 law 2: a confirm prompt, not an object -- no box, a borderSubtle hairline above (D171/D172).
-  confirmCard: { padding: spacing.xl, gap: spacing.md, alignItems: 'flex-start',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
+  photosRowText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  confirmCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
+    borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md, alignItems: 'flex-start',
   },
   confirmTitle: { ...type.h3, color: colors.textPrimary },
   confirmBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21 },
@@ -1759,18 +1722,15 @@ const styles = StyleSheet.create({
   snapshotHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
   },
-  // D192 (item 2c): neutral in every phase -- a fixed control-edge border,
-  // never the phase colour (which is itself always textSecondary now).
   phaseChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.full,
+    borderWidth: 1, borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
   phaseLabel: { ...type.captionStrong },
   weightRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   unitLinkRow: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
-  // D192 (item 2g): bodySm, not caption.
-  unitLinkText: { ...type.bodySm, color: colors.textMuted },
+  unitLinkText: { ...type.caption, color: colors.textMuted },
   weightValue: { fontSize: fontSize.xxxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
   trendHint: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   bodyFatBlock: { gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.borderSubtle, paddingTop: spacing.md },
@@ -1800,30 +1760,28 @@ const styles = StyleSheet.create({
     minWidth: '30%', backgroundColor: colors.surface2, borderRadius: radius.md,
     padding: spacing.md, gap: spacing.xxs, borderWidth: 1, borderColor: 'transparent',
   },
-  measureCellActive: { borderColor: colors.borderLight, backgroundColor: colors.surface3 },
+  measureCellActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
   measureValue: { ...type.num('bodyStrong'), color: colors.textPrimary },
-  measureValueActive: { ...type.w(type.num('bodyStrong'), 'semibold'), color: colors.textPrimary },
+  measureValueActive: { color: colors.primary },
   measureLabel: { ...type.caption, color: colors.textMuted },
-  measureLabelActive: { color: colors.textSecondary },
+  measureLabelActive: { color: colors.primaryDim },
   measureTabRow: { flexDirection: 'row', gap: spacing.xs, paddingVertical: spacing.sm },
   measureTab: {
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
     borderRadius: radius.full, backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.border,
   },
-  measureTabActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
+  measureTabActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   measureTabText: { ...type.captionStrong, color: colors.textSecondary },
-  measureTabTextActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  measureTabTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   logBtn: {
     paddingVertical: spacing.lg,
   },
   logBtnText: { ...type.title, color: colors.textPrimary },
-  // D165 law 2: a form, not an object -- no box, a borderSubtle hairline above (D171/D172).
-  formCard: { padding: spacing.lg,
-    gap: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
+  formCard: {
+    backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
+    gap: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
   },
   formTitle: { ...type.title, color: colors.textPrimary },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -1891,13 +1849,8 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
   },
 
-  // D192 (item 2d): a section, not a card -- no fill, no border, no
-  // radius; a hairline above, paddingTop replacing the old marginTop.
   ewmaCard: {
     gap: spacing.xs,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    paddingTop: spacing.lg,
   },
   labelTipRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   ewmaLabel: { ...type.caption, color: colors.textSecondary },
@@ -1905,12 +1858,8 @@ const styles = StyleSheet.create({
   ewmaWeekly: { fontSize: fontSize.sm, color: colors.textSecondary },
   ewmaMuted: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   ewmaIntake: { ...type.num('caption'), color: colors.textSecondary, marginTop: spacing.xs },
-  // D192 (item 2d): same section treatment as ewmaCard above.
   burnCard: {
-    gap: spacing.xs,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.borderSubtle,
-    paddingTop: spacing.lg,
+    gap: spacing.xs, marginTop: spacing.md,
   },
   burnLabel: { ...type.caption, color: colors.textSecondary },
   burnRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
@@ -1927,25 +1876,21 @@ const styles = StyleSheet.create({
 // screen carries no static island under a live theme toggle. Pure layout
 // keys (flex/padding/gap/margin/borderRadius/borderWidth/minWidth, no
 // token) and fontWeight (not part of useTheme()'s shape) are correctly
-// omitted. measureCell's `transparent` borderColor needs no live entry --
-// there is nothing frozen to unfreeze for it. D192 (item 2c): phaseChip's
-// border used to be phase.color, fully inline and already resolved from the
-// live theme by detectPhase(history, t.colors), so it needed no live twin
-// of its own; it is now a fixed control-edge token in the named style, so it
-// gains one below like any other colour-bearing key. The weight-logging
-// form, ED-safety calm-mode gate and every safety threshold are untouched --
-// colours only.
+// omitted. measureCell's `transparent` borderColor and phaseChip's fully
+// inline borderColor (phase.color, already resolved from the live theme by
+// detectPhase(history, t.colors)) need no live entry -- there is nothing
+// frozen to unfreeze for them. The weight-logging form, ED-safety calm-mode
+// gate and every safety threshold are untouched -- colours only.
 function buildLiveStyles(t) {
   return {
-    unitLinkText: { ...t.type.bodySm, color: t.colors.textMuted },
+    unitLinkText: { ...t.type.caption, color: t.colors.textMuted },
     safe: { backgroundColor: t.colors.background },
-    photosRow: { borderTopColor: t.colors.borderSubtle, borderBottomColor: t.colors.borderSubtle },
-    photosRowText: { ...t.type.title, color: t.colors.textPrimary },
-    confirmCard: { borderTopColor: t.colors.borderSubtle },
+    photosRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    photosRowText: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
+    confirmCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     confirmTitle: { ...t.type.h3, color: t.colors.textPrimary },
     confirmBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     confirmHelpline: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    phaseChip: { borderColor: t.colors.border },
     phaseLabel: { ...t.type.captionStrong },
     weightValue: { fontSize: t.fontSize.xxxl, color: t.colors.textPrimary },
     trendHint: { ...t.type.caption, color: t.colors.textMuted },
@@ -1957,17 +1902,17 @@ function buildLiveStyles(t) {
     recompCta: { ...t.type.label, color: t.colors.textPrimary },
     bodyFatValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
     measureCell: { backgroundColor: t.colors.surface2 },
-    measureCellActive: { borderColor: t.colors.borderLight, backgroundColor: t.colors.surface3 },
+    measureCellActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
     measureValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
-    measureValueActive: { ...t.type.w(t.type.num('bodyStrong'), 'semibold'), color: t.colors.textPrimary },
+    measureValueActive: { color: t.colors.primary },
     measureLabel: { ...t.type.caption, color: t.colors.textMuted },
-    measureLabelActive: { color: t.colors.textSecondary },
+    measureLabelActive: { color: t.colors.primaryDim },
     measureTab: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    measureTabActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
+    measureTabActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
     measureTabText: { ...t.type.captionStrong, color: t.colors.textSecondary },
-    measureTabTextActive: { color: t.colors.textPrimary },
+    measureTabTextActive: { color: t.colors.primary },
     logBtnText: { ...t.type.title, color: t.colors.textPrimary },
-    formCard: { borderTopColor: t.colors.borderSubtle },
+    formCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     formTitle: { ...t.type.title, color: t.colors.textPrimary },
     formLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     measureToggle: { borderTopColor: t.colors.border },
@@ -1977,13 +1922,11 @@ function buildLiveStyles(t) {
     historyWeight: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     historyMeasure: { ...t.type.num('caption'), color: t.colors.textMuted },
     historyActionBtn: { borderColor: t.colors.border },
-    ewmaCard: { borderTopColor: t.colors.borderSubtle },
     ewmaLabel: { ...t.type.caption, color: t.colors.textSecondary },
     ewmaValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
     ewmaWeekly: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     ewmaMuted: { ...t.type.caption, color: t.colors.textMuted },
     ewmaIntake: { ...t.type.num('caption'), color: t.colors.textSecondary },
-    burnCard: { borderTopColor: t.colors.borderSubtle },
     burnLabel: { ...t.type.caption, color: t.colors.textSecondary },
     burnValue: { ...t.type.num('h2'), color: t.colors.textPrimary },
     burnUnit: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },

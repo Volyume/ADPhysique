@@ -93,7 +93,7 @@ function ChangeCard({ icon, title, prev, next, reason, unchanged }) {
   return (
     <Card style={[styles.card, unchanged && styles.cardUnchanged]}>
       <View style={styles.cardHeader}>
-        <Ionicons name={icon} size={16} color={unchanged ? t.colors.textMuted : t.colors.textSecondary} />
+        <Ionicons name={icon} size={16} color={unchanged ? t.colors.textMuted : t.colors.primary} />
         <Text style={[styles.cardTitle, live.cardTitle]}>{title}</Text>
         {unchanged && <Text style={[styles.unchangedTag, live.unchangedTag]}>unchanged</Text>}
       </View>
@@ -252,7 +252,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
             <SectionLabel style={styles.sectionLabelSpacing}>Training</SectionLabel>
             {goalChanged && (
               <ChangeCard
-                icon="body-outline"
+                icon="trophy-outline"
                 title="Physique goal"
                 prev={GOAL_LABELS[previous.goal] ?? previous.goal}
                 next={GOAL_LABELS[next.goal] ?? next.goal}
@@ -277,7 +277,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
 
             {kcalChanged && (
               <ChangeCard
-                icon="nutrition-outline"
+                icon="flame-outline"
                 title="Daily calories"
                 prev={`${prevKcal.toLocaleString('en-GB')} kcal`}
                 next={`${nextKcal.toLocaleString('en-GB')} kcal`}
@@ -288,7 +288,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
             {(macrosChanged || (!kcalChanged && nextP != null)) && (
               <Card style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <Ionicons name="restaurant-outline" size={16} color={t.colors.textSecondary} />
+                  <Ionicons name="restaurant-outline" size={16} color={t.colors.primary} />
                   <Text style={[styles.cardTitle, live.cardTitle]}>Daily macros</Text>
                 </View>
                 <MacroRow label="Protein" prev={prevP} next={nextP} />
@@ -315,7 +315,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
         <SectionLabel style={styles.sectionLabelSpacing}>What happens next</SectionLabel>
         <Card style={[styles.nextCard, live.nextCard]}>
           <View style={styles.nextRow}>
-            <Ionicons name="ellipse" size={6} color={t.colors.textMuted} style={styles.bullet} />
+            <Ionicons name="ellipse" size={6} color={t.colors.primary} style={styles.bullet} />
             <Text style={[styles.nextText, live.nextText]}>
               {planKeptOnPurpose
                 ? `Your ${planStyleLabel ?? 'library'} plan stays as it is, so your next session is unchanged. To train differently, choose another ${planStyleLabel ?? 'library'} plan in the Plan Library.`
@@ -327,14 +327,14 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
             </Text>
           </View>
           <View style={styles.nextRow}>
-            <Ionicons name="ellipse" size={6} color={t.colors.textMuted} style={styles.bullet} />
+            <Ionicons name="ellipse" size={6} color={t.colors.primary} style={styles.bullet} />
             <Text style={[styles.nextText, live.nextText]}>
               Nutrition targets in the Coach tab now reflect the updated numbers. Open Nutrition Targets to see the full breakdown.
             </Text>
           </View>
           {next.phase === 'cut' && !edFlagOpen && (
             <View style={styles.nextRow}>
-              <Ionicons name="ellipse" size={6} color={t.colors.textMuted} style={styles.bullet} />
+              <Ionicons name="ellipse" size={6} color={t.colors.primary} style={styles.bullet} />
               <Text style={[styles.nextText, live.nextText]}>
                 If you stay in a deficit for more than eight weeks, Volyume will suggest a short diet break, so you are not eating below your target for months on end.
               </Text>
@@ -371,10 +371,7 @@ const styles = StyleSheet.create({
   diffRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
   diffPrev: { ...type.body, color: colors.textMuted, textDecorationLine: 'line-through' },
   diffArrow: { marginHorizontal: spacing.sm },
-  // D174: the new value is not the user's live moment; it is one half of a
-  // prev-to-next diff, and the struck-through `diffPrev` beside it already
-  // says which is which. Same ink as `cardValue`, the unchanged-case twin.
-  diffNext: { ...type.bodyStrong, color: colors.textPrimary },
+  diffNext: { ...type.bodyStrong, color: colors.primary },
 
   cardValue: { ...type.bodyStrong, color: colors.textPrimary },
   cardReason: { fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18, marginTop: spacing.xxs },
@@ -389,23 +386,8 @@ const styles = StyleSheet.create({
   macroNext: { fontSize: fontSize.sm, color: colors.textPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   macroUnchanged: { ...type.label, color: colors.textPrimary },
   macroDelta: { fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
-  // D174 lead ruling, and this one is ED-safety rather than style. These two
-  // were a VALENCE PAIR on calorie and macro numbers: a macro going up printed
-  // in the accent, a macro going down printed in the WARNING colour. So for
-  // anyone whose targets came down -- which is everyone in a deficit -- every
-  // food number on this screen rendered as a caution. That is a good/bad
-  // judgement on intake, which is exactly what the app refuses everywhere else
-  // it shows a trend (`AnalyticsScreen.progressSpec.guard` pins "the trend is
-  // never coloured as good or bad", and the macro rings are one colour at every
-  // value under the 2026-05-29 safety decision).
-  //
-  // Both are neutral now. Direction is carried by the sign already in the
-  // string (`{sign}{delta}{unit}`) and by the struck-through previous value
-  // beside it, so nothing is lost but the verdict. Neutralising only the amber
-  // half would have been worse than leaving both: it would have kept the
-  // caution on "down" and removed the counterweight.
-  macroDeltaUp: { color: colors.textPrimary },
-  macroDeltaDown: { color: colors.textPrimary },
+  macroDeltaUp: { color: colors.primary },
+  macroDeltaDown: { color: colors.warning },
 
   nextCard: {
     backgroundColor: colors.surface2,
@@ -434,7 +416,7 @@ function buildLiveStyles(t) {
     cardTitle: { ...t.type.label, color: t.colors.textPrimary },
     unchangedTag: { ...t.type.caption, color: t.colors.textMuted },
     diffPrev: { ...t.type.body, color: t.colors.textMuted },
-    diffNext: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    diffNext: { ...t.type.bodyStrong, color: t.colors.primary },
     cardValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     cardReason: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     macroLabel: { ...t.type.label, color: t.colors.textSecondary },
@@ -442,8 +424,8 @@ function buildLiveStyles(t) {
     macroNext: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     macroUnchanged: { ...t.type.label, color: t.colors.textPrimary },
     macroDelta: { fontSize: t.fontSize.xs },
-    macroDeltaUp: { color: t.colors.textPrimary },
-    macroDeltaDown: { color: t.colors.textPrimary },
+    macroDeltaUp: { color: t.colors.primary },
+    macroDeltaDown: { color: t.colors.warning },
     nextCard: { backgroundColor: t.colors.surface2 },
     nextText: { ...t.type.bodySm, color: t.colors.textSecondary },
   };

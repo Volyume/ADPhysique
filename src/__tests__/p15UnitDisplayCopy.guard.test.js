@@ -27,7 +27,7 @@ const ATHLETE_PROFILE = read('screens/AthleteProfileScreen.js');
 const SETTINGS_ROOT = read('screens/SettingsScreen.js');
 const SETTINGS_WORKOUT = read('screens/SettingsWorkoutScreen.js');
 const IMPORT_SCREEN = read('screens/ImportScreen.js');
-const BODY_METRICS = read('screens/BodyMetricsScreen.js');
+const WEIGHT_TREND_CARD = read('components/WeightTrendCard.js');
 
 describe('format.js exposes the central NBSP unit-display helper', () => {
   test('formatWithUnit and NBSP are exported', () => {
@@ -113,10 +113,7 @@ describe('Athlete Profile uses the noun form "body weight", not compounded "body
 
 describe('Settings body-weight-unit preference reads "Body weight unit" (P-15)', () => {
   test('Settings root row sub-copy drops the hyphen', () => {
-    // RE-ANCHORED 2026-09-18 (D192, row-line cap): the Workout & units row's
-    // line was cut to fit one line beside a glyph and a chevron. Intent kept:
-    // it still opens with "Body weight unit", two words, no hyphen (P-15).
-    expect(SETTINGS_ROOT).toMatch(/sub="Body weight unit, rest timer and rest alerts"/);
+    expect(SETTINGS_ROOT).toMatch(/sub="Body weight unit, default rest timer and rest alerts"/);
     expect(SETTINGS_ROOT).not.toMatch(/Body-weight unit/);
   });
 
@@ -133,43 +130,11 @@ describe('Import and Weight Trend numbers use en-GB, not device-locale toLocaleS
     expect(IMPORT_SCREEN).not.toMatch(/\.toLocaleString\(\)/);
   });
 
-  // RE-POINTED 2026-09-15 (D177 item 1), and the finding is why this comment
-  // is long. Five suites were pinned to `src/components/WeightTrendCard.js`, a
-  // file NOTHING imports. Four of them turned out to be asserting properties
-  // the live weight surfaces already had. This one was not: BodyMetricsScreen's
-  // "Effective maintenance" value rendered the bare `toEnergy` return, and
-  // `toEnergy` (lib/format.js) is `Math.round(k)` with no grouping -- so a
-  // 2,400 kcal maintenance figure read "2400" on the live screen, and a kJ
-  // user's read "10042", while a guard on a component nobody renders reported
-  // the rule as protected.
-  //
-  // That is exactly the scenario D177's order was written to surface: had the
-  // card been deleted first and the guards re-pointed afterwards, this would
-  // have become "this rule never existed" rather than "this rule is
-  // unprotected". The live screen was fixed onto the existing `formatEnergy`
-  // helper (which IS `formatNumber(toEnergy(...))`), and the assertion now
-  // points where the user can actually see the number.
-  //
-  // On the NBSP half: the unit is a sibling <Text> inside a non-wrapping row,
-  // so the pair cannot split. That is a different mechanism from an NBSP and a
-  // stronger one, which is why this case asserts the row rather than the
-  // character.
-  test('the Effective maintenance figure formats through the shared en-GB helper', () => {
-    // RE-ANCHORED 2026-09-18 (D192, item 2e): the same import line now also
-    // names `formatNumber` directly, for the unrelated "Average intake"
-    // line's own thousands separator (a raw formatNumber(toEnergy(...))
-    // composition, since that line's day-count wording can't go through
-    // formatEnergy's own withUnit option). Intent kept: `formatEnergy` is
-    // still imported and still the helper the Effective-maintenance figure
-    // formats through, asserted directly below.
-    expect(BODY_METRICS).toMatch(/import \{ toEnergy, energyUnitLabel, formatEnergy, formatNumber \} from '\.\.\/lib\/format';/);
-    expect(BODY_METRICS).toMatch(/\{formatEnergy\(adaptiveBurn\.adjustedTDEE, energyUnit\)\}/);
-    // The bare spelling this replaced must not come back.
-    expect(BODY_METRICS).not.toMatch(/\{toEnergy\(adaptiveBurn\.adjustedTDEE, energyUnit\)\}/);
-    expect(BODY_METRICS).not.toMatch(/adjustedTDEE[^\n]*\.toLocaleString\(\)/);
-    // The unit sits beside it in a row that cannot wrap, which is what keeps
-    // the number and its unit together here.
-    expect(BODY_METRICS).toMatch(/burnRow: \{[^}]*flexDirection: 'row'/);
-    expect(BODY_METRICS).toMatch(/\{energyUnitLabel\(energyUnit\)\}\/day/);
+  test('WeightTrendCard maintenance estimate formats through the shared en-GB helper with an NBSP-joined kcal unit', () => {
+    expect(WEIGHT_TREND_CARD).toMatch(/import \{ formatNumber, formatWithUnit \} from '\.\.\/lib\/format';/);
+    expect(WEIGHT_TREND_CARD).toMatch(
+      /~\{formatWithUnit\(formatNumber\(maintenance\.kcal\), 'kcal'\)\}\/day estimated maintenance/,
+    );
+    expect(WEIGHT_TREND_CARD).not.toMatch(/maintenance\.kcal\.toLocaleString\(\)/);
   });
 });

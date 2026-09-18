@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   // A text action, not a second button: centred, with a full touch target.
   signInLink: { minHeight: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
   signInText: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
-  signInAction: { ...type.bodyStrong, fontSize: fontSize.sm, color: colors.textPrimary },
+  signInAction: { ...type.bodyStrong, fontSize: fontSize.sm, color: colors.primary },
 });
 
 // CP-10 batch G (2026-07-11): the frozen `styles` block above stays the
@@ -223,6 +223,6 @@ function buildLiveStyles(t) {
     shotFrame: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
     free: { ...t.type.label, color: t.colors.textSecondary },
     signInText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    signInAction: { ...t.type.bodyStrong, fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    signInAction: { ...t.type.bodyStrong, fontSize: t.fontSize.sm, color: t.colors.primary },
   };
 }

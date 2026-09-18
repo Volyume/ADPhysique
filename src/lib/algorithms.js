@@ -499,8 +499,7 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
         value: weight,
         previousValue: lowestAssistance,
         reps,
-        // D192 (one unit format): a space before the unit, everywhere.
-        label: `New best: ${weight} ${units} assistance × ${reps} reps`,
+        label: `New best: ${weight}${units} assistance × ${reps} reps`,
       });
     }
     const maxRepsAtSame = eligible
@@ -513,7 +512,7 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
         value: reps,
         previousValue: maxRepsAtSame,
         reps,
-        label: `Most reps at ${weight} ${units} assistance: ${reps} reps`,
+        label: `Most reps at ${weight}${units} assistance: ${reps} reps`,
       });
     }
     return prs;
@@ -534,7 +533,7 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
       previousValue: best1RM,            // for "+X% vs previous" copy
       reps,
       weight,
-      label: `New estimated max: ${new1RM.toFixed(1)} ${units}`,
+      label: `New estimated max: ${new1RM.toFixed(1)}${units}`,
     });
   }
 
@@ -549,7 +548,7 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
       value: weight,
       previousValue: heaviestEver > 0 ? heaviestEver : null,
       reps,
-      label: `New heaviest weight: ${weight} ${units} × ${reps} reps`,
+      label: `New heaviest weight: ${weight}${units} × ${reps} reps`,
     });
   }
 
@@ -563,7 +562,7 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
       value: reps,                       // the metric here is reps, not weight
       previousValue: maxRepsAtWeight,
       reps,
-      label: `Most reps at ${weight} ${units}: ${reps} reps`,
+      label: `Most reps at ${weight}${units}: ${reps} reps`,
     });
   }
 

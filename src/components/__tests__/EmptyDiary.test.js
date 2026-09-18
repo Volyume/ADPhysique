@@ -42,15 +42,7 @@ describe('EmptyDiary', () => {
     const onPlanDay = jest.fn();
     const tree = create(<EmptyDiary onPlanDay={onPlanDay} />);
     expect(text(tree)).toContain('Meal builder');
-    // RE-ANCHORED 2026-09-18 (D192, day zero 2b): trimmed to one line (finish
-    // spec 4.7, "no paragraphs" -- the row's own chevron already says it is
-    // a tap-through). Intent kept: the meal-builder row still promises what
-    // it does before the tap. The `not.toContain` is load-bearing: without
-    // it, `toContain` alone is a substring match that the OLD two-sentence
-    // copy would also satisfy (it shares this exact prefix), so it would
-    // never actually catch the second sentence coming back.
-    expect(text(tree)).toContain('Build a day or week from your targets');
-    expect(text(tree)).not.toContain('Nothing is logged until you add it.');
+    expect(text(tree)).toContain('Build a day or week from your targets. Nothing is logged until you add it.');
     press(tree, 'Open meal builder for this day or week');
     expect(onPlanDay).toHaveBeenCalledTimes(1);
   });

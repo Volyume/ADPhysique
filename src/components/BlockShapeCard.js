@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, type, circle, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, withAlpha, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 /**
@@ -96,21 +96,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface3, borderWidth: 1, borderColor: colors.border,
   },
   // Past weeks: quietly done. Future: outlined. Current: filled amber with a
-  // ring -- the one "now" in the strip, which is what discipline 1 grants
-  // amber for. Recovery: a destination not a dip, drawn as the neutral
-  // `borderLight` fill rather than the amber wash it used to carry; §3.2
-  // refuses a wash outright, and the deload week is not "now".
+  // ring. Recovery: a soft restful tint, a destination not a dip.
   dotPast: { backgroundColor: colors.textMuted, borderColor: colors.textMuted },
   dotFuture: { backgroundColor: 'transparent', borderColor: colors.border },
   dotCurrent: {
     backgroundColor: colors.primaryFill, borderColor: colors.primary,
     width: 16, height: 16, borderRadius: circle(16),
   },
-  dotRecovery: { backgroundColor: colors.borderLight, borderColor: colors.borderLight },
+  dotRecovery: { backgroundColor: withAlpha(colors.primary, 0.22), borderColor: withAlpha(colors.primary, 0.45) },
   dotLabel: { fontSize: fontSize.micro, color: colors.textMuted },
-  // The dot already marks now; a second amber mark for the same state is
-  // what D175 ruling 3 refused for the dropdown chevron.
-  dotLabelCurrent: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  dotLabelCurrent: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   line: { ...type.body, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
 });
 
@@ -124,9 +119,9 @@ function buildLiveStyles(t) {
     dotPast: { backgroundColor: t.colors.textMuted, borderColor: t.colors.textMuted },
     dotFuture: { borderColor: t.colors.border },
     dotCurrent: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },
-    dotRecovery: { backgroundColor: t.colors.borderLight, borderColor: t.colors.borderLight },
+    dotRecovery: { backgroundColor: withAlpha(t.colors.primary, 0.22), borderColor: withAlpha(t.colors.primary, 0.45) },
     dotLabel: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
-    dotLabelCurrent: { color: t.colors.textPrimary },
+    dotLabelCurrent: { color: t.colors.primary },
     line: { ...t.type.body, fontSize: t.fontSize.sm, color: t.colors.textSecondary },
   };
 }

@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, withAlpha, circle, motion, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, withAlpha, alpha, circle, motion, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -24,7 +24,6 @@ import RollingNumber from '../components/RollingNumber';
 import BlockShapeCard from '../components/BlockShapeCard';
 import Button from '../components/Button';
 import Card from '../components/Card';
-import LedgerRow from '../components/LedgerRow';
 import BottomSheet from '../components/BottomSheet';
 import TextField from '../components/TextField';
 import { useFeedback } from '../components/FeedbackSheet';
@@ -39,7 +38,8 @@ import {
 } from '../lib/database';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { claimMilestones } from '../lib/milestones';
-import { selection as hapticSelection } from '../lib/haptics';
+import { selection as hapticSelection, prAchieved as hapticMilestone } from '../lib/haptics';
+import { MilestoneBurst } from '../components/PRCelebration';
 import ProgressPhotoPrompt from '../components/ProgressPhotoPrompt';
 import { calculateWeeklyVolume, calculateExcludedWeeklyVolume, getVolumeStatus, MUSCLE_DISPLAY_NAMES, runAdaptiveEngine } from '../lib/algorithms';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
@@ -237,6 +237,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // suppression as firstSessionLine. PRs are owned by PRCelebration and the
   // first session by COMP-013, so neither double-celebrates here.
   const [milestone, setMilestone] = useState(null);
+  // D2: the gold particle burst for the big rungs (50/100 sessions).
+  const [milestoneBurst, setMilestoneBurst] = useState(false);
   // D2: calm-mode / open-ED suppression flag for the peak-surface celebratory
   // cards (the programme-arc strip + the phase-completion card). Set once from
   // the shared wellbeing read in loadVolumeAndHistory.
@@ -843,25 +845,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           });
           if (shown) {
             setMilestone(shown);
-            // D170 (founder delegated the call 2026-09-15). D2 scaled the
-            // payoff to the rung: the 50- and 100-session rungs earned a
-            // full-screen gold particle burst and the celebration haptic
-            // ladder. Both are removed; every rung now gets the same quiet
-            // tick, and the MOMENT itself is untouched -- the card, its copy
-            // and its share action all stay.
-            //
-            // The milestone was never the problem. It is effort-framed
-            // ("Fifty times you've turned up. That takes some doing."), it
-            // counts sessions and never weight, it cannot break, and it fires
-            // twice in a lifetime. What went is the particle physics: a gold
-            // burst is the most game-like device in the product, and the
-            // direction is "no gamification" in as many words. Law 5 gives
-            // two reasons for the rule -- ED-safety and not feeling like a
-            // game -- and it is the second that settles this one. Stage 4
-            // already says the personal-best moment should state a fact
-            // rather than throw confetti; this is the same device and the
-            // same answer.
-            hapticSelection();
+            // D2 (design audit 03 win #4): scale the payoff to the rung. The
+            // big rungs (50/100 sessions) earn the gold particle burst and the
+            // celebration haptic ladder; the earlier rungs keep the quiet
+            // tick. Same calm/ED suppression as the card (this branch), and
+            // the burst itself renders nothing under reduce-motion.
+            if (shown.key === 'sessions_50' || shown.key === 'sessions_100') {
+              setMilestoneBurst(true);
+              hapticMilestone();
+            } else {
+              hapticSelection();
+            }
           }
         } catch (_) {}
       }
@@ -1265,12 +1259,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.completionHeader}>
-          {/* D192 (finish spec section 4.1/item 4): the screen title, at
-              h1 -- the checkmark-plus-title row is gone; colour is not
-              spent on decoration in the finish (spec section 4.9), and a
-              screen is titled by its h1 alone, never by a chrome row
-              around it. */}
-          <Text style={[styles.completionTitle, live.completionTitle]}>Workout complete</Text>
+          <View style={styles.checkRow}>
+            <Ionicons name="checkmark-circle" size={28} color={t.colors.success} />
+            <Text style={[styles.completionTitle, live.completionTitle]}>Workout complete</Text>
+          </View>
           <Text style={[styles.completionDate, live.completionDate]}>{completionDate}</Text>
           {firstSessionLine ? (
             <Text style={[styles.firstSessionLine, live.firstSessionLine]}>{firstSessionLine}</Text>
@@ -1283,57 +1275,45 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             rung is crossed (and never under calm/ED). Calm in tone, not loud. */}
         {milestone ? (
           <RevealSection delay={120}>
-            <Card style={styles.milestoneCard}>
-              <View style={styles.milestoneIconWrap}>
-                <Ionicons name={milestone.icon} size={22} color={t.colors.textSecondary} />
+            <Card tone="gold" style={styles.milestoneCard}>
+              <View style={[styles.milestoneIconWrap, live.milestoneIconWrap]}>
+                <Ionicons name={milestone.icon} size={22} color={t.colors.gold} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.milestoneTitle, live.milestoneTitle]}>{milestone.title}</Text>
                 <Text style={[styles.milestoneBody, live.milestoneBody]}>{milestone.body}</Text>
               </View>
               <TouchableOpacity
-                style={styles.milestoneShareBtn}
+                style={[styles.milestoneShareBtn, live.milestoneShareBtn]}
                 onPress={handleShareMilestone}
                 accessibilityRole="button"
                 accessibilityLabel="Share this milestone"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="share-social-outline" size={18} color={t.colors.textSecondary} />
+                <Ionicons name="share-social-outline" size={18} color={t.colors.gold} />
               </TouchableOpacity>
             </Card>
           </RevealSection>
         ) : null}
 
-        {/* D3 (design audit 03) made tonnage the headline in an elevated hero
-            card, with the 4-week verdict fused underneath it. D167 swaps which
-            of the two is loud: the verdict is the answer to "how did that go",
-            tonnage is a stat about it, and tonnage was already the founder's
-            WEEKLY signal on Today. The card stays the screen's one elevated
-            object; there is no amber on it now. */}
+        {/* D3 (design audit 03): tonnage is THE headline. One elevated hero
+            card carrying the display-size animated counter, with the 4-week
+            comparison verdict fused into it; the remaining three stats step
+            down to a compact row below. The hero is the screen's single
+            amber object (the numeral); everything else is neutral or tint. */}
         <Card elevated padding="xl" style={styles.heroCard}>
-          {/* 4-week comparison verdict (D167, law 1). D192 (finish spec
-              section 2) supersedes HOW it is loud: "the hero and display
-              steps carry a NAME or a NUMBER, never a sentence ... a sentence
-              that is the screen's loud element sets in h2" -- this verdict is
-              a sentence, so it renders as plain Text at h2, not through
-              BigNumber at hero size.
-
-              The screen used to shout TONNAGE at 40px. Two things were wrong
-              with that. Law 1 says the loud element is "always the thing the
-              screen is for", and what this screen is for is "how did that
-              go?" -- tonnage answers the second question, not the first. And
-              the founder had already ruled tonnage is the WEEKLY non-scale
-              signal on Today (D167), so shouting it here said the same word
-              twice in two places. Tonnage moves to the stat grid, where law 7
-              already labelled it correctly and two guards pin that string.
-
-              The session's own NAME has never been rendered on this screen at
-              all -- `routineName` was loaded solely to title the share card.
-              It is the overline now, which also matches Today: that screen
-              shouts what you are about to do, this one shouts how it went,
-              and Progress shouts what to do next.
-
-              Renders once we
+          <StatBox
+            hero
+            // WAVE-A-FINDINGS.md UNIT_DEFECT (:1220-1226): hard-coded 'kg'
+            // regardless of the store's units, mislabelling an lbs user's
+            // total. Matches the already-fixed ShareCard sibling (R8/M5,
+            // :936: `units === 'lbs' ? 'lbs' : 'kg'`).
+            value={formatWithUnit(formatNumber(Math.round(tonnage || 0)), units === 'lbs' ? 'lbs' : 'kg')}
+            label="Total lifted"
+            tooltip={'Total weight moved this session: sets x reps x weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
+          />
+          {/* 4-week comparison verdict, fused into the hero so "your number"
+              and "how it compares" read as one statement. Renders once we
               have either a prior session to compare against, or the 'first'
               verdict (no prior session at all - lead ruling: a session with
               nothing to compare against still deserves an honest line about
@@ -1344,67 +1324,48 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               readOnly mode, so this is already live-summary-only. */}
           {comparison && (comparison.priorCount > 0 || (comparison.verdict === 'first' && !calmSuppressed)) && (() => {
             const { verdict, pct, position, total, priorCount } = comparison;
-            // D167: the verdict no longer carries a colour or an icon.
-            //
-            // It used to pick gold for a best, green for up, grey for down,
-            // beside a trophy or a trend arrow. Both go. Law 6 narrows colour
-            // to one meaning ("now"), and a headline tinted by how the session
-            // went is colour AS VERDICT -- the same good/bad tinting the app
-            // already refuses for body-weight trends, generalised. The trophy
-            // and the trend arrows are category props that stage 3 removes
-            // anyway. The sentence says "Strongest workout in 4 weeks"; it
-            // does not need a colour to be understood, and law 1 wants one
-            // loud thing rather than a loud thing plus a medal.
-            let headline, sub;
+            let headline, sub, accent;
             if (verdict === 'first') {
               headline = 'First time on this session';
-              sub = 'Saved as Last session for next time';
+              sub = 'Every set is saved. Next time, these numbers show as Last session while you lift.';
+              accent = t.colors.textPrimary;
             } else if (verdict === 'best') {
-              headline = 'Strongest workout in 4 weeks';
-              sub = `Top of ${total} sessions on this routine`;
+              headline = `Strongest workout in 4 weeks`;
+              sub = `Top of ${total} sessions logged for this routine.`;
+              accent = t.colors.gold;
             } else if (verdict === 'up') {
               headline = `${pct >= 0 ? '+' : ''}${pct}% vs your 4-week average`;
-              sub = `Position ${position} of ${total} in the last 4 weeks`;
+              sub = `Position ${position} of ${total} sessions in the window.`;
+              accent = t.colors.success;
             } else if (verdict === 'down') {
               headline = `${pct}% vs your 4-week average`;
-              sub = 'The 4-week trend carries more signal than one session';
+              sub = `Sessions vary with recovery, sleep and stress. The 4-week trend carries more signal than any single session.`;
+              accent = t.colors.textSecondary;
             } else {
-              // D192 grammar fix: "your last 1 session" read like a typo, not
-              // a count. priorCount === 1 drops the numeral instead of saying it.
-              headline = priorCount === 1 ? 'On pace with your last session' : `On pace with your last ${priorCount} sessions`;
-              sub = 'Within 10% of your 4-week average';
+              headline = `On pace with your last ${priorCount} session${priorCount !== 1 ? 's' : ''}`;
+              sub = 'Within about 10% of your 4-week average. Consistency is the goal.';
+              // Neutral, not amber: the hero numeral is this screen's one
+              // amber object (design audit 03 amber-inflation rule).
+              accent = t.colors.textPrimary;
             }
             return (
-              <>
-                {/* D192 landing (2026-09-18): the overline and the headline are
-                    one block spaced by spacing.xs; the card's own gap
-                    separates that block from the sub-line. */}
-                <View style={styles.summaryVerdictHead}>
-                  {routineName ? (
-                    <Text style={[styles.summaryVerdictOverline, live.summaryVerdictOverline]}>{routineName}</Text>
-                  ) : null}
-                  <Text style={[styles.summaryVerdictHeadline, live.summaryVerdictHeadline]} testID="summary-verdict">
-                    {headline}
-                  </Text>
+              <View style={[styles.verdictRow, live.verdictRow]}>
+                <Ionicons
+                  name={verdict === 'best' ? 'trophy-outline' : verdict === 'up' ? 'trending-up-outline' : verdict === 'down' ? 'trending-down-outline' : 'analytics-outline'}
+                  size={16}
+                  color={accent}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.verdictHeadline, live.verdictHeadline, { color: accent }]}>{headline}</Text>
+                  <Text style={[styles.verdictSub, live.verdictSub]}>{sub}</Text>
                 </View>
-                <Text style={[styles.summaryVerdictSub, live.summaryVerdictSub]}>{sub}</Text>
-              </>
+              </View>
             );
           })()}
         </Card>
 
-        <View style={[styles.statsGrid, live.statsGrid]}>
-          <StatBox
-            icon="stats-chart-outline"
-            // WAVE-A-FINDINGS.md UNIT_DEFECT (:1220-1226): hard-coded 'kg'
-            // regardless of the store's units, mislabelling an lbs user's
-            // total. Matches the already-fixed ShareCard sibling (R8/M5,
-            // :936: `units === 'lbs' ? 'lbs' : 'kg'`).
-            value={formatWithUnit(formatNumber(Math.round(tonnage || 0)), units === 'lbs' ? 'lbs' : 'kg')}
-            label="Total lifted"
-            tooltip={'Total weight moved this session: sets x reps x weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
-            animateOrder={0}
-          />
+        <View style={styles.statsGrid}>
+          <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" animateOrder={0} />
           <StatBox
             icon="layers-outline"
             value={String(displayWorkingSets)}
@@ -1412,8 +1373,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             tooltip={'The sets counted in your weekly totals. Warm-ups are left out; every other logged set counts, however it felt.'}
             animateOrder={1}
           />
-          <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" animateOrder={2} />
-          <StatBox icon="time-outline" value={`${durationMinutes || 0} min`} label="Duration" animateOrder={3} />
+          <StatBox icon="time-outline" value={`${durationMinutes || 0} min`} label="Duration" animateOrder={2} />
         </View>
 
         {/* Communities revamp phase 3 (spec section 1, Q2; lead ruling,
@@ -1538,18 +1498,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   <View key={ex.exerciseId || i} style={[styles.exerciseListRow, live.exerciseListRow]}>
                     <Text style={[styles.exerciseListName, live.exerciseListName]} numberOfLines={1}>{ex.name}</Text>
                     {workingSets.length > 0 ? (
-                      /* D184: the session's working sets are ledger lines, the
-                         same row the logger drew them with -- the plan's "every
-                         set, everywhere". The string is byte-for-byte what the
-                         old wrapping chips printed; only the shape changed. */
                       <View style={styles.exerciseSetsList}>
                         {workingSets.map((s, si) => (
-                          <LedgerRow
-                            key={si}
-                            index={si + 1}
-                            primary={`${s.weight > 0 ? `${s.weight} ${units}` : 'BW'} × ${s.reps}`}
-                            first={si === 0}
-                          />
+                          <Text key={si} style={[styles.exerciseSetChip, live.exerciseSetChip]}>
+                            {s.weight > 0 ? `${s.weight}${units}` : 'BW'} x {s.reps}
+                          </Text>
                         ))}
                       </View>
                     ) : (
@@ -1567,10 +1520,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {detectedPRs.length > 0 && (
           <RevealSection delay={1340}>
           <View style={[styles.prRow, live.prRow]}>
-            {/* D174, lead review: this read `warning`. A personal best is not
-                a warning, and discipline 1 grants amber "a personal best" by
-                name -- so this is one of the dozen sites amber is actually for. */}
-            <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
+            <Ionicons name="trophy-outline" size={18} color={t.colors.warning} />
             <Text style={[styles.prRowText, live.prRowText]}>{prLine}</Text>
             {/* C5-P34-02 (D96): this is where a novice meets the term for
                 the first time (the in-session celebration labels are plain
@@ -1848,9 +1798,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             which falls back to the neutral link above. */}
         {!readOnly && blockStory && !calmSuppressed && (
           <RevealSection delay={1480}>
-            <Card style={styles.phaseCard}>
+            <Card tone="gold" style={styles.phaseCard}>
               <View style={styles.phaseHeaderRow}>
-                <Ionicons name="flag" size={18} color={t.colors.textSecondary} />
+                <Ionicons name="flag" size={18} color={t.colors.gold} />
                 <Text style={[styles.phaseTitle, live.phaseTitle]}>Block finished</Text>
               </View>
               {blockStory.name ? (
@@ -1871,7 +1821,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <View style={styles.phaseActions}>
                 <Button
                   title="Watch your block story"
-                  icon="film-outline"
+                  icon="sparkles"
                   variant="tertiary"
                   size="sm"
                   onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'RecapStory', { variant: 'block', mesocycleId: blockStory.mesocycleId, blockName: blockStory.name })}
@@ -1887,7 +1837,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   accessibilityLabel="Share block finished"
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="share-social-outline" size={18} color={t.colors.textSecondary} />
+                  <Ionicons name="share-social-outline" size={18} color={t.colors.primary} />
                 </TouchableOpacity>
               </View>
             </Card>
@@ -1899,7 +1849,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {!readOnly && sessionAdjustments.length > 0 && (
           <RevealSection delay={1520}>
             <View style={[styles.adjustedSummaryRow, live.adjustedSummaryRow]}>
-              <Ionicons name="options-outline" size={15} color={t.colors.textSecondary} />
+              <Ionicons name="sparkles" size={15} color={t.colors.primary} />
               <Text style={[styles.adjustedSummaryText, live.adjustedSummaryText]}>
                 Adjusted today: {sessionAdjustments.map(a =>
                   `${(MUSCLE_DISPLAY_NAMES[a.muscle] || a.muscle).toLowerCase()}, ${a.setDelta < 0 ? '1 set fewer' : '1 set added'}`,
@@ -2122,6 +2072,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           />
         </View>
       </BottomSheet>
+      {/* D2: gold burst over the summary for the 50/100-session rungs. Set
+          only inside the calm/ED-suppressed-free branch; renders nothing
+          under reduce-motion; never blocks taps. */}
+      {milestoneBurst ? <MilestoneBurst onDone={() => setMilestoneBurst(false)} /> : null}
     </SafeAreaView>
   );
 }
@@ -2151,7 +2105,7 @@ function RevealSection({ children }) {
 // (reduceMotion), so it is exported purely so the live-theme flip contract
 // can be pinned against a real mounted instance (see
 // cp10Stage3WorkoutShellsLiveTheme.test.js). No behaviour change.
-export function StatBox({ icon, value, label, tooltip, animateOrder = 0 }) {
+export function StatBox({ icon, value, label, tooltip, animateOrder = 0, hero = false }) {
   // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
   // See buildLiveStyles' header comment (defined further down this
   // file, after the frozen `styles` block -- see the comment there for why).
@@ -2213,8 +2167,20 @@ export function StatBox({ icon, value, label, tooltip, animateOrder = 0 }) {
     <Text style={[frozenStyle, liveStyle]} maxFontSizeMultiplier={maxFontSizeMultiplier}>{value}</Text>
   ));
 
+  if (hero) {
+    return (
+      <Animated.View style={[styles.heroValueWrap, { opacity, transform: [{ translateY }] }]}>
+        {numeral(styles.heroValue, live.heroValue, 1.3)}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
+          <Text style={[styles.heroValueLabel, live.heroValueLabel]}>{label}</Text>
+          {tooltip ? <InfoTooltip size={11} text={tooltip} /> : null}
+        </View>
+      </Animated.View>
+    );
+  }
+
   return (
-    <Animated.View style={[styles.statBox, { opacity, transform: [{ translateY }] }]}>
+    <Animated.View style={[styles.statBox, live.statBox, { opacity, transform: [{ translateY }] }]}>
       <Ionicons name={icon} size={20} color={t.colors.textSecondary} />
       {numeral(styles.statValue, live.statValue)}
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
@@ -2229,28 +2195,26 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxxl },
   completionHeader: { gap: spacing.xs, paddingVertical: spacing.md },
-  // D192 (finish spec item 4): the screen title now carries the checkmark's
-  // job -- colour is not spent on decoration in the finish (section 4.9), so
-  // the icon went and "Workout complete" sets at h1, the screen's title role.
-  completionTitle: { ...type.h1, color: colors.textPrimary },
-  completionDate: { ...type.bodySm, color: colors.textSecondary },
-  firstSessionLine: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xs },
-  // D1 early-win milestone card. D173 T1 dropped the gold Card tone and both
-  // gold washes (amber discipline 2: the accent is never a tint behind a
-  // glyph); it stays the plain surface card it already was underneath, with
-  // no confetti and no full-screen takeover.
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  completionTitle: { ...type.h2, color: colors.textPrimary },
+  completionDate: { fontSize: fontSize.sm, color: colors.textMuted },
+  firstSessionLine: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary, marginTop: spacing.xs },
+  // D1 early-win milestone card. Gold accent (an achievement beat, kin to the
+  // PR row) but calm: a soft surface card, no confetti, no full-screen takeover.
   milestoneCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
   },
   milestoneIconWrap: {
     width: 40, height: 40, borderRadius: circle(40),
+    backgroundColor: withAlpha(colors.gold, 0.125),
     alignItems: 'center', justifyContent: 'center',
   },
-  milestoneTitle: { ...type.title, color: colors.textPrimary },
-  milestoneBody: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
+  milestoneTitle: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  milestoneBody: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
   milestoneShareBtn: {
     width: 36, height: 36, borderRadius: circle(36),
     alignItems: 'center', justifyContent: 'center',
+    backgroundColor: withAlpha(colors.gold, 0.125),
   },
   // D2 phase-completion celebration card.
   phaseCard: {
@@ -2258,20 +2222,20 @@ const styles = StyleSheet.create({
   },
   phaseHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   phaseTitle: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  phaseName: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  phaseName: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary },
   phaseRecap: { ...type.bodySm, color: colors.textSecondary },
   phaseNext: { ...type.captionTight, color: colors.textMuted },
   phaseActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxs },
   phaseActionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
     paddingVertical: spacing.md, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
   },
-  phaseActionText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  phaseActionText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary },
   phaseShareBtn: {
     width: touchTarget.minimum, height: touchTarget.minimum, borderRadius: radius.md,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
   },
   // D2 programme-arc strip wrapper, surface card matching the other summary
   // sections, holding the reused BlockShapeCard (dots + effort word).
@@ -2284,29 +2248,15 @@ const styles = StyleSheet.create({
   shareOfferButtons: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end' },
   shareOfferLink: { ...type.bodySm, color: colors.textMuted },
   blockArcName: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  // The one elevated object on the screen (surfaceElevated ranks it above
-  // every flat card below). D167: it carries the 4-week verdict at type.hero
-  // through BigNumber, not the display-size tonnage counter it used to.
-  // `heroValue`/`heroValueWrap`/`heroValueLabel` and StatBox's `hero` branch
-  // went with that change rather than being left dead behind a guard.
-  // D192 (finish spec section 2): the verdict is a sentence, and "the hero
-  // and display steps carry a NAME or a NUMBER, never a sentence" -- so it
-  // moved again, off BigNumber/type.hero onto three plain Texts at h2, and
-  // the card is left-aligned (no centred text anywhere on this screen).
+  // D3 hero: the one elevated object on the screen (surfaceElevated ranks
+  // the hero, design audit 03 rule 4), carrying the display-size tonnage.
   heroCard: {
     gap: spacing.md,
-    alignItems: 'stretch',
+    alignItems: 'center',
   },
-  // D192 (finish spec 3c, 2026-09-18): the card's own `gap: spacing.md`
-  // spaces every pair of these three Texts evenly; the overline sits
-  // tighter against its headline (spacing.xs), the same correction Today's
-  // hero card makes on its own eyebrow-to-name pair (HomeScreen.js
-  // heroName/heroSentence) -- a margin on one of the two elements rather
-  // than a new wrapping View. Headline-to-sub keeps the card's spacing.md.
-  summaryVerdictHead: { gap: spacing.xs },
-  summaryVerdictOverline: { ...type.overline, color: colors.textMuted },
-  summaryVerdictHeadline: { ...type.h2, color: colors.textPrimary },
-  summaryVerdictSub: { ...type.bodySm, color: colors.textSecondary },
+  heroValueWrap: { alignItems: 'center', gap: spacing.xs },
+  heroValue: { ...type.num('display'), color: colors.primary },
+  heroValueLabel: { ...type.caption, color: colors.textSecondary },
   verdictRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     alignSelf: 'stretch',
@@ -2316,41 +2266,22 @@ const styles = StyleSheet.create({
   verdictHeadline: { ...type.bodyStrong },
   verdictSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   // The three remaining stats step down to one compact row under the hero.
-  // Four stats since tonnage moved down here (D167), so the row wraps to a
-  // two-by-two. `minWidth` rather than a percentage basis: at the largest
-  // accessibility text scale a tile needs to be able to take a whole row
-  // rather than clip its own label.
-  // D165 law 2: a row of stat tiles, not an object -- no box, a borderSubtle hairline above (D186).
-  statsGrid: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle, paddingTop: spacing.md,
-  },
-  // D165 law 2: a number, not an object -- no box; the shared hairline lives
-  // on statsGrid above, not one per tile (D186; TodayStrip is the cited
-  // precedent). Superseded checklist-1 note this replaces: the tiles used to
-  // be treated as card-class surfaces (radius.lg, colors.surface, 1px
-  // border); D165 law 2 says a number is not an object, so that reading no
-  // longer holds.
+  statsGrid: { flexDirection: 'row', gap: spacing.md },
+  // Compliance pass (remediation 2026-07-11, food design standard section 2 /
+  // checklist 1): the three stat tiles are card-class surfaces, so radius.lg
+  // (16, the one card radius), colors.surface, 1px border - matching Card.
   statBox: {
-    // `minWidth` makes the four-tile grid wrap two-by-two, and lets a tile
-    // take a whole row at the largest accessibility text scale rather than
-    // clipping its own label.
-    flex: 1, minWidth: 136,
-    padding: spacing.md, alignItems: 'center', gap: spacing.xs,
+    flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.md, alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.borderSubtle,
   },
   statValue: { ...type.num('h3'), color: colors.textPrimary },
   statLabel: { ...type.caption, color: colors.textSecondary },
-  // D174 ruled the glyph on this row to amber ("a personal best is not a
-  // warning, and discipline 1 grants amber a personal best by name") and left
-  // the row it sits in yellow, which the N-Z lane spotted. Finishing the job:
-  // the ground and the label leave `warning` too, so the row is a plain card
-  // with one amber mark on it rather than a caution with an amber glyph.
   prRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.warningBg, borderRadius: radius.md, padding: spacing.md,
+    borderWidth: 1, borderColor: withAlpha(colors.warning, 0.251),
   },
-  prRowText: { ...type.label, flex: 1, color: colors.textPrimary },
+  prRowText: { ...type.label, flex: 1, color: colors.warning },
   // CO-3: quiet onward links, same register as CoachOutputScreen's
   // planEditLink ("See your updated plan") -- a neutral pill, never amber.
   onwardLinksRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
@@ -2422,10 +2353,9 @@ const styles = StyleSheet.create({
   },
   coachZoneSubHeading: { ...type.label, color: colors.textSecondary },
   coachZoneDivider: { height: 1, backgroundColor: colors.borderSubtle },
-  // D165 law 3: a control, not a card (D186).
   feedbackToggleBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: colors.surface2, borderRadius: radius.control, padding: spacing.md,
+    backgroundColor: colors.surface2, borderRadius: radius.lg, padding: spacing.md,
     borderWidth: 1, borderColor: colors.border,
   },
   feedbackToggleBtnText: { ...type.bodyStrong, color: colors.textSecondary },
@@ -2433,8 +2363,8 @@ const styles = StyleSheet.create({
   // COMP-015 confirmation row
   adjustedSummaryRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    backgroundColor: colors.surface2, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.251),
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
   },
   adjustedSummaryText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
@@ -2456,13 +2386,12 @@ const styles = StyleSheet.create({
     width: touchTarget.minimum, height: touchTarget.minimum, minWidth: touchTarget.minimum, borderRadius: radius.md, backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
-  // D3/D174: selected state uses the app-wide chip grammar, which is now the
-  // three neutral cues Chip.js carries -- a `surface3` fill, a `borderLight`
-  // edge and the label at full ink -- not a tint and an amber edge.
-  ratingBtnActive: { backgroundColor: colors.surface3, borderColor: colors.borderLight },
+  // D3: selected state uses the app-wide chip grammar (tint + amber edge,
+  // see components/Chip.js), not a full amber fill.
+  ratingBtnActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   ratingBtnText: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textSecondary },
-  ratingBtnTextActive: { color: colors.textPrimary },
-  ratingValueLabel: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  ratingBtnTextActive: { color: colors.primary },
+  ratingValueLabel: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   notesField: { borderRadius: radius.md },
   notesInput: { ...type.body, padding: spacing.lg, minHeight: 80, textAlignVertical: 'top' },
   nextTimeNoteField: { borderRadius: radius.md },
@@ -2527,14 +2456,14 @@ const styles = StyleSheet.create({
     minHeight: touchTarget.minimum,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: 'transparent',
+    borderColor: withAlpha(colors.primary, alpha.strong),
+    backgroundColor: colors.primaryBg,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
   shareFooterBtnText: {
     ...type.label,
-    color: colors.textSecondary,
+    color: colors.primary,
   },
   exerciseList: {
     overflow: 'hidden',
@@ -2556,13 +2485,22 @@ const styles = StyleSheet.create({
     ...type.num('caption'),
     color: colors.textSecondary,
   },
-  // D184: a column of ledger lines that stretches to the row's full width
-  // (the parent row is `alignItems: 'flex-start'`), so each line's hairline
-  // and figure span the card. The chip key that followed this is gone from
-  // both halves; LedgerRow draws the figure.
   exerciseSetsList: {
-    alignSelf: 'stretch',
-    gap: 0,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  exerciseSetChip: {
+    ...type.num('caption'),
+    color: colors.textSecondary,
+    backgroundColor: colors.surface2 ?? colors.background,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+    // R2 (lead ruling): a chip is a pill, per the standard's chip idiom.
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
   },
 
   // Template-name prompt (now inside the shared BottomSheet; the sheet owns the
@@ -2605,38 +2543,31 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    completionTitle: { ...t.type.h1, color: t.colors.textPrimary },
-    completionDate: { ...t.type.bodySm, color: t.colors.textSecondary },
-    firstSessionLine: { ...t.type.bodySm, color: t.colors.textSecondary },
-    milestoneTitle: { ...t.type.title, color: t.colors.textPrimary },
-    milestoneBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    completionTitle: { ...t.type.h2, color: t.colors.textPrimary },
+    completionDate: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    firstSessionLine: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    milestoneIconWrap: { backgroundColor: withAlpha(t.colors.gold, 0.125) },
+    milestoneTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    milestoneBody: { ...t.type.captionTight, color: t.colors.textSecondary },
+    milestoneShareBtn: { backgroundColor: withAlpha(t.colors.gold, 0.125) },
     phaseTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
-    phaseName: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    phaseName: { fontSize: t.fontSize.sm, color: t.colors.primary },
     phaseRecap: { ...t.type.bodySm, color: t.colors.textSecondary },
     phaseNext: { ...t.type.captionTight, color: t.colors.textMuted },
-    phaseActionBtn: { borderColor: t.colors.border },
-    phaseActionText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    phaseShareBtn: { borderColor: t.colors.border },
+    phaseActionBtn: { borderColor: withAlpha(t.colors.primary, 0.376) },
+    phaseActionText: { fontSize: t.fontSize.sm, color: t.colors.primary },
+    phaseShareBtn: { borderColor: withAlpha(t.colors.primary, 0.376) },
     blockArcName: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    summaryVerdictOverline: { ...t.type.overline, color: t.colors.textMuted },
-    summaryVerdictHeadline: { ...t.type.h2, color: t.colors.textPrimary },
-    summaryVerdictSub: { ...t.type.bodySm, color: t.colors.textSecondary },
+    heroValue: { ...t.type.num('display'), color: t.colors.primary },
+    heroValueLabel: { ...t.type.caption, color: t.colors.textSecondary },
     verdictRow: { borderTopColor: t.colors.borderSubtle },
     verdictHeadline: { ...t.type.bodyStrong },
     verdictSub: { ...t.type.captionTight, color: t.colors.textMuted },
-    // D167 (historical): this read `t.colors.border` while the frozen half
-    // set `colors.borderSubtle`, so every stat tile drew the bright
-    // control-edge grey against its own frozen intent. D186 follow-up
-    // (D165 law 2: a number is not an object) removed statBox's fill/
-    // corner/border outright, so there is no border colour left for the
-    // two halves to disagree about, and no live.statBox key left to carry
-    // one (frozenLiveParity.guard.test.js keeps enforcing the two-halves-
-    // agree rule generally). The row above them carries the hairline now.
-    statsGrid: { borderTopColor: t.colors.borderSubtle },
+    statBox: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     statValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
     statLabel: { ...t.type.caption, color: t.colors.textSecondary },
-    prRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    prRowText: { ...t.type.label, color: t.colors.textPrimary },
+    prRow: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, 0.251) },
+    prRowText: { ...t.type.label, color: t.colors.warning },
     onwardLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     onwardLinkText: { ...t.type.label, color: t.colors.textPrimary },
     constraintEffectLine: { ...t.type.bodySm, color: t.colors.textSecondary },
@@ -2654,7 +2585,7 @@ function buildLiveStyles(t) {
     coachZoneDivider: { backgroundColor: t.colors.borderSubtle },
     feedbackToggleBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     feedbackToggleBtnText: { ...t.type.bodyStrong, color: t.colors.textSecondary },
-    adjustedSummaryRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    adjustedSummaryRow: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, 0.251) },
     adjustedSummaryText: { ...t.type.bodySm, color: t.colors.textSecondary },
     blockRecapRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     blockRecapText: { ...t.type.label, color: t.colors.textPrimary },
@@ -2662,21 +2593,22 @@ function buildLiveStyles(t) {
     ratingHint: { ...t.type.caption, color: t.colors.textMuted },
     feedbackPurpose: { ...t.type.caption, color: t.colors.textMuted },
     ratingBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    ratingBtnActive: { backgroundColor: t.colors.surface3, borderColor: t.colors.borderLight },
+    ratingBtnActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
     ratingBtnText: { fontSize: t.fontSize.md, color: t.colors.textSecondary },
-    ratingBtnTextActive: { color: t.colors.textPrimary },
-    ratingValueLabel: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    ratingBtnTextActive: { color: t.colors.primary },
+    ratingValueLabel: { fontSize: t.fontSize.xs, color: t.colors.primary },
     notesInput: { ...t.type.body },
     nextTimeNoteInput: { fontSize: t.fontSize.sm },
     templateBtnText: { ...t.type.label, color: t.colors.textSecondary },
     stickyFooter: { borderTopColor: t.colors.border, backgroundColor: t.colors.background },
     saveErrorCard: { backgroundColor: withAlpha(t.colors.error, 0.12), borderColor: withAlpha(t.colors.error, 0.28) },
     saveErrorText: { ...t.type.caption, color: t.colors.textPrimary },
-    shareFooterBtn: { borderColor: t.colors.border, backgroundColor: 'transparent' },
-    shareFooterBtnText: { ...t.type.label, color: t.colors.textSecondary },
+    shareFooterBtn: { borderColor: withAlpha(t.colors.primary, alpha.strong), backgroundColor: t.colors.primaryBg },
+    shareFooterBtnText: { ...t.type.label, color: t.colors.primary },
     exerciseListRow: { borderBottomColor: t.colors.borderSubtle },
     exerciseListName: { ...t.type.label, color: t.colors.textPrimary },
     exerciseListMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
+    exerciseSetChip: { ...t.type.num('caption'), color: t.colors.textSecondary, backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },
     templateModalTitle: { ...t.type.title, color: t.colors.textPrimary },
     templateModalInput: { ...t.type.body },
     templateModalCancel: { borderColor: t.colors.border },

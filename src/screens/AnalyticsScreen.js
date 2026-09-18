@@ -8,7 +8,7 @@ import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 import { safeDate, safeFormatDate } from '../lib/safeFormat';
 
-import { colors, fontSize, fontWeight, spacing, radius, buildVolumeStatusColor, type, circle, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, buildVolumeStatusColor, type, circle, iconSize, withAlpha, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import Button from '../components/Button';
@@ -29,9 +29,6 @@ import { VOLUME_LANDMARKS, getVolumeStatus, calculateTonnage, buildLoadSemantics
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { localWeekStartMs } from '../lib/dayKey';
 import { computeTrainingPillarSummary, buildVisualPillarCopy } from '../lib/progress/pillars';
-import VolyumeChart from '../components/VolyumeChart';
-import { navigateCrossTab } from '../navigation/navigateCrossTab';
-import { readLatestDecision, decisionAgeCaption } from '../lib/coachLatestDecision';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -68,9 +65,7 @@ function recentMonthRecapParams(earliestWorkoutAt) {
 // sanctions.
 function trainingPillarCopy({ completedWorkoutCount, summary, lastSessionAt, unitsLabel, now = Date.now() }) {
   if (completedWorkoutCount === 0) {
-    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
-    // fact under 60 characters (spec 4.8), not a two-line apology.
-    return { state: 'No sessions yet', evidence: 'Your first session starts the record' };
+    return { state: 'No sessions logged yet', evidence: 'Log your first session to start your training evidence.' };
   }
   if (summary.trainedCount === 0) {
     const days = Number.isFinite(lastSessionAt) ? Math.max(0, Math.floor((now - lastSessionAt) / DAY_MS)) : null;
@@ -83,27 +78,20 @@ function trainingPillarCopy({ completedWorkoutCount, summary, lastSessionAt, uni
     ? `Strength up on ${summary.improvedCount} of ${summary.trainedCount} lift${summary.trainedCount === 1 ? '' : 's'} this month`
     : 'No new bests this month, holding steady';
   const best = summary.namedBests[0];
-  // D192 (one unit format): × not x; the space before the unit was already there.
   const evidence = best
-    ? `${best.exerciseName} ${formatNumber(Math.round(best.weight))} ${unitsLabel} × ${best.reps}, new best`
+    ? `${best.exerciseName} ${formatNumber(Math.round(best.weight))} ${unitsLabel} x ${best.reps}, new best`
     : 'Keep training to build your evidence trail.';
   return { state, evidence };
 }
 
-// Campaign 23 (§15/§22 R2): the Body pillar's copy is a compact two-line read
-// of the SAME weightTrend view-model this screen already holds
-// (useWeightTrend/deriveWeightTrend) -- no new derivation, only fields that
-// already exist. The full chart/maintenance detail stays one tap away in Body
-// metrics, on BodyMetricsScreen's own "Weight trend" EWMA card and "Effective
-// maintenance" card, which are fed by the same derivation.
-// D177 item 1 (2026-09-15): these two lines used to say a WeightTrendCard
-// component rendered the view-model here and on Body metrics. It renders in
-// neither place -- nothing in src/ imports that file.
+// Campaign 23 (§15/§22 R2): the Body pillar's copy is the SAME weightTrend
+// view-model WeightTrendCard already renders (useWeightTrend/deriveWeightTrend)
+// -- no new derivation, only a compact two-line read of fields that already
+// exist. The full chart/maintenance detail stays one tap away in BodyMetrics
+// (WeightTrendCard renders there unchanged).
 function bodyPillarCopy(weightTrend, bodyWeightUnits) {
   if (!weightTrend?.render) {
-    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
-    // fact under 60 characters (spec 4.8), not a two-line apology.
-    return { state: 'No weigh-ins yet', evidence: 'A morning weight starts your trend' };
+    return { state: 'No weigh-ins logged yet', evidence: 'Log a morning weight to start your trend.' };
   }
   const parts = [];
   if (weightTrend.state >= 2 && weightTrend.ewmaNow != null) {
@@ -115,40 +103,8 @@ function bodyPillarCopy(weightTrend, bodyWeightUnits) {
       parts.push(formatBodyWeightRate(weightTrend.weeklyChange, bodyWeightUnits));
     }
   }
-  const figure = parts.length ? parts.join(', ') : null;
-  // D192 finding 6, ED-safety carve-out -- DO NOT TOUCH. Under an open ED
-  // flag the vm has already withheld the rate (`showRate` false), and the
-  // narration/direction-only sentence is what this pillar has always shown
-  // as its headline; the same is true before a figure has built up at all
-  // (no reading to promote). Both branches return EXACTLY what this
-  // function returned before D192.
-  if (weightTrend.edFlagOpen || !figure) {
-    return { state: weightTrend.insight, evidence: figure };
-  }
-  // D192 finding 6: the founder's device render showed a two-sentence
-  // narration ("Your smoothed weight trend is updated. Maintenance comes
-  // from...") sitting in the headline slot, with the actual figure demoted
-  // to the line beneath it. The figure IS the reading, so it takes the
-  // headline; the second line is the short form of the trend's own
-  // sentence, one per branch of deriveWeightTrend, so the row reads the
-  // same way in every state. The reassurance ("nothing to change yet")
-  // travels with its reading rather than being cut for length: the trend
-  // never asks for action (its dot caps at watch), and the row must not
-  // either. The no-comparison sentence describes the mechanism, not the
-  // trend, so that state carries the figure alone. An unknown sentence
-  // (the vm's copy moved) falls to no line, never to the long form.
-  return { state: figure, evidence: BODY_ROW_READING[weightTrend.insight] || null };
+  return { state: weightTrend.insight, evidence: parts.length ? parts.join(', ') : null };
 }
-
-// The Body row's second line, keyed on the exact sentence deriveWeightTrend
-// returns (src/lib/weightTrend.js). Every line fits the row's text column
-// at bodySm on a 360 dp phone. Pinned by AnalyticsScreen.stateMatrix.
-const BODY_ROW_READING = Object.freeze({
-  'Still building confidence. Keep logging and this sharpens.': 'Still building confidence',
-  'Trending inside your target range. Calories hold.': 'Inside your target range. Calories hold',
-  'Drifting a little above your target range. Nothing to change yet.': 'A little above target. Nothing to change yet',
-  'Trending a little under your target. Nothing to change yet.': 'A little under target. Nothing to change yet',
-});
 
 export default function AnalyticsScreen({ navigation, route }) {
   const toast = useToast();
@@ -169,47 +125,7 @@ export default function AnalyticsScreen({ navigation, route }) {
   // closed under calm mode/open ED flag regardless of tier (usePhotoSuppression
   // inside the hook); only fetches scan data for a Pro user once suppression
   // is confirmed lifted.
-  // D177 item 2 (2026-09-15): this call passed `tier` as a second argument
-  // that useVisualPillar (src/hooks/useVisualPillar.js) does not take -- a
-  // residue of D137, when the product became fully free and tier stopped
-  // gating anything. Dropped, so the next person to add a second parameter
-  // does not inherit a caller silently feeding `tier` into it.
-  const visualPillar = useVisualPillar(user?.id);
-
-  // The smoothed series for the trend graph, and the weekly rate beside it.
-  // `formatBodyWeightRate` is the only path with no kg-to-stone-user bug; the
-  // engine's `deltaLabel` is kg-only because its units input is the immutable
-  // gym unit (D167 ruling 7). `showRate` is already false under an open ED
-  // flag, so the rate disappears there without a second condition here.
-  const trendLineData = useMemo(() => (weightTrend.ewmaData ?? [])
-    .map((p) => ({ value: p?.ewma }))
-    .filter((p) => Number.isFinite(p.value)), [weightTrend.ewmaData]);
-  const weightTrendRate = weightTrend.showRate && Number.isFinite(weightTrend.weeklyChange)
-    ? formatBodyWeightRate(weightTrend.weeklyChange, bodyWeightUnits)
-    : null;
-
-  // ── D165/D166 answer 1: the loud element on Progress is the DECISION. ──
-  //
-  // The founder chose it over a bodyweight numeral: "that last thing is the
-  // reason Volyume exists ... Volyume's proposition is: Your data tells you
-  // what to do next." It is also the only version of this screen where the
-  // loudest thing is something only Volyume produces; a bodyweight figure is
-  // a fact any scale gives you.
-  //
-  // `readLatestDecision` takes the sentence from `buildDecision` WHOLE, so the
-  // ED-pattern lockout stays its first branch (D166, binding). It also reports
-  // whether the week was really checked in, which is the app's existing test
-  // for a decision rather than a computation the engine happened to run.
-  const [decision, setDecision] = useState(null);
-  const [trendChartWidth, setTrendChartWidth] = useState(0);
-  useEffect(() => {
-    let alive = true;
-    if (!user?.id) { setDecision(null); return undefined; }
-    readLatestDecision(user.id)
-      .then((d) => { if (alive) setDecision(d); })
-      .catch(() => { if (alive) setDecision(null); });
-    return () => { alive = false; };
-  }, [user?.id]);
+  const visualPillar = useVisualPillar(user?.id, tier);
 
   // Founder device order 2026-08-17: the lifetime-tonnage landmark Moment
   // (the last survivor of the COMP-018 landmark family) is retired - it sat
@@ -338,47 +254,6 @@ export default function AnalyticsScreen({ navigation, route }) {
         {/* ── Header (R1) ───────────────────────────────────── */}
         <ScreenHeader title="Progress" />
 
-        {/* ── The decision (D165/D166 answer 1). The one loud element on this
-            screen, above the evidence for it. Rows on the canvas, never a
-            Card: a decision is a reading, not an object you can pick up
-            (law 2, as the founder corrected it).
-
-            It renders only when the week was genuinely checked in. An output
-            the engine computed for an unchecked-in week is not a decision --
-            that is the PM-06/D96 divergence `isCompletedCoachDecision` was
-            written to close, and this screen defers to it rather than forming
-            a second opinion.
-
-            D192 finding 1 (2026-09-18): the sentence used to set through
-            BigNumber at hero size -- a 30-word coaching decision became
-            eight lines of display type, the first thing the founder's
-            render showed. The finish spec's own amended rule (section 2)
-            settles it: the hero/display steps carry a NAME or a NUMBER,
-            never a sentence. It stays the screen's loud element in PLACE
-            (still first, still above the Answer Block) but drops to a
-            plain wrapping Text at h2 (22 SemiBold, textPrimary). Only the
-            rendering changed -- the read path above (readLatestDecision,
-            buildDecision whole, the ED-lockout branch first) is untouched. ── */}
-        {!loading && decision?.sentence && decision.isCompleted && (
-          <AnimatedEntrance>
-            <TouchableOpacity
-              style={styles.decisionBlock}
-              onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput'); }}
-              accessibilityRole="button"
-              accessibilityLabel={`This week's decision. ${decision.sentence}. Opens the full decision.`}
-              testID="progress-decision"
-            >
-              <SectionLabel tone="muted">This week&apos;s decision</SectionLabel>
-              <Text style={[styles.decisionSentence, live.decisionSentence]}>{decision.sentence}</Text>
-              {!!decisionAgeCaption(decision.weeksAgo) && (
-                <Text style={[styles.decisionAge, live.decisionAge]}>
-                  {decisionAgeCaption(decision.weeksAgo)}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </AnimatedEntrance>
-        )}
-
         {/* ── The Answer Block (R2, always): "am I actually making
             progress?" in one glance -- three compact pillar rows inside one
             container, never three hero cards (§26). No share CTA, no
@@ -387,21 +262,17 @@ export default function AnalyticsScreen({ navigation, route }) {
           <SkeletonCard height={168} />
         ) : (
           <AnimatedEntrance>
-            {/* D192 finding 2 (2026-09-18): the three pillar rows sat inside
-                a bordered, filled Card (surfaceElevated + a hairline
-                border) -- spec 4.3 draws a Row group with no box round it,
-                one hairline above. The row anatomy inside (overline,
-                headline, sub-line, glyph, chevron, the hairlines BETWEEN
-                rows) is unchanged, kept exactly as it already was per the
-                finish brief; only the surrounding shell is gone.
-
-                D3 (design audit 03) had the two internal dividers on
-                `border` because borderSubtle fell to 1.17:1 on the raised
-                surfaceElevated tier. That tier is gone; on the plain ground
-                the hairline token reads at 1.69:1 by design, so the
-                dividers sit on borderSubtle like every other row group in
-                the finish (spec 4.3). */}
-            <View style={[styles.answerBlock, live.answerBlock]}>
+            {/* D3 (design audit 03): the hero is the screen's ONLY elevated
+                object, so surfaceElevated ranks it above every flat surface
+                card in the stack. The Answer Block is what the Progress tab
+                is FOR -- it says where training, body and photos stand -- but
+                it rendered on plain `surface`, pixel-identical to each
+                session card listed beneath it, so the screen's answer had no
+                more weight than one row of its evidence. Its two internal
+                dividers deliberately stay on `border`: on the raised surface
+                borderSubtle falls to 1.17:1 and the three pillars would run
+                together. */}
+            <Card padding="none" surface="surfaceElevated" style={styles.answerBlock}>
               <PillarRow
                 icon="barbell-outline"
                 label="Training"
@@ -434,7 +305,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                   />
                 </>
               )}
-            </View>
+            </Card>
           </AnimatedEntrance>
         )}
 
@@ -457,58 +328,20 @@ export default function AnalyticsScreen({ navigation, route }) {
           />
         )}
 
-        {/* ── Empty state (D192 finding 4, 2026-09-18): this was a filled
-            panel -- glyph, title, a two-sentence paragraph naming three
-            destinations (body metrics, progress photos, scans). Spec 4.8
-            wants a day-zero empty state as one line, plain fact, no
-            illustration, no paragraph, no box. The destinations sentence
-            retires with the box; the pillar rows above already open Lift
-            progress / Body metrics / Progress photos directly, so nothing
-            it named is orphaned. */}
+        {/* ── Empty state (U-D-4: encouragement-framed, matching BodyMetrics) ──
+            C5-P35-01 (D96): the second sentence named three destinations
+            (body metrics, progress photos, scans) that were Pro-locked for a
+            free user with no history - the read-only guards probe a history
+            they do not have, so each tap lands on the hard gate.
+            FOUNDER DECISION (fully free, no tier split): every destination
+            is now genuinely open to every account, so there is one sentence,
+            not a tier fork. */}
         {!loading && !loadError && allSets.length === 0 && (
-          <Text style={[styles.trendsEmptyLine, live.trendsEmptyLine]}>Trends appear after your first sessions</Text>
-        )}
-
-        {/* ── The weight trend (D165, founder spec section 4c: "then a
-            restrained graph"). Progress had no weight chart at all -- it sat
-            one screen deeper in Body metrics -- so the tab that answers "am I
-            making progress?" could not show the shape of the answer.
-
-            Restraint is the point: one smoothed line, no axes, no grid, no
-            fill, the raw series faint behind it. NOT a Card (the R2/R3
-            ordering rule bans one here, and a trend is a reading rather than
-            an object you can pick up, law 2).
-
-            ED-SAFETY: the whole block inherits `weightTrend`, which returns
-            BEFORE computing states 2-4 when the flag is open -- no rate, no
-            maintenance figure, no dot, and direction-only copy. The headline
-            weight and the sparkline survive that branch by the existing
-            contract, which this does not widen. The rate follows the user's
-            own display units through `formatBodyWeightRate`, never the
-            engine's kg-only `deltaLabel` (D167 ruling 7). ── */}
-        {!loading && weightTrend.render && weightTrend.hasSparkline && trendLineData.length >= 2 && (
-          <View style={styles.trendBlock}>
-            <View style={styles.trendHeadRow}>
-              <SectionLabel tone="muted">Bodyweight</SectionLabel>
-              {!!weightTrendRate && (
-                <Text style={[styles.trendRate, live.trendRate]}>{weightTrendRate}</Text>
-              )}
-            </View>
-            <View
-              style={styles.trendChartWrap}
-              onLayout={(e) => setTrendChartWidth(e.nativeEvent.layout.width)}
-            >
-              {trendChartWidth > 0 && (
-                <VolyumeChart
-                  data={trendLineData}
-                  width={trendChartWidth}
-                  height={72}
-                  color={t.colors.borderLight}
-                  curved
-                />
-              )}
-            </View>
-          </View>
+          <EmptyState
+            icon="analytics-outline"
+            title="No training trends yet"
+            text="Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below."
+          />
         )}
 
         {/* ── Evidence trail (R3, cond: any sessions exist) ──────── */}
@@ -547,8 +380,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                 <SessionCard
                   key={w.id}
                   workout={w}
-                  onPressWithLayout={(rect) => navigation.navigate('WorkoutSummary', {
-                    __heroOrigin: rect || undefined,
+                  onPress={() => navigation.navigate('WorkoutSummary', {
                     workoutId: w.id,
                     durationMinutes: w.durationMinutes,
                     exerciseCount: exerciseIds.length,
@@ -606,7 +438,7 @@ export default function AnalyticsScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Open your monthly recap, about 45 seconds"
           >
-            <Ionicons name="newspaper-outline" size={18} color={t.colors.textSecondary} />
+            <Ionicons name="newspaper-outline" size={18} color={t.colors.primary} />
             <Text style={[styles.recapCardText, live.recapCardText]}>
               Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready - 45 seconds
             </Text>
@@ -629,22 +461,9 @@ export default function AnalyticsScreen({ navigation, route }) {
                 pillar rows above already cover the same destinations
                 (Body -> BodyMetrics, Training -> LiftProgress), so keeping
                 them in the grid too meant the Progress tab listed the same
-                two screens twice.
-
-                D192 finding 5 (2026-09-18): these were bordered tiles with
-                centred glyphs; spec 4.3 makes them rows (glyph, title, one
-                optional secondary line, chevron), the same anatomy as the
-                Answer Block's PillarRow, hairline between rows, no box
-                round the group. The Consistency glyph was the one
-                colour-as-decoration holdout here (`success` green marking
-                nothing live); it takes `textSecondary` like the other
-                three now (D174: colour means something, or it is not
-                spent). */}
-            <NavTile icon="pulse" color={t.colors.textSecondary} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
-            <View style={[styles.navDivider, live.navDivider]} />
-            {/* D192 (finish spec 3a, 2026-09-18): outline glyph, matching
-                every other glyph on this screen (was the sole filled "time"). */}
-            <NavTile icon="time-outline" color={t.colors.textSecondary} label="Full history" onPress={() => navigation.navigate('WorkoutHistory')} />
+                two screens twice. */}
+            <NavTile icon="pulse" color={t.colors.success} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
+            <NavTile icon="time" color={t.colors.textSecondary} label="Full history" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
               // COMP-005: Recaps replaces the year-long locked Year-of-Lifts
               // tile. It unlocks after 10 logged sessions (~a fortnight, not a
@@ -655,27 +474,24 @@ export default function AnalyticsScreen({ navigation, route }) {
               const recapUnlocked = completedWorkoutCount >= RECAP_GATE;
               const toGo = Math.max(0, RECAP_GATE - completedWorkoutCount);
               return (
-                <>
-                  <View style={[styles.navDivider, live.navDivider]} />
-                  <NavTile
-                    icon="newspaper-outline"
-                    color={t.colors.textSecondary}
-                    label="Recaps"
-                    locked={!recapUnlocked}
-                    lockedSub={`${toGo} session${toGo === 1 ? '' : 's'} to go`}
-                    onPress={() => {
-                      if (!recapUnlocked) {
-                        // R9 (D70): a blocking alert for purely informational
-                        // copy diverged from the house rule (toast for
-                        // non-destructive feedback; alerts for destructive
-                        // confirms only).
-                        toast.show(`Your first monthly recap is ready after ${RECAP_GATE} logged sessions. ${toGo} to go.`, { variant: 'info' });
-                        return;
-                      }
-                      navigation.navigate('RecapStory', recentMonthRecapParams(earliestWorkoutAt));
-                    }}
-                  />
-                </>
+                <NavTile
+                  icon="newspaper-outline"
+                  color={t.colors.textSecondary}
+                  label="Recaps"
+                  locked={!recapUnlocked}
+                  lockedSub={`${toGo} session${toGo === 1 ? '' : 's'} to go`}
+                  onPress={() => {
+                    if (!recapUnlocked) {
+                      // R9 (D70): a blocking alert for purely informational
+                      // copy diverged from the house rule (toast for
+                      // non-destructive feedback; alerts for destructive
+                      // confirms only).
+                      toast.show(`Your first monthly recap is ready after ${RECAP_GATE} logged sessions. ${toGo} to go.`, { variant: 'info' });
+                      return;
+                    }
+                    navigation.navigate('RecapStory', recentMonthRecapParams(earliestWorkoutAt));
+                  }}
+                />
               );
             })()}
             {(() => {
@@ -684,15 +500,12 @@ export default function AnalyticsScreen({ navigation, route }) {
               const unlocked = earliestWorkoutAt && (Date.now() - earliestWorkoutAt) >= YEAR_MS;
               if (!unlocked) return null;
               return (
-                <>
-                  <View style={[styles.navDivider, live.navDivider]} />
-                  <NavTile
-                    icon="calendar-outline"
-                    color={t.colors.textSecondary}
-                    label="Year of Lifts"
-                    onPress={() => navigation.navigate('YearOfLifts')}
-                  />
-                </>
+                <NavTile
+                  icon="calendar-outline"
+                  color={t.colors.textSecondary}
+                  label="Year of Lifts"
+                  onPress={() => navigation.navigate('YearOfLifts')}
+                />
               );
             })()}
             {/* The Partners tile is REMOVED (blueprint section 1, entry
@@ -724,7 +537,7 @@ function PillarRow({ icon, label, stateText, evidenceText, onPress }) {
       accessibilityRole="button"
       accessibilityLabel={a11y}
     >
-      <Ionicons name={icon} size={22} color={t.colors.textSecondary} />
+      <Ionicons name={icon} size={22} color={t.colors.primary} />
       <View style={styles.pillarTextWrap}>
         <View style={styles.pillarLabelRow}>
           <Text style={[styles.pillarLabel, live.pillarLabel]}>{label}</Text>
@@ -833,11 +646,7 @@ function VolumeSummaryStrip({ volume, loading, onPress, landmarksTable = null })
 // CP-10 batch G (2026-07-11): sibling function-component scope, own
 // useTheme() call (same reasoning as PillarRow above), same shared
 // buildLiveStyles(t).
-// D180 part 2 (origin-aware hero zoom): this row IS a completed session and
-// the screen it opens IS that session's summary, so the summary grows out of
-// the row it came from. `onPressWithLayout` hands back null when the handle
-// could not be measured, and the push is then the ordinary one.
-function SessionCard({ workout, onPressWithLayout }) {
+function SessionCard({ workout, onPress }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const name = workout.name || 'Session';
@@ -847,16 +656,14 @@ function SessionCard({ workout, onPressWithLayout }) {
   return (
     <Card
       style={styles.sessionCard}
-      onPressWithLayout={onPressWithLayout}
+      onPress={onPress}
       accessibilityLabel={`View summary for ${name}`}
     >
       <View style={styles.sessionLeft}>
         <Text style={[styles.sessionName, live.sessionName]} numberOfLines={1}>{name}</Text>
         <Text style={[styles.sessionMeta, live.sessionMeta]}>
           {at && safeDate(at) ? safeFormatDate(at, 'EEE d MMM') : ''}
-          {/* D192 (finish spec 3a, 2026-09-18): separator unified to the
-              app's one middot, replacing the stray hyphen. */}
-          {workout.durationMinutes ? ` · ${workout.durationMinutes} min` : ''}
+          {workout.durationMinutes ? ` - ${workout.durationMinutes}m` : ''}
         </Text>
       </View>
       {diff != null && (
@@ -872,19 +679,14 @@ function SessionCard({ workout, onPressWithLayout }) {
 }
 
 function NavTile({ icon, color, label, onPress, locked, lockedSub }) {
-  // `locked` = not-enough-data-yet (the Recaps countdown pattern): a dimmed
-  // row with a progress icon and a countdown sub-line, so it reads as "keep
+  // `locked` = not-enough-data-yet (the Recaps countdown pattern): dimmed
+  // tile, a progress icon and a countdown sub-line, so it reads as "keep
   // going" rather than a paywall. Tapping fires an inline explanation
   // rather than navigating. Used for features that need accumulated
   // training data (e.g. Recaps needs RECAP_GATE logged sessions).
   // FOUNDER DECISION (fully free, no tier split): the `pro` variant
   // (undimmed icon + PRO badge for a Pro-gated destination) is retired --
   // no tile on this screen is tier-gated any more.
-  // D192 finding 5 (2026-09-18): this was a centred, bordered tile; it is a
-  // row now (spec 4.3), the same anatomy as PillarRow above -- glyph left,
-  // title, one optional secondary line, chevron, no border/fill/radius of
-  // its own. Hairlines between rows are drawn by the caller (matching the
-  // Answer Block's own `answerDivider` pattern), never by this component.
   // CP-10 batch G (2026-07-11): sibling function-component scope, own
   // useTheme() call (same reasoning as PillarRow above), same shared
   // buildLiveStyles(t). `color` arrives pre-resolved from the caller
@@ -894,7 +696,7 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <TouchableOpacity
-      style={[styles.navTile, locked && styles.navTileLocked]}
+      style={[styles.navTile, live.navTile, locked && styles.navTileLocked]}
       // R9 (D70): NavTile presses join the app's haptic vocabulary.
       onPress={() => { haptics.selection(); onPress?.(); }}
       activeOpacity={0.75}
@@ -907,13 +709,12 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub }) {
         size={22}
         color={locked ? t.colors.textMuted : color}
       />
-      <View style={styles.navTileTextWrap}>
+      <View style={styles.navTileLabelRow}>
         <Text style={[styles.navTileLabel, live.navTileLabel, locked && [styles.navTileLabelLocked, live.navTileLabelLocked]]}>{label}</Text>
-        {locked && lockedSub ? (
-          <Text style={[styles.navTileSub, live.navTileSub]} numberOfLines={1}>{lockedSub}</Text>
-        ) : null}
       </View>
-      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+      {locked && lockedSub ? (
+        <Text style={[styles.navTileSub, live.navTileSub]} numberOfLines={1}>{lockedSub}</Text>
+      ) : null}
     </TouchableOpacity>
   );
 }
@@ -944,22 +745,8 @@ const styles = StyleSheet.create({
   rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
   // ── Answer Block (R2) ──
-  decisionBlock: { gap: spacing.xs },
-  trendBlock: { gap: spacing.xs },
-  trendHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  trendRate: { ...type.num('bodySm'), color: colors.textSecondary },
-  trendChartWrap: { width: '100%' },
-  // D192 finding 1: the decision sentence itself, at h2 -- the hero/display
-  // steps carry a name or a number, never a sentence.
-  decisionSentence: { ...type.h2, color: colors.textPrimary },
-  decisionAge: { ...type.bodySm, color: colors.textSecondary },
-  // D192 finding 2: no box round the pillar-row group, one hairline above.
-  // The dividers between rows sit on the hairline token too: D3's reason
-  // for `border` (borderSubtle at 1.17:1 on the raised surface) died with
-  // the raised surface, and every row group in the finish draws its
-  // hairlines on borderSubtle (spec 4.3) -- one language, not two.
-  answerBlock: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle },
-  answerDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
+  answerBlock: {},
+  answerDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   pillarRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
@@ -970,18 +757,14 @@ const styles = StyleSheet.create({
   pillarState: { ...type.bodyStrong, color: colors.textPrimary },
   pillarEvidence: { ...type.bodySm, color: colors.textSecondary },
 
-  // D192 finding 4: replaces the boxed "No training trends yet" EmptyState
-  // with one plain-fact line, no box, no glyph, no title.
-  trendsEmptyLine: { ...type.bodySm, color: colors.textSecondary },
-
   // ── Evidence trail (R3) ──
   adherenceLine: { ...type.caption, color: colors.textMuted },
 
   // ── Moments (R5) ──
   recapCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    backgroundColor: colors.surface, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: colors.primaryBg, borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   recapCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
@@ -1017,33 +800,35 @@ const styles = StyleSheet.create({
   // report), so the raw weight stays rather than dropping emphasis.
   diffText:     { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
 
-  // ── Utilities (R6) ── D192 finding 5: rows now (spec 4.3), the same
-  // anatomy as PillarRow above -- no border/fill/radius of their own,
-  // hairlines between rows drawn by the caller.
-  navGrid: { flexDirection: 'column' },
+  // ── Utilities (R6) ──
+  navGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   navTile: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    paddingVertical: spacing.md,
+    flex: 1, minWidth: '45%',
+    backgroundColor: colors.surface, borderRadius: radius.lg,
+    padding: spacing.lg, alignItems: 'center', gap: spacing.sm,
+    borderWidth: 1, borderColor: colors.border,
   },
-  navTileTextWrap: { flex: 1, gap: spacing.xxs },
-  // RE-ANCHORED 2026-09-18 (D192, finding 5): a Row's title takes the
-  // `title` role (spec section 2: "every row title, card title, button
-  // label"), not the small centred caption role a tile used.
+  navTileLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  // R2 (cohesion sweep, 2026-07-11): the raw fontSize.xs + fontWeight.semibold
+  // pair maps exactly onto type.captionStrong (the named xs+semibold role for
+  // small non-uppercase data-adjacent labels), so it joins the shared type
+  // system instead of a hand-rolled pair.
   navTileLabel: {
-    ...type.title,
-    color: colors.textPrimary,
+    ...type.captionStrong,
+    color: colors.textSecondary, textAlign: 'center',
   },
-  // Not-enough-data-yet row variant (Recaps countdown pattern, T6): dimmed
+  // Not-enough-data-yet tile variant (Recaps countdown pattern, T6): dimmed
   // while a feature is still accumulating data (e.g. Recaps needs
   // RECAP_GATE logged sessions). Never used for a Pro lock, which stays
   // undimmed with a PRO badge instead, so the two states never look alike.
   navTileLocked: { opacity: 0.55 },
   navTileLabelLocked: { color: colors.textMuted },
   navTileSub: {
-    ...type.bodySm,
+    ...type.num('caption'),
     color: colors.textMuted,
+    marginTop: spacing.xxs,
+    textAlign: 'center',
   },
-  navDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.borderSubtle },
 });
 
 // CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
@@ -1057,17 +842,12 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    decisionSentence: { ...t.type.h2, color: t.colors.textPrimary },
-    decisionAge: { ...t.type.bodySm, color: t.colors.textSecondary },
-    answerBlock: { borderTopColor: t.colors.borderSubtle },
-    trendRate: { ...t.type.num('bodySm'), color: t.colors.textSecondary },
-    answerDivider: { backgroundColor: t.colors.borderSubtle },
+    answerDivider: { backgroundColor: t.colors.border },
     pillarLabel: { ...t.type.overline, color: t.colors.textMuted },
     pillarState: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     pillarEvidence: { ...t.type.bodySm, color: t.colors.textSecondary },
-    trendsEmptyLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     adherenceLine: { ...t.type.caption, color: t.colors.textMuted },
-    recapCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    recapCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     recapCardText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     volEmptyText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     volSummaryCount: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
@@ -1077,12 +857,9 @@ function buildLiveStyles(t) {
     sessionName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     sessionMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
     diffText: { fontSize: t.fontSize.xs },
-    // D192 finding 5: navTile is a plain row now (no fill/border of its
-    // own), so it has no live twin left to mirror -- the old
-    // backgroundColor/borderColor entry is dead code, dropped with it.
-    navTileLabel: { ...t.type.title, color: t.colors.textPrimary },
+    navTile: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    navTileLabel: { ...t.type.captionStrong, color: t.colors.textSecondary },
     navTileLabelLocked: { color: t.colors.textMuted },
-    navTileSub: { ...t.type.bodySm, color: t.colors.textMuted },
-    navDivider: { backgroundColor: t.colors.borderSubtle },
+    navTileSub: { ...t.type.num('caption'), color: t.colors.textMuted },
   };
 }
