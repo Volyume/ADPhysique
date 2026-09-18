@@ -919,7 +919,11 @@ describe('State matrix — S16: check-in due on the scheduled day', () => {
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    expect(REGION.todayLineText(tree)).toBe("Your weekly check-in is ready. It shapes this week's coaching decision.");
+    // RE-ANCHORED 2026-09-18 (D192, day zero 1d): the check-in Today-line
+    // copy is trimmed again to the fact alone (finish spec 4.7). Intent
+    // kept: the weekly check-in still occupies the Today line on its
+    // scheduled day.
+    expect(REGION.todayLineText(tree)).toBe("Your weekly check-in is ready");
     // The old bottom-of-screen nudge idiom is gone; this is the only mention.
     expect(flattenText(tree)).not.toMatch(/It's your check-in day/);
   });
@@ -1012,6 +1016,10 @@ describe('Presentation guard — R2 single occupancy at the HomeScreen fact-feed
     expect(findByTestID(tree, 'today-line').length).toBe(1);
     expect(REGION.todayLineText(tree)).toBe("Block finished. Choose what comes next.");
     expect(flattenText(tree)).not.toContain('1999 kcal');
-    expect(flattenText(tree)).not.toBe("Your weekly check-in is ready. It shapes this week's coaching decision.");
+    // RE-ANCHORED 2026-09-18 (D192, day zero 1d): the losing check-in
+    // occupant's text is the trimmed one-sentence copy now. Intent kept:
+    // whichever copy check-in carries, it never leaks through when
+    // block-complete (rank 2) wins.
+    expect(flattenText(tree)).not.toBe("Your weekly check-in is ready");
   });
 });

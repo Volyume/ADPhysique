@@ -642,7 +642,9 @@ export default function AnalyticsScreen({ navigation, route }) {
                 spent). */}
             <NavTile icon="pulse" color={t.colors.textSecondary} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
             <View style={[styles.navDivider, live.navDivider]} />
-            <NavTile icon="time" color={t.colors.textSecondary} label="Full history" onPress={() => navigation.navigate('WorkoutHistory')} />
+            {/* D192 (finish spec 3a, 2026-09-18): outline glyph, matching
+                every other glyph on this screen (was the sole filled "time"). */}
+            <NavTile icon="time-outline" color={t.colors.textSecondary} label="Full history" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
               // COMP-005: Recaps replaces the year-long locked Year-of-Lifts
               // tile. It unlocks after 10 logged sessions (~a fortnight, not a
@@ -852,7 +854,9 @@ function SessionCard({ workout, onPressWithLayout }) {
         <Text style={[styles.sessionName, live.sessionName]} numberOfLines={1}>{name}</Text>
         <Text style={[styles.sessionMeta, live.sessionMeta]}>
           {at && safeDate(at) ? safeFormatDate(at, 'EEE d MMM') : ''}
-          {workout.durationMinutes ? ` - ${workout.durationMinutes} min` : ''}
+          {/* D192 (finish spec 3a, 2026-09-18): separator unified to the
+              app's one middot, replacing the stray hyphen. */}
+          {workout.durationMinutes ? ` · ${workout.durationMinutes} min` : ''}
         </Text>
       </View>
       {diff != null && (

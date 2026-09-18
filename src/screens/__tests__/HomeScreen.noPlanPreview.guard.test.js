@@ -15,7 +15,11 @@ const HOME = fs.readFileSync(path.join(__dirname, '..', 'HomeScreen.js'), 'utf8'
 describe('HomeScreen no-plan empty state previews before it commits', () => {
   test('the action prepares a preview and opens the shared sheet', () => {
     expect(HOME).toMatch(/import \{ prepareStartWithPlan, commitStartWithPlan \} from '\.\.\/lib\/startWithPlan'/);
-    expect(HOME).toMatch(/onAction=\{handleStartWithPlanPress\}/);
+    // RE-ANCHORED 2026-09-18 (D192, day zero 1a): the no-plan state's
+    // "Start with a plan" action is a direct Button now (`onPress`), not
+    // the shared EmptyState primitive (`onAction`) -- finish spec 1a.
+    // Intent kept: the same handler still fires from the same tap.
+    expect(HOME).toMatch(/onPress=\{handleStartWithPlanPress\}/);
     expect(HOME).toMatch(/prepareStartWithPlan\(user\.id, userProfile, \{ mode: 'first' \}\)/);
     expect(HOME).toMatch(/setPlanPreview\(\{ preview: prep\.preview, otherPlansCount: prep\.otherPlansCount \}\)/);
     expect(HOME).toMatch(/confirmLabel="Start this plan"/);
@@ -37,7 +41,12 @@ describe('HomeScreen no-plan empty state previews before it commits', () => {
   });
 
   test('the empty state offers the library as a real second action', () => {
-    expect(HOME).toMatch(/secondaryLabel="Browse plans"/);
+    // RE-ANCHORED 2026-09-18 (D192, day zero 1a): the no-plan state is no
+    // longer the shared EmptyState primitive (whose `secondaryLabel` prop
+    // this matched) -- it is two direct Buttons in the hero slot's own Card
+    // (finish spec 1a). Intent kept: a real, second, secondary-variant
+    // action labelled "Browse plans" that opens the library, still present.
+    expect(HOME).toMatch(/title="Browse plans"/);
     expect(HOME).toMatch(/navigateCrossTab\(navigation, 'PlansTab', 'PlanLibrary'\)/);
   });
 });

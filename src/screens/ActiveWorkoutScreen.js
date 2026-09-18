@@ -4195,13 +4195,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const pos = circuitRound.targetRounds
         ? `Round ${circuitRound.round} of ${circuitRound.targetRounds}`
         : `Round ${circuitRound.round}`;
-      return `${pos} - Circuit`;
+      return `${pos} · Circuit`;
     }
     const pos = targetSets ? `Set ${workingLogged + 1} of ${targetSets}` : `Set ${workingLogged + 1}`;
     const mode = (currentSGI != null && pairedExerciseName)
       ? 'Superset'
       : (SET_TYPE_OPTIONS.find(o => o.value === currentSet.setType)?.label ?? 'Working');
-    return `${pos} - ${mode}`;
+    // D192 (finish spec 3b, 2026-09-18): both the position-mode separator and
+    // the mode-range separator (NowCard.js's own positionLabel/
+    // targetRangeLabel join) are now the one middot -- this line used to be
+    // the sole hyphen against NowCard's already-middot join.
+    return `${pos} · ${mode}`;
   })();
 
   // stalledAdvice (the 3-session same-weight nudge with its hard-coded,

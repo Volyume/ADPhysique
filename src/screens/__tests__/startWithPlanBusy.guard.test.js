@@ -38,29 +38,44 @@ function checkScreen(name, source) {
     expect(body).toMatch(/if \(startWithPlanRef\.current\) return;\s*\n\s*startWithPlanRef\.current = true;\s*\n\s*setPreparingPlan\(true\);/);
     expect(body).toMatch(/finally \{\s*\n\s*startWithPlanRef\.current = false;\s*\n\s*setPreparingPlan\(false\);\s*\n\s*\}/);
   });
-
-  test(`${name} passes preparingPlan to the no-plan EmptyState as busy`, () => {
-    expect(source).toMatch(/onAction=\{handleStartWithPlanPress\}[\s\S]{0,200}busy=\{preparingPlan\}/);
-  });
 }
 
 describe('HomeScreen "Start with a plan" shows it is working', () => {
   checkScreen('HomeScreen', HOME);
+
+  // RE-ANCHORED 2026-09-18 (D192, day zero 1a): the no-plan state's "Start
+  // with a plan" is a direct Button now, inside the hero slot's own Card
+  // (finish spec 1a), not the shared EmptyState primitive -- `onPress`/
+  // `loading` in place of `onAction`/`busy`. Intent kept: the SAME handler
+  // still shows it is working while preparingPlan is true.
+  test('HomeScreen passes preparingPlan to the "Start with a plan" Button as loading', () => {
+    expect(HOME).toMatch(/onPress=\{handleStartWithPlanPress\}[\s\S]{0,200}loading=\{preparingPlan\}/);
+  });
 });
 
 describe('PlansScreen "Start with a plan" shows it is working', () => {
   checkScreen('PlansScreen', PLANS);
+
+  test('PlansScreen passes preparingPlan to the no-plan EmptyState as busy', () => {
+    expect(PLANS).toMatch(/onAction=\{handleStartWithPlanPress\}[\s\S]{0,200}busy=\{preparingPlan\}/);
+  });
 });
 
 describe('the secondary action stays enabled while preparingPlan is true', () => {
-  test('neither screen guards "Browse plans" onSecondary behind preparingPlan (ruling: keep it enabled)', () => {
-    // The onSecondary handlers must not reference preparingPlan at all --
+  test('neither screen guards "Browse plans" behind preparingPlan (ruling: keep it enabled)', () => {
+    // The secondary handlers must not reference preparingPlan at all --
     // guarding them would disable the one exit a stuck preview attempt has.
-    const homeSecondary = HOME.match(/onSecondary=\{[^}]*\}/);
-    const plansSecondary = PLANS.match(/onSecondary=\{[^}]*\}/);
+    // RE-ANCHORED 2026-09-18 (D192, day zero 1a): HomeScreen's "Browse
+    // plans" is a direct Button's `onPress` now, not an EmptyState
+    // `onSecondary` -- anchored on its own title so it cannot accidentally
+    // match the UNRELATED `onSecondary` still carried by the "Your plan has
+    // no sessions yet" EmptyState two branches up (which never referenced
+    // preparingPlan either, but is not what this test is about).
+    const homeSecondary = HOME.match(/title="Browse plans"[\s\S]{0,150}onPress=\{([^}]*)\}/);
+    const plansSecondary = PLANS.match(/onSecondary=\{([^}]*)\}/);
     expect(homeSecondary).not.toBeNull();
     expect(plansSecondary).not.toBeNull();
-    expect(homeSecondary[0]).not.toMatch(/preparingPlan/);
-    expect(plansSecondary[0]).not.toMatch(/preparingPlan/);
+    expect(homeSecondary[1]).not.toMatch(/preparingPlan/);
+    expect(plansSecondary[1]).not.toMatch(/preparingPlan/);
   });
 });

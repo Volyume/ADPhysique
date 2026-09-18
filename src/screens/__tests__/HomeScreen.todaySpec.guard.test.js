@@ -66,10 +66,17 @@ describe('law 1: one loud thing, and it is the session', () => {
     // BigNumber; the block-complete and week-complete branches are sentences
     // and set in h2 through `heroSentence`. Still one loud fact per branch,
     // still one branch on screen at a time.
+    // RE-ANCHORED 2026-09-18 (D192, day zero 1a): the no-plan branch's title
+    // ("No active plan yet") is a THIRD sentence set the same way, inside
+    // the hero slot's own Card (finish spec 1a) rather than the retired
+    // EmptyState. Intent kept: still a name/number OR an h2 sentence per
+    // branch, never both, and still exactly one branch on screen at a time
+    // (a ternary alternative, not a fourth simultaneous loud thing).
     expect((HOME.match(/<BigNumber/g) || []).length).toBe(1);
-    expect((HOME.match(/styles\.heroSentence/g) || []).length).toBe(2);
+    expect((HOME.match(/styles\.heroSentence/g) || []).length).toBe(3);
     expect(HOME).toContain('<Text style={[styles.heroSentence, live.heroSentence]}>Every week of this block is done</Text>');
     expect(HOME).toContain('<Text style={[styles.heroSentence, live.heroSentence]}>Every session done this week</Text>');
+    expect(HOME).toContain('<Text style={[styles.heroSentence, live.heroSentence]}>No active plan yet</Text>');
     expect((HOME.match(/\) : blockAwaitingDecision \? \(/g) || []).length).toBe(1);
   });
 

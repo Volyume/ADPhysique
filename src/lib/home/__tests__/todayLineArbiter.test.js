@@ -96,7 +96,11 @@ describe('todayLineArbiter — each rank in isolation', () => {
   it('rank 4: check-in due — one sentence, no scan subline (copy item 5)', () => {
     const result = resolveTodayLine({ checkIn: { eligible: true, onPress: noop, onDismiss: noop } });
     expect(result.key).toBe('check_in');
-    expect(result.text).toBe("Your weekly check-in is ready. It shapes this week's coaching decision.");
+    // RE-ANCHORED 2026-09-18 (D192, day zero 1d): trimmed again to the fact
+    // alone (finish spec 4.7: "the line is a fact; the tap is the
+    // explanation"). Intent kept: rank 4 still carries exactly one sentence,
+    // with no scan or skipping language.
+    expect(result.text).toBe("Your weekly check-in is ready");
     expect(result.text).not.toMatch(/scan/i);
     expect(result.text).not.toMatch(/skipping/i);
   });

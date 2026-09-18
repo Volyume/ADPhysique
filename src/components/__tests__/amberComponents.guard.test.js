@@ -304,6 +304,16 @@ const SURVIVORS = {
     { line: 'applyBtn: { backgroundColor: t.colors.primaryFill },',
       why: 'The live twin of that committing button; both halves must move together.' },
   ],
+  // ADDED 2026-09-18 (D192, day zero 2c): "Add food" becomes the diary's
+  // one committing action on the day-zero row -- full width, amber leading
+  // glyph via the per-instance `iconFg`, fill neutral. The same D191
+  // pattern Today's "Start workout" already carries (amberScreensAM.guard.
+  // test.js's HomeScreen.js entry), on a component this time rather than a
+  // screen, so it is pinned here rather than there.
+  'food/EmptyDiary.js': [
+    { line: 'iconFg={t.colors.primary}',
+      why: 'The diary\'s one committing action ("Add food" on the day-zero row), marked the same way D191 marks Today\'s "Start workout": the leading glyph alone, fill neutral.' },
+  ],
   'food/RecipeDetailSheet.js': [
     { line: '<ActivityIndicator size="small" color={t.colors.primary} />',
       why: "An ActivityIndicator, which D174's KEEP list names outright." },
@@ -398,7 +408,10 @@ describe('D174/D175/D176/D178: every amber site left in src/components is a reco
     // outline (not yet trained) and a fill (trained). Both are today's.
     // 60 with D187, which took the avatar preset glyph's amber fallback out
     // of ProfileAvatarMark.js entirely (the presets lose `tone`; ink now).
-    expect(total).toBe(60);
+    // 61 with D192 (2026-09-18): food/EmptyDiary.js's day-zero "Add food"
+    // gains the same per-instance `iconFg` mark Today's "Start workout"
+    // carries (one new survivor line, see the table above).
+    expect(total).toBe(61);
     const community = LANE.filter((f) => f.startsWith('community/'))
       .reduce((n, f) => n + amberLines(f).length, 0);
     expect(community).toBe(11);

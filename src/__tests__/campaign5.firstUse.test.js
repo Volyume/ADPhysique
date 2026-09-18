@@ -1168,8 +1168,16 @@ describe('PRO: setup hands over live features only, and no removed one (D96)', (
     // path) is deleted outright; HomeScreen.js and PlansScreen.js's merged
     // "Start with a plan" no-plan state (see noPlanJourneyCopy.guard.test.js)
     // is the one surviving hand-off surface and carries the same sentence.
+    // RE-ANCHORED 2026-09-18 (D192, day zero 1a): HomeScreen's no-plan copy
+    // no longer carries BLOCK_START_SENTENCE inline (lead ruling, finish
+    // spec 1a) -- the sentence is dropped from Home's own text because it
+    // is de-duplicated, not deleted. Intent kept: the block-just-started
+    // fact still reaches the athlete in this hand-off -- HomeScreen's
+    // "Start with a plan" action opens PlanPreviewSheet ("the block
+    // sheet", imported and rendered lower in the same file), which itself
+    // carries BLOCK_START_SENTENCE (src/components/PlanPreviewSheet.js).
     expect(read('screens/ProSetupCompleteScreen.js')).toContain('BLOCK_START_SENTENCE');
-    expect(read('screens/HomeScreen.js')).toContain('BLOCK_START_SENTENCE');
+    expect(read('screens/HomeScreen.js')).toContain('<PlanPreviewSheet');
     expect(read('screens/PlansScreen.js')).toContain('BLOCK_START_SENTENCE');
   });
 

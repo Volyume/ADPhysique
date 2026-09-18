@@ -2292,7 +2292,13 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     alignItems: 'stretch',
   },
-  summaryVerdictOverline: { ...type.overline, color: colors.textMuted },
+  // D192 (finish spec 3c, 2026-09-18): the card's own `gap: spacing.md`
+  // spaces every pair of these three Texts evenly; the overline sits
+  // tighter against its headline (spacing.xs), the same correction Today's
+  // hero card makes on its own eyebrow-to-name pair (HomeScreen.js
+  // heroName/heroSentence) -- a margin on one of the two elements rather
+  // than a new wrapping View. Headline-to-sub keeps the card's spacing.md.
+  summaryVerdictOverline: { ...type.overline, color: colors.textMuted, marginBottom: spacing.xs - spacing.md },
   summaryVerdictHeadline: { ...type.h2, color: colors.textPrimary },
   summaryVerdictSub: { ...type.bodySm, color: colors.textSecondary },
   verdictRow: {

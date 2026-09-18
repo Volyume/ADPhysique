@@ -57,7 +57,11 @@ describe('HomeScreen check-in nudge -> Today line rank 4 (Campaign 22 Phase 2 St
     const ARBITER = fs.readFileSync(
       path.resolve(__dirname, '../../lib/home/todayLineArbiter.js'), 'utf8',
     );
-    expect(ARBITER).toContain("text: \"Your weekly check-in is ready. It shapes this week's coaching decision.\"");
+    // RE-ANCHORED 2026-09-18 (D192, day zero 1d): the arbiter's one-sentence
+    // copy is trimmed again to the fact alone ("the line is a fact; the tap
+    // is the explanation", finish spec 4.7). Intent kept: the arbiter itself
+    // still owns the exact copy string, not HomeScreen.
+    expect(ARBITER).toContain("text: \"Your weekly check-in is ready\"");
     // The occupant TEXT itself (what actually renders) never mentions the
     // scan invitation, even though the module's own explanatory comments
     // discuss why it was dropped (checked directly against the resolver's

@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, iconSize, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { touchTarget } from '../styles/layout';
 import ScreenHeader from '../components/ScreenHeader';
@@ -105,7 +105,6 @@ import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, buildLoadSemanticsById, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
 import { buildReadinessSummary } from '../lib/readinessSummary';
-import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -233,9 +232,11 @@ export default function HomeScreen({ navigation, route }) {
     activationBannerBody: { ...t.type.bodySm, color: t.colors.textMuted },
     phaseBanner: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     phaseBannerText: { ...t.type.captionTight, color: t.colors.textSecondary },
-    quickStartCard: { borderTopColor: t.colors.borderSubtle },
-    quickStartIcon: { backgroundColor: t.colors.surface2 },
-    quickStartTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    // D192 (finish spec 1b): the boxed-icon circle is gone, so its live
+    // twin (quickStartIcon) goes with it; the row now spends its type on
+    // title (16 semibold) rather than bodyStrong.
+    quickStartCard: { borderTopColor: t.colors.borderSubtle, borderBottomColor: t.colors.borderSubtle },
+    quickStartTitle: { ...t.type.title, color: t.colors.textPrimary },
     quickStartSub: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
   // S15#7 readiness chip's tone colours, built live so it stays in the same
@@ -2765,31 +2766,54 @@ export default function HomeScreen({ navigation, route }) {
         ) : (
           <View style={styles.noPlanSection}>
             {/* FOUNDER DECISION (fully free, no tier split): the free
-                no-plan branch (FreeStarter quiz) is retired -- the full-tier
-                EmptyState below is the only no-plan state now, via the
-                shared EmptyState primitive (D1 sweep, DD40). */}
-            <EmptyState
-              icon="barbell-outline"
-              title="No active plan yet"
-              /* C5-P10-01 (D96): the "Start with a plan" action creates a
-                 training block too, so it says so first. */
-              /* D141 item 10a: unified with PlansScreen's own no-plan copy.
-                 Voice rule applied: COACHING_VOICE_SYNTHESIS_LOCKED.md
-                 addendum "actor-naming rule (two registers)" (line ~836) --
-                 "Volyume" names the app only (saving, syncing, reminders),
-                 never the coaching decider; building the plan is Precision
-                 Coaching's call, so the actor here is "your coach", the
-                 locked informal actor for running prose (line ~829-830),
-                 not "Volyume" and not collaborative "we". Noun unified to
-                 "setup" (was "setup" here already, "profile" on Plans).
-                 Home's own extra clause (the cloud-arrival note) is kept. */
-              text={`Start with a plan and your coach builds one from your setup. If you just signed in on this phone, your existing plan may still be arriving. ${BLOCK_START_SENTENCE}`}
-              actionLabel="Start with a plan"
-              onAction={handleStartWithPlanPress}
-              busy={preparingPlan}
-              secondaryLabel="Browse plans"
-              onSecondary={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary'); }}
-            />
+                no-plan branch (FreeStarter quiz) is retired -- this is the
+                only no-plan state now.
+                D192 (finish spec 1a, 2026-09-18, founder device verdict on
+                build 3583): the "No active plan yet" EmptyState (a large
+                glyph, a four-sentence paragraph, two buttons) is named
+                directly as part of "day zero never designed". It is
+                replaced by the SAME anatomy every other hero state on this
+                screen uses -- title + one line inside the hero slot's own
+                Card, left-aligned, no glyph -- rather than the shared
+                EmptyState primitive (still used two branches up, for "Your
+                plan has no sessions yet", which is unchanged).
+                The six-week block sentence (BLOCK_START_SENTENCE) is
+                dropped from here: PlanPreviewSheet ("the block sheet",
+                rendered below and opened by this SAME "Start with a plan"
+                action) already carries it, so nothing is lost, only
+                de-duplicated. The former "may still be arriving" sentence
+                is also dropped, per the rule's own fallback: HomeScreen has
+                no pull-IN-PROGRESS flag to gate it on. `cloudSyncVersion`
+                (read above, S15#7) only increments AFTER a pull finishes
+                (success or error alike); `cloudSyncStatus` is written here
+                via imperative `getState()` calls in `handleRefresh` below
+                but never subscribed to for render (the reactive "restoring"
+                banner that once read it was already removed, per the
+                comment on the cloud-restore banner further down this
+                file) -- so there is no existing flag to read, and the rule
+                says drop the sentence rather than invent one. */}
+            <Card surface="surfaceElevated" style={styles.heroCard}>
+              <Text style={[styles.heroSentence, live.heroSentence]}>No active plan yet</Text>
+              <Text style={[styles.todayFact, live.todayFact]}>Your coach builds a plan from your setup</Text>
+              <View style={styles.heroActions}>
+                <Button
+                  title="Start with a plan"
+                  onPress={handleStartWithPlanPress}
+                  loading={preparingPlan}
+                  size="md"
+                  fullWidth={false}
+                  accessibilityLabel="Start with a plan"
+                />
+                <Button
+                  title="Browse plans"
+                  variant="secondary"
+                  size="md"
+                  fullWidth={false}
+                  onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary'); }}
+                  accessibilityLabel="Browse plans"
+                />
+              </View>
+            </Card>
 
             {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §7/§17 R5,
                 the 3-way duplication fix): "Progress at a glance" is
@@ -2802,18 +2826,20 @@ export default function HomeScreen({ navigation, route }) {
 
             {/* FOUNDER DECISION (fully free, no tier split): everyone keeps
                 the quick-start escape hatch while cloud restore lands; the
-                Free-only text-link variant is retired. */}
+                Free-only text-link variant is retired.
+                D192 (finish spec 1b, 2026-09-18): the boxed glyph circle and
+                three-line paragraph become a plain row (spec 4.3): a 20 dp
+                unboxed glyph, one secondary line, hairline above and below.
+                Same handler and accessibility label. */}
             <PressableCard
               style={[styles.quickStartCard, live.quickStartCard]}
               onPress={() => startBlankSession()}
               accessibilityLabel="Start your first workout"
             >
-              <View style={[styles.quickStartIcon, live.quickStartIcon]}>
-                <Ionicons name="barbell-outline" size={28} color={t.colors.textSecondary} />
-              </View>
+              <Ionicons name="barbell-outline" size={iconSize.md} color={t.colors.textSecondary} />
               <View style={{ flex: 1 }}>
                 <Text style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
-                <Text style={[styles.quickStartSub, live.quickStartSub]}>Log your sets as you go. You don't need a plan to start, and next time Volyume will start you at the weights you log today.</Text>
+                <Text style={[styles.quickStartSub, live.quickStartSub]}>Log your sets as you go, no plan needed</Text>
               </View>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </PressableCard>
@@ -3499,6 +3525,15 @@ const styles = StyleSheet.create({
 
   // No plan, plan-first section
   noPlanSection: { gap: spacing.md },
+  // D192 (finish spec 1a): the no-plan hero card's two buttons -- left-
+  // aligned (law 2: this is a screen section, not a dialog, so it never
+  // centres), wrapping if the labels ever need the room.
+  heroActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+  },
 
   // Campaign 22 Phase 2 Stage 2 (§7/§17 R5): "Progress at a glance" removed,
   // absorbed into the last-session row (3-way duplication fix).
@@ -3796,36 +3831,30 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.xs,
   },
 
-  // Quick-start card (empty state fast path)
-  // D165 law 2: a callout, not an object -- no box, a borderSubtle hairline above (D171/D172).
+  // Quick-start row (empty state fast path).
+  // D192 (2026-09-18, finish spec 1b/4.3): a plain row, not a callout card --
+  // the boxed glyph circle and three-line paragraph both go. 56 dp, a
+  // hairline above AND below (borderSubtle), so it reads as one row in the
+  // section rather than an object of its own (was: D165 law 2's callout,
+  // padding.lg on all sides with a hairline above only).
   quickStartCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    // D174: a quick-start card is a callout, not the user's live moment. The
-    // wash and the tinted edge both go; the hairline carries the card. (D3's
-    // note here said the edge was tinted "not a solid amber border" -- that
-    // was the amber-inflation rule of its day; the ceiling is tighter now.)
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
+    minHeight: 56,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle,
-  },
-  quickStartIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: circle(48),
-    backgroundColor: colors.surface2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle,
+    marginBottom: spacing.lg,
   },
   quickStartTitle: {
-    ...type.bodyStrong,
+    ...type.title,
     color: colors.textPrimary,
-    marginBottom: spacing.xs,
   },
   quickStartSub: {
     ...type.bodySm,
     color: colors.textSecondary,
+    marginTop: 2,
   },
 });
