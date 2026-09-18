@@ -1,6 +1,16 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-18 EVENING — REVERTED ON FOUNDER ORDER: APP CODE BACK TO c58aab3d ★
+
+RESUME HERE. The founder stopped all work and ordered a revert to before the
+UX and visual work of 14 to 18 September. `src/` on main is the exact tree of
+`c58aab3d` plus four non-visual fixes (board section "REVERTED" has the
+hashes). Every section below about the redesign, the ledger, the card sweep,
+the finish and V2 is history, not direction. Do not rebuild any of it. The
+readiness sheet question is closed with the revert. Nothing is queued; the
+next step is whatever the founder says next.
+
 ## ★ 2026-09-18 — THE FINISH (D192): THE FOUNDER CALLED BUILD 3583 "A MESS" AND CHOSE TO FINISH, NOT REVERT ★
 
 RESUME HERE. THE FINISH IS COMPLETE ON MAIN as of 2026-09-18 (`285ae875`;
