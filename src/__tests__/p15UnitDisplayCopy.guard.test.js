@@ -113,7 +113,10 @@ describe('Athlete Profile uses the noun form "body weight", not compounded "body
 
 describe('Settings body-weight-unit preference reads "Body weight unit" (P-15)', () => {
   test('Settings root row sub-copy drops the hyphen', () => {
-    expect(SETTINGS_ROOT).toMatch(/sub="Body weight unit, default rest timer and rest alerts"/);
+    // RE-ANCHORED 2026-09-18 (D192, row-line cap): the Workout & units row's
+    // line was cut to fit one line beside a glyph and a chevron. Intent kept:
+    // it still opens with "Body weight unit", two words, no hyphen (P-15).
+    expect(SETTINGS_ROOT).toMatch(/sub="Body weight unit, rest timer and rest alerts"/);
     expect(SETTINGS_ROOT).not.toMatch(/Body-weight unit/);
   });
 

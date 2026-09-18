@@ -128,7 +128,7 @@ import SectionLabel from '../components/SectionLabel';
 import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, letterSpacing, fontFamily, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, motion, letterSpacing, fontFamily, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { touchTarget } from '../styles/layout';
 // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): NO haptics
@@ -246,7 +246,7 @@ function AdjustmentRow({
           {tooltip ? <InfoTooltip text={tooltip} size={13} /> : null}
           {applied && !settling && (
             <View style={[styles.appliedChip, live.appliedChip]}>
-              <Ionicons name="checkmark" size={10} color={t.colors.success} />
+              <Ionicons name="checkmark" size={10} color={t.colors.textSecondary} />
               <Text style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
             </View>
           )}
@@ -268,19 +268,24 @@ function AdjustmentRow({
         <ApplyExit style={styles.applySlot}>
           <Button
             title="Apply"
-            variant={emphasis ? 'primary' : 'outline'}
+            variant={emphasis ? 'emphatic' : 'outline'}
             size="sm"
             fullWidth={false}
             state={applyState}
             onSettled={onApplySettled}
             onPress={onApply}
             style={styles.applyPill}
+            textStyle={styles.applyPillLabel}
             accessibilityLabel={`Apply: ${label}`}
           />
           {onDecline ? (
             <Button
               title="Keep as is"
-              variant="ghost"
+              // D192 landing (2026-09-18): `ghost` is not a Button variant, so
+              // this fell through to `primary` (a raised, bordered button) and the
+              // decline sat as heavy as Apply. `tertiary` is the documented quiet
+              // ghost.
+              variant="tertiary"
               size="sm"
               fullWidth={false}
               onPress={onDecline}
@@ -331,7 +336,7 @@ function NextWeekCard({
   const caloriesApplyable = calories !== null && calories.change !== 0 && !calories.applied && !calorieHold;
 
   return (
-    <Card style={styles.card} elevated={hero} tone={hero ? 'primary' : undefined}>
+    <Card style={styles.card} elevated={hero}>
       <SectionHeader title="Nutrition" />
       {calories !== null ? (
         <AdjustmentRow
@@ -412,7 +417,7 @@ function TrainingNextWeekCard({
   const deloadApplied = isApplied(output, 'deload');
 
   return (
-    <Card style={styles.card} elevated={hero} tone={hero ? 'primary' : undefined}>
+    <Card style={styles.card} elevated={hero}>
       <SectionHeader title="Training next week" tooltip={GLOSSARY.volume} />
       {deloadSuggested ? (
         <>
@@ -481,10 +486,10 @@ function TrainingNextWeekCard({
                   : upwardBlocked
                     ? 'Next week is your recovery week, so the coach will not add sets to it. Recovery weeks stay light on purpose.'
                     : recoveryReviewLine
-                      ? `${recoveryReviewLine} ${rampLine ? `${rampLine} ` : ''}These are next week's planned sets. Each session can still adjust them on the day.`
+                      ? `${recoveryReviewLine} ${rampLine ? `${rampLine} ` : ''}Each session can still adjust these on the day.`
                       : rampLine
-                        ? `${rampLine} These are next week's planned sets. Each session can still adjust them on the day.`
-                        : "These are next week's planned sets. Each session can still adjust them on the day."}
+                        ? `${rampLine} Each session can still adjust these on the day.`
+                        : "Each session can still adjust these on the day."}
             </Text>
           </View>
           {/* CO-2: this card said what changed ("N updated") but never linked
@@ -524,13 +529,13 @@ function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, on
   const live = buildLiveStyles(t);
   const settling = applyState === 'success';
   return (
-    <Card style={styles.dietBreakCard} elevated={hero} tone={hero ? 'primary' : undefined}>
+    <Card style={styles.dietBreakCard} elevated={hero}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
         <Text style={hero ? [styles.dietBreakTitleHero, live.dietBreakTitleHero] : [styles.dietBreakTitle, live.dietBreakTitle]}>Diet break worth considering</Text>
         <InfoTooltip text={GLOSSARY.maintenanceCalories} size={13} />
         {applied && !settling && (
           <View style={[styles.appliedChip, live.appliedChip]}>
-            <Ionicons name="checkmark" size={10} color={t.colors.success} />
+            <Ionicons name="checkmark" size={10} color={t.colors.textSecondary} />
             <Text style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
           </View>
         )}
@@ -560,13 +565,24 @@ function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, on
         <ApplyExit style={styles.applySlotStart}>
           <Button
             title="Set maintenance calories"
-            variant={hero ? 'primary' : 'outline'}
+            // RE-ANCHORED 2026-09-18 (D192, item A3): this is the diet-break
+            // card's own Apply-equivalent commit action -- the same control
+            // AdjustmentRow's Apply is, sharing applyPill/applyPillLabel
+            // already. It was missed by the first pass of this fix and still
+            // read `variant={hero ? 'primary' : 'outline'}`; `primary` is the
+            // neutral raised-charcoal variant since D148, so this never
+            // rendered amber even when it was the week's one hero decision.
+            // `emphatic` is Button.js's one amber-fill variant (bg:
+            // primaryFill, fg: onPrimary), the same source coachOutputApplyMorph
+            // guard.test.js's "A1 one-amber rule" now checks for.
+            variant={hero ? 'emphatic' : 'outline'}
             size="sm"
             fullWidth={false}
             state={applyState}
             onSettled={onApplySettled}
             onPress={onApply}
             style={styles.applyPill}
+            textStyle={styles.applyPillLabel}
             accessibilityLabel="Set maintenance calories for a diet break"
           />
         </ApplyExit>
@@ -837,7 +853,7 @@ function InsufficientDataView({ dataNote, receipt, onClose }) {
                 <Ionicons
                   name={row.done ? 'checkmark-circle' : 'ellipse-outline'}
                   size={14}
-                  color={row.done ? t.colors.success : t.colors.textMuted}
+                  color={row.done ? t.colors.textSecondary : t.colors.textMuted}
                 />
                 <Text style={[styles.receiptRowText, live.receiptRowText]}>{row.label}</Text>
               </View>
@@ -2629,7 +2645,15 @@ export default function CoachOutputScreen({ navigation, route }) {
   // separate "live stateColors" builder needed.
   let trendColor = t.colors.textMuted;
   if (trend.delta !== null && !edPatternOpen) {
-    const dirColor = trend.onTarget ? t.colors.success : t.colors.warning;
+    // D174/D192 item A5: colour on a body-weight numeral is a verdict the
+    // guardrails refuse (D167); both directions now read the same neutral
+    // ink. RE-ANCHORED 2026-09-18 (D192, item A5): the lead flagged
+    // `trend.onTarget ? t.colors.textSecondary : t.colors.textSecondary` as a
+    // tautology -- both branches were already the same colour, so the
+    // ternary said nothing a plain assignment doesn't. `trend.onTarget` is
+    // read nowhere else in this file; the `edPatternOpen` guard and the
+    // if/else if branch structure around this line are untouched.
+    const dirColor = t.colors.textSecondary;
     if (trend.delta > 0.01) {
       trendIcon = 'arrow-up-outline';
       trendColor = dirColor;
@@ -2656,7 +2680,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   const weightChipValue = (() => {
     if (trend.delta == null || !trend.deltaLabel) return 'No weights logged';
     const bwu = bodyWeightUnits || 'st';
-    if (bwu === 'kg') return trend.deltaLabel.replace(/ this week$/, '');
+    if (bwu === 'kg') return trend.deltaLabel.replace(/ this week$/, '').replace(/(\d)kg$/, '$1 kg');
     const lbs = Math.round(Math.abs(trend.delta) * 2.2046226218 * 10) / 10;
     return `${trend.delta >= 0 ? '+' : '-'}${lbs} lb${lbs === 1 ? '' : 's'}`;
   })();
@@ -2859,7 +2883,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           <View style={styles.coachNoteRow}>
             <Ionicons name="bulb-outline" size={14} color={t.colors.textSecondary} />
             <Text style={[styles.coachNoteText, live.coachNoteText]}>
-              Consistency is what your coach reads best. The more sessions you log, the better it understands how your body responds, and the more precisely it can adjust your plan.
+              More logged sessions sharpen next week&apos;s coaching
             </Text>
           </View>
         ) : null}
@@ -2905,14 +2929,14 @@ export default function CoachOutputScreen({ navigation, route }) {
             (on-target/holding), no hero shows. */}
         {heroCardEl ? (
           <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
-            <SectionLabel tone="primary" style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
+            <SectionLabel style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
             {/* D93 (Campaign 2, Phase 12 / review A finding 5): Manual mode
                 strips the Apply pills, which left a proposal row identical
                 to an informational one. One line above the cards makes the
                 ownership unmistakable without re-threading three cards. */}
             {applyDisabled ? (
               <Text style={[styles.manualModeNote, live.manualModeNote]}>
-                Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.
+                Manual mode: recommendations only. Changes are yours to make
               </Text>
             ) : null}
             {heroCardEl}
@@ -2930,7 +2954,7 @@ export default function CoachOutputScreen({ navigation, route }) {
              When safety holds are active the copy defers to them rather than
              claiming the plan is simply working. */
           <Reanimated.View entering={stage(2, motion.hero)} style={styles.heroZone}>
-            <SectionLabel tone="primary" style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
+            <SectionLabel style={styles.heroLabel}>This week&apos;s main move</SectionLabel>
             {/* D-2 (final certification 2026-09-05): the Manual-mode
                 ownership note used to render only in the hero-card branch
                 above, so on a hold-everything week a Manual user saw rows
@@ -2938,7 +2962,7 @@ export default function CoachOutputScreen({ navigation, route }) {
                 place, same style. */}
             {applyDisabled ? (
               <Text style={[styles.manualModeNote, live.manualModeNote]}>
-                Manual mode: these are recommendations. The coach applies nothing; any change is yours to make. Change modes in Settings, under Coaching.
+                Manual mode: recommendations only. Changes are yours to make
               </Text>
             ) : null}
             <Card elevated style={styles.holdHeroCard}>
@@ -3023,20 +3047,23 @@ export default function CoachOutputScreen({ navigation, route }) {
             surface -- this button routes to the weight/PR-bearing recap share). */}
         {greatWeek && (
           /* Wave A B6: a genuinely great, ED-safe week is the emotional peak
-             of the loop; it no longer renders at footnote weight. Success
-             tint, never amber (one-amber rule). */
+             of the loop; it no longer renders at footnote weight.
+             RE-ANCHORED 2026-09-18 (D192, item A6): this used to read
+             "Success tint, never amber" -- true when written, stale now that
+             the success tint itself is gone (see the comment on the
+             TouchableOpacity below). Never amber still holds. */
           <TouchableOpacity
-            style={[styles.shareWeekBtn, live.shareWeekBtn]}
+            style={styles.shareWeekBtn}
             onPress={handleShareWeek}
             accessibilityRole="button"
             // R9/M9 (share-card audit 2026-07-27): entry points into the share
-            // flow standardise on "Create share image" across the app; the
-            // success-tint chrome + share-outline icon still carry the
-            // "genuinely great week" framing (the button only renders under
-            // the `greatWeek` gate above).
+            // flow standardise on "Create share image" across the app.
+            // D192 item A6: no fill, no tint -- a plain text action. Amber
+            // stays reserved for the hero Apply (A1 one-amber rule); this is
+            // not the screen's one committing action, so it carries neither.
             accessibilityLabel="Create share image"
           >
-            <Ionicons name="share-outline" size={15} color={t.colors.success} />
+            <Ionicons name="share-outline" size={15} color={t.colors.textSecondary} />
             <Text style={[styles.shareWeekText, live.shareWeekText]}>Create share image</Text>
           </TouchableOpacity>
         )}
@@ -3076,8 +3103,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         <View style={[styles.planEditCard, live.planEditCard]}>
           <Text style={[styles.planEditHead, live.planEditHead]}>Plan next week&apos;s meals</Text>
           <Text style={[styles.planEditBody, live.planEditBody]}>
-            A full week built to next week&apos;s targets, with a shopping list.
-            Review it, swap meals if needed, then add it to your diary.
+            Built to next week&apos;s targets, with a shopping list
           </Text>
           <View style={styles.nextWeekRow}>
             <Button
@@ -3130,7 +3156,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             the context the decision was made from; a line with no evidence
             behind it is simply not written. */}
         {weeklyStory ? (
-          <Card style={styles.storyCard}>
+          <View style={[styles.storyCard, live.storyCard]}>
             <SectionLabel tone="primary">Your week</SectionLabel>
             {weeklyStory.outcome ? (
               <Text style={[styles.storyLine, live.storyLine]}>{weeklyStory.outcome.text}</Text>
@@ -3163,7 +3189,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             {weeklyStory.watching ? (
               <Text style={[styles.storyWatch, live.storyWatch]}>{weeklyStory.watching.text}</Text>
             ) : null}
-          </Card>
+          </View>
         ) : null}
 
         {/* 6. Why */}
@@ -3355,7 +3381,8 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle,
   },
-  planEditHead: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  // D192 item E: raw fontSize.md + bold triple -> the canonical title role.
+  planEditHead: { ...type.title, color: colors.textPrimary },
   planEditBody: { ...type.bodySm, color: colors.textSecondary },
   // D86: scanAssessmentBlock/scanAssessmentHeadline deleted with the receipt
   // sub-block; the compact card renders headline via planEditBody and one
@@ -3385,27 +3412,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  // Wave A B6: success tint on a genuinely great week (never amber; the
-  // hero Apply keeps the one-amber rule).
+  // D192 item A6: a plain text action, never amber (the hero Apply keeps
+  // the one-amber rule) and no longer success-tinted -- a share prompt is
+  // not a live moment either. No fill, no tint; minHeight kept for the
+  // WCAG/iOS touch target (U-B-1 §5), paddingHorizontal 0 since there is no
+  // ground to inset from.
   shareWeekBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: spacing.xs,
     paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: 0,
     minHeight: touchTarget.minimum, // U-B-1 §5: WCAG/iOS touch target
     marginBottom: spacing.md,
-    borderRadius: radius.full,
-    backgroundColor: withAlpha(colors.success, alpha.tint),
   },
   shareWeekText: {
     ...type.label,
     color: colors.textPrimary,
   },
+  // D192 item E: raw fontSize.xl + bold triple -> the canonical h3 role.
   insufficientTitle: {
-    fontSize: fontSize.xl,
-    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
+    ...type.h3,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
     textAlign: 'center',
@@ -3451,8 +3479,9 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
+  // D192 item E: bare fontSize.sm -> the canonical bodySm role.
   weekRange: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textMuted,
   },
 
@@ -3469,14 +3498,18 @@ const styles = StyleSheet.create({
   },
 
   // A1 verdict (U-B-1 §3 / 03 gap #1): the hero zone is a plain wrapper; the
-  // verdict card itself is the elevated object (Card elevated + primary
-  // outline). The zone no longer carries an amber tint of its own, so the
-  // hero Apply stays the screen's only amber fill.
+  // verdict card itself is the elevated object (Card elevated). RE-ANCHORED
+  // 2026-09-18 (D192, item A2): this used to read "Card elevated + primary
+  // outline" -- the amber tone/outline is gone (elevation alone marks the
+  // card now), so the hero Apply stays the screen's only amber fill.
   heroZone: {
     gap: spacing.xs,
   },
-  // B-5: typography now comes from SectionLabel (tone="primary"); only the
-  // structural padding remains local.
+  // RE-ANCHORED 2026-09-18 (D192, item A1): this used to read "typography
+  // now comes from SectionLabel (tone=\"primary\")" -- the heroLabel
+  // SectionLabel dropped `tone="primary"` (D192 item A1) and reads the
+  // plain default label style now; only the structural padding remains
+  // local, which is what was true of this block either way.
   heroLabel: {
     paddingHorizontal: spacing.xs,
   },
@@ -3510,22 +3543,24 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle,
   },
+  // D192 item E: dropped the redundant raw lineHeight:22 -- it already
+  // spreads a type role, so the role's own (now one notch tighter) line
+  // height stands.
   coachLeadAck: {
     ...type.bodyStrong,
     color: colors.textPrimary,
-    lineHeight: 22,
   },
   // S1c: the answered pre-commitment, leading the card. Emphasised but never
   // verdict-coloured (no green/red reward or shame; the one-amber rule holds).
+  // D192 item E: same redundant-lineHeight drop as coachLeadAck above.
   coachLeadCommitment: {
     ...type.bodyStrong,
     color: colors.textPrimary,
-    lineHeight: 22,
   },
+  // D192 item E: same redundant-lineHeight drop as coachLeadAck above.
   coachLeadInterpretation: {
     ...type.body,
     color: colors.textSecondary,
-    lineHeight: 22,
   },
   // S1c: the forward pre-commitment. A touch stronger than the sign-off below
   // it (textPrimary vs the forward line's textSecondary), never amber.
@@ -3534,7 +3569,11 @@ const styles = StyleSheet.create({
   // screen edge).
   // D165 law 2: a content section, not an object -- no box, a borderSubtle hairline above (D171/D172).
   nextReadCard: {
-    padding: spacing.lg,
+    // D192 item B4: the page pays the gutter once (FINISH-SPEC section 4.3)
+    // -- the ScrollView's own `content` style already insets spacing.lg on
+    // every side, so a section (not an object) only adds the top padding
+    // its hairline needs, not a second horizontal inset.
+    paddingTop: spacing.lg,
     marginTop: spacing.md,
     gap: spacing.xs,
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -3551,8 +3590,9 @@ const styles = StyleSheet.create({
   // D174: a callout is not "now". The card keeps its objecthood from the
   // surface ladder and its hairline; the eyebrow takes the muted ink.
   // D165 law 2: a content section, not an object -- no box, a borderSubtle hairline above (D171/D172).
+  // D192 item B3: same gutter-once correction as nextReadCard below.
   focusCard: {
-    padding: spacing.lg,
+    paddingTop: spacing.lg,
     gap: spacing.xs,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle,
@@ -3599,16 +3639,17 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontVariant: ['tabular-nums'],
   },
+  // D192 item A4: Applied is a calm state, not a reward -- surface2 fill,
+  // no border, ink in textSecondary throughout.
   appliedChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs2,
-    backgroundColor: colors.successBg ?? colors.surface2,
+    backgroundColor: colors.surface2,
     borderRadius: radius.full,
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
-    borderWidth: 1, borderColor: withAlpha(colors.success ?? colors.borderLight, alpha.mid),
   },
   appliedChipText: {
     ...type.captionStrong,
-    color: colors.success ?? colors.textSecondary,
+    color: colors.textSecondary,
   },
   adjustmentNote: {
     ...type.bodySm,
@@ -3627,14 +3668,44 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontWeight: fontWeight.semibold,
   },
-  // M4: the Apply buttons ride the Button primitive (primary = the A1
+  // M4: the Apply buttons ride the Button primitive (emphatic = the A1
   // one-amber hero, outline = every quiet Apply); this override keeps the
   // shipped pill geometry on top of the primitive's chrome.
+  // D192 item A3: 36dp chip scale (FINISH-SPEC section 4.6), not the old
+  // 48dp touch box -- Button.js's own auto-hitSlop (its "Touch-target
+  // floor" comment) pads the TAPPABLE area back to >=48dp for a size="sm"
+  // control with no caller hitSlop, so the visual pill can shrink safely.
+  // RE-ANCHORED 2026-09-18 (D192, item A3): no `applyPillHero` fill override
+  // lives here any more. Button's own `emphatic` variant (src/components/
+  // Button.js `buildVariants`) already draws `bg: colors.primaryFill` /
+  // `fg: colors.onPrimary` -- the app's one definition of "amber fill,
+  // onPrimary text" for a committing control, and amberScreensAM.guard.test's
+  // exact-line allowlist for this file only permits the two ED-lockout
+  // `primaryFill` lines. An earlier pass added `backgroundColor:
+  // colors.primary` on top via style precedence: that (a) fought the
+  // variant's own correct fill with a DIFFERENT token -- `primary` is the
+  // ink/small-mark amber (theme.js's own comment: "primary is the bright
+  // amber for small marks, icons, text and key data values; primaryFill is
+  // a slightly deepened amber for large filled buttons"), so the hero Apply
+  // would have rendered a brighter amber than every other one-committing-
+  // button in the app; (b) duplicated what the variant already does; and
+  // (c) was the exact line the amber census guard failed on. Removed rather
+  // than corrected in place: there is exactly one place amber fill +
+  // onPrimary text is decided (Button.js), and this pill does not need a
+  // second one. `variant={emphasis ? 'emphatic' : 'outline'}` above carries
+  // the whole colour contract; this block is geometry only.
   applyPill: {
     borderRadius: radius.full,
     paddingHorizontal: spacing.lg,
     minWidth: 84,
-    minHeight: touchTarget.minimum, // U-B-1 §5: WCAG/iOS touch target
+    height: 36,
+  },
+  // D192 item A3: label type.label (13 medium) on the Apply pill; Button's
+  // own size="sm" label is already 13pt (fs.sm) with the right line height,
+  // so only the FONT FACE needs overriding (semibold -> medium). fontFamily
+  // is theme-invariant, so this carries no live twin.
+  applyPillLabel: {
+    fontFamily: fontFamily.medium,
   },
   applySlot: { alignSelf: 'center' },
   applySlotStart: { alignSelf: 'flex-start', marginTop: spacing.md },
@@ -3651,7 +3722,14 @@ const styles = StyleSheet.create({
   // NU-8: quiet data-confidence line under the Why block.
   // Campaign 18 job 10: the weekly story. Quiet by design - it is an account,
   // not a banner.
-  storyCard: { gap: spacing.xs },
+  // D192 item B2: a content section, not an object -- no box, a borderSubtle
+  // hairline above (D165 law 2, D171/D172 pattern).
+  storyCard: {
+    gap: spacing.xs,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.lg,
+  },
   storyLine: { ...type.body, color: colors.textPrimary },
   storyMeans: { ...type.bodySm, color: colors.textSecondary },
   storyBlock: { marginTop: spacing.sm, gap: spacing.xxs },
@@ -3682,8 +3760,12 @@ const styles = StyleSheet.create({
     ...type.h3,
     color: colors.textPrimary,
   },
+  // D192 item E: bare fontSize.sm -> the canonical bodySm role. The
+  // explicit lineHeight is a deliberate roomier paragraph line (not the
+  // coachLeadAck/Commitment/Interpretation redundant-22 case), so it stays,
+  // in both halves, rather than falling to bodySm's own tighter default.
   dietBreakBody: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
     lineHeight: 21,
   },
@@ -3774,8 +3856,13 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
+  // RE-ANCHORED 2026-09-18 (D192, item E): bare fontSize.sm (no weight
+  // override) -> the canonical bodySm role, same mechanical mapping as
+  // dietBreakBody above; missed by the first pass since this card sits
+  // further down the file. The explicit lineHeight is the same deliberate
+  // roomier paragraph line as dietBreakBody's, so it stays, in both halves.
   edLockoutBody: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textPrimary,
     lineHeight: 21,
   },
@@ -3785,8 +3872,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  // RE-ANCHORED 2026-09-18 (D192, item E): same bare-fontSize.sm mapping as
+  // edLockoutBody above.
   edLockoutReadMoreText: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textSecondary,
     lineHeight: 21,
   },
@@ -3823,18 +3912,26 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     fontSize: fontSize.sm,
   },
+  // RE-ANCHORED 2026-09-18 (D192, item E): bare fontSize.xs (no weight
+  // override) -> the canonical caption role, the same shape
+  // heldHistoryEmptyText below already carries (xs + italic + an explicit
+  // roomier lineHeight:18 over caption's own tighter default).
   edLockoutBottomNote: {
     marginTop: spacing.xs,
-    fontSize: fontSize.xs,
+    ...type.caption,
     color: colors.textMuted,
     fontStyle: 'italic',
     lineHeight: 18,
   },
+  // D192 item A7: cleared/corrected is a calm report of something the engine
+  // already did, not a live reward -- the border and header move off
+  // success green to textSecondary, same as the Applied chip (A4). No copy,
+  // condition or ED-safety logic touched.
   edClearedCard: {
     backgroundColor: colors.surface2,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.success,
+    borderColor: colors.textSecondary,
     padding: spacing.lg,
     gap: spacing.sm,
     marginBottom: spacing.sm,
@@ -3842,7 +3939,7 @@ const styles = StyleSheet.create({
   edClearedHeader: {
     fontSize: fontSize.xs,
     fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
-    color: colors.success,
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: letterSpacing.overline,
   },
@@ -3851,8 +3948,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
+  // RE-ANCHORED 2026-09-18 (D192, item E): same bare-fontSize.sm mapping as
+  // edLockoutBody above.
   edClearedBody: {
-    fontSize: fontSize.sm,
+    ...type.bodySm,
     color: colors.textPrimary,
     lineHeight: 21,
   },
@@ -3914,19 +4013,21 @@ function buildLiveStyles(t) {
   return {
     coachNoteText: { ...t.type.bodySm, color: t.colors.textSecondary },
     planEditCard: { borderTopColor: t.colors.borderSubtle },
-    planEditHead: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    planEditHead: { ...t.type.title, color: t.colors.textPrimary },
     planEditBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     scanAssessmentDetail: { ...t.type.caption, color: t.colors.textSecondary },
     safe: { backgroundColor: t.colors.background },
-    shareWeekBtn: { backgroundColor: withAlpha(t.colors.success, alpha.tint) },
+    // D192 item A6: shareWeekBtn carries no token any more (no fill, no
+    // tint), so it correctly has no live twin; the JSX no longer consumes
+    // live.shareWeekBtn (frozenLiveParity's dead-consumption case).
     shareWeekText: { ...t.type.label, color: t.colors.textPrimary },
-    insufficientTitle: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
+    insufficientTitle: { ...t.type.h3, color: t.colors.textPrimary },
     insufficientBody: { ...t.type.body, color: t.colors.textSecondary },
     receiptLabel: { ...t.type.caption, color: t.colors.textMuted },
     receiptRowText: { ...t.type.bodySm, color: t.colors.textSecondary },
     receiptUnlock: { ...t.type.caption, color: t.colors.textPrimary },
     weekLabel: { fontSize: t.fontSize.xxl, color: t.colors.textPrimary },
-    weekRange: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    weekRange: { ...t.type.bodySm, color: t.colors.textMuted },
     manualModeNote: { ...t.type.caption, color: t.colors.textMuted },
     heroWhy: { ...t.type.bodySm, color: t.colors.textSecondary },
     holdHeroText: { ...t.type.h3, color: t.colors.textPrimary },
@@ -3935,6 +4036,10 @@ function buildLiveStyles(t) {
     coachLeadCommitment: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     coachLeadInterpretation: { ...t.type.body, color: t.colors.textSecondary },
     nextReadCard: { borderTopColor: t.colors.borderSubtle },
+    storyCard: { borderTopColor: t.colors.borderSubtle },
+    // RE-ANCHORED 2026-09-18 (D192, item A3): no applyPillHero live twin --
+    // see the frozen-half comment on applyPill above; the amber fill is
+    // Button's own `emphatic` variant, decided once in Button.js.
     preCommitmentLine: { ...t.type.bodySm, color: t.colors.textPrimary },
     forwardLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     focusCard: { borderTopColor: t.colors.borderSubtle },
@@ -3942,11 +4047,16 @@ function buildLiveStyles(t) {
     focusText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     adjustmentLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     adjustmentLabelHero: { ...t.type.h3, color: t.colors.textPrimary },
+    // RE-ANCHORED 2026-09-18 (D192, item A4): the live half still had the
+    // pre-D192 success-tinted fill/border/text -- since `live.K` wins over
+    // `styles.K` at runtime (appended last in the style array), the frozen
+    // half's A4 fix (surface2, no border, textSecondary) never actually
+    // reached the screen; the theme-driven render kept the old green chip.
+    // Matches the frozen half exactly now: calm surface2 fill, no border.
     appliedChip: {
-      backgroundColor: t.colors.successBg ?? t.colors.surface2,
-      borderColor: withAlpha(t.colors.success ?? t.colors.borderLight, alpha.mid),
+      backgroundColor: t.colors.surface2,
     },
-    appliedChipText: { ...t.type.captionStrong, color: t.colors.success ?? t.colors.textSecondary },
+    appliedChipText: { ...t.type.captionStrong, color: t.colors.textSecondary },
     adjustmentNote: { ...t.type.bodySm, color: t.colors.textSecondary },
     adjustmentDetail: { ...t.type.bodySm, color: t.colors.textPrimary },
     adjustmentHold: { ...t.type.bodySm, color: t.colors.textPrimary },
@@ -3960,7 +4070,12 @@ function buildLiveStyles(t) {
     confidenceCaption: { ...t.type.caption, color: t.colors.textMuted },
     dietBreakTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     dietBreakTitleHero: { ...t.type.h3, color: t.colors.textPrimary },
-    dietBreakBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    // RE-ANCHORED 2026-09-18 (D192, item E): completes the frozen-half
+    // migration above -- "do the live twin for each" -- with the same
+    // deliberate lineHeight:21 override repeated so the roomier paragraph
+    // line the frozen comment promises "in both halves" actually reaches
+    // the theme-driven render (live wins over frozen at runtime).
+    dietBreakBody: { ...t.type.bodySm, color: t.colors.textSecondary, lineHeight: 21 },
     dietBreakFootnote: { ...t.type.caption, color: t.colors.textMuted },
     doneBtnText: { fontSize: t.fontSize.lg },
     countdownCard: { borderTopColor: t.colors.borderSubtle },
@@ -3972,18 +4087,30 @@ function buildLiveStyles(t) {
     edLockoutCard: { backgroundColor: t.colors.surface2, borderColor: t.colors.warning },
     edLockoutHeader: { fontSize: t.fontSize.xs, color: t.colors.warning },
     edLockoutTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
-    edLockoutBody: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    // RE-ANCHORED 2026-09-18 (D192, item E): live twin for edLockoutBody's
+    // frozen-half migration, same reasoning as dietBreakBody above.
+    edLockoutBody: { ...t.type.bodySm, color: t.colors.textPrimary, lineHeight: 21 },
     edLockoutReadMoreBox: { borderTopColor: t.colors.border },
-    edLockoutReadMoreText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    // RE-ANCHORED 2026-09-18 (D192, item E): live twin for
+    // edLockoutReadMoreText's frozen-half migration.
+    edLockoutReadMoreText: { ...t.type.bodySm, color: t.colors.textSecondary, lineHeight: 21 },
     edLockoutCtaPrimary: { backgroundColor: t.colors.primaryFill },
     edLockoutCtaPrimaryText: { color: t.colors.onPrimary, fontSize: t.fontSize.sm },
     edLockoutCtaGhost: { borderColor: t.colors.border },
     edLockoutCtaGhostText: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
-    edLockoutBottomNote: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    edClearedCard: { backgroundColor: t.colors.surface2, borderColor: t.colors.success },
-    edClearedHeader: { fontSize: t.fontSize.xs, color: t.colors.success },
+    // RE-ANCHORED 2026-09-18 (D192, item E): live twin for
+    // edLockoutBottomNote's frozen-half migration (bare xs -> caption).
+    edLockoutBottomNote: { ...t.type.caption, color: t.colors.textMuted, fontStyle: 'italic', lineHeight: 18 },
+    // RE-ANCHORED 2026-09-18 (D192, item A7): the live half still had the
+    // pre-D192 success border/header colour -- since `live.K` wins over
+    // `styles.K` at runtime, the frozen half's A7 fix (textSecondary) never
+    // actually reached the screen. Matches the frozen half now.
+    edClearedCard: { backgroundColor: t.colors.surface2, borderColor: t.colors.textSecondary },
+    edClearedHeader: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     edClearedTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
-    edClearedBody: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    // RE-ANCHORED 2026-09-18 (D192, item E): live twin for edClearedBody's
+    // frozen-half migration.
+    edClearedBody: { ...t.type.bodySm, color: t.colors.textPrimary, lineHeight: 21 },
     heldText: { ...t.type.bodySm, color: t.colors.textSecondary },
     heldHistoryTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     heldHistoryEntry: { borderBottomColor: t.colors.borderSubtle },

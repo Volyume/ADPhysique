@@ -104,9 +104,18 @@ describe('M4 morph wiring', () => {
     expect(stateProps.length + stateForProps.length).toBeGreaterThanOrEqual(4);
   });
 
+  // RE-ANCHORED 2026-09-18 (D192, item A3): 'primary' -> 'emphatic'. D148
+  // (2026-09-04, before this pin's own "Wave 6 M4" wave) redefined Button's
+  // `primary` variant to the neutral raised-charcoal surface and introduced
+  // `emphatic` as the one amber-fill variant; this pin was never updated
+  // for that rename, so it had been asserting a variant name that no longer
+  // rendered amber at all since D148 landed. The protective intent this
+  // test names -- "the hero row is the only amber fill" -- is unchanged and
+  // is what D192 item A3 actually restores in practice; only the string it
+  // checks for is corrected to match Button.js's current vocabulary.
   test('A1 one-amber rule survives as the variant mapping', () => {
-    expect(SCREEN).toMatch(/variant=\{emphasis \? 'primary' : 'outline'\}/);
-    expect(SCREEN).toMatch(/variant=\{hero \? 'primary' : 'outline'\}/);
+    expect(SCREEN).toMatch(/variant=\{emphasis \? 'emphatic' : 'outline'\}/);
+    expect(SCREEN).toMatch(/variant=\{hero \? 'emphatic' : 'outline'\}/);
   });
 
   test('the row keeps the button mounted through the success beat', () => {

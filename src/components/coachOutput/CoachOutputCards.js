@@ -1,6 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import Card from '../Card';
 import SectionLabel from '../SectionLabel';
 import InfoTooltip from '../InfoTooltip';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, iconSize, alpha, fontFamily } from '../../styles/theme';
@@ -52,14 +51,18 @@ export function LedgerCard({ working, off }) {
   const hasOff = off && off.length > 0;
   if (!hasWorking && !hasOff) return null;
   return (
-    <Card style={styles.card}>
+    <View style={[styles.card, live.card]}>
       {hasWorking ? (
         <View>
           <SectionHeader title="What worked" />
           <View style={styles.bulletList}>
             {working.map((item, i) => (
               <View key={i} style={styles.bulletRow}>
-                <Ionicons name="checkmark" size={15} color={t.colors.success} style={styles.bulletIcon} />
+                {/* RE-ANCHORED 2026-09-18 (D192, item A7): a static list
+                    bullet marks nothing live, so it takes the calm ink
+                    rather than a success green, same as the Applied chip
+                    (A4) and the ED-cleared card. */}
+                <Ionicons name="checkmark" size={15} color={t.colors.textSecondary} style={styles.bulletIcon} />
                 <Text style={[styles.bulletText, live.bulletText]}>{item}</Text>
               </View>
             ))}
@@ -79,7 +82,7 @@ export function LedgerCard({ working, off }) {
           </View>
         </View>
       ) : null}
-    </Card>
+    </View>
   );
 }
 
@@ -130,8 +133,18 @@ export function RapidLossAlert() {
 }
 
 const styles = StyleSheet.create({
+  // RE-ANCHORED 2026-09-18 (D192, item B1): a content section, not an
+  // object -- no fill, no border, no radius; a borderSubtle hairline above
+  // (D165 law 2, same D171/D172 pattern as storyCard/focusCard/nextReadCard
+  // in CoachOutputScreen.js, this component's one caller). paddingTop only:
+  // the caller's own ScrollView content style already insets spacing.lg on
+  // every side (the page pays the gutter once, FINISH-SPEC section 4.3).
+  // The inner gap is unchanged.
   card: {
     gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.lg,
   },
   sectionHeader: {
     marginBottom: spacing.xs,
@@ -247,10 +260,16 @@ const styles = StyleSheet.create({
 // const live = buildLiveStyles(t);` and appends `live.KEY` after `styles.KEY`
 // in its own style arrays. SectionHeader has no colour tokens of its own
 // (sectionHeader/sectionHeaderRow/sectionHeaderInline are layout-only), so it
-// stays untouched -- there is nothing for it to unfreeze. card/bulletList/
-// bulletRow/bulletIcon/actions have no colour tokens either.
+// stays untouched -- there is nothing for it to unfreeze. bulletList/
+// bulletRow/bulletIcon/actions have no colour tokens either. RE-ANCHORED
+// 2026-09-18 (D192, item B1): `card` now carries its own hairline colour
+// (below), where it used to have none.
 function buildLiveStyles(t) {
   return {
+    // RE-ANCHORED 2026-09-18 (D192, item B1): live twin for card's new
+    // hairline, same shape as CoachOutputScreen.js's storyCard/focusCard/
+    // nextReadCard live twins.
+    card: { borderTopColor: t.colors.borderSubtle },
     statChip: { backgroundColor: t.colors.surface2 },
     statChipValue: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     statChipLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
