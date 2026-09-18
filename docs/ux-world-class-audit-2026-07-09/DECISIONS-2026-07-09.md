@@ -9068,3 +9068,38 @@ its test run was a subset; the full suite is the gate from here.
 
 Open for the founder, not ruled: the readiness sheet's order (only its
 padding was tightened; re-ordering it reverses a device verdict).
+
+
+## D193 — V2: keep the product, replace the visual language and the information architecture (founder brief 2026-09-18, evening)
+
+**The verdict on the finish.** The founder, on device: "This doesn't look
+like a world-class fitness product. It looks like a competent dark-mode
+admin panel that happens to be about lifting." The lead's own reading
+agreed: the finish (D192) subtracted faults and produced consistency with
+no point of view, settled the taste decisions (face, colour, signature
+objects) by rule, and left the information architecture untouched, so the
+same jobs sat behind two doors on several tabs.
+
+**The brief.** A full design brief in chat, verbatim authority: keep every
+capability; destroy the visual language (one card, large equal radii, timid
+gold, one geometric sans, display type on defaults and placeholders, empty
+states as sentences) and the IA (duplicate doors for Start, Injuries, Plan
+editing, the week, Nutrition targets, Weight, Community, Trends; Coach as a
+dump; Progress as a sitemap; the logger's sequence and clocks wrong). Hard
+bans on radius, twin buttons, card soup, gold hairlines, Inter as the sole
+voice, a tutorial inside every set, rest before a log. Output required in
+order: design system, IA one-pager, eight screens, kill list.
+
+**The lead's answer** is `docs/design-redesign-2026-09-14/50-V2-SPEC.md`
+(the specification) and `50-V2-DESIGN.html` (the same, rendered as phone
+mockups; built by a Sonnet lane from the spec, reviewed by the lead). It is
+a design for the founder's verdict; nothing is implemented. Its rulings:
+two faces (Inter for the UI voice, IBM Plex Sans for every logged value,
+session name and clock; Plex is a new asset and needs the founder's yes);
+a warm-black surface ladder with one raised object per screen; radii 2, 4,
+6, 8; one accent used with conviction and rarely; a merged IA (This week,
+Change plan, Training record, Settings behind the gear); and eight screens
+including both logger states. The readiness sheet stays a founder question.
+
+**What it does not touch.** The coaching engine, the ED-safety system,
+consent, the data model, the Community hub, and every setting's behaviour.
