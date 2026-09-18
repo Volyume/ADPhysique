@@ -261,6 +261,11 @@ const SURVIVORS = {
     // rows.amber.guard.test.js pins the sibling component's copies and was
     // deliberately not re-anchored.
     "<View style={[styles.badge, { backgroundColor: t.colors.primary, borderColor: t.colors.background }]}>",
+    // KEEP (D192, 2026-09-18) -- the day-zero doorway "Create my profile"
+    // carries the amber leading glyph, as Today's Start workout does (spec
+    // 4.6): the amber FILL stays on the Join screen's real commit (V1,
+    // 2026-09-07), so the hub's one action is marked, not filled.
+    "iconFg={t.colors.primary}",
     // KEEP -- loading spinner / pull-to-refresh tint. D174's KEEP list names
     // ActivityIndicator and RefreshControl explicitly: a spinner is the app
     // telling you it is working RIGHT NOW, which is discipline 1 exactly.
@@ -470,7 +475,7 @@ describe('D174/D175: the amber left on screens A-M is exactly this list', () => 
     const withAmber = files.filter((f) => SURVIVORS[f].length > 0);
     expect(withAmber.length).toBeGreaterThan(20);
     // 65 at the sweep; 66 with D191's one amber mark on Today's Start workout.
-    expect(files.reduce((n, f) => n + SURVIVORS[f].length, 0)).toBe(66);
+    expect(files.reduce((n, f) => n + SURVIVORS[f].length, 0)).toBe(67);
   });
 
   test('every pinned survivor carries a stated reason in the table above', () => {
