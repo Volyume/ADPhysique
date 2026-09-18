@@ -595,7 +595,11 @@ describe('State matrix — A: established Pro, all progressing, photos current',
     // Body pillar: state 3 (20 entries), the real !hasComparison branch.
     const body = pillarRow(tree, 'Body');
     expect(body.length).toBe(1);
-    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your smoothed weight trend is updated\./);
+    // RE-ANCHORED 2026-09-18 (D192, finding 6): the figure is the headline
+    // now (the narration sentence demotes to a short basis line, or drops
+    // past 60 characters, spec 4.7 -- this one is 104, so it drops).
+    expect(body[0].props.accessibilityLabel).not.toMatch(/Your smoothed weight trend is updated/);
+    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. \d/);
     expect(body[0].props.accessibilityLabel).toMatch(/kg/);
 
     // Visual pillar: eligible, real buildVisualPillarCopy string.
@@ -649,7 +653,11 @@ describe('State matrix — B: training up, weight stalled', () => {
     const training = pillarRow(tree, 'Training');
     expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts this month/);
     const body = pillarRow(tree, 'Body');
-    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your smoothed weight trend is updated\./);
+    // RE-ANCHORED 2026-09-18 (D192, finding 6): the figure is the headline
+    // now (the narration sentence demotes to a short basis line, or drops
+    // past 60 characters, spec 4.7 -- this one is 104, so it drops).
+    expect(body[0].props.accessibilityLabel).not.toMatch(/Your smoothed weight trend is updated/);
+    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. \d/);
     // No instruction/imperative anywhere in the Body pillar's copy.
     expect(body[0].props.accessibilityLabel).not.toMatch(/add|reduce|increase|decrease|deload/i);
   });
@@ -703,7 +711,11 @@ describe('State matrix — D: both training and weight progressing; Visual pilla
     const training = pillarRow(tree, 'Training');
     expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts this month/);
     const body = pillarRow(tree, 'Body');
-    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your smoothed weight trend is updated\./);
+    // RE-ANCHORED 2026-09-18 (D192, finding 6): the figure is the headline
+    // now (the narration sentence demotes to a short basis line, or drops
+    // past 60 characters, spec 4.7 -- this one is 104, so it drops).
+    expect(body[0].props.accessibilityLabel).not.toMatch(/Your smoothed weight trend is updated/);
+    expect(body[0].props.accessibilityLabel).toMatch(/^Body\. \d/);
     const visual = pillarRow(tree, 'Progress photos');
     expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Building your visual trend. 2 more comparable scans until your first assessment.');
     expect(visual[0].props.accessibilityLabel).not.toMatch(/visible change/i);
@@ -748,14 +760,23 @@ describe('State matrix — F/L: zero-data (lead ruling: immature pillar lines AN
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Log your first session to start your training evidence.');
+    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
+    // fact under 60 characters (spec 4.8), not a two-line apology.
+    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions yet. Your first session starts the record');
     const body = pillarRow(tree, 'Body');
-    expect(body[0].props.accessibilityLabel).toContain('No weigh-ins logged yet');
+    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
+    // fact under 60 characters (spec 4.8), not a two-line apology.
+    expect(body[0].props.accessibilityLabel).toContain('No weigh-ins yet');
     const visual = pillarRow(tree, 'Progress photos');
-    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Take your first progress photos to start tracking visible change.');
+    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
+    // fact under 60 characters (spec 4.8), not a two-line apology.
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Two photos show what changed');
     // Deliberately BOTH render (lead ruling, §23 state F):
-    expect(flattenText(tree)).toContain('No training trends yet');
-    expect(flattenText(tree)).toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
+    // RE-ANCHORED 2026-09-18 (D192, finding 4): the boxed "No training
+    // trends yet" title + two-sentence paragraph is one plain-fact line
+    // now, no box, no glyph, no title (spec 4.8). Intent kept: still
+    // renders TOGETHER WITH the immature pillar lines above.
+    expect(flattenText(tree)).toContain('Trends appear after your first sessions');
   });
 
   // FOUNDER DECISION (fully free, no tier split): the Free-tier EmptyState
@@ -766,8 +787,12 @@ describe('State matrix — F/L: zero-data (lead ruling: immature pillar lines AN
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Log your first session to start your training evidence.');
-    expect(flattenText(tree)).toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
+    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
+    // fact under 60 characters (spec 4.8), not a two-line apology.
+    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions yet. Your first session starts the record');
+    // RE-ANCHORED 2026-09-18 (D192, finding 4): see state F's own re-anchor
+    // note above -- the box is one plain-fact line now (spec 4.8).
+    expect(flattenText(tree)).toContain('Trends appear after your first sessions');
     expect(flattenText(tree)).not.toMatch(/welcome/i);
     expect(flattenText(tree)).not.toMatch(/get started/i);
   });
@@ -790,7 +815,9 @@ describe('State matrix — G: Pro, training/body evidence present, no photo hist
     expect(errors).toEqual([]);
     const visual = pillarRow(tree, 'Progress photos');
     expect(visual.length).toBe(1);
-    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Take your first progress photos to start tracking visible change.');
+    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
+    // fact under 60 characters (spec 4.8), not a two-line apology.
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Two photos show what changed');
     expect(visual[0].props.accessibilityLabel).not.toMatch(/Part of Pro/);
   });
 });

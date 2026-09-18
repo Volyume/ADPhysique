@@ -110,7 +110,9 @@ export function buildVisualPillarCopy({ hasScan, hasNote, packet, capturedAt: _c
     // the user's words - "scan" is capture-flow vocabulary a brand-new user
     // has not met yet, and the row label alone ("Visual" at the time) told
     // them nothing.
-    return { state: 'No photos yet', evidence: 'Take your first progress photos to start tracking visible change.' };
+    // RE-ANCHORED 2026-09-18 (D192, finding 3): day-zero copy is one plain
+    // fact under 60 characters (spec 4.8), not a two-line apology.
+    return { state: 'No photos yet', evidence: 'Two photos show what changed' };
   }
   if (!hasNote) {
     return { state: 'Latest scan needs a clearer read', evidence: 'Retake for a comparable read.' };

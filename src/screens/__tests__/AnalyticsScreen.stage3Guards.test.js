@@ -140,6 +140,14 @@ describe('"For You" retirement covers useProgressData.js as well as the screen',
 //     recorded interpretation, regardless of how many tiles it holds)
 // = 7, exactly the spec's stated ceiling ("Max bordered containers on the
 // whole landing: 7").
+//
+// AMENDED 2026-09-18 (D192, findings 2 and 5): the Answer Block and the
+// utilities grid slots are no longer literally bordered — both dropped
+// their Card/tile shell for the finish spec's Row anatomy (no box round
+// the group). The SLOT bookkeeping this budget runs on is unchanged
+// (construction still caps each at exactly one), so the ceiling below
+// still holds; only 3 of the 5 counted slots (SessionCard, VolumeSummary
+// Strip, the Moment card) still draw a border today.
 describe('§24 density budget: primary evidence container ceiling, source-counted', () => {
   test('recentSessions is capped at 3 by useProgressData (the R3 evidence-trail ceiling)', () => {
     expect(USE_PROGRESS_DATA_SRC).toMatch(/\.slice\(0, 3\)/);
@@ -178,12 +186,16 @@ describe('§24 density budget: primary evidence container ceiling, source-counte
 
   test('above-the-fold ceiling: the Answer Block is the first bordered container, immediately after the header, before any other container', () => {
     const headerIdx = ANALYTICS_SRC.indexOf('Header (R1)');
-    // Anchored on styles.answerBlock, the stable identifier, rather than on
-    // the full opening tag: the tag gained surface="surfaceElevated" (D3, the
-    // hero is the screen's only elevated object) and a literal locator broke
-    // on a prop change that does not touch the ordering rule this test pins.
-    const answerBlockMatch = ANALYTICS_SRC.match(/<Card [^>]*style=\{styles\.answerBlock\}>/);
-    const answerBlockIdx = answerBlockMatch ? answerBlockMatch.index : -1;
+    // RE-ANCHORED 2026-09-18 (D192, finding 2): the Answer Block dropped its
+    // Card shell entirely (rows, no box round the group, spec 4.3), so
+    // there is no `<Card ... style={styles.answerBlock}>` opening tag left
+    // to match at all -- anchored on the stable `styles.answerBlock`
+    // identifier itself now. Intent kept: the ordering rule (nothing
+    // Card-shaped between the header and the Answer Block, or between the
+    // Answer Block and the evidence trail) is unaffected by removing a
+    // card -- removing one cannot break an "no Card here" rule, so this
+    // re-anchor only moves the locator, not the assertion.
+    const answerBlockIdx = ANALYTICS_SRC.indexOf('styles.answerBlock');
     const evidenceTrailIdx = ANALYTICS_SRC.indexOf('Evidence trail (R3');
     expect(headerIdx).toBeGreaterThan(-1);
     expect(answerBlockIdx).toBeGreaterThan(headerIdx);

@@ -54,18 +54,31 @@ const TREND_BLOCK = (() => {
 })();
 
 describe('the decision is the loud element, and it is above its evidence', () => {
-  test('it renders through BigNumber at the loud step', () => {
-    expect(SRC).toContain("import BigNumber from '../components/BigNumber'");
-    expect(SRC).toContain('<BigNumber value={decision.sentence} />');
+  // RE-ANCHORED 2026-09-18 (D192, finding 1): the finish spec amended
+  // section 2's own rule for this exact case -- the hero/display steps
+  // carry a NAME or a NUMBER, never a sentence. A 30-word coaching decision
+  // through BigNumber became eight lines of display type, the first thing
+  // the founder's render showed. Intent kept: the decision is STILL the
+  // loud element (first on the tab, above its evidence, its own
+  // TouchableOpacity/testID/accessibilityLabel untouched) -- only which
+  // step it sets in changed, from hero to h2.
+  test('the decision sentence renders as a plain Text at h2, never through BigNumber', () => {
+    expect(SRC).not.toContain('BigNumber');
+    expect(SRC).toContain('<Text style={[styles.decisionSentence, live.decisionSentence]}>{decision.sentence}</Text>');
+    expect(SRC).toMatch(/decisionSentence:\s*\{\s*\.\.\.type\.h2,\s*color:\s*colors\.textPrimary\s*\}/);
   });
 
-  test('BigNumber appears exactly once, so the screen has one loud thing', () => {
-    expect((SRC.match(/<BigNumber/g) || []).length).toBe(1);
+  test('the hero/display steps never carry the decision sentence, so BigNumber never appears', () => {
+    expect((SRC.match(/<BigNumber/g) || []).length).toBe(0);
   });
 
   test('the decision sits above the Answer Block, which is its evidence', () => {
     const decisionIdx = SRC.indexOf('testID="progress-decision"');
-    const answerIdx = SRC.search(/<Card [^>]*style=\{styles\.answerBlock\}>/);
+    // RE-ANCHORED 2026-09-18 (D192, finding 2): the Answer Block dropped its
+    // Card shell (rows, no box round the group), so there is no longer a
+    // `<Card ... style={styles.answerBlock}>` opening tag to anchor on.
+    // `styles.answerBlock` itself is the stable identifier now.
+    const answerIdx = SRC.indexOf('styles.answerBlock');
     expect(decisionIdx).toBeGreaterThan(-1);
     expect(answerIdx).toBeGreaterThan(-1);
     expect(decisionIdx).toBeLessThan(answerIdx);
@@ -75,7 +88,7 @@ describe('the decision is the loud element, and it is above its evidence', () =>
     // Law 2, as the founder corrected it: a card means an object. A decision
     // and a trend are readings.
     const decisionIdx = SRC.indexOf('testID="progress-decision"');
-    const answerIdx = SRC.search(/<Card [^>]*style=\{styles\.answerBlock\}>/);
+    const answerIdx = SRC.indexOf('styles.answerBlock');
     expect(SRC.slice(decisionIdx, answerIdx)).not.toMatch(/<Card\b/);
     expect(TREND_BLOCK.length).toBeGreaterThan(200);
     expect(TREND_BLOCK).not.toMatch(/<Card\b/);
@@ -164,5 +177,46 @@ describe('the screen keeps what it already answered well', () => {
     const nav = code(read('src/navigation/RootNavigator.js'));
     expect(nav).toContain('name="ProfileTab"');
     expect(nav).toContain('name="CoachOutput"');
+  });
+});
+
+// D192 finding 6 (2026-09-18): the Body row's headline is the figure, and
+// its second line is a short reading keyed on the exact sentence the trend
+// returns. The map is the only place that copy is shortened, so it must stay
+// true to its source: every key is a sentence `deriveWeightTrend` can
+// return, every value fits the row's text column, and the no-comparison
+// narration ("Your smoothed weight trend is updated. Maintenance comes
+// from...") is deliberately absent, so that state shows the figure alone.
+describe('the Body row reads the trend in one short line per state (D192)', () => {
+  const MAP_SRC = (() => {
+    const m = SRC.match(/const BODY_ROW_READING = Object\.freeze\(\{([\s\S]*?)\}\);/);
+    return m ? m[1] : '';
+  })();
+  const entries = [...MAP_SRC.matchAll(/'([^']+)':\s*'([^']+)'/g)].map((m) => [m[1], m[2]]);
+  const VM = read('src/lib/weightTrend.js');
+
+  test('the row consumes the map, not the sentence', () => {
+    expect(SRC).toContain('evidence: BODY_ROW_READING[weightTrend.insight] || null');
+    expect(SRC).not.toMatch(/insight\.length <= \d+/);
+  });
+
+  test('every key is a sentence the trend actually returns', () => {
+    expect(entries.length).toBe(4);
+    for (const [sentence] of entries) {
+      expect({ sentence, inVm: VM.includes(`'${sentence}'`) }).toEqual({ sentence, inVm: true });
+    }
+  });
+
+  test('every reading fits one row line and keeps the calm tail with its verdict', () => {
+    for (const [sentence, reading] of entries) {
+      expect({ reading, short: reading.length <= 45 }).toEqual({ reading, short: true });
+      if (/Nothing to change yet/.test(sentence)) {
+        expect(reading).toMatch(/Nothing to change yet$/);
+      }
+    }
+  });
+
+  test('the mechanism narration is not a reading, so that state carries the figure alone', () => {
+    expect(entries.map(([s]) => s)).not.toContain('Your smoothed weight trend is updated. Maintenance comes from your validated food and weight history.');
   });
 });

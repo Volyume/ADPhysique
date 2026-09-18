@@ -33,21 +33,38 @@ describe('AnalyticsScreen cohesion census (R2)', () => {
     // left on this screen to pin.
   });
 
-  test('nav-tile label uses the shared type.captionStrong role, not a raw pair', () => {
-    expect(SRC).toMatch(/navTileLabel:\s*\{\s*\.\.\.type\.captionStrong/);
+  // RE-ANCHORED 2026-09-18 under D192 finding 5 (finish spec 4.3): the tile
+  // became a Row, and a Row's title takes the `title` role (spec section 2:
+  // "every row title, card title, button label"), not the small centred
+  // caption role a tile used. Intent kept: still a named shared role, never
+  // a raw fontSize+fontWeight pair.
+  test('nav-tile label uses the shared type.title role (the row-title role), not a raw pair', () => {
+    expect(SRC).toMatch(/navTileLabel:\s*\{\s*\.\.\.type\.title/);
     // The live twin mirrors the same role for theme parity.
-    expect(SRC).toMatch(/navTileLabel:\s*\{\s*\.\.\.t\.type\.captionStrong/);
+    expect(SRC).toMatch(/navTileLabel:\s*\{\s*\.\.\.t\.type\.title/);
   });
 
+  // RE-ANCHORED 2026-09-18 under D192 finding 5 (finish spec 4.3): "MORE
+  // STATS" tiles became rows, matching the Answer Block's PillarRow anatomy
+  // -- a row is layout only (flexDirection/gap/padding), never a
+  // bordered/radiused control. This supersedes the 2026-09-17 re-anchor
+  // immediately below (kept for its own history): that ruling moved the
+  // tile from card-class to control-class radius; this one removes the
+  // radius/border class altogether, because the object is no longer a
+  // tile of any class -- it is a row. The intent survives once more: the
+  // element sits on a named class rather than inventing a corner, and the
+  // named class here is "no corner, because it is a row".
+  //
   // RE-ANCHORED 2026-09-17 under D165 law 3 (geometry carries meaning): "a
   // control is 10 px and never a pill; a card stays 16 px". A nav tile is a
   // BUTTON -- you press it and a screen opens -- and the founder's own worked
   // examples end "a button definitely isn't [an object]". The intent of the R2
   // case is kept: the tile must sit on a named class rather than invent a
   // corner. The class it belongs to has moved from card to control.
-  test('nav tiles are control-class (radius.control), because a tile is a button', () => {
-    expect(SRC).toMatch(/navTile:\s*\{[\s\S]{0,140}?borderRadius: radius\.control/);
-    expect(SRC).not.toMatch(/navTile:\s*\{[\s\S]{0,140}?borderRadius: radius\.lg/);
+  test('nav tiles are rows now, not bordered/radiused tiles of any class', () => {
+    expect(SRC).toMatch(/navTile:\s*\{[^}]*flexDirection:\s*'row'/);
+    expect(SRC).not.toMatch(/navTile:\s*\{[\s\S]{0,200}?borderRadius/);
+    expect(SRC).not.toMatch(/navTile:\s*\{[\s\S]{0,200}?borderWidth/);
   });
 
   test('recapCard keeps its RECORDED radius.md ephemeral-banner exception (R9/D70)', () => {

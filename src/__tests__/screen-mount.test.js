@@ -1230,8 +1230,10 @@ describe('Edge: empty arrays in expected-populated state', () => {
           .map(n => (Array.isArray(n.props.children) ? n.props.children.join('') : n.props.children))
           .filter(c => typeof c === 'string')
           .join(' ');
-        expect(text).toContain('No training trends yet');
-        expect(text).toContain('Training charts appear here once sessions are logged.');
+        // RE-ANCHORED 2026-09-18 (D192, finding 4): the boxed "No training
+        // trends yet" title + paragraph is one plain-fact line now, no box,
+        // no glyph, no title (spec 4.8).
+        expect(text).toContain('Trends appear after your first sessions');
         expect(text).not.toContain('Start a workout');
         const { failures } = await bashTappables(tree);
         const real = failures.filter(f => !/getState|dispatch|navigation\.navigate|getParent/i.test(f.error));

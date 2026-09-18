@@ -1100,10 +1100,16 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
   // FOUNDER DECISION (fully free, no tier split): every destination is
   // genuinely open to every account now, so there is one sentence, not a
   // tier fork -- the old Free-only "consistency, lifts" sentence is retired.
-  test('the Progress empty state promises the same, real destinations to every account (C5-P35-01 superseded)', () => {
+  // RE-ANCHORED 2026-09-18 (D192, finding 4): the "same real destinations"
+  // premise described the two-part copy that named them; that box is one
+  // factual line now, no promised destinations, no paragraph (spec 4.8).
+  // Intent kept: still one sentence, not a tier fork -- there is no tier
+  // branch left to fork.
+  test('the Progress empty state is one fact, not a tier fork (C5-P35-01 / D192 finding 4 superseded)', () => {
     const src = read('screens/AnalyticsScreen.js');
-    expect(src).toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
+    expect(src).toContain('Trends appear after your first sessions');
     expect(src).not.toContain('Your consistency, lifts and full history are still available below.');
+    expect(src).not.toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
   });
 
   test('the safety screener is reachable on every tier (W-8 / C5-P7-07)', () => {
