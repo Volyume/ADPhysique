@@ -5,7 +5,7 @@ import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import RollingNumber from '../RollingNumber';
 import { colors, fontSize, fontWeight, spacing, radius, motion, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
-import { toEnergy, energyUnitLabel } from '../../lib/format';
+import { toEnergy, energyUnitLabel, formatNumber } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
 
 const KCAL_SIZE = 132;
@@ -141,10 +141,15 @@ function Ring({ size, stroke, progress, progressTarget, plannedProgress = 0, tin
 // `sub` is an optional quiet descriptive line under the bar (e.g. protein
 // g/kg today), purely factual, never a target judgement.
 //
-// `moreIsFine` marks a macro with no upper-bound shame (fibre): it shows a
-// "Ng to go" remaining hint while under target but NEVER an "over" readout,
-// since more fibre is not a deviation to flag.
-function MacroBar({ label, value, target, planned = 0, primary, sub = null, moreIsFine = false, tint }) {
+// `moreIsFine` marks a macro with no upper-bound shame (fibre). RE-ANCHORED
+// 2026-09-18 (D192, finish spec item 2): it used to gate a "Ng to go" /
+// "Ng over" remaining hint (never "over" for a more-is-fine macro -- more
+// fibre is not a deviation to flag), so it is unused inside this function
+// now that the hint is removed entirely. Left wired -- the fibre call site
+// below still passes it -- because removing the hint for every macro cannot
+// add an "over" readout for this one, so the ED-safety property the
+// parameter existed to protect stays true with nothing left to check.
+function MacroBar({ label, value, target, planned = 0, primary, sub = null, moreIsFine: _moreIsFine = false, tint }) {
   // CP-10 stage 4: `tint` was a default PARAMETER reading the frozen module
   // `colors` singleton (every real caller in this file already passes an
   // explicit tint, so this default is defensive); resolved against the
@@ -159,15 +164,13 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
   const resolvedTint = tint ?? t.colors.borderLight;
   const progress = target && target > 0 ? Math.max(0, Math.min(1, value / target)) : 0;
   const plannedProgress = target && target > 0 ? Math.max(0, Math.min(1, (value + planned) / target)) : 0;
-  // Remaining framing (factual value/target, no colour judgement, matches the
-  // adherence-neutral kcal ring). "Ng to go" while under, "Ng over" while over,
-  // and nothing exactly on target. A more-is-fine macro never shows "over".
-  const remaining = target != null && target > 0 ? target - value : null;
-  let remainingText = null;
-  if (remaining != null) {
-    if (remaining > 0) remainingText = `${Math.round(remaining)}g to go`;
-    else if (remaining < 0 && !moreIsFine) remainingText = `${Math.round(Math.abs(remaining))}g over`;
-  }
+  // RE-ANCHORED 2026-09-18 (D192, finish spec item 2): the "Ng to go" /
+  // "Ng over" remaining hint that used to live here is REMOVED. The row
+  // already prints "127 / 170g" a few lines below; the hint restated the
+  // same fact and roughly doubled the macro block's height. This is a pure
+  // removal, nothing replaces it, so the ED-safety property it used to
+  // enforce (a more-is-fine macro never shows an "over" readout) cannot be
+  // violated by code that no longer exists.
   return (
     <View style={styles.macroBar}>
       <View style={styles.macroBarTop}>
@@ -183,10 +186,9 @@ function MacroBar({ label, value, target, planned = 0, primary, sub = null, more
         ) : null}
         <View style={[styles.macroFill, live.macroFill, { width: `${Math.round(progress * 100)}%`, backgroundColor: resolvedTint }]} />
       </View>
-      {(sub || remainingText) ? (
+      {sub ? (
         <View style={styles.macroBarSubRow}>
-          <Text style={[styles.macroBarSub, live.macroBarSub]}>{sub ?? ''}</Text>
-          {remainingText ? <Text style={[styles.macroBarRemaining, live.macroBarRemaining]}>{remainingText}</Text> : null}
+          <Text style={[styles.macroBarSub, live.macroBarSub]}>{sub}</Text>
         </View>
       ) : null}
     </View>
@@ -333,7 +335,16 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
             progressTarget={kcalProgress}
             plannedProgress={kcalPlannedProgress}
             tint={kcalTint}
-            track={t.colors.surface2}
+            // Finish spec item 7 (D192): at zero the fill sweep is empty, so
+            // the track alone was reading as "a full grey circle of the
+            // trained-day fill" -- surface2 is close in value to the fills
+            // the app uses for a filled control. The hairline token is the
+            // one the app already uses for an empty/unfilled edge, so a
+            // zero day reads as an empty ring, not a filled one. The fill
+            // colour itself (tint, above) is untouched -- D170 keeps the
+            // ring visible at every value, and that is the fill's job, not
+            // the track's.
+            track={t.colors.borderSubtle}
           />
           <View style={styles.kcalCentre} pointerEvents="none">
             {kcalTarget != null ? (
@@ -362,14 +373,22 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
               </>
             )}
             {hasPlanned ? (
-              <Text style={[styles.kcalPlanned, live.kcalPlanned]} numberOfLines={1}>{`+${toEnergy(plannedKcal, energyUnit)} planned`}</Text>
+              <Text style={[styles.kcalPlanned, live.kcalPlanned]} numberOfLines={1}>{`+${formatNumber(toEnergy(plannedKcal, energyUnit))} planned`}</Text>
             ) : null}
           </View>
         </View>
         {kcalTarget != null ? (
           <View style={styles.kcalEatenWrap}>
             <RollingNumber value={toEnergy(kcal, energyUnit)} style={[styles.kcalEatenValue, live.kcalEatenValue]} maxFontSizeMultiplier={KCAL_MAX_FONT_SCALE} />
-            <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${toEnergy(kcalTarget, energyUnit)} ${energyUnitLabel(energyUnit)}`}</Text>
+            {/* RE-ANCHORED 2026-09-18 (D192, finish spec item 1): the target
+                was the one figure on this screen without a thousands
+                separator, on the same screen as the comma-grouped eaten
+                value beside it (RollingNumber's own en-GB grouping,
+                groupDigits() in RollingNumber.js). formatNumber is the
+                app's shared en-GB display formatter (src/lib/format.js);
+                this is a plain Text, not a RollingNumber, so it is applied
+                directly here rather than animated. */}
+            <Text style={[styles.kcalEatenLabel, live.kcalEatenLabel]}>{`of ${formatNumber(toEnergy(kcalTarget, energyUnit))} ${energyUnitLabel(energyUnit)}`}</Text>
           </View>
         ) : null}
       </View>
@@ -402,7 +421,7 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
       </View>
       {macroSplit ? (
         <Text style={[styles.macroSplit, live.macroSplit]}>
-          {`P ${macroSplit.p}% - C ${macroSplit.c}% - F ${macroSplit.f}%`}
+          {`P ${macroSplit.p}% · C ${macroSplit.c}% · F ${macroSplit.f}%`}
           <Text style={[styles.macroSplitCaption, live.macroSplitCaption]}> of calories</Text>
         </Text>
       ) : null}
@@ -545,19 +564,16 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
-  // Quiet descriptive sub-row under a bar: protein g/kg on the left, the
-  // factual remaining ("Ng to go" / "Ng over") on the right. Both adherence-
-  // neutral (textMuted), never a colour judgement.
+  // Quiet descriptive sub-row under a bar: protein g/kg today, the only
+  // thing it shows now. RE-ANCHORED 2026-09-18 (D192, finish spec item 2):
+  // used to also carry the factual remaining ("Ng to go" / "Ng over") on
+  // the right; removed, so macroBarRemaining (its Text style) is removed
+  // with it. Still adherence-neutral (textMuted), never a colour judgement.
   macroBarSubRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     marginTop: spacing.xxs,
   },
   macroBarSub: {
-    color: colors.textMuted,
-    fontSize: fontSize.xs,
-    fontVariant: ['tabular-nums'],
-  },
-  macroBarRemaining: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
     fontVariant: ['tabular-nums'],
@@ -607,7 +623,6 @@ function buildLiveStyles(t) {
     macroFillPlanned: { backgroundColor: t.colors.borderLight },
     macroBarPlanned: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     macroBarSub: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
-    macroBarRemaining: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     macroSplit: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     macroSplitCaption: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
   };

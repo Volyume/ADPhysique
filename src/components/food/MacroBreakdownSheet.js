@@ -60,12 +60,12 @@ function MacroLine({ kcal, protein, carbs, fat, energyUnit }) {
   const fKcal = fat * 9;
   const macroKcal = pKcal + cKcal + fKcal;
   const split = macroKcal > 0
-    ? `P ${Math.round((pKcal / macroKcal) * 100)}% - C ${Math.round((cKcal / macroKcal) * 100)}% - F ${Math.round((fKcal / macroKcal) * 100)}%`
+    ? `P ${Math.round((pKcal / macroKcal) * 100)}% · C ${Math.round((cKcal / macroKcal) * 100)}% · F ${Math.round((fKcal / macroKcal) * 100)}%`
     : null;
   return (
     <View style={styles.macroCell}>
       <Text style={[styles.rowMacros, live.rowMacros]}>
-        {toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)} - {protein}P {carbs}C {fat}F
+        {toEnergy(kcal, energyUnit)} {energyUnitLabel(energyUnit)} · {protein}P {carbs}C {fat}F
       </Text>
       <Text style={[styles.rowMacroKcal, live.rowMacroKcal]}>
         {/* D88: this figure was hardcoded to kcal while the line above

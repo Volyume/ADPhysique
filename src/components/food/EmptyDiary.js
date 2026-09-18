@@ -10,7 +10,7 @@
  */
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, radius, type, hitSlop, iconSize } from '../../styles/theme';
+import { colors, spacing, type, hitSlop, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import Button from '../Button';
 import { touchTarget } from '../../styles/layout';
@@ -33,15 +33,13 @@ export default function EmptyDiary({
       <Text style={[styles.body, live.body]}>{EMPTY_DIARY_COPY}</Text>
       {onPlanDay ? (
         <TouchableOpacity
-          style={[styles.planRow, live.planRow]}
+          style={styles.planRow}
           onPress={onPlanDay}
           hitSlop={hitSlop}
           accessibilityRole="button"
           accessibilityLabel="Open meal builder for this day or week"
         >
-          <View style={[styles.planIcon, live.planIcon]}>
-            <Ionicons name="restaurant-outline" size={18} color={t.colors.textSecondary} />
-          </View>
+          <Ionicons name="restaurant-outline" size={iconSize.md} color={t.colors.textSecondary} />
           <View style={styles.planCopy}>
             <Text style={[styles.planTitle, live.planTitle]}>Meal builder</Text>
             <Text style={[styles.planText, live.planText]}>Build a day or week from your targets. Nothing is logged until you add it.</Text>
@@ -100,31 +98,21 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.xs,
   },
+  // Finish spec item 6 (D192): a row (spec 4.3) -- unboxed 20dp glyph at the
+  // left, title 16 semibold, one 13 secondary line, chevron, no box round
+  // it. Replaces the bordered surface2 box and its boxed icon disc.
   planRow: {
     alignSelf: 'stretch',
     minHeight: 62,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    backgroundColor: colors.surface2,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  planIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    flexShrink: 0,
-  },
   planCopy: { flex: 1, minWidth: 0, alignItems: 'flex-start' },
-  planTitle: { ...type.label, color: colors.textPrimary },
-  planText: { ...type.caption, color: colors.textSecondary, marginTop: 2, textAlign: 'left' },
+  planTitle: { ...type.title, color: colors.textPrimary },
+  planText: { ...type.bodySm, color: colors.textSecondary, marginTop: 2, textAlign: 'left' },
   actionButton: { minHeight: touchTarget.minimum },
 });
 
@@ -142,8 +130,6 @@ function buildLiveStyles(t) {
     // (D168) -- the pattern the styling rules now forbid for new components.
     card: { borderTopColor: t.colors.borderSubtle },
     body: { color: t.colors.textSecondary },
-    planRow: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    planIcon: { backgroundColor: t.colors.surface },
     planTitle: { color: t.colors.textPrimary },
     planText: { color: t.colors.textSecondary },
   };

@@ -32,7 +32,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
-import Card from '../components/Card';
 import {
   getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
   applyCuratedMealToDiary,
@@ -1404,6 +1403,19 @@ export default function DiaryScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [bottomInset, t],
   );
+  // Finish spec item 5 (D192): styles.scrollContent's static paddingBottom
+  // (below) assumed the FAB sits at `bottom: spacing.sm`, matching its own
+  // comment -- but scanFabStyle above actually floats it at
+  // `spacing.sm + bottomInset`. On any device with a safe-area inset (most
+  // current phones, and the founder's own), the real FAB sits bottomInset
+  // higher than the static padding accounted for, so the last row in view
+  // (the founder's screenshot showed the meal-builder row) could scroll to
+  // rest still under the disc. Same "frozen default + runtime inset" split
+  // as scanFabStyle/selectionBarStyle just above.
+  const scrollContentStyle = useMemo(
+    () => [styles.scrollContent, { paddingBottom: spacing.sm + 56 + spacing.xl + bottomInset }],
+    [bottomInset],
+  );
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
@@ -1416,7 +1428,7 @@ export default function DiaryScreen({ navigation, route }) {
       <ScrollView
         ref={scrollRef}
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={scrollContentStyle}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.colors.primary} />}
       >
         <ScreenHeader title="Nutrition" />
@@ -1570,47 +1582,46 @@ export default function DiaryScreen({ navigation, route }) {
           </View>
         ) : null}
 
-        {/* Item 9(c) (D141): calm, dismissible, one-time discovery offer for
-            the opt-in meal-log reminder. Same card shape as the OFF-consent
-            card above (offCard styles reused, not duplicated), with a title
-            line added since this offer needs one. */}
+        {/* Item 9(c) (D141). RE-ANCHORED 2026-09-18 (D192, finish spec item
+            4): the paragraph + two pill buttons is now one row (row
+            anatomy, spec 4.3) -- glyph, title, one secondary line, chevron.
+            The row's own tap does exactly what "Set up reminders" did; the
+            "Not now" dismissal is the small close glyph at the row's right.
+            The eligibility gate (mealReminderOfferVisible) and the dismissal
+            logic/persistence key (dismissMealReminderOffer) are byte-for-
+            byte unchanged; DiaryScreen.mealReminderOffer.item9c.guard.test.js
+            pins both and still passes unmodified. */}
         {mealReminderOfferVisible ? (
-          <View style={[styles.offCard, live.offCard]}>
-            <Text style={[styles.mealReminderOfferTitle, live.mealReminderOfferTitle]}>
-              Want a nudge to log?
-            </Text>
-            <Text style={[styles.offCardText, live.offCardText]}>
-              A gentle reminder at your usual meal times can make logging easier. You choose the times, and you can turn it off any time.
-            </Text>
-            <View style={styles.offCardRow}>
-              <Button
-                title="Not now"
-                onPress={dismissMealReminderOffer}
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                style={[styles.offCardButton, live.offCardButton, styles.offCardButtonMuted, live.offCardButtonMuted]}
-                textStyle={[styles.offCardDismiss, live.offCardDismiss]}
-                accessibilityLabel="Not now"
-              />
-              <Button
-                title="Set up reminders"
-                // NotificationSettings lives in ProfileStack, so this diary
-                // (DiaryStack) must cross-tab, same idiom as the OFF-consent
-                // card's "Sharing settings" button just above. Navigate
-                // first, then dismiss, so the tap is never lost.
-                onPress={() => {
-                  navigateCrossTab(navigation, 'ProfileTab', 'NotificationSettings');
-                  dismissMealReminderOffer();
-                }}
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                style={[styles.offCardButton, live.offCardButton]}
-                textStyle={[styles.offCardCta, live.offCardCta]}
-                accessibilityLabel="Set up meal reminders"
-              />
-            </View>
+          <View style={[styles.mealReminderRow, live.mealReminderRow]}>
+            <TouchableOpacity
+              style={styles.mealReminderRowMain}
+              // NotificationSettings lives in ProfileStack, so this diary
+              // (DiaryStack) must cross-tab, same idiom as the OFF-consent
+              // card's "Sharing settings" button above. Navigate first, then
+              // dismiss, so the tap is never lost.
+              onPress={() => {
+                navigateCrossTab(navigation, 'ProfileTab', 'NotificationSettings');
+                dismissMealReminderOffer();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Set up meal reminders"
+            >
+              <Ionicons name="notifications-outline" size={iconSize.md} color={t.colors.textSecondary} />
+              <View style={styles.mealReminderRowCopy}>
+                <Text style={[styles.mealReminderRowTitle, live.mealReminderRowTitle]}>Meal reminders</Text>
+                <Text style={[styles.mealReminderRowSub, live.mealReminderRowSub]}>Optional, at your usual meal times</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={dismissMealReminderOffer}
+              hitSlop={12}
+              style={styles.mealReminderDismiss}
+              accessibilityRole="button"
+              accessibilityLabel="Not now"
+            >
+              <Ionicons name="close" size={iconSize.sm} color={t.colors.textMuted} />
+            </TouchableOpacity>
           </View>
         ) : null}
 
@@ -2180,7 +2191,7 @@ function WaterRow({
   const targetL = (targetMl / 1000).toFixed(1);
   const progress = Math.max(0, Math.min(1, ml / targetMl));
   return (
-    <Card padding="md" style={styles.waterRow}>
+    <View style={[styles.waterRow, live.waterRow]}>
       <View style={styles.waterHeader}>
         <View style={styles.waterLeft}>
           <Ionicons name="water-outline" size={18} color={t.colors.textSecondary} />
@@ -2237,7 +2248,7 @@ function WaterRow({
           style={styles.waterHint}
         />
       ) : null}
-    </Card>
+    </View>
   );
 }
 
@@ -2442,9 +2453,6 @@ const styles = StyleSheet.create({
     padding: spacing.md, marginBottom: spacing.lg,
   },
   offCardText: { ...type.bodySm, color: colors.textSecondary },
-  // Item 9(c) (D141): the meal-reminder offer's title line, the offCard
-  // shape's only user with a heading above the body text.
-  mealReminderOfferTitle: { ...type.bodyStrong, color: colors.textPrimary },
   offCardRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, flexWrap: 'wrap' },
   offCardButton: {
     minHeight: 40,
@@ -2461,6 +2469,26 @@ const styles = StyleSheet.create({
   },
   offCardDismiss: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textMuted },
   offCardCta: { ...type.label, color: colors.textPrimary },
+  // Item 9(c) (D141). RE-ANCHORED 2026-09-18 (D192, finish spec item 4): one
+  // row (spec 4.3) in place of the old offCard-shaped two-button prompt.
+  // Un-carded like offCard/plannedBanner above (D171 law 2): a hairline
+  // above, no fill, no radius.
+  mealReminderRow: {
+    flexDirection: 'row', alignItems: 'center',
+    minHeight: 56, gap: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  mealReminderRowMain: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+  },
+  mealReminderRowCopy: { flex: 1, minWidth: 0 },
+  mealReminderRowTitle: { ...type.title, color: colors.textPrimary },
+  mealReminderRowSub: { ...type.bodySm, color: colors.textMuted, marginTop: 2 },
+  mealReminderDismiss: {
+    width: 32, height: 32, alignItems: 'center', justifyContent: 'center',
+  },
   addMealRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xs, minHeight: touchTarget.minimum,
@@ -2499,9 +2527,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   plannedBtnGhost: { ...type.label, color: colors.textPrimary },
+  // Finish spec item 6 (D192): a row (spec 4.3), not a card -- un-carded
+  // like offCard/plannedBanner/mealReminderRow above (D171 law 2): a
+  // hairline above, no fill, no radius, no shadow. The header row (icon,
+  // label, value, steppers) and the track/fill bar beneath are unchanged.
   waterRow: {
     marginBottom: spacing.lg,
     gap: spacing.sm,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
   },
   waterHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -2584,11 +2619,13 @@ function buildLiveStyles(t) {
     // change would have done nothing on device while looking right in source.
     offCard: { borderTopColor: t.colors.borderSubtle },
     offCardText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    mealReminderOfferTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     offCardButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     offCardButtonMuted: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     offCardDismiss: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     offCardCta: { ...t.type.label, color: t.colors.textPrimary },
+    mealReminderRow: { borderTopColor: t.colors.borderSubtle },
+    mealReminderRowTitle: { color: t.colors.textPrimary },
+    mealReminderRowSub: { color: t.colors.textMuted },
     addMealRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     addMealLabel: { ...t.type.label, color: t.colors.textPrimary },
     // D171: un-carded, and its amber edge went with the box. See offCard.
@@ -2598,6 +2635,7 @@ function buildLiveStyles(t) {
     plannedBtnPrimaryText: { fontSize: t.fontSize.sm },
     plannedBtnGhostButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     plannedBtnGhost: { ...t.type.label, color: t.colors.textPrimary },
+    waterRow: { borderTopColor: t.colors.borderSubtle },
     waterLabel: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
     waterValue: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
     waterBtn: { backgroundColor: t.colors.surface2 },

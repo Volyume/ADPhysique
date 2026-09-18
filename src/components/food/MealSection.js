@@ -152,7 +152,7 @@ export default function MealSection({
       <View style={styles.header}>
         <Text style={[styles.mealName, live.mealName]}>{slot.label}</Text>
         {hasEntries ? (
-          <Text style={[styles.subtotal, live.subtotal]}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} - {slotProtein}g P</Text>
+          <Text style={[styles.subtotal, live.subtotal]}>{toEnergy(slotKcal, energyUnit)} {energyUnitLabel(energyUnit)} · {slotProtein}g P</Text>
         ) : null}
       </View>
       {showEmptyActions && showUsuals ? (

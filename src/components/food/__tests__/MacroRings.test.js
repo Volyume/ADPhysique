@@ -110,7 +110,7 @@ describe('remaining-as-hero (founder decision 2026-06-29)', () => {
     // host in tests); its resting text is defaultValue.
     const numerals = tree.root.findAll((n) => n.props?.defaultValue != null)
       .map((n) => n.props.defaultValue);
-    // 2100 - 1840 = 260 left; eaten reference shows "1840" + "of 2100 kcal"
+    // 2100 - 1840 = 260 left; eaten reference shows "1840" + "of 2,100 kcal"
     expect(numerals).toContain('260');
     expect(numerals).toContain('1,840');
     // D169, law 7: the sub-label was bare "left" and now carries the unit.
@@ -121,7 +121,13 @@ describe('remaining-as-hero (founder decision 2026-06-29)', () => {
     // it was.
     expect(texts).toContain('kcal left');
     expect(texts).not.toContain('left');
-    expect(texts).toContain('of 2100 kcal');
+    // RE-ANCHORED 2026-09-18 (D192, finish spec item 1): was 'of 2100 kcal'.
+    // The target now shares the same en-GB thousands formatter
+    // (formatNumber) as the eaten value beside it (RollingNumber's own
+    // grouping) -- it was the one figure on this screen without a
+    // separator. Intent kept: this still pins "of <target> <unit>" as the
+    // quiet reference text next to the hero.
+    expect(texts).toContain('of 2,100 kcal');
   });
 
   test('over target reads "over" with the magnitude, never a separate alarm', () => {
