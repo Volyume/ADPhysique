@@ -586,33 +586,50 @@ export default function CommunityHubScreen({ navigation, route }) {
 
       {!joined && !browsing ? (
         <>
-          <Card style={styles.block}>
-            <Text style={[styles.heroTitle, { ...t.type.h3, color: t.colors.textPrimary }]}>
+          {/* D192 finish spec (`40-FINISH-SPEC.md` section 5 item 9): no
+              Card here any more -- a plain View with the same gap. The
+              title moved from h3 to h2. STOP (see lane report): Button.js's
+              `primary` is confirmed neutral, not amber (D148 moved the
+              amber fill to `emphatic`) -- but `Button.hierarchy.guard.
+              test.js` pins a separate, specific, reasoned prior ruling
+              (V1, visual ruling 2026-09-07, social-discovery blueprint
+              sections 6+13): this exact button was moved OFF `emphatic`
+              deliberately, because CommunityJoinScreen carries the actual
+              committing moment. Kept at `primary` rather than switched to
+              `emphatic`, so the day-zero hero currently carries no amber
+              at all; flagged for the lead rather than decided here. */}
+          <View style={styles.block}>
+            <Text style={[styles.heroTitle, { ...t.type.h2, color: t.colors.textPrimary }]}>
               Your gym, your people
             </Text>
             <Text style={[styles.heroBody, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
-              See who is training around you, keep up with friends, give respect.
+              See who trains around you and keep up with friends
             </Text>
             <View style={styles.heroActions}>
               <Button
                 variant="primary"
-                size="sm"
+                size="md"
                 fullWidth={false}
                 icon="person-add-outline"
+                // D192 lead ruling (2026-09-18): V1 keeps the amber FILL on the
+                // Join screen's real commit, so this doorway carries the amber
+                // leading glyph instead, exactly as Today's Start workout does
+                // (spec 4.6: fill for the committing action, otherwise the glyph).
+                iconFg={t.colors.primary}
                 title="Create my profile"
                 onPress={() => navigation.navigate('CommunityJoin')}
                 accessibilityLabel="Create my Community profile"
               />
               <Button
                 variant="tertiary"
-                size="sm"
+                size="md"
                 fullWidth={false}
                 title="Browse first"
                 onPress={() => setBrowsing(true)}
                 accessibilityLabel="Browse Community first"
               />
             </View>
-          </Card>
+          </View>
           <PrivacyReceipt />
         </>
       ) : null}
@@ -854,7 +871,7 @@ const styles = StyleSheet.create({
   blockTitle: { ...type.bodyStrong, color: colors.textPrimary },
   blockBody: { ...type.bodySm, color: colors.textSecondary },
   blockActions: { flexDirection: 'row', gap: spacing.sm },
-  heroTitle: { ...type.h3, color: colors.textPrimary },
+  heroTitle: { ...type.h2, color: colors.textPrimary },
   heroBody: { ...type.bodySm, color: colors.textSecondary },
   heroActions: { flexDirection: 'row', gap: spacing.sm },
   sectionEmpty: { ...type.bodySm, color: colors.textMuted, paddingVertical: spacing.sm },

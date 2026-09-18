@@ -247,16 +247,31 @@ beforeEach(() => {
 
 describe('state 1: no Community profile', () => {
   test('shows the hero, the privacy receipt and the one committing action', async () => {
-    const { text } = await render();
+    const { text, partTrees } = await render();
 
     expect(text).toContain('Your gym, your people');
-    expect(text).toContain('See who is training around you, keep up with friends, give respect.');
+    // RE-ANCHORED 2026-09-18 (D192, item 1): the finish spec's day-zero
+    // hero body is one line -- "See who trains around you and keep up
+    // with friends" (40-FINISH-SPEC.md section 5 item 9) -- replacing the
+    // old three-clause sentence. Intent kept: the hero still states what
+    // Community is for before anyone joins.
+    expect(text).toContain('See who trains around you and keep up with friends');
     expect(text).toContain('Nothing about your body, food or coaching is ever shared.');
-    // Lead visual review 2026-09-06, ruling V9: PrivacyReceipt is compact by
-    // default (the one-line promise plus "What is shared"); the two columns
-    // ("Others can see" / "Never shared") only render once that is tapped,
-    // so they are no longer part of the hero's own default text.
-    expect(text).toContain('What is shared');
+    // RE-ANCHORED 2026-09-18 (D192, item 2): PrivacyReceipt's separate
+    // "What is shared" tertiary Button is gone -- the whole collapsed row
+    // is now the disclosure (PrivacyReceipt.js), and its own rendered text
+    // is only the shield glyph, PRIVACY_RECEIPT_LINE and a chevron; "What
+    // is shared" survives as that row's accessibilityLabel, not as
+    // visible text. Intent kept -- PrivacyReceipt is compact by default
+    // (lead visual review 2026-09-06 ruling V9) and the disclosure is
+    // present and reachable before the two "Others can see" / "Never
+    // shared" columns are asked for -- is asserted directly on the row.
+    const disclosure = partTrees[0].root.findAll(
+      (n) => n.props?.accessibilityLabel === 'What is shared. Expands the full list.'
+        && typeof n.props.onPress === 'function',
+    )[0];
+    expect(disclosure).toBeTruthy();
+    expect(disclosure.props.accessibilityState).toEqual({ expanded: false });
     expect(text).toContain('Create my profile');
     expect(text).toContain('Browse first');
   });
