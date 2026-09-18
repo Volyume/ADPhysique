@@ -22,14 +22,19 @@ describe('Coach and weekly check-in copy polish', () => {
   });
 
   test('fast check-in detail escape is a contained secondary action, not an amber text link', () => {
-    // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): the JSX
-    // call site now reads the live theme (color={t.colors.textSecondary})
-    // instead of the frozen static import; the frozen `styles` block asserted
-    // below (fastExpandBtn/fastExpandText) is byte-identical to before, so
-    // this is a mechanical update, not a weakening.
-    expect(weeklyCheckInSource).toContain('<Ionicons name="create-outline" size={16} color={t.colors.textSecondary} />');
-    expect(weeklyCheckInSource).toMatch(/fastExpandBtn: \{[\s\S]*minHeight: touchTarget\.minimum,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(weeklyCheckInSource).toContain('fastExpandText: { ...type.label, color: colors.textPrimary }');
-    expect(weeklyCheckInSource).not.toMatch(/fastExpandText: \{ fontSize: fontSize\.sm,[\s\S]*color: colors\.primary/);
+    // RE-ANCHORED 2026-09-18 (D192, item 6): "Add more detail" is no longer
+    // a bordered chip button with a pencil icon (fastExpandBtn/
+    // fastExpandText, both removed) -- it is a plain Row (title + trailing
+    // chevron-forward in textMuted) per the finish spec's Row anatomy, sat
+    // above the primary button instead of below it. Intent kept, restated
+    // for the new shape: the escape reads in neutral ink (textPrimary
+    // title, textMuted chevron), never amber/colors.primary, and the
+    // pencil icon this suite used to pin is confirmed gone rather than
+    // merely unchecked.
+    expect(weeklyCheckInSource).not.toContain('create-outline');
+    expect(weeklyCheckInSource).toMatch(/addDetailRow: \{[\s\S]*minHeight: 56,[\s\S]*borderTopColor: colors\.borderSubtle,[\s\S]*borderBottomColor: colors\.borderSubtle,/);
+    expect(weeklyCheckInSource).toContain('addDetailRowText: { ...type.title, color: colors.textPrimary }');
+    expect(weeklyCheckInSource).not.toMatch(/addDetailRowText: \{[\s\S]*color: colors\.primary/);
+    expect(weeklyCheckInSource).toContain('<Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />');
   });
 });
