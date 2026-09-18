@@ -234,11 +234,11 @@ function personaStoreState(seed, overrides = {}) {
     // the same "already onboarded" characterisation firstRunComplete above
     // already gives the persona, just for the field Community reads.
     healthConsent: true,
-    units: 'metric',
+    units: 'kg',
     bodyWeightUnits: 'kg',
     userProfile: {
       firstName: 'Alex', sex: 'male', goal: 'lean_gain', trainingFocus: 'hypertrophy',
-      units: 'metric', coachAutonomy: 'collaborative', coachTone: 'automatic',
+      units: 'kg', coachAutonomy: 'collaborative', coachTone: 'automatic',
       // CoachOutputScreen reads userProfile.phaseStartedAt (store field, set
       // by ProOnboardingScreen at real onboarding time) STRAIGHT from the
       // store, not from a DB row, to compute weeksInPhase for the real
@@ -442,7 +442,7 @@ test('paper-render the day-zero variant for Home, Analytics, Diary and Plans', a
   const dayZeroStoreOverride = {
     userProfile: {
       firstName: dayZero.firstName, sex: dayZero.sex, goal: 'lean_gain', trainingFocus: 'hypertrophy',
-      units: 'metric', coachAutonomy: 'collaborative', coachTone: 'automatic',
+      units: 'kg', coachAutonomy: 'collaborative', coachTone: 'automatic',
     },
   };
 

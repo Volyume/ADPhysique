@@ -456,7 +456,18 @@ function renderNode(node, ctx, forceInlineText) {
   if (CONTAINER_TYPES.has(type)) {
     const style = flattenStyle(node.props.style);
     const css = mapContainerCss(style);
-    return `<div style="${cssToString(css)}">${renderChildren(node.children, ctx)}</div>`;
+    // A ScrollView's `contentContainerStyle` is where a screen's gutter and
+    // section gap live (`content: { padding, gap }`). The jest mock keeps it
+    // as a prop on the RCTScrollView node rather than on an inner View, so it
+    // is applied here to an inner wrapper -- without this every scroll screen
+    // rendered flush to the edge with no rhythm, which is not the app.
+    const contentStyle = node.props.contentContainerStyle
+      ? mapContainerCss(flattenStyle(node.props.contentContainerStyle))
+      : null;
+    const inner = contentStyle
+      ? `<div style="${cssToString(contentStyle)}">${renderChildren(node.children, ctx)}</div>`
+      : renderChildren(node.children, ctx);
+    return `<div style="${cssToString(css)}">${inner}</div>`;
   }
 
   return renderUnknown(node, ctx);

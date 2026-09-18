@@ -36,7 +36,10 @@ D192; this is the working spec._
 | micro | 10 | Regular | chart axes only |
 
 Rules. Weight comes from a shipped face, never a numeric `fontWeight` on
-Android. A screen uses at most five sizes. A row is title + one secondary
+Android. **The hero and display steps carry a NAME or a NUMBER, never a
+sentence**: a 30-word coaching decision at 40 became eight lines of display
+type on Progress (seen in the first renders). A sentence that is the screen's
+loud element sets in h2. A screen uses at most five sizes. A row is title + one secondary
 line; a card is one headline + one meta line. Numbers are tabular and carry
 their unit in the same role (law 7). Nothing on a screen is larger than its
 hero, and only Today, Progress, the logger and the summary have one.
