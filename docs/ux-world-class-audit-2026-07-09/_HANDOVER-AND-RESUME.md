@@ -3,7 +3,7 @@
 ===============================================================================
 ## ★ 2026-09-18 — THE FINISH (D192): THE FOUNDER CALLED BUILD 3583 "A MESS" AND CHOSE TO FINISH, NOT REVERT ★
 
-RESUME HERE. THE FINISH IS COMPLETE ON MAIN as of 2026-09-18 (`d9a8ed5f`;
+RESUME HERE. THE FINISH IS COMPLETE ON MAIN as of 2026-09-18 (`285ae875`;
 final gate: lint clean, 1,328 suites / 20,768 tests, 0 failures). What is
 open: the founder's device walk on ONE build (offered in chat, never
 dispatched without their explicit go) and one founder question, the
