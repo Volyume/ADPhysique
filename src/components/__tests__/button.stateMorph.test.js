@@ -158,8 +158,8 @@ describe('phase rendering and the disabled contract', () => {
     const pressable = tree.root.findByProps({ accessibilityRole: 'button' });
     // Quiet secondary chrome: neutral surface + border, not amber link styling.
     const flat = JSON.stringify(pressable.props.style ?? tree.toJSON());
-    expect(flat).toContain('#191917');
-    expect(flat).toContain('#757169'); // colors.border, warmed under D165
+    expect(flat).toContain('#252422'); // colors.surface (D192 ladder)
+    expect(flat).toContain('#878279'); // colors.border, warmed under D165, lifted under D192
     expect(flat).not.toContain('transparent');
   });
 

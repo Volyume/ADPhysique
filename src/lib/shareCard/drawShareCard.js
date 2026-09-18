@@ -44,18 +44,18 @@ const PALETTE = {
   // D165 (2026-09-14): bg0 tracks theme.js `background`, moved to warm charcoal
   // #111110; bg1/bg2 are share-card-only tonal steps between it and `surface`.
   bg0: '#111110', bg1: '#1A1917', bg2: '#191917',
-  surface: '#222220', surface2: '#2A2A27',
-  // `border` tracks theme.js `border` (#757169 since D165), chosen for 3:1
+  surface: '#2D2C29', surface2: '#363531', // D192: tracks theme.js surfaceElevated / surface2
+  // `border` tracks theme.js `border` (#878279 since D192, #757169 under D165), chosen for 3:1
   // WCAG 1.4.11. It previously held #343431, which is theme.js `surface3` -- a
   // fill colour, not an outline one. Stat-box and chip outlines were
   // near-invisible in the exported PNG and disappeared entirely under platform
   // re-compression.
-  border: '#757169', divider: 'rgba(255,255,255,0.06)',
+  border: '#878279', divider: 'rgba(255,255,255,0.06)',
   accent: '#F5A623',
   // text/textSecondary/textMuted track theme.js textPrimary/textSecondary/
   // textMuted, all warmed under D165. textMuted had drifted by a digit to
   // #9B9B9B once before; it is checked against theme.js, not eyeballed.
-  text: '#F2EFE7', textSecondary: '#A8A196', textMuted: '#A59E93',
+  text: '#F2EFE7', textSecondary: '#B7B0A4', textMuted: '#B2AB9F', // D192
 };
 
 // Central number+unit join (P-15, ux-copy-polish audit 2026-07-12 / format.js).

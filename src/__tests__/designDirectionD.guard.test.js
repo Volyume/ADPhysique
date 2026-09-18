@@ -122,7 +122,8 @@ describe('D166 law 3: geometry carries meaning — a control is not a card', () 
 describe('D166 law 1: the type scale has a loud step, on a face that already ships', () => {
   test('fontSize.hero exists and scales under largerText', () => {
     const c = code(THEME);
-    expect(/hero:\s*56,/.test(c)).toBe(true);
+    // RE-ANCHORED (D192, 2026-09-18): the hero step is 40. 56 dwarfed everything beside it.
+    expect(/hero:\s*40,/.test(c)).toBe(true);
     // resolveTheme enumerates every key by name; an omitted key silently does
     // not scale for users who need larger text.
     expect(c).toContain('hero:    Math.round(baseFontSize.hero    * 1.2)');

@@ -60,10 +60,11 @@ describe('scrim token', () => {
 
 describe('type roles', () => {
   test('body bundles family + size + lineHeight + letterSpacing', () => {
+    // RE-ANCHORED (D192, 2026-09-18): body is 15 on the re-cut scale.
     expect(type.body).toEqual({
       fontFamily: fontFamily.regular,
-      fontSize: 16,
-      lineHeight: Math.round(16 * lineHeight.normal),
+      fontSize: 15,
+      lineHeight: Math.round(15 * lineHeight.normal),
       letterSpacing: letterSpacing.body,
     });
   });
@@ -73,10 +74,12 @@ describe('type roles', () => {
     expect(type.display.fontFamily).toBe(fontFamily.displayBold);
   });
   test('overline is the shared section-label role and tracks at the overline token (D3 2026-07-09)', () => {
+    // RE-ANCHORED (D192): xs is 12 on the re-cut scale; the tracking token
+    // moved 0.5 -> 0.6 and this still reads it from the token, as D3 asked.
     expect(type.overline).toEqual({
       fontFamily: fontFamily.medium,
-      fontSize: 11,
-      lineHeight: Math.round(11 * lineHeight.snug),
+      fontSize: 12,
+      lineHeight: Math.round(12 * lineHeight.snug),
       // D3 (DECISIONS-2026-07-09): uppercase 10-12px micro-labels track
       // slightly open (letterSpacing.overline = 0.5) for legibility. Was 0
       // pre-campaign; this is the sanctioned role value, not drift.
@@ -86,9 +89,12 @@ describe('type roles', () => {
   });
 
   test('core hierarchy avoids blocky synthetic bold weights on Android', () => {
+    // RE-ANCHORED (D192): h3 and title carry their weight through the REAL
+    // SemiBold face, which is exactly what this case protects -- weight from
+    // a shipped face, never a synthetic fontWeight on Android.
     expect(type.h2.fontFamily).toBe(fontFamily.semibold);
-    expect(type.h3.fontFamily).toBe(fontFamily.medium);
-    expect(type.title.fontFamily).toBe(fontFamily.medium);
+    expect(type.h3.fontFamily).toBe(fontFamily.semibold);
+    expect(type.title.fontFamily).toBe(fontFamily.semibold);
     expect(type.bodyStrong.fontFamily).toBe(fontFamily.medium);
     expect(type.h2.fontWeight).toBeUndefined();
     expect(type.title.fontWeight).toBeUndefined();
@@ -583,10 +589,16 @@ describe('D174 A1: switch track and thumb clear the non-text bar', () => {
     // in dark by 0.07, which is exactly the kind of near-miss that gets rounded
     // up by a later reader. Pinned so the ruling's rejected rung stays a
     // measurement rather than a recollection.
+    // RE-ANCHORED (D192, 2026-09-18): the ladder was re-tuned and the same
+    // rung now measures 3.47:1 in dark, so it clears the bar it once missed
+    // by 0.07. It stays a MEASUREMENT here for the same reason as before. The
+    // D175 ruling that put the switch track on textMuted stands as a design
+    // decision (textMuted reads 4.68:1 on surface3 and darker than the thumb),
+    // not as a consequence of this number.
     applyAccessibility({ theme: 'dark' });
-    expect(ratio(colors.borderLight, colors.surface3)).toBeLessThan(3);
+    expect(ratio(colors.borderLight, colors.surface3)).toBeCloseTo(3.47, 1);
     applyAccessibility({ theme: 'dark', colorBlindSafe: true });
-    expect(ratio(colors.borderLight, colors.surface3)).toBeLessThan(3);
+    expect(ratio(colors.borderLight, colors.surface3)).toBeCloseTo(3.47, 1);
   });
 
   test('neither half of the pair is any amber token, in any palette', () => {

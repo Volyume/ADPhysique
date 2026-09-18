@@ -54,13 +54,13 @@ const baseColors = {
   // product reads as a premium instrument rather than a developer terminal.
   // Every ratio below is recomputed and asserted in theme.test.js.
   background: '#111110',
-  surface: '#191917',          // 1st elevation: cards, sheets
-  surfaceElevated: '#222220',  // nested cards / raised tier (new)
-  surface2: '#2A2A27',         // inputs, chips, secondary cards
-  surface3: '#343431',         // skeletons, fills, highest
-  border: '#757169',       // 3.89:1 on background, meets WCAG 1.4.11 (3:1 for UI separators)
-  borderLight: '#7F7A71',  // 4.43:1 on background
-  borderSubtle: '#2E2E2C', // hairline dividers INSIDE a card (low-contrast, not a card edge)
+  surface: '#252422', // D192: 1.22:1 on the ground. Cards and sheets. Was #191917 (1.07:1), which read as the same black as the page.
+  surfaceElevated: '#2D2C29', // D192: 1.35:1 on the ground, 1.11:1 on surface. Nested cards, the raised tier.
+  surface2: '#363531', // D192: 1.54:1 on the ground. Inputs, chips, secondary cards.
+  surface3: '#403E3A', // D192: 1.77:1 on the ground. Skeletons, fills, highest. textMuted still 4.68:1 on it.
+  border: '#878279', // D192: 4.95:1 on the ground, 4.06:1 on surface. The edge of a CONTROL (WCAG 1.4.11 wants 3:1).
+  borderLight: '#999288', // D192: 6.14:1 on the ground. The selected edge.
+  borderSubtle: '#3D3B37', // D192: 1.69:1 on the ground, 1.39:1 on surface. The hairline: rows, card edges, section rules. Was #2E2E2C (1.39:1), near-invisible.
 
   // Primary accent, amber gold. `primary` is the bright amber for small
   // marks, icons, text and key data values; `primaryFill` is a slightly
@@ -123,17 +123,17 @@ const baseColors = {
   // badge is safe at any elevation, verified in theme.test.js. `warning` is
   // not given one: `warningBg` already clears 4.5:1 at every elevation in
   // both themes (Okabe-Ito yellow is bright enough).
-  onSuccessBg: '#77C27A',
-  onErrorBg: '#F88A82',
+  onSuccessBg: '#8CD08F', // D192: 4.77:1 worst case on the lighter ladder (was #77C27A, 4.05)
+  onErrorBg: '#FBA39C', // D192: 4.89:1 worst case on the lighter ladder (was #F88A82, 4.04)
 
   // Text hierarchy. D165: warm off-white rather than pure white, muted warm
   // grey beneath it. The hue bias is the same one the surface ladder already
   // carries (blue channel a few points below red/green), so ink and ground
   // belong to one family instead of a neutral ramp sitting on a warm ground.
   textPrimary: '#F2EFE7',  // 16.4:1 on bg, AAA
-  textSecondary: '#A8A196', // 7.38:1 on bg, AAA body, AA on raised surfaces
-  textMuted: '#A59E93',    // 7.12:1 on bg, AAA at body-text bar; >=4.5:1 on every surface (AA)
-  textDisabled: '#78736B', // 4.02:1 on bg, disabled state only, no WCAG body-text requirement
+  textSecondary: '#B7B0A4', // D192: warm grey, 8.78:1 on the ground, 4.96:1 on surface3 (AA everywhere).
+  textMuted: '#B2AB9F', // D192: 8.29:1 on the ground, 4.68:1 on surface3 (AA everywhere).
+  textDisabled: '#7D786F', // D192: 4.31:1 on the ground, deliberately under 4.5. Disabled state only.
 
   // Tab bar
   tabBar: '#111111',
@@ -218,7 +218,7 @@ const lightColors = {
   surface3: '#E7E7E1',         // skeletons, fills, highest emphasis
   border: '#8F8F8B',           // 3:1+ on surface/bg (WCAG 1.4.11)
   borderLight: '#767672',      // ~4.5:1
-  borderSubtle: '#E4E4DF',     // hairline inside cards (low-contrast by role)
+  borderSubtle: '#D9D8D2', // D192: 1.41:1 on white. The hairline has to be seen to do its job.
   primary: '#8A5200',          // amber INK, >=4.5:1 on every surface
   primaryFill: '#F5A623',      // the bright brand amber is the fill on light (ink = onPrimary)
   primaryBg: 'rgba(245, 166, 35, 0.18)',
@@ -296,8 +296,8 @@ const darkCVD = {
   // onSuccessBg/onErrorBg ink sitting on the swapped blue/pink tint, which
   // is both a colour mismatch and, for the error case, a fresh contrast
   // fail. Same >=4.5:1-at-every-elevation method as the base tokens.
-  onSuccessBg: '#6ABDEC',
-  onErrorBg:   '#DA9FC0',
+  onSuccessBg: '#86CBF1', // D192: 4.70:1 worst case on the lighter ladder
+  onErrorBg:   '#E7B7D1', // D192: 5.07:1 worst case on the lighter ladder
 };
 const lightCVD = {
   success:   '#0072B2',
@@ -437,22 +437,28 @@ export function circle(size) {
 }
 
 const baseFontSize = {
+  // D192 (2026-09-18): the scale re-cut for a premium, consistent read.
+  // Body 15, row and card titles 16 semibold, headings 18/22/28, one display
+  // step at 34 and the hero at 40. The old scale ran 16/17/20/24/32/40/56:
+  // too many neighbouring steps in the middle, every row title at 20, and a
+  // 56 hero that dwarfed everything beside it. Consumers read roles, so the
+  // change lands everywhere at once.
   micro: 10, // dense chart axis / data micro-labels only, below body min (replaces hand-rolled 8-10px)
-  xs: 11,
+  xs: 12,
   sm: 13,
-  md: 16,   // body (design premium audit 2026-05-30: 16 is the premium body size; was 15)
-  lg: 17,
-  xl: 20,
-  xxl: 24,
-  xxxl: 32,
-  display: 40,
+  md: 15,   // body
+  lg: 16,   // titles of rows, cards and buttons (semibold through the role)
+  xl: 18,
+  xxl: 22,
+  xxxl: 28,
+  display: 34,
   // D166 law 1: one loud thing per screen, at a size that reads at arm's
   // length mid-set. `display` at 40 was the ceiling and had a single call site
   // in the whole product (a photo countdown), so where a screen actually needed
   // to be loud it reached PAST the scale with a raw literal -- 96 and 44 in
   // YearOfLifts, both carrying a source comment reading "Theme gap: no
   // display-size + black type role exists". This is that missing step.
-  hero: 56,
+  hero: 40, // D192: was 56.
 };
 
 export const fontSize = { ...baseFontSize };
@@ -568,10 +574,12 @@ export const fontWeight = {
 // round(fontSize * multiplier), computed in the type roles below so it
 // tracks the larger-text fontSize swap.
 export const lineHeight = {
-  tight: 1.2,
-  snug: 1.35,
-  normal: 1.5,
-  relaxed: 1.6,
+  // D192: tightened one notch across the board. Body at 1.4 sets paragraphs
+  // and rows at a premium density; headings at 1.15 sit on their line.
+  tight: 1.15,
+  snug: 1.3,
+  normal: 1.4,
+  relaxed: 1.55,
 };
 
 // Letter-spacing stays neutral on Android for running text. Negative
@@ -588,7 +596,7 @@ export const letterSpacing = {
   body: 0,
   label: 0,
   caption: 0,
-  overline: 0.5,
+  overline: 0.6, // D192: a touch more air in small caps
   wordmark: 2,
 };
 
@@ -629,11 +637,11 @@ function buildTypeRoles(fontSizeTable) {
         lineHeight: Math.round(fontSizeTable.xxl * lineHeight.snug), letterSpacing: letterSpacing.heading };
     },
     get h3() {
-      return { fontFamily: fontFamily.medium, fontSize: fontSizeTable.xl,
+      return { fontFamily: fontFamily.semibold, fontSize: fontSizeTable.xl,
         lineHeight: Math.round(fontSizeTable.xl * lineHeight.snug), letterSpacing: letterSpacing.heading };
     },
     get title() {
-      return { fontFamily: fontFamily.medium, fontSize: fontSizeTable.lg,
+      return { fontFamily: fontFamily.semibold, fontSize: fontSizeTable.lg,
         lineHeight: Math.round(fontSizeTable.lg * lineHeight.snug), letterSpacing: letterSpacing.body };
     },
     get body() {

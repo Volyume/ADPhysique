@@ -23,8 +23,10 @@ function buildSizes(fs) {
   return {
     // sm (D145): the compact field for dense forms such as the account
     // sheet; still the full touch target high.
-    sm: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fs.md, minHeight: touchTarget.minimum },
-    md: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, fontSize: fs.md, minHeight: 50 },
+    // D192: body dropped to 15, and an input's text stays at 16 or more (the
+    // legibility floor `inputs.test.js` pins), so the field reads `lg`.
+    sm: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fs.lg, minHeight: touchTarget.minimum },
+    md: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, fontSize: fs.lg, minHeight: 50 },
     lg: { paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: fs.lg, minHeight: 54 },
   };
 }

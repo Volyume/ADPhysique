@@ -8977,3 +8977,38 @@ mutation proved, and one STOP ruled: `ProOnboardingScreen.seqPanel` keeps
 its charcoal surface because D147 is a founder device verdict on that exact
 surface, and a general law does not quietly reverse a specific founder
 ruling. Walk: steps 54m-54p.
+
+---
+
+## D192 — Finish it properly: the design system re-cut under the lead's full judgement (founder order 2026-09-17, landed from 2026-09-18)
+
+**The order.** After nine screenshots of build 3583: "Finish it properly but
+not with sizes as ordered. Use your full judgement to make it look premium
+and not at all AI built. Font sizes look off and all sorts, there's no
+consistency either." The founder chose option B over reverting the restyle,
+and released the lead from the plan's specified sizes.
+
+**The spec** is `docs/design-redesign-2026-09-14/40-FINISH-SPEC.md`: the
+measured causes, the re-cut type scale, the surface ladder, one component
+language, and the screen order. It is the authority for every finish lane.
+
+**Landed first, in one file.** The type scale (body 15, titles 16 SemiBold,
+18/22/28, display 34, hero 40, line heights one notch tighter) and the dark
+ladder (surface 1.22:1 on the ground, hairline 1.69:1, control edge 4.95:1,
+inks lifted so AA holds on every surface, tinted-banner inks lifted to
+4.5:1 on the lighter ladder), the light hairline, and both hand-copied
+mirrors. Every computed contrast case re-ran; the measured pins (the
+gridline ratio, the borderLight rung, the role bundles, the outline
+button's hexes) were re-anchored as measurements with the reason on the
+line. The D175 switch-track ruling stands as a decision: borderLight now
+clears 3:1 on surface3 (3.47), and the track stays on textMuted anyway.
+
+**What this deliberately reverses.** D166's "hero 56" and the 2026-05-30
+"16 is the premium body size" audit ruling. Both were sizes chosen on paper;
+the founder's eye on device overrules them, and the lead agrees: 56 dwarfed
+the card it sat in and 16 at 1.5 made every row and paragraph loose.
+
+**How the rest lands.** Screen by screen in the spec's order, each on a
+Sonnet lane under this spec with the lead's hands on Today and the logger,
+each verified in the paper-render harness before it is committed, and one
+build at the end for the founder's walk.
