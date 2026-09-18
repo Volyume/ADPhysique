@@ -48,7 +48,6 @@ export default function TodayStrip({
   const t = useTheme();
   const live = {
     card: { borderTopColor: t.colors.borderSubtle },
-    metricIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     cellLabel: { ...t.type.caption, color: t.colors.textMuted },
     cellValue: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     loggedPill: { borderColor: t.colors.success, backgroundColor: t.colors.surface2 },
@@ -284,13 +283,11 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   metricLeft: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  // D192 landing (2026-09-18): a row's glyph is never boxed (spec 4.3); the
+  // fill, border and radius are gone, the 34 dp frame keeps the row's rhythm.
   metricIcon: {
     width: 34,
     height: 34,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },

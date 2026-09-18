@@ -1228,7 +1228,7 @@ export default function BodyMetricsScreen() {
                     // D192 (item 2e): the kcal figure gets the app's
                     // thousands separator; "day" drops its redundant "1".
                     <Text style={[styles.ewmaIntake, live.ewmaIntake]}>
-                      Average intake {formatNumber(toEnergy(recentIntake.avgKcal, energyUnit))} {energyUnitLabel(energyUnit)} over the last {recentIntake.daysLogged === 1 ? 'day' : `${recentIntake.daysLogged} days`}.
+                      Average intake {formatNumber(toEnergy(recentIntake.avgKcal, energyUnit))} {energyUnitLabel(energyUnit)} over the last {recentIntake.daysLogged === 1 ? 'day' : `${recentIntake.daysLogged} days`}
                     </Text>
                   )}
                 </>

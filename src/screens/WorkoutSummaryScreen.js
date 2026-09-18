@@ -1376,12 +1376,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             }
             return (
               <>
-                {routineName ? (
-                  <Text style={[styles.summaryVerdictOverline, live.summaryVerdictOverline]}>{routineName}</Text>
-                ) : null}
-                <Text style={[styles.summaryVerdictHeadline, live.summaryVerdictHeadline]} testID="summary-verdict">
-                  {headline}
-                </Text>
+                {/* D192 landing (2026-09-18): the overline and the headline are
+                    one block spaced by spacing.xs; the card's own gap
+                    separates that block from the sub-line. */}
+                <View style={styles.summaryVerdictHead}>
+                  {routineName ? (
+                    <Text style={[styles.summaryVerdictOverline, live.summaryVerdictOverline]}>{routineName}</Text>
+                  ) : null}
+                  <Text style={[styles.summaryVerdictHeadline, live.summaryVerdictHeadline]} testID="summary-verdict">
+                    {headline}
+                  </Text>
+                </View>
                 <Text style={[styles.summaryVerdictSub, live.summaryVerdictSub]}>{sub}</Text>
               </>
             );
@@ -2298,7 +2303,8 @@ const styles = StyleSheet.create({
   // hero card makes on its own eyebrow-to-name pair (HomeScreen.js
   // heroName/heroSentence) -- a margin on one of the two elements rather
   // than a new wrapping View. Headline-to-sub keeps the card's spacing.md.
-  summaryVerdictOverline: { ...type.overline, color: colors.textMuted, marginBottom: spacing.xs - spacing.md },
+  summaryVerdictHead: { gap: spacing.xs },
+  summaryVerdictOverline: { ...type.overline, color: colors.textMuted },
   summaryVerdictHeadline: { ...type.h2, color: colors.textPrimary },
   summaryVerdictSub: { ...type.bodySm, color: colors.textSecondary },
   verdictRow: {

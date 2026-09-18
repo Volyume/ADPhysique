@@ -49,12 +49,17 @@ function EvidencePanel({ panel, onPress, testID }) {
             <Text style={[styles.countdown, live.countdown]}>{panel.countdown}</Text>
           ) : null}
         </>
-      ) : (
+      ) : panel.countdown ? (
         <View style={styles.headerRow}>
           <Text style={[styles.countdown, live.countdown]}>{panel.countdown}</Text>
           <Ionicons name="chevron-forward" size={14} color={t.colors.textMuted} />
         </View>
-      )}
+      ) : null}
+      {/* D192 landing (2026-09-18): with neither a title nor a countdown (day
+          zero before any review is scheduled) the header row used to render
+          as a bare chevron beside nothing. The founder's 2026-08-17 order
+          stands (no coach-voiced title), so the block simply starts at its
+          rows; the whole panel is still the tap target. */}
       {panel.rows.map((row) => (
         <View key={row.key} style={styles.row}>
           <Ionicons

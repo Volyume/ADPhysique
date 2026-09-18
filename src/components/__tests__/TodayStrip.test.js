@@ -91,7 +91,11 @@ describe('weight cell', () => {
     expect(SOURCE).toContain('metricRow: {');
     expect(SOURCE).toContain('metricIcon: {');
     expect(SOURCE).toContain('metricAction: {');
-    expect(SOURCE).toContain('borderColor: colors.border');
+    // RE-ANCHORED 2026-09-18 (D192): the bordered literal this asserted lived
+    // on the glyph's box, which is gone (a row's glyph is never boxed). The
+    // rule is pinned on the control itself: the Log action rides the Button
+    // primitive in a contained variant, never a bare text link.
+    expect(SOURCE).toMatch(/variant="secondary"[\s\S]{0,400}title="Log"/);
     expect(SOURCE).toContain('backgroundColor: colors.surface2');
     // C5-P37-01 (D96): the Log button dropped from primary to secondary so
     // the session hero owns Home's single primary action. The law this pin
@@ -121,7 +125,10 @@ describe('R2 radius cohesion (2026-07-11)', () => {
   // deliberately stay radius.sm; pinned here so neither side drifts.
   test('loggedPill is a full-radius badge; density-exception radii stay sm', () => {
     expect(SOURCE).toMatch(/loggedPill:\s*\{[\s\S]*?borderRadius:\s*radius\.full/);
-    expect(SOURCE).toMatch(/metricIcon:\s*\{[\s\S]*?borderRadius:\s*radius\.sm/);
+    // RE-ANCHORED 2026-09-18 (D192): the glyph is no longer boxed, so it has
+    // no radius, fill or border to pin; the other density radii stand.
+    expect(SOURCE).toMatch(/metricIcon:\s*\{[^}]*\}/);
+    expect(SOURCE).not.toMatch(/metricIcon:\s*\{[^}]*(borderRadius|backgroundColor|borderWidth)/);
     expect(SOURCE).toMatch(/weightField:\s*\{[\s\S]*?borderRadius:\s*radius\.sm/);
     expect(SOURCE).toMatch(/logBtn:\s*\{[\s\S]*?borderRadius:\s*radius\.sm/);
   });

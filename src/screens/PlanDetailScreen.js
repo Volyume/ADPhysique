@@ -735,7 +735,9 @@ export default function PlanDetailScreen({ navigation, route }) {
         {!isLibrary && (
           <View style={styles.section}>
             <SectionLabel>Manage</SectionLabel>
-            <Card padding="none" style={styles.manageCard}>
+            {/* D192 landing (2026-09-18): a row group, not a boxed card (spec
+                4.3); a hairline above, the rows' own hairlines between. */}
+            <View style={[styles.manageGroup, live.manageGroup]}>
               <TouchableOpacity style={[styles.manageRow, live.manageRow]} onPress={handleEditPlan} accessibilityRole="button" accessibilityLabel="Edit plan">
                 <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
                 <Text style={[styles.manageRowText, live.manageRowText]}>Edit plan</Text>
@@ -748,7 +750,7 @@ export default function PlanDetailScreen({ navigation, route }) {
                   <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
                 </TouchableOpacity>
               )}
-            </Card>
+            </View>
           </View>
         )}
       </ScrollView>
@@ -834,9 +836,7 @@ const styles = StyleSheet.create({
   startWorkoutBtnText: { ...type.label, color: colors.textPrimary },
   // Card owns background/radius/border here; overflow clips row dividers to
   // the rounded corner.
-  manageCard: {
-    overflow: 'hidden',
-  },
+  manageGroup: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle },
   manageRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
@@ -889,6 +889,7 @@ function buildLiveStyles(t) {
     workoutName: { ...t.type.title, color: t.colors.textPrimary },
     workoutMeta: { ...t.type.bodySm, color: t.colors.textSecondary },
     startWorkoutBtnText: { ...t.type.label, color: t.colors.textPrimary },
+    manageGroup: { borderTopColor: t.colors.borderSubtle },
     manageRow: { borderBottomColor: t.colors.borderSubtle },
     manageRowText: { ...t.type.body, color: t.colors.textPrimary },
     whySection: { borderTopColor: t.colors.borderSubtle },
