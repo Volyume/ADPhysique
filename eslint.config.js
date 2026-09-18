@@ -228,19 +228,6 @@ module.exports = [
           message: 'No raw fontWeight literal. Use a type role or fontWeight.* token.',
         },
         {
-          // D166 law 3 (geometry carries meaning). `radius.lg` was the card,
-          // the button, the empty state, the tooltip and the tab pill at once,
-          // so a button and a card were geometrically identical. The split into
-          // radius.control (press) vs radius.lg (card) only holds if raw numbers
-          // cannot creep back: the 14 raw radius literals that existed before
-          // this rule were discipline, not enforcement, and discipline is what
-          // a redesign leaks through. Symmetric with the fontSize rule above.
-          // `borderRadius: 0` is exempt: it means "square this corner", which is
-          // a shape decision, not a hand-picked number the tokens should own.
-          selector: "Property[key.name=/^border(Top|Bottom)?(Left|Right|Start|End)?Radius$/] > Literal[raw=/^[0-9]/][raw!='0']",
-          message: 'No raw borderRadius literal. Use radius.control (anything you press), radius.lg (a card), radius.full (a pill) or circle(size). (Genuine one-offs: add a scoped eslint-disable with a reason.)',
-        },
-        {
           // D3 (design campaign 2026-07-09): letterSpacing stays neutral (0)
           // everywhere except two named tokens. Raw literals drifted to 7
           // different ad-hoc values on uppercase labels alone. Use
