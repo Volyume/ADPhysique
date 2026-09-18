@@ -22,11 +22,11 @@ D192; this is the working spec._
 
 | Role | Size / line | Face | Use |
 |---|---|---|---|
-| hero | 40 / 46 | InterDisplay ExtraBold | the ONE loud element on Today, Progress, the logger, the summary |
+| hero | 40 / 46 | InterDisplay ExtraBold | the ONE loud element where it is a name or a number: Today (the session's name), the logger (the working weight) |
 | display | 34 / 39 | InterDisplay Bold | a metric that is the point of its screen (the diary ring number) |
 | h1 | 28 / 32 | InterDisplay Bold | screen titles |
 | h2 | 22 / 29 | Inter SemiBold | card headline, a section's one big line |
-| h3 | 18 / 23 | Inter SemiBold | sub-headings, the summary verdict line |
+| h3 | 18 / 23 | Inter SemiBold | sub-headings |
 | title | 16 / 21 | Inter SemiBold | every row title, card title, button label |
 | body | 15 / 21 | Inter Regular | running text |
 | bodyStrong | 15 / 21 | Inter Medium | emphasis inside body |
@@ -39,10 +39,13 @@ Rules. Weight comes from a shipped face, never a numeric `fontWeight` on
 Android. **The hero and display steps carry a NAME or a NUMBER, never a
 sentence**: a 30-word coaching decision at 40 became eight lines of display
 type on Progress (seen in the first renders). A sentence that is the screen's
-loud element sets in h2. A screen uses at most five sizes. A row is title + one secondary
-line; a card is one headline + one meta line. Numbers are tabular and carry
-their unit in the same role (law 7). Nothing on a screen is larger than its
-hero, and only Today, Progress, the logger and the summary have one.
+loud element sets in h2: the week's decision on Progress and the session
+verdict on the summary both do (amended 2026-09-18 at the Progress landing;
+the h3 row used to name the verdict, and Progress used to be listed among
+the hero screens). A screen uses at most five sizes. A row is title + one
+secondary line; a card is one headline + one meta line. Numbers are tabular
+and carry their unit in the same role (law 7). Nothing on a screen is larger
+than its hero, and only Today and the logger have one.
 
 ## 3. Surfaces (landed, D192)
 
