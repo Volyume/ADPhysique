@@ -28,15 +28,26 @@ const summary = read('lib/capability/summary.js');
 const settings = read('screens/SettingsScreen.js');
 
 describe('1. Train tab: first row of Plan tools, always shown', () => {
-  test('the row is the first card after the Plan tools label and carries the live line', () => {
+  // RE-ANCHORED 2026-09-18 (D192, finish spec section 4.3): the row lost
+  // its <Card> wrapper -- Plan tools are rows now, no card, no box -- so
+  // the marker moves from a <Card>...</Card> tag pair to the row's own
+  // "the FIRST row, always shown" comment (still literally there, still
+  // immediately above this exact row) through its onPress. The intent
+  // this test pins is unchanged: first entry after the label, always
+  // shown unconditionally, the live hytSummary.sub line, opens
+  // HowYouTrain.
+  test('the row is the first row after the Plan tools label and carries the live line', () => {
     const tools = plans.slice(plans.indexOf('<SectionLabel>Plan tools</SectionLabel>'));
-    const firstCard = tools.indexOf('<Card');
-    const block = tools.slice(firstCard, tools.indexOf('</Card>', firstCard));
+    const firstRow = tools.indexOf('the FIRST row, always shown');
+    expect(firstRow).toBeGreaterThan(-1);
+    const rowIdx = tools.indexOf("onPress={() => navigation.navigate('HowYouTrain')}", firstRow);
+    expect(rowIdx).toBeGreaterThan(firstRow);
+    const block = tools.slice(firstRow, firstRow + 900);
     expect(block).toContain("onPress={() => navigation.navigate('HowYouTrain')}");
     expect(block).toContain('>Injuries & limitations</Text>');
     expect(block).toContain('{hytSummary.sub}');
     // Always shown: no count or state condition wraps it (unlike Avoided movements, D109-3).
-    const before = tools.slice(0, firstCard);
+    const before = tools.slice(0, firstRow);
     expect(before).not.toMatch(/&&\s*\($/m);
     expect(before).not.toContain('hytSummary.empty');
   });

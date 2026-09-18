@@ -34,6 +34,10 @@ describe('BLOCK_DEFINITION: one shared training-block explanation', () => {
   test('PlansScreen reads the same shared constant for its active-plan card tooltip', () => {
     const src = read('screens/PlansScreen.js');
     expect(src).toContain('BLOCK_DEFINITION');
-    expect(src).toContain('<InfoTooltip text={BLOCK_DEFINITION} size={13} />');
+    // RE-ANCHORED 2026-09-18 (D192): same re-anchor as
+    // PlansScreen.d139.guard.test.js -- the glyph grows from 13 to 20 to
+    // match the finish spec's row anatomy (section 4.3). Still the shared
+    // constant, still an InfoTooltip, only the size measurement moved.
+    expect(src).toContain('<InfoTooltip text={BLOCK_DEFINITION} size={20} />');
   });
 });

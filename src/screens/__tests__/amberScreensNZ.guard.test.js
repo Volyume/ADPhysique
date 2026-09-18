@@ -136,6 +136,14 @@ const SURVIVORS = {
   'PlansScreen.js': [
     { line: 'refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}',
       why: 'A RefreshControl tint.' },
+    // ADDED 2026-09-18 (D192, finish spec section 4 point 6 / D191 pattern):
+    // KEEP -- the screen's one committing action, "Start next workout",
+    // carries the one amber mark discipline 1 grants a screen's committing
+    // button, on its leading play glyph, the same additive `iconFg` D191
+    // put on Today's own "Start workout". Every other button/icon on this
+    // screen stays neutral.
+    { line: 'iconFg={t.colors.primary}',
+      why: 'KEEP: "Start next workout" is this screen\'s one committing action; D191\'s additive iconFg prop puts the accent on its leading play glyph, same pattern as Today\'s "Start workout".' },
     { line: '<Ionicons name="body-outline" size={20} color={hytSummary.attention ? t.colors.primary : t.colors.textSecondary} />',
       why: 'STOPPED: the "Injuries & limitations" attention glyph. `howYouTrainSummary` sets `attention` for BOTH awaiting-confirmation and undecided, and its sub line only says so in the first case, so in the second the tint is the only cue a user has. Removing it would lose a meaning the surrounding text does not carry.' },
   ],
@@ -234,17 +242,20 @@ describe('D174/D175: every amber site left on the N-Z screens is a recorded deci
 
   test('the whole lane is down to the handful discipline 1 allows', () => {
     // §3 discipline 1 entitles the product to roughly a dozen amber sites.
-    // This lane's 45 screens started at 511 raw references and hold 36 source
-    // lines now. Of those, 14 are live twins of a line already counted and 17
-    // lines (five distinct sites) are STOPPED, left untouched for a lead to
-    // rule rather than guessed at, which leaves about
-    // two dozen logical keeps: four spinners, four pull-to-refresh tints, five
-    // selection ticks, two focus rings, three committing buttons, two live
-    // meters, today's calendar cell, the check-in's you-are-here dot and the
-    // personal-best glyph. The ceiling is asserted as an exact number rather
-    // than described, so a later unit cannot drift back up.
+    // This lane's 45 screens started at 511 raw references and hold 37 source
+    // lines now (ADDED 2026-09-18, D192: PlansScreen's "Start next workout"
+    // gained the one-committing-action leading glyph the Today/PlansScreen
+    // finish lanes both use, D191's pattern). Of those, 14 are live twins of
+    // a line already counted and 17 lines (five distinct sites) are
+    // STOPPED, left untouched for a lead to rule rather than guessed at,
+    // which leaves about two dozen logical keeps: four spinners, four
+    // pull-to-refresh tints, five selection ticks, two focus rings, three
+    // committing-button fills, one committing action's leading glyph, two
+    // live meters, today's calendar cell, the check-in's you-are-here dot
+    // and the personal-best glyph. The ceiling is asserted as an exact
+    // number rather than described, so a later unit cannot drift back up.
     const total = LANE.reduce((n, f) => n + amberLines(f).length, 0);
-    expect(total).toBe(36);
+    expect(total).toBe(37);
     const stopped = Object.values(SURVIVORS).flat().filter((e) => e.why.startsWith('STOPPED')).length;
     expect(stopped).toBe(11);
   });
