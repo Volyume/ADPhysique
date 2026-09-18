@@ -375,7 +375,6 @@ export default function YouScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader
           title="Coach"
-          subtitle="Weekly coaching from your logs."
           right={(
             <Pressable
               onPress={() => navigation.navigate('Settings')}
@@ -499,7 +498,7 @@ export default function YouScreen({ navigation }) {
         {/* D134 (founder 2026-09-03): tier-blind, above Setup. The first
             thing the coach builds from is free by law (CAP-19), so every
             account sees it here, with its live line. */}
-        <View style={styles.section}>
+        <View style={styles.sectionLabelled}>
           <SectionLabel>Your body</SectionLabel>
           <NavGroup>
             <NavRow
@@ -514,7 +513,7 @@ export default function YouScreen({ navigation }) {
         {/* FOUNDER DECISION (fully free, no tier split): "This week" is the
             only version of this section now -- the Free "Coach"/"Coaching
             history" branch is retired. */}
-        <View style={styles.section}>
+        <View style={styles.sectionLabelled}>
           <SectionLabel>This week</SectionLabel>
           <NavGroup>
           {/* R2-7 (remediation 2026-07-11, founder device walk build 2684):
@@ -529,7 +528,7 @@ export default function YouScreen({ navigation }) {
             icon="clipboard-outline"
             label="Weekly check-in"
             sub={latestReview
-              ? "Answer this week's questions so the coach has context."
+              ? "This week's questions, so the coach has context"
               : pendingCoachCopy.title}
             onPress={() => navigation.navigate('WeeklyCheckIn')}
           />
@@ -549,7 +548,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="book-outline"
             label="Your week"
-            sub="Training, eating, weighing in and the coach's decision, in one place."
+            sub="Training, eating, weigh-ins and the decision in one place"
             onPress={() => navigation.navigate('WeeklyStory')}
           />
           </NavGroup>
@@ -563,7 +562,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="people-outline"
             label="Community"
-            sub="Connect with other lifters and share your training progress."
+            sub="Other lifters, gyms and groups"
             onPress={openCommunity}
           />
           </NavGroup>
@@ -571,7 +570,7 @@ export default function YouScreen({ navigation }) {
 
         {/* FOUNDER DECISION (fully free, no tier split): Setup renders for
             everyone now. */}
-        <View style={styles.section}>
+        <View style={styles.sectionLabelled}>
           <SectionLabel>Setup</SectionLabel>
           <NavGroup>
           <NavRow
@@ -589,7 +588,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="notifications-outline"
             label="Coaching reminders"
-            sub="Check-in, weigh-in and adherence reminders that feed the weekly loop."
+            sub="Check-in, weigh-in and adherence reminders"
             onPress={() => navigation.navigate('CoachingReminders')}
           />
           {/* D94 (Campaign 3, Phase 9): the volume-target editor's only
@@ -600,7 +599,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="stats-chart-outline"
             label="Volume targets"
-            sub="Weekly set ranges per muscle. Your own numbers take precedence."
+            sub="Weekly set ranges per muscle. Yours take precedence"
             // Review A finding 3: VolumeHeatmap lives in the Home and Progress
             // stacks, not ProfileTab; cross-tab helper or the tap is dead.
             onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'VolumeHeatmap')}
@@ -619,7 +618,7 @@ export default function YouScreen({ navigation }) {
             proGate.js are explicit that guardrails never consult tier, so the
             section is tier-blind here too. No screen, question, score,
             threshold, flag or floor is changed by this move. */}
-        <View style={styles.section}>
+        <View style={styles.sectionLabelled}>
           <SectionLabel>Safety checks</SectionLabel>
           <NavGroup>
           <NavRow
@@ -667,7 +666,10 @@ const styles = StyleSheet.create({
   profileInfo: { flex: 1, gap: spacing.xxs },
   profileNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   profileName: { ...type.h3, color: colors.textPrimary, flexShrink: 1 },
-  profileStat: { ...type.num('caption'), color: colors.textSecondary },
+  // D192 finish spec 4.1 table: a card's meta line is a "secondary line
+  // under a title", which is bodySm (13/18), not caption (12/16) -- was
+  // reading a size step small for its role.
+  profileStat: { ...type.num('bodySm'), color: colors.textSecondary },
   profileFocus: { ...type.captionTight, color: colors.textMuted },
   loadErrorCard: {
     flexDirection: 'row',
@@ -699,6 +701,15 @@ const styles = StyleSheet.create({
   statusTitle: { ...type.bodyStrong, color: colors.textPrimary },
   statusBody: { ...type.bodySm, color: colors.textSecondary },
   section: { gap: spacing.md },
+  // D192 finish spec (40-FINISH-SPEC.md 4.1 rule 2, "an overline label sits
+  // 24 to 28dp below the previous section's last row"): YouScreen hand-rolls
+  // its own section rhythm (no SettingsPrimitives here), and the ScrollView's
+  // `content.gap` (spacing.lg, 16) is the only air the page puts between its
+  // top-level children. A section that opens with a SectionLabel needs the
+  // difference (spacing.sm, 8) added on top, so it totals spacing.xl (24)
+  // below whatever precedes it. Community carries no label of its own and
+  // keeps the plain `section` gap.
+  sectionLabelled: { gap: spacing.md, marginTop: spacing.sm },
   // D165 law 2, the founder's test: a list of navigation rows is not an
   // object, so the fill, the card radius and the outline go. The rows sit on
   // the page's own ground, divided by the hairline they already carried, with
@@ -747,7 +758,7 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     settingsGear: { backgroundColor: t.colors.surface2 },
     profileName: { ...t.type.h3, color: t.colors.textPrimary },
-    profileStat: { ...t.type.num('caption'), color: t.colors.textSecondary },
+    profileStat: { ...t.type.num('bodySm'), color: t.colors.textSecondary },
     profileFocus: { ...t.type.captionTight, color: t.colors.textMuted },
     loadErrorCard: { borderColor: t.colors.warning },
     loadErrorIcon: { backgroundColor: t.colors.warningBg },

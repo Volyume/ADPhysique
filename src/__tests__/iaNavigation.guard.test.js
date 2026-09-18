@@ -25,7 +25,14 @@ describe('premium tab IA', () => {
   });
 
   test('Coach root is deterministic and links profile as a separate surface', () => {
-    expect(COACH).toContain('Weekly coaching from your logs.');
+    // RE-ANCHORED 2026-09-18 (D192): the finish spec (40-FINISH-SPEC.md 4.1
+    // rule 1, "no subtitle sentence under a title") retires this sentence;
+    // ScreenHeader now renders title-only here, the same shape Today/Train/
+    // Nutrition/Progress already use. Intent kept -- the Coach root is still
+    // a deterministic, named screen -- via the title check below in place of
+    // the retired subtitle text.
+    expect(COACH).toContain('title="Coach"');
+    expect(COACH).not.toMatch(/subtitle=/);
     // Same-meaning re-anchor (C5-P7-08, D96): the Free pitch used to describe
     // the coach in the present tense ("Your coach reads your logs..."), on the
     // tab that then tells a Free user coaching is Pro. It now says what the

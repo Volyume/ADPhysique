@@ -24,7 +24,13 @@ describe('YouScreen coach hub load state', () => {
   });
 
   test('coach hub groups actions by user intent instead of internal labels', () => {
-    expect(source).toContain('subtitle="Weekly coaching from your logs."');
+    // RE-ANCHORED 2026-09-18 (D192): the finish spec (40-FINISH-SPEC.md 4.1
+    // rule 1, "Screen = title (h1) + sections. No subtitle sentence under a
+    // title.") retires the subtitle sentence under "Coach". Intent kept --
+    // this test is about the screen being grouped by user intent, not about
+    // that sentence's wording, so the pin becomes its negative rather than
+    // being dropped outright.
+    expect(source).not.toMatch(/subtitle=/);
     expect(source).toMatch(/<SectionLabel>This week<\/SectionLabel>/);
     expect(source).toMatch(/<SectionLabel>Setup<\/SectionLabel>/);
     expect(source).toMatch(/<SectionLabel>Safety checks<\/SectionLabel>/);
