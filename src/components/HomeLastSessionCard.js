@@ -34,7 +34,7 @@ function HomeLastSessionCard({ lastSession, tonnageLabel, relativeDay, onOpenHis
     lastSession.durationMinutes ? `${lastSession.durationMinutes} min` : null,
     lastSession.setCount ? `${lastSession.setCount} sets` : null,
     tonnageLabel,
-  ].filter(Boolean).join(' - ');
+  ].filter(Boolean).join(' · ');
 
   return (
     <Card
@@ -45,7 +45,7 @@ function HomeLastSessionCard({ lastSession, tonnageLabel, relativeDay, onOpenHis
     >
       <View style={{ flex: 1, gap: spacing.xxs }}>
         <Text style={[styles.lastSessionLabel, live.lastSessionLabel]}>
-          Last session - {relativeDay}
+          Last session · {relativeDay}
         </Text>
         <Text style={[styles.lastSessionName, live.lastSessionName]} numberOfLines={1}>
           {/* Prefer the plan-day name (routineName, e.g. "Day 2: Back Width

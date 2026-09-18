@@ -65,7 +65,10 @@ function EvidencePanel({ panel, onPress, testID }) {
           <Ionicons
             name={row.done ? 'checkmark-circle' : 'ellipse-outline'}
             size={14}
-            color={row.done ? t.colors.success : t.colors.textMuted}
+            // D192 landing (2026-09-18): a static list mark is ink, not green
+            // (the same ruling as the coaching ledger's ticks); done reads as
+            // the filled glyph against the outline, not as a colour.
+            color={row.done ? t.colors.textSecondary : t.colors.textMuted}
           />
           <Text style={[styles.rowText, live.rowText, row.done && [styles.rowTextDone, live.rowTextDone]]}>
             {row.label}
