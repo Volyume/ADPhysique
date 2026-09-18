@@ -9012,3 +9012,59 @@ the card it sat in and 16 at 1.5 made every row and paragraph loose.
 Sonnet lane under this spec with the lead's hands on Today and the logger,
 each verified in the paper-render harness before it is committed, and one
 build at the end for the founder's walk.
+
+**Landed, 2026-09-18, and the rulings made on the way** (every commit is on
+main; the board's finish entry lists the hashes; the device walk carries a
+step for each):
+
+1. *A sentence never sets at hero.* The week's decision on Progress and the
+   session verdict on the summary set at h2; only Today (the session's name)
+   and the logger (the working weight) keep a hero step. The spec's type
+   table was amended to say so (`511f4206`).
+2. *Hairlines.* A row group's dividers sit on `borderSubtle`, the same token
+   as its top hairline; the old D3 reason for `border` (the raised surface)
+   died with the raised surface.
+3. *The Body row reads the trend in one short line per state*, keyed on the
+   exact sentence the trend module returns, pinned against that module; the
+   no-comparison narration shows the figure alone. A character-count cut had
+   dropped "a little above target" while showing its twin.
+4. *Row lines fit one line at 50 characters* beside a glyph and a chevron
+   (measured on the Settings render; the spec's "under 60" let lines wrap).
+   Nav rows are cut to fit; a row carrying a switch, a data action or an
+   onboarding step keeps its explanation, which may run to two lines.
+5. *One unit format.* "100 kg × 8", "100.5 kg", "52 min" everywhere a set,
+   a load or a duration prints (26 files). Grams in the food domain
+   ("170g"), the stone format ("12st 4lb") and the rest stepper's compact
+   readout stay, each consistent within its domain.
+6. *Amber.* The one committing action carries it; where a screen's real
+   commit lives elsewhere (the Join screen, per V1), the doorway carries the
+   amber leading glyph instead: Today's Start workout, the diary's Add food,
+   the Community hub's Create my profile. On the coaching decision the hero
+   row's Apply is the one amber fill (the label and card edge lose theirs).
+   Green is retired from every static tick, chip and "Applied" state; colour
+   is never a verdict on body weight (the trend chips, the phase chip).
+7. *Cards are for objects.* The pillar rows, the stats tiles, the ledger,
+   the story, focus and next-check-in blocks, the privacy receipt, the
+   nested weight-trend and maintenance cards, the workout list on Plan
+   detail and the day-zero panels are sections and rows now.
+8. *Day zero is one line and one action* on Progress, Home, the diary and
+   the Community hub: no illustration, no paragraph, no box.
+9. *Copy.* Each screen's own notes are one line; engine copy (the coach's
+   read, the why, the story, the trend's sentences) is untouched; the block
+   sheet's explanation is short lines behind its tap, the reps-in-reserve
+   removal standing.
+10. *The check-in* answers with five-cell scales and one amber button; its
+    header has no subtitle, its auto-read rows no ticks.
+
+Found and fixed on the way, none of them in the spec: the "Applied" chip's
+live twin still carried the old green so the change had never reached the
+device; the hero Apply used `primary` (the ink amber) for a fill; the
+diet-break card's own apply had never rendered amber since D148; a decline
+button used a variant that did not exist and fell through to a raised
+style; the paper-render converter ignored an SVG Text's fontSize prop, which
+had made chart axis labels look clipped. One landing (the Settings row
+cuts, `0ffae6aa`) left a guard red on main for about ninety minutes because
+its test run was a subset; the full suite is the gate from here.
+
+Open for the founder, not ruled: the readiness sheet's order (only its
+padding was tightened; re-ordering it reverses a device verdict).

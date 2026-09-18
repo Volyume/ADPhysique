@@ -370,6 +370,25 @@ of them. 8. Section K, every step.
     recovery week do not count towards the block". No paragraph, no reps
     in reserve. "Choose your next block" only on a finished block.
 
+### G6. Day zero on Home and the diary (D192, 2026-09-18)
+
+40v. **A fresh account's Today.** *Expect:* the hero card reads "No active
+    plan yet" with one line, "Your coach builds a plan from your setup",
+    and "Start with a plan" beside "Browse plans"; **no glyph, no
+    paragraph**. Under it, "Start your first workout" as a plain row with
+    one line ("Log your sets as you go, no plan needed") and a chevron.
+    The Welcome card is unchanged.
+40w. **Tap "Start with a plan".** *Expect:* the preview sheet that opens still
+    states the six-week block sentence; it left the hero, not the app.
+40x. **The Today line when a check-in is ready.** *Expect:* "Your weekly
+    check-in is ready", nothing more; the tap opens it.
+40y. **The diary on an empty day.** *Expect:* "Nothing logged yet" at the
+    left with no glyph; the Meal builder row with one line; "Add food" full
+    width with an **amber plus** and a neutral fill.
+40z. **Separators.** *Expect:* Progress session cards read "Wed 16 Sep · 56
+    min"; the logger's set header reads "Set 2 of 3 · Working" (and "· Circuit"
+    on a circuit); the summary's routine name sits close above its verdict.
+
 ## H. Settings
 
 41. **Any Settings sub-page.** *Expect:* every row's icon is a **plain grey
