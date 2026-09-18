@@ -223,6 +223,34 @@ of them. 8. Section K, every step.
     over the past few weeks." or similar) with the plain weight beneath it and
     **no rate anywhere on the row**; the decision slot either does not render
     or shows the lockout copy. Unchanged from before the finish by construction.
+31i. **Exercise detail** (D192 secondary sweep). *Expect:* **no amber edge**
+    round the personal-records card; the PR number itself still amber. Under
+    "STRENGTH TREND" (a small grey label now, not a bold title) the 1M / 3M /
+    6M / Y control is **one segmented strip** with hairline dividers; the
+    tapped cell fills a shade lighter. The same strip serves Body metrics and
+    the volume heatmap.
+31j. **Body metrics.** *Expect:* "Progress photos" as a plain row (camera
+    glyph, title, chevron, hairlines, no box); the snapshot label reads
+    "WEIGHT · date"; the phase chip (Gaining / Losing / Maintaining) is a
+    **grey outline in every phase**, never coloured; "Weight trend" and
+    "Effective maintenance" sit on the plain ground under a hairline, not in
+    nested boxes; "Smoothed across daily ups and downs"; the intake line
+    reads "Average intake 1,625 kcal over the last day" (comma; "days" when
+    more than one); the cold-start maintenance line is "Logged intake that
+    held your weight steady".
+31k. **Lifts.** *Expect:* a small "OVERALL LEVEL" label, the level word at
+    heading size (smaller than before), "Across N main lifts" under it.
+31l. **Plan detail.** *Expect:* the workouts as rows: a grey number, the day's
+    name, "N exercises", hairlines between, no boxes; the pencil and "Start"
+    beside each row without boxes; "Why this plan, for you" as lines under a
+    hairline, no card. Reorder mode drags as before.
+31m. **Workout history.** *Expect:* "60 min · 12 sets" with a middle dot; the
+    card's foot reads "View summary" and "Repeat" as plain text with the bin
+    glyph unboxed; each still does what it did.
+31n. ★ **ED-safety, Body metrics.** With an open ED flag. *Expect:* no weekly
+    rate, no maintenance figure, no state dot, exactly as before; the weight
+    and the chart still show; the phase chip still shows (it never read the
+    flag) and is now grey rather than coloured.
 
 ## F. Nutrition and the diary
 
