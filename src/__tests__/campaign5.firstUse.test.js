@@ -489,8 +489,10 @@ describe('HOME: zero history has one clear next action and claims no history (C5
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(summary.line).toBe('See how this block works.');
-    expect(summary.line).not.toMatch(/\d+ of \d+/);
+    // RE-ANCHORED (D192, 2026-09-18): the zero-history case gets NO line.
+    // The intent is untouched and stronger: no claimed track record, no
+    // counter, nothing that could duplicate the eyebrow.
+    expect(summary).toBeNull();
 
     // The default block-phase read still holds, counter-free, once a
     // session exists (RE-PINNED AGAIN, founder device order 2026-08-17: the

@@ -140,7 +140,9 @@ describe('buildReadinessSummary', () => {
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
       fatigueHistory: [{ fatigueLevel: 3 }, { fatigueLevel: 3 }],
-      lastSession: null,
+      // RE-ANCHORED (D192): with no session the summary is null, so a logged
+      // session of calm readings lets this case reach the phase read it names.
+      lastSession: { soreness24hBefore: 1, sleepQuality: 4, energyScore: 4 },
     });
     expect(result.tone).toBe('go');
   });
@@ -206,7 +208,10 @@ describe('buildReadinessSummary', () => {
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(result).toEqual({ tone: 'go', line: 'See how this block works.' });
+    // RE-ANCHORED (D192, 2026-09-18): with no session there is no reading and
+    // therefore no line. The old tutorial fallback was a third control inside
+    // the hero card; the block sheet's door is the hero's eyebrow now.
+    expect(result).toBeNull();
   });
 
   test('deterministic: identical inputs produce an identical result', () => {
@@ -232,9 +237,11 @@ describe('buildReadinessSummary', () => {
     ];
     for (const scenario of scenarios) {
       const result = buildReadinessSummary(scenario);
-      expect(result.line).not.toMatch(/\d+\s*\/\s*100/);
-      expect(result.line).not.toMatch(/red|amber|green light/i);
-      expect(result.line).not.toMatch(/—/); // no em dash, British-English house style
+      // D192: a no-session scenario yields no line, which carries no wording.
+      const line = result?.line ?? '';
+      expect(line).not.toMatch(/\d+\s*\/\s*100/);
+      expect(line).not.toMatch(/red|amber|green light/i);
+      expect(line).not.toMatch(/—/); // no em dash, British-English house style
     }
   });
 });

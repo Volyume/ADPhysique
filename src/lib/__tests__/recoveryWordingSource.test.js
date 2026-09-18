@@ -90,7 +90,9 @@ describe('recovery wording — single source of truth (spec §8)', () => {
       lastSession: null,
     });
     const card = recoveryStateCard(gatedRecoveryState);
-    expect(chip.line).not.toMatch(/^Recovery week/);
+    // D192: with no session logged the chip is null, which claims nothing at
+    // all; the contradiction this case guards against still cannot recur.
+    expect(chip?.line ?? '').not.toMatch(/^Recovery week/);
     expect(card).toBeNull();
   });
 });

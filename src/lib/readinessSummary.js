@@ -165,10 +165,14 @@ export function buildReadinessSummary({
   // record that does not exist. No second "N of M" counter here either,
   // per the C22 single-counter law the Priority 5 note above documents.
   if (!lastSession) {
-    // Founder device order 2026-09-08: the row is a fixed-width chip and the
-    // original line ("First session of your plan. See how this block is
-    // shaped.") overran it. Kept short enough to always fit.
-    return { tone: 'go', line: 'See how this block works.' };
+    // D192 (finish spec section 4.7): a status line is a fact or nothing.
+    // "See how this block works." was a tutorial pointer standing in for a
+    // reading the coach did not yet have, and it sat inside the hero card
+    // as a third control. With no session logged there is no reading, so
+    // there is no line; the block sheet keeps its door on the hero's
+    // eyebrow. (The 2026-09-08 device order about this row overrunning a
+    // fixed-width chip is moot: the chip is gone and the line wraps.)
+    return null;
   }
 
   // Priority 5: default block-phase read.

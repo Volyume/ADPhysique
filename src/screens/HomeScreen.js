@@ -10,6 +10,7 @@ import { format } from 'date-fns/format';
 
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { touchTarget } from '../styles/layout';
 import ScreenHeader from '../components/ScreenHeader';
 import CommunityHeaderAction from '../components/community/CommunityHeaderAction';
 import HomeCommunityIntroCard from '../components/HomeCommunityIntroCard';
@@ -36,9 +37,8 @@ import { nextWorkoutRecoveryLabel, isLighterTrainingState } from '../lib/recover
 import { useToast } from '../components/Toast';
 // Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §17 R3, hero merge):
 // CoachBriefCard's card-in-card render is retired -- the hero now renders
-// its content as one quiet line inline. buildBriefIconColor is still the
-// shared tone-colour source for the readiness chip below and stays imported.
-import { buildBriefIconColor } from '../components/CoachBriefCard';
+// its content as one quiet line inline. D192 then took the tone glyph off
+// the readiness line too, so nothing here reads CoachBriefCard's colours.
 import HomeWelcomeCard from '../components/HomeWelcomeCard';
 import HomeHowYouTrainOfferCard from '../components/HomeHowYouTrainOfferCard';
 import HomeLastSessionCard from '../components/HomeLastSessionCard';
@@ -190,8 +190,7 @@ export default function HomeScreen({ navigation, route }) {
     continueIcon: { backgroundColor: withAlpha(t.colors.background, alpha.soft) },
     continueTitle: { ...t.type.bodyStrong, color: t.colors.onPrimary },
     continueSub: { ...t.type.caption, color: withAlpha(t.colors.onPrimary, alpha.half) },
-    mesoBriefChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    mesoBriefText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
+    readinessLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
     workoutOptionsText: { color: t.colors.textSecondary },
     // Campaign 22 Phase 2 Stage 2 (§7/§17 R5): the "Progress at a glance"
     // card is removed (3-way duplication fix); its live styles go with it.
@@ -239,8 +238,6 @@ export default function HomeScreen({ navigation, route }) {
     quickStartSub: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
   // S15#7 readiness chip's tone colours, built live so it stays in the same
-  // theme generation as CoachBriefCard (buildBriefIconColor, imported above).
-  const BRIEF_ICON_COLOR = buildBriefIconColor(t.colors);
 
   // WK-1: recover an in-progress workout after an app kill/crash. The store
   // holds the session in memory only, so a kill stranded the logged sets
@@ -2357,25 +2354,19 @@ export default function HomeScreen({ navigation, route }) {
   // day, on a complete week and on a finished block (F-18 hero precedence),
   // and all three must read the same one calm line and open the same
   // block-shape sheet.
+  // D192 (finish spec 4.4, 4.7): the readiness read is one quiet LINE under
+  // the session's meta, not a pill with a tone-coloured glyph sitting inside
+  // the hero card as a third control. Text and a chevron; the line wraps; it
+  // still opens the block sheet. The tone no longer colours anything here:
+  // the words carry it, and the card's one amber mark is Start workout.
   const readinessChipEl = readinessSummary ? (
     <TouchableOpacity
-      style={[styles.mesoBriefChip, live.mesoBriefChip]}
+      style={styles.readinessLine}
       onPress={() => { haptics.selection(); setShowBlockShape(true); }}
       accessibilityRole="button"
-      /* C5-P34-04 (D96): the chip is where "stop 2 short of
-         failure" is defined, but its label named only the block,
-         so a screen-reader user heard an offer to explain
-         something else entirely and had no reason to open the one
-         sheet that answers the phrase they just heard. The
-         definition stays exactly one tap away. */
       accessibilityLabel="See the shape of your training block"
     >
-      <Ionicons
-        name={READINESS_ICON[readinessSummary.tone] ?? READINESS_ICON.go}
-        size={12}
-        color={BRIEF_ICON_COLOR[readinessSummary.tone] ?? BRIEF_ICON_COLOR.go}
-      />
-      <Text style={[styles.mesoBriefText, live.mesoBriefText]}>{readinessSummary.line}</Text>
+      <Text style={[styles.readinessLineText, live.readinessLineText]}>{readinessSummary.line}</Text>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>
   ) : null;
@@ -2631,9 +2622,19 @@ export default function HomeScreen({ navigation, route }) {
                 so a single clamped line ellipsised mid-word on longer
                 names/larger text scales. Raised to 2 lines, the same fix
                 already applied to workoutName below for the same reason. */}
-            <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={2}>
-              {recoveryLabel ? `${recoveryLabel} · ${planProgress}` : planProgress}
-            </SectionLabel>
+            {/* D192: the eyebrow is the block sheet's door. It used to be the
+                readiness chip alone, which is null before the first session,
+                so a new user had no way into the sheet. */}
+            <TouchableOpacity
+              onPress={() => { haptics.selection(); setShowBlockShape(true); }}
+              accessibilityRole="button"
+              accessibilityLabel="See the shape of your training block"
+              style={styles.heroEyebrowTap}
+            >
+              <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={2}>
+                {recoveryLabel ? `${recoveryLabel} · ${planProgress}` : planProgress}
+              </SectionLabel>
+            </TouchableOpacity>
             {/* D165/D166 law 1: this session IS what the screen is for, so it
                 is the one loud element on it, at type.hero (56) through
                 BigNumber rather than the 24px it was. The founder's hierarchy
@@ -3413,15 +3414,8 @@ function getRelativeDay(ts) {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 // CoachBriefCard moved to src/components/CoachBriefCard.js (behaviour-
-// preserving decomposition), imported at the top of this file. BRIEF_ICON_COLOR
-// is re-exported from there since the readiness-summary chip below reuses its
-// tone colours.
-
-// S15#7 readiness aggregate chip: its own icon set (kept distinct from
-// CoachBriefCard's BRIEF_ICON card-sized icons) but the SAME tone colours
-// (BRIEF_ICON_COLOR, imported above) so the chip and the coaching brief card
-// read as one family.
-const READINESS_ICON = { go: 'trending-up-outline', caution: 'alert-circle-outline', recover: 'bed-outline' };
+// preserving decomposition). The S15#7 readiness chip that once shared its
+// tone icons and colours is a plain line since D192 and reads neither.
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -3468,20 +3462,16 @@ const styles = StyleSheet.create({
   todayFact: { ...type.bodySm, color: colors.textSecondary },
   todayCoach: { ...type.body, color: colors.textPrimary },
   heroEyebrow: {},
+  heroEyebrowTap: { alignSelf: 'flex-start' },
   // D167: `workoutName` (24px + a raw lineHeight: 30), `workoutMeta` and
   // `heroBody` are retired. All three hero branches now carry their one loud
   // fact through BigNumber at type.hero, with the supporting line as its
   // caption, so there is nothing left for these keys to style.
-  mesoBriefChip: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs2,
-    alignSelf: 'flex-start',
-    marginTop: spacing.xs,
-    paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border,
+  readinessLine: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    alignSelf: 'stretch', marginTop: spacing.xs, minHeight: touchTarget.minimum,
   },
-  mesoBriefText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  readinessLineText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
   // B-5/Button adoption: box, fill, radius, padding and label typography now
   // come from the shared <Button> primitive; only the local margin survives.
   primaryBtn: {
