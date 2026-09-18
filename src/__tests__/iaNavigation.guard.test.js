@@ -38,7 +38,9 @@ describe('premium tab IA', () => {
     // tab that then tells a Free user coaching is Pro. It now says what the
     // tab BECOMES on Pro, and what is here either way. The Pro half of the
     // card (the property this test pins for a Pro user) is unchanged.
-    expect(COACH).toContain('What changed, what was held, and the exact signals behind it.');
+    // RE-ANCHORED 2026-09-18 (D192, row-line cap): the card's meta line was cut
+    // to fit one line. Intent kept: the real status card's content is here.
+    expect(COACH).toContain('What changed, what held, and the signals behind it');
     // 'On Pro this tab carries your weekly check-in' pinned the Free-vs-Pro
     // pitch copy on this card. D137 (fully free product) retired that whole
     // branch -- YouScreen.js:474-476 says so directly ("the Free pitch

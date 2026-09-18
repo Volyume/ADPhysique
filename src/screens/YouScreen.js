@@ -490,7 +490,7 @@ export default function YouScreen({ navigation }) {
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </View>
             <Text style={[styles.statusBody, live.statusBody]}>
-              What changed, what was held, and the exact signals behind it.
+              What changed, what held, and the signals behind it
             </Text>
           </Card>
         ) : null}

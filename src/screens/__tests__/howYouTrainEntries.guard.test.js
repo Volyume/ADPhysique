@@ -104,7 +104,10 @@ describe('3. Home: one calm, one-time offer', () => {
 
 describe('the live line and the entries that stay', () => {
   test('the summary never uses diagnosis or restriction vocabulary and offers rather than asks', () => {
-    expect(summary).toContain("export const HOW_YOU_TRAIN_OFFER = 'Injuries, pain, long-term conditions or disabilities that affect your training.';");
+    // RE-ANCHORED 2026-09-18 (D192, row-line cap): the offer line was cut to
+    // fit one row line. Intent kept: it still offers ("Injuries, pain,
+    // conditions or disabilities"), never asks, never diagnoses.
+    expect(summary).toContain("export const HOW_YOU_TRAIN_OFFER = 'Injuries, pain, conditions or disabilities';");
     // Scoped to what a person can read: the string literals, not the
     // comments that explain the law.
     const text = (summary.match(/'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g) ?? []).join(' ');

@@ -1536,7 +1536,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
                   checkmark-circle is removed entirely, nothing replaces it. */}
               <Ionicons name={row.icon} size={iconSize.md} color={t.colors.textSecondary} style={styles.fastSummaryIcon} />
               <Text style={[styles.fastSummaryLabel, live.fastSummaryLabel]} numberOfLines={1}>{row.label}</Text>
-              <Text style={[styles.fastSummaryValue, live.fastSummaryValue]} numberOfLines={1}>{row.value}</Text>
+              <Text style={[styles.fastSummaryValue, live.fastSummaryValue]} numberOfLines={2}>{row.value}</Text>
             </View>
           ))}
           {/* Wave A B6: the fastest path was the least transparent, one
@@ -2366,7 +2366,10 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderSubtle,
   },
   fastSummaryIcon: { width: iconSize.md },
-  fastSummaryLabel: { ...type.bodySm, color: colors.textSecondary, width: 76 },
+  // D192 landing (2026-09-18): the render clipped "Training" in a fixed 76
+  // column and cut the value to one line; the label column has a floor
+  // instead and the value may take two lines.
+  fastSummaryLabel: { ...type.bodySm, color: colors.textSecondary, minWidth: 80 },
   fastSummaryValue: { ...type.body, flex: 1, color: colors.textPrimary },
   // Wave A B6: muted provenance line under the fast summary rows.
   fastSummaryProvenance: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs },

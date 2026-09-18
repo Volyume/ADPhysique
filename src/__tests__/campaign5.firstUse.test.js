@@ -1073,7 +1073,9 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
     const coach = stripComments(read('screens/YouScreen.js'));
     expect(coach).not.toContain('Coach is available on Pro');
     expect(coach).not.toMatch(/navigation\.navigate\('ProUpgrade', \{ source: 'coach_pitch_card' \}\)/);
-    expect(coach).toContain('What changed, what was held, and the exact signals behind it.');
+    // RE-ANCHORED 2026-09-18 (D192, row-line cap): the card's meta line was cut
+    // to fit one line. Intent kept: the real status card's content is here.
+    expect(coach).toContain('What changed, what held, and the signals behind it');
   });
 
   test('the free column carries the tier word, never a hardcoded currency (C5-P8-01)', () => {
