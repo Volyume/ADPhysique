@@ -3613,7 +3613,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     backgroundColor: colors.surface2 ?? colors.background,
     borderRadius: radius.control,
-    padding: spacing.lg,
+    // D192: a control sits at 52 dp, not 72; the three answers were the
+    // tallest buttons in the product.
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     borderWidth: 1,
     borderColor: colors.border,
   },
