@@ -346,6 +346,28 @@ of them. 8. Section K, every step.
     prompt does not render at all (its gate fails closed, unchanged); the
     Weight row renders as it always did.
 
+### G5. The Community hub at day zero and the block sheet (D192, 2026-09-18)
+
+40s. **Community with no profile yet.** *Expect:* "Your gym, your people" as a
+    heading on the plain ground, **no box round it**, one line under it ("See
+    who trains around you and keep up with friends"), then "Create my
+    profile" (neutral fill, **amber person glyph**, like Start workout on
+    Today) beside "Browse first" as a text action. The amber FILL stays on
+    the Join screen's own button.
+40t. **The privacy line.** *Expect:* one row with a shield glyph, "Nothing
+    about your body, food or coaching is ever shared." and a chevron, a
+    hairline above and below, no box. Tap the row: it opens the same two
+    lists as before (Others can see / Never shared), word for word.
+40u. **The block sheet** (tap the week line on Today). *Expect:* title, block
+    name (smaller than before), the ribbon card, then short single lines in
+    this order: the block definition; any lines about your own muscles;
+    "Each week the effort target steps closer to failure"; "When the block
+    ends you choose what comes next. Nothing starts on its own"; "How each
+    muscle goes shapes where its sets start next block"; "Recovery week: a
+    planned lighter week at the end of the block."; "Sets logged in the
+    recovery week do not count towards the block". No paragraph, no reps
+    in reserve. "Choose your next block" only on a finished block.
+
 ## H. Settings
 
 41. **Any Settings sub-page.** *Expect:* every row's icon is a **plain grey
