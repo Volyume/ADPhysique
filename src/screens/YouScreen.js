@@ -548,7 +548,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="book-outline"
             label="Your week"
-            sub="Training, eating, weigh-ins and the decision in one place"
+            sub="Training, eating, weigh-ins and the decision"
             onPress={() => navigation.navigate('WeeklyStory')}
           />
           </NavGroup>
@@ -576,13 +576,13 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="flag-outline"
             label="Update goal and phase"
-            sub="Change goal, phase, schedule, equipment or experience."
+            sub="Goal, phase, schedule, equipment, experience"
             onPress={() => navigation.navigate('ProGoalSetup')}
           />
           <NavRow
             icon="nutrition-outline"
             label="Nutrition targets"
-            sub="Calories, macros, protein level and target rationale."
+            sub="Calories, macros, protein level and rationale"
             onPress={() => navigation.navigate('NutritionTargets')}
           />
           <NavRow
@@ -599,7 +599,7 @@ export default function YouScreen({ navigation }) {
           <NavRow
             icon="stats-chart-outline"
             label="Volume targets"
-            sub="Weekly set ranges per muscle. Yours take precedence"
+            sub="Set ranges per muscle. Yours take precedence"
             // Review A finding 3: VolumeHeatmap lives in the Home and Progress
             // stacks, not ProfileTab; cross-tab helper or the tap is dead.
             onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'VolumeHeatmap')}

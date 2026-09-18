@@ -432,7 +432,13 @@ function renderNode(node, ctx, forceInlineText) {
       const attrs = [];
       if (node.props.x !== undefined) attrs.push(`x="${node.props.x}"`);
       if (node.props.y !== undefined) attrs.push(`y="${node.props.y}"`);
-      if (style.fontSize) attrs.push(`font-size="${style.fontSize}"`);
+      // react-native-svg's Text takes fontSize as a PROP (VolyumeChart's
+      // axis labels pass fontSize={9}); reading only the style left the
+      // browser's 16px default in place and the labels clipped at the
+      // chart's left edge in every render, a harness artefact, not the app.
+      const svgFontSize = node.props.fontSize || style.fontSize;
+      if (svgFontSize) attrs.push(`font-size="${svgFontSize}"`);
+      if (node.props.fontFamily || style.fontFamily) attrs.push(`font-family="${node.props.fontFamily || style.fontFamily}"`);
       if (node.props.fill || style.color) attrs.push(`fill="${node.props.fill || style.color}"`);
       if (node.props.textAnchor) attrs.push(`text-anchor="${node.props.textAnchor}"`);
       return `<text ${attrs.join(' ')}>${escapeHtml(textContentOf(node))}</text>`;

@@ -119,7 +119,11 @@ describe('CP-8: SettingsProfileScreen is free-tier reachable, unlike the Pro Nut
     // If a tier gate appears at all before this row, a sibling row opened
     // after it (proving the gate closed before reaching Profile).
     expect(lastTierGateBeforeProfile < lastRowBeforeProfile || lastTierGateBeforeProfile === -1).toBe(true);
-    expect(SETTINGS_ROOT).toMatch(/sub="Name, sex, height, date of birth and diet preference"/);
+    // RE-ANCHORED 2026-09-18 (D192, row-line cap): the Profile row's line was
+    // cut to fit one line (50 characters at bodySm beside a glyph and a
+    // chevron). Intent kept: the row is present as a plain row with its
+    // secondary line, ungated.
+    expect(SETTINGS_ROOT).toMatch(/sub="Name, sex, height, birth date, diet preference"/);
   });
 });
 

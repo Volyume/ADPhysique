@@ -618,7 +618,7 @@ export default function AthleteProfileScreen({ navigation }) {
             live={live}
             icon="person-outline"
             label="Edit profile details"
-            sub="Name, sex, height, date of birth and diet preference."
+            sub="Name, sex, height, birth date, diet preference"
             onPress={() => navigation.navigate('SettingsProfile')}
           />
           <Row

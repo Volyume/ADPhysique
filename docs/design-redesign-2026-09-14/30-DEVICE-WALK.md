@@ -276,10 +276,12 @@ of them. 8. Section K, every step.
     "Safety checks" each have visibly more air above their label than the rows
     inside a group have between them.
 40c. **Read every row's second line.** *Expect:* each sits on **one line** --
-    Weekly check-in, Your week ("Training, eating, weigh-ins and the decision
-    in one place"), Community ("Other lifters, gyms and groups"), Coaching
-    reminders, Volume targets ("Weekly set ranges per muscle. Yours take
+    Weekly check-in, Your week ("Training, eating, weigh-ins and the
+    decision"), Community ("Other lifters, gyms and groups"), Coaching
+    reminders, Volume targets ("Set ranges per muscle. Yours take
     precedence"). The Injuries & limitations line is the D152 line, unchanged.
+    (Row lines are capped at 50 characters since the Settings render showed
+    a 59-character line wrapping; Settings' own lines were cut the same way.)
 40d. **The profile card.** *Expect:* the name is the largest text; the "N
     completed sessions" line reads a step larger than before, as the card's
     one meta line.
