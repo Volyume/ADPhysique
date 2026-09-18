@@ -1,6 +1,17 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-18 — THE FINISH (D192): THE FOUNDER CALLED BUILD 3583 "A MESS" AND CHOSE TO FINISH, NOT REVERT ★
+
+RESUME HERE. Read `docs/design-redesign-2026-09-14/40-FINISH-SPEC.md` first: the
+measured causes (surface 1.07:1 on the ground, two component languages per
+screen, a big-everything type scale with a 56 hero, a dozen explanatory
+paragraphs, day zero never designed), the re-cut scale, the lifted ladder, one
+component language, and the screen order. Landed: `5ab7c7a2` (tokens),
+`807a63ca` (Today), `451d3d82` (logger). The board section "APP-WIDE VISUAL
+REDESIGN" carries the in-flight lanes and the queue. Nothing is built until
+the renders are reviewed; then one build.
+
 ## ★ 2026-09-14/17 — APP-WIDE VISUAL REDESIGN: STAGES 1-4, THE LEDGER (D184) AND THE CARD SWEEP (D186) ALL ON MAIN ★
 
 RESUME HERE for the redesign. Live plan:

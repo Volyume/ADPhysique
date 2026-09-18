@@ -33,7 +33,11 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
-## APP-WIDE VISUAL REDESIGN (2026-09-14) — DIRECTION RULED BY THE FOUNDER (D165); STAGES 1-4 LANDED AND MERGED; THE LEDGER (D184) AND THE CARD SWEEP (D186) LANDED 2026-09-17; ONE SMALL TAIL LANE IN FLIGHT; NO BUILD YET (D181)
+## APP-WIDE VISUAL REDESIGN (2026-09-14) — FOUNDER VERDICT ON BUILD 3583: "A MESS"; FINISH UNDER THE LEAD'S FULL JUDGEMENT (D192) IN PROGRESS
+
+**THE FINISH (D192, from 2026-09-18).** Authority: `docs/design-redesign-2026-09-14/40-FINISH-SPEC.md`. Landed on main so far: step one, the type scale re-cut and the surface ladder lifted (`5ab7c7a2`); Today, the readiness read as a line and the eyebrow as the block sheet's door (`807a63ca`); the logger, the reserved line always a figure and the rest drain amber only while counting (`451d3d82`). IN FLIGHT: the Train tab on a Sonnet lane (plan card without narration, PLAN TOOLS as rows); the paper-render harness on a Sonnet lane (`scripts/paper-render/`, renders to the scratchpad). QUEUED, in the spec's order: Nutrition, Progress at day zero, Coach (token-only check), the readiness sheet, the block sheet, the Community hub. Each lands after its render is reviewed; then ONE build for the founder's walk. RECOVERY PATH for any lane: the spec is complete; a partial tree is reviewed hunk by hunk against it and finished or reverted.
+
+_Previous heading, kept for the record: stages 1-4 landed and merged; the ledger (D184) and the card sweep (D186) landed 2026-09-17._
 
 Plan: `docs/design-redesign-2026-09-14/20-DIRECTION-AND-PLAN.md` (**v3, live**).
 Research: files 10-13 in that folder (README = map). Decisions: **D164** (the
