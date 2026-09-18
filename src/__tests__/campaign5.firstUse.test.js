@@ -617,7 +617,11 @@ describe('WORKOUT: the first session completes honestly with no history (C5-P13-
 describe('BLOCK: the first block explains itself and never advances on its own (C5-P11-*, FB-*, D96)', () => {
   test('block start explains build then recovery, and that nothing rolls over', () => {
     const sheet = read('components/HomeBlockShapeSheet.js');
-    expect(sheet).toMatch(/When the block finishes, you choose what comes next\. Nothing starts on its own/);
+    // RE-ANCHORED 2026-09-18 (D192, block sheet): reworded from "finishes,"
+    // to "ends" as part of the paragraph-to-three-lines rewrite; same fact
+    // kept -- the block finishing hands the decision to the user and
+    // nothing starts on its own.
+    expect(sheet).toMatch(/When the block ends you choose what comes next\. Nothing starts on its own/);
     // C5-P11-06: the definition is read before the provenance lines.
     expect(sheet.indexOf('GLOSSARY.mesocycle')).toBeLessThan(sheet.indexOf('seedLines.map'));
     // C5-P11-07: the countdown carries its unit noun.

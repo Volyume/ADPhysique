@@ -57,7 +57,11 @@ describe('HomeBlockShapeSheet', () => {
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Your block');
     expect(text).toContain('Hypertrophy block');
-    expect(text).toContain(GLOSSARY.deload);
+    // RE-ANCHORED 2026-09-18 (D192, block sheet): GLOSSARY.deload (three
+    // sentences) now renders only its opening fact here, plus one fact
+    // line of the sheet's own -- same recovery-week facts, fewer words.
+    expect(text).toContain(GLOSSARY.deload.split('. ')[0] + '.');
+    expect(text).toContain('Sets logged in the recovery week do not count towards the block');
     // Founder order 2026-09-17: the block sheet does not explain reps in
     // reserve. The gloss and its GLOSSARY entry are gone; pinned as absent.
     expect(text).not.toMatch(/Reps in reserve/);
@@ -73,9 +77,16 @@ describe('HomeBlockShapeSheet', () => {
     const { tree } = render();
     const text = flattenText(tree.toJSON());
     expect(text).toContain(GLOSSARY.mesocycle);
-    expect(text).toMatch(/Each week the effort target moves a step closer to failure/);
-    expect(text).toMatch(/recovery week eases both sets and effort so fatigue clears/);
-    expect(text).toMatch(/How each muscle goes this block shapes where its sets start in the next one/);
+    // RE-ANCHORED 2026-09-18 (D192, block sheet): the five-sentence inline
+    // paragraph became three one-line facts (FINISH-SPEC copy rule: no
+    // paragraphs, one line each). Same three facts kept -- the climb, the
+    // next-block choice with nothing automatic, and next-block learning --
+    // in fewer words. The recovery-week clause that used to sit mid-
+    // paragraph is dropped from here because the deload line already
+    // states it (pinned in the test above).
+    expect(text).toMatch(/Each week the effort target steps closer to failure/);
+    expect(text).toMatch(/When the block ends you choose what comes next\. Nothing starts on its own/);
+    expect(text).toMatch(/How each muscle goes shapes where its sets start next block/);
   });
 
   test('stays unreachable while not visible', () => {

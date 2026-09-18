@@ -29,8 +29,12 @@ describe('TRAINING comprehension', () => {
   test('the block sheet teaches the mental model: definition, climb why, next-block learning', () => {
     const src = read('components/HomeBlockShapeSheet.js');
     expect(src).toContain('GLOSSARY.mesocycle');
-    expect(src).toMatch(/Each week the effort target moves a step closer to failure/);
-    expect(src).toMatch(/How each muscle goes this block shapes where its sets start in the next one/);
+    // RE-ANCHORED 2026-09-18 (D192, block sheet): the five-sentence
+    // paragraph became three one-line facts; same climb-and-next-block
+    // facts, fewer words (see HomeBlockShapeSheet.test.js for the full
+    // rendered-text pin, including the deload line's recovery fact).
+    expect(src).toMatch(/Each week the effort target steps closer to failure/);
+    expect(src).toMatch(/How each muscle goes shapes where its sets start next block/);
   });
 
   test('peak week explains expected fatigue without pretending recovery is excellent', () => {
