@@ -3,7 +3,17 @@
 ===============================================================================
 ## ★ 2026-09-18 — THE FINISH (D192): THE FOUNDER CALLED BUILD 3583 "A MESS" AND CHOSE TO FINISH, NOT REVERT ★
 
-RESUME HERE. Read `docs/design-redesign-2026-09-14/40-FINISH-SPEC.md` first: the
+RESUME HERE. THE FINISH IS COMPLETE ON MAIN as of 2026-09-18 (`d9a8ed5f`;
+final gate: lint clean, 1,328 suites / 20,768 tests, 0 failures). What is
+open: the founder's device walk on ONE build (offered in chat, never
+dispatched without their explicit go) and one founder question, the
+readiness sheet's order. The register's D192 entry carries the ten rulings
+made on the way and what was found beside the spec; the board's finish
+entry carries every commit hash; `30-DEVICE-WALK.md` sections B to G6 and K
+are the walk. If the founder's walk turns up defects, each is a small lane
+under the same spec, landed the same way (render, review, gate, merge).
+
+Read `docs/design-redesign-2026-09-14/40-FINISH-SPEC.md` first: the
 measured causes (surface 1.07:1 on the ground, two component languages per
 screen, a big-everything type scale with a 56 hero, a dozen explanatory
 paragraphs, day zero never designed), the re-cut scale, the lifted ladder, one
