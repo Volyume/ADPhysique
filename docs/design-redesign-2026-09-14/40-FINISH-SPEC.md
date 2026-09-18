@@ -71,7 +71,14 @@ lifted to clear 4.5:1 on the lighter ladder. Light: the hairline darkens to
    and a chevron leaves about 314 dp for text at 360 dp wide, and bodySm
    sets about 5.8 dp per character, so a secondary line fits one line at
    **50 characters or fewer**; a full-width meta line (a card, no glyph or
-   chevron) at 56. The earlier "under 60" allowed lines that wrapped.
+   chevron) at 56. The earlier "under 60" allowed lines that wrapped. The cap
+   is for NAV rows (title, one line, chevron: the tabs, Settings root, the
+   Coach tab). A row that carries a switch or a data action (export, backup,
+   delete) or an onboarding step keeps its explanation, which may run to two
+   lines: the settings page is the tap the explanation lives behind, and
+   cutting "Replaces success-green and error-red with sky blue and reddish
+   purple" to fit would lose the fact the person needs (ruled 2026-09-18 from
+   a tree-wide inventory).
 4. **Card** (only for an object: the plan, the session ahead, a meal, a lift,
    a person): surface fill, 1 px hairline, radius 16, padding 16; one
    headline (h2 or title), one meta line, controls at the foot; never a

@@ -113,7 +113,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="contrast-outline"
           label="Display and accessibility"
-          sub="Appearance, energy units, text size, contrast, motion"
+          sub="Appearance, units, text size, contrast, motion"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsDisplay'); }}
         />
         <SettingRow
