@@ -165,7 +165,16 @@ function mapContainerCss(style) {
   }
   applyBoxSpacing(css, style, 'margin');
   applyBoxSpacing(css, style, 'padding');
-  return css;
+    // CSS draws no border without a border-style; React Native draws one for
+  // any width. Every hairline, card edge and outline was missing from the
+  // first renders because of this line's absence.
+  // Per side: a bare `border-style: solid` would give every UNSPECIFIED side
+  // the CSS default width (medium, 3 px) and box every hairline-ruled row.
+  if (css['border-width']) css['border-style'] = 'solid';
+  for (const side of ['top', 'bottom', 'left', 'right']) {
+    if (css[`border-${side}-width`]) css[`border-${side}-style`] = 'solid';
+  }
+return css;
 }
 
 // ── Text style mapping ───────────────────────────────────────────────────

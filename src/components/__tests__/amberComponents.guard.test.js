@@ -512,7 +512,9 @@ describe('D174 §3.2: no tint sits behind a glyph in src/components', () => {
     ['ProgressPhotoPrompt.js', 'iconWrap'],
     ['ReadinessCards.js', 'mfIconWrap'],
     ['HomeCommunityIntroCard.js', 'icon'],
-    ['HomeHowYouTrainOfferCard.js', 'icon'],
+    // HomeHowYouTrainOfferCard.js left this list under D192 (2026-09-18): the
+    // offer is a row with a bare glyph and no wrap key at all, so there is no
+    // disc to test for a tint. The rule holds trivially.
     ['workout/EmptyExerciseView.js', 'navTabBadge'],
   ];
 

@@ -31,7 +31,7 @@ function TodayLine({ item, testID }) {
 
   const { text, onPress, onDismiss, accessibilityLabel } = item;
   const live = {
-    row: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    row: { borderBottomColor: t.colors.borderSubtle },
     accent: { backgroundColor: t.colors.textMuted },
     text: { ...t.type.bodySm, color: t.colors.textPrimary },
   };
@@ -72,15 +72,15 @@ function TodayLine({ item, testID }) {
 export default React.memo(TodayLine);
 
 const styles = StyleSheet.create({
+  // D192 (finish spec 4.7, 2026-09-18): a status line, not a box. It sat at
+  // the top of Today as a filled, bordered, rounded panel; it is one line on
+  // the page's ground with a hairline beneath, the dot and the dismiss kept.
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle,
     paddingVertical: spacing.sm + spacing.xxs,
   },
   accent: {
