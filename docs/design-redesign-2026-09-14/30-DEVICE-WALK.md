@@ -318,6 +318,34 @@ of them. 8. Section K, every step.
     raised bordered one (it used a variant that did not exist and fell
     through to the heavy style).
 
+### G4. The weekly check-in (D192, 2026-09-18)
+
+40m. **Open Weekly check-in** on an account with a baseline. *Expect:* the
+    header reads "Weekly check-in" with **no "Quick check-in" tag** under it.
+40n. **The scan prompt, if it shows.** *Expect:* "Add a progress scan first?"
+    with one line, "Adds a visual read to this week's check-in", and "Do a
+    scan" / "Not now" as plain text actions, a hairline above and below the
+    block, no fill.
+40o. **The week.** *Expect:* the date range as a bold title, a small "FROM
+    YOUR LOGS" label under it, then Training / Nutrition / Weight as three
+    plain rows with **no green ticks**, a faint line between them, the
+    Training value starting with a capital, the Weight value reading "7 days
+    logged · trend 82.3 kg" with a middle dot, and one grey line under the
+    rows like "From your logs: 2 of 4 sessions · 1 of 7 diary days".
+40p. ★ **The two questions.** *Expect:* each a single bordered strip of five
+    numbered cells, "Low" and "High" (or "None" and "Very high") under its
+    ends. Tap a cell: it fills a shade lighter with a visible edge, **never
+    amber**. The same strip now serves the long form's energy, stress and
+    soreness questions.
+40q. **The actions.** *Expect:* an "Add more detail" row (no pencil, chevron
+    at the right) above the button; the button greyed with "Rate your energy
+    and soreness to continue" (no full stop) under it until both scales are
+    answered, then the **one amber button** on the screen. The long form's
+    final button is the same size.
+40r. ★ **ED-safety.** With calm mode on or an open ED flag. *Expect:* the scan
+    prompt does not render at all (its gate fails closed, unchanged); the
+    Weight row renders as it always did.
+
 ## H. Settings
 
 41. **Any Settings sub-page.** *Expect:* every row's icon is a **plain grey
