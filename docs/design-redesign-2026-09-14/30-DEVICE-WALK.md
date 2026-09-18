@@ -116,9 +116,27 @@ of them. 8. Section K, every step.
 
 ## D. The workout summary
 
-21. *Expect:* the four-week verdict is the one large element. The stat grid's
-    first tile shows a chart glyph, not a flame, and every figure states its
-    unit.
+21. *Expect:* "Workout complete" is the screen's title at h1 with **no green
+    tick beside it**, the date in small grey under it. The four-week verdict
+    sits in the raised card below as **one sentence at heading size** (not
+    display size, since D192: a sentence never sets at hero), the routine name
+    as a small-caps line above it and **one short grey line** beneath, all
+    left-aligned. The stat grid's first tile shows a chart glyph, not a flame,
+    and every figure states its unit.
+21b. **The verdict's second line, by case.** *Expect:* exactly one line, no
+    second sentence: "Saved as Last session for next time" (first time on a
+    routine), "Top of N sessions on this routine" (best), "Position X of Y in
+    the last 4 weeks" (up), "The 4-week trend carries more signal than one
+    session" (down), "Within 10% of your 4-week average" (on pace).
+21c. ★ **One prior session on the routine, on pace.** *Expect:* "On pace with
+    your last session" -- never "your last 1 session".
+21d. **A milestone card, if one shows.** *Expect:* its title a step bolder than
+    its one body line, both left-aligned, no coloured fill or box behind the
+    glyph.
+21e. ★ **ED-safety.** With calm mode on or an open ED flag, finish a session
+    that would be a first-ever session or cross a milestone rung. *Expect:* the
+    milestone card and the first-session line stay **hidden**, exactly as
+    before; nothing about their conditions changed.
 21a. ★ **The set breakdown under each exercise** (D184). *Expect:* each working
     set is one hairline-ruled line -- "1" in a grey column, then "100kg x 8" in
     ink, tabular -- **no chips, no pills, no borders**. Warm-ups are not listed
