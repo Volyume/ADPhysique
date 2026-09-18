@@ -70,9 +70,16 @@ describe('PressableCard origin-aware measure API', () => {
     expect(firstPressHandler(tree, 'onLongPress')).toBeNull();
   });
 
-  test('source: the measured path forwards a {x, y, width, height} rect via measureInWindow', () => {
+  test('source: the measured path forwards a {x, y, width, height} rect, and cannot lose a tap', () => {
+    // RE-ANCHORED 2026-09-18 (revert): the rect still comes from
+    // measureInWindow, and a handle whose measure never calls back (a row a
+    // list has just recycled) no longer eats the tap: the callback fires once
+    // either way, with the rect or with null after a short fallback.
     const src = fs.readFileSync(path.join(__dirname, '..', 'PressableCard.js'), 'utf8');
-    expect(src).toContain('node.measureInWindow((x, y, width, height) => cb({ x, y, width, height }));');
+    expect(src).toContain('node.measureInWindow((x, y, width, height) => {');
+    expect(src).toContain('finish({ x, y, width, height });');
+    expect(src).toMatch(/let settled = false;/);
+    expect(src).toMatch(/setTimeout\(\(\) => finish\(null\), \d+\)/);
   });
 });
 

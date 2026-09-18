@@ -83,13 +83,27 @@ export default function PressableCard({
   // Measure this card in window coordinates, then hand the rect to the
   // origin-aware callback. Falls back to a null rect when the native handle
   // isn't measurable so the action still fires (never a lost tap).
+  // A row that a list has just recycled can hold a native handle whose
+  // measureInWindow never calls back, and the tap was lost with it (fixed
+  // 2026-09-16, re-applied on the 2026-09-18 revert). The callback fires
+  // exactly once: with the rect if it arrives, with null otherwise.
   function measureThen(cb) {
     if (!cb) return;
     const node = viewRef.current;
+    let settled = false;
+    const finish = (rect) => {
+      if (settled) return;
+      settled = true;
+      cb(rect);
+    };
     if (node && typeof node.measureInWindow === 'function') {
-      node.measureInWindow((x, y, width, height) => cb({ x, y, width, height }));
+      const fallback = setTimeout(() => finish(null), 120);
+      node.measureInWindow((x, y, width, height) => {
+        clearTimeout(fallback);
+        finish({ x, y, width, height });
+      });
     } else {
-      cb(null);
+      finish(null);
     }
   }
 
