@@ -13,7 +13,6 @@ import {
   KeyboardGestureArea,
 } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import BigNumber from '../components/BigNumber';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, withAlpha, circle, motion, iconSize, fontFamily } from '../styles/theme';
@@ -1266,10 +1265,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.completionHeader}>
-          <View style={styles.checkRow}>
-            <Ionicons name="checkmark-circle" size={28} color={t.colors.success} />
-            <Text style={[styles.completionTitle, live.completionTitle]}>Workout complete</Text>
-          </View>
+          {/* D192 (finish spec section 4.1/item 4): the screen title, at
+              h1 -- the checkmark-plus-title row is gone; colour is not
+              spent on decoration in the finish (spec section 4.9), and a
+              screen is titled by its h1 alone, never by a chrome row
+              around it. */}
+          <Text style={[styles.completionTitle, live.completionTitle]}>Workout complete</Text>
           <Text style={[styles.completionDate, live.completionDate]}>{completionDate}</Text>
           {firstSessionLine ? (
             <Text style={[styles.firstSessionLine, live.firstSessionLine]}>{firstSessionLine}</Text>
@@ -1310,7 +1311,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             WEEKLY signal on Today. The card stays the screen's one elevated
             object; there is no amber on it now. */}
         <Card elevated padding="xl" style={styles.heroCard}>
-          {/* 4-week comparison verdict, now the hero itself (D167, law 1).
+          {/* 4-week comparison verdict (D167, law 1). D192 (finish spec
+              section 2) supersedes HOW it is loud: "the hero and display
+              steps carry a NAME or a NUMBER, never a sentence ... a sentence
+              that is the screen's loud element sets in h2" -- this verdict is
+              a sentence, so it renders as plain Text at h2, not through
+              BigNumber at hero size.
 
               The screen used to shout TONNAGE at 40px. Two things were wrong
               with that. Law 1 says the loud element is "always the thing the
@@ -1323,7 +1329,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
               The session's own NAME has never been rendered on this screen at
               all -- `routineName` was loaded solely to title the share card.
-              It is the eyebrow now, which also matches Today: that screen
+              It is the overline now, which also matches Today: that screen
               shouts what you are about to do, this one shouts how it went,
               and Progress shouts what to do next.
 
@@ -1352,27 +1358,32 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             let headline, sub;
             if (verdict === 'first') {
               headline = 'First time on this session';
-              sub = 'Every set is saved. Next time, these numbers show as Last session while you lift.';
+              sub = 'Saved as Last session for next time';
             } else if (verdict === 'best') {
               headline = 'Strongest workout in 4 weeks';
-              sub = `Top of ${total} sessions logged for this routine.`;
+              sub = `Top of ${total} sessions on this routine`;
             } else if (verdict === 'up') {
               headline = `${pct >= 0 ? '+' : ''}${pct}% vs your 4-week average`;
-              sub = `Position ${position} of ${total} sessions in the window.`;
+              sub = `Position ${position} of ${total} in the last 4 weeks`;
             } else if (verdict === 'down') {
               headline = `${pct}% vs your 4-week average`;
-              sub = 'Sessions vary with recovery, sleep and stress. The 4-week trend carries more signal than any single session.';
+              sub = 'The 4-week trend carries more signal than one session';
             } else {
-              headline = `On pace with your last ${priorCount} session${priorCount !== 1 ? 's' : ''}`;
-              sub = 'Within about 10% of your 4-week average. Consistency is the goal.';
+              // D192 grammar fix: "your last 1 session" read like a typo, not
+              // a count. priorCount === 1 drops the numeral instead of saying it.
+              headline = priorCount === 1 ? 'On pace with your last session' : `On pace with your last ${priorCount} sessions`;
+              sub = 'Within 10% of your 4-week average';
             }
             return (
-              <BigNumber
-                label={routineName || null}
-                value={headline}
-                caption={sub}
-                testID="summary-verdict"
-              />
+              <>
+                {routineName ? (
+                  <Text style={[styles.summaryVerdictOverline, live.summaryVerdictOverline]}>{routineName}</Text>
+                ) : null}
+                <Text style={[styles.summaryVerdictHeadline, live.summaryVerdictHeadline]} testID="summary-verdict">
+                  {headline}
+                </Text>
+                <Text style={[styles.summaryVerdictSub, live.summaryVerdictSub]}>{sub}</Text>
+              </>
             );
           })()}
         </Card>
@@ -2213,10 +2224,12 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxxl },
   completionHeader: { gap: spacing.xs, paddingVertical: spacing.md },
-  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  completionTitle: { ...type.h2, color: colors.textPrimary },
-  completionDate: { fontSize: fontSize.sm, color: colors.textMuted },
-  firstSessionLine: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textSecondary, marginTop: spacing.xs },
+  // D192 (finish spec item 4): the screen title now carries the checkmark's
+  // job -- colour is not spent on decoration in the finish (section 4.9), so
+  // the icon went and "Workout complete" sets at h1, the screen's title role.
+  completionTitle: { ...type.h1, color: colors.textPrimary },
+  completionDate: { ...type.bodySm, color: colors.textSecondary },
+  firstSessionLine: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xs },
   // D1 early-win milestone card. D173 T1 dropped the gold Card tone and both
   // gold washes (amber discipline 2: the accent is never a tint behind a
   // glyph); it stays the plain surface card it already was underneath, with
@@ -2228,8 +2241,8 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: circle(40),
     alignItems: 'center', justifyContent: 'center',
   },
-  milestoneTitle: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  milestoneBody: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
+  milestoneTitle: { ...type.title, color: colors.textPrimary },
+  milestoneBody: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
   milestoneShareBtn: {
     width: 36, height: 36, borderRadius: circle(36),
     alignItems: 'center', justifyContent: 'center',
@@ -2271,10 +2284,17 @@ const styles = StyleSheet.create({
   // through BigNumber, not the display-size tonnage counter it used to.
   // `heroValue`/`heroValueWrap`/`heroValueLabel` and StatBox's `hero` branch
   // went with that change rather than being left dead behind a guard.
+  // D192 (finish spec section 2): the verdict is a sentence, and "the hero
+  // and display steps carry a NAME or a NUMBER, never a sentence" -- so it
+  // moved again, off BigNumber/type.hero onto three plain Texts at h2, and
+  // the card is left-aligned (no centred text anywhere on this screen).
   heroCard: {
     gap: spacing.md,
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
+  summaryVerdictOverline: { ...type.overline, color: colors.textMuted },
+  summaryVerdictHeadline: { ...type.h2, color: colors.textPrimary },
+  summaryVerdictSub: { ...type.bodySm, color: colors.textSecondary },
   verdictRow: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
     alignSelf: 'stretch',
@@ -2573,11 +2593,11 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    completionTitle: { ...t.type.h2, color: t.colors.textPrimary },
-    completionDate: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
-    firstSessionLine: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    milestoneTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
-    milestoneBody: { ...t.type.captionTight, color: t.colors.textSecondary },
+    completionTitle: { ...t.type.h1, color: t.colors.textPrimary },
+    completionDate: { ...t.type.bodySm, color: t.colors.textSecondary },
+    firstSessionLine: { ...t.type.bodySm, color: t.colors.textSecondary },
+    milestoneTitle: { ...t.type.title, color: t.colors.textPrimary },
+    milestoneBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     phaseTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     phaseName: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     phaseRecap: { ...t.type.bodySm, color: t.colors.textSecondary },
@@ -2586,6 +2606,9 @@ function buildLiveStyles(t) {
     phaseActionText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     phaseShareBtn: { borderColor: t.colors.border },
     blockArcName: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
+    summaryVerdictOverline: { ...t.type.overline, color: t.colors.textMuted },
+    summaryVerdictHeadline: { ...t.type.h2, color: t.colors.textPrimary },
+    summaryVerdictSub: { ...t.type.bodySm, color: t.colors.textSecondary },
     verdictRow: { borderTopColor: t.colors.borderSubtle },
     verdictHeadline: { ...t.type.bodyStrong },
     verdictSub: { ...t.type.captionTight, color: t.colors.textMuted },

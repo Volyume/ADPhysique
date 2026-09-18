@@ -23,6 +23,18 @@
  * which is the same good/bad tinting the app already refuses for body-weight
  * trends; law 6 narrows colour to one meaning; and the trophy and arrows are
  * category props. The sentence carries itself.
+ *
+ * AMENDED 2026-09-18 (D192, item 1). The founder's build-3583 device verdict
+ * ("finish it properly... use your full judgement on sizes") produced the
+ * finish spec's type rule: a sentence never sets at hero/display size, and a
+ * sentence that IS the screen's loud element sets in h2 instead. This
+ * verdict is a sentence, so "the loud thing is how it went" now renders as
+ * plain Text at h2 (three Texts: overline / headline / sub), not through
+ * BigNumber at hero size. The three cases that named BigNumber directly are
+ * re-anchored below to the same intent under the new mechanism; every other
+ * case in this file (the colour/trophy/arrow refusals, the sentence content,
+ * the tonnage move, the ED-safety/milestone survival) was unaffected and is
+ * untouched.
  */
 const fs = require('fs');
 const path = require('path');
@@ -40,18 +52,38 @@ function code(source) {
 const SRC = code(read('src/screens/WorkoutSummaryScreen.js'));
 
 describe('law 1: the loud thing is how it went', () => {
-  test('the verdict renders through BigNumber', () => {
-    expect(SRC).toContain("import BigNumber from '../components/BigNumber'");
+  // RE-ANCHORED 2026-09-18 (D192, item 1): the finish spec (section 2) rules
+  // that "the hero and display steps carry a NAME or a NUMBER, never a
+  // sentence" and that "a sentence that is the screen's loud element sets in
+  // h2". The verdict is a sentence ("Strongest workout in 4 weeks"), so it no
+  // longer renders through BigNumber at hero size -- it is three plain Texts
+  // (overline / h2 headline / bodySm sub) sharing the elevated Card. The
+  // intent this law protects -- the verdict is still the one thing the
+  // screen is loudest about, and it is still findable by one testID -- is
+  // unchanged; only the mechanism moved, on the founder's device order to
+  // redo the sizes under full lead judgement (D192, build 3583 walk).
+  test('the verdict renders as plain Text, findable by its testID', () => {
+    expect(SRC).not.toContain("import BigNumber from '../components/BigNumber'");
     expect(SRC).toContain('testID="summary-verdict"');
   });
 
-  test('exactly one loud element on the screen', () => {
-    expect((SRC.match(/<BigNumber/g) || []).length).toBe(1);
+  test('exactly one loud element on the screen: zero hero-scale, one verdict headline', () => {
+    // D192 retires BigNumber/type.hero from this screen entirely -- a
+    // sentence verdict never sets at hero size (finish spec section 2) -- so
+    // "exactly one loud element" is now pinned as zero BigNumber usages plus
+    // exactly one testID="summary-verdict" headline, rather than one
+    // BigNumber mount.
+    expect((SRC.match(/<BigNumber/g) || []).length).toBe(0);
+    expect((SRC.match(/testID="summary-verdict"/g) || []).length).toBe(1);
   });
 
-  test('the session name is finally rendered, as the eyebrow', () => {
+  test('the session name is finally rendered, as the overline', () => {
     // It was loaded on every mount and used only for the share card title.
-    expect(SRC).toContain('label={routineName || null}');
+    // RE-ANCHORED: no longer BigNumber's `label` prop -- it is its own Text,
+    // styled `summaryVerdictOverline` (type.overline/textMuted per the
+    // finish spec), rendered only when a routine name exists.
+    expect(SRC).toContain('styles.summaryVerdictOverline');
+    expect(SRC).toMatch(/\{routineName \? \(/);
   });
 
   test('the display-size tonnage counter is gone, not just unused', () => {
