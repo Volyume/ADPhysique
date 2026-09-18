@@ -335,9 +335,11 @@ export default function LiftProgressScreen({ navigation }) {
         <View style={[styles.standingCard, live.standingCard]}>
           {standing ? (
             <View style={[styles.standingHeadline, live.standingHeadline]}>
+              {/* D192 (item 3): an overline section label ahead of the word. */}
+              <SectionLabel>Overall level</SectionLabel>
               <Text style={[styles.standingLabel, live.standingLabel]}>{standing.overallLabel}</Text>
               <Text style={[styles.standingSub, live.standingSub]}>
-                overall across {standing.count} main {standing.count === 1 ? 'lift' : 'lifts'}
+                Across {standing.count} main {standing.count === 1 ? 'lift' : 'lifts'}
               </Text>
               {standing.nearest ? (
                 <Text style={[styles.standingNext, live.standingNext]}>
@@ -709,17 +711,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },
-  // D174: a strength standing is a rank, not the user's live moment; the
-  // xxxl heavy face is what makes it the loud thing on the card (law 1).
+  // D174: a strength standing is a rank, not the user's live moment.
+  // D192 (item 3): the word drops to type.h2 behind its own SectionLabel
+  // overline, rather than carrying the loud weight itself; it is a word
+  // ("Novice"), not a number, so tabular figures no longer apply.
   standingLabel: {
+    ...type.h2,
     color: colors.textPrimary,
-    fontSize: fontSize.xxxl,
-    fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy,
-    lineHeight: 36,
-    fontVariant: ['tabular-nums'],
   },
-  standingSub: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
-  standingNext: { ...type.label, color: colors.textSecondary, marginTop: spacing.sm },
+  // D192 (item 3): bodySm; the first line's colour also moves to
+  // textSecondary (from textMuted), matching the second line beside it.
+  standingSub: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
+  standingNext: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm },
   sectionSub: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xs },
   strengthRow: {
     flexDirection: 'row',
@@ -853,9 +856,9 @@ function buildLiveStyles(t) {
     heroAxisLabel: { ...t.type.captionTight, color: t.colors.textMuted },
     standingCard: { borderTopColor: t.colors.borderSubtle },
     standingHeadline: { borderBottomColor: t.colors.borderSubtle },
-    standingLabel: { color: t.colors.textPrimary, fontSize: t.fontSize.xxxl },
-    standingSub: { ...t.type.caption, color: t.colors.textMuted },
-    standingNext: { ...t.type.label, color: t.colors.textSecondary },
+    standingLabel: { ...t.type.h2, color: t.colors.textPrimary },
+    standingSub: { ...t.type.bodySm, color: t.colors.textSecondary },
+    standingNext: { ...t.type.bodySm, color: t.colors.textSecondary },
     sectionSub: { ...t.type.caption, color: t.colors.textMuted },
     strengthRow: { borderTopColor: t.colors.borderSubtle },
     strengthName: { ...t.type.label, color: t.colors.textPrimary },

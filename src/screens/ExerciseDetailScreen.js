@@ -769,7 +769,10 @@ export default function ExerciseDetailScreen({ navigation, route }) {
           const displayPR = pr1rm || prHeavy;
           if (!displayPR) return null;
           return (
-            <Card tone="primary" style={styles.prHighlightCard}>
+            // D192 (item 1a): the amber edge was decoration (the hero PR
+            // figure below stays amber on its own merit, spec 4.9); the
+            // card itself is neutral now.
+            <Card style={styles.prHighlightCard}>
               <View style={styles.prHighlightHeader}>
                 <SectionLabel tone="muted">Personal records</SectionLabel>
                 {/* D93 (Campaign 2, Phase 3): the records surfaces carry the
@@ -905,7 +908,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         {allChartPoints.length >= 2 && (
           <View style={styles.chartSection}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
-              <Text style={[styles.chartLabel, live.chartLabel]}>Strength trend</Text>
+              {/* D192 (item 1c): a section, not a bold title. */}
+              <SectionLabel>Strength trend</SectionLabel>
               {/* T24/O20: plain-English gloss for the total-lifted lenses.
                   Not GLOSSARY.volume -- that entry describes the app's
                   OTHER "Volume" (weekly hard sets), a different concept. */}
@@ -1334,10 +1338,6 @@ const styles = StyleSheet.create({
   chartSection: { gap: spacing.sm },
   chartTakeaway: { ...type.bodySm, color: colors.textSecondary },
   chartEmptyHint: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', paddingVertical: spacing.md },
-  chartLabel: {
-    ...type.captionStrong,
-    color: colors.textMuted,
-  },
   chartToggle: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, alignSelf: 'flex-start' },
   loadErrorWrap: { flex: 1, padding: spacing.lg, justifyContent: 'center' },
   loadErrorCard: {
@@ -1633,7 +1633,6 @@ function buildLiveStyles(t) {
     sfrDivider: { backgroundColor: t.colors.border },
     chartTakeaway: { ...t.type.bodySm, color: t.colors.textSecondary },
     chartEmptyHint: { ...t.type.caption, color: t.colors.textMuted },
-    chartLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     loadErrorIcon: { backgroundColor: withAlpha(t.colors.warning, 0.12) },
     loadErrorTitle: { ...t.type.title, color: t.colors.textPrimary },
     loadErrorText: { ...t.type.bodySm, color: t.colors.textSecondary },

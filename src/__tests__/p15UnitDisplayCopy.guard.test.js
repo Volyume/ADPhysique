@@ -155,7 +155,14 @@ describe('Import and Weight Trend numbers use en-GB, not device-locale toLocaleS
   // stronger one, which is why this case asserts the row rather than the
   // character.
   test('the Effective maintenance figure formats through the shared en-GB helper', () => {
-    expect(BODY_METRICS).toMatch(/import \{ toEnergy, energyUnitLabel, formatEnergy \} from '\.\.\/lib\/format';/);
+    // RE-ANCHORED 2026-09-18 (D192, item 2e): the same import line now also
+    // names `formatNumber` directly, for the unrelated "Average intake"
+    // line's own thousands separator (a raw formatNumber(toEnergy(...))
+    // composition, since that line's day-count wording can't go through
+    // formatEnergy's own withUnit option). Intent kept: `formatEnergy` is
+    // still imported and still the helper the Effective-maintenance figure
+    // formats through, asserted directly below.
+    expect(BODY_METRICS).toMatch(/import \{ toEnergy, energyUnitLabel, formatEnergy, formatNumber \} from '\.\.\/lib\/format';/);
     expect(BODY_METRICS).toMatch(/\{formatEnergy\(adaptiveBurn\.adjustedTDEE, energyUnit\)\}/);
     // The bare spelling this replaced must not come back.
     expect(BODY_METRICS).not.toMatch(/\{toEnergy\(adaptiveBurn\.adjustedTDEE, energyUnit\)\}/);

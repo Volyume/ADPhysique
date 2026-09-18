@@ -470,7 +470,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
                 <Ionicons name="time-outline" size={14} color={t.colors.textMuted} />
                 {/* D88: was "45m" here and "45 min" once expanded, same value. */}
                 <Text style={[styles.cardMetaText, live.cardMetaText]}>{workout.durationMinutes || 0} min</Text>
-                <Text style={[styles.cardMetaDivider, live.cardMetaDivider]}>-</Text>
+                {/* D192 (item 5a): the separator is a middle dot. */}
+                <Text style={[styles.cardMetaDivider, live.cardMetaDivider]}>·</Text>
                 <Ionicons name="layers-outline" size={14} color={t.colors.textMuted} />
                 <Text style={[styles.cardMetaText, live.cardMetaText]}>{workingSetCount} set{workingSetCount !== 1 ? 's' : ''}</Text>
               </View>
@@ -582,13 +583,14 @@ export default function WorkoutHistoryScreen({ navigation }) {
           </View>
         )}
 
-        {/* Card actions */}
+        {/* Card actions. D192 (item 5b): "View summary" and "Repeat" become
+            text actions (no pill border or fill); delete stays a plain
+            glyph button, now with no border either. Same handlers, same
+            accessibility labels, same order. */}
         <View style={[styles.cardActions, live.cardActions]}>
           {!isExpanded && (
-            <Button
-              title="View summary"
-              variant="secondary"
-              size="sm"
+            <TouchableOpacity
+              style={styles.viewBtn}
               onPress={() =>
                 navigation.navigate('WorkoutSummary', {
                   workoutId: workout.id,
@@ -611,27 +613,23 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   readOnly: true,
                 })
               }
-              // Campaign item 8 (2026-07-10): pinned by
-              // WorkoutHistoryScreen.loadState.test.js's "history cards
-              // expose expansion state..." guard, which was updated in the
-              // same change to expect this array form.
-              style={[styles.viewBtn, live.viewBtn]}
-              textStyle={[styles.viewBtnText, live.viewBtnText]}
+              accessibilityRole="button"
               accessibilityLabel="View summary"
-            />
+            >
+              <Text style={[styles.viewBtnText, live.viewBtnText]}>View summary</Text>
+            </TouchableOpacity>
           )}
-          <Button
-            title="Repeat"
-            icon="refresh-outline"
-            variant="secondary"
-            size="sm"
-            onPress={() => handleRepeatWorkout(workout)}
-            style={[styles.repeatBtn, live.repeatBtn, isExpanded && styles.repeatBtnFull]}
-            textStyle={[styles.repeatBtnText, live.repeatBtnText]}
-            accessibilityLabel="Repeat workout"
-          />
           <TouchableOpacity
-            style={[styles.deleteBtn, live.deleteBtn]}
+            style={[styles.repeatBtn, isExpanded && styles.repeatBtnFull]}
+            onPress={() => handleRepeatWorkout(workout)}
+            accessibilityRole="button"
+            accessibilityLabel="Repeat workout"
+          >
+            <Ionicons name="refresh-outline" size={iconSize.sm} color={t.colors.textPrimary} />
+            <Text style={[styles.repeatBtnText, live.repeatBtnText]}>Repeat</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.deleteBtn}
             onPress={() => handleDeleteWorkout(workout)}
             accessibilityRole="button"
             accessibilityLabel="Delete workout"
@@ -1176,47 +1174,43 @@ const styles = StyleSheet.create({
 
   cardActions: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.md,
     paddingTop: spacing.xs,
     borderTopWidth: 1,
     borderTopColor: colors.border,
   },
+  // D192 (item 5b): a text action, no pill border or fill.
   viewBtn: {
     flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.lg,
-    backgroundColor: colors.surface2,
+    minHeight: 44,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   viewBtnText: {
     ...type.label,
-    color: colors.textSecondary,
+    color: colors.textPrimary,
   },
+  // D192 (item 5b): a text action, no pill border or fill.
   repeatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: spacing.xs,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.control,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
   },
   repeatBtnFull: {
     flex: 1,
-    justifyContent: 'center',
   },
+  // D192 (item 5b): stays a plain glyph button, now with no border either.
   // Quiet destructive affordance: neutral until the confirm dialog, matching
   // the row's secondary-button treatment rather than shouting red.
   deleteBtn: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    width: 44,
+    height: 44,
   },
   repeatBtnText: {
     ...type.label,
@@ -1269,10 +1263,7 @@ function buildLiveStyles(t) {
     fullSummaryBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     fullSummaryBtnText: { ...t.type.label, color: t.colors.textPrimary },
     cardActions: { borderTopColor: t.colors.border },
-    viewBtn: { backgroundColor: t.colors.surface2 },
-    viewBtnText: { ...t.type.label, color: t.colors.textSecondary },
-    repeatBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    deleteBtn: { borderColor: t.colors.border },
+    viewBtnText: { ...t.type.label, color: t.colors.textPrimary },
     repeatBtnText: { ...t.type.label, color: t.colors.textPrimary },
   };
 }

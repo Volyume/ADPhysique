@@ -585,14 +585,14 @@ export default function PlanDetailScreen({ navigation, route }) {
               keyExtractor={(w) => w.id}
               onReorder={handleReorderWorkouts}
               handleAccessibilityLabel={(w) => `Drag to reorder ${w.name}`}
-              gap={spacing.md}
+              // D192 (item 4a): the rows pack tight, hairline-only, matching
+              // the plain (non-reorder) branch below -- so 0, not spacing.md.
+              gap={0}
               scrollRef={scrollRef}
               scrollOffset={scrollOffset}
               renderRow={({ item: routine, index: i }) => (
-                <Card style={styles.workoutCard}>
-                  <View style={[styles.workoutIndex, live.workoutIndex]}>
-                    <Text style={[styles.workoutIndexText, live.workoutIndexText]}>{i + 1}</Text>
-                  </View>
+                <View style={[styles.workoutRow, live.workoutRow, i === workouts.length - 1 && styles.workoutRowLast]}>
+                  <Text style={[styles.workoutIndexText, live.workoutIndexText]}>{i + 1}</Text>
                   <View style={styles.workoutInfo}>
                     <Text style={[styles.workoutName, live.workoutName]}>{routine.name}</Text>
                     {exerciseCounts[routine.id] ? (
@@ -632,57 +632,61 @@ export default function PlanDetailScreen({ navigation, route }) {
                       <Ionicons name="chevron-down" size={16} color={i === workouts.length - 1 ? t.colors.border : t.colors.textMuted} />
                     </TouchableOpacity>
                   </View>
-                </Card>
+                </View>
               )}
             />
           ) : (
-            workouts.map((routine, i) => (
-              <Card key={routine.id} style={styles.workoutCard}>
-                <View style={[styles.workoutIndex, live.workoutIndex]}>
+            // D192 (item 4a): rows, not cards -- a grey tabular index column,
+            // hairlines between rows, no box round the group. The wrapper
+            // carries no gap of its own so the rows' own hairlines are the
+            // only separation, matching the reorder branch above.
+            <View style={styles.workoutList}>
+              {workouts.map((routine, i) => (
+                <View key={routine.id} style={[styles.workoutRow, live.workoutRow, i === workouts.length - 1 && styles.workoutRowLast]}>
                   <Text style={[styles.workoutIndexText, live.workoutIndexText]}>{i + 1}</Text>
-                </View>
-                <View style={styles.workoutInfo}>
-                  <Text style={[styles.workoutName, live.workoutName]}>{routine.name}</Text>
-                  {exerciseCounts[routine.id] ? (
-                    <Text style={[styles.workoutMeta, live.workoutMeta]}>
-                      {exerciseCounts[routine.id]} exercise{exerciseCounts[routine.id] !== 1 ? 's' : ''}
-                    </Text>
-                  ) : (
-                    <Text style={[styles.workoutMeta, live.workoutMeta]}>No exercises yet</Text>
-                  )}
-                  {/* F-17 (evidence A10): a day that runs a circuit says so
-                      here, with its stations, rounds and round rest, before
-                      anyone commits to the plan. */}
-                  {(circuitGroups[routine.id] ?? []).map(group => (
-                    <Text key={group.groupId} style={[styles.workoutMeta, live.workoutMeta]}>
-                      {formatCircuitPreviewLine(group)}
-                    </Text>
-                  ))}
-                </View>
-                {!isLibrary && (
-                  <View style={styles.workoutActions}>
-                    <TouchableOpacity
-                      style={[styles.editWorkoutBtn, live.editWorkoutBtn]}
-                      onPress={() => navigation.navigate('RoutineDetail', { routineId: routine.id })}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Edit ${routine.name}`}
-                    >
-                      <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.startWorkoutBtn, live.startWorkoutBtn]}
-                      onPress={() => handleStartWorkout(routine)}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Start ${routine.name}`}
-                    >
-                      <Ionicons name="play" size={13} color={t.colors.textPrimary} />
-                    </TouchableOpacity>
+                  <View style={styles.workoutInfo}>
+                    <Text style={[styles.workoutName, live.workoutName]}>{routine.name}</Text>
+                    {exerciseCounts[routine.id] ? (
+                      <Text style={[styles.workoutMeta, live.workoutMeta]}>
+                        {exerciseCounts[routine.id]} exercise{exerciseCounts[routine.id] !== 1 ? 's' : ''}
+                      </Text>
+                    ) : (
+                      <Text style={[styles.workoutMeta, live.workoutMeta]}>No exercises yet</Text>
+                    )}
+                    {/* F-17 (evidence A10): a day that runs a circuit says so
+                        here, with its stations, rounds and round rest, before
+                        anyone commits to the plan. */}
+                    {(circuitGroups[routine.id] ?? []).map(group => (
+                      <Text key={group.groupId} style={[styles.workoutMeta, live.workoutMeta]}>
+                        {formatCircuitPreviewLine(group)}
+                      </Text>
+                    ))}
                   </View>
-                )}
-              </Card>
-            ))
+                  {!isLibrary && (
+                    <View style={styles.workoutActions}>
+                      <TouchableOpacity
+                        style={styles.editWorkoutBtn}
+                        onPress={() => navigation.navigate('RoutineDetail', { routineId: routine.id })}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Edit ${routine.name}`}
+                      >
+                        <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.startWorkoutBtn}
+                        onPress={() => handleStartWorkout(routine)}
+                        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Start ${routine.name}`}
+                      >
+                        <Text style={[styles.startWorkoutBtnText, live.startWorkoutBtnText]}>Start</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
           )}
         </View>
 
@@ -690,16 +694,19 @@ export default function PlanDetailScreen({ navigation, route }) {
             mirroring the enrollment reveal so the rationale is here any
             time, not just right after setup. */}
         {isActive && !isLibrary && whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
-          <View style={styles.section}>
+          // D192 (item 4b): a section, not a boxed card -- the SectionLabel
+          // stays, the lines lose their box, a hairline sits above the
+          // section.
+          <View style={[styles.whySection, live.whySection]}>
             <SectionLabel>Why this plan, for you</SectionLabel>
-            <Card style={styles.whyCard}>
+            <View style={styles.whyList}>
               {WHY_ORDER.filter(k => whyThis[k]).map((k, i, arr) => (
                 <View key={k} style={[styles.whyItem, i < arr.length - 1 && styles.whyItemGap]}>
                   <View style={[styles.whyBullet, live.whyBullet]} />
                   <Text style={[styles.whyText, live.whyText]}>{whyThis[k]}</Text>
                 </View>
               ))}
-            </Card>
+            </View>
           </View>
         ) : splitRationale ? (
           // D139 (finding: "every preview carries a rationale line"): the
@@ -709,14 +716,14 @@ export default function PlanDetailScreen({ navigation, route }) {
           // all. The split's own template line (whyThisTemplates.js, the
           // same source the auto-generated reveal itself draws on) fills
           // that gap for every plan that has a split type.
-          <View style={styles.section}>
+          <View style={[styles.whySection, live.whySection]}>
             <SectionLabel>Why this plan, for you</SectionLabel>
-            <Card style={styles.whyCard}>
+            <View style={styles.whyList}>
               <View style={styles.whyItem}>
                 <View style={[styles.whyBullet, live.whyBullet]} />
                 <Text style={[styles.whyText, live.whyText]}>{splitRationale}</Text>
               </View>
-            </Card>
+            </View>
           </View>
         ) : null}
 
@@ -795,26 +802,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyCardText: { ...type.bodySm, color: colors.textMuted, textAlign: 'center' },
-  workoutCard: {
+  // D192 (item 4a): rows, not cards. No box round the group (workoutList);
+  // each row carries its own hairline, dropped on the last one.
+  workoutList: {},
+  workoutRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.borderSubtle,
   },
-  workoutIndex: {
-    width: 32, height: 32, borderRadius: circle(32), backgroundColor: colors.surface2,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
+  workoutRowLast: { borderBottomWidth: 0 },
+  // A fixed 24 dp column so the title lines up whether the index is one or
+  // two digits.
+  workoutIndexText: {
+    ...type.num('bodySm'), color: colors.textMuted,
+    width: 24, textAlign: 'center',
   },
-  workoutIndexText: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textSecondary },
   workoutInfo: { flex: 1, gap: spacing.xxs },
-  workoutName: { ...type.bodyStrong, color: colors.textPrimary },
-  workoutMeta: { ...type.caption, color: colors.textSecondary },
-  workoutActions: { flexDirection: 'row', gap: spacing.sm },
+  workoutName: { ...type.title, color: colors.textPrimary },
+  workoutMeta: { ...type.bodySm, color: colors.textSecondary },
+  workoutActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  // D192 (item 4a): the two trailing actions lose their boxes -- a plain
+  // 44 dp glyph button (no border/fill) and a 44 dp text action.
   editWorkoutBtn: {
-    width: 36, height: 36, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
+    width: 44, height: 44, alignItems: 'center', justifyContent: 'center',
   },
   startWorkoutBtn: {
-    width: 36, height: 36, alignItems: 'center', justifyContent: 'center',
-    backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    minWidth: 44, height: 44, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
   },
+  startWorkoutBtnText: { ...type.label, color: colors.textPrimary },
   // Card owns background/radius/border here; overflow clips row dividers to
   // the rounded corner.
   manageCard: {
@@ -826,8 +843,15 @@ const styles = StyleSheet.create({
   },
   manageRowLast: { borderBottomWidth: 0 },
   manageRowText: { flex: 1, ...type.body, color: colors.textPrimary },
-  // Card owns background/radius/padding/border here.
-  whyCard: {
+  // D192 (item 4b): a section, not a boxed card -- a hairline above,
+  // no fill, no border.
+  whySection: {
+    gap: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderSubtle,
+    paddingTop: spacing.lg,
+  },
+  whyList: {
     gap: spacing.sm,
   },
   whyItem: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
@@ -860,14 +884,14 @@ function buildLiveStyles(t) {
     reorderToggleTextActive: { color: t.colors.textPrimary },
     reorderBtn: { backgroundColor: t.colors.surface2 },
     emptyCardText: { ...t.type.bodySm, color: t.colors.textMuted },
-    workoutIndex: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    workoutIndexText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    workoutName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    workoutMeta: { ...t.type.caption, color: t.colors.textSecondary },
-    editWorkoutBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    startWorkoutBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    workoutRow: { borderBottomColor: t.colors.borderSubtle },
+    workoutIndexText: { ...t.type.num('bodySm'), color: t.colors.textMuted },
+    workoutName: { ...t.type.title, color: t.colors.textPrimary },
+    workoutMeta: { ...t.type.bodySm, color: t.colors.textSecondary },
+    startWorkoutBtnText: { ...t.type.label, color: t.colors.textPrimary },
     manageRow: { borderBottomColor: t.colors.borderSubtle },
     manageRowText: { ...t.type.body, color: t.colors.textPrimary },
+    whySection: { borderTopColor: t.colors.borderSubtle },
     whyBullet: { backgroundColor: t.colors.textMuted },
     whyText: { ...t.type.bodySm, color: t.colors.textSecondary },
   };

@@ -453,37 +453,70 @@ describe('WorkoutHistoryScreen summary polish', () => {
     expect(WORKOUT_HISTORY_SOURCE).toContain('Double-tap to show or hide the exercise breakdown');
     expect(WORKOUT_HISTORY_SOURCE).toContain('accessibilityLabel="View summary"');
     // old -> new (design-usability-audit-2026-07-09 Batch 2 wave B, Button
-    // adoption): both "View summary" actions now render through the shared
+    // adoption): both "View summary" actions rendered through the shared
     // Button primitive (title prop, not a raw <Text> child), reusing the
     // SAME viewBtnText/fullSummaryBtnText style objects via Button's
-    // textStyle prop, so this pins the Button call sites instead of the JSX.
+    // textStyle prop, so this pinned the Button call sites instead of the JSX.
     // 2026-07-10 (campaign item 8, history + cardio theme migration): style/
-    // textStyle now carry a live-theme override alongside the frozen style
-    // (`[styles.viewBtn, live.viewBtn]`), so the pin matches the array form
-    // instead of the bare `styles.viewBtn` reference. Same call sites,
-    // same frozen style object, still asserted below.
-    expect(WORKOUT_HISTORY_SOURCE).toMatch(/title="View summary"[\s\S]*?style=\{\[styles\.viewBtn, live\.viewBtn\]\}[\s\S]*?textStyle=\{\[styles\.viewBtnText, live\.viewBtnText\]\}/);
+    // textStyle carried a live-theme override alongside the frozen style
+    // (`[styles.viewBtn, live.viewBtn]`), so the pin matched the array form
+    // instead of the bare `styles.viewBtn` reference.
+    // RE-ANCHORED 2026-09-18 (D192, item 5b): the footer's "View summary"
+    // is a text action now (no pill border or fill), so it moved off the
+    // shared Button primitive onto a bare TouchableOpacity + Text child --
+    // `viewBtn` lost its last colour token (see frozenLiveParity's rule),
+    // so this half drops its `live.viewBtn` twin on purpose. Intent kept:
+    // the footer action is still labelled "View summary", still styled
+    // through `viewBtnText`/`live.viewBtnText`, still the same handler.
+    // The OTHER "View summary" (`fullSummaryBtn`, expanded-view only) is
+    // untouched by this lane and still asserted on the next line.
+    expect(WORKOUT_HISTORY_SOURCE).toMatch(/accessibilityLabel="View summary"[\s\S]*?>\s*<Text style=\{\[styles\.viewBtnText, live\.viewBtnText\]\}>View summary<\/Text>/);
     expect(WORKOUT_HISTORY_SOURCE).toMatch(/title="View summary"[\s\S]*?trailingIcon="arrow-forward"/);
     expect(WORKOUT_HISTORY_SOURCE).not.toContain('View Details');
     expect(WORKOUT_HISTORY_SOURCE).not.toContain('View full summary');
   });
 
   test('summary and repeat actions use contained neutral controls, not amber text links', () => {
-    // old -> new: the arrow-forward/refresh-outline icons are now Button's
+    // old -> new: the arrow-forward/refresh-outline icons were Button's
     // `icon`/`trailingIcon` prop rather than a literal <Ionicons>, so Button
-    // (not the screen) now renders them at its own computed size/colour.
-    // Button gives icon and label the SAME foreground colour (no separate
+    // (not the screen) rendered them at its own computed size/colour.
+    // Button gave icon and label the SAME foreground colour (no separate
     // icon-tint slot), so the previous icon-vs-label two-tone (icon
-    // textSecondary, label textPrimary) collapses to one colour; both stay
-    // neutral (textPrimary via variant="secondary"), never amber, which is
-    // this guard's real intent.
+    // textSecondary, label textPrimary) collapsed to one colour; both stayed
+    // neutral (textPrimary via variant="secondary"), never amber.
+    //
+    // RE-ANCHORED 2026-09-18 (D192, item 5b): the footer's "View summary"
+    // and "Repeat" are TEXT ACTIONS now (no pill border or fill) -- the
+    // lead ruling this guard's own title used to forbid ("not amber text
+    // links") is the exact shape D192 orders for this specific pair, so
+    // the "contained" half of the old intent is superseded here on the
+    // record; the "never amber" half is not, and is re-asserted directly
+    // below rather than inferred from a fill that no longer exists. Both
+    // moved off the shared Button primitive onto a bare TouchableOpacity;
+    // "Repeat" keeps its "refresh-outline" glyph, now a literal <Ionicons>
+    // at `iconSize.sm` rather than a Button-computed size/colour.
+    // `fullSummaryBtn` (the OTHER, expanded-view-only "View summary") is
+    // untouched by this lane and still asserted unchanged.
     expect(WORKOUT_HISTORY_SOURCE).toContain('trailingIcon="arrow-forward"');
-    expect(WORKOUT_HISTORY_SOURCE).toContain('icon="refresh-outline"');
+    expect(WORKOUT_HISTORY_SOURCE).toContain('name="refresh-outline"');
     expect(WORKOUT_HISTORY_SOURCE).toMatch(/fullSummaryBtn: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(WORKOUT_HISTORY_SOURCE).toMatch(/repeatBtn: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    // viewBtn/repeatBtn lost their box (border/fill) on purpose (D192, item
+    // 5b) -- extracted with a bounded, non-nested-brace capture (repeatBtn's
+    // value has no `{`/`}` of its own) so the check cannot drift past its
+    // own closing brace into an unrelated, later style key's border/fill.
+    const repeatBtnBody = /\brepeatBtn: \{([^}]*)\}/.exec(WORKOUT_HISTORY_SOURCE)?.[1] ?? '';
+    const viewBtnBody = /\bviewBtn: \{([^}]*)\}/.exec(WORKOUT_HISTORY_SOURCE)?.[1] ?? '';
+    expect({ repeatBtnBody, hasBox: /colors\.primary|borderColor|backgroundColor/.test(repeatBtnBody) })
+      .toEqual({ repeatBtnBody, hasBox: false });
+    expect({ viewBtnBody, hasBox: /colors\.primary|borderColor|backgroundColor/.test(viewBtnBody) })
+      .toEqual({ viewBtnBody, hasBox: false });
     expect(WORKOUT_HISTORY_SOURCE).toContain('fullSummaryBtnText: {\n    ...type.label,\n    color: colors.textPrimary,');
     expect(WORKOUT_HISTORY_SOURCE).toContain('repeatBtnText: {\n    ...type.label,\n    color: colors.textPrimary,');
     expect(WORKOUT_HISTORY_SOURCE).not.toMatch(/repeatBtnText: \{[\s\S]*color: colors\.primary/);
+    // viewBtnText/repeatBtnText carry textPrimary now (item 5b's text
+    // action), never amber -- same non-amber guarantee the old assertion
+    // made, restated for the new colour.
+    expect(WORKOUT_HISTORY_SOURCE).toContain('viewBtnText: {\n    ...type.label,\n    color: colors.textPrimary,');
   });
 
   test('L01-B37: history-card repeat/delete copy is normalised to "workout" (the app\'s dominant term), not mixed with "session"', () => {
