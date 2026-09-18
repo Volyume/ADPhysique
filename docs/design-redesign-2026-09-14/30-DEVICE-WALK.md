@@ -286,6 +286,38 @@ of them. 8. Section K, every step.
     completed sessions" line reads a step larger than before, as the card's
     one meta line.
 
+### G3. The coaching decision (D192, 2026-09-18)
+
+40e. **Open a week with a main move.** *Expect:* "THIS WEEK'S MAIN MOVE" is a
+    plain grey label (no amber), the card has **no amber edge**, and the
+    hero row's **Apply is a solid amber pill** with dark text, about 36 dp
+    tall. Every other Apply on the screen (More adjustments) is a neutral
+    outline pill of the same height.
+40f. **Tap a non-hero Apply.** *Expect:* the busy and tick beats as before,
+    settling to an **"Applied" chip in flat grey with a grey tick** -- no
+    green fill, no green border.
+40g. **The trend chips.** *Expect:* the arrow and figure read the same neutral
+    grey whether the week is on target or off it; in kg the weight chip
+    reads "+0.06 kg" with a space.
+40h. **A great week's "Create share image".** *Expect:* plain text and glyph,
+    no pill, no green tint.
+40i. **"Your week", the what-worked ledger, "Focus this week", "Next
+    check-in".** *Expect:* each a plain block under a thin line, not a filled
+    or bordered box; the ledger's ticks are grey.
+40j. **The screen's own notes.** *Expect:* one line each: the bulb tip "More
+    logged sessions sharpen next week's coaching", the Manual-mode line
+    "Manual mode: recommendations only. Changes are yours to make", the
+    card footnote "Each session can still adjust these on the day", the
+    meals line "Built to next week's targets, with a shopping list". The
+    coach's own sentences (the read, the why, the story) are unchanged.
+40k. **A diet-break week, if reachable.** *Expect:* the card's "Set
+    maintenance calories" is the solid amber pill. It had never rendered
+    amber, even as the hero, since the variant it used stopped meaning
+    amber on 2026-09-04.
+40l. **"Keep as is" beside an Apply.** *Expect:* a quiet text button, not a
+    raised bordered one (it used a variant that did not exist and fell
+    through to the heavy style).
+
 ## H. Settings
 
 41. **Any Settings sub-page.** *Expect:* every row's icon is a **plain grey
@@ -430,7 +462,10 @@ prove that. **Any deviation here is a stop-everything finding.**
     stay.
 59. **Coach output with an ED flag open.** *Expect:* the lockout card is
     unchanged, with its caution edge, its exact copy, the Beat UK signposting,
-    and **"Get support" still a solid amber button**.
+    and **"Get support" still a solid amber button**. Since the finish the
+    trend chip is neutral grey in every state, so under the flag it looks the
+    same as it does without one; the hero zone shows no applyable move and
+    defers to the held decision, as before.
 60. **Calorie floors.** Force a very aggressive cut in Nutrition targets.
     *Expect:* the floor banner appears with its **green shield** and its exact
     wording; the caution banners keep their **yellow** glyph; and the **"Ease
