@@ -140,8 +140,11 @@ of them. 8. Section K, every step.
 
 ## E. Progress
 
-25. *Expect:* the screen ends in a **decision** -- the coach's actual sentence --
-    and that decision is the large element, above the evidence that supports it.
+25. *Expect:* the screen opens on a **decision** -- the coach's actual sentence --
+    above the evidence that supports it. Since the finish (D192, 2026-09-18) it
+    sets at **heading size, wrapping naturally**, under "THIS WEEK'S DECISION",
+    with "From last week." beneath it in small grey -- **not** at display size
+    (a 30-word sentence at 40 was eight lines of display type).
 26. **The weight trend.** *Expect:* one neutral colour at every value. **No line
     is red, green or yellow.** A bodyweight trend is never coloured good or bad.
 27. ★ **"Effective maintenance"** (Body metrics). *Expect:* the figure reads
@@ -174,6 +177,32 @@ of them. 8. Section K, every step.
     scroll a long list fast and tap a row that has just come into view.
     *Expect:* it opens **every time**. A recycled row used to be able to eat
     the tap (fixed 2026-09-16).
+31d. ★ **The three pillar rows** (Training / Body / Progress photos, D192).
+    *Expect:* **no card, no fill, no border** round them -- a thin line above
+    the group and thin lines between rows, on the plain background. Row
+    anatomy unchanged: small label, headline, one line under it, chevron.
+31e. **Day zero** (a fresh account or one with no sessions). *Expect:* Training
+    "No sessions yet" / "Your first session starts the record"; Body "No
+    weigh-ins yet" / "A morning weight starts your trend"; Photos "No photos
+    yet" / "Two photos show what changed"; and under the rows **one plain
+    line** "Trends appear after your first sessions" -- no icon, no box, no
+    title.
+31f. **More stats.** *Expect:* Consistency, Full history, Recaps (and Year of
+    Lifts once unlocked) as a **plain list** -- glyph left, title, chevron
+    right, hairlines between -- not boxed tiles in a two-column grid. The
+    Consistency glyph is grey, not green. A locked Recaps row is dimmed with
+    its "N sessions to go" line and still explains itself on tap.
+31g. **The Body row with several weeks of weigh-ins.** *Expect:* the headline
+    is the **figure** ("82.4 kg, +0.1 kg/week"), and under it at most one short
+    line reading the trend ("Inside your target range. Calories hold", "A
+    little above target. Nothing to change yet", "Still building confidence")
+    -- or nothing when the trend has no comparison yet. Never the old
+    two-sentence narration in the headline slot.
+31h. ★ **ED-safety, the Body row.** With an open ED flag. *Expect:* the row shows
+    only its direction-only sentence ("Your weight has stayed broadly stable
+    over the past few weeks." or similar) with the plain weight beneath it and
+    **no rate anywhere on the row**; the decision slot either does not render
+    or shows the lockout copy. Unchanged from before the finish by construction.
 
 ## F. Nutrition and the diary
 
@@ -194,6 +223,20 @@ of them. 8. Section K, every step.
     with full ink and the tick **inside it is the page colour** -- a dark tick on
     a light box in dark theme, light on dark in light theme. ★ **Check this one
     in light theme especially**; it was briefly invisible there.
+37a. **The diary at the finish** (D192, 2026-09-18; reviewed on the paper
+    render, walked here for the first time). *Expect:* every figure on the
+    screen -- ring number, macro figures, meal totals, the breakdown sheet --
+    in **one tabular number format** with its unit.
+37b. **The macro rings.** *Expect:* **no "N g to go" line** under any ring; the
+    ring and its number say it. At zero logged, the ring's track sits on the
+    **hairline colour**, visible but quiet.
+37c. **The how-you-eat nudge** (when it shows). *Expect:* a **row** with a
+    hairline above and below -- glyph, one title, one line, a text action --
+    not a boxed card.
+37d. **The barcode / scan button.** *Expect:* it sits **clear of the meal list**,
+    not butted against the meal-builder row.
+37e. **Day zero in the diary.** *Expect:* one calm line where the empty state
+    was, no box, no illustration.
 
 ## G. Community
 
@@ -206,6 +249,22 @@ of them. 8. Section K, every step.
 40. The "See all" link, the header glyph and the shield glyph are now neutral.
     The Respect heart is full ink when given (the filled/outline shape already
     carried the state).
+
+### G2. The Coach tab (D192, 2026-09-18)
+
+40a. **Open the Coach tab.** *Expect:* the title reads "Coach" with **nothing
+    underneath it** (the "Weekly coaching from your logs." sentence is gone).
+40b. **Scroll top to bottom.** *Expect:* "Your body", "This week", "Setup" and
+    "Safety checks" each have visibly more air above their label than the rows
+    inside a group have between them.
+40c. **Read every row's second line.** *Expect:* each sits on **one line** --
+    Weekly check-in, Your week ("Training, eating, weigh-ins and the decision
+    in one place"), Community ("Other lifters, gyms and groups"), Coaching
+    reminders, Volume targets ("Weekly set ranges per muscle. Yours take
+    precedence"). The Injuries & limitations line is the D152 line, unchanged.
+40d. **The profile card.** *Expect:* the name is the largest text; the "N
+    completed sessions" line reads a step larger than before, as the card's
+    one meta line.
 
 ## H. Settings
 

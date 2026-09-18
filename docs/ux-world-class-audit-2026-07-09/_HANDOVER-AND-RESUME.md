@@ -7,10 +7,19 @@ RESUME HERE. Read `docs/design-redesign-2026-09-14/40-FINISH-SPEC.md` first: the
 measured causes (surface 1.07:1 on the ground, two component languages per
 screen, a big-everything type scale with a 56 hero, a dozen explanatory
 paragraphs, day zero never designed), the re-cut scale, the lifted ladder, one
-component language, and the screen order. Landed: `5ab7c7a2` (tokens),
-`807a63ca` (Today), `451d3d82` (logger). The board section "APP-WIDE VISUAL
-REDESIGN" carries the in-flight lanes and the queue. Nothing is built until
-the renders are reviewed; then one build.
+component language, and the screen order. Landed on main, in the spec's
+order: `5ab7c7a2` (tokens and the surface ladder), `807a63ca` / `24c42f2e` /
+`756ec7d0` / `b9cb4baf` (Today and its readiness sheet), `451d3d82` (logger),
+`f9fcc682` (the logger's prefill rows, a space before the unit), `c8f194a6`
+(Train), `fbdfa639` (Nutrition), `a12938a1` (Progress; the spec's hero and h3
+rows amended to match at `511f4206`: a sentence sets at h2, only Today and
+the logger carry a hero step), `b8a86b33` (Coach tab). The paper-render
+harness is `bash scripts/paper-render/run.sh` (23 screens to the scratchpad;
+the lead reviews every screen from it before a build). The board section
+"APP-WIDE VISUAL REDESIGN" carries the in-flight lanes, the queued briefs
+(scratchpad `briefs/`, re-dispatched two at a time) and the one open founder
+question (the readiness sheet's order). Nothing is built until the renders
+are reviewed; then one build.
 
 ## ★ 2026-09-14/17 — APP-WIDE VISUAL REDESIGN: STAGES 1-4, THE LEDGER (D184) AND THE CARD SWEEP (D186) ALL ON MAIN ★
 
