@@ -31,7 +31,6 @@ import { Ionicons } from '@expo/vector-icons';
 import SetEntry from '../SetEntry';
 import { spacing, radius, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
-import BigNumber from '../BigNumber';
 import { workoutLoggerSize } from '../../styles/layout';
 
 export default function NowCard({
@@ -75,15 +74,6 @@ export default function NowCard({
 
   const noteVisible = noteOpen || (noteText ?? '').length > 0;
 
-  // The loud readout. Only for schemas that HAVE a working weight: a duration
-  // or distance set has no such number, and a reps-only set's load is the
-  // body, so shouting a blank or a zero would be worse than shouting nothing.
-  const showsWeight = exerciseType === 'weight_reps' || exerciseType === 'weighted_bodyweight';
-  const heroWeight = (setValue?.weight ?? '').toString().trim();
-  const heroReps = (setValue?.reps ?? '').toString().trim();
-  const heroSpoken = heroWeight
-    ? `${heroWeight} ${units}${heroReps ? ` for ${heroReps} reps` : ''}`
-    : 'No weight entered yet';
 
   // D173 T2: a warm-up ramp is literally a ramp, so it is described rather
   // than punned with a flame; and the ink moves off `warning`, which is a
@@ -222,24 +212,12 @@ export default function NowCard({
           It also carries no line clamp: a guard slices this exact span and
           forbids one, so that the quiet first-time prefill line above stays
           the only clamped thing between here and the entry fields. */}
-      {showsWeight && (
-        <View style={{ minHeight: t.type.hero.lineHeight, justifyContent: 'center' }}>
-          {/* D192: before a weight is entered the reserved line used to hold
-              an empty value with the reps caption floating under it -- a
-              stray "6" in a hole. The line now shows whichever figure the
-              set has: the weight with its unit once typed (reps as the
-              caption, with their own unit, law 7), otherwise the reps as the
-              figure. Same box, same height, never empty. */}
-          <BigNumber
-            value={heroWeight || heroReps}
-            unit={heroWeight ? units : (heroReps ? 'reps' : null)}
-            caption={heroWeight && heroReps ? `${heroReps} reps` : null}
-            align="center"
-            accessibilityLabel={heroSpoken}
-            testID="logger-working-weight"
-          />
-        </View>
-      )}
+      {/* Founder order 2026-09-18 (from the live logger): the working weight
+          is not repeated above the steppers. The SetEntry below is the
+          instrument; a second copy of the same number at display size was
+          out of place, and on a first-time lift it shouted a default. The
+          reserved hero line went with it, so nothing here mounts or shifts
+          when a weight is typed. */}
 
       <SetEntry
         value={setValue}

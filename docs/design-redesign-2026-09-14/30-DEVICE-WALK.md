@@ -114,6 +114,10 @@ of them. 8. Section K, every step.
     is deliberate -- founder device order 2026-08-22, see section L.)
 20. **Finish.** *Expect:* the tick glyph is amber; the × beside it is muted.
 
+13d. ★ **The logger, any set.** *Expect:* **no large weight above the
+    steppers**, before or after you type a load. The steppers are the only
+    place the number appears (founder order 2026-09-18).
+
 ## D. The workout summary
 
 21. *Expect:* "Workout complete" is the screen's title at h1 with **no green
