@@ -2886,7 +2886,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           reps: setData.actualReps,
           value: setData.weight,
           previousValue: null,
-          label: `${setData.weight}${units} x ${setData.actualReps} logged as your starting point`,
+          label: `${setData.weight} ${units} x ${setData.actualReps} logged as your starting point`,
           exerciseName: exercise.name,
         });
       } else if (prs.length > 0) {
@@ -4834,7 +4834,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               if (isDeloadWeek && currentPrescription?.provenance === PROVENANCE.SENIOR_RECOVERY_HOLD) {
                 prefill = {
                   label: 'Recovery week -',
-                  valueLabel: `${currentPrescription.weight}${units} x ${currentPrescription.repsTarget}`,
+                  valueLabel: `${currentPrescription.weight} ${units} x ${currentPrescription.repsTarget}`,
                   onUse: () => {
                     hapticsVocab.setLogged();
                     audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
@@ -4849,7 +4849,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   // Law A (design section 16): always the factual history,
                   // never the target - unmistakably labelled as history.
                   label: 'Last session:',
-                  valueLabel: `${prev.weight}${units} x ${prev.actualReps}`,
+                  valueLabel: `${prev.weight} ${units} x ${prev.actualReps}`,
                   onUse: () => {
                     hapticsVocab.setLogged();
                     audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
