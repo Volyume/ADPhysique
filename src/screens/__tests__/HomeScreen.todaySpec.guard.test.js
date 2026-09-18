@@ -61,7 +61,15 @@ describe('law 1: one loud thing, and it is the session', () => {
   test('every hero branch carries its loud fact, and only one can render at a time', () => {
     // Three BigNumbers in source, one on screen: the hero is a ternary chain
     // whose precedence is pinned by HomeScreen.heroPrecedence.guard.
-    expect((HOME.match(/<BigNumber/g) || []).length).toBe(3);
+    // RE-ANCHORED (D192, 2026-09-18): the hero step carries a name or a
+    // number, never a sentence. The session NAME still renders through
+    // BigNumber; the block-complete and week-complete branches are sentences
+    // and set in h2 through `heroSentence`. Still one loud fact per branch,
+    // still one branch on screen at a time.
+    expect((HOME.match(/<BigNumber/g) || []).length).toBe(1);
+    expect((HOME.match(/styles\.heroSentence/g) || []).length).toBe(2);
+    expect(HOME).toContain('<Text style={[styles.heroSentence, live.heroSentence]}>Every week of this block is done</Text>');
+    expect(HOME).toContain('<Text style={[styles.heroSentence, live.heroSentence]}>Every session done this week</Text>');
     expect((HOME.match(/\) : blockAwaitingDecision \? \(/g) || []).length).toBe(1);
   });
 

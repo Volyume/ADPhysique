@@ -34,7 +34,7 @@ export default function HomeHowYouTrainOfferCard({ onSetUp, onDismiss }) {
       <Ionicons name="body-outline" size={iconSize.md} color={t.colors.textSecondary} style={styles.glyph} />
       <View style={styles.copy}>
         <Text style={[styles.title, { color: t.colors.textPrimary }]}>Anything Volyume should build your training around?</Text>
-        <Text style={[styles.body, { color: t.colors.textSecondary }]} numberOfLines={1}>
+        <Text style={[styles.body, { color: t.colors.textSecondary }]} numberOfLines={2}>
           Injuries, pain, long-term conditions or disabilities.
         </Text>
         <TouchableOpacity onPress={onSetUp} accessibilityRole="button" accessibilityLabel="Set it up. Entirely optional." style={styles.action}>

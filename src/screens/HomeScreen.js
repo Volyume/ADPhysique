@@ -191,6 +191,7 @@ export default function HomeScreen({ navigation, route }) {
     continueTitle: { ...t.type.bodyStrong, color: t.colors.onPrimary },
     continueSub: { ...t.type.caption, color: withAlpha(t.colors.onPrimary, alpha.half) },
     readinessLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    heroSentence: { ...t.type.h2, color: t.colors.textPrimary },
     workoutOptionsText: { color: t.colors.textSecondary },
     // Campaign 22 Phase 2 Stage 2 (§7/§17 R5): the "Progress at a glance"
     // card is removed (3-way duplication fix); its live styles go with it.
@@ -2543,7 +2544,11 @@ export default function HomeScreen({ navigation, route }) {
             {/* Law 1: on a block-complete day the screen is FOR this fact, so
                 it is the loud thing, exactly as the session name is on a
                 training day. Three hero branches, one treatment. */}
-            <BigNumber value="Every week of this block is done" style={styles.heroName} />
+            {/* D192 (finish spec section 2): the hero step carries a name or a
+                number, never a sentence. This branch's loud line is a sentence,
+                so it sets in h2: still the loudest thing on the screen, still
+                the screen's fact, no longer three lines of display type. */}
+            <Text style={[styles.heroSentence, live.heroSentence]}>Every week of this block is done</Text>
             {readinessChipEl}
             <View style={styles.startWorkoutRow}>
               <View style={styles.startBtnSplit}>
@@ -2598,11 +2603,10 @@ export default function HomeScreen({ navigation, route }) {
             {/* Law 1, as above: the week being done IS what this screen is
                 for today, so it carries the scale. Its supporting sentence
                 becomes the caption rather than a separate line. */}
-            <BigNumber
-              value="Every session done this week"
-              caption={weekCompleteLine(planAllWorkouts[0]?.name)}
-              style={styles.heroName}
-            />
+            {/* D192: a sentence sets in h2, not at the hero step (see the
+                block-complete branch above). */}
+            <Text style={[styles.heroSentence, live.heroSentence]}>Every session done this week</Text>
+            <Text style={[styles.todayFact, live.todayFact]}>{weekCompleteLine(planAllWorkouts[0]?.name)}</Text>
             {readinessChipEl}
             <TouchableOpacity
               onPress={() => { haptics.selection(); setShowChangeWorkout(true); }}
@@ -3457,6 +3461,7 @@ const styles = StyleSheet.create({
   // B-5: typography now comes from SectionLabel (tone="muted"); only
   // structural overrides remain local.
   heroName: { marginTop: spacing.xs },
+  heroSentence: { ...type.h2, color: colors.textPrimary, marginTop: spacing.xs },
   todaySection: { gap: spacing.xs },
   todayValue: { ...type.num('h3'), color: colors.textPrimary },
   todayFact: { ...type.bodySm, color: colors.textSecondary },
