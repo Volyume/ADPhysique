@@ -224,10 +224,16 @@ export default function NowCard({
           the only clamped thing between here and the entry fields. */}
       {showsWeight && (
         <View style={{ minHeight: t.type.hero.lineHeight, justifyContent: 'center' }}>
+          {/* D192: before a weight is entered the reserved line used to hold
+              an empty value with the reps caption floating under it -- a
+              stray "6" in a hole. The line now shows whichever figure the
+              set has: the weight with its unit once typed (reps as the
+              caption, with their own unit, law 7), otherwise the reps as the
+              figure. Same box, same height, never empty. */}
           <BigNumber
-            value={heroWeight}
-            unit={heroWeight ? units : null}
-            caption={heroReps}
+            value={heroWeight || heroReps}
+            unit={heroWeight ? units : (heroReps ? 'reps' : null)}
+            caption={heroWeight && heroReps ? `${heroReps} reps` : null}
             align="center"
             accessibilityLabel={heroSpoken}
             testID="logger-working-weight"

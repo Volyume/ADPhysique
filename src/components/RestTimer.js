@@ -97,6 +97,10 @@ export default function RestTimer() {
     drainTrack: { backgroundColor: t.colors.surface3 },
     // KEEP: the drain bar's width tracks the live rest countdown.
     drainFill: { backgroundColor: t.colors.primaryFill },
+    // D192: the drain is a live meter only while the rest is counting. Idle,
+    // it sat at full width in amber above the strip, a second amber edge
+    // framing the logger with the outline's own; idle it takes the track's ink.
+    drainFillIdle: { backgroundColor: t.colors.surface3 },
     drainFillWarm: { backgroundColor: t.colors.warning },
     doneText: { fontSize: t.fontSize.sm, color: t.colors.onSuccessBg },
     doneContainer: { backgroundColor: t.colors.successBg },
@@ -469,6 +473,7 @@ export default function RestTimer() {
             styles.drainFill,
             live.drainFill,
             { transform: [{ scaleX: drain }] },
+            !restTimerActive && [styles.drainFillIdle, live.drainFillIdle],
             isAlmostDone && [styles.drainFillWarm, live.drainFillWarm],
           ]}
         />
@@ -607,6 +612,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFill,
     transformOrigin: 'left',
   },
+  drainFillIdle: { backgroundColor: colors.surface3 },
   drainFillWarm: { backgroundColor: colors.warning },
   doneContainer: {
     flexDirection: 'row',

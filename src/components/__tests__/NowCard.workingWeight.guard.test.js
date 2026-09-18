@@ -91,7 +91,13 @@ describe('it is a readout, not a second control and not a celebration', () => {
 
 describe('law 7 and the spoken label', () => {
   test('the unit rides with the figure, and disappears with it', () => {
-    expect(CODE).toContain('unit={heroWeight ? units : null}');
+    // RE-ANCHORED (D192, 2026-09-18): the intent is unchanged -- the unit
+    // names whichever figure is shown and an empty value carries none. With
+    // no weight the line shows the reps as the figure (unit "reps"), so the
+    // box is never a hole with a stray caption in it.
+    expect(CODE).toContain("unit={heroWeight ? units : (heroReps ? 'reps' : null)}");
+    expect(CODE).toContain('value={heroWeight || heroReps}');
+    expect(CODE).toContain('caption={heroWeight && heroReps ? `${heroReps} reps` : null}');
   });
 
   test('it speaks as one phrase, not as a figure then a unit', () => {
