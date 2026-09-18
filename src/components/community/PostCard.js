@@ -67,7 +67,7 @@ export function bodyForKind(post) {
     case 'pr':
       return {
         eyebrow: p.exerciseName ? `New PR · ${p.exerciseName}` : 'New PR',
-        hero: `${p.weight ?? ''} ${p.units ?? 'kg'} x ${p.reps ?? ''}`.trim(),
+        hero: `${p.weight ?? ''} ${p.units ?? 'kg'} × ${p.reps ?? ''}`.trim(),
         line: p.previousBest ? `Previous best ${p.previousBest} ${p.units ?? 'kg'}` : null,
       };
     case 'session': {

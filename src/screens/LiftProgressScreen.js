@@ -482,7 +482,7 @@ export default function LiftProgressScreen({ navigation }) {
               onLongPressWithLayout={(rect) => openLiftMenu(item, rect)}
               accessibilityLabel={[
                 item.name,
-                `${item.bestE1rm}${units} estimated max`,
+                `${item.bestE1rm} ${units} estimated max`,
                 (item.deltaPct != null && item.sessions > 1)
                   ? `${item.deltaPct > 0 ? 'up' : item.deltaPct < 0 ? 'down' : 'no change'} ${Math.abs(item.deltaPct)} percent since your first logged session`
                   : null,
@@ -509,7 +509,7 @@ export default function LiftProgressScreen({ navigation }) {
                     session's top weight and its e1RM only (no rep count is
                     computed per session), so the line reports those two. */}
                 <Text style={[styles.lastTime, live.lastTime]}>
-                  Last time: {item.latestWeight}{units} - Est. max {item.latestE1rm}{units}
+                  Last time: {item.latestWeight} {units} - Est. max {item.latestE1rm} {units}
                 </Text>
                 <View style={styles.statRow}>
                   <Text style={[styles.statValue, live.statValue]}>
@@ -517,7 +517,7 @@ export default function LiftProgressScreen({ navigation }) {
                         figures (kg), so it gets an en-GB thousands
                         separator; the other lenses are unaffected. */}
                     {headlineMetric === 'volume' ? Math.round(headlineValue).toLocaleString('en-GB') : headlineValue}
-                    {headlineMeta.isWeight ? units : ''}
+                    {headlineMeta.isWeight ? ` ${units}` : ''}
                   </Text>
                   <Text style={[styles.statLabel, live.statLabel]}>{headlineMeta.label}</Text>
                   {/* U-D-3: plain-English gloss for estimated 1RM on the row.

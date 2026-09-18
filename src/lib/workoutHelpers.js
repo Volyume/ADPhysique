@@ -161,7 +161,8 @@ export function formatSeconds(total) {
  * seconds; reps_only carries no load. Without this, a logged run printed
  * "400kg × 90" with a bogus "Est. max ≈…kg" (the weight column held metres).
  * weight_reps / weighted_bodyweight (and any unknown type, for safety) keep the
- * original "{weight}{units} × {reps}" with the 1RM estimate shown.
+ * original "{weight} {units} × {reps}" with the 1RM estimate shown (D192:
+ * a space before the unit, everywhere the app prints a logged set).
  *
  * @param {object} set            logged set ({ weight, actualReps|reps })
  * @param {string} units          the user's gym unit label (kg)
@@ -183,5 +184,6 @@ export function formatLoggedSet(set, units, exerciseType = 'weight_reps') {
     const dist = set.weight ?? 0;
     return { text: `${dist}${distUnit} · ${formatSeconds(reps)}`, showE1RM: false };
   }
-  return { text: `${set.weight}${units} × ${reps}`, showE1RM: true };
+  // D192 (one unit format): a space before the unit, everywhere.
+  return { text: `${set.weight} ${units} × ${reps}`, showE1RM: true };
 }

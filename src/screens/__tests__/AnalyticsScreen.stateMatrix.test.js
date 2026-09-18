@@ -588,9 +588,11 @@ describe('State matrix — A: established Pro, all progressing, photos current',
 
     // Training pillar: real computeTrainingPillarSummary output — 2 of 3
     // lifts improved this month, most recent named best is e1 @ 85kg x 5.
+    // RE-ANCHORED 2026-09-18 (D192, one unit format): × not x; intent kept --
+    // the accessibility label still reports the named best evidence.
     const training = pillarRow(tree, 'Training');
     expect(training.length).toBe(1);
-    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 2 of 3 lifts this month. Bench press 85 kg x 5, new best');
+    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 2 of 3 lifts this month. Bench press 85 kg × 5, new best');
 
     // Body pillar: state 3 (20 entries), the real !hasComparison branch.
     const body = pillarRow(tree, 'Body');
@@ -1067,7 +1069,9 @@ describe('State matrix — N: multiple PR events; only the best 2-3 are named, t
     const training = pillarRow(tree, 'Training');
     expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on 4 of 4 lifts this month\./);
     // Exactly one named-best evidence line, the most recent (e4).
-    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 4 of 4 lifts this month. Overhead press 45 kg x 6, new best');
+    // RE-ANCHORED 2026-09-18 (D192, one unit format): × not x; intent kept --
+    // exactly one named-best evidence line, the most recent.
+    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 4 of 4 lifts this month. Overhead press 45 kg × 6, new best');
   });
 });
 
@@ -1086,7 +1090,9 @@ describe('State matrix — O: lb-unit user, unit strings correct throughout', ()
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toMatch(/85 lbs x 5/);
+    // RE-ANCHORED 2026-09-18 (D192, one unit format): × not x; intent kept --
+    // the lbs-unit user still gets lbs throughout, never kg.
+    expect(training[0].props.accessibilityLabel).toMatch(/85 lbs × 5/);
     expect(training[0].props.accessibilityLabel).not.toMatch(/\bkg\b/);
     const body = pillarRow(tree, 'Body');
     // The EWMA weight figure correctly follows bodyWeightUnits (formatBodyWeight).

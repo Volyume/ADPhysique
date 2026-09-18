@@ -2886,7 +2886,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           reps: setData.actualReps,
           value: setData.weight,
           previousValue: null,
-          label: `${setData.weight} ${units} x ${setData.actualReps} logged as your starting point`,
+          label: `${setData.weight} ${units} × ${setData.actualReps} logged as your starting point`,
           exerciseName: exercise.name,
         });
       } else if (prs.length > 0) {
@@ -4834,7 +4834,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               if (isDeloadWeek && currentPrescription?.provenance === PROVENANCE.SENIOR_RECOVERY_HOLD) {
                 prefill = {
                   label: 'Recovery week -',
-                  valueLabel: `${currentPrescription.weight} ${units} x ${currentPrescription.repsTarget}`,
+                  valueLabel: `${currentPrescription.weight} ${units} × ${currentPrescription.repsTarget}`,
                   onUse: () => {
                     hapticsVocab.setLogged();
                     audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
@@ -4849,7 +4849,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   // Law A (design section 16): always the factual history,
                   // never the target - unmistakably labelled as history.
                   label: 'Last session:',
-                  valueLabel: `${prev.weight} ${units} x ${prev.actualReps}`,
+                  valueLabel: `${prev.weight} ${units} × ${prev.actualReps}`,
                   onUse: () => {
                     hapticsVocab.setLogged();
                     audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
@@ -4920,7 +4920,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 Side one logged
               </Text>
               <Text style={[styles.clusterReps, live.clusterReps]}>
-                {`${perSide.reps} reps${perSide.weight ? ` @ ${perSide.weight}${units}` : ''} - same on your other side`}
+                {`${perSide.reps} reps${perSide.weight ? ` @ ${perSide.weight} ${units}` : ''} - same on your other side`}
               </Text>
               <Text style={[styles.sheetOptionDesc, live.sheetOptionDesc]}>
                 {exercise?.compoundIsolation === 'compound'
@@ -4947,7 +4947,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </Text>
               <Text style={[styles.clusterReps, live.clusterReps]}>
                 {cluster.reps.join(' + ')} = {cluster.reps.reduce((a, n) => a + n, 0)} reps
-                {cluster.weight ? ` @ ${cluster.weight}${units}` : ''}
+                {cluster.weight ? ` @ ${cluster.weight} ${units}` : ''}
               </Text>
               <View style={styles.clusterInputRow}>
                 <TextInput
@@ -5568,7 +5568,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       >
                         <View style={styles.overflowOptionRow}>
                           <Ionicons name="trending-up-outline" size={16} color={t.colors.textSecondary} />
-                          <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`${row.weight} ${units} x ${row.reps}`}</Text>
+                          <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`${row.weight} ${units} × ${row.reps}`}</Text>
                         </View>
                         {row.isBar ? <Text style={[styles.rampBarTag, live.rampBarTag]}>Empty bar</Text> : null}
                       </TouchableOpacity>

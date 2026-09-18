@@ -751,7 +751,7 @@ export default function ShareCardScreen({ navigation, route }) {
                   const active = i === selectedPrIndex;
                   const name = pr.exerciseName || pr.exercise || 'Exercise';
                   const detail = pr.weight
-                    ? `${pr.weight}${pr.units || 'kg'}${pr.reps ? ` × ${pr.reps}` : ''}`
+                    ? `${pr.weight} ${pr.units || 'kg'}${pr.reps ? ` × ${pr.reps}` : ''}`
                     : '';
                   return (
                     <TouchableOpacity

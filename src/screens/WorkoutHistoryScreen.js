@@ -69,7 +69,7 @@ function hasSetValue(value) {
 }
 
 function formatLoadValue(value, units = 'kg') {
-  return `${value}${units}`;
+  return `${value} ${units}`;
 }
 
 export function formatHistoryExerciseSummary(sets = [], exerciseType = 'weight_reps', units = 'kg') {

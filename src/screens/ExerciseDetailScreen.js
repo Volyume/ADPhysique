@@ -789,7 +789,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
               {displayPR && (
                 <View style={styles.prHeroStat}>
                   <Text style={[styles.prHeroValue, live.prHeroValue]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                    {safeToFixed(displayPR.value, 1)}{units}
+                    {safeToFixed(displayPR.value, 1)} {units}
                   </Text>
                   <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>
                     {displayPR.record_type === '1rm_estimate' ? 'Est. max' : 'Heaviest weight'}
@@ -800,7 +800,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 {prHeavy && displayPR !== prHeavy && (
                   <View style={[styles.prHighlightStat, live.prHighlightStatBordered]}>
                     <Text style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
-                      {finiteOr(prHeavy.value, '-')}{units} x {finiteOr(prHeavy.reps, '-')}
+                      {finiteOr(prHeavy.value, '-')} {units} × {finiteOr(prHeavy.reps, '-')}
                     </Text>
                     <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Heaviest weight</Text>
                   </View>
@@ -808,7 +808,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                 {prReps && (
                   <View style={[styles.prHighlightStat, prHeavy && displayPR !== prHeavy ? styles.prHighlightStatBordered : null, live.prHighlightStatBordered]}>
                     <Text style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
-                      {finiteOr(prReps.value, '-')}{units} x {finiteOr(prReps.reps, '-')}
+                      {finiteOr(prReps.value, '-')} {units} × {finiteOr(prReps.reps, '-')}
                     </Text>
                     <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>Most reps</Text>
                   </View>
@@ -857,7 +857,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
 
             <View style={styles.goalWeightRow}>
               <View style={styles.goalWeightItem}>
-                <Text style={[styles.goalWeightValue, live.goalWeightValue]}>{best1RM > 0 ? best1RM.toFixed(1) : '-'}{best1RM > 0 ? units : ''}</Text>
+                <Text style={[styles.goalWeightValue, live.goalWeightValue]}>{best1RM > 0 ? best1RM.toFixed(1) : '-'}{best1RM > 0 ? ` ${units}` : ''}</Text>
                 <Text style={[styles.goalWeightLabel, live.goalWeightLabel]}>Current est. max</Text>
               </View>
               <Ionicons name="arrow-forward" size={14} color={t.colors.textMuted} />
@@ -867,7 +867,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     between them already say which is which, so the override
                     goes rather than being recoloured into a second grey. */}
                 <Text style={[styles.goalWeightValue, live.goalWeightValue]}>
-                  {finiteOr(goal.targetWeight, '-')}{units}
+                  {finiteOr(goal.targetWeight, '-')} {units}
                 </Text>
                 <Text style={[styles.goalWeightLabel, live.goalWeightLabel]}>
                   Target{goal.targetDate && safeDate(goal.targetDate) ? ` - by ${safeFormatDate(goal.targetDate, 'MMM yyyy')}` : ''}
@@ -886,7 +886,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             ]}>
               {goalProgress >= 1
                 ? 'Goal reached.'
-                : `${safeToFixed(goalKgToGo, 1)}${units} to go`}
+                : `${safeToFixed(goalKgToGo, 1)} ${units} to go`}
             </Text>
           </Card>
         )}
@@ -1004,7 +1004,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     {sessionSets.map((s, j) => {
                       const isWarmup = s.set_type === 'warmup' || s.setType === 'warmup';
                       const ev = s.evidenceClass ?? s.evidence_class;
-                      const line = `${s.weight}${units} x ${s.actualReps}`
+                      // D192 (one unit format): a space before the unit, × not x.
+                      const line = `${s.weight} ${units} × ${s.actualReps}`
                         + (isWarmup ? ' - Warm-up' : '')
                         + (s.set_type === 'dropset' || s.setType === 'dropset' ? ' - Drop set' : '')
                         // EL-7: truthful label only, same mechanism as warm-up/drop-set above.
@@ -1023,7 +1024,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     })}
                   </View>
                   {sessionEst1RM > 0 && (
-                    <Text style={[styles.historyEst, live.historyEst]}>Est. max: ~{sessionEst1RM.toFixed(0)}{units}</Text>
+                    <Text style={[styles.historyEst, live.historyEst]}>Est. max: ~{sessionEst1RM.toFixed(0)} {units}</Text>
                   )}
                 </Card>
               );
@@ -1068,8 +1069,8 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                      pr.record_type === 'heaviest_weight' ? 'Heaviest weight' : 'Most reps'}
                   </Text>
                   <Text style={[styles.prValue, live.prValue]}>
-                    {pr.record_type === '1rm_estimate' ? `${safeToFixed(pr.value, 1)}${units}` :
-                     `${finiteOr(pr.value, '-')}${units} x ${finiteOr(pr.reps, '-')} reps`}
+                    {pr.record_type === '1rm_estimate' ? `${safeToFixed(pr.value, 1)} ${units}` :
+                     `${finiteOr(pr.value, '-')} ${units} × ${finiteOr(pr.reps, '-')} reps`}
                   </Text>
                 </View>
                 <Text style={[styles.prDate, live.prDate]}>{safeFormatDate(pr.achieved_date, 'MMM d yyyy')}</Text>

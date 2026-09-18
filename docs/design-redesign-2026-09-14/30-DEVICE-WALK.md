@@ -83,7 +83,7 @@ of them. 8. Section K, every step.
     wash any more.
 13a. ★ **The logged sets are ledger lines** (D184, 2026-09-17). *Expect:* each
     logged set is ONE hairline-ruled line: a grey set number in a fixed column,
-    the figure ("100kg × 8", exactly as it read before) in ink, tabular, then a
+    the figure ("100 kg × 8"; D192, 2026-09-18 added the space before the unit) in ink, tabular, then a
     grey chevron at the right edge. **No badge behind the number, no border or fill around the row.** The
     rule between rows is the subtle hairline, full width, and the first row of
     the block has none above it. The lines are the same height they were (36 dp)
@@ -138,8 +138,9 @@ of them. 8. Section K, every step.
     milestone card and the first-session line stay **hidden**, exactly as
     before; nothing about their conditions changed.
 21a. ★ **The set breakdown under each exercise** (D184). *Expect:* each working
-    set is one hairline-ruled line -- "1" in a grey column, then "100kg x 8" in
-    ink, tabular -- **no chips, no pills, no borders**. Warm-ups are not listed
+    set is one hairline-ruled line -- "1" in a grey column, then "100 kg × 8"
+    (D192, 2026-09-18: a space before the unit, × not x) in ink, tabular --
+    **no chips, no pills, no borders**. Warm-ups are not listed
     here (they never were). **Judge the density, and say so either way:** a
     five-exercise session shows twenty-odd ink lines under the stat grid. The
     plan's sentence is "everything behind it grey"; the primitive draws a done
@@ -182,7 +183,8 @@ of them. 8. Section K, every step.
     and its text is readable.
 31a. **Exercise detail, the history list** (D184). *Expect:* every past
     session's sets as the same hairline-ruled lines the logger draws: set number
-    in a grey column, "100kg x 8" in ink (the string is byte-for-byte what the
+    in a grey column, "100 kg × 8" in ink (D192, 2026-09-18: a space before the
+    unit, × not x -- the rest of the string is byte-for-byte what the
     old chips printed), a warm-up's figure in grey with its " - Warm-up"
     suffix. One session per card, lines inside it with no gaps.
 31b. **Lifts** (Progress → Lifts). *Expect:* every level badge -- Beginner

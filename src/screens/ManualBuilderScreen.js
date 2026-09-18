@@ -82,7 +82,9 @@ function formatRest(secs) {
   if (secs < 60) return `${secs}s`;
   const m = Math.floor(secs / 60);
   const s = secs % 60;
-  return s === 0 ? `${m}m` : `${m}m ${s}s`;
+  // D192 (one unit format): whole minutes read "m min"; the "m Ys" compound
+  // form is this stepper's own compact convention and is unchanged.
+  return s === 0 ? `${m} min` : `${m}m ${s}s`;
 }
 
 // D139 (lead programme ruling): a day's session length, so the builder can

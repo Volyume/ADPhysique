@@ -1542,7 +1542,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                           <LedgerRow
                             key={si}
                             index={si + 1}
-                            primary={`${s.weight > 0 ? `${s.weight}${units}` : 'BW'} x ${s.reps}`}
+                            primary={`${s.weight > 0 ? `${s.weight} ${units}` : 'BW'} × ${s.reps}`}
                             first={si === 0}
                           />
                         ))}

@@ -174,7 +174,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
       subline: 'Estimated max lifts logged this year',
       rows: data.topPRs.slice(0, 5).map(pr => ({
         primary: pr.exerciseName ?? pr.exercise_name,
-        secondary: `${safeToFixed(pr.value, 1)}${units}`,
+        secondary: `${safeToFixed(pr.value, 1)} ${units}`,
       })),
     });
   }
@@ -272,7 +272,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
     content.push({
       type: 'list', icon: 'barbell', tone: 'neutral',
       headline: 'Personal records', subline: 'Estimated max lifts this month',
-      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
+      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)} ${units}` })),
     });
   }
 
@@ -363,7 +363,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
     content.push({
       type: 'list', icon: 'barbell', tone: 'neutral',
       headline: 'Personal records', subline: 'Estimated max lifts this week',
-      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
+      rows: data.topPRs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)} ${units}` })),
     });
   }
 
@@ -433,7 +433,7 @@ export function buildBlockCards(data, units) {
     cards.push({
       type: 'list', icon: 'barbell', tone: 'neutral',
       headline: 'Your best lifts', subline: 'Estimated max lifts this block',
-      rows: data.prs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
+      rows: data.prs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)} ${units}` })),
     });
   }
 

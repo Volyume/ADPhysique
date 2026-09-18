@@ -43,7 +43,7 @@ import { touchTarget } from '../styles/layout';
 
 export default function LedgerRow({
   index = null,          // the set number, or any short leading mark
-  primary,               // the figure: "100 kg x 8"
+  primary,               // the figure: "100 kg × 8" (D192: one unit format)
   secondary = null,      // a quieter trailing fact: "est. 1RM 125 kg"
   state = 'done',        // 'done' | 'current' | 'upcoming'
   muted = false,         // a quieter DONE line (a warm-up): figure in textMuted

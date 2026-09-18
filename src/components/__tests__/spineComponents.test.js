@@ -154,49 +154,56 @@ describe('WeekRibbon', () => {
   });
 });
 
+// RE-ANCHORED 2026-09-18 (D192, one unit format): the fixture figure below
+// reads "100 kg × 8" (space before the unit, × not x) everywhere in this
+// block, matching the one format the app now prints for a logged set.
+// LedgerRow itself does not format anything -- it renders whatever `primary`
+// string it is given -- so the fixture's exact text is incidental to every
+// assertion here (index/secondary rendering, the hairline rule, current-row
+// amber ink, the 48 dp minimum, no gutter of its own); intent kept unchanged.
 describe('LedgerRow', () => {
   const rowNode = (tree) => tree.root.findAll((n) => typeof n.type === 'string' && flat(n).flexDirection === 'row')[0];
 
   test('renders the index, the figure and its trailing fact', () => {
-    const tree = render(<LedgerRow index="3" primary="100 kg x 8" secondary="est. 1RM 125 kg" />);
-    expect(texts(tree).map((n) => n.props.children)).toEqual(['3', '100 kg x 8', 'est. 1RM 125 kg']);
+    const tree = render(<LedgerRow index="3" primary="100 kg × 8" secondary="est. 1RM 125 kg" />);
+    expect(texts(tree).map((n) => n.props.children)).toEqual(['3', '100 kg × 8', 'est. 1RM 125 kg']);
   });
 
   test('the first row of a block draws no rule above it', () => {
-    const first = render(<LedgerRow primary="100 kg x 8" first />);
-    const later = render(<LedgerRow primary="100 kg x 8" />);
+    const first = render(<LedgerRow primary="100 kg × 8" first />);
+    const later = render(<LedgerRow primary="100 kg × 8" />);
     expect(flat(rowNode(first)).borderTopWidth).toBeUndefined();
     expect(flat(rowNode(later)).borderTopWidth).toBeGreaterThan(0);
   });
 
   test('the rule is the hairline token, never the bright control edge', () => {
-    const tree = render(<LedgerRow primary="100 kg x 8" />);
+    const tree = render(<LedgerRow primary="100 kg × 8" />);
     expect(flat(rowNode(tree)).borderTopColor).toBe(colors.borderSubtle);
     expect(flat(rowNode(tree)).borderTopColor).not.toBe(colors.border);
   });
 
   test('the current row is amber ink; done and upcoming are not', () => {
-    const cur = render(<LedgerRow index="3" primary="100 kg x 8" state="current" />);
-    const done = render(<LedgerRow index="2" primary="100 kg x 8" state="done" />);
-    const next = render(<LedgerRow index="4" primary="100 kg x 8" state="upcoming" />);
-    const colourOf = (t) => flat(texts(t).find((n) => n.props.children === '100 kg x 8')).color;
+    const cur = render(<LedgerRow index="3" primary="100 kg × 8" state="current" />);
+    const done = render(<LedgerRow index="2" primary="100 kg × 8" state="done" />);
+    const next = render(<LedgerRow index="4" primary="100 kg × 8" state="upcoming" />);
+    const colourOf = (t) => flat(texts(t).find((n) => n.props.children === '100 kg × 8')).color;
     expect(colourOf(cur)).toBe(colors.primary);
     expect(colourOf(done)).toBe(colors.textPrimary);
     expect(colourOf(next)).toBe(colors.textMuted);
   });
 
   test('amber is ink on the current row, never a fill behind it', () => {
-    const tree = render(<LedgerRow index="3" primary="100 kg x 8" state="current" />);
+    const tree = render(<LedgerRow index="3" primary="100 kg × 8" state="current" />);
     expect(flat(rowNode(tree)).backgroundColor).toBeUndefined();
   });
 
   test('a row clears the 48 dp minimum, so it can carry a control', () => {
-    const tree = render(<LedgerRow primary="100 kg x 8" trailing={<Text>x</Text>} />);
+    const tree = render(<LedgerRow primary="100 kg × 8" trailing={<Text>x</Text>} />);
     expect(flat(rowNode(tree)).minHeight).toBeGreaterThanOrEqual(48);
   });
 
   test('the row pays no gutter of its own, so the page keeps one left edge', () => {
-    const tree = render(<LedgerRow primary="100 kg x 8" />);
+    const tree = render(<LedgerRow primary="100 kg × 8" />);
     const st = flat(rowNode(tree));
     expect(st.paddingHorizontal).toBeUndefined();
     expect(st.paddingLeft).toBeUndefined();

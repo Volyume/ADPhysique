@@ -293,9 +293,11 @@ describe('LiftProgressScreen — metric-switcher headline (item 7, campaign 2026
     const s3 = calculate1RM(73, 11);
     const bestE1rm = Math.round(Math.max(s1, s2, s3) * 10) / 10;
 
+    // RE-ANCHORED 2026-09-18 (D192, one unit format): space before the unit;
+    // intent kept -- the e1RM headline is still named "Est. max".
     const text = renderedText(capturedListProps.renderItem({ item: row, index: 0 }));
     expect(text).toContain('Est. max');
-    expect(text).toContain(`${bestE1rm}kg`);
+    expect(text).toContain(`${bestE1rm} kg`);
   });
 
   test('switching to Heaviest tracks the headline numeral and label to the heaviest single weight', async () => {
@@ -311,7 +313,9 @@ describe('LiftProgressScreen — metric-switcher headline (item 7, campaign 2026
     const row = capturedListProps.data.find(r => r.name === 'Barbell Bench Press');
     const text = renderedText(capturedListProps.renderItem({ item: row, index: 0 }));
     // Heaviest single working weight across all three sessions is 97kg.
-    expect(text).toContain('97kg');
+    // RE-ANCHORED 2026-09-18 (D192, one unit format): space before the unit;
+    // intent kept -- the heaviest-weight lens headline is unchanged.
+    expect(text).toContain('97 kg');
     expect(text).toContain('heaviest');
   });
 
@@ -348,7 +352,9 @@ describe('LiftProgressScreen — metric-switcher headline (item 7, campaign 2026
     const row = capturedListProps.data.find(r => r.name === 'Barbell Bench Press');
     const text = renderedText(capturedListProps.renderItem({ item: row, index: 0 }));
     // Session volumes: 60*8=480, 97*3=291, 73*11=803 -> best is 803.
-    expect(text).toContain('803kg');
+    // RE-ANCHORED 2026-09-18 (D192, one unit format): space before the unit;
+    // intent kept -- the total-lifted lens still carries the unit and separator.
+    expect(text).toContain('803 kg');
     expect(text).toContain('total lifted');
   });
 });
@@ -405,11 +411,14 @@ describe('LiftProgressScreen — last-time line (C1)', () => {
     // no-jargon pass; capitalised under D93-2's Phase 2 terminology canon so
     // the label matches every other "Est. max" surface); the underlying
     // value is unchanged.
+    // RE-ANCHORED 2026-09-18 (D192, one unit format): space before the unit;
+    // intent kept -- the "Last time" line still reports the row's own
+    // latestWeight/latestE1rm, in the user's units.
     const benchText = renderedText(capturedListProps.renderItem({ item: benchRow, index: 0 }));
-    expect(benchText).toContain(`Last time: 60kg - Est. max ${benchE1rm}kg`);
+    expect(benchText).toContain(`Last time: 60 kg - Est. max ${benchE1rm} kg`);
 
     const squatText = renderedText(capturedListProps.renderItem({ item: squatRow, index: 0 }));
-    expect(squatText).toContain(`Last time: 100kg - Est. max ${squatE1rm}kg`);
+    expect(squatText).toContain(`Last time: 100 kg - Est. max ${squatE1rm} kg`);
   });
 });
 

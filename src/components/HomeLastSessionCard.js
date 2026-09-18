@@ -31,7 +31,7 @@ function HomeLastSessionCard({ lastSession, tonnageLabel, relativeDay, onOpenHis
   // `setUnits` coerces anything to 'kg'), so the old label was correct and the
   // move is composition hygiene, not a bug fix. See HomeScreen's fuller note.
   const meta = [
-    lastSession.durationMinutes ? `${lastSession.durationMinutes}m` : null,
+    lastSession.durationMinutes ? `${lastSession.durationMinutes} min` : null,
     lastSession.setCount ? `${lastSession.setCount} sets` : null,
     tonnageLabel,
   ].filter(Boolean).join(' - ');

@@ -271,7 +271,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
                 tooltip={GLOSSARY.tonnage}
               />
               {data.avgDuration > 0 && (
-                <StatBlock icon="time-outline" value={`${data.avgDuration}m`} label="Avg session" />
+                <StatBlock icon="time-outline" value={`${data.avgDuration} min`} label="Avg session" />
               )}
             </View>
 

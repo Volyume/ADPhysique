@@ -83,8 +83,9 @@ function trainingPillarCopy({ completedWorkoutCount, summary, lastSessionAt, uni
     ? `Strength up on ${summary.improvedCount} of ${summary.trainedCount} lift${summary.trainedCount === 1 ? '' : 's'} this month`
     : 'No new bests this month, holding steady';
   const best = summary.namedBests[0];
+  // D192 (one unit format): × not x; the space before the unit was already there.
   const evidence = best
-    ? `${best.exerciseName} ${formatNumber(Math.round(best.weight))} ${unitsLabel} x ${best.reps}, new best`
+    ? `${best.exerciseName} ${formatNumber(Math.round(best.weight))} ${unitsLabel} × ${best.reps}, new best`
     : 'Keep training to build your evidence trail.';
   return { state, evidence };
 }
@@ -851,7 +852,7 @@ function SessionCard({ workout, onPressWithLayout }) {
         <Text style={[styles.sessionName, live.sessionName]} numberOfLines={1}>{name}</Text>
         <Text style={[styles.sessionMeta, live.sessionMeta]}>
           {at && safeDate(at) ? safeFormatDate(at, 'EEE d MMM') : ''}
-          {workout.durationMinutes ? ` - ${workout.durationMinutes}m` : ''}
+          {workout.durationMinutes ? ` - ${workout.durationMinutes} min` : ''}
         </Text>
       </View>
       {diff != null && (

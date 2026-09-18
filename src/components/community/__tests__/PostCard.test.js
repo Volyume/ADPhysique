@@ -103,11 +103,16 @@ describe('every story kind renders a body', () => {
     act(() => { tree.unmount(); });
   });
 
+  // RE-ANCHORED 2026-09-18 (D192, one unit format): × not x -- the hero is
+  // built at render time from numeric payload fields (bodyForKind), never
+  // stored post text, so this is a display-format change, not a data change.
+  // Intent kept: the PR card still carries the lift, the reps and the
+  // previous best.
   test('the PR card carries the lift, the reps and the previous best', () => {
     const tree = render(POSTS.pr);
     const text = texts(tree);
     expect(text).toContain('Bench press');
-    expect(text).toContain('85 kg x 5');
+    expect(text).toContain('85 kg × 5');
     expect(text).toContain('Previous best 82.5 kg');
     act(() => { tree.unmount(); });
   });

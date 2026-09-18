@@ -241,19 +241,23 @@ describe('formatLoggedSet — exercise_type aware read-back', () => {
   // The bug this locks off: distance reuses the weight column for metres and
   // reps for seconds; a logged run must NOT render "400kg × 90" + a bogus
   // "Est. max" (which a weight×reps formatter and 1RM estimate produced).
+  // RE-ANCHORED 2026-09-18 (D192, one unit format): a space before the unit
+  // is now part of this same weight_reps layout ("100 kg × 5", not
+  // "100kg × 5"). Intent kept byte-for-byte otherwise: weight × reps, e1RM
+  // eligible, unchanged for weighted_bodyweight and the unknown-type default.
   test('weight_reps renders weight × reps and is e1RM-eligible (unchanged)', () => {
     expect(formatLoggedSet({ weight: 100, actualReps: 5 }, 'kg', 'weight_reps'))
-      .toEqual({ text: '100kg × 5', showE1RM: true });
+      .toEqual({ text: '100 kg × 5', showE1RM: true });
   });
   test('an unknown / missing type defaults to the weight_reps layout', () => {
     expect(formatLoggedSet({ weight: 60, actualReps: 8 }, 'kg'))
-      .toEqual({ text: '60kg × 8', showE1RM: true });
+      .toEqual({ text: '60 kg × 8', showE1RM: true });
     expect(formatLoggedSet({ weight: 60, actualReps: 8 }, 'kg', 'nonsense'))
-      .toEqual({ text: '60kg × 8', showE1RM: true });
+      .toEqual({ text: '60 kg × 8', showE1RM: true });
   });
   test('weighted_bodyweight keeps weight × reps and the e1RM estimate', () => {
     expect(formatLoggedSet({ weight: 20, actualReps: 6 }, 'kg', 'weighted_bodyweight'))
-      .toEqual({ text: '20kg × 6', showE1RM: true });
+      .toEqual({ text: '20 kg × 6', showE1RM: true });
   });
   test('reps_only shows reps with no load and no e1RM', () => {
     expect(formatLoggedSet({ weight: 0, actualReps: 12 }, 'kg', 'reps_only'))
@@ -272,8 +276,10 @@ describe('formatLoggedSet — exercise_type aware read-back', () => {
     expect(formatLoggedSet({ weight: 400, actualReps: 90 }, 'lbs', 'distance'))
       .toEqual({ text: '400yd · 1:30', showE1RM: false });
   });
+  // RE-ANCHORED 2026-09-18 (D192, one unit format): space before the unit;
+  // intent kept -- snake_case actual_reps is still read when actualReps is absent.
   test('snake_case actual_reps is read when actualReps is absent', () => {
     expect(formatLoggedSet({ weight: 80, actual_reps: 10 }, 'kg', 'weight_reps'))
-      .toEqual({ text: '80kg × 10', showE1RM: true });
+      .toEqual({ text: '80 kg × 10', showE1RM: true });
   });
 });

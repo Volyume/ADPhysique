@@ -423,11 +423,14 @@ describe('WorkoutHistoryScreen load states', () => {
 });
 
 describe('WorkoutHistoryScreen summary polish', () => {
+  // RE-ANCHORED 2026-09-18 (D192, one unit format): space before the unit
+  // (formatLoadValue); intent kept -- zero-load and bodyweight working sets
+  // still read cleanly.
   test('expanded exercise summaries keep zero-load and bodyweight working sets readable', () => {
     expect(formatHistoryExerciseSummary([
       { setType: 'straight', weight: 0, actualReps: 10 },
       { setType: 'straight', weight: 0, actualReps: 8 },
-    ])).toBe('2 × 0kg × 10, 8');
+    ])).toBe('2 × 0 kg × 10, 8');
 
     expect(formatHistoryExerciseSummary([
       { setType: 'straight', weight: '', actualReps: 12 },
