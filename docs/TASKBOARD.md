@@ -37,9 +37,11 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 **Landed:** item 1, every provable Community action sends its push (`5441df58`; two server-side gaps recorded in code: Respect-all and group join requests need the server to return recipients, queued for the migration batch). Item 2 with 4a, Community's visible home on Today: labelled header pill, the members-only live row with Invite, the intro card re-offered once, Settings opens the Hub, the Hub gains a privacy button (`92580e80`). Gate at landing: lint 0, tsc 0, imports OK, 1319 suites / 20,463 tests.
 
-**In review:** item 3, the Community profile is created at onboarding step 5 (lead review caught and fixed a replace-not-merge body-profile save that would have nulled a re-running person's wellbeing score and consent flag; adversarial review running).
+**Landed:** item 3, the Community profile is created at onboarding step 5 (`20d229c7`; lead review caught a replace-not-merge body-profile save, fixed; the review's F2 ruled by the lead: a successful early join switches the step to its existing-member state). Item 4b, link previews on the four public pages (`3f1249ef`). Gate: 1319 suites / 20,464 tests.
 
-**Queued, in order:** 4b link previews on the public pages (Haiku); 5 free-text first post (migration 177, WRITTEN NOT APPLIED until the phrase); 6 server-side calm/ED backstop on consistency sharing (migration 178); 7 gym submissions and reports moderation screen (list functions needed, migration 179); 8 look and copy; 9 hygiene (revokes, dead HTML, tests, group kinds); 10 Partners migration 155 (founder confirmation + phrase); 11 side findings (tooling tables RLS, leaked-password setting, two dashboard-only edge functions).
+**Building now:** item 1's server half (migration 177, so Respect-all and group join requests can notify) and item 5 (free-text first post, migration 178).
+
+**Queued, in order:** 5 free-text first post (migration 177, WRITTEN NOT APPLIED until the phrase); 6 server-side calm/ED backstop on consistency sharing (migration 178); 7 gym submissions and reports moderation screen (list functions needed, migration 179); 8 look and copy; 9 hygiene (revokes, dead HTML, tests, group kinds); 10 Partners migration 155 (founder confirmation + phrase); 11 side findings (tooling tables RLS, leaked-password setting, two dashboard-only edge functions).
 
 **Side finding for the founder (not fixed, ED-adjacent):** advanceFrom8's own body-profile save at wizard completion passes four fields to a save that replaces every column; on a RE-RUN wizard with an existing row it would null the wellbeing (SCOFF) score and zero the consent flag. Pre-existing, outside item 3's scope; surfaced in chat.
 
