@@ -27,6 +27,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { logError } from '../errorLog';
 import {
   upsertProfile, loadMe, hasProfile, suggestHandle, ensureBodyProfilePushed,
 } from './profile';
@@ -336,6 +337,73 @@ async function performCommunityJoinOnce(uid, { handle, displayName, gymId, gym, 
   return classifyRefusal(uid, error, {
     handle, displayName, gymId, gym, ...(Number.isFinite(decidedAt) ? { decidedAt } : {}),
   });
+}
+
+/**
+ * Founder order 2026-09-22, item 3 (audit `docs/audit/
+ * community-audit-2026-09-22/A-adoption-visibility-look-copy.md` A-06/Q2):
+ * create the profile the MOMENT "Join Community" is tapped on the
+ * onboarding step, not only at wizard completion -- someone who taps Join
+ * and then abandons a later step must still have joined. The wizard's own
+ * completion step (spec section 4.3) keeps calling `performCommunityJoin`
+ * unchanged as the fallback: that path already skips an existing profile
+ * and drains anything this call had to queue, so running both is safe.
+ *
+ * Saves `body` first, best effort: a failed save still lets the join
+ * attempt below run (D159's own forced push inside
+ * `performCommunityJoinOnce` queues the join if the row is not yet on the
+ * cloud, exactly as an offline attempt already queues). `body` is handed
+ * to `saveUserBodyProfile` untouched -- this module never names a single
+ * one of its fields, the same opaque pass-through treatment `displayName`
+ * and `gym` already get here, so it keeps obeying the Community privacy
+ * guard (`community.privacy.guard.test.js`) that bans reading a body field
+ * by name from any file under this folder. Never throws.
+ *
+ * @param {string} uid
+ * @param {{handle: (string|null), displayName: (string|null),
+ *   gymId: (string|null), gym: (object|null), body: (object|null)}}
+ *   [fields] `body`, when given, is passed to `saveUserBodyProfile` as-is.
+ * @returns {Promise<{ok: boolean, queued: boolean, error: (string|null)}>}
+ */
+export async function performEarlyCommunityJoin(uid, {
+  handle = null, displayName = null, gymId = null, gym = null, body = null,
+} = {}) {
+  if (!uid) return { ok: false, queued: false, error: 'not_signed_in' };
+  if (body) {
+    // Lazy require (as the rest of this file does for cross-cutting
+    // calls): keeps the device layer out of every OTHER consumer of the
+    // Community barrel that never needs it, the same reason
+    // CommunityGroupScreen's own database.js exception is lazy.
+    //
+    // Lead review 2026-09-22: `saveUserBodyProfile` REPLACES every column
+    // of an existing row (database.js, the UPDATE branch writes all eight
+    // from the object it is given), so a bare save of the three fields
+    // known at step 5 would null a re-running person's wellbeing score,
+    // experience and consent flag. This merges over the existing row the
+    // way SettingsProfileScreen already does, and lets only a value that
+    // is actually known (not null) replace what is stored. A failed read
+    // of the existing row still saves the known fields (a brand-new
+    // account has no row to read), unlike WellbeingCheckScreen, which has
+    // nothing to save without the row.
+    try {
+      // eslint-disable-next-line global-require
+      const database = require('../database');
+      const existing = await database.getUserBodyProfile(uid).catch(() => null);
+      const known = Object.fromEntries(Object.entries(body).filter(([, v]) => v != null));
+      await database.saveUserBodyProfile(uid, { ...(existing || {}), ...known });
+    } catch (e) {
+      logError('Community.performEarlyCommunityJoin.body', e, { uid });
+    }
+  }
+  try {
+    return await performCommunityJoin(uid, { handle, displayName, gymId, gym });
+  } catch (e) {
+    // performCommunityJoin never throws by its own contract; this is
+    // belt and braces so a future change to it can never make THIS
+    // function throw either.
+    logError('Community.performEarlyCommunityJoin.join', e, { uid });
+    return { ok: false, queued: false, error: 'unavailable' };
+  }
 }
 
 /**

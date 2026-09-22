@@ -44,13 +44,18 @@ jest.mock('../profile', () => ({
   hasProfile: (me) => !!me?.profile?.handle,
 }));
 jest.mock('../../gyms', () => ({ setGyms: jest.fn() }));
+// Founder order 2026-09-22, item 3: performEarlyCommunityJoin's own body
+// save. Mocked here, never in the describe blocks above -- they exercise
+// performCommunityJoin, which never touches the device layer at all.
+jest.mock('../../database', () => ({ saveUserBodyProfile: jest.fn(), getUserBodyProfile: jest.fn() }));
 
 const {
   upsertProfile, loadMe, suggestHandle, ensureBodyProfilePushed,
 } = require('../profile');
 const { setGyms } = require('../../gyms');
+const { saveUserBodyProfile, getUserBodyProfile } = require('../../database');
 const {
-  performCommunityJoin, retryPendingJoin, applyOnboardingGym,
+  performCommunityJoin, performEarlyCommunityJoin, retryPendingJoin, applyOnboardingGym,
   rememberOnboardingChoice, readOnboardingChoice, clearOnboardingChoice,
   writePendingJoin, readPendingJoin, clearPendingJoin,
   PENDING_JOIN_MAX_AGE_MS, onboardingChoiceKey, pendingJoinKey,
@@ -70,6 +75,8 @@ beforeEach(() => {
   suggestHandle.mockReset().mockResolvedValue({ handle: 'suggested_1', source: 'email' });
   ensureBodyProfilePushed.mockReset().mockResolvedValue(true);
   setGyms.mockReset().mockResolvedValue({});
+  saveUserBodyProfile.mockReset().mockResolvedValue('row1');
+  getUserBodyProfile.mockReset().mockResolvedValue(null);
 });
 
 describe('D159: the body profile row is pushed, forced, before the profile is created', () => {
@@ -339,6 +346,104 @@ describe('the decision time survives every failed retry (fresh-eyes review B1)',
     upsertProfile.mockRejectedValue(communityError('offline'));
     await performCommunityJoin('u1', { handle: 'rowan_lifts', displayName: 'Rowan', gymId: null });
     expect((await readPendingJoin('u1')).decidedAt).toBeGreaterThanOrEqual(before);
+  });
+});
+
+describe('performEarlyCommunityJoin (founder order 2026-09-22, item 3): saves the known body fields first, then joins', () => {
+  test('the body is saved before the join is attempted, and the join runs with the caller\'s own fields', async () => {
+    const order = [];
+    saveUserBodyProfile.mockImplementation(async () => { order.push('body'); return 'row1'; });
+    upsertProfile.mockImplementation(async () => { order.push('upsert'); return { handle: 'rowan_lifts' }; });
+    const body = { sex: 'male', heightCm: 180 };
+
+    const out = await performEarlyCommunityJoin('u1', {
+      handle: 'rowan_lifts', displayName: 'Rowan', gymId: 'g1', gym: { id: 'g1' }, body,
+    });
+
+    expect(saveUserBodyProfile).toHaveBeenCalledWith('u1', body);
+    expect(order).toEqual(['body', 'upsert']);
+    // Passed straight into the ONE join path, unchanged.
+    expect(upsertProfile).toHaveBeenCalledWith({
+      handle: 'rowan_lifts', display_name: 'Rowan', visibility: 'public',
+      share_sessions: true, sessions_audience: 'everyone',
+    });
+    expect(setGyms).toHaveBeenCalledWith('g1', []);
+    expect(out).toEqual({ ok: true, queued: false, error: null });
+  });
+
+  test('a body-save failure still attempts the join; the join\'s own D159 push queues it exactly as it would for any other caller', async () => {
+    saveUserBodyProfile.mockRejectedValue(new Error('disk full'));
+
+    const out = await performEarlyCommunityJoin('u1', {
+      handle: 'rowan_lifts', displayName: 'Rowan', gymId: null, body: { sex: 'male' },
+    });
+
+    expect(saveUserBodyProfile).toHaveBeenCalledWith('u1', { sex: 'male' });
+    // A failed LOCAL save never blocks the attempt: the join still ran
+    // and succeeded against its own (healthy) mocked dependencies.
+    expect(upsertProfile).toHaveBeenCalled();
+    expect(out).toEqual({ ok: true, queued: false, error: null });
+
+    // When the join's OWN push genuinely cannot reach the server, it
+    // queues -- the same D159 behaviour performCommunityJoin already has
+    // for any caller, unchanged by this function.
+    ensureBodyProfilePushed.mockResolvedValueOnce(false);
+    const queued = await performEarlyCommunityJoin('u1', {
+      handle: 'rowan_lifts', displayName: 'Rowan', gymId: null, body: { sex: 'male' },
+    });
+    expect(queued).toEqual({ ok: false, queued: true, error: 'unavailable' });
+  });
+
+  // Lead review 2026-09-22: saveUserBodyProfile replaces every column of an
+  // existing row, so the early save must merge over what is stored and let
+  // only a KNOWN (non-null) value replace it. Otherwise a person re-running
+  // the wizard would lose their wellbeing score, experience and consent flag
+  // between step 5 and completion, or for good if they abandoned it.
+  test('merges over the existing row: a stored field is never nulled, and a null body field never replaces a stored value', async () => {
+    getUserBodyProfile.mockResolvedValue({
+      id: 'row1', userId: 'u1', sex: 'male', heightCm: 165, experienceLevel: 'intermediate',
+      scoffScore: 1, gdprConsented: 1,
+    });
+    await performEarlyCommunityJoin('u1', {
+      handle: 'rowan_lifts', displayName: 'Rowan', gymId: null, body: { sex: 'female', heightCm: null },
+    });
+    expect(saveUserBodyProfile).toHaveBeenCalledWith('u1', expect.objectContaining({
+      sex: 'female', heightCm: 165, experienceLevel: 'intermediate', scoffScore: 1, gdprConsented: 1,
+    }));
+    const saved = saveUserBodyProfile.mock.calls[0][1];
+    expect(Object.values(saved)).not.toContain(null);
+  });
+
+  test('a failed read of the existing row still saves the known fields', async () => {
+    getUserBodyProfile.mockRejectedValue(new Error('locked'));
+    await performEarlyCommunityJoin('u1', {
+      handle: 'rowan_lifts', displayName: 'Rowan', gymId: null, body: { sex: 'male', heightCm: 180 },
+    });
+    expect(saveUserBodyProfile).toHaveBeenCalledWith('u1', { sex: 'male', heightCm: 180 });
+  });
+
+  test('no body given never calls saveUserBodyProfile, and the join still runs', async () => {
+    const out = await performEarlyCommunityJoin('u1', { handle: 'rowan_lifts', displayName: 'Rowan', gymId: null });
+    expect(saveUserBodyProfile).not.toHaveBeenCalled();
+    expect(out).toEqual({ ok: true, queued: false, error: null });
+  });
+
+  test('no uid sends nothing: neither the body save nor the join runs', async () => {
+    const out = await performEarlyCommunityJoin(null, {
+      handle: 'rowan_lifts', displayName: 'Rowan', gymId: 'g1', body: { sex: 'male' },
+    });
+    expect(out).toEqual({ ok: false, queued: false, error: 'not_signed_in' });
+    expect(saveUserBodyProfile).not.toHaveBeenCalled();
+    expect(upsertProfile).not.toHaveBeenCalled();
+  });
+
+  test('never throws, even when the body save rejects AND the join itself refuses outright', async () => {
+    saveUserBodyProfile.mockRejectedValue(new Error('disk full'));
+    upsertProfile.mockRejectedValue(Object.assign(new Error('profile_suspended'), { code: 'profile_suspended' }));
+
+    await expect(performEarlyCommunityJoin('u1', {
+      handle: 'rowan_lifts', displayName: 'Rowan', gymId: null, body: { sex: 'male' },
+    })).resolves.toEqual({ ok: false, queued: false, error: 'profile_suspended' });
   });
 });
 

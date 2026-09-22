@@ -145,6 +145,52 @@ describe('D160 (2026-09-12): the two review notes the lead had held, now built',
   });
 });
 
+describe('founder order 2026-09-22, item 3 (audit docs/audit/community-audit-2026-09-22/A-adoption-visibility-look-copy.md A-06/Q2): the join also runs the moment "Join Community" is tapped, not only at wizard completion', () => {
+  const fn = SRC.slice(SRC.indexOf('function advanceFrom5(intent)'), SRC.indexOf('// CC28 (section 11.2): the capability step is OPTIONAL'));
+
+  test('performEarlyCommunityJoin fires inside the \'join\' branch, after the handle state is settled and the step has already advanced', () => {
+    const holdAt = fn.indexOf("if (join && communityJoin !== 'existing' && communityHandle.trim() && communityHandleState === 'checking') {");
+    const validateAt = fn.indexOf('const errs = validateStep5({ join });');
+    const setStepAt = fn.indexOf('setStep(6);');
+    const earlyJoinAt = fn.indexOf("if (join && communityJoin !== 'existing' && user?.id) {");
+    const callAt = fn.indexOf("require('../lib/community/onboardingJoin').performEarlyCommunityJoin(user.id, {");
+    // Both guards that can hold or refuse the tap (the live-check hold,
+    // then validateStep5's gap check) sit BEFORE this, so it never runs
+    // for a held or an invalid tap -- only for one the step has already
+    // committed to advancing on.
+    expect(holdAt).toBeGreaterThan(-1);
+    expect(validateAt).toBeGreaterThan(holdAt);
+    expect(setStepAt).toBeGreaterThan(validateAt);
+    expect(earlyJoinAt).toBeGreaterThan(setStepAt);
+    expect(callAt).toBeGreaterThan(earlyJoinAt);
+  });
+
+  test('never awaited on the path that advances the step, fire-and-forget with its own logError catch', () => {
+    // The step's own transition (setStep(6), just above) never waits on
+    // this call, and nothing inside advanceFrom5 awaits it either.
+    expect(fn).not.toMatch(/await[^;{]*performEarlyCommunityJoin/);
+    const earlyJoinAt = fn.indexOf("if (join && communityJoin !== 'existing' && user?.id) {");
+    const block = fn.slice(earlyJoinAt);
+    expect(block).toMatch(/\}\)\.catch\(\(e\) => \{/);
+    expect(block).toContain("try { require('../lib/errorLog').logError('ProOnboarding.performEarlyCommunityJoin', e, { uid: user?.id }); } catch (_) {}");
+  });
+
+  test('only a genuine fresh join fires it: an existing member and "Skip for now" are left to the completion path, unchanged', () => {
+    expect(fn).toContain("if (join && communityJoin !== 'existing' && user?.id) {");
+  });
+
+  test('sends exactly what advanceFrom8 would (handle and name resolved the same way, the same gym), and a body carrying only what step 5 already knows: sex, height and date of birth, never the physique goal (chosen later, at step 7)', () => {
+    const earlyJoinAt = fn.indexOf("if (join && communityJoin !== 'existing' && user?.id) {");
+    const call = fn.slice(earlyJoinAt, fn.indexOf('}).catch((e) => {', earlyJoinAt));
+    expect(call).toContain('const chosenHandle = communityHandle.trim().toLowerCase() || null;');
+    expect(call).toContain('displayName: communityDisplayName.trim() || chosenHandle,');
+    expect(call).toContain('gymId: gymVenue?.id ?? null,');
+    expect(call).toContain('gym: gymVenue,');
+    expect(call).toMatch(/body: \{\s*sex,\s*heightCm: hcm,\s*dateOfBirth: dateOfBirthFromAgeYears\(ageNum\),\s*\},/);
+    expect(call).not.toContain('primaryGoal');
+  });
+});
+
 describe('the join runs at completion, explicitly, and never blocks the wizard', () => {
   test('only for an explicit join, after the plan block and before the draft is cleared', () => {
     const joinAt = COMPLETION.indexOf("if (communityJoin === 'join') {");
@@ -165,6 +211,13 @@ describe('the join runs at completion, explicitly, and never blocks the wizard',
     // kept, and only when they actually picked one (review F2).
     expect(block).toContain("} else if (communityJoin === 'existing' && gymChoice === 'picked' && gymVenue?.id) {");
     expect(block).toContain('await applyOnboardingGym(user.id, gymVenue.id);');
+  });
+
+  // Fresh-eyes review F2, lead ruling 2026-09-22: a successful early join
+  // flips the step to the existing-member state; a queued one does not.
+  test('a successful early join switches the step to the existing-member state, a queued one does not', () => {
+    const fn = SRC.slice(SRC.indexOf('function advanceFrom5(intent)'), SRC.indexOf('// CC28 (section 11.2): the capability step is OPTIONAL'));
+    expect(fn).toMatch(/\.then\(\(out\) => \{[\s\S]*?if \(out\?\.ok && !out\?\.queued\) setCommunityJoin\('existing'\);/);
   });
 
   test('a gap line is rendered once per field: TextField owns it from `error`, and the gym has none', () => {

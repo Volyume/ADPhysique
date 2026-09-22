@@ -1330,6 +1330,48 @@ export default function ProOnboardingScreen({ navigation }) {
     if (communityJoin !== 'existing') setCommunityJoin(join ? 'join' : 'later');
     emitStepDone(5);
     setStep(6);
+    // Founder order 2026-09-22, item 3 (audit docs/audit/
+    // community-audit-2026-09-22/A-adoption-visibility-look-copy.md
+    // A-06/Q2): create the profile the MOMENT "Join Community" is
+    // tapped, not only at wizard completion -- someone who taps Join
+    // and abandons step 6, 7 or 8 must still have joined. Fire-and-
+    // forget: never awaited, so the step transition and the funnel
+    // event just above, and the draft handling, are all untouched.
+    // advanceFrom8's own join at completion STAYS as the fallback
+    // (performCommunityJoin skips an already-created profile and
+    // drains anything queued here), so an existing member and anyone
+    // who chose "Skip for now" are both left to that path unchanged.
+    if (join && communityJoin !== 'existing' && user?.id) {
+      const chosenHandle = communityHandle.trim().toLowerCase() || null;
+      const hcm = localHeightUnits === 'imperial'
+        ? (!isNaN(parseInt(heightFt, 10)) ? ftInToCm(heightFt, heightIn) : null)
+        : (parseDecimalInput(heightCm) || null);
+      const ageNum = parseInt(age, 10) || null;
+      // eslint-disable-next-line global-require
+      require('../lib/community/onboardingJoin').performEarlyCommunityJoin(user.id, {
+        handle: chosenHandle,
+        displayName: communityDisplayName.trim() || chosenHandle,
+        gymId: gymVenue?.id ?? null,
+        gym: gymVenue,
+        body: {
+          sex,
+          heightCm: hcm,
+          dateOfBirth: dateOfBirthFromAgeYears(ageNum),
+        },
+      }).then((out) => {
+        // Fresh-eyes review F2 (lead ruling under D33, 2026-09-22): once the
+        // profile genuinely exists, the step becomes the existing-member
+        // state the wizard already has, so going back to step 5 and editing
+        // the handle or name can never look like it took (performCommunityJoin
+        // never overwrites an existing profile) and the completion path
+        // applies only a gym change. A queued join (offline) stays 'join'
+        // so the completion fallback drains it.
+        if (out?.ok && !out?.queued) setCommunityJoin('existing');
+      }).catch((e) => {
+        // eslint-disable-next-line global-require
+        try { require('../lib/errorLog').logError('ProOnboarding.performEarlyCommunityJoin', e, { uid: user?.id }); } catch (_) {}
+      });
+    }
   }
 
   // CC28 (section 11.2): the capability step is OPTIONAL and one-tap
