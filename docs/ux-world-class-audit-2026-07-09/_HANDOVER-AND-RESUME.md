@@ -1,6 +1,10 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-22 — COMMUNITY: STORIES SHOW THE TOTAL LIFTED AND PRS; SHARING ON BY DEFAULT UNDER THE SUMMARY'S HERO (D194); TWO-LANE AUDIT REPORTS IN docs/audit/community-audit-2026-09-22/ ★
+
+Landed on main: `ec8add4a` (story card and feed row lead with tonnage and PRs), `ead77931` (share_sessions defaults ON to everyone; the summary's share strip under the hero; the wizard create carries sharing; guards re-anchored). Register: D194. Board: the section at the top of `docs/TASKBOARD.md`. The audit lanes' reports are the source for the proposals delivered to the founder in chat; nothing from them is built until the founder chooses. Read-only production facts of the day are recorded in D194 item 5.
+
 ## ★ 2026-09-18 EVENING — REVERTED ON FOUNDER ORDER: APP CODE BACK TO c58aab3d ★
 
 RESUME HERE. The founder stopped all work and ordered a revert to before the

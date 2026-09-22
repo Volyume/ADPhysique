@@ -33,6 +33,18 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## COMMUNITY STORIES + AUTOMATIC SHARING (founder orders 2026-09-22) — LANDED on main `ec8add4a` (tonnage and PRs on the story card and feed row) and `ead77931` (sharing on by default, to everyone; the share surface under the summary's hero); D194
+
+**The orders.** On a live story: "It does not fucking show tonnage and prs to the community story share!! Turn it on then." Then: "turn it on to automatic ... we can't have story's sharing hidden all the way down the screen as an optional when someone's finished a workout it'll never be used. We need more encouragement."
+
+**Done (D194):** the story card leads with "5,400 kg lifted · 1 PR" ahead of the sets line, and the feed row leads its figures with the same total; "Share what I did" defaults ON with audience "everyone" (Join screen shows it on with chips; the onboarding step says in plain words what is shared and where to turn it off; the wizard create carries it; CR-13 superseded); the workout summary carries the Community surface directly under the hero, stating what actually happened (shared / queued offline / not a member / sharing off), never under calm mode or an open ED flag. Full gate green at each landing: lint 0, tsc 0, imports OK, 1312 suites / 20,316 tests.
+
+**Audit (founder order 2026-09-22, "use low level agents to audit and then come to me with proposals"):** two Sonnet lanes, read-only, reports in `docs/audit/community-audit-2026-09-22/` (A: adoption, visibility, day zero, join, return, look, copy; B: RPC coverage map of 87 exposed / 4 wrapped-unused / 11 dead / 0 missing, completeness, Partners, privacy receipt vs reality, ED-safety, moderation, gym directory, engineering). Production facts pulled read-only the same day (33 accounts, 2 profiles both the founder's, 1 post, 9 push tokens). Proposals delivered in chat; **no further implementation without the founder's choice.**
+
+**Founder-side:** none new. The device walk for D194 is in chat (story card, summary strip, Join screen default, onboarding step line, calm-mode case).
+
+---
+
 ## REVERTED (founder order 2026-09-18, evening): THE APP-WIDE VISUAL REDESIGN IS OFF MAIN
 
 **The order.** "Stop all work and revert to before we started the ux / visual work the other day." Target confirmed by the founder: `c58aab3d`, the commit before the redesign plan of 14 September. **Done, on main:** `src/` is the exact tree of `c58aab3d` (one commit, no history rewrite), plus four non-visual fixes re-applied on top in their own commits: the ED-safety body-fat fix (`38443009`), the calendar day-loss fix (`512468a7`), the auth test anchor (`330a7c01`), and the recycled-row tap fix ported inline without the redesign's hero transition (from `cda29707`). The Android build workflow fix (`5759b5dc`) was never in `src/` and stands. No schema migration was involved. The paper-render harness under `scripts/` stays as tooling.

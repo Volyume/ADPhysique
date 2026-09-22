@@ -9103,3 +9103,78 @@ including both logger states. The readiness sheet stays a founder question.
 
 **What it does not touch.** The coaching engine, the ED-safety system,
 consent, the data model, the Community hub, and every setting's behaviour.
+
+## D194 — Community stories carry the total lifted and PRs; sharing is on by default and sits under the summary's hero (founder orders 2026-09-22)
+
+Founder, on a live story from the store build ("It does not fucking show
+tonnage and prs to the community story share!! Turn it on then"), then:
+"I said turn it on to automatic. Sharing or make it better. We can't have
+story's sharing hidden all the way down the screen as an optional when
+someone's finished a workout it'll never be used. We need more
+encouragement." Both are founder orders, executed the same day; the
+rulings below are the lead's, under D33, on how.
+
+1. **The story card prints what the payload already carried.** Every
+   session payload has carried `tonnage`, `prCount`, `topSet` and
+   `intensityTier` since `POST_PAYLOAD_KEYS.session` was written; the card
+   printed only sets, exercises and minutes. `PostCard.bodyForKind` now
+   returns a `facts` line ("5,400 kg lifted · 1 PR") rendered ahead of the
+   sets line, worded as the summary's own "Total lifted" hero, through
+   `formatNumber`/`formatWithUnit`; `ActivityItemRow` leads its figures
+   with the same total. A zero is left out, never printed. Landed
+   `ec8add4a`.
+
+2. **"Share what I did" is ON by default, to everyone.** `TP_DEFAULT_SHARE.
+   share_sessions = true`, `DEFAULT_SESSIONS_AUDIENCE = 'everyone'`. This
+   supersedes CR-13 (the wizard join kept sharing off) and the part of the
+   safety verdict R3 that treated the toggle as something only the Training
+   profile screen may turn on. Consent stays an informed act: the Join
+   screen shows the switch on with its audience chips before "Create
+   profile"; the onboarding step states, in plain words above its Join
+   button, "Every session you finish is shared with everyone in Community:
+   exercises, sets, the total lifted and any PRs. Turn it off any time from
+   your Training profile."; the wizard's create carries the setting to the
+   server so the client and the profile row agree. What travels is only a
+   session's training facts (the allow-list); the ED/calm gate on
+   auto-sharing (`ambient.js`) is untouched; a minor is clamped to
+   followers on every path; and a STORED audience that is present but not
+   in the closed set now fails closed to followers
+   (`FALLBACK_SESSIONS_AUDIENCE`) rather than to the default, so a corrupt
+   value can never widen an audience. "Followers" as the default would have
+   shared every session with nobody at this network's size: that is why
+   the default audience is "everyone" for an adult.
+
+3. **The summary's share surface moved from the bottom to directly under
+   the hero.** A strip after the "Total lifted" card states what actually
+   happened: "Shared to Community" with "Add a note"; "Shares to Community
+   when you are back online" with no second button (a manual post would
+   duplicate the queued one); "Sessions like this one are what Community
+   is for" with "Share this session" for a device with no Community
+   profile (routed through Compose, which sends a non-member to Join
+   first); "People who train like you would see this one" with "Post this
+   session" and "Share every session" for a member with sharing off. It
+   renders only once the calm/ED read, the auto-share outcome and the
+   cached profile are known, and never under calm mode or an open ED
+   flag: for a suppressed summary the old quiet button at the bottom
+   stays exactly as it was, so nothing new presses a flagged person to
+   share. The auto-share effect no longer sends a doomed create for a
+   device with no cached profile. Landed `ead77931`.
+
+4. **Guards re-anchored, each with a RE-ANCHORED note:**
+   `trainingProfile.test.js` (defaults travel true / everyone; an absent
+   audience reads as the default, an unrecognised one still fails closed),
+   `CommunityJoin.test.js` (Create publishes the default without a tap;
+   switched off first, nothing is published), `onboardingJoin.test.js`
+   (the wizard create carries sharing), the onboarding step guard (the
+   plain-words line sits between the receipt and the Join button),
+   `community.ambient.guard.test.js` (the strip's position, its gating,
+   the recorded outcomes, and no duplicate post for a queued share).
+
+5. **Production note (read-only facts, 2026-09-22).** 33 accounts, all
+   created in the last 90 days; 2 Community profiles, both the founder's
+   (the host account `allan` and `alland`); 1 post, made today; 9
+   accounts hold a push token; Partners is 13 test rows from July and
+   August, all ended but one stale invite. The two audit reports this
+   day's proposals draw on are `docs/audit/community-audit-2026-09-22/`
+   (A: adoption, visibility, look, copy; B: functionality, backend,
+   safety, engineering).
