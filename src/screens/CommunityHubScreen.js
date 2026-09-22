@@ -434,7 +434,7 @@ export default function CommunityHubScreen({ navigation, route }) {
 
   async function react(item) {
     try {
-      await reactToPost(item.post.id, !item.myReaction);
+      await reactToPost(item.post.id, !item.myReaction, item.author?.user_id);
       setHub((prev) => (prev ? {
         ...prev,
         posts: (prev.posts ?? []).map((row) => {
@@ -512,6 +512,22 @@ export default function CommunityHubScreen({ navigation, route }) {
               </Text>
             </View>
           ) : null}
+        </Pressable>
+      ) : null}
+      {/* Founder order 2026-09-22, item 2 / audit A-10: CommunityPrivacy
+          was reachable only from Settings, never from inside Community.
+          One entry here, matching the three buttons above exactly (same
+          size, background, border, icon convention) -- nothing else on
+          this screen changes. */}
+      {joined ? (
+        <Pressable
+          onPress={() => navigation.navigate('CommunityPrivacy')}
+          hitSlop={spacing.sm}
+          style={[styles.headerBtn, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
+          accessibilityRole="button"
+          accessibilityLabel="Community privacy"
+        >
+          <Ionicons name="shield-checkmark-outline" size={18} color={t.colors.primary} />
         </Pressable>
       ) : null}
     </View>

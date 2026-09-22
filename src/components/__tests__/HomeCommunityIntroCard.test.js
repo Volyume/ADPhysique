@@ -69,7 +69,12 @@ describe('HomeScreen gating (source-level guard)', () => {
   test('defaults dismissed, reads the flag and the cached profile together', () => {
     expect(src).toMatch(/const \[communityIntroDismissed, setCommunityIntroDismissed\] = useState\(true\);/);
     expect(src).toMatch(/AsyncStorage\.getItem\(communityIntroKey\),\s*readCachedMe\(user\.id\),/);
-    expect(src).toMatch(/setCommunityIntroDismissed\(flag === 'true' \|\| hasProfile\(me\)\);/);
+    // RE-ANCHORED 2026-09-22 (founder order item 2, audit A-04): a member is
+    // still dismissed outright; everyone else goes through the re-offer rule
+    // in src/lib/community/introReoffer.js against a fresh completed-session
+    // count, so a dismissal retires the card for now, not for good.
+    expect(src).toMatch(/if \(hasProfile\(me\)\) \{ setCommunityIntroDismissed\(true\); return; \}/);
+    expect(src).toMatch(/setCommunityIntroDismissed\(isIntroDismissedNow\(parseIntroDismissal\(raw\), completedSessions\)\);/);
   });
 
   test('renders only after a session, without a ranked banner, and both actions dismiss', () => {

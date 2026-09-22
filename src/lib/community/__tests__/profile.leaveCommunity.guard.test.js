@@ -125,3 +125,22 @@ describe('leaveCommunity also clears the onboarding join queue (spec section 4.2
     expect(pendingClearIdx).toBeGreaterThan(leaveCallIdx);
   });
 });
+
+describe('leaveCommunity also clears the Today row\'s friends-count cache (F4, fresh-eyes review, founder order 2026-09-22 item 2)', () => {
+  const body = fnBody(SOURCE, 'leaveCommunity');
+
+  test('clears the homeFriendsRow cache key, beside the widget friends-cache clear', () => {
+    expect(body).toMatch(/AsyncStorage\.removeItem\(homeFriendsRowCacheKey\(uid\)\)/);
+  });
+
+  test('homeFriendsRowCacheKey is imported statically (homeFriendsRow.js imports only AsyncStorage, so no cycle)', () => {
+    expect(SOURCE).toMatch(/import \{ homeFriendsRowCacheKey \} from '\.\/homeFriendsRow';/);
+  });
+
+  test('sits inside the same try/catch as the widget friends-cache clear, not a new block', () => {
+    const tryBlocks = body.match(/try \{[\s\S]*?\} catch \(_e\) \{ \/\* best-effort \*\/ \}/g) ?? [];
+    const widgetBlock = tryBlocks.find((b) => b.includes('clearCachedFriends'));
+    expect(widgetBlock).toBeTruthy();
+    expect(widgetBlock).toMatch(/homeFriendsRowCacheKey\(uid\)/);
+  });
+});

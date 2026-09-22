@@ -2,8 +2,11 @@
  * Community share links (blueprint sections 5.6, 8; SD-16).
  *
  * PURE, save for `openMessageLink` (community product audit
- * `40-GAP-CLOSURE.md` §1, "Messaging links"), the one function here that
- * touches the OS browser -- everything else is address-shaping only.
+ * `40-GAP-CLOSURE.md` §1, "Messaging links") and `shareCommunityMessage`
+ * (founder order 2026-09-22 item 2, the Today live row's Invite action
+ * sharing the Hub's own invite text) -- the two functions here that touch
+ * the OS (the browser and the native share sheet) -- everything else is
+ * address-shaping only.
  * Two forms of the same three addresses:
  *   - the WEB form, a static page under `public/` that fetches the
  *     `community-public` edge function, so a link works for someone who
@@ -70,6 +73,24 @@ export function openMessageLink(url) {
   // eslint-disable-next-line global-require
   const { Linking } = require('react-native');
   Linking.openURL(url).catch(() => { /* best effort: nothing to recover */ });
+}
+
+/**
+ * Open the native share sheet with a Community message (early days spec
+ * 1.5). Callers build the message text themselves (earlyDays.js's
+ * inviteMessage) so this file never depends on that module -- shared so
+ * the Hub's own invite button and the Today row's Invite action send the
+ * exact same text through the exact same call.
+ *
+ * @param {string} message
+ * @returns {Promise<void>}
+ */
+export async function shareCommunityMessage(message) {
+  // eslint-disable-next-line global-require
+  const { Share } = require('react-native');
+  try {
+    await Share.share({ message: String(message ?? '') });
+  } catch (_e) { /* the person dismissed the share sheet */ }
 }
 
 // 'p' (programme) links are retired along with Community programme-sharing

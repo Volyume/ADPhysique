@@ -136,7 +136,10 @@ describe('ED-safety: getOpenEdPatternFlag reads on safety surfaces fail CLOSED',
     const allReads = FILES.home.match(/getOpenEdPatternFlag\(user\.id\)/g) || [];
     // Every single read on this screen fails closed - no read is exempt.
     expect(matches.length).toBe(allReads.length);
-    expect(matches.length).toBe(2);
+    // RE-ANCHORED 2026-09-22 (founder order item 2, the Today live Community
+    // row): a third read, in loadCommunityFriendsRow, fails closed the same
+    // way and hides the row on 'read_failed'. Two became three.
+    expect(matches.length).toBe(3);
   });
 
   // 7. ProSetupCompleteScreen — the dated first-review line.

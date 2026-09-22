@@ -39,6 +39,11 @@ const COMPONENTS_COMMUNITY_DIR = path.join(ROOT, 'src/components/community');
 const INTRO_CARD = path.join(ROOT, 'src/components/HomeCommunityIntroCard.js');
 const RULES_SCREEN = path.join(ROOT, 'src/screens/CommunityRulesScreen.js');
 const LIMITS_FILE = path.join(ROOT, 'src/lib/community/limits.js');
+// F6 fix (fresh-eyes review, founder order 2026-09-22 item 2): the Today
+// live Community row and the screen that hosts its header action are two
+// new surfaces that can carry Community copy, so the guard covers them too.
+const TODAY_ROW = path.join(ROOT, 'src/components/HomeCommunityTodayRow.js');
+const SETTINGS_SCREEN = path.join(ROOT, 'src/screens/SettingsScreen.js');
 
 /** Strip block and line comments so a rule NAMED or EXPLAINED in a
  * comment (this file is full of them, and so is the source) is never
@@ -71,6 +76,11 @@ function stringLiterals(source) {
  * Community). Both directories are read top-level only -- neither has a
  * subdirectory but `__tests__`, and a `.js`-only filter already leaves
  * that out.
+ *
+ * RE-ANCHORED 2026-09-22 (founder order item 2, fresh-eyes review F6): the
+ * Today root's live Community row (HomeCommunityTodayRow.js) and the
+ * Settings screen that now hosts a Community-adjacent entry point are
+ * added by their own path, the same way the intro card is.
  */
 function targetFiles() {
   const screens = fs.readdirSync(SCREENS_DIR)
@@ -79,7 +89,7 @@ function targetFiles() {
   const components = fs.readdirSync(COMPONENTS_COMMUNITY_DIR)
     .filter((f) => f.endsWith('.js'))
     .map((f) => path.join(COMPONENTS_COMMUNITY_DIR, f));
-  return [...screens, ...components, INTRO_CARD];
+  return [...screens, ...components, INTRO_CARD, TODAY_ROW, SETTINGS_SCREEN];
 }
 
 describe('no Community copy explains programme, plan or routine sharing', () => {

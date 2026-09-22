@@ -1,16 +1,20 @@
 /**
- * CommunityHeaderAction (blueprint section 1, entry point 1)
+ * CommunityHeaderAction (blueprint section 1, entry point 1; founder
+ * order 2026-09-22 item 2, audit A-03: the glyph alone is Community's
+ * one permanent entry point with no visible name anywhere near it).
  *
- * The Today root's header action: a 34 dp round pressable carrying the
- * `people-outline` glyph in amber on `surface2` with a hairline border,
- * matching the brand-mark box it replaces on that screen. An amber dot
- * sits at its top-right when there is unseen activity or a pending
- * follow request, read from the cached `me` payload so the header never
- * waits on the network to draw.
+ * The Today root's header action: a pressable PILL carrying the
+ * `people-outline` glyph in amber plus the visible word "Community", on
+ * `surface2` with a hairline border. An amber dot sits at its top-right
+ * when there is unseen activity or a pending follow request, read from
+ * the cached `me` payload so the header never waits on the network to
+ * draw. The dot and the message badge below are UNCHANGED by the label:
+ * same size, colour and corner position, now on a wider pill.
  *
  * Lead visual review (section 13, ruling 1): the glyph and the dot are
  * the only amber on this control, and the Today header keeps ONLY this
- * action in its `right` slot.
+ * action in its `right` slot. One pill, not a new card (founder brief
+ * 2026-09-22: no card soup, no new amber).
  *
  * Message badge (community product audit `40-GAP-CLOSURE.md` §1, "Message
  * badge" BUILD row): the unread MESSAGE count reads separately from the
@@ -24,15 +28,19 @@
 import { Pressable, Text, View, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import { spacing, circle, fontSize, fontWeight } from '../../styles/theme';
+import { spacing, circle, fontSize, fontWeight, type } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import { hasUnseen, hasUnreadMessages } from '../../lib/community';
 
-// Matches ScreenHeader's BRAND_BOX so the control sits exactly where the
-// brand mark used to, at the same optical weight.
-const BOX = 34;
+// The pill's minimum height, at least the platform's 44dp touch target
+// (was a 34dp glyph-only circle before the 2026-09-22 label). DOT is the
+// unseen dot's own size, unchanged. GLYPH is the icon's own size: the dot
+// and badge are pinned to a wrapper sized exactly to it (F3 fix, fresh-eyes
+// review, founder order 2026-09-22 item 2), not to the whole pill.
+const MIN_HEIGHT = 44;
 const DOT = 6;
+const GLYPH = 18;
 
 export default function CommunityHeaderAction({ onPress }) {
   const t = useTheme();
@@ -63,38 +71,55 @@ export default function CommunityHeaderAction({ onPress }) {
         { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
       ]}
     >
-      <Ionicons name="people-outline" size={18} color={t.colors.primary} />
-      {unreadMessages ? (
-        <View
-          style={[
-            styles.badge,
-            { backgroundColor: t.colors.primary, borderColor: t.colors.background },
-          ]}
-        >
-          <Text style={[styles.badgeText, { color: t.colors.onPrimary }]}>
-            {messageCount > 9 ? '9+' : String(messageCount)}
-          </Text>
-        </View>
-      ) : unseen ? (
-        <View
-          style={[
-            styles.dot,
-            { backgroundColor: t.colors.primary, borderColor: t.colors.background },
-          ]}
-        />
-      ) : null}
+      {/* F3 fix (fresh-eyes review, founder order 2026-09-22 item 2): the
+          dot/badge are pinned to THIS wrapper, sized to the glyph alone,
+          so they sit on the glyph's own corner exactly as before the
+          "Community" label was added, not past the whole pill. */}
+      <View style={styles.iconWrap}>
+        <Ionicons name="people-outline" size={GLYPH} color={t.colors.primary} />
+        {unreadMessages ? (
+          <View
+            style={[
+              styles.badge,
+              { backgroundColor: t.colors.primary, borderColor: t.colors.background },
+            ]}
+          >
+            <Text style={[styles.badgeText, { color: t.colors.onPrimary }]}>
+              {messageCount > 9 ? '9+' : String(messageCount)}
+            </Text>
+          </View>
+        ) : unseen ? (
+          <View
+            style={[
+              styles.dot,
+              { backgroundColor: t.colors.primary, borderColor: t.colors.background },
+            ]}
+          />
+        ) : null}
+      </View>
+      <Text style={[styles.label, { color: t.colors.textPrimary }]}>Community</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   box: {
-    width: BOX,
-    height: BOX,
-    borderRadius: circle(BOX),
-    borderWidth: StyleSheet.hairlineWidth,
+    minHeight: MIN_HEIGHT,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: circle(MIN_HEIGHT),
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  label: {
+    ...type.captionStrong,
+  },
+  iconWrap: {
+    width: GLYPH,
+    height: GLYPH,
+    position: 'relative',
   },
   dot: {
     position: 'absolute',

@@ -13,7 +13,15 @@ import useTheme from '../hooks/useTheme';
 import ScreenHeader from '../components/ScreenHeader';
 import CommunityHeaderAction from '../components/community/CommunityHeaderAction';
 import HomeCommunityIntroCard from '../components/HomeCommunityIntroCard';
+import HomeCommunityTodayRow from '../components/HomeCommunityTodayRow';
 import { readCachedMe, hasProfile } from '../lib/community/profile';
+import { inviteMessage } from '../lib/community/earlyDays';
+import { shareCommunityMessage } from '../lib/community/links';
+import {
+  readCachedHomeFriendsRow, writeCachedHomeFriendsRow, shouldRefreshHomeFriendsRow,
+} from '../lib/community/homeFriendsRow';
+import { fetchFriendsTrainedToday } from '../lib/widgets/friends';
+import { parseIntroDismissal, nextIntroDismissal, isIntroDismissedNow } from '../lib/community/introReoffer';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
@@ -71,7 +79,7 @@ import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { heroPlanLabel, weekCompleteLine } from '../lib/planDisplay';
 import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE, NUDGE_WINDOW_GRACE_MS } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
-import { localWeekStartMs, localWeekEndMs, localDayKey } from '../lib/dayKey';
+import { localWeekStartMs, localWeekEndMs, localDayKey, todayLocalKey } from '../lib/dayKey';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 // Campaign 22 Phase 2 Stage 1 (HOME-TODAY-UX-SPEC.md §13/§17 region R2):
 // the single unified P1 "Today line" and its pure priority arbiter.
@@ -337,6 +345,14 @@ export default function HomeScreen({ navigation, route }) {
   // dismissed so it never flashes before the stored flag and the cached
   // profile are read; never shown to someone who already has a profile.
   const [communityIntroDismissed, setCommunityIntroDismissed] = useState(true);
+  // Founder order 2026-09-22 item 2 x 4a: the Today live Community row.
+  // Defaults hidden (never a flash of the wrong state) until the loader
+  // below confirms membership from the CACHED profile and the ED/calm
+  // gate. communityInviteProfile carries only what the Invite action
+  // needs (handle, gymLabel), same fields the Hub's own invite reads.
+  const [communityRowVisible, setCommunityRowVisible] = useState(false);
+  const [communityFriendsCount, setCommunityFriendsCount] = useState(null);
+  const [communityInviteProfile, setCommunityInviteProfile] = useState(null);
   const [hytNothingSetUp, setHytNothingSetUp] = useState(false);
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
@@ -493,6 +509,7 @@ export default function HomeScreen({ navigation, route }) {
         loadWelcome(),
         loadHytOffer(),
         loadCommunityIntro(),
+        loadCommunityFriendsRow(),
         loadActivationNudge(), // S6: tier-blind, computes from workouts + account age + ED flag
         loadTodayWeight(),
         loadLatestCoachOutput(),
@@ -653,23 +670,100 @@ export default function HomeScreen({ navigation, route }) {
   const hytOfferKey = user?.id ? `@volyume_hyt_offer_${user.id}` : null;
   const communityIntroKey = user?.id ? `@volyume_community_intro_${user.id}` : null;
 
+  // Founder order 2026-09-22 item 2 (audit A-04): a dismissal used to
+  // retire this card for good. It now retires it only FOR NOW -- offered
+  // once more after five further completed sessions to someone who still
+  // has no Community profile, then never again. The session count is
+  // read fresh here (getAllWorkouts), not from the totalSessions state
+  // variable: this loader runs via the focus-effect callback captured at
+  // mount (see loadData's useCallback deps, [user?.id] only), so a
+  // closed-over totalSessions would stay frozen at its initial value
+  // across later focuses. A fresh read matches loadWeekStats' own
+  // completed-session definition exactly.
   async function loadCommunityIntro() {
     if (!communityIntroKey || !user?.id) return;
     try {
-      const [flag, me] = await Promise.all([
+      const [raw, me, workouts] = await Promise.all([
         AsyncStorage.getItem(communityIntroKey),
         readCachedMe(user.id),
+        getAllWorkouts(user.id).catch(() => []),
       ]);
-      setCommunityIntroDismissed(flag === 'true' || hasProfile(me));
+      if (hasProfile(me)) { setCommunityIntroDismissed(true); return; }
+      const completedSessions = workouts.filter((w) => w.isCompleted).length;
+      setCommunityIntroDismissed(isIntroDismissedNow(parseIntroDismissal(raw), completedSessions));
     } catch (_) {
       setCommunityIntroDismissed(true);
     }
   }
 
-  const dismissCommunityIntro = useCallback(() => {
+  // Founder order 2026-09-22 item 2 x 4a (audit A-03/Q1/Q5): the Today
+  // live Community row. Membership is the CACHED profile only, never a
+  // network read on first paint (same readCachedMe/hasProfile pair
+  // loadCommunityIntro uses). The ED/calm gate mirrors loadActivationNudge's
+  // formula exactly, fail CLOSED, so the two surfaces can never disagree.
+  // The count reads the row's own 15-minute cache first and only calls
+  // fetchFriendsTrainedToday (src/lib/widgets/friends.js, the same reader
+  // the Android widget uses) when that cache is missing, stale, or from a
+  // different local day -- never on every render, only via this loader,
+  // which loadData() already runs on focus.
+  async function loadCommunityFriendsRow() {
+    if (!user?.id) { setCommunityRowVisible(false); return; }
+    try {
+      const me = await readCachedMe(user.id);
+      if (!hasProfile(me)) { setCommunityRowVisible(false); return; }
+      const [edFlag, wellbeing] = await Promise.all([
+        getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
+        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
+      ]);
+      if (edFlag || wellbeing === 'read_failed' || isCalm(wellbeing)) { setCommunityRowVisible(false); return; }
+
+      setCommunityInviteProfile({ handle: me?.profile?.handle ?? null, gymLabel: me?.profile?.gym_label ?? null });
+
+      // F1 fix (fresh-eyes review, founder order 2026-09-22 item 2): the
+      // row's visibility now depends on having a SAME-DAY count, cached
+      // or fresh. Painting a cache stamped with yesterday's dayKey under
+      // "today" was the bug; HomeCommunityTodayRow renders a null count
+      // as an honest zero line with Invite, so the row must stay hidden
+      // rather than show that until a same-day count actually exists.
+      const today = todayLocalKey();
+      const cached = await readCachedHomeFriendsRow(user.id);
+      if (cached && cached.dayKey === today) {
+        setCommunityFriendsCount(cached.count);
+        setCommunityRowVisible(true);
+      }
+      if (shouldRefreshHomeFriendsRow(cached, today)) {
+        // F2 fix (fresh-eyes review, founder order 2026-09-22 item 2):
+        // fetchFriendsTrainedToday is a live RPC with no client timeout.
+        // This loader is awaited inside loadData's Promise.all, so
+        // awaiting the network here would gate Home's initialLoading and
+        // every banner behind a slow or offline connection. Only the
+        // cache read above (local, fast) is awaited; the refresh itself
+        // runs in the background and, once it resolves, is what reveals
+        // the row for a reader with no same-day cache yet.
+        fetchFriendsTrainedToday(user.id).then((fresh) => {
+          if (!fresh) return;
+          setCommunityFriendsCount(fresh.count);
+          setCommunityRowVisible(true);
+          writeCachedHomeFriendsRow(user.id, fresh.count, today);
+        }).catch(() => {
+          // best-effort: a failed/offline fetch leaves the cached value
+          // (or null) exactly as it was -- never an error the user sees.
+        });
+      }
+    } catch (_e) {
+      setCommunityRowVisible(false);
+    }
+  }
+
+  const dismissCommunityIntro = useCallback(async () => {
     setCommunityIntroDismissed(true);
-    if (communityIntroKey) AsyncStorage.setItem(communityIntroKey, 'true').catch(() => {});
-  }, [communityIntroKey]);
+    if (!communityIntroKey) return;
+    try {
+      const raw = await AsyncStorage.getItem(communityIntroKey);
+      const next = nextIntroDismissal(parseIntroDismissal(raw), totalSessions);
+      await AsyncStorage.setItem(communityIntroKey, JSON.stringify(next));
+    } catch (_) { /* best effort: worst case the card is offered again next launch */ }
+  }, [communityIntroKey, totalSessions]);
 
   async function loadHytOffer() {
     if (!hytOfferKey) return;
@@ -2274,6 +2368,26 @@ export default function HomeScreen({ navigation, route }) {
             Community action. It replaces the brand mark on this screen, and
             the brand mark is not shown beside it. */}
         <ScreenHeader title="Today" right={<CommunityHeaderAction />} />
+
+        {/* Founder order 2026-09-22 item 2 x 4a (audit A-03/A-04/Q1/Q5):
+            the one live Community row on Today, members only. Membership
+            + the ED/calm gate are decided in loadCommunityFriendsRow; a
+            non-member or a gated reader gets nothing here, never an
+            empty placeholder. */}
+        {!initialLoading && communityRowVisible && (
+          <HomeCommunityTodayRow
+            count={communityFriendsCount}
+            gymLabel={communityInviteProfile?.gymLabel}
+            onOpen={() => { haptics.selection(); navigation.navigate('Community'); }}
+            onInvite={() => {
+              haptics.selection();
+              shareCommunityMessage(inviteMessage({
+                handle: communityInviteProfile?.handle,
+                gymLabel: communityInviteProfile?.gymLabel,
+              }));
+            }}
+          />
+        )}
 
         {/* ── Campaign 22 Phase 2 Stage 1: the unified Today line (P1 slot,
             HOME-TODAY-UX-SPEC.md §17 region R2). One quiet row, one occupant,

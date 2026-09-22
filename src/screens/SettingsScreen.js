@@ -142,16 +142,18 @@ export default function SettingsScreen({ navigation }) {
           sub="Sync, backup, import, export"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsData'); }}
         />
-        {/* Community (blueprint section 6): the privacy half of Community
-            is reachable from Settings as well as from Community itself, so
-            "who can see me" is answerable from where people look for it.
-            Community lives in the Home stack, so this is a cross-tab jump
-            like the volume-targets row on Coach. */}
+        {/* Community (founder order 2026-09-22, item 2; audit A-10: this
+            row used to open CommunityPrivacy, not Community, so someone
+            looking for "my Community feed" landed on "who can follow you"
+            instead). Now opens the Hub itself; the privacy controls are
+            one tap further in, from inside Community. Community lives in
+            the Home stack, so this is a cross-tab jump like the
+            volume-targets row on Coach. */}
         <SettingRow
           icon="people-outline"
           label="Community"
-          sub="Who can follow you, blocked and muted people"
-          onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'HomeTab', 'CommunityPrivacy'); }}
+          sub="Your feed, people, groups and privacy"
+          onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'HomeTab', 'Community'); }}
         />
         <SettingRow
           icon="shield-checkmark-outline"

@@ -39,7 +39,7 @@ export {
 export {
   WEB_ORIGIN, APP_SCHEME, profileUrl, storyUrl, groupUrl, groupInviteUrl,
   appProfileUrl, appStoryUrl, appGroupUrl, appGroupInviteUrl, parseCommunityLink,
-  findHttpsLinks, openMessageLink,
+  findHttpsLinks, openMessageLink, shareCommunityMessage,
 } from './links';
 
 // ─── Early days (26-EARLY-DAYS-SPEC.md, CR-16 / D162) ─────────────────

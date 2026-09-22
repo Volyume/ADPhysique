@@ -36,7 +36,10 @@ function fnBody(src, decl) {
 
 describe('X5/X11: HomeScreen "this week" counts are Monday-anchored, not rolling', () => {
   test('dayKey.js Monday-anchored helpers are imported', () => {
-    expect(HOME).toMatch(/import \{ localWeekStartMs, localWeekEndMs, localDayKey \} from '\.\.\/lib\/dayKey';/);
+    // RE-ANCHORED 2026-09-22 (founder order item 2): the Today live Community
+    // row stamps its cache with todayLocalKey from the same module; the three
+    // Monday-anchored helpers are still imported from it.
+    expect(HOME).toMatch(/import \{ localWeekStartMs, localWeekEndMs, localDayKey, todayLocalKey \} from '\.\.\/lib\/dayKey';/);
   });
 
   test('loadWeekStats (the "Sessions this week" glance card) uses the Monday-anchored window', () => {

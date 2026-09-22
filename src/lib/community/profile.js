@@ -15,6 +15,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logError } from '../errorLog';
 import { callCommunity, CommunityError } from './transport';
 import { COMMUNITY_RULES_VERSION } from './limits';
+import { notifyCommunityEvent } from './notify';
+// F4 fix (fresh-eyes review, founder order 2026-09-22 item 2): a static
+// import is safe here -- homeFriendsRow.js imports only AsyncStorage, so
+// this creates no cycle back into this module (unlike feed.js,
+// trainingProfile.js, ambient.js, respect.js and onboardingJoin.js below,
+// which all import FROM profile.js and so are required lazily).
+import { homeFriendsRowCacheKey } from './homeFriendsRow';
 
 export const ME_CACHE_PREFIX = '@volyume_community_me_';
 
@@ -327,6 +334,12 @@ export async function leaveCommunity() {
       await require('../widgets/friends').clearCachedFriends(uid);
       // eslint-disable-next-line global-require
       await require('../widgets/writer').writeWidgetSnapshot(uid, { refreshFriends: false });
+      // F4 fix (fresh-eyes review, founder order 2026-09-22 item 2): the
+      // Today row's own same-day friends-count cache
+      // (src/lib/community/homeFriendsRow.js) goes too, beside the
+      // widget's friends cache above, so a home screen never keeps
+      // showing a same-day count on behalf of someone who has just left.
+      await AsyncStorage.removeItem(homeFriendsRowCacheKey(uid));
     } catch (_e) { /* best-effort */ }
     // F11 fix (fresh-eyes review): the rest of Community's device caches
     // go too, so nothing left behind after leaving still reads as this
@@ -373,16 +386,48 @@ export async function getProfile({ handle = null, userId = null } = {}) {
   return callCommunity('community_get_profile', { _handle: handle, _uid: userId });
 }
 
+/**
+ * Follow, or ask to: a followers-only profile answers with a request
+ * instead of an immediate follow (SD-05). `community_follow` reports
+ * which one happened in its own `state` ('accepted'/'requested'), so the
+ * push kind is read from the server's own answer rather than guessed
+ * here (founder order 2026-09-22, item 1: "wire the pushes").
+ *
+ * `ref_id` plays no part in this kind's proof or replay guard (the
+ * server derives its own activity target from the CALLER's id, not from
+ * this field: `community-notify`'s `follow`/`follow_request` branch sets
+ * `activityTargetId = actorId`) and no route built from it reads
+ * `ref_id` either (`notificationRoute.js`: `community_follow` always
+ * opens the Activity inbox) -- the caller's own id is sent because it is
+ * guaranteed to be a real UUID and matches what the server itself
+ * treats as "the row this is about" (`_community_add_activity`'s own
+ * `target_id`, migrate_160).
+ */
 export async function follow(targetUserId) {
-  return callCommunity('community_follow', { _target: targetUserId });
+  const out = await callCommunity('community_follow', { _target: targetUserId });
+  notifyCommunityEvent(
+    out?.state === 'requested' ? 'follow_request' : 'follow',
+    targetUserId,
+    currentUserId(),
+  );
+  return out;
 }
 
 export async function unfollow(targetUserId) {
   return callCommunity('community_unfollow', { _target: targetUserId });
 }
 
+/**
+ * Accept or decline a follow request. Only accepting notifies the
+ * requester (target = requesterId, the person who asked); a decline is
+ * silent, the same posture as every other decline in Community.
+ */
 export async function respondToFollow(requesterId, accept) {
-  return callCommunity('community_respond_follow', { _requester: requesterId, _accept: !!accept });
+  const out = await callCommunity('community_respond_follow', { _requester: requesterId, _accept: !!accept });
+  if (accept && out?.state === 'accepted') {
+    notifyCommunityEvent('follow_accepted', requesterId, currentUserId());
+  }
+  return out;
 }
 
 export async function removeFollower(followerId) {

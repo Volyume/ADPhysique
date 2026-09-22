@@ -296,6 +296,23 @@ describe('state 1: no Community profile', () => {
     expect(reactToPost).not.toHaveBeenCalled();
     expect(navigation.navigate).toHaveBeenCalledWith('CommunityJoin');
   });
+
+  test('a joined member giving Respect calls reactToPost with post id, true, and author user id', async () => {
+    useCommunityMe.mockReturnValue({
+      me: ME_WITH_PROFILE, loading: false, error: null, refresh: jest.fn(),
+    });
+    loadHub.mockResolvedValue(emptyHub({ posts: [post()] }));
+    const { list } = await render();
+    const itemEl = list.props.renderItem({ item: list.props.data[0] });
+    let itemTree = null;
+    act(() => { itemTree = create(itemEl); });
+    const respectBtn = itemTree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Give this respect' && typeof n.props.onPress === 'function',
+    )[0];
+    await act(async () => { respectBtn.props.onPress(); });
+    // Founder order 2026-09-22 item 1 (review R-01): the author id must reach reactToPost or no push fires.
+    expect(reactToPost).toHaveBeenCalledWith('p1', true, 'u2');
+  });
 });
 
 describe('state 2: joined, nothing followed yet', () => {
