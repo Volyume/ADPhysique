@@ -9178,3 +9178,39 @@ rulings below are the lead's, under D33, on how.
    day's proposals draw on are `docs/audit/community-audit-2026-09-22/`
    (A: adoption, visibility, look, copy; B: functionality, backend,
    safety, engineering).
+
+## D195 — Community proposals 1 to 11, executed in order under the lead's orchestration (founder order 2026-09-22)
+
+Founder: "Do 1-11 in order. Utilise the lowest level agent suitable and you do
+the plan and design and thinking and orchestration so we preserve tokens."
+Then: "You need to manage and ensure it's done to the highest standard also."
+Operating pattern for every item: a Sonnet or Haiku build lane on disjoint
+files, two lanes at a time, supervised on an eight-minute check-in; the lead
+reads every diff against the brief; a fresh-eyes adversarial review lane per
+item (Sonnet; Opus for the server-side safety items); full gate over the
+settled tree; one commit per item; merged to main and pushed the same step.
+
+1. **Item 1, pushes (landed `5441df58`, follow wiring and the Hub's Respect
+   author id in `92580e80`).** Every provable action notifies once, from the
+   lib wrapper that knows its recipient, after the server confirms it, never
+   on a negative action or a failure. Respect is centralised in
+   `reactToPost(postId, on, authorId)`. Ruling: two actions stay unwired
+   until the server returns recipients (Respect-all returns a bare count;
+   `community_group_join` exposes no admin list to a requester); the fix is
+   server-side and goes into the next migration batch rather than a guessed
+   or reduced client version.
+2. **Item 2 with 4a (landed `92580e80`).** The labelled header pill; the
+   members-only live row under the Today header with a one-tap Invite; the
+   intro card re-offered once after five further sessions (legacy 'true'
+   reads as one dismissal, so an existing dismisser with five or more
+   sessions sees it once more on their next open: ruled acceptable, it is
+   one more offer, once); Settings opens the Hub; the Hub gains a privacy
+   button. The review's findings (a stale cross-day count painted as
+   today, the network on Home's critical path, the dot's anchor, the cache
+   not cleared on leaving, guard coverage) were fixed before landing.
+3. **Item 3 (built, in adversarial review).** The profile is created the
+   moment "Join Community" is tapped at step 5, fire-and-forget, with the
+   completion-time join kept as the fallback. Lead ruling on a defect the
+   build lane missed: `saveUserBodyProfile` replaces every column, so the
+   early save merges over the existing row and only a known value replaces
+   a stored one.

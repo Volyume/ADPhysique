@@ -33,6 +33,18 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ---
 
+## COMMUNITY PROPOSALS 1 TO 11 (founder order 2026-09-22: "Do 1-11 in order. Utilise the lowest level agent suitable and you do the plan and design and thinking and orchestration") — IN PROGRESS; each item: build lane (Sonnet or Haiku), lead diff review, fresh-eyes adversarial review, full gate, one commit, merged to main
+
+**Landed:** item 1, every provable Community action sends its push (`5441df58`; two server-side gaps recorded in code: Respect-all and group join requests need the server to return recipients, queued for the migration batch). Item 2 with 4a, Community's visible home on Today: labelled header pill, the members-only live row with Invite, the intro card re-offered once, Settings opens the Hub, the Hub gains a privacy button (`92580e80`). Gate at landing: lint 0, tsc 0, imports OK, 1319 suites / 20,463 tests.
+
+**In review:** item 3, the Community profile is created at onboarding step 5 (lead review caught and fixed a replace-not-merge body-profile save that would have nulled a re-running person's wellbeing score and consent flag; adversarial review running).
+
+**Queued, in order:** 4b link previews on the public pages (Haiku); 5 free-text first post (migration 177, WRITTEN NOT APPLIED until the phrase); 6 server-side calm/ED backstop on consistency sharing (migration 178); 7 gym submissions and reports moderation screen (list functions needed, migration 179); 8 look and copy; 9 hygiene (revokes, dead HTML, tests, group kinds); 10 Partners migration 155 (founder confirmation + phrase); 11 side findings (tooling tables RLS, leaked-password setting, two dashboard-only edge functions).
+
+**Side finding for the founder (not fixed, ED-adjacent):** advanceFrom8's own body-profile save at wizard completion passes four fields to a save that replaces every column; on a RE-RUN wizard with an existing row it would null the wellbeing (SCOFF) score and zero the consent flag. Pre-existing, outside item 3's scope; surfaced in chat.
+
+---
+
 ## COMMUNITY STORIES + AUTOMATIC SHARING (founder orders 2026-09-22) — LANDED on main `ec8add4a` (tonnage and PRs on the story card and feed row) and `ead77931` (sharing on by default, to everyone; the share surface under the summary's hero); D194
 
 **The orders.** On a live story: "It does not fucking show tonnage and prs to the community story share!! Turn it on then." Then: "turn it on to automatic ... we can't have story's sharing hidden all the way down the screen as an optional when someone's finished a workout it'll never be used. We need more encouragement."

@@ -1,6 +1,10 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-22 (later) — COMMUNITY PROPOSALS 1 TO 11 UNDER WAY: ITEMS 1 AND 2 ON MAIN (`5441df58`, `92580e80`), ITEM 3 IN REVIEW; D195 ★
+
+Resume from `docs/TASKBOARD.md` (the section at the top) and D195 in the register. Lanes are two at a time, supervised by an eight-minute check-in; every item gets a lead diff review and a fresh-eyes adversarial review before its commit. Migrations written for items 5 to 11 are NOT APPLIED until the founder's phrase.
+
 ## ★ 2026-09-22 — COMMUNITY: STORIES SHOW THE TOTAL LIFTED AND PRS; SHARING ON BY DEFAULT UNDER THE SUMMARY'S HERO (D194); TWO-LANE AUDIT REPORTS IN docs/audit/community-audit-2026-09-22/ ★
 
 Landed on main: `ec8add4a` (story card and feed row lead with tonnage and PRs), `ead77931` (share_sessions defaults ON to everyone; the summary's share strip under the hero; the wizard create carries sharing; guards re-anchored). Register: D194. Board: the section at the top of `docs/TASKBOARD.md`. The audit lanes' reports are the source for the proposals delivered to the founder in chat; nothing from them is built until the founder chooses. Read-only production facts of the day are recorded in D194 item 5.
