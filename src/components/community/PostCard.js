@@ -42,6 +42,7 @@ import Card from '../Card';
 import ProfileAvatarMark from '../ProfileAvatarMark';
 import useTheme from '../../hooks/useTheme';
 import { spacing, type, hitSlop, iconSize } from '../../styles/theme';
+import { formatNumber, formatWithUnit } from '../../lib/format';
 
 /** A short, calm relative day. Never a clock time: a story is a day's work. */
 export function postDayLabel(ms) {
@@ -60,7 +61,9 @@ function number(value) {
 }
 
 /** The eyebrow + hero + supporting line for each kind. Every field is named
- * explicitly; there is no spread of the payload anywhere in this file. */
+ * explicitly; there is no spread of the payload anywhere in this file.
+ * `facts` is the session kind's headline figures (what was lifted, and any
+ * PRs), rendered ahead of `line`; every other kind returns it null. */
 export function bodyForKind(post) {
   const p = post?.payload ?? {};
   switch (post?.kind) {
@@ -68,9 +71,26 @@ export function bodyForKind(post) {
       return {
         eyebrow: p.exerciseName ? `New PR · ${p.exerciseName}` : 'New PR',
         hero: `${p.weight ?? ''} ${p.units ?? 'kg'} x ${p.reps ?? ''}`.trim(),
+        facts: null,
         line: p.previousBest ? `Previous best ${p.previousBest} ${p.units ?? 'kg'}` : null,
       };
     case 'session': {
+      // Founder order 2026-09-22: a session story leads with the total
+      // lifted and any PRs, ahead of the sets, exercises and minutes. Both
+      // figures have ridden in every session payload since the allow-list
+      // was written (`POST_PAYLOAD_KEYS.session`: `tonnage`, `prCount`,
+      // `units`); the card had never printed them. A zero is left out
+      // rather than shown as "0 kg lifted" or "0 PRs": a bodyweight-only
+      // session, or one with no new best, still reads as a session. The
+      // total is worded exactly as the workout summary's own hero ("Total
+      // lifted"), through the same en-GB number helper.
+      const units = p.units === 'lbs' ? 'lbs' : 'kg';
+      const tonnage = number(p.tonnage);
+      const prCount = number(p.prCount);
+      const facts = [
+        tonnage > 0 ? `${formatWithUnit(formatNumber(Math.round(tonnage)), units)} lifted` : null,
+        prCount > 0 ? `${prCount} PR${prCount === 1 ? '' : 's'}` : null,
+      ].filter(Boolean).join(' · ');
       const stats = [
         `${number(p.workingSets)} working sets`,
         `${number(p.exerciseCount)} exercises`,
@@ -79,6 +99,7 @@ export function bodyForKind(post) {
       return {
         eyebrow: p.planName ? `Session · ${p.planName}` : 'Session',
         hero: p.sessionName ?? 'Session',
+        facts: facts || null,
         line: stats.join(' · '),
       };
     }
@@ -87,6 +108,7 @@ export function bodyForKind(post) {
       return {
         eyebrow: p.planName ? `Block complete · ${p.planName}` : 'Block complete',
         hero: `${number(p.weeks)} weeks · ${number(p.sessions)} sessions`,
+        facts: null,
         line: lifts.length
           ? lifts.map((l) => `${l?.exerciseName ?? 'Lift'} +${l?.deltaKg ?? 0} ${l?.units ?? 'kg'}`).join(' · ')
           : null,
@@ -96,10 +118,11 @@ export function bodyForKind(post) {
       return {
         eyebrow: p.eyebrow ?? 'Milestone',
         hero: `${p.heroValue ?? ''}${p.heroUnit ? ` ${p.heroUnit}` : ''}`.trim(),
+        facts: null,
         line: p.caption ?? null,
       };
     default:
-      return { eyebrow: null, hero: null, line: null };
+      return { eyebrow: null, hero: null, facts: null, line: null };
   }
 }
 
@@ -107,7 +130,7 @@ export default function PostCard({
   post, author, myReaction = false, onPress, onReact, onOpenAuthor, onMessageAuthor,
 }) {
   const t = useTheme();
-  const { eyebrow, hero, line } = bodyForKind(post);
+  const { eyebrow, hero, facts, line } = bodyForKind(post);
   const handle = author?.handle ? `@${author.handle}` : '';
   const day = postDayLabel(post?.created_at);
 
@@ -142,6 +165,9 @@ export default function PostCard({
         {eyebrow ? <Text style={[styles.eyebrow, { color: t.colors.textPrimary }]}>{eyebrow}</Text> : null}
         {hero ? (
           <Text style={[styles.hero, t.type.num('body'), { color: t.colors.textPrimary }]}>{hero}</Text>
+        ) : null}
+        {facts ? (
+          <Text style={[styles.facts, t.type.num('bodySm'), { color: t.colors.textPrimary }]}>{facts}</Text>
         ) : null}
         {line ? (
           <Text style={[styles.line, { color: t.colors.textSecondary }]}>{line}</Text>
@@ -210,6 +236,7 @@ const styles = StyleSheet.create({
   body: { gap: spacing.xxs },
   eyebrow: { ...type.captionStrong },
   hero: {},
+  facts: {},
   line: { ...type.caption },
   caption: { ...type.bodySm },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl },

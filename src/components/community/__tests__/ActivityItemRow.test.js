@@ -23,6 +23,7 @@ jest.mock('../../../store/useAppStore', () => ({
 
 import ActivityItemRow, { activityItemLines } from '../ActivityItemRow';
 import { resolveTheme, hitSlop } from '../../../styles/theme';
+import { formatNumber, formatWithUnit } from '../../../lib/format';
 
 const THEME = resolveTheme({
   theme: undefined, largerText: undefined, higherContrast: undefined, colorBlindSafe: undefined,
@@ -85,6 +86,23 @@ describe('activityItemLines: every kind reads the allow-listed payload fields', 
     });
     expect(lines.headline).toBe('Upper A');
     expect(lines.figures).toBe('52 min · 18 sets · 2 PRs · Tue');
+  });
+
+  test('session: the total lifted leads the figures when the payload carries it (founder order 2026-09-22)', () => {
+    const lines = activityItemLines({
+      kind: 'session',
+      created_at: Date.now(),
+      payload: {
+        sessionName: 'Upper A', workingSets: 18, duration: 52, prCount: 2, tonnage: 5400, units: 'kg',
+        date: '2026-09-08T09:00:00.000Z',
+      },
+    });
+    expect(lines.figures).toBe(`${formatWithUnit(formatNumber(5400), 'kg')} · 52 min · 18 sets · 2 PRs · Tue`);
+    const lbs = activityItemLines({
+      kind: 'session',
+      payload: { sessionName: 'Upper A', workingSets: 18, duration: 52, tonnage: 11905, units: 'lbs' },
+    });
+    expect(lbs.figures.startsWith(`${formatWithUnit(formatNumber(11905), 'lbs')} · `)).toBe(true);
   });
 
   test('block: the plan name, then weeks and sessions', () => {

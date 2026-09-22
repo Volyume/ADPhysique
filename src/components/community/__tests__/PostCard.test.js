@@ -29,6 +29,7 @@ jest.mock('expo-haptics', () => ({
 }));
 
 import PostCard, { bodyForKind, postDayLabel } from '../PostCard';
+import { formatNumber, formatWithUnit } from '../../../lib/format';
 
 const AUTHOR = {
   user_id: 'u2', handle: 'rowan_lifts', display_name: 'Rowan M', avatar_preset: null,
@@ -90,6 +91,55 @@ const POSTS = {
     },
   },
 };
+
+describe('a session story leads with the total lifted and any PRs (founder order 2026-09-22)', () => {
+  // The payload had carried `tonnage` and `prCount` since the allow-list
+  // was written; the card printed neither until this order. Both now sit
+  // on their own line ahead of the sets, exercises and minutes, worded as
+  // the workout summary's own "Total lifted" hero and formatted en-GB.
+  const LIFTED = formatWithUnit(formatNumber(5400), 'kg');
+
+  test('the fixture session shows "5,400 kg lifted · 1 PR" above the sets line', () => {
+    const body = bodyForKind(POSTS.session);
+    expect(body.facts).toBe(`${LIFTED} lifted · 1 PR`);
+    expect(body.line).toBe('18 working sets · 6 exercises · 55 min');
+    const tree = render(POSTS.session);
+    const text = texts(tree);
+    expect(text).toContain(`${LIFTED} lifted · 1 PR`);
+    expect(text.indexOf('lifted')).toBeLessThan(text.indexOf('working sets'));
+    act(() => { tree.unmount(); });
+  });
+
+  test('more than one PR pluralises', () => {
+    const post = { ...POSTS.session, payload: { ...POSTS.session.payload, prCount: 3 } };
+    expect(bodyForKind(post).facts).toBe(`${LIFTED} lifted · 3 PRs`);
+  });
+
+  test('an lbs session keeps its own unit', () => {
+    const post = { ...POSTS.session, payload: { ...POSTS.session.payload, units: 'lbs', tonnage: 11905 } };
+    expect(bodyForKind(post).facts).toBe(`${formatWithUnit(formatNumber(11905), 'lbs')} lifted · 1 PR`);
+  });
+
+  test('a zero is left out, never printed as "0 kg lifted" or "0 PRs"', () => {
+    const noPr = { ...POSTS.session, payload: { ...POSTS.session.payload, prCount: 0 } };
+    expect(bodyForKind(noPr).facts).toBe(`${LIFTED} lifted`);
+    const bodyweightOnly = { ...POSTS.session, payload: { ...POSTS.session.payload, tonnage: 0 } };
+    expect(bodyForKind(bodyweightOnly).facts).toBe('1 PR');
+    const neither = { ...POSTS.session, payload: { ...POSTS.session.payload, tonnage: 0, prCount: 0 } };
+    expect(bodyForKind(neither).facts).toBeNull();
+    const tree = render(neither);
+    const text = texts(tree);
+    expect(text).not.toContain('lifted');
+    expect(text).not.toContain('PR');
+    act(() => { tree.unmount(); });
+  });
+
+  test('every other kind returns no facts line', () => {
+    for (const kind of ['pr', 'block', 'milestone']) {
+      expect(bodyForKind(POSTS[kind]).facts).toBeNull();
+    }
+  });
+});
 
 describe('every story kind renders a body', () => {
   test.each(Object.keys(POSTS))('%s', (kind) => {

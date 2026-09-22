@@ -62,6 +62,7 @@ import {
 } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { localDayKey, todayLocalKey } from '../../lib/dayKey';
+import { formatNumber, formatWithUnit } from '../../lib/format';
 
 const AVATAR = 32;
 const RING = 10;
@@ -98,7 +99,13 @@ export function activityItemLines(post) {
     case 'session': {
       const prCount = count(p.prCount);
       const day = weekdayShort(p.date ?? post?.created_at);
+      // Founder order 2026-09-22: the total lifted leads the figures, the
+      // same field (`tonnage`, in `units`) the story card now prints. A
+      // zero (bodyweight-only session) is left out, as the PR figure is.
+      const tonnage = count(p.tonnage);
+      const units = p.units === 'lbs' ? 'lbs' : 'kg';
       const figures = [
+        tonnage > 0 ? formatWithUnit(formatNumber(Math.round(tonnage)), units) : null,
         `${count(p.duration)} min`,
         `${count(p.workingSets)} sets`,
         prCount ? `${prCount} PR${prCount === 1 ? '' : 's'}` : null,
