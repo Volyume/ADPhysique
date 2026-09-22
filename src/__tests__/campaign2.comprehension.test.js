@@ -106,8 +106,10 @@ describe('TRAINING comprehension', () => {
 
 describe('EFFORT comprehension', () => {
   test('the reps-short instruction is explained in the founder\'s register, without failure worship', () => {
-    expect(GLOSSARY.rir).toMatch(/finish the set when you believe you could still do about 2 good reps/);
-    expect(GLOSSARY.rir).toMatch(/never depends on taking every set to failure/);
+    // RE-ANCHORED 2026-09-22 (founder order): the reps-in-reserve gloss is
+    // retired with its only call site, the block sheet. Intent kept: nothing
+    // in the app claims to MEASURE reps in reserve, because nothing explains it.
+    expect(GLOSSARY.rir).toBeUndefined();
   });
 
   test('the working-sets count is by set type, never by how the set felt', () => {

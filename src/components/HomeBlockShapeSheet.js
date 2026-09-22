@@ -71,7 +71,8 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext, 
           Each week the effort target moves a step closer to failure, so the same sets keep asking more of you. The recovery week eases both sets and effort so fatigue clears. When the block finishes, you choose what comes next. Nothing starts on its own. How each muscle goes this block shapes where its sets start in the next one.
         </Text>
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.deload}</Text>
-        <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.rir}</Text>
+        {/* Founder order 2026-09-22 (and 2026-09-17 before the revert): the
+            block sheet does not explain reps in reserve. */}
         {currentMesoWeek?.awaitingDecision && onChooseNext ? (
           <Button
             variant="primary"

@@ -1336,7 +1336,9 @@ describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, 
     // The chip publishes "stop N short of failure" and opens the only sheet
     // that defines it; its label named the block and nothing else.
     expect(home).toContain('accessibilityLabel="See the shape of your training block and what the effort target means"');
-    expect(read('components/HomeBlockShapeSheet.js')).toContain('GLOSSARY.rir');
+    // RE-ANCHORED 2026-09-22 (founder order): the block sheet does not explain
+    // reps in reserve.
+    expect(read('components/HomeBlockShapeSheet.js')).not.toContain('GLOSSARY.rir');
   });
 
   test('Est. max claims only the evidence it has (C5-P14-03, re-pinned for phase 2B)', () => {
