@@ -186,4 +186,19 @@ describe('a reader with a Community profile', () => {
     expect(typeof card.props.onReact).toBe('function');
     act(() => { footer.unmount(); header.unmount(); tree.unmount(); });
   });
+
+  test('tapping Respect calls reactToPost with post id, true, and author user id', async () => {
+    const { reactToPost } = require('../../lib/community');
+    const { tree } = await mount();
+    const header = part(tree, 'ListHeaderComponent');
+
+    const card = header.root.findAll(
+      (n) => typeof n.type === 'function' && n.props && 'myReaction' in n.props,
+    )[0];
+    expect(typeof card.props.onReact).toBe('function');
+    await act(async () => { card.props.onReact(true); });
+    // Founder order 2026-09-22 item 1 (review R-01): the author id must reach reactToPost or no push fires.
+    expect(reactToPost).toHaveBeenCalledWith('post1', true, 'u2');
+    act(() => { header.unmount(); tree.unmount(); });
+  });
 });

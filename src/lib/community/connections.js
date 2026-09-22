@@ -24,6 +24,7 @@
 import { callCommunity, CommunityError } from './transport';
 import { cleanOptionalText } from './validation';
 import { TP_DAYS, TP_TIME_BANDS } from './trainingProfile';
+import { notifyCommunityEvent } from './notify';
 
 export const DEFAULT_PAGE_SIZE = 30;
 
@@ -147,22 +148,35 @@ export async function connect(targetUserId, { reasons = [], note = null } = {}) 
       cleaned.reason === 'content_not_allowed' ? 'content_not_allowed' : 'invalid_input',
     );
   }
-  return callCommunity('community_connect', {
+  const card = await callCommunity('community_connect', {
     _target: targetUserId,
     _reasons: cleanReasons(reasons),
     _note: cleaned.value,
   });
+  // Fires on the idempotent "already requested/connected" return path
+  // too (community_connect's own early RETURN, migrate_161): that is
+  // harmless rather than wrong, because the server's own proof re-checks
+  // the request row's recency (community-notify step 2) and its replay
+  // guard (step 5b), so a retry that created nothing new is refused
+  // in_app there rather than filtered here. CONNECT_KINDS carry no ref of
+  // their own (the connection row is proof enough), so refId is null.
+  notifyCommunityEvent('connect_request', targetUserId, null);
+  return card;
 }
 
 /**
  * Accept or decline a request. Accepting makes both people follow each
- * other, even across followers-only profiles; declining is silent.
+ * other, even across followers-only profiles, and notifies the requester
+ * (target = requesterId); declining is silent, both server-side (no
+ * activity row) and here.
  */
 export async function respondToConnect(requesterId, accept) {
   if (!requesterId) throw new CommunityError('invalid_input');
-  return callCommunity('community_respond_connect', {
+  const card = await callCommunity('community_respond_connect', {
     _requester: requesterId, _accept: !!accept,
   });
+  if (accept) notifyCommunityEvent('connect_accepted', requesterId, null);
+  return card;
 }
 
 /** Take back a request that has not been answered. */

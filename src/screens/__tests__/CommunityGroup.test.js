@@ -303,6 +303,35 @@ test('closeGroup fires from the menu for an admin', async () => {
   expect(closeGroup).toHaveBeenCalledWith('g1');
 });
 
+test('a member giving Respect on a group feed item calls reactToPost with post id, true, and author user id', async () => {
+  const { reactToPost } = require('../../lib/community');
+  const feedItem = {
+    post: { id: 'p2', kind: 'session', payload: {}, caption: null, reaction_count: 0, comment_count: 0, created_at: Date.now() },
+    author: { user_id: 'u3', handle: 'john_doe', display_name: 'John Doe' },
+    myReaction: false,
+  };
+  getGroup.mockResolvedValue({ ...OPEN_GROUP, myRole: 'member', myState: 'member' });
+  loadGroupFeed.mockResolvedValue({ rows: [feedItem], cursor: null });
+  const { tree } = await mount();
+  // Find component with renderItem prop (the screen passes it to FlashList)
+  let flashListProps = null;
+  tree.root.findAll((n) => {
+    if (n.props?.renderItem && n.props?.data) {
+      flashListProps = n.props;
+    }
+  });
+  expect(flashListProps).toBeTruthy();
+  const itemEl = flashListProps.renderItem({ item: feedItem });
+  let itemTree = null;
+  act(() => { itemTree = create(itemEl); });
+  const respectBtn = itemTree.root.findAll(
+    (n) => n.props?.accessibilityLabel === 'Give this respect' && typeof n.props.onPress === 'function',
+  )[0];
+  await act(async () => { respectBtn.props.onPress(); });
+  // Founder order 2026-09-22 item 1 (review R-01): the author id must reach reactToPost or no push fires.
+  expect(reactToPost).toHaveBeenCalledWith('p2', true, 'u3');
+});
+
 // ─── Early days (26-EARLY-DAYS-SPEC.md 1.7): the invite link's token ───
 
 describe('an invite link into the group', () => {

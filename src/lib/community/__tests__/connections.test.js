@@ -29,8 +29,16 @@ jest.mock('../transport', () => {
   }
   return { callCommunity: jest.fn(async () => ({})), CommunityError };
 });
+// Founder order 2026-09-22 (item 1, "wire the pushes"): connections.js now
+// calls notifyCommunityEvent, so it must be mocked here too -- the real
+// notify.js reaches for invokeCommunityFunction, which the transport mock
+// above does not export, and calling that undefined value would throw
+// synchronously into connect()/respondToConnect() the moment a test
+// exercises the accept/request path.
+jest.mock('../notify', () => ({ notifyCommunityEvent: jest.fn() }));
 
 const { callCommunity } = require('../transport');
+const { notifyCommunityEvent } = require('../notify');
 const {
   connect, respondToConnect, withdrawConnect, removeConnection, listConnections,
   setConnectFrom, setPartner,
@@ -166,6 +174,49 @@ describe('answering, withdrawing and removing', () => {
     await expect(respondToConnect(null, true)).rejects.toMatchObject({ code: 'invalid_input' });
     await expect(withdrawConnect('')).rejects.toMatchObject({ code: 'invalid_input' });
     await expect(removeConnection(undefined)).rejects.toMatchObject({ code: 'invalid_input' });
+  });
+});
+
+// Founder order 2026-09-22 (item 1, "wire the pushes"; audit A-01/Q5,
+// B-01): connect() and respondToConnect(..., true) are two of the eleven
+// provable actions that never reached notifyCommunityEvent at all.
+describe('notifying (founder order 2026-09-22, item 1)', () => {
+  test('a successful connect notifies connect_request, target = the invitee, no ref', async () => {
+    callCommunity.mockResolvedValue({ connection: 'requested_by_me' });
+    await connect('u2', { reasons: ['same_gym'] });
+    expect(notifyCommunityEvent).toHaveBeenCalledTimes(1);
+    expect(notifyCommunityEvent).toHaveBeenCalledWith('connect_request', 'u2', null);
+  });
+
+  test('a refused connect never notifies', async () => {
+    callCommunity.mockRejectedValue(Object.assign(new Error('connect_not_allowed'), { code: 'connect_not_allowed' }));
+    await expect(connect('u2', {})).rejects.toMatchObject({ code: 'connect_not_allowed' });
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  test('accepting notifies connect_accepted, target = the requester, no ref', async () => {
+    callCommunity.mockResolvedValue({ connection: 'connected' });
+    await respondToConnect('u2', true);
+    expect(notifyCommunityEvent).toHaveBeenCalledTimes(1);
+    expect(notifyCommunityEvent).toHaveBeenCalledWith('connect_accepted', 'u2', null);
+  });
+
+  test('declining never notifies', async () => {
+    callCommunity.mockResolvedValue({ connection: 'none' });
+    await respondToConnect('u2', false);
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  test('a failed respond never notifies', async () => {
+    callCommunity.mockRejectedValue(Object.assign(new Error('not_found'), { code: 'not_found' }));
+    await expect(respondToConnect('u2', true)).rejects.toMatchObject({ code: 'not_found' });
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  test('withdrawing and removing never notify', async () => {
+    await withdrawConnect('u2');
+    await removeConnection('u2');
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
   });
 });
 

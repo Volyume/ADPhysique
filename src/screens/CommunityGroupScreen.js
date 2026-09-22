@@ -152,7 +152,7 @@ export default function CommunityGroupScreen({ navigation, route }) {
       ? { ...r, myReaction: on, post: { ...r.post, reaction_count: Math.max(0, Number(r.post.reaction_count ?? 0) + (on ? 1 : -1)) } }
       : r)));
     try {
-      await reactToPost(item.post.id, on);
+      await reactToPost(item.post.id, on, item.author?.user_id);
     } catch (_e) {
       // A reaction that did not land is not worth interrupting for; the
       // next refresh shows the truth.

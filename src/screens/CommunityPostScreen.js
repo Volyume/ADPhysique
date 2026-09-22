@@ -146,8 +146,10 @@ export default function CommunityPostScreen({ navigation, route }) {
       },
     } : prev));
     try {
-      await reactToPost(post.id, next);
-      if (next) notifyCommunityEvent('reaction', post.author_id, post.id);
+      // The notify call for a Respect tap now lives inside reactToPost
+      // itself (feed.js), the one place every Respect surface shares, so
+      // it is not repeated here (founder order 2026-09-22, item 1).
+      await reactToPost(post.id, next, post.author_id);
     } catch (_e) {
       setMyReaction(previous);
       setData((prev) => (prev ? {

@@ -275,7 +275,11 @@ describe('RECENT (task 6, closing the phase 1 gap)', () => {
       (n) => n.props?.accessibilityLabel === 'Give this respect' && typeof n.props.onPress === 'function',
     )[0];
     await act(async () => { respectBtn.props.onPress(); });
-    expect(reactToPost).toHaveBeenCalledWith('p1', true);
+    // RE-ANCHORED 2026-09-22 (founder order item 1, "wire the pushes"):
+    // reactToPost now takes the author id as a third argument so it can
+    // notify them (feed.js centralises the notify call there); this row's
+    // author is POST_ROW.author.user_id ('u2').
+    expect(reactToPost).toHaveBeenCalledWith('p1', true, 'u2');
   });
 });
 

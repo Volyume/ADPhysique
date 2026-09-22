@@ -469,7 +469,7 @@ export default function CommunityDimensionScreen({ navigation, route }) {
    * identical `ActivityItemRow` component. */
   async function respondRecent(item) {
     try {
-      await reactToPost(item.post.id, !item.myReaction);
+      await reactToPost(item.post.id, !item.myReaction, item.author?.user_id);
       setRecent((prev) => prev.map((r) => {
         if (r.post.id !== item.post.id) return r;
         const on = !item.myReaction;

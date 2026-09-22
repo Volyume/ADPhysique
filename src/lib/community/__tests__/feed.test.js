@@ -34,12 +34,18 @@
 jest.mock('../transport', () => ({ callCommunity: jest.fn() }));
 jest.mock('../profile', () => ({ currentUserId: () => 'u1' }));
 jest.mock('../../dayKey', () => ({ localDayKey: jest.fn(() => '2026-09-10') }));
+// Founder order 2026-09-22 (item 1, "wire the pushes"): reactToPost now
+// calls notifyCommunityEvent, so it must be mocked here too -- the real
+// notify.js reaches for invokeCommunityFunction, which the transport mock
+// above does not export.
+jest.mock('../notify', () => ({ notifyCommunityEvent: jest.fn() }));
 
 const { callCommunity } = require('../transport');
+const { notifyCommunityEvent } = require('../notify');
 const {
   loadHub, loadFeed, listComments, clearCachedHub,
   loadHubSummary, loadDimensionRecent,
-  createPost, setPostNote,
+  createPost, setPostNote, reactToPost,
 } = require('../feed');
 const { loadActivity } = require('../activity');
 
@@ -290,5 +296,38 @@ describe('loadDimensionRecent (community_dimension_recent)', () => {
     expect(callCommunity).toHaveBeenCalledWith('community_dimension_recent', {
       _kind: 'age_band', _key: '25_34', _cursor: null, _limit: 20,
     });
+  });
+});
+
+// Founder order 2026-09-22 (item 1, "wire the pushes"; audit A-01/Q5,
+// B-01): reactToPost is centralised here as the ONE place every Respect
+// surface's notify call lives (CommunityPostScreen, CommunityGroupScreen,
+// CommunityDimensionScreen, CommunityProfileScreen and CommunityHubScreen
+// all call this one wrapper), rather than repeated at each call site.
+describe('reactToPost: notifying (founder order 2026-09-22, item 1)', () => {
+  test('turning Respect on notifies reaction, target = the author, ref = the post', async () => {
+    server({ community_react: {} });
+    await reactToPost('p1', true, 'author1');
+    expect(notifyCommunityEvent).toHaveBeenCalledTimes(1);
+    expect(notifyCommunityEvent).toHaveBeenCalledWith('reaction', 'author1', 'p1');
+    expect(callCommunity).toHaveBeenCalledWith('community_react', { _post_id: 'p1', _on: true });
+  });
+
+  test('turning Respect off never notifies', async () => {
+    server({ community_react: {} });
+    await reactToPost('p1', false, 'author1');
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  test('no author id (e.g. a caller that has not loaded one) never notifies', async () => {
+    server({ community_react: {} });
+    await reactToPost('p1', true, null);
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  test('a refused reaction never notifies', async () => {
+    server({ community_react: refusal('blocked') });
+    await expect(reactToPost('p1', true, 'author1')).rejects.toMatchObject({ code: 'blocked' });
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
   });
 });

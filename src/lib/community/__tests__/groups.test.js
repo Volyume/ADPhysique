@@ -25,8 +25,14 @@ jest.mock('../transport', () => {
   }
   return { callCommunity: jest.fn(async () => ({})), CommunityError };
 });
+// Founder order 2026-09-22 (item 1, "wire the pushes"): approveGroupRequest
+// and inviteToGroup now call notifyCommunityEvent, so it must be mocked
+// here too -- the real notify.js reaches for invokeCommunityFunction,
+// which the transport mock above does not export.
+jest.mock('../notify', () => ({ notifyCommunityEvent: jest.fn() }));
 
 const { callCommunity } = require('../transport');
+const { notifyCommunityEvent } = require('../notify');
 const {
   createGroup, updateGroup, closeGroup, leaveGroup, joinGroup,
   approveGroupRequest, removeGroupMember, promoteGroupMember,
@@ -119,6 +125,67 @@ test('inviteToGroup lower-cases and trims the handle', async () => {
   const out = await inviteToGroup('g1', '  Rowan  ');
   expect(callCommunity).toHaveBeenCalledWith('community_group_invite', { _group_id: 'g1', _handle: 'rowan' });
   expect(out).toEqual({ invited: 'u3' });
+});
+
+// Founder order 2026-09-22 (item 1, "wire the pushes"; audit A-01/Q5,
+// B-01, B-09): approveGroupRequest and inviteToGroup are two of the
+// eleven provable actions that never reached notifyCommunityEvent at
+// all; group_request/group_accepted/group_invited were also missing
+// from COMMUNITY_NOTIFY_KINDS (B-09), so even a wired call would have
+// been dropped client-side before this order.
+describe('notifying (founder order 2026-09-22, item 1)', () => {
+  test('approving notifies group_accepted, target = the requester, ref = the group id', async () => {
+    callCommunity.mockResolvedValueOnce({ approved: true });
+    await approveGroupRequest('g1', 'u2');
+    expect(notifyCommunityEvent).toHaveBeenCalledTimes(1);
+    expect(notifyCommunityEvent).toHaveBeenCalledWith('group_accepted', 'u2', 'g1');
+  });
+
+  test('an unapproved response never notifies', async () => {
+    callCommunity.mockResolvedValueOnce({ approved: false });
+    await approveGroupRequest('g1', 'u2');
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  test('a refused approve never notifies', async () => {
+    callCommunity.mockRejectedValueOnce(Object.assign(new Error('not_found'), { code: 'not_found' }));
+    await expect(approveGroupRequest('g1', 'u2')).rejects.toMatchObject({ code: 'not_found' });
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  test('inviting notifies group_invited, target = the invitee id the RPC resolved, ref = the group id', async () => {
+    callCommunity.mockResolvedValueOnce({ invited: 'u3' });
+    await inviteToGroup('g1', 'rowan');
+    expect(notifyCommunityEvent).toHaveBeenCalledTimes(1);
+    expect(notifyCommunityEvent).toHaveBeenCalledWith('group_invited', 'u3', 'g1');
+  });
+
+  test('no resolved invitee id never notifies', async () => {
+    callCommunity.mockResolvedValueOnce({ invited: null });
+    await inviteToGroup('g1', 'rowan');
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  test('a refused invite never notifies', async () => {
+    callCommunity.mockRejectedValueOnce(Object.assign(new Error('not_found'), { code: 'not_found' }));
+    await expect(inviteToGroup('g1', 'rowan')).rejects.toMatchObject({ code: 'not_found' });
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  // STOPPED (see the doc comment on joinGroup in groups.js): the
+  // invite-only branch's recipient is "every admin", but no
+  // client-callable RPC exposes a group's admin list to a caller who is
+  // not yet an accepted member, so this is deliberately left unwired
+  // rather than guessed at (e.g. notifying only created_by). Pinned here
+  // so a future casual "just add the notify call" cannot slip past
+  // review without also answering that gap.
+  test('joinGroup never notifies, on either branch, pending a decision on how to reach every admin', async () => {
+    callCommunity.mockResolvedValueOnce({ state: 'member' });
+    await joinGroup('g1');
+    callCommunity.mockResolvedValueOnce({ state: 'requested' });
+    await joinGroup('g1');
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
 });
 
 test('createGroupInviteLink reduces to {token, expiresAt}', async () => {

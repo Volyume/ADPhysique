@@ -14,6 +14,7 @@
  */
 
 import { callCommunity } from './transport';
+import { notifyCommunityEvent } from './notify';
 
 export const GROUP_NAME_MAX = 40;
 export const GROUP_BLURB_MAX = 140;
@@ -118,6 +119,23 @@ export async function leaveGroup(groupId) {
 /**
  * Join a group. Open groups admit directly ('member'); invite-only
  * groups queue a request ('requested'). Minors refused server-side.
+ *
+ * STOPPED, not wired (founder order 2026-09-22, item 1, "wire the
+ * pushes"): the invite-only branch's recipient is "every admin"
+ * (migrate_165, the comment above `community_group_join`: "Notified to
+ * every admin as `group_request`... the client fans this out to each
+ * admin"), but no client-callable RPC ever hands a caller who is not yet
+ * an accepted member the group's admin list to fan out to --
+ * `community_group_members` refuses with `not_allowed` until
+ * `_community_group_role()` answers non-null, and that helper filters on
+ * `state = 'member'` (a fresh 'requested' row never qualifies, even
+ * though its `role` column is already 'member');
+ * `_community_group_card`/`community_group_get` carry only `created_by`,
+ * the group's ORIGINAL creator, never a current admin list. Notifying
+ * only the creator would be a materially reduced version of "every
+ * admin" shipped without asking (CLAUDE.md section 4: no silent
+ * corner-cutting), so this is left unwired and reported instead of
+ * guessed.
  * @returns {Promise<{state: 'member'|'requested'}>}
  */
 export async function joinGroup(groupId) {
@@ -125,9 +143,11 @@ export async function joinGroup(groupId) {
   return { state: data?.state ?? null };
 }
 
-/** Admin-only: approve a pending join request. */
+/** Admin-only: approve a pending join request. Notifies the requester
+ * (target = userId) once approved. */
 export async function approveGroupRequest(groupId, userId) {
   const data = await callCommunity('community_group_approve', { _group_id: groupId, _user_id: userId });
+  if (data?.approved) notifyCommunityEvent('group_accepted', userId, groupId);
   return { approved: !!data?.approved };
 }
 
@@ -145,11 +165,13 @@ export async function promoteGroupMember(groupId, userId) {
 }
 
 /** Admin-only: invite by handle. The invitee lands in 'invited' state
- * until they accept. */
+ * until they accept, and is notified (target = the invitee's user id --
+ * `community_group_invite` returns it as `invited`, despite the name). */
 export async function inviteToGroup(groupId, handle) {
   const data = await callCommunity('community_group_invite', {
     _group_id: groupId, _handle: String(handle || '').trim().toLowerCase(),
   });
+  if (data?.invited) notifyCommunityEvent('group_invited', data.invited, groupId);
   return { invited: data?.invited ?? null };
 }
 

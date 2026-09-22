@@ -210,7 +210,7 @@ export default function CommunityProfileScreen({ navigation, route }) {
 
   async function react(item) {
     try {
-      await reactToPost(item.post.id, !item.myReaction);
+      await reactToPost(item.post.id, !item.myReaction, item.author?.user_id);
       setData((prev) => (prev ? {
         ...prev,
         posts: (prev.posts ?? []).map((row) => {

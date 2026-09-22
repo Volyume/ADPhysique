@@ -26,8 +26,14 @@ jest.mock('../transport', () => {
   }
   return { callCommunity: jest.fn(async () => ({})), CommunityError };
 });
+// Founder order 2026-09-22 (item 1, "wire the pushes"): sendMessage now
+// calls notifyCommunityEvent, so it must be mocked here too -- the real
+// notify.js reaches for invokeCommunityFunction, which the transport mock
+// above does not export.
+jest.mock('../notify', () => ({ notifyCommunityEvent: jest.fn() }));
 
 const { callCommunity } = require('../transport');
+const { notifyCommunityEvent } = require('../notify');
 const {
   listConversations, listMessages, sendMessage, markRead, deleteMessage,
   placeholderFor, MESSAGE_MAX, MESSAGE_REF_KINDS,
@@ -135,6 +141,38 @@ describe('sending', () => {
   test('a response of the wrong shape leaves nulls behind, never undefined', async () => {
     callCommunity.mockResolvedValue(null);
     expect(await sendMessage('u2', 'hello')).toEqual({ conversation_id: null, message: null });
+  });
+});
+
+// Founder order 2026-09-22 (item 1, "wire the pushes"; audit A-01/Q5,
+// B-01): sendMessage is one of the eleven provable actions that never
+// reached notifyCommunityEvent at all.
+describe('notifying (founder order 2026-09-22, item 1)', () => {
+  test('a successful send notifies message, target = the recipient, ref = the conversation id', async () => {
+    callCommunity.mockResolvedValue({ conversation_id: 'c1', message: { id: 'm1' } });
+    await sendMessage('u2', 'How are you finding week three?');
+    expect(notifyCommunityEvent).toHaveBeenCalledTimes(1);
+    expect(notifyCommunityEvent).toHaveBeenCalledWith('message', 'u2', 'c1');
+  });
+
+  test('never the message body, only the conversation id', async () => {
+    callCommunity.mockResolvedValue({ conversation_id: 'c1', message: { id: 'm1', body: 'secret' } });
+    await sendMessage('u2', 'secret');
+    const [, , ref] = notifyCommunityEvent.mock.calls[0];
+    expect(ref).toBe('c1');
+    expect(JSON.stringify(notifyCommunityEvent.mock.calls[0])).not.toMatch(/secret/);
+  });
+
+  test('a malformed response with no conversation id never notifies', async () => {
+    callCommunity.mockResolvedValue({ message: { id: 'm1' } });
+    await sendMessage('u2', 'hello');
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  test('a refused send never notifies', async () => {
+    callCommunity.mockRejectedValue(Object.assign(new Error('not_connected'), { code: 'not_connected' }));
+    await expect(sendMessage('u2', 'hello')).rejects.toMatchObject({ code: 'not_connected' });
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
   });
 });
 

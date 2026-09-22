@@ -21,6 +21,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { callCommunity } from './transport';
 import { currentUserId } from './profile';
 import { localDayKey } from '../dayKey';
+import { notifyCommunityEvent } from './notify';
 
 export const HUB_CACHE_PREFIX = '@volyume_community_hub_';
 export const DEFAULT_PAGE_SIZE = 20;
@@ -282,9 +283,25 @@ export async function getPost(id) {
   return callCommunity('community_get_post', { _id: id });
 }
 
-/** One "Respect" tap, on or off. */
-export async function reactToPost(postId, on) {
-  return callCommunity('community_react', { _post_id: postId, _on: !!on });
+/**
+ * One "Respect" tap, on or off.
+ *
+ * Notify is centralised here, ONE place for every Respect tap in the app
+ * (founder order 2026-09-22, item 1: "wire the pushes"), rather than
+ * repeated at each of the five screens that render a Respect control:
+ * every caller passes the post's own already-loaded `author.user_id` as
+ * `authorId`, and this is the only place that turns a successful "on"
+ * tap into a notify call.
+ *
+ * @param {string} postId
+ * @param {boolean} on
+ * @param {string|null} [authorId] the post's author; omitted (or turning
+ *   Respect off) sends no push.
+ */
+export async function reactToPost(postId, on, authorId = null) {
+  const out = await callCommunity('community_react', { _post_id: postId, _on: !!on });
+  if (on && authorId) notifyCommunityEvent('reaction', authorId, postId);
+  return out;
 }
 
 export async function addComment(targetKind, targetId, body) {

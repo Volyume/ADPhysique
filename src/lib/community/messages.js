@@ -25,6 +25,7 @@
 
 import { callCommunity, CommunityError } from './transport';
 import { cleanText } from './validation';
+import { notifyCommunityEvent } from './notify';
 
 export const DEFAULT_PAGE_SIZE = 30;
 
@@ -171,8 +172,14 @@ export async function sendMessage(targetUserId, body, { refKind = null, refId = 
     _ref_id: kind && kind !== 'session' ? refId : null,
     _ref_payload: kind === 'session' ? refPayload : null,
   });
+  const conversationId = data?.conversation_id ?? null;
+  // The contract's own ref for this kind: the conversation, which becomes
+  // `data.conversation_id` server-side so the tap route opens it (never
+  // the message body). Skipped on the malformed-response edge case where
+  // the RPC answered no conversation id at all -- nothing to prove.
+  if (conversationId) notifyCommunityEvent('message', targetUserId, conversationId);
   return {
-    conversation_id: data?.conversation_id ?? null,
+    conversation_id: conversationId,
     message: data?.message ?? null,
   };
 }

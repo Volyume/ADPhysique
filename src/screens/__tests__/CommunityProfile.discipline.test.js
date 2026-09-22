@@ -211,6 +211,29 @@ describe('the progress strip on someone else\'s profile', () => {
   });
 });
 
+describe('giving Respect on a profile post', () => {
+  test('calls reactToPost with post id, true, and author user id', async () => {
+    const { reactToPost } = require('../../lib/community');
+    const postItem = {
+      post: { id: 'p3', kind: 'session', payload: {}, caption: null, reaction_count: 0, comment_count: 0, created_at: Date.now() },
+      author: OTHER_CARD,
+      myReaction: false,
+    };
+    getProfile.mockResolvedValue({ card: OTHER_CARD, viewable: true, posts: [postItem] });
+    const { tree } = await mount();
+    const list = tree.root.findAll((n) => n.type === 'FlatList')[0];
+    const itemEl = list.props.renderItem({ item: postItem });
+    let itemTree = null;
+    act(() => { itemTree = create(itemEl); });
+    const respectBtn = itemTree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Give this respect' && typeof n.props.onPress === 'function',
+    )[0];
+    await act(async () => { respectBtn.props.onPress(); });
+    // Founder order 2026-09-22 item 1 (review R-01): the author id must reach reactToPost or no push fires.
+    expect(reactToPost).toHaveBeenCalledWith('p3', true, 'u2');
+  });
+});
+
 describe('the owner\'s own profile keeps the device path', () => {
   test('still reads local consistency, independent of whether the own card carries counters', async () => {
     const OWN_CARD = { ...OTHER_CARD, user_id: 'u1', handle: 'rowan' };

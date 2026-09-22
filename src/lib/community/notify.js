@@ -27,6 +27,17 @@ export const COMMUNITY_NOTIFY_KINDS = Object.freeze([
   // time. The push body is "New message from @handle" and NEVER the
   // content, so a locked screen cannot leak a conversation.
   'connect_request', 'connect_accepted', 'message',
+  // RE-ANCHORED 2026-09-22 (founder order item 1, "wire the pushes"; B-09):
+  // this was an eight-kind list. `community-notify` (migrate_165, design
+  // 60 §3) has supported these three group kinds server-side since they
+  // shipped -- `pushCopy`/`categoryFor` already handle all three -- but no
+  // client call site ever named them, so the client's own allow-list
+  // silently dropped any future attempt to notify on a group event before
+  // it ever reached the edge function. `group_request`/`group_invited`
+  // fan out from the join/invite RPCs; `group_accepted` from the approval
+  // one. All three ride the community_follow category budget, same as the
+  // connection kinds above (index.ts categoryFor).
+  'group_request', 'group_accepted', 'group_invited',
 ]);
 
 /**
