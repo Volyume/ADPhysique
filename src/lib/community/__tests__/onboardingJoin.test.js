@@ -127,6 +127,7 @@ describe('performCommunityJoin: the success order', () => {
     expect(suggestHandle).toHaveBeenCalledTimes(1);
     expect(upsertProfile).toHaveBeenCalledWith({
       handle: 'suggested_1', display_name: 'Rowan', visibility: 'public',
+      share_sessions: true, sessions_audience: 'everyone',
     });
     expect(setGyms).toHaveBeenCalledWith('g1', []);
     expect(loadMe).toHaveBeenCalledWith({ force: true, userId: 'u1' });
@@ -141,6 +142,7 @@ describe('performCommunityJoin: the success order', () => {
     expect(suggestHandle).not.toHaveBeenCalled();
     expect(upsertProfile).toHaveBeenCalledWith({
       handle: 'rowan_lifts', display_name: 'Rowan', visibility: 'public',
+      share_sessions: true, sessions_audience: 'everyone',
     });
   });
 
@@ -149,12 +151,17 @@ describe('performCommunityJoin: the success order', () => {
     expect(setGyms).not.toHaveBeenCalled();
   });
 
-  test('the profile call never carries an avatar preset, discipline keys or a sharing toggle (CR-13: sharing stays OFF)', async () => {
+  // RE-ANCHORED 2026-09-22 (founder order supersedes CR-13): "Share what I
+  // did" is on by default, to everyone, and the wizard's step says so above
+  // its Join button, so the create carries it. Avatar preset, discipline
+  // keys and the rules version still never travel from here.
+  test('the profile call carries sharing on (to everyone) and never an avatar preset, discipline keys or a rules version', async () => {
     await performCommunityJoin('u1', { handle: 'rowan_lifts', displayName: 'Rowan', gymId: null });
     const sent = upsertProfile.mock.calls[0][0];
     expect(sent).not.toHaveProperty('avatar_preset');
     expect(sent).not.toHaveProperty('discipline_keys');
-    expect(sent).not.toHaveProperty('share_sessions');
+    expect(sent.share_sessions).toBe(true);
+    expect(sent.sessions_audience).toBe('everyone');
     expect(sent).not.toHaveProperty('accept_rules_version');
   });
 
@@ -273,7 +280,10 @@ describe('performCommunityJoin: lead review 2026-09-11 (existing profile, empty 
 
   test('an empty name falls back to the handle the server suggested, so a retry can never refuse forever', async () => {
     await performCommunityJoin('u1', { handle: null, displayName: '  ', gymId: null });
-    expect(upsertProfile).toHaveBeenCalledWith({ handle: 'suggested_1', display_name: 'suggested_1', visibility: 'public' });
+    expect(upsertProfile).toHaveBeenCalledWith({
+      handle: 'suggested_1', display_name: 'suggested_1', visibility: 'public',
+      share_sessions: true, sessions_audience: 'everyone',
+    });
   });
 
   test('two overlapping joins for one account run once and share the answer', async () => {

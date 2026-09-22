@@ -388,8 +388,10 @@ describe('only the opted-in bands are sent', () => {
     expect(payload.share_consistency).toBe(false);
     // Phase 3 (spec section 1): `share_sessions`/`sessions_audience`
     // always travel too, the identical shape.
-    expect(payload.share_sessions).toBe(false);
-    expect(payload.sessions_audience).toBe('followers');
+    // RE-ANCHORED 2026-09-22 (founder order: "Share what I did" is on by
+    // default, to everyone): the defaults now travel as true / 'everyone'.
+    expect(payload.share_sessions).toBe(true);
+    expect(payload.sessions_audience).toBe('everyone');
   });
 
   test('a band whose toggle is off is ABSENT, not sent as null', () => {
@@ -421,7 +423,10 @@ describe('only the opted-in bands are sent', () => {
 
     const off = shareablePayload(BANDS, { ...TP_DEFAULT_SHARE, share_sessions: false });
     expect(off.share_sessions).toBe(false);
-    expect(off.sessions_audience).toBe('followers');
+    // RE-ANCHORED 2026-09-22 (founder order): an ABSENT audience reads as
+    // the default, now 'everyone'; an unrecognised one still fails closed
+    // to followers (the test below).
+    expect(off.sessions_audience).toBe('everyone');
   });
 
   test('an unrecognised sessions_audience value falls back to followers, never travels raw', () => {

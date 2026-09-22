@@ -478,3 +478,43 @@ describe('F12: emptyMe().is_minor defaults to true, and the two screens with lit
     expect(source).toMatch(/\{meLoading \? null : isMinor \? \(/);
   });
 });
+
+// Founder order 2026-09-22 ("we can't have story sharing hidden all the way
+// down the screen as an optional ... we need more encouragement"): the
+// Community share surface sits under the summary's hero, states what
+// actually happened to the session, and never appears under calm mode or an
+// open ED flag. Source-pinned, this screen's own convention.
+describe('the Community share strip under the hero (founder order 2026-09-22, source-pinned on WorkoutSummaryScreen.js)', () => {
+  const SOURCE = fs.readFileSync(path.join(__dirname, '../screens/WorkoutSummaryScreen.js'), 'utf8');
+
+  test('the strip renders before the stats grid, only once the calm read, the outcome and the membership are known, and never under suppression', () => {
+    const strip = SOURCE.indexOf('styles.shareStrip}');
+    const grid = SOURCE.indexOf('styles.statsGrid}');
+    expect(strip).toBeGreaterThan(-1);
+    expect(strip).toBeLessThan(grid);
+    expect(SOURCE).toMatch(/\{!readOnly && workoutId && calmKnown && !calmSuppressed && shareStripState \? \(/);
+    expect(SOURCE).toMatch(/setCalmSuppressed\(suppressed\);\n\s*setCalmKnown\(true\);/);
+  });
+
+  test('the quiet button at the bottom survives only for a suppressed summary', () => {
+    expect(SOURCE).toMatch(/\{!readOnly && workoutId && calmSuppressed \? \(/);
+  });
+
+  test('the auto-share effect records every outcome and never sends a doomed create for a device with no cached profile', () => {
+    const start = SOURCE.indexOf('ambientPublishedRef.current = true;');
+    const end = SOURCE.indexOf('}, [readOnly, workoutId, user?.id]);', start);
+    expect(start).toBeGreaterThan(-1);
+    expect(end).toBeGreaterThan(start);
+    const body = SOURCE.slice(start, end);
+    expect(body.indexOf('readCachedMe(user.id)')).toBeLessThan(body.indexOf('publishAmbientItems('));
+    expect(body).toMatch(/skipped: 'no_profile'/);
+    expect(body).toMatch(/skipped: 'sharing_off'/);
+    expect(body).toMatch(/setAmbientOutcome\(out/);
+  });
+
+  test('a queued (offline) share never offers a second, duplicating post', () => {
+    const at = SOURCE.indexOf('ambientOutcome.queued > 0');
+    expect(at).toBeGreaterThan(-1);
+    expect(SOURCE.slice(at, at + 400)).toMatch(/action: null/);
+  });
+});

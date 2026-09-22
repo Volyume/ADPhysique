@@ -234,4 +234,13 @@ describe('copy', () => {
     expect(STEP5).toContain('Only training facts are ever shared: never your body, your food or your location.');
     expect(STEP5).toContain('Only the gym you choose. Never your location.');
   });
+
+  // Founder order 2026-09-22: "Share what I did" is on by default, so the
+  // step states, in plain words and before its Join button, what that
+  // shares and where it is switched off.
+  test('the step says finished sessions are shared with everyone, and where to switch it off', () => {
+    const line = STEP5.indexOf('Every session you finish is shared with everyone in Community: exercises, sets, the total lifted and any PRs. Turn it off any time from your Training profile.');
+    expect(line).toBeGreaterThan(STEP5.indexOf('<PrivacyReceipt />'));
+    expect(line).toBeLessThan(STEP5.indexOf('title="Join Community"'));
+  });
 });

@@ -201,13 +201,20 @@ async function attemptJoin(handle, displayName, gymId) {
     const suggestion = await suggestHandle();
     resolvedHandle = suggestion?.handle ?? null;
   }
-  // Avatar preset stays the client (server) default, as Join; the
-  // sharing toggles stay OFF (CR-13): neither is sent. A missing name
-  // falls back to the handle (lead review 2026-09-11): the server refuses
-  // an empty name as invalid_input, and a retry with the same empty name
-  // would refuse forever.
+  // Avatar preset stays the client (server) default, as Join. CR-13 had
+  // the sharing toggles stay OFF here; founder order 2026-09-22 turns
+  // "Share what I did" on by default, to everyone, and the wizard's step
+  // says so in plain words above its Join button, so the create carries
+  // it (the server clamps a minor to followers, and the wizard never
+  // shows the step to one). A missing name falls back to the handle
+  // (lead review 2026-09-11): the server refuses an empty name as
+  // invalid_input, and a retry with the same empty name would refuse
+  // forever.
   const name = (typeof displayName === 'string' && displayName.trim()) || resolvedHandle;
-  await upsertProfile({ handle: resolvedHandle, display_name: name, visibility: 'public' });
+  await upsertProfile({
+    handle: resolvedHandle, display_name: name, visibility: 'public',
+    share_sessions: true, sessions_audience: 'everyone',
+  });
   if (gymId) {
     try {
       await setGyms(gymId, []);

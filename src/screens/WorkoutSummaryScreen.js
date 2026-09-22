@@ -57,7 +57,7 @@ import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
 import { touchTarget } from '../styles/layout';
 import {
-  loadMe, hasProfile, readShareSettings, writeShareSettings,
+  loadMe, hasProfile, readCachedMe, readShareSettings, writeShareSettings,
   publishConsistency, publishAmbientItems,
   flushPendingAmbientItems, hasSeenSessionShareOffer, recordSessionShareOfferSeen,
 } from '../lib/community';
@@ -256,6 +256,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // (never for a queued-offline or gated/skipped attempt, which has no
   // row yet): "Add a note" opens compose already pointed at this row.
   const [autoSessionPost, setAutoSessionPost] = useState(null);
+  // Founder order 2026-09-22: the share strip under the hero says what
+  // actually happened to this session, so the auto-share attempt records
+  // its outcome ({created, queued, skipped}) and the device's own answer
+  // to "is this account a Community member" (cached profile; null until
+  // read). `calmKnown` is true once the calm/ED read has settled, so the
+  // strip can never flash at a person it must not be shown to.
+  const [ambientOutcome, setAmbientOutcome] = useState(null);
+  const [communityMember, setCommunityMember] = useState(null);
+  const [calmKnown, setCalmKnown] = useState(false);
   // Keep the completion state calm: the workout is done, and the primary
   // actions must be visible immediately. These optional answers still feed the
   // coaching loop, but only open when the lifter deliberately rates the session.
@@ -353,7 +362,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       try {
         const share = await readShareSettings(user.id);
         flushPendingAmbientItems(user.id).catch(() => {});
-        if (!share.share_sessions) return;
+        // Founder order 2026-09-22: every early exit records an outcome for
+        // the strip. A device with no cached profile is not a member as far
+        // as it knows: no doomed create call, and the strip shows the
+        // invitation instead of a confirmation that could never come.
+        const me = await readCachedMe(user.id).catch(() => null);
+        const member = !!me && hasProfile(me);
+        setCommunityMember(member);
+        if (!member) { setAmbientOutcome({ created: 0, queued: 0, skipped: 'no_profile' }); return; }
+        if (!share.share_sessions) { setAmbientOutcome({ created: 0, queued: 0, skipped: 'sharing_off' }); return; }
         const prList = (detectedPRs || []).map((p) => ({
           exerciseId: p.exerciseId,
           exerciseName: p.exerciseName,
@@ -371,10 +388,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         const out = await publishAmbientItems({
           userId: user.id, workoutId, prList, units: units === 'lbs' ? 'lbs' : 'kg',
         });
+        setAmbientOutcome(out ?? { created: 0, queued: 0, skipped: 'failed' });
         if (out?.sessionPostId) {
           setAutoSessionPost({ id: out.sessionPostId, payload: out.sessionPayload });
         }
-      } catch (_e) { /* best effort: never the reason the summary fails to show */ }
+      } catch (_e) {
+        // best effort: never the reason the summary fails to show
+        setAmbientOutcome((prev) => prev ?? { created: 0, queued: 0, skipped: 'failed' });
+      }
     })();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readOnly, workoutId, user?.id]);
@@ -818,6 +839,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       } catch (_) {}
       const suppressed = calm || !!edFlag;
       setCalmSuppressed(suppressed);
+      setCalmKnown(true);
       // Communities revamp phase 3 (Q2): eligibility only, not the
       // decision to show -- that also needs the device-recorded seen
       // flag and a Community profile, both read async in their own
@@ -1226,6 +1248,63 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     ? `New best on ${prExerciseNames || '1 lift'}`
     : `New bests on ${detectedPRs.length} lifts${prExerciseNames ? ` - ${prExerciseNames}` : ''}`;
 
+  // Founder order 2026-09-22: what the Community share strip under the
+  // hero says (see the render comment there). Null until the auto-share
+  // attempt has settled and the device knows whether this account has a
+  // Community profile, so the strip never flickers from "Post this
+  // session" to "Shared" a second later. Every string here is calm and
+  // plain: an invitation, never a nudge with a cost attached.
+  const openCompose = (params) => { hapticSelection(); navigation.navigate('CommunityCompose', params); };
+  const shareStripState = (() => {
+    if (autoSessionPost) {
+      return {
+        title: 'Shared to Community',
+        sub: 'People who train like you can see this session.',
+        action: {
+          title: 'Add a note',
+          a11y: 'Add a note to this session',
+          onPress: () => openCompose({ postId: autoSessionPost.id, kind: 'session', payload: autoSessionPost.payload }),
+        },
+        link: null,
+      };
+    }
+    if (!ambientOutcome || communityMember == null) return null;
+    if (ambientOutcome.queued > 0) {
+      return {
+        title: 'Shares to Community when you are back online',
+        sub: 'It goes up on its own. Nothing to redo.',
+        action: null,
+        link: null,
+      };
+    }
+    if (!communityMember) {
+      return {
+        title: 'Sessions like this one are what Community is for',
+        sub: 'Share it with people who train like you. Never your weight, food or photos.',
+        action: {
+          title: 'Share this session',
+          a11y: 'Share this session to Community',
+          onPress: () => openCompose({ kind: 'session', workoutId }),
+        },
+        link: null,
+      };
+    }
+    return {
+      title: 'People who train like you would see this one',
+      sub: 'Post it now, or share every session as you finish it.',
+      action: {
+        title: 'Post this session',
+        a11y: 'Post this session to Community',
+        onPress: () => openCompose({ kind: 'session', workoutId }),
+      },
+      link: {
+        title: 'Share every session',
+        a11y: 'Share every session from your training profile',
+        onPress: () => navigation.navigate('CommunityTrainingProfile'),
+      },
+    };
+  })();
+
   return (
     // R2-5 (remediation 2026-07-11, founder device walk build 2684): edges is
     // ['top'] only, NOT ['top', 'bottom']. This screen always renders INSIDE a
@@ -1364,6 +1443,63 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           })()}
         </Card>
 
+        {/* Founder order 2026-09-22 ("we can't have story sharing hidden all
+            the way down the screen as an optional; we need more
+            encouragement"): the Community share surface sits here, right
+            under the session's headline number, on every live summary that
+            is not under calm mode or an open ED flag. What it says follows
+            what actually happened to this session:
+              - shared by "Share what I did" (on by default since this
+                order): a plain confirmation and "Add a note";
+              - queued offline: says so, and offers no second button, since
+                a manual post now would duplicate the queued one when it
+                flushes;
+              - no Community profile on this device: the invitation, routed
+                through CommunityCompose, which sends a non-member to Join
+                first;
+              - a member with sharing off (or a refused attempt): the manual
+                post, plus the one-tap route to sharing every session.
+            Under suppression the quiet button further down stays exactly
+            as it was: the gate exists so a flagged person is never pressed
+            to share, and this strip never appears for them. */}
+        {!readOnly && workoutId && calmKnown && !calmSuppressed && shareStripState ? (
+          <RevealSection delay={260}>
+            <Card style={styles.shareStrip}>
+              <View style={styles.shareStripBody}>
+                <Text style={[styles.shareStripTitle, { ...t.type.bodyStrong, color: t.colors.textPrimary }]}>
+                  {shareStripState.title}
+                </Text>
+                <Text style={[styles.shareStripSub, { ...t.type.bodySm, color: t.colors.textSecondary }]}>
+                  {shareStripState.sub}
+                </Text>
+              </View>
+              {shareStripState.action ? (
+                <View style={styles.shareStripActions}>
+                  {shareStripState.link ? (
+                    <Button
+                      variant="tertiary"
+                      size="sm"
+                      fullWidth={false}
+                      title={shareStripState.link.title}
+                      onPress={shareStripState.link.onPress}
+                      accessibilityLabel={shareStripState.link.a11y}
+                    />
+                  ) : null}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    fullWidth={false}
+                    icon="people-outline"
+                    title={shareStripState.action.title}
+                    onPress={shareStripState.action.onPress}
+                    accessibilityLabel={shareStripState.action.a11y}
+                  />
+                </View>
+              ) : null}
+            </Card>
+          </RevealSection>
+        ) : null}
+
         <View style={styles.statsGrid}>
           <StatBox icon="barbell-outline" value={String(exerciseCount || 0)} label="Exercises" animateOrder={0} />
           <StatBox
@@ -1428,8 +1564,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             posting moment, so it is the one state without it.
             Phase 3 (spec section 2): once sharing has put an ambient item
             on this workout, the button becomes "Add a note" on that same
-            row instead of opening a fresh manual compose. */}
-        {!readOnly && workoutId ? (
+            row instead of opening a fresh manual compose.
+            Founder order 2026-09-22: for everyone else this moved up to the
+            share strip under the hero; this quiet button survives only for
+            a summary under calm mode or an open ED flag, where the strip
+            never appears and nothing new presses anyone to share. */}
+        {!readOnly && workoutId && calmSuppressed ? (
           <RevealSection delay={1140}>
             <Button
               title={autoSessionPost ? 'Add a note' : 'Post to Community'}
@@ -2242,6 +2382,12 @@ const styles = StyleSheet.create({
   blockArcSection: {
     gap: spacing.sm,
   },
+  // Founder order 2026-09-22: the Community share strip under the hero.
+  shareStrip: { gap: spacing.md },
+  shareStripBody: { gap: spacing.xxs },
+  shareStripTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  shareStripSub: { ...type.bodySm, color: colors.textSecondary },
+  shareStripActions: { flexDirection: 'row', gap: spacing.sm, justifyContent: 'flex-end', alignItems: 'center' },
   // Communities revamp phase 3 (Q2): the once-only share offer card.
   shareOfferCard: { gap: spacing.md },
   shareOfferLine: { ...type.body, color: colors.textPrimary },

@@ -145,11 +145,21 @@ export const TP_DEFAULT_SHARE = Object.freeze({
   // `shareablePayload` (its fields come from `trainingConsistency.js`,
   // not from `deriveTrainingProfile`).
   consistency: false,
-  // Phase 3 (spec section 1): "Share what I did" - off by default, same
-  // as every other revealing toggle. Its audience lives in the sibling
-  // `sessions_audience` field below, kept OUTSIDE this boolean set
-  // because it is a three-way choice, not a switch.
-  share_sessions: false,
+  // Phase 3 (spec section 1) had "Share what I did" off by default, like
+  // every other revealing toggle. Founder order 2026-09-22 ("turn it on
+  // to automatic ... we can't have story sharing hidden all the way down
+  // the screen as an optional; it'll never be used"): ON by default. The
+  // Join screen and the onboarding step both show the switch on, with
+  // its audience and its wording, before "Create profile", so joining
+  // with it on is still the person's own informed act, and the Training
+  // profile screen switches it off (with Remove/Keep) at any time. What
+  // it shares is only ever a session's training facts (the allow-list in
+  // `validation.js`); the ED/calm gate in `ambient.js` is untouched, and
+  // a minor's audience is still clamped to followers downstream. Its
+  // audience lives in the sibling `sessions_audience` field below, kept
+  // OUTSIDE this boolean set because it is a three-way choice, not a
+  // switch.
+  share_sessions: true,
 });
 
 export const TP_SHARE_KEYS = Object.freeze(Object.keys(TP_DEFAULT_SHARE));
@@ -164,7 +174,15 @@ export const SESSIONS_AUDIENCE_LABELS = Object.freeze({
   everyone: 'Everyone',
 });
 
-export const DEFAULT_SESSIONS_AUDIENCE = 'followers';
+// Founder order 2026-09-22: sharing is on by default, and a default of
+// "followers" would share every session with nobody while the network is
+// this young. "Everyone" is the default for an adult; a minor is clamped
+// to followers on the Join screen, in `ambient.js` and by the server.
+export const DEFAULT_SESSIONS_AUDIENCE = 'everyone';
+/** Where a STORED value is present but not in the closed set, the reader
+ * fails closed to the narrowest audience rather than to the default: a
+ * corrupt value must never widen who sees a session. */
+export const FALLBACK_SESSIONS_AUDIENCE = 'followers';
 
 /**
  * Which band each toggle carries. The payload is built from THIS map and
@@ -430,6 +448,9 @@ function normaliseShare(raw) {
     }
     if (SESSIONS_AUDIENCE_VALUES.includes(raw.sessions_audience)) {
       out.sessions_audience = raw.sessions_audience;
+    } else if (raw.sessions_audience != null) {
+      // Present but unrecognised: fail closed (see FALLBACK_SESSIONS_AUDIENCE).
+      out.sessions_audience = FALLBACK_SESSIONS_AUDIENCE;
     }
   }
   return out;

@@ -96,9 +96,11 @@ jest.mock('../../lib/community', () => ({
   TP_AGE_BANDS: {
     '18_24': '18 to 24', '25_34': '25 to 34', '35_44': '35 to 44', '45_54': '45 to 54', '55_plus': '55 or over',
   },
+  // RE-ANCHORED 2026-09-22 (founder order): `share_sessions` defaults ON,
+  // audience 'everyone', mirroring the real module's defaults.
   TP_DEFAULT_SHARE: {
     days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, age_band: false,
-    consistency: false, share_sessions: false,
+    consistency: false, share_sessions: true,
   },
   SESSIONS_AUDIENCE_VALUES: ['followers', 'groups', 'everyone'],
   SESSIONS_AUDIENCE_LABELS: { followers: 'Followers', groups: 'My groups', everyone: 'Everyone' },
@@ -109,7 +111,7 @@ jest.mock('../../lib/community', () => ({
   loadTrainingProfile: jest.fn(() => Promise.resolve({})),
   readShareSettings: jest.fn(() => Promise.resolve({
     days: false, time_bands: false, sessions: true, staple_lifts: true, experience: true, age_band: false,
-    consistency: false, share_sessions: false, sessions_audience: 'followers',
+    consistency: false, share_sessions: true, sessions_audience: 'everyone',
   })),
   writeShareSettings: jest.fn(() => Promise.resolve()),
   syncTrainingProfile: jest.fn(() => Promise.resolve({ sent: true, reason: null, payload: null })),
@@ -340,8 +342,28 @@ describe('the training profile step (SD-22)', () => {
     );
   });
 
-  test('left off, nothing is published for it on Create', async () => {
+  // RE-ANCHORED 2026-09-22 (founder order: "Share what I did" is on by
+  // default, to everyone): Create publishes the default without a tap, and
+  // only a person who switches it off before Create publishes nothing.
+  test('on by default, Create publishes sharing to everyone without a tap', async () => {
     const { tree } = await mount();
+    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Display name', 'Rowan M');
+    await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
+    await flush();
+
+    expect(publishSharingSettings).toHaveBeenCalledWith(
+      'u1', expect.objectContaining({ share_sessions: true, sessions_audience: 'everyone' }),
+    );
+  });
+
+  test('switched off before Create, nothing is published for it', async () => {
+    const { tree } = await mount();
+    const shareSwitch = tree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Share share what i did' && typeof n.props?.onValueChange === 'function',
+    )[0];
+    await act(async () => { shareSwitch.props.onValueChange(false); });
+    await flush();
     await type(tree, 'Handle', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
