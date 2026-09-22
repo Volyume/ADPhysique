@@ -1231,7 +1231,6 @@ export default function HowYouTrainScreen() {
   const awaiting = state.episodes.filter((ep) => ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION);
   const optionsEp = optionsFor && !String(optionsFor).startsWith('row:') ? state.episodes.find((ep) => ep.groupId === optionsFor) ?? null : null;
   const optionsRow = optionsFor && String(optionsFor).startsWith('row:') ? state.baseline.find((r) => `row:${r.id}` === optionsFor) ?? null : null;
-  const nothingYet = !state.baseline.length && !state.episodes.length && !state.history.length;
   const flashStyle = (id) => (flashId != null && flashId === id ? { borderColor: t.colors.primary } : null);
   const onCardLayout = (id) => (e) => {
     cardYRef.current.set(id, e.nativeEvent.layout.y);
@@ -1263,10 +1262,6 @@ export default function HowYouTrainScreen() {
           Volyume about it here. It takes that into account when it picks
           exercises and builds your training.
         </Text>
-        <Text style={[styles.hint, { color: t.colors.textSecondary, marginTop: spacing.sm }]}>
-          You do not need a diagnosis, or even a name for it. Just say what you cannot
-          do. Volyume leaves those movements out and trains the same muscle groups another way.
-        </Text>
       </View>
       <View style={styles.addWrap}>
         <Button
@@ -1274,11 +1269,6 @@ export default function HowYouTrainScreen() {
           onPress={() => { haptics.selection(); navigation.navigate('HowYouTrainAdd'); }}
           accessibilityLabel="Add something Volyume should build your training around"
         />
-        {nothingYet ? (
-          <Text style={[styles.hint, { color: t.colors.textMuted, marginTop: spacing.sm }]}>
-            Takes about a minute. Whatever you add is either long-term, or a temporary change worked around for a while, and you can change or remove it here any time.
-          </Text>
-        ) : null}
       </View>
 
       {renderLineReview()}
