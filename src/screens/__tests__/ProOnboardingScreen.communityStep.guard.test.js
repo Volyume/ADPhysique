@@ -104,7 +104,10 @@ describe('nothing on the step is pre-decided', () => {
     expect(v).toMatch(/if \(join && communityJoin !== 'existing' && communityHandle\.trim\(\)\) \{/);
     expect(v).not.toMatch(/errs\.name|communityDisplayName|Choose a handle|checking/);
     expect(v).toContain("if (communityHandleState === 'invalid') errs.handle = HANDLE_HINT;");
-    expect(v).toContain("else if (communityHandleState === 'taken') errs.handle = 'That handle is taken. Try another.';");
+    // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8): "Handle"
+    // -> "Username" in user-facing copy (audit A-14); errs.handle (the
+    // field/key) is unchanged.
+    expect(v).toContain("else if (communityHandleState === 'taken') errs.handle = 'That username is taken. Try another.';");
     // The empty field says so, and the completion hands a null handle on.
     expect(STEP5).toContain("idle: 'Leave it blank and Volyume picks one for you.',");
     expect(COMPLETION).toContain("const chosenHandle = communityHandle.trim().toLowerCase() || null;");
@@ -136,7 +139,9 @@ describe('D160 (2026-09-12): the two review notes the lead had held, now built',
     // The button shows the wait; it is never disabled (the R-guard above).
     expect(STEP5).toContain('loading={joinHeldForCheck}');
     // The field's own line already says what is happening.
-    expect(STEP5).toContain("checking: 'Checking that handle.',");
+    // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8): "Handle"
+    // -> "Username" in user-facing copy (audit A-14).
+    expect(STEP5).toContain("checking: 'Checking that username.',");
   });
 
   test('N9: the funnel event carries the wizard numbering as an integer beside the step', () => {

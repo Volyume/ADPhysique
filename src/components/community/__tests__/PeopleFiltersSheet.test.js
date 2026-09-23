@@ -12,11 +12,15 @@
  *   3. Where (My gym / Near me / Anywhere) is pick-one-OR-NONE: a second
  *      tap on the selected chip clears it; choosing Near me reveals the
  *      distance band row, defaulted to "Same place".
- *   4. Age band only renders when the caller shares their own
+ *   4. Age group only renders when the caller shares their own
  *      (`me.tp_age_band`); a caller with none never sees the section.
  *   5. Reopening the sheet re-seeds the draft from what is CURRENTLY
  *      applied (`value`), not from whatever was left over from a
  *      cancelled edit.
+ *
+ * RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8): point 4 and
+ * the describe block below read "Age group" now (audit A-09, copy only);
+ * the field (`tp_age_band`, `age_band`) and its values are unchanged.
  */
 
 import { create, act } from 'react-test-renderer';
@@ -155,17 +159,20 @@ describe('Where: pick one or none, and the distance band', () => {
   });
 });
 
-describe('Age band: only when the caller shares their own', () => {
+// RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8): "Age band" ->
+// "Age group" (audit A-09), copy only; the field and its values (age_band,
+// 25_34, ...) are unchanged.
+describe('Age group: only when the caller shares their own', () => {
   test('absent entirely for a caller with no age band', async () => {
     const tree = await mount({ onApply: jest.fn(), onClose: jest.fn(), me: ME_NO_AGE, value: null });
-    expect(flattenText(tree.toJSON())).not.toContain('Age band');
+    expect(flattenText(tree.toJSON())).not.toContain('Age group');
   });
 
   test('present, and applies the chosen band, for a caller who shares one', async () => {
     const onApply = jest.fn();
     const tree = await mount({ onApply, onClose: jest.fn(), me: ME_WITH_AGE, value: null });
 
-    expect(flattenText(tree.toJSON())).toContain('Age band');
+    expect(flattenText(tree.toJSON())).toContain('Age group');
     await tap(tree, '25 to 34');
     await tap(tree, 'Show results');
 

@@ -277,8 +277,8 @@ export default function PeopleFiltersSheet({
           nothing here to filter candidates by either. */}
       {ownAgeBand ? (
         <View style={styles.section}>
-          <SectionLabel tone="muted">Age band</SectionLabel>
-          <View style={styles.chips} accessibilityLabel="Age band">
+          <SectionLabel tone="muted">Age group</SectionLabel>
+          <View style={styles.chips} accessibilityLabel="Age group">
             {Object.entries(TP_AGE_BANDS).map(([key, label]) => (
               <Chip
                 key={key}

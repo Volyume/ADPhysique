@@ -76,7 +76,7 @@ import {
   loadHubSummary, metricLabel, loadConsistency, consistencyGateState,
   myStatus, isModeratedStatus, REPORT_REASONS, TP_AGE_BANDS,
   getProfile, follow, COMMUNITY_HOST_HANDLE, inviteMessage, inviteLabel, firstHereLine,
-  hostRowVisible, hostCaption, readHostDismissed, writeHostDismissed,
+  hostRowVisible, hostCaption, readHostDismissed, writeHostDismissed, GROUP_PURPOSE_LINE,
 } from '../lib/community';
 import { todayLocalKey } from '../lib/dayKey';
 
@@ -656,6 +656,7 @@ export default function CommunityHubScreen({ navigation, route }) {
           metric={youMetric}
           days={youDays}
           trainedToday={youTrainedToday}
+          metricRole="title"
           onPress={() => navigation.navigate('CommunityProfile', { userId: uid })}
         />
       ) : null}
@@ -727,7 +728,7 @@ export default function CommunityHubScreen({ navigation, route }) {
             ))
           ) : (
             <Text style={[styles.groupsEmptyLine, { ...t.type.bodySm, color: t.colors.textMuted }]}>
-              Make a group with friends to see each other&apos;s training weeks.
+              {GROUP_PURPOSE_LINE}
             </Text>
           )}
         </>

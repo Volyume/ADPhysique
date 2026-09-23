@@ -30,6 +30,9 @@ jest.mock('../../lib/community', () => ({
   GROUP_BLURB_MAX: 140,
   GROUP_ACCESS: { open: 'Open', invite: 'Invite only' },
   GROUP_ACCESS_ORDER: ['open', 'invite'],
+  // Founder order 2026-09-22 item 8 (audit A-13): real value, not a
+  // stand-in -- the new test below checks the actual sentence.
+  GROUP_PURPOSE_LINE: 'Make a group with friends to see each other\'s training weeks.',
 }));
 
 import { createGroup, updateGroup } from '../../lib/community';
@@ -64,6 +67,27 @@ test('Create is disabled with an empty name', async () => {
   const { tree } = await mount();
   const btn = byLabel(tree, 'Create group');
   expect(btn.props.disabled).toBe(true);
+});
+
+// Founder order 2026-09-22 item 8 (audit A-13): what a group is for,
+// CREATE mode only -- an editor already knows.
+describe('the purpose line', () => {
+  function flattenText(node) {
+    if (node == null) return '';
+    if (typeof node === 'string' || typeof node === 'number') return String(node);
+    if (Array.isArray(node)) return node.map(flattenText).join(' ');
+    return flattenText(node.children);
+  }
+
+  test('present when creating', async () => {
+    const { tree } = await mount();
+    expect(flattenText(tree.toJSON())).toContain("Make a group with friends to see each other's training weeks.");
+  });
+
+  test('absent when editing', async () => {
+    const { tree } = await mount({ mode: 'edit', group: EDIT_GROUP });
+    expect(flattenText(tree.toJSON())).not.toContain('Make a group with friends');
+  });
 });
 
 test('creates with the trimmed name, trimmed blurb, and selected access, then replaces to the group', async () => {

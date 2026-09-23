@@ -171,6 +171,7 @@ export {
 
 export {
   GROUP_NAME_MAX, GROUP_BLURB_MAX, GROUP_ACCESS, GROUP_ACCESS_ORDER,
+  GROUP_PURPOSE_LINE,
   createGroup, updateGroup, closeGroup, leaveGroup, joinGroup,
   approveGroupRequest, removeGroupMember, promoteGroupMember,
   inviteToGroup, createGroupInviteLink, acceptGroupInvite,

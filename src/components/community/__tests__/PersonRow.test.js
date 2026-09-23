@@ -7,7 +7,10 @@
  * one); the viewer's own row tints via `person.isYou`, using the exact
  * `withAlpha(c.textPrimary, alpha.ghost)` formula the spec gives rather
  * than the `surface2` token; the second line is `DayDots` when `days` is
- * given and `person.caption` otherwise; the row opens on press.
+ * given and `person.caption` otherwise; the row opens on press. Founder
+ * order 2026-09-22 item 8 (Q6, Part E) adds `metricRole`: the metric
+ * reads at `label` unless the caller marks it `title`, the one figure
+ * per screen that is the screen's own result.
  */
 
 import { create, act } from 'react-test-renderer';
@@ -20,7 +23,7 @@ jest.mock('../../../store/useAppStore', () => ({
 }));
 
 import PersonRow from '../PersonRow';
-import { resolveTheme, withAlpha, alpha } from '../../../styles/theme';
+import { resolveTheme, withAlpha, alpha, type } from '../../../styles/theme';
 
 const THEME = resolveTheme({
   theme: undefined, largerText: undefined, higherContrast: undefined, colorBlindSafe: undefined,
@@ -41,6 +44,19 @@ function bgColorOf(instance) {
   };
   collect(instance.props.style);
   return flat.map((s) => s.backgroundColor).find(Boolean) ?? null;
+}
+
+// RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8): the metric
+// Text is the only node in this file styled with `type.num(...)`
+// (`fontVariant: ['tabular-nums']`), so that is what tells it apart from
+// the name/caption/rank Text nodes, which never carry a fontVariant.
+function metricFontSize(tree) {
+  const nodes = tree.root.findAll((n) => n.type === 'Text').filter((n) => [].concat(n.props.style)
+    .filter(Boolean)
+    .some((s) => Array.isArray(s.fontVariant) && s.fontVariant.includes('tabular-nums')));
+  if (nodes.length === 0) return undefined;
+  const sizeStyle = [].concat(nodes[0].props.style).filter(Boolean).find((s) => 'fontSize' in s);
+  return sizeStyle ? sizeStyle.fontSize : undefined;
 }
 
 function render(props) {
@@ -133,5 +149,24 @@ describe('PersonRow', () => {
     const button = tree.root.findAll((n) => n.props?.accessibilityRole === 'button')[0];
     act(() => { button.props.onPress(); });
     expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  // New pin (founder order 2026-09-22 item 8, Q6 recommendation, Part
+  // E): the metric reads at `label` by default and steps up to `title`
+  // only when the caller marks it the screen's result (the Hub's You
+  // row).
+  test('metric renders at the label type role by default', () => {
+    const tree = render({ person: person(), metric: '4 sessions' });
+    expect(metricFontSize(tree)).toBe(type.label.fontSize);
+  });
+
+  test('metricRole="title" elevates the metric to the title type role', () => {
+    const tree = render({ person: person(), metric: '4 sessions', metricRole: 'title' });
+    expect(metricFontSize(tree)).toBe(type.title.fontSize);
+  });
+
+  test('any metricRole other than "title" still reads at the label type role', () => {
+    const tree = render({ person: person(), metric: '4 sessions', metricRole: 'label' });
+    expect(metricFontSize(tree)).toBe(type.label.fontSize);
   });
 });

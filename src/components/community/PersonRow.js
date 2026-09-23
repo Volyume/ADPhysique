@@ -47,6 +47,11 @@
  *                 isYou, caption }
  *   metric        the right-aligned figure, already formatted by the
  *                 caller (e.g. `metricLabel('week', n)`)
+ *   metricRole    'label' (default) or 'title': the type role `metric`
+ *                 renders at. 'title' is for the one figure per screen
+ *                 that reads as the screen's result (Q6 recommendation,
+ *                 founder order 2026-09-22 item 8) -- the Hub's You row
+ *                 only; every other caller leaves the default.
  *   days          string[] of trained day keys ('mon'..'sun'); when
  *                 given (non-empty) the second line is `DayDots` instead
  *                 of `person.caption`
@@ -76,7 +81,7 @@ const RANK_COL = 18;
 const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
 
 export default function PersonRow({
-  person, metric, days, trainedToday, rank, onPress, trailing,
+  person, metric, metricRole, days, trainedToday, rank, onPress, trailing,
 }) {
   const t = useTheme();
   if (!person) return null;
@@ -140,7 +145,7 @@ export default function PersonRow({
           ) : null}
         </View>
         {metric != null ? (
-          <Text style={[styles.metric, t.type.num('label'), { color: t.colors.textPrimary }]} numberOfLines={1}>
+          <Text style={[styles.metric, t.type.num(metricRole === 'title' ? 'title' : 'label'), { color: t.colors.textPrimary }]} numberOfLines={1}>
             {metric}
           </Text>
         ) : null}

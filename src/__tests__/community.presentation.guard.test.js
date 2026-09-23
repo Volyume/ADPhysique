@@ -43,6 +43,16 @@
  *     in Community -- `CommunityBoardScreen.js` included, unchanged by
  *     this phase -- so the walk here is exactly those four files, not
  *     every Community screen.
+ * (d) RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8, Q6
+ *     recommendation, Part E): the `title` type role (17, `fontSize.lg`)
+ *     is reserved for the ONE figure per screen that reads as the
+ *     screen's result. It is used exactly once in `PersonRow.js` (the
+ *     Hub's You-row metric, via `metricRole="title"`) and exactly once
+ *     in `ProgressStrip.js` (the leading cell, "sessions this week"),
+ *     never in any `src/screens/Community*.js` and never in any other
+ *     file under `src/components/community/`; `metricRole="title"` is
+ *     passed exactly once across `src/screens` and `src/components`, on
+ *     `CommunityHubScreen.js`'s You row only.
  */
 
 const fs = require('fs');
@@ -50,6 +60,8 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const SCREENS_DIR = path.join(ROOT, 'src/screens');
+const COMPONENTS_DIR = path.join(ROOT, 'src/components');
+const COMPONENTS_COMMUNITY_DIR = path.join(COMPONENTS_DIR, 'community');
 
 const HUB = path.join(SCREENS_DIR, 'CommunityHubScreen.js');
 const FOUR_REVAMPED_NAMES = [
@@ -59,6 +71,8 @@ const FOUR_REVAMPED_NAMES = [
   'CommunityProfileScreen.js',
 ];
 const FOUR_REVAMPED = FOUR_REVAMPED_NAMES.map((f) => path.join(SCREENS_DIR, f));
+const PERSON_ROW = path.join(COMPONENTS_COMMUNITY_DIR, 'PersonRow.js');
+const PROGRESS_STRIP = path.join(COMPONENTS_COMMUNITY_DIR, 'ProgressStrip.js');
 
 /** Strip block and line comments so a rule NAMED in a comment (this file
  * is full of them, and so is the source) is never mistaken for a live
@@ -74,6 +88,29 @@ function communityScreenFiles() {
   return fs.readdirSync(SCREENS_DIR)
     .filter((f) => /^Community.*\.js$/.test(f))
     .map((f) => path.join(SCREENS_DIR, f));
+}
+
+/** Every top-level file under `components/community/` (no subdirectory
+ * there but `__tests__`, already excluded by the `.js`-only filter). */
+function communityComponentFiles() {
+  return fs.readdirSync(COMPONENTS_COMMUNITY_DIR)
+    .filter((f) => f.endsWith('.js'))
+    .map((f) => path.join(COMPONENTS_COMMUNITY_DIR, f));
+}
+
+/** Every `.js` file under `dir`, recursively, `__tests__` excluded --
+ * rule (d)'s `metricRole="title"` census walks the whole of
+ * `src/screens` and `src/components`, not just the Community corner of
+ * each, since a stray second use anywhere in either tree would still
+ * break the "one figure, one screen" rule. Same convention
+ * `community.privacy.guard.test.js`'s own `walk()` uses. */
+function walk(dir) {
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) return entry.name === '__tests__' ? [] : walk(full);
+    return entry.name.endsWith('.js') ? [full] : [];
+  });
 }
 
 describe('presentation law (a): no display/h1/h2 anywhere in Community, h3 only on the Hub', () => {
@@ -141,5 +178,64 @@ describe('presentation law (c): SectionLabel is retired from the four revamped s
   test('CommunityBoardScreen.js still imports SectionLabel (unchanged by this phase)', () => {
     const source = code(fs.readFileSync(path.join(SCREENS_DIR, 'CommunityBoardScreen.js'), 'utf8'));
     expect(SECTION_LABEL_IMPORT.test(source)).toBe(true);
+  });
+});
+
+// RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8, Q6
+// recommendation, Part E): rule (d), the `title` type role's own cap.
+describe('presentation law (d): the title type role is reserved for one figure per screen', () => {
+  /** How many call sites in `source` elevate to the `title` role: either
+   * `num(...)` with a 'title' literal anywhere in its argument list (one
+   * match per CALL, however many quoted 'title's that call's own text
+   * happens to contain -- `num(metricRole === 'title' ? 'title' :
+   * 'label')` is ONE call, not two), or a direct `type.title` /
+   * `t.type.title` property access with no `num()` at all. */
+  function titleRoleCount(source) {
+    const numTitle = source.match(/\bnum\([^)]*['"]title['"]/g) || [];
+    const directTitle = source.match(/\btype\.title\b/g) || [];
+    return numTitle.length + directTitle.length;
+  }
+
+  test('PersonRow.js uses the title role exactly once (the Hub\'s You-row metric)', () => {
+    const source = code(fs.readFileSync(PERSON_ROW, 'utf8'));
+    expect(titleRoleCount(source)).toBe(1);
+  });
+
+  test('ProgressStrip.js uses the title role exactly once (the leading cell)', () => {
+    const source = code(fs.readFileSync(PROGRESS_STRIP, 'utf8'));
+    expect(titleRoleCount(source)).toBe(1);
+  });
+
+  test.each(communityScreenFiles().map((f) => [path.relative(ROOT, f), f]))(
+    '%s never uses the title role',
+    (rel, full) => {
+      const source = code(fs.readFileSync(full, 'utf8'));
+      expect({ rel, count: titleRoleCount(source) }).toEqual({ rel, count: 0 });
+    },
+  );
+
+  test.each(
+    communityComponentFiles()
+      .filter((f) => f !== PERSON_ROW && f !== PROGRESS_STRIP)
+      .map((f) => [path.relative(ROOT, f), f]),
+  )(
+    '%s never uses the title role',
+    (rel, full) => {
+      const source = code(fs.readFileSync(full, 'utf8'));
+      expect({ rel, count: titleRoleCount(source) }).toEqual({ rel, count: 0 });
+    },
+  );
+
+  test('metricRole="title" is passed exactly once across src/screens and src/components, on CommunityHubScreen.js', () => {
+    const files = [...walk(SCREENS_DIR), ...walk(COMPONENTS_DIR)];
+    // Sanity floor so a rename/move that quietly shrank the walk to
+    // near-nothing fails honestly rather than passing by starvation.
+    expect(files.length).toBeGreaterThan(100);
+    const hits = files.flatMap((full) => {
+      const source = code(fs.readFileSync(full, 'utf8'));
+      const matches = source.match(/\bmetricRole\s*=\s*"title"/g) || [];
+      return matches.map(() => path.relative(ROOT, full));
+    });
+    expect(hits).toEqual([path.relative(ROOT, HUB)]);
   });
 });

@@ -22,6 +22,11 @@ export const GROUP_BLURB_MAX = 140;
 export const GROUP_ACCESS = Object.freeze({ open: 'Open', invite: 'Invite only' });
 export const GROUP_ACCESS_ORDER = Object.freeze(['open', 'invite']);
 
+// Founder order 2026-09-22 item 8 (audit A-13): the one line that says
+// what a group is FOR, on the create screen and the Hub (one register
+// across both, CommunityHubScreen.js and CommunityGroupCreateScreen.js).
+export const GROUP_PURPOSE_LINE = 'Make a group with friends to see each other\'s training weeks.';
+
 /** One row's card, as `_community_group_card` returns it. */
 function normaliseGroup(g) {
   if (!g?.id) return null;

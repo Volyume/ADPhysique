@@ -29,13 +29,16 @@ import useTheme from '../../hooks/useTheme';
 
 // Fixed copy (blueprint section 2 and docs/community-safety/
 // COMMUNITY-RULES.md). It is the notice recorded against
-// COMMUNITY_RULES_VERSION, so it changes only with a version bump.
+// COMMUNITY_RULES_VERSION, so it changes only with a version bump --
+// its SUBSTANCE, never a same-meaning synonym (lead ruling 2026-09-22
+// item 8: this list's own "handle" to "username" wording did not need
+// one).
 // The two discovery lines (blueprint 70 sections 3 and 12; SD-22, SD-31):
 // the training profile is on the "Others can see" side because it can be
 // shared, and the right-hand column answers the question a band invites
 // ("does this say where I am?") before anyone has to ask it.
 const SHOWN = [
-  'Your handle and name',
+  'Your username and name',
   'Styles, goal, gym and area you type',
   'Sessions you choose to share',
   'Stories you post',

@@ -10,8 +10,12 @@
  *     members' feed, and reloads neither for a non-member.
  *  3. Leave calls `leaveGroup` and goes back; a `last_admin` refusal is
  *     spoken calmly and the screen stays.
- *  4. Admin-only menu rows (Invite by handle, Share invite link, Close
+ *  4. Admin-only menu rows (Invite by username, Share invite link, Close
  *     group) render only for `myRole === 'admin'`.
+ *
+ * RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8): "Invite by
+ * handle" -> "Invite by username" in point 4 and the two menu-row
+ * assertions below (audit A-14, copy only).
  */
 
 import { create, act } from 'react-test-renderer';
@@ -160,6 +164,27 @@ test('a member loads the group week board and the feed; a non-member loads neith
   expect(loadGroupFeed).not.toHaveBeenCalled();
 });
 
+// Founder order 2026-09-22 item 8 (audit A-08): the group's own empty
+// feed is one quiet line, matching the Hub and Profile (blueprint section
+// 9 rule 9); the offline/error branch above keeps its full EmptyState
+// with its retry.
+describe('the empty feed line', () => {
+  test('a member with an empty feed sees the quiet line, no EmptyState icon', async () => {
+    getGroup.mockResolvedValue({ ...OPEN_GROUP, myRole: 'member', myState: 'member' });
+    loadGroupFeed.mockResolvedValue({ rows: [], cursor: null });
+    const { tree } = await mount();
+    expect(texts(tree.toJSON())).toContain("Nothing here yet from this group's members.");
+    expect(tree.root.findAll((n) => n.props?.name === 'images-outline')).toHaveLength(0);
+  });
+
+  test('an offline load keeps the full EmptyState with Try again', async () => {
+    getGroup.mockRejectedValue(Object.assign(new Error('offline'), { code: 'offline' }));
+    const { tree } = await mount();
+    expect(byLabel(tree, 'Try loading this group again')).toBeTruthy();
+    expect(texts(tree.toJSON())).toContain('Try again');
+  });
+});
+
 test('Leave calls leaveGroup and goes back', async () => {
   getGroup.mockResolvedValue({ ...OPEN_GROUP, myRole: 'member', myState: 'member' });
   const { tree, navigation } = await mount();
@@ -198,7 +223,7 @@ test('admin-only menu rows render only for an admin member', async () => {
   const { tree } = await mount();
   await act(async () => { byLabel(tree, 'Group menu').props.onPress(); });
   const labels = tree.root.findAll((n) => n.props?.rows).slice(-1)[0].props.rows.map((r) => r.label);
-  expect(labels).toEqual(expect.arrayContaining(['Edit', 'Invite by handle', 'Share invite link', 'Close group']));
+  expect(labels).toEqual(expect.arrayContaining(['Edit', 'Invite by username', 'Share invite link', 'Close group']));
 });
 
 test('Edit opens CommunityGroupCreate in edit mode, prefilled', async () => {
@@ -218,7 +243,7 @@ test('a plain member sees no admin-only menu rows', async () => {
   const { tree } = await mount();
   await act(async () => { byLabel(tree, 'Group menu').props.onPress(); });
   const labels = tree.root.findAll((n) => n.props?.rows).slice(-1)[0].props.rows.map((r) => r.label);
-  expect(labels).not.toEqual(expect.arrayContaining(['Invite by handle', 'Close group']));
+  expect(labels).not.toEqual(expect.arrayContaining(['Invite by username', 'Close group']));
 });
 
 // ─── Phase 3 (spec section 4): "Together this week" ─────────────────────

@@ -29,7 +29,7 @@ import { inviteToGroup, createGroupInviteLink, groupInviteUrl } from '../../lib/
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
-  not_found: 'No one with that handle was found.',
+  not_found: 'No one with that username was found.',
   already_member: 'They are already in this group.',
   minor_restricted: 'That person is under 18 and cannot join groups.',
   blocked: 'That invite could not be sent.',
@@ -86,15 +86,15 @@ export default function GroupInviteSheet({ visible, onClose, groupId, groupName 
       </View>
       <View style={styles.body}>
         <Text style={[styles.label, { ...t.type.captionStrong, color: t.colors.textSecondary }]}>
-          By handle
+          By username
         </Text>
         <TextField
           value={handle}
           onChangeText={setHandle}
-          placeholder="handle"
+          placeholder="username"
           autoCapitalize="none"
           autoCorrect={false}
-          accessibilityLabel="Handle to invite"
+          accessibilityLabel="Username to invite"
         />
         <Button
           variant="primary"

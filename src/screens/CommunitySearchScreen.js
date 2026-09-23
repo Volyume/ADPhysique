@@ -125,7 +125,7 @@ export default function CommunitySearchScreen({ navigation, route }) {
     <View>
       <EmptyState
         icon="search-outline"
-        title={mode === 'groups' ? 'Search groups by name' : 'Search by @handle or name'}
+        title={mode === 'groups' ? 'Search groups by name' : 'Search by @username or name'}
         text={mode === 'groups' ? 'Find an open group to join.' : 'Find someone you train with.'}
       />
       {mode === 'people' && recent.length > 0 ? (
@@ -173,7 +173,7 @@ export default function CommunitySearchScreen({ navigation, route }) {
     <EmptyState
       icon="people-outline"
       title="No one by that name yet"
-      text="Try the start of their handle, or their display name."
+      text="Try the start of their username, or their display name."
     />
   );
 

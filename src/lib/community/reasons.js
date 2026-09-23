@@ -21,7 +21,7 @@
 
 /** Reasons whose copy never changes row to row. */
 export const REASON_TOKENS = Object.freeze({
-  same_age_band: 'Same age band',
+  same_age_band: 'Same age group',
   near_place: 'Near you',
   within_25_miles: 'Within 25 miles',
 });

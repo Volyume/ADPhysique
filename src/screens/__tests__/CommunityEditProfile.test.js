@@ -229,8 +229,11 @@ describe('Edit profile saves the fields it owns', () => {
     await act(async () => { byLabel(tree, 'Save profile').props.onPress(); });
     await flush();
 
+    // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8): "Handle"
+    // -> "Username" in user-facing copy (audit A-14); the handle field,
+    // codes and RPCs are unchanged.
     expect(mockToastShow).toHaveBeenCalledWith(
-      'That handle is taken. Try another.',
+      'That username is taken. Try another.',
       expect.objectContaining({ variant: 'error' }),
     );
     expect(mockToastShow).not.toHaveBeenCalledWith('Profile saved');
@@ -257,19 +260,22 @@ describe('Edit profile saves the fields it owns', () => {
 // 2026-09-11): the Handle field, live-checked exactly as Join checks a
 // NEW one, but measured against the profile's OWN handle rather than
 // against "well-formed and free" alone. ────────────────────────────────
+// RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8): "Handle" ->
+// "Username" in user-facing copy (audit A-14) through this whole describe
+// block; the handle field, its codes and its RPCs are unchanged.
 describe('the handle field', () => {
   test('is on the screen now, pre-filled from the profile, with the cooldown hint', async () => {
     const { tree } = await mount(CommunityEditProfileScreen);
 
-    expect(field(tree, 'Handle').props.value).toBe('rowan_lifts');
+    expect(field(tree, 'Username').props.value).toBe('rowan_lifts');
     expect(flattenText(tree.toJSON()))
-      .toContain('Letters, numbers and underscores. You can change your handle once every 30 days.');
+      .toContain('Letters, numbers and underscores. You can change your username once every 30 days.');
   });
 
   test('re-typing the SAME handle asks the server nothing, and Save stays enabled', async () => {
     const { tree } = await mount(CommunityEditProfileScreen);
 
-    await act(async () => { field(tree, 'Handle').props.onChangeText('rowan_lifts'); });
+    await act(async () => { field(tree, 'Username').props.onChangeText('rowan_lifts'); });
     await flush();
 
     expect(checkHandle).not.toHaveBeenCalled();
@@ -279,7 +285,7 @@ describe('the handle field', () => {
   test('a handle of the wrong shape never reaches the server, and Save is disabled', async () => {
     const { tree } = await mount(CommunityEditProfileScreen);
 
-    await act(async () => { field(tree, 'Handle').props.onChangeText('ro'); });
+    await act(async () => { field(tree, 'Username').props.onChangeText('ro'); });
     await flush();
 
     expect(checkHandle).not.toHaveBeenCalled();
@@ -289,7 +295,7 @@ describe('the handle field', () => {
   test('a free new handle reads Available, live-checked against the server', async () => {
     const { tree } = await mount(CommunityEditProfileScreen);
 
-    await act(async () => { field(tree, 'Handle').props.onChangeText('New_Handle'); });
+    await act(async () => { field(tree, 'Username').props.onChangeText('New_Handle'); });
     await flush();
 
     expect(checkHandle).toHaveBeenCalledWith('new_handle'); // lowercased and stripped
@@ -301,7 +307,7 @@ describe('the handle field', () => {
     checkHandle.mockResolvedValue(false);
     const { tree } = await mount(CommunityEditProfileScreen);
 
-    await act(async () => { field(tree, 'Handle').props.onChangeText('new_handle'); });
+    await act(async () => { field(tree, 'Username').props.onChangeText('new_handle'); });
     await flush();
 
     expect(flattenText(tree.toJSON())).toContain('Taken');
@@ -312,17 +318,17 @@ describe('the handle field', () => {
     checkHandle.mockRejectedValue(Object.assign(new Error('offline'), { code: 'offline' }));
     const { tree } = await mount(CommunityEditProfileScreen);
 
-    await act(async () => { field(tree, 'Handle').props.onChangeText('new_handle'); });
+    await act(async () => { field(tree, 'Username').props.onChangeText('new_handle'); });
     await flush();
 
-    expect(flattenText(tree.toJSON())).toContain('Could not check that handle. You are offline.');
+    expect(flattenText(tree.toJSON())).toContain('Could not check that username. You are offline.');
     expect(byLabel(tree, 'Save profile').props.disabled).toBe(false);
   });
 
   test('a changed, available handle is sent on Save', async () => {
     const { tree } = await mount(CommunityEditProfileScreen);
 
-    await act(async () => { field(tree, 'Handle').props.onChangeText('new_handle'); });
+    await act(async () => { field(tree, 'Username').props.onChangeText('new_handle'); });
     await flush();
     await act(async () => { byLabel(tree, 'Save profile').props.onPress(); });
     await flush();
@@ -334,13 +340,13 @@ describe('the handle field', () => {
     upsertProfile.mockRejectedValueOnce(Object.assign(new Error('not_allowed'), { code: 'not_allowed' }));
     const { tree, navigation } = await mount(CommunityEditProfileScreen);
 
-    await act(async () => { field(tree, 'Handle').props.onChangeText('new_handle'); });
+    await act(async () => { field(tree, 'Username').props.onChangeText('new_handle'); });
     await flush();
     await act(async () => { byLabel(tree, 'Save profile').props.onPress(); });
     await flush();
 
     expect(mockToastShow).toHaveBeenCalledWith(
-      'You changed your handle less than 30 days ago.',
+      'You changed your username less than 30 days ago.',
       expect.objectContaining({ variant: 'error' }),
     );
     expect(mockToastShow).not.toHaveBeenCalledWith('Profile saved');

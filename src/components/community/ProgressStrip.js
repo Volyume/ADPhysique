@@ -42,10 +42,13 @@ const BAR_MAX_HEIGHT = 24;
 // floor rather than a hairline nobody can see (founder defect 2026-09-14).
 const BAR_MIN_HEIGHT = 2;
 
-function Cell({ t, value, label, isLast }) {
+function Cell({ t, value, label, isLast, lead }) {
   return (
     <View style={[styles.cell, !isLast && { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: t.colors.borderSubtle }]}>
-      <Text style={[styles.value, t.type.num('label'), { color: t.colors.textPrimary }]}>{value}</Text>
+      {/* Q6 recommendation, founder order 2026-09-22 item 8: the ONE
+          figure that steps up on this strip is sessions this week, the
+          screen's own result, so only the leading cell passes `lead`. */}
+      <Text style={[styles.value, t.type.num(lead ? 'title' : 'label'), { color: t.colors.textPrimary }]}>{value}</Text>
       <Text style={[styles.label, { ...t.type.caption, color: t.colors.textMuted }]}>{label}</Text>
     </View>
   );
@@ -112,7 +115,7 @@ export default function ProgressStrip({ counters, onPress }) {
       accessibilityLabel={`${sessions} sessions this week, ${streak} weeks in a row, ${consistent} consistent weeks in the last 12${prsClause}${historyClause}.${suffix}`}
     >
       <View style={styles.cellsRow}>
-        <Cell t={t} value={sessions} label={sessions === 1 ? 'session this week' : 'sessions this week'} />
+        <Cell t={t} value={sessions} label={sessions === 1 ? 'session this week' : 'sessions this week'} lead />
         <Cell t={t} value={streak} label={streak === 1 ? 'week in a row' : 'weeks in a row'} />
         <Cell t={t} value={consistent} label="consistent in 12 weeks" isLast={!hasPrs} />
         {hasPrs ? (

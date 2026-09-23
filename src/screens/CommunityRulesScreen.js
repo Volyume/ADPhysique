@@ -75,7 +75,7 @@ export const COMMUNITY_RULES_TEXT = {
   privacy: {
     heading: 'What stays private',
     intro:
-      'Community only ever shows what you choose to put there: a handle, '
+      'Community only ever shows what you choose to put there: a username, '
       + 'a display name, a bio, up to three training styles, a goal, a '
       + 'training setting, and (if you want) an area or gym label. '
       + 'Training-story posts show what you post and nothing more.',

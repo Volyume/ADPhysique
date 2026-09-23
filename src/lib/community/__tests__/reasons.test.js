@@ -15,7 +15,8 @@ const { REASON_TOKENS, reasonCopy, reasonLines } = require('../reasons');
 
 describe('reasonCopy', () => {
   test('the three fixed-wording tokens read as their exact copy', () => {
-    expect(reasonCopy('same_age_band')).toBe('Same age band');
+    // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8)
+    expect(reasonCopy('same_age_band')).toBe('Same age group');
     expect(reasonCopy('near_place')).toBe('Near you');
     expect(reasonCopy('within_25_miles')).toBe('Within 25 miles');
   });
@@ -46,8 +47,9 @@ describe('reasonCopy', () => {
 describe('reasonLines', () => {
   test('a whole row of reasons, tokens and copy mixed, in order', () => {
     const card = { place_label: 'Motherwell' };
+    // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8)
     expect(reasonLines(['Trains at PureGym Leeds', 'same_place', 'same_age_band'], card)).toEqual([
-      'Trains at PureGym Leeds', 'In Motherwell', 'Same age band',
+      'Trains at PureGym Leeds', 'In Motherwell', 'Same age group',
     ]);
   });
 

@@ -296,7 +296,11 @@ surface.
    or `bodySm`; figures and metadata are `label` or `caption` (clarified
    2026-09-10: this rule never banned `body`).
    No `h1`, `h2` or `h3` on any list screen; the one `h3` allowed in
-   Community is the not-joined hero on the Hub.
+   Community is the not-joined hero on the Hub (clarified 2026-09-23,
+   founder order 2026-09-22 item 8: ONE figure per screen, the screen's
+   result, may take `title` (17): the Hub's You-row metric and the
+   Profile strip's leading cell; pinned by `community.presentation.guard`
+   rule (d)).
 2. No `Card` for people, groups, cohorts or activity. Rosters, group
    lists and the feed are flat rows with hairline dividers. `Card` is
    allowed only for the not-joined hero and the moderated-person notice.

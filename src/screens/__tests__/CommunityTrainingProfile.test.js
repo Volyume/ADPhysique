@@ -430,13 +430,17 @@ describe('a minor never sees the age band row (SD-32, exactly as Join filters it
       refresh: jest.fn(() => Promise.resolve()),
     });
     const { tree } = await mount();
-    expect(flattenText(tree.toJSON())).not.toContain('Age band');
+    // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8): "Age band"
+    // -> "Age group" (audit A-09), copy only; the field is unchanged.
+    expect(flattenText(tree.toJSON())).not.toContain('Age group');
     expect(switchFor(tree, 'Share age band')).toBeUndefined();
   });
 
   test('an adult still sees the row', async () => {
     const { tree } = await mount();
-    expect(flattenText(tree.toJSON())).toContain('Age band');
+    // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8): "Age band"
+    // -> "Age group" (audit A-09), copy only; the field is unchanged.
+    expect(flattenText(tree.toJSON())).toContain('Age group');
   });
 });
 

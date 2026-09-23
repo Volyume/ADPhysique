@@ -201,7 +201,7 @@ export default function CommunityFindPeopleScreen({ navigation }) {
       <SearchBar
         value={query}
         onChangeText={setQuery}
-        placeholder="Search by name or handle"
+        placeholder="Search by name or username"
         accessibilityLabel="Search for people"
         onSubmitEditing={() => {
           const q = query.trim();

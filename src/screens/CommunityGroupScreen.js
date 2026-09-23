@@ -311,7 +311,7 @@ export default function CommunityGroupScreen({ navigation, route }) {
       },
     }, {
       icon: 'person-add-outline',
-      label: 'Invite by handle',
+      label: 'Invite by username',
       onPress: () => { setMenuOpen(false); setInviteOpen(true); },
     }, {
       icon: 'share-outline',
@@ -362,7 +362,18 @@ export default function CommunityGroupScreen({ navigation, route }) {
       actionAccessibilityLabel="Try loading this group again"
     />
   ) : isMember ? (
-    <EmptyState icon="images-outline" title="No stories yet" text="Nothing here yet from this group's members." />
+    // Founder defect 2026-09-14 ("it looks rubbish"): a section with
+    // nothing in it was a bordered box with a 52 dp circle icon, a title
+    // and a paragraph. The Hub and Profile say their own emptiness in one
+    // quiet line; this group's own feed now does the same (blueprint
+    // section 9 rule 9: one line, one action, never a paragraph -- the one
+    // action here is the "Share a workout with the group" door already at
+    // the top of ACTIVITY, so no button belongs on this line). The offline
+    // and failed branch above keeps the full EmptyState: it carries a
+    // retry, and an error is not an empty section.
+    <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+      Nothing here yet from this group's members.
+    </Text>
   ) : null;
 
   return (
@@ -553,6 +564,7 @@ const styles = StyleSheet.create({
   header: { gap: spacing.xs, marginBottom: spacing.sm },
   label: { ...type.label, color: colors.textSecondary },
   blurb: { ...type.bodySm, color: colors.textSecondary },
+  sectionEmpty: { ...type.bodySm, color: colors.textMuted, paddingVertical: spacing.sm },
   joinBtn: { marginTop: spacing.sm, alignSelf: 'flex-start' },
   invited: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm },
   // Phase 3: "Together this week" (spec section 4).

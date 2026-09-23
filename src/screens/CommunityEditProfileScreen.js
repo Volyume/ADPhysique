@@ -71,19 +71,19 @@ const MAX_OTHER_GYMS = 3;
 // Same debounce the Join screen's own handle check uses.
 const HANDLE_DEBOUNCE_MS = 250;
 
-const HANDLE_HINT = `Letters, numbers and underscores. You can change your handle once every ${HANDLE_CHANGE_DAYS} days.`;
-const NOT_ALLOWED_HINT = `You changed your handle less than ${HANDLE_CHANGE_DAYS} days ago.`;
+const HANDLE_HINT = `Letters, numbers and underscores. You can change your username once every ${HANDLE_CHANGE_DAYS} days.`;
+const NOT_ALLOWED_HINT = `You changed your username less than ${HANDLE_CHANGE_DAYS} days ago.`;
 // The two "a check that could not run" lines, same wording as the Join
 // screen's own (`CommunityJoinScreen.js`). Duplicated rather than
 // cross-imported: the established pattern here (each screen owns its
 // own small copy set, e.g. the REFUSALS map below already repeats
 // several of Join's lines verbatim).
-const HANDLE_OFFLINE_HINT = 'Could not check that handle. You are offline.';
-const HANDLE_UNAVAILABLE_HINT = 'Could not check that handle just now. Try again.';
+const HANDLE_OFFLINE_HINT = 'Could not check that username. You are offline.';
+const HANDLE_UNAVAILABLE_HINT = 'Could not check that username just now. Try again.';
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
-  handle_taken: 'That handle is taken. Try another.',
+  handle_taken: 'That username is taken. Try another.',
   handle_invalid: 'Use 3 to 20 letters, numbers or underscores.',
   content_not_allowed: 'That wording is not allowed here. Try different words.',
   rate_limited: 'That is a lot of changes for one day. Try again tomorrow.',
@@ -390,13 +390,13 @@ export default function CommunityEditProfileScreen({ navigation }) {
 
         <View style={styles.field}>
           <TextField
-            label="Handle"
+            label="Username"
             value={handle}
             onChangeText={(v) => setHandle(v.replace(/\s/g, '').toLowerCase())}
             autoCapitalize="none"
             autoCorrect={false}
             size="sm"
-            accessibilityLabel="Handle"
+            accessibilityLabel="Username"
           />
           <Text style={[styles.hint, { ...t.type.caption, color: handleTone }]}>{handleLine}</Text>
         </View>

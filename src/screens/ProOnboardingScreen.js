@@ -248,8 +248,8 @@ const RECOVERY_OPTIONS = [
 
 // Step 5 handle line (CR-15): the Join screen's own states and words.
 const HANDLE_HINT = 'Use 3 to 20 letters, numbers or underscores.';
-const HANDLE_OFFLINE_HINT = 'Could not check that handle. You are offline.';
-const HANDLE_UNAVAILABLE_HINT = 'Could not check that handle just now.';
+const HANDLE_OFFLINE_HINT = 'Could not check that username. You are offline.';
+const HANDLE_UNAVAILABLE_HINT = 'Could not check that username just now.';
 const HANDLE_CHECK_DEBOUNCE_MS = 400;
 // The longest a Join tap waits for a live handle check that has not
 // answered (D160, hostile review OJ-REV-SQL-3 F1): the check has no timeout
@@ -1306,7 +1306,7 @@ export default function ProOnboardingScreen({ navigation }) {
     const errs = {};
     if (join && communityJoin !== 'existing' && communityHandle.trim()) {
       if (communityHandleState === 'invalid') errs.handle = HANDLE_HINT;
-      else if (communityHandleState === 'taken') errs.handle = 'That handle is taken. Try another.';
+      else if (communityHandleState === 'taken') errs.handle = 'That username is taken. Try another.';
     }
     return errs;
   }
@@ -2680,9 +2680,9 @@ export default function ProOnboardingScreen({ navigation }) {
       : ({
         idle: 'Leave it blank and Volyume picks one for you.',
         invalid: HANDLE_HINT,
-        checking: 'Checking that handle.',
+        checking: 'Checking that username.',
         available: 'Available.',
-        taken: 'That handle is taken. Try another.',
+        taken: 'That username is taken. Try another.',
         unknown: communityHandleFailure === 'offline' ? HANDLE_OFFLINE_HINT : HANDLE_UNAVAILABLE_HINT,
       })[communityHandleState];
     const handleTone = communityHandleState === 'available' || communityJoin === 'existing'
@@ -2768,14 +2768,14 @@ export default function ProOnboardingScreen({ navigation }) {
               ) : (
                 <>
                   <View style={styles.section} onLayout={markY('handle')}>
-                    <Text style={[styles.fieldLabel, live.fieldLabel]}>Handle</Text>
+                    <Text style={[styles.fieldLabel, live.fieldLabel]}>Username</Text>
                     <TextField
                       ref={communityHandleRef}
                       value={communityHandle}
                       onChangeText={(v) => setCommunityHandle(v.replace(/\s/g, '').toLowerCase())}
                       autoCapitalize="none"
                       autoCorrect={false}
-                      accessibilityLabel="Handle"
+                      accessibilityLabel="Username"
                       error={errors5.handle}
                     />
                     {/* TextField renders the gap line itself from `error`

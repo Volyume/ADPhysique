@@ -53,7 +53,8 @@ jest.mock('../../../lib/community', () => ({
   },
   reasonLines: (reasons, card) => (Array.isArray(reasons) ? reasons : []).map((r) => {
     if (r === 'same_place') return `In ${card?.place_label || card?.area_label || 'your place'}`;
-    if (r === 'same_age_band') return 'Same age band';
+    // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8)
+    if (r === 'same_age_band') return 'Same age group';
     if (r === 'near_place') return 'Near you';
     if (r === 'within_25_miles') return 'Within 25 miles';
     return r;
@@ -129,7 +130,8 @@ describe('rendering', () => {
       reasons: ['same_place', 'same_age_band'],
     });
     const text = flattenText(tree.toJSON());
-    expect(text).toContain('In Motherwell · Same age band');
+    // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8)
+    expect(text).toContain('In Motherwell · Same age group');
     expect(text).not.toContain('same_place');
   });
 

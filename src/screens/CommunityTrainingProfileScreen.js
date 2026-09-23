@@ -83,7 +83,7 @@ export function bandRows(bands, me) {
     { key: 'experience', label: 'Experience', value: TP_EXPERIENCE_BANDS[bands?.tp_experience_band] ?? '' },
     {
       key: 'age_band',
-      label: 'Age band',
+      label: 'Age group',
       value: TP_AGE_BANDS[me?.tp_age_band] ?? '',
       empty: 'Worked out from your date of birth when this is on',
     },

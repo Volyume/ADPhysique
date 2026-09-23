@@ -69,16 +69,16 @@ const HANDLE_DEBOUNCE_MS = 250;
 const MAX_OTHER_GYMS = 3;
 
 const HANDLE_HINT = 'Use 3 to 20 letters, numbers or underscores.';
-export const HANDLE_OFFLINE_HINT = 'Could not check that handle. You are offline.';
-export const HANDLE_UNAVAILABLE_HINT = 'Could not check that handle just now. Try again.';
+export const HANDLE_OFFLINE_HINT = 'Could not check that username. You are offline.';
+export const HANDLE_UNAVAILABLE_HINT = 'Could not check that username just now. Try again.';
 
 const REFUSALS = {
   offline: 'You are offline. Try again when you have a connection.',
-  handle_taken: 'That handle is taken. Try another.',
+  handle_taken: 'That username is taken. Try another.',
   handle_invalid: HANDLE_HINT,
   content_not_allowed: 'That wording is not allowed here. Try different words.',
   rate_limited: 'That is a lot of changes for one day. Try again tomorrow.',
-  invalid_input: 'Check the handle and name, then try again.',
+  invalid_input: 'Check the username and name, then try again.',
 };
 
 export default function CommunityJoinScreen({ navigation, route }) {
@@ -358,13 +358,13 @@ export default function CommunityJoinScreen({ navigation, route }) {
 
         <View style={styles.field}>
           <TextField
-            label="Handle"
+            label="Username"
             value={handle}
             onChangeText={(v) => setHandle(v.replace(/\s/g, '').toLowerCase())}
             autoCapitalize="none"
             autoCorrect={false}
             size="sm"
-            accessibilityLabel="Handle"
+            accessibilityLabel="Username"
           />
           <Text style={[styles.hint, { ...t.type.caption, color: handleTone }]}>{handleLine}</Text>
         </View>

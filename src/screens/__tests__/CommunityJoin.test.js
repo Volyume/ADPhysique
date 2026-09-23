@@ -214,7 +214,7 @@ describe('the handle line', () => {
 
   test('a handle of the wrong shape never reaches the server', async () => {
     const { tree } = await mount();
-    await type(tree, 'Handle', 'ro');
+    await type(tree, 'Username', 'ro');
 
     expect(checkHandle).not.toHaveBeenCalled();
     expect(flattenText(tree.toJSON()))
@@ -223,7 +223,7 @@ describe('the handle line', () => {
 
   test('a free handle reads Available', async () => {
     const { tree } = await mount();
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
 
     expect(checkHandle).toHaveBeenCalledWith('rowan_lifts');
     expect(flattenText(tree.toJSON())).toContain('Available');
@@ -232,14 +232,14 @@ describe('the handle line', () => {
   test('a used handle reads Taken', async () => {
     checkHandle.mockResolvedValue(false);
     const { tree } = await mount();
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
 
     expect(flattenText(tree.toJSON())).toContain('Taken');
   });
 
   test('whitespace and case are normalised before the check', async () => {
     const { tree } = await mount();
-    await type(tree, 'Handle', 'Rowan Lifts');
+    await type(tree, 'Username', 'Rowan Lifts');
 
     expect(checkHandle).toHaveBeenCalledWith('rowanlifts');
   });
@@ -250,7 +250,7 @@ describe('creating the profile', () => {
     const { tree } = await mount();
     expect(button(tree, 'Create my Community profile').props.disabled).toBe(true);
 
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     expect(button(tree, 'Create my Community profile').props.disabled).toBe(true);
 
     await type(tree, 'Display name', 'Rowan M');
@@ -259,7 +259,7 @@ describe('creating the profile', () => {
 
   test('sends the accepted rules version with the profile', async () => {
     const { tree } = await mount();
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
 
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
@@ -276,7 +276,7 @@ describe('creating the profile', () => {
 
   test('the training profile syncs, forced, once the profile exists (SD-22)', async () => {
     const { tree } = await mount();
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
 
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
@@ -291,13 +291,16 @@ describe('creating the profile', () => {
     upsertProfile.mockRejectedValueOnce(err);
 
     const { tree, navigation } = await mount();
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
     await flush();
 
+    // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8): "Handle"
+    // -> "Username" in user-facing copy (audit A-14); the handle field,
+    // codes and RPCs are unchanged.
     expect(mockToastShow).toHaveBeenCalledWith(
-      'That handle is taken. Try another.',
+      'That username is taken. Try another.',
       expect.objectContaining({ variant: 'error' }),
     );
     expect(navigation.goBack).not.toHaveBeenCalled();
@@ -332,7 +335,7 @@ describe('the training profile step (SD-22)', () => {
     await act(async () => { everyone.props.onPress(); });
     await flush();
 
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
     await flush();
@@ -347,7 +350,7 @@ describe('the training profile step (SD-22)', () => {
   // only a person who switches it off before Create publishes nothing.
   test('on by default, Create publishes sharing to everyone without a tap', async () => {
     const { tree } = await mount();
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
     await flush();
@@ -364,7 +367,7 @@ describe('the training profile step (SD-22)', () => {
     )[0];
     await act(async () => { shareSwitch.props.onValueChange(false); });
     await flush();
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
     await flush();
@@ -477,23 +480,27 @@ describe('when the handle check cannot run', () => {
     return e;
   }
 
+  // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 8): "Handle" ->
+  // "Username" in user-facing copy (audit A-14) through this whole
+  // describe block; the handle field and its offline/unavailable codes
+  // are unchanged.
   test('offline says so, and Create stays available', async () => {
     checkHandle.mockRejectedValue(offline());
     const { tree } = await mount();
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
 
-    expect(flattenText(tree.toJSON())).toContain('Could not check that handle. You are offline.');
+    expect(flattenText(tree.toJSON())).toContain('Could not check that username. You are offline.');
     expect(button(tree, 'Create my Community profile').props.disabled).toBe(false);
   });
 
   test('any other failure says try again, and Create stays available', async () => {
     checkHandle.mockRejectedValue(new Error('boom'));
     const { tree } = await mount();
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
 
-    expect(flattenText(tree.toJSON())).toContain('Could not check that handle just now. Try again.');
+    expect(flattenText(tree.toJSON())).toContain('Could not check that username just now. Try again.');
     expect(button(tree, 'Create my Community profile').props.disabled).toBe(false);
   });
 
@@ -502,7 +509,7 @@ describe('when the handle check cannot run', () => {
     upsertProfile.mockRejectedValueOnce(offline());
 
     const { tree } = await mount();
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
     await flush();
@@ -517,14 +524,14 @@ describe('when the handle check cannot run', () => {
   test('a check that answers again clears the line', async () => {
     checkHandle.mockRejectedValueOnce(offline());
     const { tree } = await mount();
-    await type(tree, 'Handle', 'rowan_lifts');
-    expect(flattenText(tree.toJSON())).toContain('Could not check that handle. You are offline.');
+    await type(tree, 'Username', 'rowan_lifts');
+    expect(flattenText(tree.toJSON())).toContain('Could not check that username. You are offline.');
 
     checkHandle.mockResolvedValue(true);
-    await type(tree, 'Handle', 'rowan_lift');
+    await type(tree, 'Username', 'rowan_lift');
 
     expect(flattenText(tree.toJSON())).toContain('Available');
-    expect(flattenText(tree.toJSON())).not.toContain('Could not check that handle');
+    expect(flattenText(tree.toJSON())).not.toContain('Could not check that username');
   });
 });
 
@@ -580,7 +587,7 @@ describe('the gym step', () => {
     expect(flattenText(tree.toJSON()))
       .toContain('Not chosen yet. You can add this any time from Edit profile.');
 
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
     await flush();
@@ -605,7 +612,7 @@ describe('the gym step', () => {
     await confirmGym(tree, OTHER);
     expect(flattenText(tree.toJSON())).toContain('The Gym Leeds');
 
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
     await flush();
@@ -638,7 +645,7 @@ describe('the discipline picker', () => {
 
   test('is optional: Create works with none chosen', async () => {
     const { tree } = await mount();
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
 
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
@@ -656,7 +663,7 @@ describe('the discipline picker', () => {
     const { tree } = await mount();
     await act(async () => { chip(tree, 'Bodybuilding').props.onPress(); });
     await act(async () => { chip(tree, 'Wellness').props.onPress(); });
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
 
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
@@ -673,7 +680,7 @@ describe('the discipline picker', () => {
     await act(async () => { chip(tree, 'Powerlifting').props.onPress(); });
     await act(async () => { chip(tree, 'Wellness').props.onPress(); });
     await act(async () => { chip(tree, 'Hybrid').props.onPress(); });
-    await type(tree, 'Handle', 'rowan_lifts');
+    await type(tree, 'Username', 'rowan_lifts');
     await type(tree, 'Display name', 'Rowan M');
 
     await act(async () => { button(tree, 'Create my Community profile').props.onPress(); });
@@ -704,7 +711,7 @@ describe('the handle suggestion on mount', () => {
     const { tree } = await mount();
     await flush(); // the cascaded live-check debounce, on top of mount()'s own flush
 
-    expect(field(tree, 'Handle').props.value).toBe('suggested_one');
+    expect(field(tree, 'Username').props.value).toBe('suggested_one');
     expect(checkHandle).toHaveBeenCalledWith('suggested_one');
     expect(flattenText(tree.toJSON())).toContain('Available');
   });
@@ -714,7 +721,7 @@ describe('the handle suggestion on mount', () => {
     // "unchanged behaviour" half of spec 4.4 has its own test.
     const { tree } = await mount();
 
-    expect(field(tree, 'Handle').props.value).toBe('');
+    expect(field(tree, 'Username').props.value).toBe('');
     expect(checkHandle).not.toHaveBeenCalled();
     expect(flattenText(tree.toJSON())).toContain('Use 3 to 20 letters, numbers or underscores.');
   });
@@ -724,11 +731,11 @@ describe('the handle suggestion on mount', () => {
     suggestHandle.mockReturnValueOnce(new Promise((resolve) => { resolveSuggestion = resolve; }));
     const { tree } = await mount();
 
-    await type(tree, 'Handle', 'my_own_handle');
+    await type(tree, 'Username', 'my_own_handle');
     resolveSuggestion({ handle: 'suggested_one', source: 'email' });
     await flush();
 
-    expect(field(tree, 'Handle').props.value).toBe('my_own_handle');
+    expect(field(tree, 'Username').props.value).toBe('my_own_handle');
   });
 });
 
@@ -771,7 +778,7 @@ describe('a pending join pre-fills instead, and supersedes the queue', () => {
     const { tree } = await mount();
     await flush(); // the cascaded live-check debounce for the pre-filled handle
 
-    expect(field(tree, 'Handle').props.value).toBe('queued_handle');
+    expect(field(tree, 'Username').props.value).toBe('queued_handle');
     expect(field(tree, 'Display name').props.value).toBe('Queued Name');
     const text = flattenText(tree.toJSON());
     expect(text).toContain('Your main gym');
@@ -788,7 +795,7 @@ describe('a pending join pre-fills instead, and supersedes the queue', () => {
     const { tree } = await mount();
     await flush();
 
-    expect(field(tree, 'Handle').props.value).toBe('queued_handle');
+    expect(field(tree, 'Username').props.value).toBe('queued_handle');
     expect(flattenText(tree.toJSON())).not.toContain('Your main gym');
   });
 

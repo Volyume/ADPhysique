@@ -31,6 +31,7 @@ import useTheme from '../hooks/useTheme';
 import { colors, spacing, type } from '../styles/theme';
 import {
   createGroup, updateGroup, GROUP_NAME_MAX, GROUP_BLURB_MAX, GROUP_ACCESS, GROUP_ACCESS_ORDER,
+  GROUP_PURPOSE_LINE,
 } from '../lib/community';
 
 const REFUSALS = {
@@ -82,6 +83,13 @@ export default function CommunityGroupCreateScreen({ navigation, route }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title={editing ? 'Edit group' : 'New group'} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {/* Founder order 2026-09-22 item 8 (audit A-13): what a group is
+            FOR, in CREATE mode only -- an editor already knows. One
+            register with the Hub's own empty-groups line
+            (CommunityHubScreen.js). */}
+        {!editing ? (
+          <Text style={[styles.purpose, { ...t.type.bodySm, color: t.colors.textSecondary }]}>{GROUP_PURPOSE_LINE}</Text>
+        ) : null}
         <TextField
           label="Group name"
           value={name}
@@ -139,6 +147,7 @@ export default function CommunityGroupCreateScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
+  purpose: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.md },
   counter: { ...type.caption, color: colors.textMuted, textAlign: 'right', marginTop: -spacing.xs },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   hint: { ...type.bodySm, color: colors.textSecondary },

@@ -15,10 +15,14 @@
  *    (a genuine 0 included), absent for null/undefined, singular label
  *    at exactly 1, and the accessibility label gains the PR clause only
  *    in that case.
+ *  - founder order 2026-09-22 item 8 (Q6, Part E): the leading cell
+ *    (sessions this week) reads at the `title` type role, the screen's
+ *    own result; every other cell stays at `label`.
  */
 import { create, act } from 'react-test-renderer';
 
 import ProgressStrip from '../ProgressStrip';
+import { type } from '../../../styles/theme';
 
 function render(props = {}) {
   let tree = null;
@@ -45,6 +49,17 @@ function barViews(tree) {
     (n) => n.type === 'View' && n.props?.style
       && [].concat(n.props.style).some((s) => s && typeof s === 'object' && 'height' in s && 'backgroundColor' in s),
   );
+}
+
+// Founder order 2026-09-22 item 8 (Q6, Part E): each cell's VALUE Text is
+// the only node in this file styled with `type.num(...)`
+// (`fontVariant: ['tabular-nums']`), so that is what tells the value
+// Texts apart from the label/footer-caption Texts, in cell order.
+function cellValueFontSizes(tree) {
+  return tree.root.findAll((n) => n.type === 'Text')
+    .filter((n) => [].concat(n.props.style).filter(Boolean)
+      .some((s) => Array.isArray(s.fontVariant) && s.fontVariant.includes('tabular-nums')))
+    .map((n) => [].concat(n.props.style).filter(Boolean).find((s) => 'fontSize' in s)?.fontSize);
 }
 
 describe('ProgressStrip', () => {
@@ -229,6 +244,31 @@ describe('ProgressStrip', () => {
       const label = tree.root.findByProps({ accessibilityRole: 'button' }).props.accessibilityLabel;
       expect(label.indexOf('3 PRs in the last four weeks')).toBeLessThan(label.indexOf('See boards'));
       expect(label.endsWith('See boards')).toBe(true);
+    });
+  });
+
+  // New pin (founder order 2026-09-22 item 8, Q6 recommendation, Part
+  // E): the leading cell is the screen's own result, "sessions this
+  // week", so it alone steps up to the `title` type role.
+  describe('the leading cell reads one type role larger (Q6)', () => {
+    test('with three cells: the first (sessions) is title, the other two stay label', () => {
+      const tree = render({
+        counters: { c_sessions_week: 4, c_weeks_streak: 2, c_consistent_weeks_12w: 6 },
+      });
+      expect(cellValueFontSizes(tree)).toEqual([
+        type.title.fontSize, type.label.fontSize, type.label.fontSize,
+      ]);
+    });
+
+    test('with the fourth PR cell present: still only the first cell is title', () => {
+      const tree = render({
+        counters: {
+          c_sessions_week: 4, c_weeks_streak: 2, c_consistent_weeks_12w: 6, c_prs_4w: 1,
+        },
+      });
+      expect(cellValueFontSizes(tree)).toEqual([
+        type.title.fontSize, type.label.fontSize, type.label.fontSize, type.label.fontSize,
+      ]);
     });
   });
 });

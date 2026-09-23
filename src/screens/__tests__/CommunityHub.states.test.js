@@ -69,6 +69,9 @@ jest.mock('../../lib/community', () => ({
   readHostDismissed: jest.fn(() => Promise.resolve(false)),
   writeHostDismissed: jest.fn(() => Promise.resolve()),
   loadHub: jest.fn(),
+  // Founder order 2026-09-22 item 8 (audit A-13): real constant, not a
+  // stand-in, so this suite stays honest about the actual rendered line.
+  GROUP_PURPOSE_LINE: jest.requireActual('../../lib/community/groups').GROUP_PURPOSE_LINE,
   hasProfile: (me) => !!me?.profile?.handle,
   hasUnseen: () => false,
   hasUnreadMessages: () => false,
