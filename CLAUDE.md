@@ -15,8 +15,11 @@ are paying. Every change affects them. Work accordingly.
 > `migrate_175` (2026-09-12 15:05 UTC; the README status block is the
 > live record) except **155**, which waits for the store apps to move to
 > a build without Partners (README status block); **176** (closed groups
-> leave the Hub and "My groups", 2026-09-13) is WRITTEN, guard-proved and
-> NOT APPLIED, waiting for the phrase. Only **049** is HELD
+> leave the Hub and "My groups", 2026-09-13), **177** (push recipients),
+> **178** (the note post) and **179** (RLS on the two tooling tables), the
+> last three written 2026-09-22/23, are WRITTEN, guard-proved and NOT
+> APPLIED, waiting for the phrase; 179 can go alone and first, and 178 must
+> be applied before any build carrying the note door. Only **049** is HELD
 > (059 is applied; its `meal_[0-9]+` CHECK is live); 150 is RETIRED. This
 > line is updated at every apply (founder order 2026-09-12).
 > Decision delegation (D33) and the full
@@ -45,7 +48,7 @@ database is the source of truth on device. Local migrations run via
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
 is absolute — all user data stays in Dublin. Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_176`, WRITTEN NOT APPLIED; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_179`; 176 to 179 WRITTEN NOT APPLIED; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,

@@ -1,7 +1,7 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-09-22 (later) — COMMUNITY PROPOSALS 1 TO 11 UNDER WAY: ITEMS 1 AND 2 ON MAIN (`5441df58`, `92580e80`), ITEM 3 IN REVIEW; D195 ★
+## ★ 2026-09-23 — COMMUNITY PROPOSALS 1 TO 11: ITEMS 1 TO 5 ON MAIN (last `55937478`), THE NUTRITION ORDER (`26cf33cc`) AND MIGRATION 179 (`2e567408`) TOO; 176 TO 179 WRITTEN NOT APPLIED; NEXT: ITEM 6 (MIGRATION 180) ★
 
 Resume from `docs/TASKBOARD.md` (the section at the top) and D195 in the register. Lanes are two at a time, supervised by an eight-minute check-in; every item gets a lead diff review and a fresh-eyes adversarial review before its commit. Migrations written for items 5 to 11 are NOT APPLIED until the founder's phrase.
 

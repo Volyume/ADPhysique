@@ -9214,3 +9214,29 @@ settled tree; one commit per item; merged to main and pushed the same step.
    build lane missed: `saveUserBodyProfile` replaces every column, so the
    early save merges over the existing row and only a known value replaces
    a stored one.
+4. **Item 3 landed (`20d229c7`); item 4b, link previews (`3f1249ef`).**
+   Ruling on the item 3 review's F2: a successful early join switches the
+   step to its existing-member state, so a back-edit can never look like
+   it took.
+5. **Item 1 server half, migration 177 (`518f1ce6`).** Ruling on the
+   review's F1: a requester receives the ids of the group's current
+   admins; the client uses them as push targets only and never shows
+   them; group metadata, never health data. Recorded in the migration.
+6. **Item 5, the note (`55937478`), Opus-reviewed.** Rulings: a note
+   defaults to Everyone for an adult, Followers for a minor; blank by any
+   whitespace is refused in SQL, spelt with visible chr() calls rather
+   than invisible bytes; the caption's blocked-terms check now runs over
+   every payload string value of every kind (the review found session
+   names and plan names were unfiltered); an automatic note is refused;
+   blanking a note through a direct call to community_post_set_note is
+   recorded as accepted. Hard gate: no build with the door before 178 is
+   applied.
+7. **The founder's Nutrition order (`26cf33cc`).** The chip row goes; one
+   shared feature row carries Higher-calorie day (state-aware, the
+   ED-safety gate untouched) and Meal builder on a day with food logged;
+   Trends is a labelled header action. Review blocker fixed: the
+   container renders only when a row will.
+8. **Migration 179 (`2e567408`), pulled forward on the founder's Supabase
+   advisor email:** RLS on the two migration-tooling tables. The
+   remaining numbering: 180 ED backstop (item 6), 181 gym moderation
+   (item 7), 182 hygiene (item 9).
