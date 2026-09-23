@@ -283,6 +283,68 @@ export async function report(venueId, kind, detail = null) {
 }
 
 /**
+ * The moderator queue's pending gym submissions (GD-12; founder order
+ * 2026-09-22 item 7, B-03). `gyms_review_submission` already existed and
+ * already checked `community_is_moderator()` server-side (migrate_162);
+ * this is the LISTING half, added by migrate_181_gym_moderation_lists.sql.
+ * Refuses `not_allowed` for a non-moderator caller.
+ *
+ * @param {{limit?: number, cursor?: (string|null)}} [opts]
+ * @returns {Promise<{submissions: Array<object>, cursor: (string|null)}>}
+ */
+export async function pendingSubmissions({ limit = 20, cursor = null } = {}) {
+  const data = await callGyms('gyms_pending_submissions', { _limit: limit, _cursor: cursor });
+  return {
+    submissions: Array.isArray(data?.submissions) ? data.submissions : [],
+    cursor: data?.cursor ?? null,
+  };
+}
+
+/**
+ * The moderator queue's pending gym reports (GD-12; founder order
+ * 2026-09-22 item 7, B-03). One row per open `gym_reports` record (never
+ * grouped), matching `gyms_review_report`'s own single-report-id target.
+ * Refuses `not_allowed` for a non-moderator caller.
+ *
+ * @param {{limit?: number, cursor?: (string|null)}} [opts]
+ * @returns {Promise<{reports: Array<object>, cursor: (string|null)}>}
+ */
+export async function pendingReports({ limit = 20, cursor = null } = {}) {
+  const data = await callGyms('gyms_pending_reports', { _limit: limit, _cursor: cursor });
+  return {
+    reports: Array.isArray(data?.reports) ? data.reports : [],
+    cursor: data?.cursor ?? null,
+  };
+}
+
+/**
+ * Approve, reject or merge a pending gym submission (GD-12). Moderator
+ * only; refuses `not_allowed` otherwise. Pre-existing RPC
+ * (migrate_162_gym_directory.sql) - this is its first client wrapper.
+ *
+ * @param {string} id
+ * @param {'approve'|'reject'|'merge'} action
+ * @param {string|null} [mergeInto] required only for 'merge'
+ * @returns {Promise<*>}
+ */
+export async function reviewSubmission(id, action, mergeInto = null) {
+  return callGyms('gyms_review_submission', { _id: id, _action: action, _merge_into: mergeInto });
+}
+
+/**
+ * Resolve or dismiss a venue report (GD-12). Moderator only; refuses
+ * `not_allowed` otherwise. Pre-existing RPC (migrate_162_gym_directory.sql)
+ * - this is its first client wrapper.
+ *
+ * @param {string} id
+ * @param {'resolve'|'dismiss'} action
+ * @returns {Promise<*>}
+ */
+export async function reviewReport(id, action) {
+  return callGyms('gyms_review_report', { _id: id, _action: action });
+}
+
+/**
  * Set the caller's own primary gym and up to three other gyms (GD-14).
  * `community_set_gyms` writes `community_profiles` directly, so it is a
  * Community RPC and goes through Community's own transport rather than

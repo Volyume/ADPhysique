@@ -24,8 +24,9 @@ jest.mock('../transport', () => ({
 import {
   venueLine, distanceLabel, isPendingVenue, milesToMetres, METRES_PER_MILE,
   search, near, placeCentroid, get,
+  pendingSubmissions, pendingReports, reviewSubmission, reviewReport,
 } from '../index';
-import { callGyms } from '../transport';
+import { callGyms, GymsError } from '../transport';
 
 describe('distanceLabel', () => {
   test('one decimal, always, whatever the distance', () => {
@@ -178,5 +179,72 @@ describe('search, near and placeCentroid (30-IMPLEMENTATION.md 1.1 A)', () => {
     expect(out.website).toBe('https://www.puregym.com');
     expect(out.postcode).toBe('ML1 1AA');
     expect(out.source_names).toEqual(['PureGym']);
+  });
+});
+
+// ─── Founder order 2026-09-22 item 7 (B-03): the moderator listing/action
+// wrappers, added by migrate_181_gym_moderation_lists.sql. Every call goes
+// through callGyms, the same RPC-only transport every other wrapper in this
+// file already uses, and a `not_allowed` refusal from the RPC surfaces
+// unchanged as a GymsError with that code (GYM_ERROR_CODES already carries
+// it - no transport change was needed). ──────────────────────────────────
+describe('pendingSubmissions / pendingReports / reviewSubmission / reviewReport (migrate_181)', () => {
+  beforeEach(() => { callGyms.mockReset(); });
+
+  test('pendingSubmissions calls gyms_pending_submissions with _limit/_cursor and normalises the page', async () => {
+    callGyms.mockResolvedValue({
+      submissions: [{ id: 's1', name: 'Volt Gym', confirmation_count: 1 }],
+      cursor: '2026-09-23T00:00:00.000000|s1',
+    });
+    const out = await pendingSubmissions({ limit: 10, cursor: 'prev-cursor' });
+    expect(callGyms).toHaveBeenCalledWith('gyms_pending_submissions', { _limit: 10, _cursor: 'prev-cursor' });
+    expect(out.submissions).toEqual([{ id: 's1', name: 'Volt Gym', confirmation_count: 1 }]);
+    expect(out.cursor).toBe('2026-09-23T00:00:00.000000|s1');
+  });
+
+  test('pendingSubmissions defaults to a first page and normalises a missing list/cursor', async () => {
+    callGyms.mockResolvedValue({});
+    const out = await pendingSubmissions();
+    expect(callGyms).toHaveBeenCalledWith('gyms_pending_submissions', { _limit: 20, _cursor: null });
+    expect(out).toEqual({ submissions: [], cursor: null });
+  });
+
+  test('pendingReports calls gyms_pending_reports with _limit/_cursor and normalises the page', async () => {
+    callGyms.mockResolvedValue({
+      reports: [{ id: 'r1', venue_id: 'v1', venue_name: 'Volt Gym', reason: 'closed', reporter_count: 2 }],
+      cursor: null,
+    });
+    const out = await pendingReports({ limit: 5 });
+    expect(callGyms).toHaveBeenCalledWith('gyms_pending_reports', { _limit: 5, _cursor: null });
+    expect(out.reports).toEqual([
+      { id: 'r1', venue_id: 'v1', venue_name: 'Volt Gym', reason: 'closed', reporter_count: 2 },
+    ]);
+    expect(out.cursor).toBeNull();
+  });
+
+  test('reviewSubmission calls gyms_review_submission with _id/_action/_merge_into', async () => {
+    callGyms.mockResolvedValue({ ok: true, id: 's1', action: 'approve' });
+    await reviewSubmission('s1', 'approve');
+    expect(callGyms).toHaveBeenCalledWith('gyms_review_submission', { _id: 's1', _action: 'approve', _merge_into: null });
+
+    await reviewSubmission('s2', 'merge', 'v9');
+    expect(callGyms).toHaveBeenCalledWith('gyms_review_submission', { _id: 's2', _action: 'merge', _merge_into: 'v9' });
+  });
+
+  test('reviewReport calls gyms_review_report with _id/_action', async () => {
+    callGyms.mockResolvedValue({ ok: true, id: 'r1', action: 'resolve' });
+    await reviewReport('r1', 'resolve');
+    expect(callGyms).toHaveBeenCalledWith('gyms_review_report', { _id: 'r1', _action: 'resolve' });
+  });
+
+  test.each([
+    ['reviewSubmission', () => reviewSubmission('s1', 'reject')],
+    ['reviewReport', () => reviewReport('r1', 'dismiss')],
+    ['pendingSubmissions', () => pendingSubmissions()],
+    ['pendingReports', () => pendingReports()],
+  ])('%s surfaces a not_allowed refusal as a GymsError with that code', async (_name, call) => {
+    callGyms.mockRejectedValue(new GymsError('not_allowed', 'not_allowed'));
+    await expect(call()).rejects.toMatchObject({ code: 'not_allowed' });
+    await expect(call()).rejects.toBeInstanceOf(GymsError);
   });
 });

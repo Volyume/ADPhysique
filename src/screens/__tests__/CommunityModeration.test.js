@@ -42,7 +42,35 @@ jest.mock('../../lib/community', () => ({
   REPORT_REASONS: jest.requireActual('../../lib/community/validation').REPORT_REASONS,
 }));
 
+// Founder order 2026-09-22 item 7 (B-03): the Gyms segment's own wrappers
+// (migrate_181_gym_moderation_lists.sql). REPORT_KINDS is copied verbatim
+// from src/lib/gyms/index.js rather than requireActual'd, so this test
+// never pulls in the real gyms transport chain (callGyms -> callCommunity
+// -> supabase) just to read a fixed label map.
+let lastAlertButtons = null;
+jest.mock('../../lib/gyms', () => ({
+  pendingSubmissions: jest.fn(),
+  pendingReports: jest.fn(),
+  reviewSubmission: jest.fn(() => Promise.resolve({ ok: true })),
+  reviewReport: jest.fn(() => Promise.resolve({ ok: true })),
+  REPORT_KINDS: {
+    closed: 'This gym has closed',
+    wrong_name: 'The name is wrong',
+    wrong_location: 'The location is wrong',
+    duplicate_of: 'This is a duplicate of another gym',
+    not_a_gym: 'This is not a gym',
+    other: 'Something else',
+  },
+}));
+jest.mock('../../components/AppAlert', () => ({
+  appAlert: jest.fn((title, message, buttons) => { lastAlertButtons = buttons; }),
+}));
+
 import { moderationQueue, moderate } from '../../lib/community';
+import {
+  pendingSubmissions, pendingReports, reviewSubmission, reviewReport,
+} from '../../lib/gyms';
+import { appAlert } from '../../components/AppAlert';
 import useCommunityMe from '../../hooks/useCommunityMe';
 import CommunityModerationScreen, { MODERATION_NOTE_MAX } from '../CommunityModerationScreen';
 
@@ -60,6 +88,29 @@ const REPORT = {
   priority: true,
   created_at: Date.now(),
   content: { body: 'Told someone to eat less.', status: 'visible' },
+};
+
+// The shapes gyms_pending_submissions/gyms_pending_reports actually return
+// (supabase/migrate_181_gym_moderation_lists.sql).
+const GYM_SUBMISSION = {
+  id: 'sub1',
+  name: 'Volt Gym',
+  address_line: '1 Main Street',
+  town: 'Burscough',
+  postcode: 'L40 4BY',
+  website: 'https://voltgym.example',
+  operator: null,
+  confirmation_count: 1,
+  created_at: Date.now(),
+};
+const GYM_REPORT = {
+  id: 'grep1',
+  venue_id: 'v1',
+  venue_name: 'PureGym Motherwell',
+  reason: 'closed',
+  detail: 'Permanently shut in June.',
+  reporter_count: 2,
+  created_at: Date.now(),
 };
 
 function texts(tree) {
@@ -109,6 +160,7 @@ function action(tree, label) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  lastAlertButtons = null;
   useCommunityMe.mockReturnValue({
     me: { profile: { user_id: 'u1', handle: 'mod' }, is_moderator: true },
     loading: false,
@@ -116,6 +168,8 @@ beforeEach(() => {
     refresh: jest.fn(),
   });
   moderationQueue.mockResolvedValue({ reports: [REPORT], cursor: null });
+  pendingSubmissions.mockResolvedValue({ submissions: [], cursor: null });
+  pendingReports.mockResolvedValue({ reports: [], cursor: null });
 });
 
 async function openSheet(tree) {
@@ -123,6 +177,12 @@ async function openSheet(tree) {
   const pressable = card.root.findAll((n) => n.props?.onPress && n.props?.accessibilityLabel)[0];
   await act(async () => { pressable.props.onPress(); });
   act(() => { card.unmount(); });
+}
+
+/** Taps the new "Gyms" segment chip and waits for its own loader. */
+async function openGyms(tree) {
+  await act(async () => { action(tree, 'Gyms').props.onPress(); });
+  await flush();
 }
 
 describe('the note for the record', () => {
@@ -213,6 +273,111 @@ describe('the reported content itself renders (F2 fix)', () => {
 
     expect(texts(card)).toContain('Feeling really low about training today.');
     act(() => { card.unmount(); tree.unmount(); });
+  });
+});
+
+// Founder order 2026-09-22 item 7 (B-03): gym submissions and reports were
+// actionable only via raw SQL; this is the minimal moderator queue that
+// closes it. The screen's existing Open/Actioned tabs are untouched by any
+// test in this block.
+describe('the Gyms segment', () => {
+  test('rows render from a fixture: a submission and a report', async () => {
+    pendingSubmissions.mockResolvedValue({ submissions: [GYM_SUBMISSION], cursor: null });
+    pendingReports.mockResolvedValue({ reports: [GYM_REPORT], cursor: null });
+    const tree = await mount();
+    await openGyms(tree);
+
+    const text = texts(tree);
+    expect(text).toContain('Volt Gym');
+    expect(text).toContain('1 Main Street, Burscough, L40 4BY');
+    expect(text).toContain('PureGym Motherwell');
+    expect(text).toContain('This gym has closed');
+    expect(text).toContain('Permanently shut in June.');
+    act(() => { tree.unmount(); });
+  });
+
+  test('the calm empty states show when a queue is empty', async () => {
+    const tree = await mount();
+    await openGyms(tree);
+
+    const text = texts(tree);
+    expect(text).toContain('No gym submissions waiting.');
+    expect(text).toContain('No gym reports waiting.');
+    act(() => { tree.unmount(); });
+  });
+
+  test('approve calls reviewSubmission with the id, no confirm needed', async () => {
+    pendingSubmissions.mockResolvedValue({ submissions: [GYM_SUBMISSION], cursor: null });
+    const tree = await mount();
+    await openGyms(tree);
+
+    await act(async () => { action(tree, `Approve ${GYM_SUBMISSION.name}`).props.onPress(); });
+    await flush();
+
+    expect(appAlert).not.toHaveBeenCalled();
+    expect(reviewSubmission).toHaveBeenCalledWith('sub1', 'approve');
+    act(() => { tree.unmount(); });
+  });
+
+  test('reject asks first, and only calls reviewSubmission once the destructive button is confirmed', async () => {
+    pendingSubmissions.mockResolvedValue({ submissions: [GYM_SUBMISSION], cursor: null });
+    const tree = await mount();
+    await openGyms(tree);
+
+    await act(async () => { action(tree, `Reject ${GYM_SUBMISSION.name}`).props.onPress(); });
+    expect(appAlert).toHaveBeenCalled();
+    expect(reviewSubmission).not.toHaveBeenCalled();
+
+    const destructive = lastAlertButtons.find((b) => b.style === 'destructive');
+    expect(destructive).toBeTruthy();
+    await act(async () => { await destructive.onPress(); });
+    await flush();
+
+    expect(reviewSubmission).toHaveBeenCalledWith('sub1', 'reject');
+    act(() => { tree.unmount(); });
+  });
+
+  test('resolve calls reviewReport with the id and "resolve"', async () => {
+    pendingReports.mockResolvedValue({ reports: [GYM_REPORT], cursor: null });
+    const tree = await mount();
+    await openGyms(tree);
+
+    await act(async () => {
+      action(tree, `Resolve report on ${GYM_REPORT.venue_name}`).props.onPress();
+    });
+    await flush();
+
+    expect(reviewReport).toHaveBeenCalledWith('grep1', 'resolve');
+    act(() => { tree.unmount(); });
+  });
+
+  test('dismiss calls reviewReport with the id and "dismiss", no confirm needed', async () => {
+    pendingReports.mockResolvedValue({ reports: [GYM_REPORT], cursor: null });
+    const tree = await mount();
+    await openGyms(tree);
+
+    await act(async () => {
+      action(tree, `Dismiss report on ${GYM_REPORT.venue_name}`).props.onPress();
+    });
+    await flush();
+
+    expect(appAlert).not.toHaveBeenCalled();
+    expect(reviewReport).toHaveBeenCalledWith('grep1', 'dismiss');
+    act(() => { tree.unmount(); });
+  });
+
+  test('a non-moderator never reaches the Gyms queues either (the screen-level guard covers all three segments)', async () => {
+    useCommunityMe.mockReturnValue({
+      me: { profile: { user_id: 'u2', handle: 'rowan' }, is_moderator: false },
+      loading: false,
+      error: null,
+      refresh: jest.fn(),
+    });
+    const tree = await mount();
+
+    expect(pendingSubmissions).not.toHaveBeenCalled();
+    expect(pendingReports).not.toHaveBeenCalled();
+    act(() => { tree.unmount(); });
   });
 });
 

@@ -18,13 +18,17 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, RefreshControl,
+  View, Text, StyleSheet, RefreshControl, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList. The props are the
 // blueprint's own list contract (keyExtractor, onEndReached paging,
-// pull-to-refresh, an empty state); the list underneath recycles.
+// pull-to-refresh, an empty state); the list underneath recycles. The
+// Gyms segment below is a small, bounded moderator queue (never a long
+// scroll) rendered as plain rows in a ScrollView, so it never reaches
+// for FlatList either -- e8FlashList.guard.test.js's whole-tree sweep
+// only forbids that literal component, not a bounded .map().
 import { FlashList } from '@shopify/flash-list';
 import BackHeader from '../components/BackHeader';
 import BottomSheet from '../components/BottomSheet';
@@ -36,6 +40,7 @@ import EmptyState from '../components/EmptyState';
 import { SkeletonCard } from '../components/Skeleton';
 import ComposerInput from '../components/community/ComposerInput';
 import { useToast } from '../components/Toast';
+import { appAlert } from '../components/AppAlert';
 import useTheme from '../hooks/useTheme';
 import useCommunityMe from '../hooks/useCommunityMe';
 import { colors, spacing, type } from '../styles/theme';
@@ -43,6 +48,14 @@ import { calendarRelativeLabel } from '../lib/workoutDate';
 import {
   moderationQueue, moderate, MODERATION_ACTIONS, REPORT_REASONS,
 } from '../lib/community';
+// Founder order 2026-09-22 item 7 (B-03): the gym directory's moderator
+// actions (`gyms_review_submission`/`gyms_review_report`, migrate_162)
+// already existed and already checked community_is_moderator() server
+// side; they had no client wrapper and no screen at all. This is the
+// first one, added by migrate_181_gym_moderation_lists.sql.
+import {
+  pendingSubmissions, pendingReports, reviewSubmission, reviewReport, REPORT_KINDS,
+} from '../lib/gyms';
 
 const PAGE = 30;
 
@@ -81,6 +94,14 @@ export function reportCountLabel(count) {
   return n === 1 ? '1 report' : `${n} reports`;
 }
 
+/** "1 person confirmed this" / "4 people confirmed this" - the same
+ * `confirmations` count GD-11's two-confirmer rule already tracks on a
+ * gym submission, never a confirmer's identity. */
+export function confirmationCountLabel(count) {
+  const n = Number(count) || 0;
+  return n === 1 ? '1 person confirmed this' : `${n} people confirmed this`;
+}
+
 function whenLabel(createdAt) {
   const ms = typeof createdAt === 'number' ? createdAt : Date.parse(createdAt);
   return Number.isFinite(ms) ? calendarRelativeLabel(ms) : '';
@@ -92,6 +113,9 @@ export default function CommunityModerationScreen() {
   const { me, loading: meLoading } = useCommunityMe();
   const isModerator = !!me?.is_moderator;
 
+  // 'open' | 'actioned' | 'gyms'. The third value is the new segment
+  // (founder order 2026-09-22 item 7); the first two, and everything that
+  // reads or sets them below, are unchanged.
   const [status, setStatus] = useState('open');
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -100,8 +124,16 @@ export default function CommunityModerationScreen() {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const [gymSubmissions, setGymSubmissions] = useState([]);
+  const [gymReports, setGymReports] = useState([]);
+  const [gymsLoading, setGymsLoading] = useState(true);
+  const [gymBusy, setGymBusy] = useState(false);
+
   const load = useCallback(async () => {
-    if (!isModerator) { setLoading(false); return; }
+    // The Gyms segment has its own loader (loadGyms) below; community_
+    // moderation_queue only accepts 'open'/'actioned'/'dismissed'/NULL, so
+    // this must never be called with status === 'gyms'.
+    if (!isModerator || status === 'gyms') { setLoading(false); return; }
     setLoading(true);
     try {
       const out = await moderationQueue(status, { limit: PAGE });
@@ -114,6 +146,98 @@ export default function CommunityModerationScreen() {
   }, [status, isModerator]);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadGyms = useCallback(async () => {
+    if (!isModerator) { setGymsLoading(false); return; }
+    setGymsLoading(true);
+    try {
+      const [subs, reps] = await Promise.all([
+        pendingSubmissions({ limit: PAGE }),
+        pendingReports({ limit: PAGE }),
+      ]);
+      setGymSubmissions(subs.submissions);
+      setGymReports(reps.reports);
+    } catch (_e) {
+      setGymSubmissions([]);
+      setGymReports([]);
+    } finally {
+      setGymsLoading(false);
+    }
+  }, [isModerator]);
+
+  useEffect(() => { if (status === 'gyms') loadGyms(); }, [status, loadGyms]);
+
+  async function approveSubmission(item) {
+    if (gymBusy) return;
+    setGymBusy(true);
+    try {
+      await reviewSubmission(item.id, 'approve');
+      setGymSubmissions((prev) => prev.filter((s) => s.id !== item.id));
+      toast.show('Approved');
+    } catch (_e) {
+      toast.show('Could not do that just now.', { variant: 'error' });
+    } finally {
+      setGymBusy(false);
+    }
+  }
+
+  // Destructive: closes the venue and cannot be undone from this screen,
+  // so it asks first (founder order 2026-09-22 item 7's own requirement),
+  // the same appAlert confirm pattern the rest of Community already uses
+  // (e.g. CommunityConnectionsScreen.js's confirmRemove).
+  function confirmRejectSubmission(item) {
+    appAlert(
+      'Reject this submission?',
+      `"${item.name}" will be closed and will not appear in the directory.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reject',
+          style: 'destructive',
+          onPress: async () => {
+            setGymBusy(true);
+            try {
+              await reviewSubmission(item.id, 'reject');
+              setGymSubmissions((prev) => prev.filter((s) => s.id !== item.id));
+              toast.show('Rejected');
+            } catch (_e) {
+              toast.show('Could not do that just now.', { variant: 'error' });
+            } finally {
+              setGymBusy(false);
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  async function resolveReport(item) {
+    if (gymBusy) return;
+    setGymBusy(true);
+    try {
+      await reviewReport(item.id, 'resolve');
+      setGymReports((prev) => prev.filter((r) => r.id !== item.id));
+      toast.show('Recorded');
+    } catch (_e) {
+      toast.show('Could not do that just now.', { variant: 'error' });
+    } finally {
+      setGymBusy(false);
+    }
+  }
+
+  async function dismissReport(item) {
+    if (gymBusy) return;
+    setGymBusy(true);
+    try {
+      await reviewReport(item.id, 'dismiss');
+      setGymReports((prev) => prev.filter((r) => r.id !== item.id));
+      toast.show('Dismissed');
+    } catch (_e) {
+      toast.show('Could not do that just now.', { variant: 'error' });
+    } finally {
+      setGymBusy(false);
+    }
+  }
 
   async function act(action) {
     if (!active || busy) return;
@@ -162,8 +286,147 @@ export default function CommunityModerationScreen() {
             onPress={() => setStatus('actioned')}
             accessibilityRole="radio"
           />
+          {/* Founder order 2026-09-22 item 7 (B-03): the third segment.
+              Gym submissions and reports were actionable only via raw SQL
+              before this; this is the minimal queue that closes it. */}
+          <Chip label="Gyms" selected={status === 'gyms'} onPress={() => setStatus('gyms')} accessibilityRole="radio" />
         </View>
       </View>
+      {status === 'gyms' ? (
+        <ScrollView
+          contentContainerStyle={styles.gymsList}
+          refreshControl={(
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={async () => {
+                setRefreshing(true);
+                try { await loadGyms(); } finally { setRefreshing(false); }
+              }}
+              tintColor={t.colors.textMuted}
+              colors={[t.colors.primary]}
+            />
+          )}
+        >
+          <Text style={[styles.gymsHeading, { ...t.type.caption, color: t.colors.textMuted }]}>
+            Gym submissions
+          </Text>
+          {gymsLoading ? (
+            <View style={styles.skeleton}>
+              <SkeletonCard height={116} />
+            </View>
+          ) : gymSubmissions.length === 0 ? (
+            <EmptyState
+              icon="business-outline"
+              title="No gym submissions waiting."
+              compact
+            />
+          ) : (
+            gymSubmissions.map((item) => (
+              <Card key={item.id} style={styles.report} accessibilityLabel={`Gym submission: ${item.name}`}>
+                <Text style={[styles.preview, { ...t.type.bodySm, color: t.colors.textPrimary }]}>
+                  {item.name}
+                </Text>
+                <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]}>
+                  {[item.address_line, item.town, item.postcode].filter(Boolean).join(', ')}
+                </Text>
+                {item.website ? (
+                  <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]}>
+                    {item.website}
+                  </Text>
+                ) : null}
+                {item.operator ? (
+                  <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]}>
+                    {`Operator: ${item.operator}`}
+                  </Text>
+                ) : null}
+                <Text style={[styles.meta, { ...t.type.caption, color: t.colors.textMuted }]}>
+                  {[
+                    confirmationCountLabel(item.confirmation_count),
+                    whenLabel(item.created_at),
+                  ].filter(Boolean).join(' · ')}
+                </Text>
+                <View style={styles.actions}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    fullWidth={false}
+                    title="Reject"
+                    disabled={gymBusy}
+                    onPress={() => confirmRejectSubmission(item)}
+                    accessibilityLabel={`Reject ${item.name}`}
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    fullWidth={false}
+                    title="Approve"
+                    disabled={gymBusy}
+                    onPress={() => approveSubmission(item)}
+                    accessibilityLabel={`Approve ${item.name}`}
+                  />
+                </View>
+              </Card>
+            ))
+          )}
+
+          <Text style={[styles.gymsHeading, { ...t.type.caption, color: t.colors.textMuted }]}>
+            Gym reports
+          </Text>
+          {gymsLoading ? (
+            <View style={styles.skeleton}>
+              <SkeletonCard height={116} />
+            </View>
+          ) : gymReports.length === 0 ? (
+            <EmptyState
+              icon="flag-outline"
+              title="No gym reports waiting."
+              compact
+            />
+          ) : (
+            gymReports.map((item) => (
+              <Card key={item.id} style={styles.report} accessibilityLabel={`Gym report: ${item.venue_name}`}>
+                <View style={styles.reportTop}>
+                  <Chip label={REPORT_KINDS[item.reason] ?? item.reason} accessibilityRole="text" />
+                </View>
+                <Text style={[styles.preview, { ...t.type.bodySm, color: t.colors.textPrimary }]}>
+                  {item.venue_name}
+                </Text>
+                {item.detail ? (
+                  <Text style={[styles.detail, { ...t.type.caption, color: t.colors.textSecondary }]} numberOfLines={3}>
+                    {item.detail}
+                  </Text>
+                ) : null}
+                <Text style={[styles.meta, { ...t.type.caption, color: t.colors.textMuted }]}>
+                  {[
+                    item.reporter_count ? reportCountLabel(item.reporter_count) : null,
+                    whenLabel(item.created_at),
+                  ].filter(Boolean).join(' · ')}
+                </Text>
+                <View style={styles.actions}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    fullWidth={false}
+                    title="Dismiss"
+                    disabled={gymBusy}
+                    onPress={() => dismissReport(item)}
+                    accessibilityLabel={`Dismiss report on ${item.venue_name}`}
+                  />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    fullWidth={false}
+                    title="Resolve"
+                    disabled={gymBusy}
+                    onPress={() => resolveReport(item)}
+                    accessibilityLabel={`Resolve report on ${item.venue_name}`}
+                  />
+                </View>
+              </Card>
+            ))
+          )}
+        </ScrollView>
+      ) : (
       <FlashList
         data={rows}
         keyExtractor={(item) => item.id}
@@ -260,6 +523,7 @@ export default function CommunityModerationScreen() {
           />
         )}
       />
+      )}
 
       <BottomSheet
         visible={!!active}
@@ -308,6 +572,8 @@ const styles = StyleSheet.create({
   controls: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
+  gymsList: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.md },
+  gymsHeading: { marginTop: spacing.sm, marginBottom: spacing.xs },
   report: { gap: spacing.sm },
   reportTop: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs2 },
   preview: { ...type.bodySm, color: colors.textPrimary },

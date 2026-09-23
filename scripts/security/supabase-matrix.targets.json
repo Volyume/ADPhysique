@@ -192,6 +192,8 @@
     "gyms_report",
     "gyms_review_submission",
     "gyms_review_report",
+    "gyms_pending_submissions",
+    "gyms_pending_reports",
     "community_set_gyms",
     "gyms_place_centroid",
     "community_set_place",
