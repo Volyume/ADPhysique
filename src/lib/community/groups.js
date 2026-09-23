@@ -120,27 +120,24 @@ export async function leaveGroup(groupId) {
  * Join a group. Open groups admit directly ('member'); invite-only
  * groups queue a request ('requested'). Minors refused server-side.
  *
- * STOPPED, not wired (founder order 2026-09-22, item 1, "wire the
- * pushes"): the invite-only branch's recipient is "every admin"
- * (migrate_165, the comment above `community_group_join`: "Notified to
- * every admin as `group_request`... the client fans this out to each
- * admin"), but no client-callable RPC ever hands a caller who is not yet
- * an accepted member the group's admin list to fan out to --
- * `community_group_members` refuses with `not_allowed` until
- * `_community_group_role()` answers non-null, and that helper filters on
- * `state = 'member'` (a fresh 'requested' row never qualifies, even
- * though its `role` column is already 'member');
- * `_community_group_card`/`community_group_get` carry only `created_by`,
- * the group's ORIGINAL creator, never a current admin list. Notifying
- * only the creator would be a materially reduced version of "every
- * admin" shipped without asking (CLAUDE.md section 4: no silent
- * corner-cutting), so this is left unwired and reported instead of
- * guessed.
+ * migrate_177 supplies `admin_ids` on a 'requested' response (founder
+ * order 2026-09-22, item 1, "wire the pushes"; replaces the STOP that
+ * used to sit here): every current admin is notified `group_request`,
+ * target = the admin, ref = the group id -- the exact proof shape
+ * `community-notify`'s `group_request` branch expects (the caller's own
+ * 'requested' row). An older server that has not been migrated yet
+ * simply omits `admin_ids`, so nothing is notified here.
  * @returns {Promise<{state: 'member'|'requested'}>}
  */
 export async function joinGroup(groupId) {
   const data = await callCommunity('community_group_join', { _group_id: groupId });
-  return { state: data?.state ?? null };
+  const state = data?.state ?? null;
+  if (state === 'requested' && Array.isArray(data?.admin_ids)) {
+    for (const adminId of data.admin_ids) {
+      if (adminId) notifyCommunityEvent('group_request', adminId, groupId);
+    }
+  }
+  return { state };
 }
 
 /** Admin-only: approve a pending join request. Notifies the requester

@@ -172,18 +172,42 @@ describe('notifying (founder order 2026-09-22, item 1)', () => {
     expect(notifyCommunityEvent).not.toHaveBeenCalled();
   });
 
-  // STOPPED (see the doc comment on joinGroup in groups.js): the
-  // invite-only branch's recipient is "every admin", but no
-  // client-callable RPC exposes a group's admin list to a caller who is
-  // not yet an accepted member, so this is deliberately left unwired
-  // rather than guessed at (e.g. notifying only created_by). Pinned here
-  // so a future casual "just add the notify call" cannot slip past
-  // review without also answering that gap.
-  test('joinGroup never notifies, on either branch, pending a decision on how to reach every admin', async () => {
-    callCommunity.mockResolvedValueOnce({ state: 'member' });
-    await joinGroup('g1');
+  // migrate_177 supplies admin_ids on a 'requested' response (founder
+  // order 2026-09-22, item 1, "wire the pushes"): this replaces the
+  // former STOP, which was pinned so a casual "just add the notify call"
+  // could never slip past review without also answering the admin-list
+  // gap. That gap is now closed server-side.
+  test('joinGroup requested: notifies group_request once per admin id, target = admin, ref = the group id', async () => {
+    callCommunity.mockResolvedValueOnce({ state: 'requested', admin_ids: ['a1', 'a2'] });
+    const out = await joinGroup('g1');
+    expect(out).toEqual({ state: 'requested' });
+    expect(notifyCommunityEvent).toHaveBeenCalledTimes(2);
+    expect(notifyCommunityEvent).toHaveBeenNthCalledWith(1, 'group_request', 'a1', 'g1');
+    expect(notifyCommunityEvent).toHaveBeenNthCalledWith(2, 'group_request', 'a2', 'g1');
+  });
+
+  test('joinGroup member (open group): never notifies, even if admin_ids were somehow present', async () => {
+    callCommunity.mockResolvedValueOnce({ state: 'member', admin_ids: ['a1'] });
+    const out = await joinGroup('g1');
+    expect(out).toEqual({ state: 'member' });
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  test('joinGroup requested: an older server with no admin_ids notifies nothing', async () => {
     callCommunity.mockResolvedValueOnce({ state: 'requested' });
     await joinGroup('g1');
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  test('joinGroup requested: an empty admin_ids array notifies nothing', async () => {
+    callCommunity.mockResolvedValueOnce({ state: 'requested', admin_ids: [] });
+    await joinGroup('g1');
+    expect(notifyCommunityEvent).not.toHaveBeenCalled();
+  });
+
+  test('a refused join never notifies', async () => {
+    callCommunity.mockRejectedValueOnce(Object.assign(new Error('group_closed'), { code: 'group_closed' }));
+    await expect(joinGroup('g1')).rejects.toMatchObject({ code: 'group_closed' });
     expect(notifyCommunityEvent).not.toHaveBeenCalled();
   });
 });

@@ -16,6 +16,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { callCommunity } from './transport';
+import { notifyCommunityEvent } from './notify';
 import { currentUserId } from './profile';
 import { todayLocalKey } from '../dayKey';
 
@@ -76,13 +77,26 @@ export async function recordRespectGiven(scope, scopeKey, day, given, uid = null
  * @param {string|null} [input.today] the caller's own UK-local day
  *   (`dayKey.js`); the RPC falls back to its own UK-local computation
  *   when omitted, but a live caller always has one to send
- * @returns {Promise<{given: number}>} a count only -- no per-recipient
- *   detail, by design (the RPC's own contract)
+ * @returns {Promise<{given: number}>} the count; notifying the recipients
+ *   is a fire-and-forget side effect below (migrate_177 supplies them)
  */
 export async function respectAll({ scope, scopeKey = null, today = null } = {}) {
   const data = await callCommunity('community_respect_all', {
     _scope: scope, _scope_key: scopeKey, _today: today || todayLocalKey(),
   });
+  // migrate_177 supplies the recipients (founder order 2026-09-22, item 1,
+  // "wire the pushes"): the STOP this replaces recorded that the RPC gave
+  // no way to notify the people it just gave Respect to, although its own
+  // loop already knew who they were. An older server that has not been
+  // migrated yet simply omits `recipients`, so nothing is notified here --
+  // never a crash, never a guess.
+  if (Array.isArray(data?.recipients)) {
+    for (const recipient of data.recipients) {
+      if (recipient?.user_id && recipient?.post_id) {
+        notifyCommunityEvent('reaction', recipient.user_id, recipient.post_id);
+      }
+    }
+  }
   return { given: Number.isFinite(Number(data?.given)) ? Number(data.given) : 0 };
 }
 
