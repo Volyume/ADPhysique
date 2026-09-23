@@ -124,6 +124,18 @@ describe('activityItemLines: every kind reads the allow-listed payload fields', 
   });
 });
 
+describe('activityItemLines: note (founder order 2026-09-22 item 5, audit A-05; F1 re-pin, Opus adversarial review)', () => {
+  // F1: figures used to be `caption.slice(0, 80)`, so a note's caption
+  // rendered TWICE -- once truncated as the figures line, once in full as
+  // the row's own `note` text below it. figures is now always '' for a
+  // note: the caption renders exactly once, as the note line.
+  test('headline is "note"; figures is always empty, whatever the caption', () => {
+    expect(activityItemLines({ kind: 'note', payload: {}, caption: 'a'.repeat(120) })).toEqual({ headline: 'note', figures: '' });
+    expect(activityItemLines({ kind: 'note', payload: {}, caption: 'Hello' }).figures).toBe('');
+    expect(activityItemLines({ kind: 'note', payload: {}, caption: null }).figures).toBe('');
+  });
+});
+
 describe('ActivityItemRow rendering', () => {
   test('returns null with no post, no crash', () => {
     expect(() => render({ item: {} })).not.toThrow();
@@ -152,6 +164,30 @@ describe('ActivityItemRow rendering', () => {
     const text = norm(flattenText(tree.toJSON()));
     expect(text).toContain('Sam Rees · Upper A');
     expect(text).toContain('52 min · 18 sets · 2 PRs · Tue');
+  });
+
+  // F1 (Opus adversarial review, founder order 2026-09-22 item 5): the
+  // caption renders exactly once, as the note line -- not a second time,
+  // truncated, as the figures line above it.
+  test('a note post: the caption renders exactly once, as the note line, never a duplicated figures preview', () => {
+    const caption = 'Just joined, looking forward to training with everyone here and seeing how it goes over the next few months.';
+    const tree = render({ item: item('note', {}, { caption }) });
+    const flat = flattenText(tree.toJSON());
+    const text = norm(flat);
+    expect(text).toContain(norm(`Sam Rees · note`));
+    expect(text).toContain(norm(caption));
+    // Counted on the raw flattened text (not the space-normalised one,
+    // which could paper over a second, differently-wrapped copy): the
+    // caption is a single string child of a single Text, so it survives
+    // flattenText unsplit, and a plain substring count is exact.
+    expect(flat.split(caption)).toHaveLength(2);
+  });
+
+  test('the accessibility label carries the caption exactly once too', () => {
+    const caption = 'Just joined, looking forward to training with everyone here.';
+    const tree = render({ item: item('note', {}, { caption }) });
+    const root = tree.root.findAll((n) => n.props?.accessibilityRole === 'button')[0];
+    expect(root.props.accessibilityLabel.split(caption)).toHaveLength(2);
   });
 
   test('renders the note text when the post carries one', () => {

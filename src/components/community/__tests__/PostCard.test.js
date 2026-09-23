@@ -171,6 +171,41 @@ describe('every story kind renders a body', () => {
   });
 });
 
+describe('note (founder order 2026-09-22 item 5, audit A-05)', () => {
+  // A first post without a workout: no payload at all, so eyebrow is the
+  // only fixed body text and the caption -- rendered exactly as for every
+  // other kind -- is the whole story. Kept out of the shared `POSTS`
+  // fixture and its test.each loops above (they assert `body.hero` is
+  // truthy for every kind, which a note deliberately has none of).
+  const NOTE_POST = {
+    id: 'p5', kind: 'note', reaction_count: 2, comment_count: 0, created_at: Date.now(),
+    payload: {}, caption: 'Just joined, looking forward to training with everyone here.',
+  };
+
+  test('bodyForKind returns the eyebrow only, nothing else', () => {
+    expect(bodyForKind(NOTE_POST)).toEqual({ eyebrow: 'Note', hero: null, facts: null, line: null });
+  });
+
+  test('renders the eyebrow and the caption, and nothing personal from a poisoned payload', () => {
+    const poisoned = { ...NOTE_POST, payload: { bodyweight: 78.4, kcal: 2450 } };
+    const tree = render(poisoned);
+    const text = texts(tree);
+    expect(text).toContain('Note');
+    expect(text).toContain('Just joined, looking forward to training with everyone here.');
+    expect(text).not.toContain('78.4');
+    expect(text).not.toContain('2450');
+    act(() => { tree.unmount(); });
+  });
+
+  test('with no caption, only the eyebrow and the author render (never a blank hero)', () => {
+    const tree = render({ ...NOTE_POST, caption: null });
+    const text = texts(tree);
+    expect(text).toContain('Note');
+    expect(text).toContain('Rowan M');
+    act(() => { tree.unmount(); });
+  });
+});
+
 describe('nothing personal can reach a card', () => {
   // Every kind, handed a payload stuffed with the things Community must
   // never carry. The renderer names its fields one by one, so none of these

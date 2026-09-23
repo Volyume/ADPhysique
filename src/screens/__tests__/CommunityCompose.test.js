@@ -161,6 +161,75 @@ describe('manual post: the audience chooser', () => {
   });
 });
 
+describe('note: a first post without a workout (founder order 2026-09-22 item 5, audit A-05)', () => {
+  test('needs no workout or payload: the preview renders immediately, never "Nothing to post yet"', async () => {
+    const { tree } = await mount({ kind: 'note' });
+    // Finding the Post button at all proves the screen took the main
+    // branch, not the "Nothing to post yet" EmptyState one (mutually
+    // exclusive branches of the same ternary).
+    expect(tree.root.findAll((n) => n.props?.title === 'Post' && n.props?.onPress)).toHaveLength(1);
+    expect(tree.root.findAll((n) => n.props?.title === 'Go back')).toHaveLength(0);
+  });
+
+  test('Post is disabled until the caption has text', async () => {
+    const { tree } = await mount({ kind: 'note' });
+    const post = () => tree.root.findAll((n) => n.props?.title === 'Post' && n.props?.onPress)[0];
+    expect(post().props.disabled).toBe(true);
+
+    // F11: a note's field carries "Your note", not "Caption".
+    const field = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Your note' && n.props?.onChangeText)[0];
+    await act(async () => { field.props.onChangeText('Hello everyone'); });
+    expect(post().props.disabled).toBe(false);
+  });
+
+  test('a whitespace-only caption still leaves Post disabled', async () => {
+    const { tree } = await mount({ kind: 'note' });
+    const field = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Your note' && n.props?.onChangeText)[0];
+    await act(async () => { field.props.onChangeText('   '); });
+    const post = tree.root.findAll((n) => n.props?.title === 'Post' && n.props?.onPress)[0];
+    expect(post.props.disabled).toBe(true);
+  });
+
+  test('posting sends kind note with an empty payload and the typed caption', async () => {
+    createPost.mockResolvedValue({ id: 'p1' });
+    const { tree, navigation } = await mount({ kind: 'note' });
+    const field = tree.root.findAll((n) => n.props?.accessibilityLabel === 'Your note' && n.props?.onChangeText)[0];
+    await act(async () => { field.props.onChangeText('Hello everyone'); });
+
+    const post = tree.root.findAll((n) => n.props?.title === 'Post' && n.props?.onPress)[0];
+    await act(async () => { post.props.onPress(); });
+    await flush();
+
+    expect(createPost).toHaveBeenCalledWith(expect.objectContaining({
+      kind: 'note', payload: {}, caption: 'Hello everyone',
+    }));
+    expect(navigation.replace).toHaveBeenCalledWith('CommunityPost', { id: 'p1' });
+  });
+});
+
+describe('F7 (lead ruling, Opus adversarial review): a note\'s visibility default', () => {
+  test('an adult composing a note defaults to Everyone', async () => {
+    loadMe.mockResolvedValue({ me: { profile: { user_id: 'u1', handle: 'rowan_lifts' }, is_minor: false } });
+    const { tree } = await mount({ kind: 'note' });
+    expect(chip(tree, 'Everyone').props.selected).toBe(true);
+    expect(chip(tree, 'Followers').props.selected).toBe(false);
+  });
+
+  test('a minor composing a note stays on Followers, exactly as every other kind already forces', async () => {
+    loadMe.mockResolvedValue({ me: { profile: { user_id: 'u1', handle: 'rowan_lifts' }, is_minor: true } });
+    const { tree } = await mount({ kind: 'note' });
+    expect(chip(tree, 'Followers').props.selected).toBe(true);
+    expect(chip(tree, 'Everyone')).toBeFalsy();
+  });
+
+  test('a session keeps its existing Followers default, adult or not', async () => {
+    loadMe.mockResolvedValue({ me: { profile: { user_id: 'u1', handle: 'rowan_lifts' }, is_minor: false } });
+    const { tree } = await mount({ kind: 'session', workoutId: 'w1' });
+    expect(chip(tree, 'Followers').props.selected).toBe(true);
+    expect(chip(tree, 'Everyone').props.selected).toBe(false);
+  });
+});
+
 describe('"Add a note" (postId present)', () => {
   test('no audience chooser, and the payload comes from params without a fresh read', async () => {
     const { tree } = await mount({

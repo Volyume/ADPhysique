@@ -167,7 +167,23 @@ export default function CommunityModerationScreen() {
       <FlashList
         data={rows}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
+        renderItem={({ item }) => {
+          // F2 (Opus adversarial review, founder order 2026-09-22):
+          // `community_moderation_queue` (migrate_165 lines 1525-1549)
+          // never returns a `preview` field -- it returns `content`,
+          // shaped per target_kind: post {kind, caption, status}, comment
+          // {body, status}, message {body, conversation_id}, group {name,
+          // blurb, status}, else (profile) {handle, display_name, bio,
+          // status}. `item.preview` was therefore always undefined, so a
+          // reported note (or anything else) reached the moderator with
+          // no text at all. Falls through the real per-kind field names.
+          const preview = item.preview
+            ?? item.content?.caption
+            ?? item.content?.body
+            ?? item.content?.bio
+            ?? item.content?.name
+            ?? null;
+          return (
           <Card
             style={styles.report}
             onPress={status === 'open' ? () => setActive(item) : undefined}
@@ -178,12 +194,12 @@ export default function CommunityModerationScreen() {
                 {item.priority ? <Chip label="Priority" selected accessibilityRole="text" /> : null}
                 <Chip label={TARGET_LABELS[item.target_kind] ?? 'Content'} accessibilityRole="text" />
               </View>
-              {item.preview ? (
+              {preview ? (
                 <Text
                   style={[styles.preview, { ...t.type.bodySm, color: t.colors.textPrimary }]}
                   numberOfLines={4}
                 >
-                  {item.preview}
+                  {preview}
                 </Text>
               ) : null}
               {item.detail ? (
@@ -211,7 +227,8 @@ export default function CommunityModerationScreen() {
                 </Text>
               ) : null}
           </Card>
-        )}
+          );
+        }}
         ListEmptyComponent={loading ? (
           <View style={styles.skeleton}>
             <SkeletonCard height={116} />

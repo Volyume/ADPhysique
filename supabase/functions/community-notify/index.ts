@@ -189,7 +189,7 @@ function ukLocalDayKey(at: Date = new Date()): string {
 // British English, calm voice, no clipped commands, no em dash (CLAUDE.md
 // section 3). The handle is the only identity in a Community push: never a
 // first name, never a display name pulled from anywhere else.
-function pushCopy(kind: Kind, handle: string): { title: string; body: string } {
+function pushCopy(kind: Kind, handle: string, reactionPostKind: string | null = null): { title: string; body: string } {
   switch (kind) {
     case 'follow':
       return { title: 'Community', body: `@${handle} followed you` }
@@ -202,7 +202,14 @@ function pushCopy(kind: Kind, handle: string): { title: string; body: string } {
       // recipient per UK-local day (5c below), so a reaction push always
       // now represents "at least one Respect today", possibly several from
       // different people - it never names a single handle.
-      return { title: 'Community', body: 'Someone gave your training respect' }
+      //
+      // F10 (Opus adversarial review, founder order 2026-09-22 item 5): a
+      // note carries no training at all, so a Respect on one reads "your
+      // post"; every other kind keeps "your training".
+      return {
+        title: 'Community',
+        body: reactionPostKind === 'note' ? 'Someone gave your post respect' : 'Someone gave your training respect',
+      }
     case 'comment':
       return { title: 'Community', body: `@${handle} commented on your post` }
     case 'connect_request':
@@ -303,6 +310,12 @@ serve(async (req: Request) => {
   let verified = false
   let activityTargetKind: string | null = null
   let activityTargetId: string | null = null
+  // F10 (Opus adversarial review, founder order 2026-09-22 item 5): the
+  // target post's OWN kind (pr/session/block/milestone/note), read
+  // alongside author_id in the 'reaction' branch below, purely so
+  // pushCopy can say "post" for a note and "training" for everything
+  // else. Not the notification `kind` (always 'reaction' here).
+  let reactionPostKind: string | null = null
   try {
     if (kind === 'follow' || kind === 'follow_request') {
       activityTargetKind = 'profile'
@@ -455,14 +468,17 @@ serve(async (req: Request) => {
       activityTargetId = refId
       const { data } = await admin
         .from('community_reactions')
-        .select('post_id, community_posts!inner(author_id)')
+        .select('post_id, community_posts!inner(author_id, kind)')
         .eq('post_id', refId)
         .eq('user_id', actorId)
         .gte('created_at', sinceIso)
         .limit(1)
         .maybeSingle()
-      const author = (data as { community_posts?: { author_id?: string } } | null)?.community_posts
+      const author = (data as { community_posts?: { author_id?: string; kind?: string } } | null)?.community_posts
       verified = !!data && author?.author_id === targetUserId
+      // F10: read here, where the post row is already being fetched for
+      // verification, rather than a second query later.
+      reactionPostKind = author?.kind ?? null
     } else if (kind === 'comment') {
       const { data } = await admin
         .from('community_comments')
@@ -765,7 +781,7 @@ serve(async (req: Request) => {
     }
   }
 
-  const copy = pushCopy(kind, handle)
+  const copy = pushCopy(kind, handle, reactionPostKind)
   try {
     await fetch(`${supabaseUrl}/functions/v1/send-push`, {
       method: 'POST',

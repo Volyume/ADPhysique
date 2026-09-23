@@ -11,8 +11,10 @@
  * the note text when the author wrote one; a trailing column, a Respect
  * heart and the comment count. Renders every kind
  * `src/lib/community/validation.js`'s `POST_PAYLOAD_KEYS` carries (pr,
- * session, block, milestone), reading one named `payload` field at a time
- * (never a spread) exactly the way `PostCard.bodyForKind` does -- see
+ * session, block, milestone, and 'note' since migrate_178 -- an empty
+ * payload, so its line two is always ''), reading one named `payload`
+ * field at a time (never a spread) exactly the way `PostCard.bodyForKind`
+ * does -- see
  * `activityItemLines` below -- with this row's own field selection and
  * wording, since section 1's own line-two examples ("52 min . 18 sets .
  * 2 PRs . Tue") use a different figure set than `PostCard` shows today.
@@ -120,6 +122,13 @@ export function activityItemLines(post) {
       };
     case 'milestone':
       return { headline: p.title || 'Milestone', figures: typeof p.caption === 'string' ? p.caption : '' };
+    case 'note':
+      // F1 (Opus adversarial review, founder order 2026-09-22 item 5):
+      // figures is '', never a slice of the caption -- the caption
+      // already renders in full as this row's own `note` text below it
+      // (see `ActivityItemRow` below), so a non-empty figures value here
+      // rendered the same words twice, once truncated and once in full.
+      return { headline: 'note', figures: '' };
     default:
       return { headline: '', figures: '' };
   }

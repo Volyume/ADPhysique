@@ -96,6 +96,13 @@ export const POST_PAYLOAD_KEYS = Object.freeze({
   milestone: Object.freeze([
     'eyebrow', 'title', 'heroValue', 'heroUnit', 'caption', 'stats',
   ]),
+  // Founder order 2026-09-22 item 5 (audit A-05): a short free-text post
+  // with no logged training behind it. No payload keys at all -- the
+  // caption IS the whole post, so nothing about the body, food or
+  // coaching can ever enter it (there is no payload for such a key to
+  // hide in). `validatePostPayload` already accepts an empty object
+  // against an empty allow-list with no further change.
+  note: Object.freeze([]),
 });
 
 export const POST_KINDS = Object.freeze(Object.keys(POST_PAYLOAD_KEYS));

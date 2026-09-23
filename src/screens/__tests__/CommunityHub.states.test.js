@@ -39,6 +39,17 @@ import { create, act } from 'react-test-renderer';
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: ({ children }) => children }));
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('../../components/BackHeader', () => ({ right }) => right ?? null);
+// F5 (Opus adversarial review, founder order 2026-09-22): the Hub now
+// calls the real useFocusEffect, which needs a navigation context this
+// harness does not provide. Collapsed to a mount-only effect, the same
+// shape CommunityConversations.test.js / CommunityPost.noProfile.test.js
+// already use -- it fires once (mount), never a second time, so it never
+// changes any existing call-count assertion in this file. The behaviour
+// itself is pinned at the source level below instead (see "F5: reload
+// quietly on focus").
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (cb) => { const React = require('react'); React.useEffect(() => cb(), [cb]); },
+}));
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn(), logWarn: jest.fn(), logInfo: jest.fn() }));
 
@@ -325,17 +336,43 @@ describe('state 2: joined, nothing followed yet', () => {
   // Founder defect 2026-09-14: a section with nothing in it is one quiet
   // line, not a bordered box with a circle icon, a paragraph and a second
   // "Find people" button duplicating the row two sections above it.
-  test('the empty ACTIVITY section is one quiet line, and the only Find people is the PEOPLE row', async () => {
+  //
+  // RE-ANCHORED (founder order 2026-09-22 item 5, audit A-05): this test
+  // used to pin ZERO controls in the empty section at all ("the one 'Find
+  // people' on this screen is the PEOPLE row in the header"). That was
+  // true before this order: no way existed to post without a workout, so
+  // there was nothing this section's own action could usefully do. Now
+  // there is one ("Say hello", opening CommunityCompose's new 'note'
+  // kind), so the pin moves from zero controls to exactly one -- still
+  // one line, one action (presentation rule 9), never a poster.
+  test('the empty ACTIVITY section is one quiet line with exactly one action, Say hello', async () => {
     loadHub.mockResolvedValue(emptyHub());
     const { text, partTrees } = await render();
 
-    expect(text).toContain('Follow people and their training shows up here.');
+    // F11 (Opus adversarial review, founder order 2026-09-22 item 5):
+    // re-anchored copy naming the action beneath it.
+    expect(text).toContain('Follow people to see their training, or say hello.');
     expect(text).not.toContain('Nothing here yet');
-    // The empty section itself carries no control at all: the one
-    // "Find people" on this screen is the PEOPLE row in the header.
     const emptyTree = partTrees[partTrees.length - 1];
-    expect(flattenText(emptyTree.toJSON())).toContain('Follow people and their training shows up here.');
-    expect(emptyTree.root.findAll((n) => typeof n.props?.onPress === 'function')).toHaveLength(0);
+    expect(flattenText(emptyTree.toJSON())).toContain('Follow people to see their training, or say hello.');
+    // Button forwards onPress through several wrapper layers (PressableCard
+    // etc.), so a raw node count over-counts one control several times
+    // over; the DISTINCT labelled actions is the true count of one.
+    const pressable = emptyTree.root.findAll((n) => typeof n.props?.onPress === 'function');
+    const labels = new Set(pressable.map((n) => n.props?.accessibilityLabel).filter(Boolean));
+    expect(labels).toEqual(new Set(['Say hello']));
+  });
+
+  test('Say hello opens CommunityCompose with kind note', async () => {
+    loadHub.mockResolvedValue(emptyHub());
+    const { navigation, partTrees } = await render();
+    const emptyTree = partTrees[partTrees.length - 1];
+    const sayHello = emptyTree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Say hello' && n.props?.onPress,
+    )[0];
+    expect(sayHello).toBeTruthy();
+    await act(async () => { sayHello.props.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityCompose', { kind: 'note' });
   });
 
   test('no "Lifters like you" suggestions anywhere on the Hub (moved to Find people)', async () => {
@@ -734,5 +771,28 @@ describe('early days: the HOST row (spec 1.2)', () => {
     expect(row).toBeTruthy();
     await act(async () => { row.props.onPress(); });
     expect(navigation.navigate).toHaveBeenCalledWith('CommunityProfile', { handle: 'allan' });
+  });
+});
+
+// F5 (Opus adversarial review, founder order 2026-09-22): after Say
+// hello -> Post -> Back, the Hub kept showing the zero state and the
+// door -- nothing reloaded it. Source-level, not rendered: this file's
+// own `@react-navigation/native` mock (above) collapses useFocusEffect
+// to a mount-only effect, so it cannot exercise a genuine second focus;
+// the real behaviour is that every later focus reloads QUIETLY, never
+// re-showing the spinner over content already on screen.
+describe('F5: reload quietly on focus, after the same initial mount load', () => {
+  test('useFocusEffect reloads quietly on every return to focus, without disturbing the mount-time load', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '../CommunityHubScreen.js'), 'utf8');
+    expect(src).toContain("import { useFocusEffect } from '@react-navigation/native';");
+    // The original mount-time load is unchanged.
+    expect(src).toContain('useEffect(() => { load(); }, [load]);');
+    // The focus effect skips its own first call (the one focus fires
+    // alongside mount) and reloads QUIETLY every time after that.
+    expect(src).toMatch(
+      /useFocusEffect\(useCallback\(\(\) => \{\s*if \(!focusedOnceRef\.current\) \{ focusedOnceRef\.current = true; return; \}\s*load\(\{ quiet: true \}\);\s*\}, \[load\]\)\);/,
+    );
   });
 });

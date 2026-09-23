@@ -2,11 +2,13 @@
  * CommunityComposeScreen — post one training story (blueprint section 6,
  * `docs/social-discovery-2026-09-06/30-BLUEPRINT.md`; SD-06).
  *
- * Nothing here is automatic. A story is composed from something the athlete
- * really logged, shown to them exactly as everyone else will see it, and
- * posted only when they tap Post. The payload comes from the builders in
- * `src/lib/community/posts.js`, which carry ONLY the allow-listed keys for
- * the kind; this screen never assembles a payload of its own.
+ * Nothing here is automatic. Most kinds compose a story from something the
+ * athlete really logged, shown to them exactly as everyone else will see
+ * it, and posted only when they tap Post; the one exception is 'note'
+ * (founder order 2026-09-22 item 5), free text with no workout behind it.
+ * The payload comes from the builders in `src/lib/community/posts.js`,
+ * which carry ONLY the allow-listed keys for the kind; this screen never
+ * assembles a payload of its own.
  *
  * Without a Community profile there is nothing to post as, so the screen
  * hands over to Join and asks it to come back here afterwards.
@@ -87,7 +89,16 @@ export default function CommunityComposeScreen({ navigation, route }) {
   // never actually renders; it only matters that `isMinor` is never read
   // before `load()` has set it from the real `me`.
   const [isMinor, setIsMinor] = useState(true);
-  const [payload, setPayload] = useState(noteMode ? (params.payload ?? null) : null);
+  // Founder order 2026-09-22 item 5 (audit A-05): kind 'note' has no
+  // workout or payload to build -- the payload is always `{}`, set here
+  // so it is ready the moment `load()` finishes, without a second,
+  // network-shaped read of its own. F12 correction (Opus adversarial
+  // review): the spinner below still shows until `load()` itself
+  // resolves (`loading` starts true) -- only the wait for a PAYLOAD is
+  // skipped, never the wait for `load()`.
+  const [payload, setPayload] = useState(
+    noteMode ? (params.payload ?? null) : (kind === 'note' ? {} : null),
+  );
   const [caption, setCaption] = useState('');
   const [visibility, setVisibility] = useState('followers');
   const [myGroups, setMyGroups] = useState([]);
@@ -111,6 +122,13 @@ export default function CommunityComposeScreen({ navigation, route }) {
     }
     setProfile(me.profile);
     setIsMinor(!!me.is_minor);
+    // F7 (lead ruling, Opus adversarial review, founder order 2026-09-22
+    // item 5): a note defaults to "Everyone" for an adult -- it is a
+    // greeting meant to be found, not a training log meant for people
+    // who already follow you -- while a minor stays on Followers, exactly
+    // as this screen already forces for every kind (visibilityOptions
+    // below). Every other kind keeps its existing 'followers' default.
+    if (kind === 'note' && !me.is_minor) setVisibility('public');
     if (noteMode) {
       // The payload came from the caller (the row already exists); a
       // manual compose is the only path that needs to build one.
@@ -119,7 +137,9 @@ export default function CommunityComposeScreen({ navigation, route }) {
     }
     try {
       const [builtPayload, groupsResult] = await Promise.all([
-        payloadFor(params, { userId: user?.id ?? null, units }),
+        // Founder order 2026-09-22 item 5: a note needs no builder --
+        // there is no workout or mesocycle behind it, only the caption.
+        kind === 'note' ? Promise.resolve({}) : payloadFor(params, { userId: user?.id ?? null, units }),
         listMyGroups().catch(() => []),
       ]);
       setPayload(builtPayload);
@@ -198,10 +218,24 @@ export default function CommunityComposeScreen({ navigation, route }) {
     : null;
 
   // F13 fix (fresh-eyes review): a minor never gets an "Everyone"
-  // audience, same posture as the Training profile audience row
-  // (HARD BOUND, belt and braces -- the server also refuses it).
-  // Followers and this person's own groups stay offered.
+  // audience, same posture as the Training profile audience row.
+  // P2 correction (Opus adversarial review, founder order 2026-09-22):
+  // `community_create_post`'s manual (non-auto) path does NOT itself
+  // refuse visibility 'public' for a minor caller -- the server's own
+  // minor check only runs inside the `_auto` branch (migrate_170 lines
+  // 3113-3115). This client-side filter is the only gate on a manual
+  // post's audience; a minor is kept off Everyone SURFACES by other
+  // mechanisms instead -- their own profile visibility is forced to
+  // 'followers' at write time (migrate_175 lines 262-263) and
+  // community_discover_posts excludes minors' authors at read time
+  // (migrate_160 line 2713, `p.is_minor = false`). Followers and this
+  // person's own groups stay offered regardless.
   const visibilityOptions = isMinor ? VISIBILITY_OPTIONS.filter((opt) => opt.value !== 'public') : VISIBILITY_OPTIONS;
+
+  // Founder order 2026-09-22 item 5: a note IS its caption, so Post stays
+  // disabled until there is text to post -- every other kind still posts
+  // from its payload alone, caption optional, exactly as before.
+  const postDisabled = posting || (kind === 'note' && !caption.trim());
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
@@ -226,14 +260,22 @@ export default function CommunityComposeScreen({ navigation, route }) {
           <PostCard post={previewPost} author={profile} myReaction={false} />
 
           <View style={styles.field}>
-            <SectionLabel tone="muted">Caption</SectionLabel>
+            {/* F11 (Opus adversarial review, founder order 2026-09-22
+                item 5): a note's field label reads "Your note" -- it IS
+                the whole post, not a caption on something else. Every
+                other kind's label is unchanged. */}
+            <SectionLabel tone="muted">{kind === 'note' ? 'Your note' : 'Caption'}</SectionLabel>
             <ComposerInput
               value={caption}
               onChangeText={setCaption}
               maxLength={CAPTION_MAX}
               minHeight={96}
-              placeholder="Say something about the training, if you want to."
-              accessibilityLabel="Caption"
+              placeholder={
+                kind === 'note'
+                  ? 'Say hello, or something about your training.'
+                  : 'Say something about the training, if you want to.'
+              }
+              accessibilityLabel={kind === 'note' ? 'Your note' : 'Caption'}
             />
             <Text style={[styles.counter, { color: t.colors.textMuted }]}>
               {`${caption.length} of ${CAPTION_MAX}`}
@@ -275,7 +317,7 @@ export default function CommunityComposeScreen({ navigation, route }) {
             size="lg"
             onPress={handlePost}
             loading={posting}
-            disabled={posting}
+            disabled={postDisabled}
           />
         </ScrollView>
       )}

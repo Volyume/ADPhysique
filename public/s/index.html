@@ -7,12 +7,12 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Volyume">
 <meta property="og:title" content="A training story on Volyume">
-<meta property="og:description" content="A session, a personal best or a finished block, shared from real logged training.">
+<meta property="og:description" content="A session, a personal best, a finished block or a note, shared on Volyume.">
 <meta property="og:image" content="https://volyume.app/volyume-v.png">
 <meta property="og:image:alt" content="Volyume">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="A training story on Volyume">
-<meta name="twitter:description" content="A session, a personal best or a finished block, shared from real logged training.">
+<meta name="twitter:description" content="A session, a personal best, a finished block or a note, shared on Volyume.">
 <meta name="twitter:image" content="https://volyume.app/volyume-v.png">
 <meta name="description" content="A training story shared on Volyume Community.">
 <link rel="icon" type="image/png" href="/favicon.png">
@@ -152,6 +152,13 @@
         card.appendChild(el('div', 'eyebrow', payload.eyebrow || 'Milestone'));
         card.appendChild(el('div', 'hero', (payload.heroValue != null ? payload.heroValue : '') + (payload.heroUnit || '')));
         if (payload.title) card.appendChild(el('div', 'sub', payload.title));
+      } else if (post.kind === 'note') {
+        // F4 (Opus adversarial review, founder order 2026-09-22 item 5):
+        // a note carries no payload at all -- its whole story is the
+        // caption, which the generic `post.caption` block below already
+        // renders into #caption via textContent (escaped exactly the
+        // same way every other kind's text on this page is).
+        card.appendChild(el('div', 'eyebrow', 'Note'));
       } else if (post.kind === 'programme') {
         card.appendChild(el('div', 'eyebrow', 'Shared programme'));
         var link = el('a', 'hero');

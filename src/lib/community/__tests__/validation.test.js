@@ -142,9 +142,16 @@ describe('post payload allow-lists', () => {
     expect(POST_PAYLOAD_KEYS.programme).toBeUndefined();
   });
 
-  test('there are exactly four kinds', () => {
+  // Founder order 2026-09-22 item 5 (audit A-05): 'note' is added, a
+  // short free-text post with no payload keys at all -- re-anchored from
+  // "exactly four kinds" to five.
+  test('there are exactly five kinds', () => {
     expect(Object.keys(POST_PAYLOAD_KEYS).sort())
-      .toEqual(['block', 'milestone', 'pr', 'session']);
+      .toEqual(['block', 'milestone', 'note', 'pr', 'session']);
+  });
+
+  test('note carries no payload keys at all', () => {
+    expect(POST_PAYLOAD_KEYS.note).toEqual([]);
   });
 
   test('a valid PR payload passes', () => {
@@ -170,6 +177,27 @@ describe('post payload allow-lists', () => {
 
   test('an unknown kind is refused', () => {
     expect(validatePostPayload('checkin', {})).toEqual({ ok: false, errors: ['unknown_kind'] });
+  });
+
+  // Founder order 2026-09-22 item 5 (audit A-05): a first post without a
+  // workout. 'note' has no payload keys at all, so an empty object is
+  // the only valid payload and any key at all is refused by name.
+  describe('note (audit A-05)', () => {
+    test('an empty payload is accepted', () => {
+      expect(validatePostPayload('note', {})).toEqual({ ok: true, errors: [] });
+    });
+
+    test('any key at all is refused, since the allow-list is empty', () => {
+      const out = validatePostPayload('note', { text: 'Hello' });
+      expect(out.ok).toBe(false);
+      expect(out.errors).toContain('unexpected_key:text');
+    });
+
+    test('a forbidden key is refused too, belt and braces on top of the empty allow-list', () => {
+      const out = validatePostPayload('note', { bodyweight: 82 });
+      expect(out.ok).toBe(false);
+      expect(out.errors).toEqual(expect.arrayContaining(['unexpected_key:bodyweight', 'forbidden_field']));
+    });
   });
 });
 

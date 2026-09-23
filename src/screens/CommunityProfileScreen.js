@@ -40,11 +40,12 @@
  * which is what the app's sheets are for.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, RefreshControl, Pressable, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList. The props are the
 // blueprint's own list contract (keyExtractor, onEndReached paging,
@@ -172,8 +173,8 @@ export default function CommunityProfileScreen({ navigation, route }) {
     return () => { alive = false; };
   }, [isMe, card?.user_id]);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (opts = {}) => {
+    if (!opts.quiet) setLoading(true);
     try {
       const out = await getProfile({ handle, userId });
       setData(out);
@@ -195,6 +196,21 @@ export default function CommunityProfileScreen({ navigation, route }) {
   }, [handle, userId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // F5 (Opus adversarial review, founder order 2026-09-22): after Say
+  // hello -> Post -> Back, the profile still showed the zero state and
+  // the door -- nothing reloaded it. Reload on every return to focus,
+  // the same useFocusEffect shape CommunityPostScreen.js and
+  // CommunityConversationsScreen.js already use. The ref skips the call
+  // focus fires right alongside the mount effect above, so first-mount
+  // behaviour is unchanged; every later focus reloads QUIETLY
+  // (`quiet: true`), never re-showing the spinner over content already
+  // on screen.
+  const focusedOnceRef = useRef(false);
+  useFocusEffect(useCallback(() => {
+    if (!focusedOnceRef.current) { focusedOnceRef.current = true; return; }
+    load({ quiet: true });
+  }, [load]));
 
   const openFollows = useCallback(async (kind) => {
     if (!card?.user_id || !viewable) return;
@@ -536,11 +552,32 @@ export default function CommunityProfileScreen({ navigation, route }) {
     <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
       Follow to see their training stories.
     </Text>
+  ) : isMe ? (
+    // Founder order 2026-09-22 item 5 (audit A-05): a first post without a
+    // workout. One quiet line, one action (presentation rule 9) -- "Say
+    // hello" opens CommunityCompose's new 'note' kind; no other door on
+    // this screen offers it, and it never appears on someone else's
+    // profile, where posting as them is not a thing.
+    <View style={styles.activityEmptyWrap}>
+      <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+        {/* F11 (Opus adversarial review, founder order 2026-09-22 item 5):
+            names every kind this screen's own empty ACTIVITY can show,
+            note included. */}
+        Your sessions, personal bests and notes show up here.
+      </Text>
+      <Button
+        variant="tertiary"
+        size="sm"
+        fullWidth={false}
+        icon="chatbubble-outline"
+        title="Say hello"
+        onPress={() => navigation.navigate('CommunityCompose', { kind: 'note' })}
+        accessibilityLabel="Say hello"
+      />
+    </View>
   ) : (
     <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
-      {isMe
-        ? 'Your sessions and personal bests show up here once you share them.'
-        : 'Their sessions and personal bests show up here.'}
+      Their sessions and personal bests show up here.
     </Text>
   );
 
@@ -653,6 +690,9 @@ const styles = StyleSheet.create({
   facts: { ...type.bodySm, color: colors.textSecondary },
   hiddenNote: { ...type.caption, color: colors.textMuted },
   sectionEmpty: { ...type.bodySm, color: colors.textMuted, paddingVertical: spacing.sm },
+  // Founder order 2026-09-22 item 5: no vertical padding of its own --
+  // sectionEmpty already pays paddingVertical: spacing.sm on its own Text.
+  activityEmptyWrap: { gap: spacing.sm },
   counts: { flexDirection: 'row', gap: spacing.lg },
   count: { ...type.bodySm, color: colors.textSecondary },
   actions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: spacing.sm },

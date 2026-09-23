@@ -26,6 +26,15 @@ import { create, act } from 'react-test-renderer';
 jest.mock('react-native-safe-area-context', () => ({
   SafeAreaView: ({ children }) => children,
 }));
+// F5 (Opus adversarial review, founder order 2026-09-22): the profile
+// screen now calls the real useFocusEffect, which needs a navigation
+// context this harness does not provide. Collapsed to a mount-only
+// effect (the same shape CommunityConversations.test.js already uses)
+// so it fires once and never changes an existing assertion in this
+// file; the behaviour itself is pinned at the source level below.
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (cb) => { const React = require('react'); React.useEffect(() => cb(), [cb]); },
+}));
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
 jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), commit: jest.fn() }));
 jest.mock('../../components/BackHeader', () => () => null);
@@ -112,6 +121,17 @@ function renderHeader(tree) {
   let part = null;
   act(() => { part = create(header); });
   return { text: flattenText(part.toJSON()) };
+}
+
+/** ListEmptyComponent, rendered for real (same pattern as renderHeader,
+ * founder order 2026-09-22 item 5). */
+function renderEmpty(tree) {
+  const list = tree.root.findAll((n) => n.type === 'FlatList')[0];
+  const empty = list.props.ListEmptyComponent;
+  if (!empty) return { text: '', tree: null };
+  let part = null;
+  act(() => { part = create(empty); });
+  return { text: flattenText(part.toJSON()), tree: part };
 }
 
 async function mount(route = { params: { handle: 'sam' } }) {
@@ -276,5 +296,73 @@ describe('the owner\'s own profile keeps the device path', () => {
 
     expect(text).not.toContain('PR');
     expect(text).toContain('sessions this week');
+  });
+});
+
+describe('own-profile ACTIVITY zero state gains "Say hello" (founder order 2026-09-22 item 5, audit A-05)', () => {
+  const OWN_CARD = { ...OTHER_CARD, user_id: 'u1', handle: 'rowan' };
+
+  test('the owner\'s own empty activity is one quiet line with exactly one action, Say hello', async () => {
+    getProfile.mockResolvedValue({ card: OWN_CARD, viewable: true, posts: [] });
+    const { tree } = await mount();
+    const { text, tree: emptyTree } = renderEmpty(tree);
+
+    // F11 (Opus adversarial review, founder order 2026-09-22 item 5):
+    // re-anchored copy naming every kind this zero state can show.
+    expect(text).toContain('Your sessions, personal bests and notes show up here.');
+    // Button forwards onPress through several wrapper layers, so the
+    // DISTINCT labelled actions is the true count of one, not a raw node
+    // count (see the identical note in CommunityHub.states.test.js).
+    const pressable = emptyTree.root.findAll((n) => typeof n.props?.onPress === 'function');
+    const labels = new Set(pressable.map((n) => n.props?.accessibilityLabel).filter(Boolean));
+    expect(labels).toEqual(new Set(['Say hello']));
+  });
+
+  test('Say hello opens CommunityCompose with kind note', async () => {
+    getProfile.mockResolvedValue({ card: OWN_CARD, viewable: true, posts: [] });
+    const { tree, navigation } = await mount();
+    const { tree: emptyTree } = renderEmpty(tree);
+    const sayHello = emptyTree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Say hello' && n.props?.onPress,
+    )[0];
+    expect(sayHello).toBeTruthy();
+    await act(async () => { sayHello.props.onPress(); });
+    expect(navigation.navigate).toHaveBeenCalledWith('CommunityCompose', { kind: 'note' });
+  });
+
+  test('no other door: someone else\'s empty activity carries no action at all', async () => {
+    getProfile.mockResolvedValue({ card: OTHER_CARD, viewable: true, posts: [] });
+    const { tree } = await mount();
+    const { text, tree: emptyTree } = renderEmpty(tree);
+
+    expect(text).toContain('Their sessions and personal bests show up here.');
+    expect(emptyTree.root.findAll((n) => typeof n.props?.onPress === 'function')).toHaveLength(0);
+  });
+});
+
+// F5 (Opus adversarial review, founder order 2026-09-22): after Say
+// hello -> Post -> Back, the profile kept showing the zero state and
+// the door -- nothing reloaded it. Source-level, not rendered: this
+// file's own `@react-navigation/native` mock (above) collapses
+// useFocusEffect to a mount-only effect, so it cannot exercise a
+// genuine second focus; the real behaviour is that every later focus
+// reloads QUIETLY, never re-showing the spinner over content already
+// on screen.
+describe('F5: reload quietly on focus, after the same initial mount load', () => {
+  test('useFocusEffect reloads quietly on every return to focus, without disturbing the mount-time load', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(path.join(__dirname, '../CommunityProfileScreen.js'), 'utf8');
+    expect(src).toContain("import { useFocusEffect } from '@react-navigation/native';");
+    // The original mount-time load is unchanged.
+    expect(src).toContain('useEffect(() => { load(); }, [load]);');
+    // `load` itself gained a quiet option (never re-showing the spinner).
+    expect(src).toContain('const load = useCallback(async (opts = {}) => {');
+    expect(src).toContain('if (!opts.quiet) setLoading(true);');
+    // The focus effect skips its own first call (the one focus fires
+    // alongside mount) and reloads QUIETLY every time after that.
+    expect(src).toMatch(
+      /useFocusEffect\(useCallback\(\(\) => \{\s*if \(!focusedOnceRef\.current\) \{ focusedOnceRef\.current = true; return; \}\s*load\(\{ quiet: true \}\);\s*\}, \[load\]\)\);/,
+    );
   });
 });

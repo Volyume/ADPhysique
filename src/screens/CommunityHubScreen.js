@@ -45,6 +45,7 @@ import {
   View, Text, StyleSheet, RefreshControl, ActivityIndicator, Pressable, AppState, TouchableOpacity, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 // E8 (founder decision 2026-07-02): every list in the app renders
 // through FlashList, never an unrecycled FlatList. The props are the
 // blueprint's own list contract (keyExtractor, onEndReached paging,
@@ -260,6 +261,22 @@ export default function CommunityHubScreen({ navigation, route }) {
   }, [joined]);
 
   useEffect(() => { load(); }, [load]);
+
+  // F5 (Opus adversarial review, founder order 2026-09-22): after Say
+  // hello -> Post -> Back, the Hub still showed the zero state and the
+  // door -- nothing reloaded it. Reload on every return to focus, the
+  // same useFocusEffect shape CommunityPostScreen.js and
+  // CommunityConversationsScreen.js already use for their own screens.
+  // The ref skips the call focus fires right alongside the mount effect
+  // above, so first-mount behaviour is unchanged; every later focus
+  // reloads QUIETLY (`quiet: true`, the same flag pull-to-refresh already
+  // passes below), never re-showing the spinner over content already on
+  // screen.
+  const focusedOnceRef = useRef(false);
+  useFocusEffect(useCallback(() => {
+    if (!focusedOnceRef.current) { focusedOnceRef.current = true; return; }
+    load({ quiet: true });
+  }, [load]));
 
   // Community product audit section 1: the app-foreground trigger for the
   // consistency counters, alongside the workout-completion one in
@@ -766,7 +783,7 @@ export default function CommunityHubScreen({ navigation, route }) {
       onSecondary={() => load()}
       secondaryAccessibilityLabel="Try loading Community again"
     />
-  ) : (
+  ) : joined ? (
     // Founder defect 2026-09-14 ("it looks rubbish"): a section with
     // nothing in it was a bordered box with a 52 dp circle icon, a title,
     // a paragraph and a "Find people" button that repeated the Find
@@ -777,10 +794,31 @@ export default function CommunityHubScreen({ navigation, route }) {
     // one action, never a paragraph). The offline and failed states above
     // keep the full EmptyState: those carry a retry, and an error is not
     // an empty section.
+    //
+    // Founder order 2026-09-22 item 5 (audit A-05): a first post without a
+    // workout. The one action stays exactly one ("Say hello", opening
+    // CommunityCompose's new 'note' kind), so the section is still one
+    // line, one action, never a poster -- no other Hub surface offers
+    // this door.
+    <View style={styles.activityEmptyWrap}>
+      <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
+        {/* F11 (Opus adversarial review, founder order 2026-09-22 item 5):
+            names the action the button beneath it actually offers. */}
+        Follow people to see their training, or say hello.
+      </Text>
+      <Button
+        variant="tertiary"
+        size="sm"
+        fullWidth={false}
+        icon="chatbubble-outline"
+        title="Say hello"
+        onPress={() => navigation.navigate('CommunityCompose', { kind: 'note' })}
+        accessibilityLabel="Say hello"
+      />
+    </View>
+  ) : (
     <Text style={[styles.sectionEmpty, { ...t.type.bodySm, color: t.colors.textMuted }]}>
-      {joined
-        ? 'Follow people and their training shows up here.'
-        : 'Training stories from Community show up here.'}
+      Training stories from Community show up here.
     </Text>
   );
 
@@ -827,6 +865,9 @@ const styles = StyleSheet.create({
   // carries the section rhythm, and the margin stacked under it so ACTIVITY
   // sat 20 dp above its rows while PEOPLE and GROUPS sat 8 (2026-09-14).
   header: {},
+  // Founder order 2026-09-22 item 5: no vertical padding of its own --
+  // sectionEmpty already pays paddingVertical: spacing.sm on its own Text.
+  activityEmptyWrap: { gap: spacing.sm },
   statusNotice: {
     borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, gap: spacing.xs, marginBottom: spacing.lg,
   },

@@ -196,6 +196,26 @@ describe('the Actioned tab is the audit view', () => {
   });
 });
 
+// F2 (Opus adversarial review, founder order 2026-09-22): the live queue
+// (migrate_165 lines 1525-1549) never returns `preview` -- it returns
+// `content`, shaped per target_kind. A reported note (target_kind
+// 'post') reached the moderator with no text at all until this fell
+// through to `content.caption`.
+describe('the reported content itself renders (F2 fix)', () => {
+  test('a note report with no report detail still shows its caption, from content', async () => {
+    const tree = await mount();
+    const card = row(tree, {
+      ...REPORT,
+      target_kind: 'post',
+      detail: null,
+      content: { kind: 'note', caption: 'Feeling really low about training today.', status: 'visible' },
+    });
+
+    expect(texts(card)).toContain('Feeling really low about training today.');
+    act(() => { card.unmount(); tree.unmount(); });
+  });
+});
+
 describe('the guard', () => {
   test('a non-moderator sees a calm note and no queue', async () => {
     useCommunityMe.mockReturnValue({

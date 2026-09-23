@@ -140,7 +140,9 @@ describe('a skeleton stands in the shape of the row it replaces', () => {
 describe('a section with nothing in it is one quiet line, not a poster', () => {
   test('the Hub and the profile say it in a line, and keep EmptyState for a screen with nothing on it', () => {
     const hub = read('src/screens/CommunityHubScreen.js');
-    expect(hub).toContain('Follow people and their training shows up here.');
+    // F11 (Opus adversarial review, founder order 2026-09-22 item 5):
+    // re-anchored copy naming the action beneath it.
+    expect(hub).toContain('Follow people to see their training, or say hello.');
     expect(hub).not.toContain('title="Nothing here yet"');
     // The error and offline states keep the shared box: they carry a retry.
     expect(hub).toContain('Could not load Community');

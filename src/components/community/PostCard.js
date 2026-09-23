@@ -2,8 +2,10 @@
  * PostCard — one training story (blueprint section 6,
  * `docs/social-discovery-2026-09-06/30-BLUEPRINT.md`; SD-04, SD-06).
  *
- * A story is generated from something the user really logged and posted by
- * hand. This component renders ONLY the allow-listed payload keys for the
+ * Most kinds are generated from something the user really logged and posted
+ * by hand; 'note' (founder order 2026-09-22 item 5) is free text with no
+ * workout behind it. This component renders ONLY the allow-listed payload
+ * keys for the
  * post's kind (`POST_PAYLOAD_KEYS` in `src/lib/community/validation.js`),
  * one field at a time, so nothing about a person's body, food or coaching
  * can reach a card even if a payload somehow carried it. The weight on a PR
@@ -121,6 +123,13 @@ export function bodyForKind(post) {
         facts: null,
         line: p.caption ?? null,
       };
+    case 'note':
+      // Founder order 2026-09-22 item 5 (audit A-05): a short free-text
+      // post with no logged training behind it. There is no payload, so
+      // no hero, facts or supporting line -- the post's own `caption`
+      // (rendered below, exactly as for every other kind) is the whole
+      // story.
+      return { eyebrow: 'Note', hero: null, facts: null, line: null };
     default:
       return { eyebrow: null, hero: null, facts: null, line: null };
   }

@@ -132,6 +132,10 @@
       if (post.kind === 'block') return payload.planName || 'Block complete';
       if (post.kind === 'milestone') return payload.title || 'Milestone';
       if (post.kind === 'programme') return payload.title || 'Shared programme';
+      // F4 (Opus adversarial review, founder order 2026-09-22 item 5): a
+      // note listed as generic "Story" -- it carries no title of its
+      // own, so it lists as what it is.
+      if (post.kind === 'note') return 'Note';
       return 'Story';
     }
 

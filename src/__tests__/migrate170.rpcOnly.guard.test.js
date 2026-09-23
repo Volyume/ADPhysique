@@ -1500,9 +1500,12 @@ describe('PART B review: the daily digest collapses even under a burst', () => {
   });
 
   test('the collapsed push names nobody, in its body or in its payload', () => {
+    // RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 5, review F10):
+    // a Respect on a note reads "your post"; both bodies still name nobody.
     expect(NOTIFY_FN).toContain(
-      "return { title: 'Community', body: 'Someone gave your training respect' }",
+      "body: reactionPostKind === 'note' ? 'Someone gave your post respect' : 'Someone gave your training respect',",
     );
+    expect(NOTIFY_FN).not.toMatch(/Someone gave your (post|training) respect[^\n]*\$\{/);
     expect(NOTIFY_FN).toContain(
       "...(kind === 'reaction' ? {} : { actor_handle: handle }),",
     );
