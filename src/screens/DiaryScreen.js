@@ -12,12 +12,19 @@
  * D138 (the diary as a daily workspace): a usual chip on an empty meal logs
  * its remembered portion in ONE tap (portion stated on the chip, undo toast
  * after, hold to change it first); an empty meal whose slot had food
- * yesterday offers "Yesterday's <meal>" to copy just that meal across; the
- * two-line meal-builder row and the standalone banking button are one
- * compact chip row (Meal builder / Higher-calorie day / Trends) under the
- * meals; and a user with no targets gets a way out from under the rings.
+ * yesterday offers "Yesterday's <meal>" to copy just that meal across; and
+ * a user with no targets gets a way out from under the rings.
  * The canonical add path (Add food -> search -> Add to diary) is unchanged:
  * this is a shorter path for repeats, not a replacement for it.
+ *
+ * RE-ANCHORED 2026-09-22/23 (founder order, live screenshot of the
+ * Nutrition tab): the D138 day-tools chip row above (Meal builder /
+ * Higher-calorie day / Trends as three Chips) is GONE -- it read as
+ * "ugly pills... only to one side", not features in their own right.
+ * "Meal builder" (day with entries) and "Higher-calorie day" are now
+ * full-width FeatureRow doors under the log (styles.featureRows); "Trends"
+ * moved into the ScreenHeader's right slot as a HeaderAction. See the
+ * featureRows block and the ScreenHeader render below for the detail.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appAlert } from '../components/AppAlert';
@@ -82,7 +89,8 @@ import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
-import Chip from '../components/Chip';
+import FeatureRow from '../components/food/FeatureRow';
+import HeaderAction from '../components/HeaderAction';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
@@ -435,6 +443,22 @@ export default function DiaryScreen({ navigation, route }) {
     return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
   }, [selectedDate]);
   const bankActiveThisWeek = !!calorieBank && weekDates.includes(calorieBank.bigDayKey);
+
+  // Founder order 2026-09-22/23: the "Higher-calorie day" FeatureRow's sub
+  // line is state-aware, so it names the real planned day rather than
+  // repeating a static instruction. bankActiveThisWeek (above) is the SAME
+  // gate CalorieBankSheet's own existingBank prop uses, so this reads the
+  // identical "planned, for THIS week" state, never a stale bank from a
+  // week that has since passed. Full weekday name ("Saturday"), same
+  // defensive NaN fallback shape as selectedDateDetail above.
+  const bankedDayLabel = useMemo(() => {
+    const d = parseLocalDay(calorieBank?.bigDayKey);
+    if (Number.isNaN(d.getTime())) return calorieBank?.bigDayKey ?? '';
+    return d.toLocaleDateString('en-GB', { weekday: 'long' });
+  }, [calorieBank]);
+  const bankingRowSub = bankActiveThisWeek
+    ? `Planned for ${bankedDayLabel}. Your weekly total stays the same.`
+    : 'Plan one for this week. Your weekly total stays the same.';
 
   const applyBank = useCallback(async (bank) => {
         // CB-1b: move the planned FOOD to match the new per-day targets, not just the
@@ -1419,7 +1443,21 @@ export default function DiaryScreen({ navigation, route }) {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.colors.primary} />}
       >
-        <ScreenHeader title="Nutrition" />
+        {/* Founder order 2026-09-22/23: "Trends" moved out of the day-tools
+            chip row and into the header's right slot as a labelled
+            HeaderAction, same accessibility label and destination
+            (FoodInsights) the old Chip carried. */}
+        <ScreenHeader
+          title="Nutrition"
+          right={(
+            <HeaderAction
+              icon="analytics-outline"
+              label="Trends"
+              onPress={() => { lightTap(); navigation.navigate('FoodInsights'); }}
+              accessibilityLabel="Open nutrition trends and export"
+            />
+          )}
+        />
 
         {/* Day pager + compact options. Sits under the standard
             ScreenHeader so the Nutrition tab now matches Today, Train,
@@ -1762,42 +1800,51 @@ export default function DiaryScreen({ navigation, route }) {
           </>
         )}
 
-        {/* D138 item 3: one compact chip row carries the day's remaining
-            doors, replacing the two-line "Meal builder" nav row and the
-            standalone "Plan a higher-calorie day" button that used to stack
-            here. Fewer competing blocks under the meals, and trends finally
-            have a door on the surface itself rather than only inside the Day
-            tools sheet (which still lists both, unchanged).
-            "Higher-calorie day" keeps the EXACT banking gate the button had
-            (bankingAvailable: targets present, not floored, no open ED flag)
-            and its accessibility label, so the ED-safety carve-out reads and
-            tests the same. On a day with nothing logged, EmptyDiary carries
-            its own meal-builder promo, so the chip is dropped there rather
-            than repeated. */}
-        {loaded && !selectionMode ? (
-          <View style={styles.dayToolsRow}>
+        {/* RE-ANCHORED 2026-09-22/23 (founder order, live screenshot of the
+            Nutrition tab: the day-tools Chips read as "ugly pills... only
+            to one side", not features in their own right). The chip row
+            (D138 item 3) is gone. "Meal builder" (day with entries) and
+            "Higher-calorie day" are now full-width FeatureRow doors -- the
+            SAME shared component and anatomy (icon box, title, sub,
+            chevron) EmptyDiary's own promo row uses, never a copy -- flush
+            in ONE bordered surface as a short list, a hairline between
+            them when both show, never cards inside a card, never confined
+            to one side. "Trends" moved into the header's right slot
+            (HeaderAction, in the ScreenHeader above); it is not repeated
+            here.
+            "Higher-calorie day" keeps the EXACT banking gate the old chip
+            had (bankingAvailable: targets present, not floored, no open ED
+            flag) and its accessibility label, so the ED-safety carve-out
+            reads and tests the same. On a day with nothing logged,
+            EmptyDiary carries its own meal-builder promo (also FeatureRow),
+            so this list is dropped there rather than shown twice. */}
+        {/* Fresh-eyes review F1 (2026-09-23): the container renders only
+            when at least one row will, so an empty day with banking
+            unavailable (no targets yet, a floored day, an open ED flag)
+            never shows a stray bordered box. */}
+        {loaded && !selectionMode && (viewEntries.length > 0 || bankingAvailable) ? (
+          <View style={[styles.featureRows, live.featureRows]}>
             {viewEntries.length > 0 ? (
-              <Chip
-                label="Meal builder"
+              <FeatureRow
                 icon="restaurant-outline"
+                title="Meal builder"
+                sub="Build a day or week from your targets."
                 onPress={() => { lightTap(); navigation.navigate('MealPlan', { entryDate: selectedDate }); }}
                 accessibilityLabel="Open meal builder for this day or week"
+                bordered={false}
+                divider={bankingAvailable}
               />
             ) : null}
             {bankingAvailable ? (
-              <Chip
-                label="Higher-calorie day"
+              <FeatureRow
                 icon="trending-up-outline"
+                title="Higher-calorie day"
+                sub={bankingRowSub}
                 onPress={() => setBankSheetVisible(true)}
                 accessibilityLabel="Plan a higher-calorie day"
+                bordered={false}
               />
             ) : null}
-            <Chip
-              label="Trends"
-              icon="analytics-outline"
-              onPress={() => { lightTap(); navigation.navigate('FoodInsights'); }}
-              accessibilityLabel="Open nutrition trends and export"
-            />
           </View>
         ) : null}
         <WaterRow
@@ -2406,11 +2453,16 @@ const styles = StyleSheet.create({
   macroRingsWrap: { marginBottom: spacing.lg },
   // D138 item 4: the no-targets way out, tucked under the rings.
   noTargetsWrap: { marginTop: spacing.md },
-  // D138 item 3: the day's remaining doors as one wrapping chip row (shared
-  // Chip primitive, so no colour or type is set here).
-  dayToolsRow: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    gap: spacing.xs,
+  // RE-ANCHORED 2026-09-22/23 (founder order): the day's remaining doors as
+  // ONE bordered/rounded surface holding a short list of flush FeatureRow
+  // children (shared FeatureRow primitive owns the row chrome and every
+  // colour/type inside it; this is layout only -- border/background colour
+  // set here is the container's own neutral chrome, never text/icon
+  // colour on the rows).
+  featureRows: {
+    borderWidth: 1,
+    borderRadius: radius.md,
+    overflow: 'hidden',
     marginBottom: spacing.md,
   },
   // NU-2: quiet mode rows under the rings and the banking-paused note.
@@ -2576,6 +2628,7 @@ function buildLiveStyles(t) {
     offCardDismiss: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     offCardCta: { ...t.type.label, color: t.colors.textPrimary },
     addMealRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    featureRows: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     addMealLabel: { ...t.type.label, color: t.colors.textPrimary },
     plannedBanner: { backgroundColor: t.colors.surface2, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     plannedBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },

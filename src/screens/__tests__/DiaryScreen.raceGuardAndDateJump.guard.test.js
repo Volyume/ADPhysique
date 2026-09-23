@@ -171,27 +171,36 @@ describe('DiaryScreen diary tools', () => {
 });
 
 describe('DiaryScreen meal-planning entry point', () => {
-  // D138 item 3: the two-line "Meal builder" nav row under the meals became
-  // one chip in the day-tools chip row (with the standalone "Plan a
-  // higher-calorie day" button and a new "Trends" door). The pinned contract
-  // is unchanged in substance: meal planning is still ONE plain route out of
-  // the diary carrying the day in view, never another summary block. The
-  // two-line promo copy itself survives where it still earns its space, on
-  // the empty state (EmptyDiary.js, pinned by foodComponents.test.js).
+  // RE-ANCHORED 2026-09-22/23 (founder order, live screenshot of the
+  // Nutrition tab: the day-tools Chips read as "ugly pills... only to one
+  // side"). The chip row is gone. "Meal builder" (day with entries) and
+  // "Higher-calorie day" are now full-width FeatureRow doors in
+  // styles.featureRows, the SAME shared component/anatomy EmptyDiary's own
+  // promo row uses (never a copy); "Trends" moved into the header's right
+  // slot as a HeaderAction. The pinned contract is unchanged in substance:
+  // meal planning is still ONE plain route out of the diary carrying the
+  // day in view, never another summary block. The two-line promo copy
+  // itself survives where it still earns its space, on the empty state
+  // (EmptyDiary.js, pinned by foodComponents.test.js).
   test('meal planning stays as one plain route, not another summary block', () => {
     expect(SRC).toMatch(/navigation\.navigate\('MealPlan', \{ entryDate: selectedDate \}\)/);
     expect(SRC).toMatch(/accessibilityLabel="Open meal builder for this day or week"/);
-    expect(SRC).toMatch(/<Chip\s+label="Meal builder"/);
+    expect(SRC).toMatch(/<FeatureRow\s+icon="restaurant-outline"\s+title="Meal builder"/);
     // No second diary summary block came back with it.
     expect(SRC).not.toMatch(/buildPlanBtn/);
     expect(SRC).not.toMatch(/Create today or the week from your targets/);
   });
 
-  test('the day-tools chip row keeps the banking gate and adds a trends door', () => {
-    // The ED-safety carve-out is unchanged: the higher-calorie-day chip is
-    // still gated on bankingAvailable and still announces itself the same way.
+  test('the banking gate is unchanged and trends is a header action', () => {
+    // RE-ANCHORED 2026-09-22/23: the chip row is gone, but the ED-safety
+    // carve-out is unchanged -- "Higher-calorie day" is still gated on
+    // bankingAvailable and still announces itself the same way, now as a
+    // FeatureRow rather than a Chip.
     expect(SRC).toMatch(/\{bankingAvailable \? \([\s\S]{0,320}accessibilityLabel="Plan a higher-calorie day"/);
-    expect(SRC).toMatch(/<Chip\s+label="Trends"[\s\S]{0,240}navigation\.navigate\('FoodInsights'\)/);
+    // "Trends" moved into the ScreenHeader's right slot as a HeaderAction,
+    // same destination and accessibility label the old Chip carried.
+    expect(SRC).toMatch(/<HeaderAction[\s\S]{0,240}navigation\.navigate\('FoodInsights'\)/);
+    expect(SRC).toMatch(/accessibilityLabel="Open nutrition trends and export"/);
   });
 
   test('small diary actions use button chrome instead of loose text links', () => {
@@ -207,17 +216,31 @@ describe('DiaryScreen meal-planning entry point', () => {
     expect(SRC).toContain('plannedBtnGhost: { ...type.label, color: colors.textPrimary }');
     expect(SRC).toMatch(/offCardRow: \{[\s\S]*flexWrap: 'wrap'/);
     expect(SRC).toMatch(/plannedBannerRow: \{[\s\S]*flexWrap: 'wrap'/);
-    // D138 item 3: the banking entry (previously the hand-rolled bankRow
-    // TouchableOpacity, then a <Button variant="secondary">) is now a chip in
-    // the day-tools row. The pin moves to the shared Chip primitive, which
-    // owns the chrome, and to the row's own layout-only style: no colour or
-    // type is set locally for it any more, which is the point of the rule
-    // this test guards.
+    // RE-ANCHORED 2026-09-22/23 (founder order): the banking entry
+    // (hand-rolled bankRow TouchableOpacity, then a Button, then a Chip in
+    // the day-tools row) is now a FeatureRow inside styles.featureRows.
+    // The pin moves to the shared FeatureRow primitive, which owns the row
+    // chrome, and to the container's own layout-only style: no text/icon
+    // colour is set locally for it any more, which is the point of the
+    // rule this test guards.
     expect(SRC).not.toMatch(/bankRow/);
-    expect(SRC).toMatch(/<Chip\s+label="Higher-calorie day"/);
-    expect(SRC).toMatch(/dayToolsRow: \{[\s\S]*flexWrap: 'wrap'/);
+    expect(SRC).toMatch(/<FeatureRow\s+icon="trending-up-outline"\s+title="Higher-calorie day"/);
+    expect(SRC).toMatch(/featureRows: \{[\s\S]*borderRadius: radius\.md/);
     expect(SRC).not.toMatch(/offCardCta: \{[\s\S]*color: colors\.primary/);
     expect(SRC).not.toMatch(/plannedBtnGhost: \{[\s\S]*color: colors\.primary/);
+    expect(SRC).not.toMatch(/featureRows: \{[\s\S]*color: colors\.primary/);
+    expect(SRC).not.toMatch(/dayToolsRow/);
+  });
+});
+
+describe('the feature-row list never renders as an empty box, and no chip remains (fresh-eyes review 2026-09-23)', () => {
+  test('the container is gated on at least one row rendering', () => {
+    expect(SRC).toMatch(/\{loaded && !selectionMode && \(viewEntries\.length > 0 \|\| bankingAvailable\) \? \(\s*<View style=\{\[styles\.featureRows, live\.featureRows\]\}>/);
+  });
+
+  test('no Chip is rendered or imported on this screen any more', () => {
+    expect(SRC).not.toMatch(/<Chip\b/);
+    expect(SRC).not.toMatch(/import Chip\b/);
   });
 });
 

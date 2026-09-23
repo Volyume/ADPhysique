@@ -13,9 +13,13 @@
  *     that slot's rows, and only real intake (a planned, unconfirmed row was
  *     never eaten and must not become today's actual). Undo removes every
  *     copied row, not just the first.
- *  3. DAY TOOLS CHIP ROW. Meal builder / Higher-calorie day / Trends, with
- *     the banking chip still behind the untouched bankingAvailable ED gate
- *     (DiaryScreen.bankingAvailable.test.js owns that gate's own cases).
+ *  3. DAY TOOLS. Meal builder / Higher-calorie day / Trends. RE-ANCHORED
+ *     2026-09-22/23 (founder order): no longer a chip row -- Meal builder
+ *     and Higher-calorie day are FeatureRow doors under the log, Trends is
+ *     a header action -- with the banking row still behind the untouched
+ *     bankingAvailable ED gate (DiaryScreen.bankingAvailable.test.js owns
+ *     that gate's exhaustive on/off cases; this file adds one toggle case
+ *     of its own alongside the mounted "present" coverage below).
  *  4. NO TARGETS. A user with no nutrition targets is given the way out.
  *  5. LOAD COST. Yesterday is read only when this day can actually use it.
  *  6. BATCHED RESOLUTION. The day's entries and the usual chips each resolve
@@ -324,8 +328,8 @@ describe('D138 item 2: per-meal copy from yesterday', () => {
   });
 });
 
-describe('D138 item 3: the day tools chip row', () => {
-  test('meal builder, higher-calorie day and trends are one chip row', async () => {
+describe('D138 item 3, RE-ANCHORED 2026-09-22/23: meal builder, higher-calorie day and trends', () => {
+  test('meal builder and higher-calorie day are FeatureRows; trends is a header action', async () => {
     dayWith({ today: startedDay });
     const nav = makeNav();
     const tree = await mountDiary(nav);
@@ -335,6 +339,10 @@ describe('D138 item 3: the day tools chip row', () => {
     // identically-labelled wrapper does not carry: this is the entry point.
     expect(byLabel(tree, 'Plan a higher-calorie day')).toHaveLength(1);
 
+    // "Trends" moved into the ScreenHeader's right slot as a HeaderAction
+    // (founder order 2026-09-22/23): its visible label, accessibility
+    // label and destination are unchanged from the old Chip.
+    expect(textOf(tree)).toContain('Trends');
     const trends = byLabel(tree, 'Open nutrition trends and export');
     expect(trends).toHaveLength(1);
     act(() => { trends[0].props.onPress(); });
@@ -343,11 +351,35 @@ describe('D138 item 3: the day tools chip row', () => {
 
   test('the two-line meal-builder promo is not repeated over the empty state', async () => {
     const tree = await mountDiary();
-    // EmptyDiary still carries its own promo; the chip does not duplicate it.
+    // EmptyDiary still carries its own promo; the day's feature list does
+    // not duplicate it.
     expect(textOf(tree)).toContain('Meal builder');
     expect(byLabel(tree, 'Open nutrition trends and export')).toHaveLength(1);
-    expect(byLabel(tree, 'Open meal builder for this day or week')
-      .filter((n) => n.props.accessibilityRole === 'button')).toHaveLength(1);
+    // RE-ANCHORED 2026-09-22/23: the row is now FeatureRow, a wrapper
+    // component that itself carries accessibilityLabel/onPress (the same
+    // props its inner TouchableOpacity carries). byLabel's `deep: false`
+    // stops at that shallowest match, so accessibilityRole -- set on the
+    // inner TouchableOpacity, not forwarded onto FeatureRow's own props --
+    // is no longer visible on the node byLabel returns; the exact-once
+    // rule this test pins is still fully proven by byLabel alone.
+    expect(byLabel(tree, 'Open meal builder for this day or week')).toHaveLength(1);
+  });
+
+  test('the higher-calorie day row respects the banking gate: absent when unavailable, present when available', async () => {
+    // ED-safety carve-out (unchanged): floored targets close banking.
+    // DiaryScreen.bankingAvailable.test.js owns the exhaustive on/off
+    // cases (ED flag, floor, read-failure-fails-closed, no targets); this
+    // is the one toggle this mounted suite pins for itself.
+    dayWith({ today: startedDay });
+    mockGetNutritionTargets.mockResolvedValue({ ...targets, floorApplied: true });
+    const floored = await mountDiary();
+    expect(byLabel(floored, 'Plan a higher-calorie day')).toHaveLength(0);
+    // The meal-builder row is unaffected by the banking gate.
+    expect(byLabel(floored, 'Open meal builder for this day or week')).toHaveLength(1);
+
+    mockGetNutritionTargets.mockResolvedValue(targets);
+    const available = await mountDiary();
+    expect(byLabel(available, 'Plan a higher-calorie day')).toHaveLength(1);
   });
 });
 
