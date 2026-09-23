@@ -39,9 +39,9 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 **Migrations WRITTEN, NOT APPLIED (founder phrase per batch):** 176, 177, 178, 179. 179 depends on nothing and can go alone and first. 178 is a hard gate for the next build: no build carrying the "Say hello" door before 178 is applied (on the live server a note is refused). The community-notify edge function carries the note's push copy and deploys only by manual dispatch under the same phrase.
 
-**Queued, in order:** item 6 server-side calm/ED backstop on consistency sharing (migration 180); item 7 gym submissions and reports moderation screen (list functions needed, migration 181); item 8 look and copy; item 9 hygiene (revokes, dead programme HTML, tests, group kinds; migration 182); item 10 Partners migration 155 (founder confirmation and phrase); item 11 remainder (leaked-password setting in the dashboard; the two dashboard-only edge functions "tips" and "bright-handler").
+**In flight:** item 8 look and copy (Sonnet build lane, brief `scratchpad/briefs/item8-look-and-copy.md`; recovery path: the brief is complete and every change is file:line-specified, so a partial tree is reviewed hunk by hunk against it and finished by a relaunch). **Queued, in order:** item 9 hygiene (brief drafted at `scratchpad/briefs/item9-hygiene.md`: migration 182 revokes EXECUTE on `community_dimensions_me`, `gyms_in_place` and `community_gym_suggest` ONLY, since the audit's `gyms_near` zero-caller claim is wrong, `GymPicker.js:58` imports it as `nearGyms`; the static retired page for `public/p`; tests for the gyms `submit`/`confirmSubmission`/`report` wrappers and `CommunityGroupMembersScreen`; the `group_accepted` recency filter in community-notify); item 10 Partners migration 155 (founder confirmation and phrase); item 11 remainder (leaked-password setting in the dashboard; the two dashboard-only edge functions "tips" and "bright-handler").
 
-**Side findings for the founder (not fixed, surfaced in chat):** the wizard's completion-time body-profile save replaces every column on a re-run (wellbeing score and consent flag); payload string values were unfiltered for blocked terms until 178 (closed there); a rate limit cut two lanes off on 2026-09-22 evening, both relaunched and completed on 2026-09-23.
+**Side findings for the founder (not fixed, surfaced in chat):** the wizard's completion-time body-profile save replaces every column on a re-run (wellbeing score and consent flag); payload string values were unfiltered for blocked terms until 178 (closed there); a rate limit cut two lanes off on 2026-09-22 evening, both relaunched and completed on 2026-09-23. **From the Opus review of migration 180 (2026-09-23), lead-verified:** nothing writes the cloud `ed_pattern_flags` table (engine flags live in device SQLite only; registry pull-only; no migration or edge function inserts it), so migration 180's gate AND the two edge functions' existing ED gates (partner-cheer, community-notify push suppression) are dormant for engine-raised flags until D92-11 (the raise-only push, open since 2026-08-10) is decided; the fork is in chat. Also L4: `syncTrainingProfile` skips `consistencyGateState` (sends `share_consistency: true` for a calm or flagged user; counters null, nothing leaks, but it wipes what `publishConsistency` published), not fixed.
 
 ---
 
@@ -3792,6 +3792,28 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **ED FLAG CLOUD WRITE, D92-11 (re-raised 2026-09-23 by the Opus review of
+  migration 180, lead-verified) - DECISION.** Nothing writes the cloud
+  `ed_pattern_flags` table: the engine raises flags into device SQLite
+  only, the sync registry has the table pull-only, no migration or edge
+  function inserts it. So migration 180's server gate on consistency
+  sharing, AND the two edge functions' existing ED gates (partner-cheer,
+  community-notify push suppression), withhold nothing for an engine-raised
+  flag until a cloud write exists. Options, asked in chat: (A) wire the
+  raise-only push D92-11 records as the design (an ed_pattern_flags row
+  reaches Dublin when raised, cleared_at moves forward only; Article 9
+  data, RLS already owner-scoped; the lead recommends dropping the owner
+  UPDATE policy in favour of an engine-controlled clear); (B) also, or
+  instead, a withhold-only calm arm on the server read from the synced
+  prefs mirror; (C) keep flags per-device deliberately, correct the
+  registry comment and the two edge functions' claims, and leave 180 as a
+  wall that only a future write would arm. 180 is committed as the shared
+  foundation and is NOT applied until the phrase, whichever way this goes.
+- **MIGRATIONS 176 TO 181 (2026-09-23) - the phrase.** All six WRITTEN,
+  guard-proved, NOT APPLIED. Order inside the batch: 179 can go alone and
+  first; 176 BEFORE 180 (both files refuse the other order in code); 178
+  before any build carrying the "Say hello" door. Say "run against
+  production: 176, 177, 178, 179, 180, 181" (or a subset in that order).
 - **GYM DIRECTORY (2026-09-07) - founder items after the build.** (a)
   When 162 passes re-review: say "run against production" for the batch
   160 + 161 + 162 and the generated seed chunks (`node

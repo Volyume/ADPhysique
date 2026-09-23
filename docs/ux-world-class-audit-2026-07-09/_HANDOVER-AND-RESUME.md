@@ -1,9 +1,9 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-09-23 — COMMUNITY PROPOSALS 1 TO 11: ITEMS 1 TO 5 ON MAIN (last `55937478`), THE NUTRITION ORDER (`26cf33cc`) AND MIGRATION 179 (`2e567408`) TOO; 176 TO 179 WRITTEN NOT APPLIED; NEXT: ITEM 6 (MIGRATION 180) ★
+## ★ 2026-09-23 — COMMUNITY PROPOSALS 1 TO 11: ITEMS 1 TO 7 ON MAIN (items 6 and 7 landing this session), THE NUTRITION ORDER (`26cf33cc`) AND MIGRATION 179 (`2e567408`) TOO; 176 TO 181 WRITTEN NOT APPLIED (176 BEFORE 180, ENFORCED IN CODE); 180 IS DORMANT UNTIL D92-11; NEXT: ITEM 8 (LOOK AND COPY, LANE RUNNING), THEN 9 ★
 
-Resume from `docs/TASKBOARD.md` (the section at the top) and D195 in the register. Lanes are two at a time, supervised by an eight-minute check-in; every item gets a lead diff review and a fresh-eyes adversarial review before its commit. Migrations written for items 5 to 11 are NOT APPLIED until the founder's phrase.
+Resume from `docs/TASKBOARD.md` (the section at the top) and D195 in the register (items 9 and 10 carry the item 6 and 7 rulings, including the review finding that nothing writes the cloud `ed_pattern_flags` table, so migration 180's gate is dormant until the founder answers D92-11; that question is open in chat). Lanes are two at a time, supervised by an eight-minute check-in; every item gets a lead diff review and a fresh-eyes adversarial review before its commit. Briefs for items 8 and 9 are in the scratchpad (`briefs/item8-look-and-copy.md`, `briefs/item9-hygiene.md`; item 9's brief records that the audit's `gyms_near` zero-caller claim was wrong: `GymPicker.js:58` imports it as `nearGyms`, so only three RPCs are revoked). Migrations written for items 5 to 11 are NOT APPLIED until the founder's phrase.
 
 ## ★ 2026-09-22 — COMMUNITY: STORIES SHOW THE TOTAL LIFTED AND PRS; SHARING ON BY DEFAULT UNDER THE SUMMARY'S HERO (D194); TWO-LANE AUDIT REPORTS IN docs/audit/community-audit-2026-09-22/ ★
 

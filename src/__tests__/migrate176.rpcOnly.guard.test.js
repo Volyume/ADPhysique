@@ -124,3 +124,28 @@ describe('the acceptance block reads the live bodies', () => {
     expect(ACCEPT).toContain("has_function_privilege('anon'");
   });
 });
+
+// RE-ANCHORED 2026-09-23 (founder order 2026-09-22 item 6; Opus review of
+// migrate_180, finding H2): the 176-before-180 apply order is enforced by
+// code in both files, not by prose. This file's Part 0 refuses to (re-)run
+// once migrate_180's ED gate is live in community_hub_summary, because a
+// re-run would put the pre-gate body back.
+describe('Part 0: refuses to (re-)run once migrate_180 is live (review H2)', () => {
+  const PART0 = SQL.slice(SQL.indexOf('-- ─── Part 0'), SQL.indexOf('-- ─── Part 1'));
+  test('sits before Part 1 and is a read-only DO block', () => {
+    expect(SQL.indexOf('-- ─── Part 0')).toBeGreaterThan(-1);
+    expect(SQL.indexOf('-- ─── Part 0')).toBeLessThan(SQL.indexOf('-- ─── Part 1'));
+    expect(PART0).toContain('DO $$');
+    expect(PART0).not.toMatch(/\b(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\b/);
+  });
+  test('refuses when community_hub_summary already calls _community_ed_flag_open', () => {
+    expect(PART0).toContain("pg_get_functiondef(to_regprocedure('public.community_hub_summary(text)'))");
+    expect(PART0).toContain("strpos(v_def, '_community_ed_flag_open(') > 0");
+    expect(PART0).toContain("RAISE EXCEPTION 'migrate_176 refused: migrate_180 is live");
+  });
+  test('the header records the apply order and the changed re-run rule', () => {
+    expect(HEADER).toContain('APPLY ORDER');
+    expect(HEADER).toContain('BEFORE migrate_180');
+    expect(HEADER).toMatch(/Safe to re-run:\s+YES until migrate_180 is applied/);
+  });
+});

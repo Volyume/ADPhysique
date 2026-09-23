@@ -39,8 +39,11 @@
 --                    status block is the live record). Claude-run through
 --                    the Supabase connector under the checksum protocol when
 --                    it runs.
--- Safe to re-run:    YES - CREATE OR REPLACE FUNCTION, REVOKE/GRANT are
---                    idempotent, and the acceptance block is read-only.
+-- Safe to re-run:    YES until migrate_180 is applied; after that Part 0
+--                    refuses (re-apply 180 instead, whose body carries
+--                    this file's change). CREATE OR REPLACE FUNCTION,
+--                    REVOKE/GRANT are idempotent, and the acceptance block
+--                    is read-only.
 -- Rollback:          re-issue `community_hub_summary(text)` from migrate_170
 --                    lines 1550-1705, and `community_group_list_mine()` and
 --                    `community_group_accept_invite(uuid, uuid)` from
@@ -52,6 +55,31 @@
 --                    two functions re-issued in parts 2 and 3,
 --                    _community_group_card), 170 (the function re-issued in
 --                    part 1, _community_cohort_stats, _community_is_blocked).
+--                    APPLY ORDER (lead ruling 2026-09-23, review H2 of
+--                    migrate_180): this file BEFORE migrate_180. 180's
+--                    Part 0 refuses until this file's list_mine change is
+--                    live; this file's Part 0 refuses once 180's gate is
+--                    live.
+
+-- ─── Part 0: pre-flight, refuse once migrate_180's ED gate is live ────────
+-- migrate_180 (item 6, 2026-09-23) re-issues community_hub_summary from
+-- THIS file's Part 1 body plus its marked ED-gate lines, and its own
+-- Part 0 refuses to run until this file is applied. Running this file
+-- again AFTER 180 would put the pre-gate body back and silently strip the
+-- gate, so this block refuses in that case: re-apply migrate_180 instead
+-- (its body already carries this file's change). Read-only.
+
+DO $$
+DECLARE
+  v_def text;
+BEGIN
+  IF to_regprocedure('public.community_hub_summary(text)') IS NOT NULL THEN
+    v_def := pg_get_functiondef(to_regprocedure('public.community_hub_summary(text)'));
+    IF v_def IS NOT NULL AND strpos(v_def, '_community_ed_flag_open(') > 0 THEN
+      RAISE EXCEPTION 'migrate_176 refused: migrate_180 is live (community_hub_summary carries the ED gate); re-apply migrate_180 instead of this file';
+    END IF;
+  END IF;
+END $$;
 
 -- ─── Part 1: the Hub summary lists active groups only ────────────────────────
 -- migrate_170 lines 1550-1705 carried forward byte-for-byte; the marked

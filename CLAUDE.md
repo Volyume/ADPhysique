@@ -16,10 +16,14 @@ are paying. Every change affects them. Work accordingly.
 > live record) except **155**, which waits for the store apps to move to
 > a build without Partners (README status block); **176** (closed groups
 > leave the Hub and "My groups", 2026-09-13), **177** (push recipients),
-> **178** (the note post) and **179** (RLS on the two tooling tables), the
-> last three written 2026-09-22/23, are WRITTEN, guard-proved and NOT
-> APPLIED, waiting for the phrase; 179 can go alone and first, and 178 must
-> be applied before any build carrying the note door. Only **049** is HELD
+> **178** (the note post), **179** (RLS on the two tooling tables),
+> **180** (the server-side ED backstop on consistency sharing, DORMANT
+> until D92-11 is decided: nothing writes the cloud ed_pattern_flags table
+> yet) and **181** (gym moderation lists), written 2026-09-22/23, are
+> WRITTEN, guard-proved and NOT APPLIED, waiting for the phrase; 179 can
+> go alone and first, 176 must apply BEFORE 180 (both files refuse the
+> other order in code), and 178 must be applied before any build carrying
+> the note door. Only **049** is HELD
 > (059 is applied; its `meal_[0-9]+` CHECK is live); 150 is RETIRED. This
 > line is updated at every apply (founder order 2026-09-12).
 > Decision delegation (D33) and the full
@@ -48,7 +52,7 @@ database is the source of truth on device. Local migrations run via
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
 is absolute — all user data stays in Dublin. Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_179`; 176 to 179 WRITTEN NOT APPLIED; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_181`; 176 to 181 WRITTEN NOT APPLIED, 176 before 180; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,

@@ -9240,3 +9240,55 @@ settled tree; one commit per item; merged to main and pushed the same step.
    advisor email:** RLS on the two migration-tooling tables. The
    remaining numbering: 180 ED backstop (item 6), 181 gym moderation
    (item 7), 182 hygiene (item 9).
+9. **Item 6, migration 180, the server-side ED backstop on consistency
+   sharing (Opus-reviewed 2026-09-23).** Rulings: the backstop covers the
+   OPEN ED-PATTERN FLAG ONLY, through a new fail-closed SECURITY DEFINER
+   helper (`_community_ed_flag_open`: true on a null id, true on any read
+   error); calm mode stays client-only for this purpose because its cloud
+   mirror is a synced pref nothing server-side reads as a signal today,
+   and inventing one was refused in the lead's build brief (the phrase
+   "do not invent a calm signal" is the lead's, not the founder's; review
+   L3). Every server reader of the `c_*` counters is re-issued
+   byte-for-byte plus one marked line, each pinned at its anchor (review
+   M1); `community_hub_summary` is re-issued from migrate_176's body so
+   the closed-groups fix is kept, and the apply order 176 BEFORE 180 is
+   now a refusal in code in both files (review H2), never prose. The
+   four helper calls inside FILTER and sample expressions sit last in
+   their AND so the cheap column tests run first (review L1). A caller
+   with an open flag has `share_consistency` stored false regardless of
+   what was sent. THE REVIEW'S HIGH FINDING, VERIFIED BY THE LEAD (H1):
+   nothing writes the cloud `ed_pattern_flags` table today. The engine
+   raises flags into device SQLite only, the sync registry has the table
+   pull-only, and no migration or edge function inserts it, exactly as
+   D92-11 recorded on 2026-08-10 and left open for the founder. So this
+   gate, and the two edge functions' existing ED gates that read the
+   same table, withhold nothing for an engine-raised flag until the
+   raise-only push recorded as D92-11's design lands. The migration says
+   so in its header and its acceptance block prints the open-flag count
+   at apply time; the README row and CLAUDE.md say DORMANT UNTIL D92-11;
+   audit B-02 is NOT reported closed. The lead's earlier header sentence
+   that the cloud row was "at least as reliable as the client's own
+   read" was an inference from a docstring and is withdrawn. The fork
+   (D92-11 options A raise-only push, B a withhold-only calm arm from the
+   prefs mirror, C ship the dormant wall and decide later) goes to the
+   founder in chat as a multi-choice question; the wall itself is
+   committed as the shared foundation every option needs, with no
+   migration applied until the phrase. Side finding for the founder, not
+   fixed (review L4): `syncTrainingProfile` skips `consistencyGateState`,
+   so band toggles, Recalculate and Join send `share_consistency: true`
+   for a calm or flagged user; the counters go as null, so nothing
+   leaks, but it wipes what `publishConsistency` published.
+10. **Item 7, migration 181 and the Gyms segment of the moderation
+    screen (Sonnet-reviewed).** Fact established first against migrate_162
+    as applied: both review RPCs already check `community_is_moderator()`
+    and are granted to authenticated only, so neither is touched; the
+    real gap was client-only. Two new STABLE listing RPCs
+    (`gyms_pending_submissions`, `gyms_pending_reports`), moderator-gated,
+    keyset-paged on the existing cursor helpers, returning what a
+    moderator needs and never a submitter's or reporter's identity
+    beyond a count. Review fixes landed before commit: the acceptance
+    block's `OR p.proconfig IS NULL` arm (the hostile-review form every
+    migration since 173 carries; without it a function with no SET
+    clause slips through), and the returned key renamed
+    `confirmation_count` (it is the row's distinct-confirmer count, never
+    a count of submitters).
