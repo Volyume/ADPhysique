@@ -1907,6 +1907,10 @@ export default function ProOnboardingScreen({ navigation }) {
       }
 
       if (user?.id && (sex || hcm || ageNum)) {
+        // Names four fields only. Since D198 (2026-09-24) saveUserBodyProfile
+        // keeps every field a caller leaves undefined, so a re-run of the
+        // wizard no longer nulls the SCOFF score, the experience level, the
+        // training age or the consent flag on the stored row.
         await saveUserBodyProfile(user.id, {
           sex,
           heightCm: hcm,

@@ -35,7 +35,7 @@ describe('ONBOARDING: the Step 1 trap stays fixed (C5-P29-01, D96)', () => {
 });
 
 describe('WELLBEING: completing the SCOFF check preserves the body profile (C5-P5-03, D96)', () => {
-  test('the scoff write merges the existing row (saveUserBodyProfile writes whole rows)', () => {
+  test('the scoff write merges the existing row (saveUserBodyProfile wrote whole rows until D198; the screen still merges explicitly)', () => {
     const src = read('screens/WellbeingCheckScreen.js');
     expect(src).toMatch(/getUserBodyProfile\(user\.id\)/);
     expect(src).toMatch(/\.\.\.\(existing \|\| \{\}\), scoffScore/);

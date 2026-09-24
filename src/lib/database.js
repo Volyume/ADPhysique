@@ -6817,11 +6817,22 @@ export async function runInsightsEngine(userId) {
 export async function saveUserBodyProfile(userId, profile) {
   const d = await db();
   const now = Date.now();
-  const existing = await d.getFirstAsync(
-    'SELECT id FROM user_body_profile WHERE user_id = ? LIMIT 1',
+  const existing = rowToCamel(await d.getFirstAsync(
+    'SELECT * FROM user_body_profile WHERE user_id = ? LIMIT 1',
     [userId],
-  );
+  ));
   if (existing) {
+    // Lead ruling 2026-09-24 (register D198): a field the caller leaves
+    // UNDEFINED keeps its stored value; only a field the caller names is
+    // written (null included, so a caller can still clear one). This
+    // update used to write every column from the argument, so the wizard's
+    // completion-time save, which names sex, height, date of birth and the
+    // goal only, nulled the rest on a re-run: the SCOFF score (ED-screening
+    // data the coach report and the countdown gate read), the experience
+    // level, the training age and the consent flag. Every other caller
+    // already spread the stored row first (the wellbeing check, the early
+    // Community join, the profile settings); they are unchanged by this.
+    const pick = (key) => (profile?.[key] !== undefined ? profile[key] : existing[key]);
     await d.runAsync(
       `UPDATE user_body_profile SET
         sex=?, date_of_birth=?, height_cm=?, experience_level=?,
@@ -6829,10 +6840,10 @@ export async function saveUserBodyProfile(userId, profile) {
         scoff_score=?, updated_at=?
        WHERE user_id=?`,
       [
-        profile.sex ?? null, profile.dateOfBirth ?? null, profile.heightCm ?? null,
-        profile.experienceLevel ?? null, profile.trainingAgeYears ?? null,
-        profile.primaryGoal ?? null, profile.gdprConsented ? 1 : 0,
-        profile.scoffScore ?? null, now, userId,
+        pick('sex') ?? null, pick('dateOfBirth') ?? null, pick('heightCm') ?? null,
+        pick('experienceLevel') ?? null, pick('trainingAgeYears') ?? null,
+        pick('primaryGoal') ?? null, pick('gdprConsented') ? 1 : 0,
+        pick('scoffScore') ?? null, now, userId,
       ],
     );
     _scheduleSync();

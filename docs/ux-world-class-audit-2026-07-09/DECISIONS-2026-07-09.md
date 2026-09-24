@@ -9531,3 +9531,42 @@ R-02), lead-reviewed hunk by hunk, landed the same day. Rulings:
 8. **Not a build gate.** 183 is a grant change on RPCs no build calls;
    the community-notify change tightens a proof window only. Neither
    holds a build.
+
+## D198 — Two defects the lead had left "for the founder's word", fixed hands-on (2026-09-24)
+
+Both had been surfaced as side findings and left sitting; the founder's
+"Why have you stopped" is the correction. Neither needed a decision, only
+the fix, and both only strengthen a safety posture. Rulings:
+
+1. **Every sender of the training profile composes the same payload.**
+   `syncTrainingProfile` (hub open, the band toggles, Recalculate, Join)
+   folded the bands alone through `shareablePayload(bands, share)`, with
+   no consistency counters and no gate (Opus review of migration 180, L4).
+   Observed effects: for a calm or flagged person with the toggle on it
+   stamped `share_consistency: true` with every counter null (nothing
+   leaked, but the stored preference was wrong until the next publish);
+   for everyone it nulled the counters `publishConsistency` had published
+   until the next workout or foreground publish. Fix: one
+   `composeTrainingProfilePayload(uid, { nowMs, share })` in
+   `trainingConsistency.js` (bands, share settings, counters, and the
+   gate: calm mode, an open ED-pattern flag, a minor, folded through
+   `shareablePayload`), called by `publishConsistency`,
+   `publishSharingSettings` and, through a lazy require, by
+   `syncTrainingProfile`. Pinned in `trainingProfile.test.js` (gated,
+   minor, unreadable me fails closed, toggle off, and a source guard that
+   no sender folds the bands alone).
+2. **A body-profile field the caller does not name keeps its stored
+   value.** `saveUserBodyProfile`'s update wrote every column from its
+   argument, so the wizard's completion-time save (sex, height, date of
+   birth, goal) nulled the SCOFF score, the experience level, the training
+   age and the consent flag on a re-run. The SCOFF score is ED-screening
+   data: `coachReport.js` and the peak-week countdown gate read a positive
+   screen from it, so a re-run silently weakened a safety posture. Fix,
+   in the function itself so every caller is covered: an UNDEFINED field
+   keeps its stored value; a named field is written, null included (an
+   explicit clear still clears). The callers that already spread the
+   stored row (the wellbeing check, the early Community join, the profile
+   settings) are unchanged. Pinned on the real database module on an
+   in-memory SQLite (`src/lib/__tests__/saveUserBodyProfile.merge.test.js`).
+3. **Not a build gate, no schema change.** Both fixes are client code;
+   the next build carries them.

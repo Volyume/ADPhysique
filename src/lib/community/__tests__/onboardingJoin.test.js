@@ -394,9 +394,12 @@ describe('performEarlyCommunityJoin (founder order 2026-09-22, item 3): saves th
     expect(queued).toEqual({ ok: false, queued: true, error: 'unavailable' });
   });
 
-  // Lead review 2026-09-22: saveUserBodyProfile replaces every column of an
+  // Lead review 2026-09-22: saveUserBodyProfile replaced every column of an
   // existing row, so the early save must merge over what is stored and let
-  // only a KNOWN (non-null) value replace it. Otherwise a person re-running
+  // only a KNOWN (non-null) value replace it. (Since 2026-09-24, D198, an
+  // UNDEFINED field keeps its stored value inside saveUserBodyProfile itself;
+  // this early save still merges explicitly, so a NULL body field never
+  // replaces a stored value either, which the function alone would allow.) Otherwise a person re-running
   // the wizard would lose their wellbeing score, experience and consent flag
   // between step 5 and completion, or for good if they abandoned it.
   test('merges over the existing row: a stored field is never nulled, and a null body field never replaces a stored value', async () => {
