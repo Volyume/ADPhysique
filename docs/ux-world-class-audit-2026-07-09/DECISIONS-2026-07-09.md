@@ -9609,3 +9609,22 @@ multi-choice question and is NOT ruled here.
    screenshots in depth and the rest of the tab by inventory plus one
    accuracy sweep; the screens not yet audited in depth are listed in the
    report's section 6, and their order is the founder's (Q4).
+5. **Second pass, ten accuracy defects, no fork (report F8 to F17).**
+   Every one lead-verified in the code before being called a finding.
+   Rulings inside them: the weight-trend chart converts to pounds for a
+   pounds user (number and label must agree) and keeps kilograms, labelled
+   kilograms, for a stone user (stone is not a decimal axis); "Today" on
+   the weight header only when the entry is today's local day, otherwise
+   "Date unknown"; the history header shows the true completed-session
+   count from a count read, the list pages beyond its 50 with "Show more",
+   and the calendar's dots come from a month-range read, so the LB-7
+   bound (never load the whole history for the list) still holds; a
+   history session's "lifted" total passes the exercise-type map so
+   metres and seconds are never counted as kilograms; the lift list's
+   "+N%" follows the lens on screen; the "Weight lifted" hero gates on
+   sessions inside the eight weeks it draws; the standing card gains its
+   third state (body weight known, no matching lift); strength standards
+   are keyed by category with the best ratio per category, so variants of
+   one lift never double-count; exercise detail's "Estimated max" and the
+   goal progress read every session, not the last eight. All client code,
+   tests with each, two build lanes with disjoint files.

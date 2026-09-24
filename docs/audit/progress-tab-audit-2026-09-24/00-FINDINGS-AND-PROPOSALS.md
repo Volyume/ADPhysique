@@ -69,7 +69,7 @@ Tuesday, so "actual" must count the sets logged inside THAT span, on both
 surfaces. Home currently counts a rolling seven days (`HomeScreen.js:1276`,
 `weekAgo = Date.now() - 7d`), which after a Monday session on a
 Wednesday-started block credits the previous block week's work to this
-one. Fix (lane F2, LANDED 2026-09-24 on main; the commit hash is recorded on the board at the next landing): one pure helper,
+one. Fix (lane F2, LANDED 2026-09-24 on main `1ae313f5`): one pure helper,
 `src/lib/blockWeekProgress.js` (`blockWeekSpan`, `buildBlockProgressRows`),
 used by both surfaces; `getCurrentMesocycleWeek` gains `blockStartMs`
 (additive); tests pin the helper, the block-week span across the UK clock
@@ -287,10 +287,102 @@ e1RM, history and Year of lifts, the landing's recap, photos.
 
 ---
 
-## 5. First accuracy sweep of the rest of the tab (R5, being verified)
+## 5. Accuracy sweep of the body-metrics, lift and history screens (R5b, every finding lead-verified in the code)
 
-Filled in from the R5 lane's report after lead verification; anything not
-verified by the lead in the code is marked OBSERVED BY LANE.
+The first R5 attempt (Haiku) returned a summary of this document instead of
+the check and was discarded; R5b (Sonnet) did the check and every line
+below was then read by the lead. All ten are defects with no product fork,
+so under the founder's "works 100%, is accurate" they are being fixed in
+two build lanes (A: body metrics and history; B: lift progress and
+exercise detail), one commit per lane after lead review.
+
+### F8. Weight trend chart labels kilogram figures as pounds for a pounds user
+OBSERVED `src/screens/BodyMetricsScreen.js:296-321`: the chart plots
+`value: e.body_weight` (canonical kg), `min`/`max` from the raw kg series,
+`yAxisSuffix={bodyWeightUnits === 'st' ? ' kg' : ` ${bodyWeightUnits || 'kg'}`}`
+and the tooltip `title: `${e.body_weight} ${unit}`` with `unit` = 'lbs' for
+a pounds user. SO a true 82.5 kg reading shows as "82.5 lbs" on the axis and
+in every tooltip, about 2.2x wrong, while the headline and delta above the
+chart convert correctly (lines 1150-1157). A stone user is shown kg
+labelled kg (honest). Lane A, ruling: pounds converted throughout the chart;
+stone unchanged.
+
+### F9. "Weight - Today" for any unreadable date
+OBSERVED `BodyMetricsScreen.js:1130`: `Weight - {safeFormatDate(latest?.metric_date, 'd MMM yyyy') || 'Today'}`.
+A malformed stored date reads as today's weigh-in. Lane A: "Today" only
+when the entry is today's local day; otherwise "Date unknown".
+
+### F10. The "+N%" badge on the lift list always reports the 1RM change
+OBSERVED `src/screens/LiftProgressScreen.js:527-535` renders
+`item.deltaPct` beside whichever headline the metric switcher shows, with
+the caption "since first log"; `src/lib/liftProgress.js:76-78` computes
+`deltaPct` once, from the estimated-1RM series only. SO on "Total lifted",
+"Heaviest weight" or "Total reps" the number beside the headline is a
+different metric's change. Lane B: per-lens delta.
+
+### F11. The "Weight lifted" hero gates on all-time sessions but draws eight weeks
+OBSERVED `LiftProgressScreen.js:183` counts distinct workouts over all sets;
+line 313 gates `weeklyLoadSessionCount >= 3`; the series
+(`buildWeeklyLoadSeries`, Monday-anchored, 8 weeks) bins only the last
+eight weeks. SO a returning lifter with three old sessions sees the hero
+with "This week: 0" and an empty chart. Lane B: gate on sessions inside the
+window.
+
+### F12. The standing card has no state for "body weight known, no matching lift"
+OBSERVED `LiftProgressScreen.js:302, 328, 369`: `hasStanding ? card :
+(!bodyWeight && rows.length > 0) ? prompt : null`. SO a person with a
+logged body weight who has not trained a bench, squat, deadlift, overhead
+press or row sees nothing in that slot and no explanation. Lane B: a calm
+one-line third state.
+
+### F13. Strength standards are keyed by exercise name, so variants double-count
+OBSERVED `LiftProgressScreen.js:195-198`: `levels[r.name] = lvl`;
+`src/lib/strengthStandards.js:17-37` matches by substring (`/bench press/i`
+and so on). SO "Barbell Bench Press" and "Close-Grip Bench Press" are two
+rows and two of the "N main lifts" against one standard. Lane B: keyed by
+category, best ratio per category.
+
+### F14. Exercise detail's "Estimated max" is the best of the last eight sessions only
+OBSERVED `src/screens/ExerciseDetailScreen.js:354` (`setHistory(sessions.slice(0, 8))`),
+`599-602` (`const allTimeSets = history.flat(); best1RM = ...`), `734`
+("Estimated max: ~{Math.round(best1RM)}"), while the "Personal records" card
+(`765-771`) reads the uncapped PR rows. SO when the true best was more than
+eight sessions ago, "Estimated max" and the goal progress read lower than
+the PR shown on the same screen, and the variable name says all-time while
+the value is not. Lane B: best over every session.
+
+### F15. Workout history: the session count and the calendar are capped at 50
+OBSERVED `src/screens/WorkoutHistoryScreen.js:145-147`
+(`getRecentCompletedWorkouts(user.id, 50)`), `429` (the calendar's
+trained-day set from the same page), `777` (`{workouts.length} session(s)`).
+SO more than 50 sessions shows "50 sessions", and paging the calendar to an
+older month shows no trained days. Lane A, ruling: true count from a count
+read, "Show more" paging, calendar dots from a month-range read.
+
+### F16. A history session's "lifted" total counts metres and seconds as kilograms
+OBSERVED `WorkoutHistoryScreen.js:179`: `calculateTonnage(mySets, null, ...)`
+passes no exercise-type map; `src/lib/algorithms.js:198-206`
+(`isLoadBearingSet`) returns true for every set when the map is absent, and
+the function's own header (`143-149`) says distance and duration sets store
+metres and seconds in the weight and reps columns. `LiftProgressScreen.js:181-182`
+passes the map. SO a session with a tracked row or run shows an inflated
+"kg lifted" chip. Lane A: pass the map.
+
+### F17. History rows read to screen readers without their duration and set count
+OBSERVED `WorkoutHistoryScreen.js:459`: the row's label is "Workout on
+<date>, expanded|collapsed" and the visible "45 min" and "12 sets" children
+are collapsed under it. Lane A: the label carries both.
+
+Also noted, not defects: the body-fat and measurement charts show the last
+12 readings by count (`BodyMetricsScreen.js:343, 418`) without saying so;
+the history section shows 12 of the 50 loaded rows; the lift screen's
+"Based on X kg body weight" line carries no calm-mode or ED-flag withhold
+(it is the person's own figure on their own screen, the same as the
+body-metrics page; recorded, not changed).
+
+### Proposals P8 to P17
+One per finding, as ruled above; all client code, no schema change, tests
+with each. Lane A carries F8, F9, F15, F16, F17; lane B carries F10 to F14.
 
 ---
 
