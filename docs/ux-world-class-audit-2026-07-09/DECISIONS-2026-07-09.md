@@ -9628,3 +9628,50 @@ multi-choice question and is NOT ruled here.
    one lift never double-count; exercise detail's "Estimated max" and the
    goal progress read every session, not the last eight. All client code,
    tests with each, two build lanes with disjoint files.
+
+## D200 — Progress-tab audit: "fix it all", the four open questions ruled by the lead (2026-09-24; founder: "As I keep repeating for questions you make the call based on what brings the best product. Ok fix it all")
+
+The founder re-affirmed D33 (product forks are the lead's call on the best
+product, never on effort) and ordered every finding of
+`docs/audit/progress-tab-audit-2026-09-24/00-FINDINGS-AND-PROPOSALS.md`
+fixed, including the screens section 6 had not yet audited in depth. The
+four questions become rulings:
+
+1. **Q1, heatmap windows: option A.** At 2 and 4 weeks the row, bar,
+   colour, status, the body figure and the accessibility label read the
+   AVERAGE sets per week over the window against the unchanged weekly
+   bands, with the total shown beside it ("avg 10 / 32 per week, 39 sets in
+   4 weeks"); the divisor is the number of weeks in the window the account
+   has data for (from the earliest completed set), clamped to at least
+   one, so a ten-day-old account at "4 weeks" divides by two; the ghost
+   "previous window" bar uses the same normalisation and is hidden when
+   the previous window pre-dates the account; the 1-week view is
+   unchanged. `getVolumeStatus` and the landmarks are untouched.
+2. **Q2, Recovery: proposal P3 without the duplicate line.** The founder
+   did not say which of the two readings the device showed; the code has
+   no hide path and Sentry has no error, so the evidence-supported reading
+   is an empty block. The block now always says something true and
+   useful: the gauges stay, their waiting caption names the input (the
+   soreness, fatigue and joint-comfort ratings at the end of a session;
+   two rated sessions in the last two weeks) with a one-tap "Rate your
+   last session" path to the latest completed session's summary; a "From
+   your weekly check-in" row shows the latest check-in's energy, soreness,
+   stress and sleep when one exists. The block's recovery-week line is NOT
+   repeated here (BlockShapeCard already states it directly above; one
+   statement per fact). No ED or calm withhold is added or removed. If the
+   founder later reports the heading itself was absent, that is a device
+   render fault to chase with a debug build, not a data state.
+3. **Q3, weeks: one definition per meaning across the tab.** Block week
+   for plan-versus-actual (done, D199); Monday-anchored local week for
+   every "this week / last week" reading (muscle frequency already; the
+   load sparkline, the training-load card and the session-length trend
+   move to it, the current week labelled "so far"); rolling windows only
+   where the user chooses a span, always labelled "last N weeks", never
+   "this week"; the volume trend's buckets anchor on the Monday-anchored
+   week end so its "this week" agrees with the rest of the screen.
+4. **Q4, order: everything, by user impact.** Lanes A and B (F8 to F17,
+   in flight), then C (F1 and F6, the heatmap), D (F3, Recovery), E (F4
+   and F5, weeks and one load surface), then a read lane over the screens
+   section 6 lists (the landing, the recap story, Year of lifts, photos,
+   share cards) and a fix lane for what it finds. Two lanes at a time,
+   disjoint files, lead review of every diff, one commit per lane.
