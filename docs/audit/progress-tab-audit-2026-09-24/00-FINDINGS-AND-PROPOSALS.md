@@ -133,12 +133,25 @@ joint comfort) that are the ONLY input to the gauges; or (b) the block was
 below the part of the screen the screenshots covered. There is no code path
 in which the heading is absent while "This week's plan" is present.
 
+TWO MORE FACTS (lead-read). `src/screens/WorkoutSummaryScreen.js:926-936`
+(C5-P17-01): the post-session save writes ONLY the ratings the user
+actually touched (`realFieldsRef`); an untouched slider is never sent and
+stays NULL, by design, so the engine's unrated-session gate keeps working.
+Soreness is captured before the session (`createWorkout`, COMP-008,
+line 685 "now sourced pre-workout"), fatigue and joint comfort after. So a
+person who finishes sessions without touching the ratings has NULL in every
+gauge input and sees three "N/A" gauges for as long as that continues; the
+gauges cannot fill from anything else today. The weekly check-in already
+stores `energy_score, soreness_score, stress_score, sleep_hours` locally
+(`src/lib/database.js:606-620`, table `weekly_checkins`, read by
+`getRecentCheckins`, line 8590), and `ReadinessCards` reads it only for the
+trend sentence, never for the gauges.
+
 Either way the surface fails the founder's "usable" bar: a section whose
 three figures say N/A and whose caption says "Nothing to show yet" tells the
 user nothing about what would fill it, and it ignores signals the app already
-holds (the weekly check-in's soreness, energy and sleep scores in
-`weekly_checkins_v2`, and the block's own recovery state). Proposals in
-section 3.
+holds (the weekly check-in's soreness, energy, stress and sleep scores, and
+the block's own recovery state). Proposals in section 3.
 
 ---
 
@@ -222,8 +235,9 @@ fewer than two rated sessions exist in 14 days, show the gauges greyed with
 one line that names the input ("Rate soreness, fatigue and joint comfort
 when you finish a session; the figures appear after two rated sessions")
 and a one-tap "Rate your last session" path to the existing summary rating
-row; (b) add the weekly check-in's soreness, energy and sleep as a second,
-clearly labelled signal row when they exist (already stored in
+row; (b) add the weekly check-in's soreness, energy, stress and sleep as a
+second, clearly labelled signal row when they exist (already stored in the
+local `weekly_checkins` table, mirrored to the cloud as
 `weekly_checkins_v2`); (c) fold the block's own recovery state (recovery
 week in N weeks, or the recovery week now) into the same block so
 "Recovery" is never empty for a person on a plan; (d) keep every ED/calm
