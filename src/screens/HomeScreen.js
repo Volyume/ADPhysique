@@ -106,6 +106,7 @@ import { prepareStartWithPlan, commitStartWithPlan } from '../lib/startWithPlan'
 import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, buildLoadSemanticsById, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
+import { blockWeekSpan, buildBlockProgressRows } from '../lib/blockWeekProgress';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
 import { buildReadinessSummary } from '../lib/readinessSummary';
 import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
@@ -1272,30 +1273,34 @@ export default function HomeScreen({ navigation, route }) {
         } catch (_e) { setBlockSeedLines([]); }
       }
 
-      const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      // LB-7: fetch only the last week of sets rather than the whole
-      // history then discarding all but seven days of it in JS.
-      const [planned, recentSets, allExercises] = await Promise.all([
+      // F2 (progress-tab-audit-2026-09-24, D199): "actual" must count the
+      // sets logged inside THIS BLOCK WEEK's own seven days, not a rolling
+      // seven days from now -- a rolling window credits a session to the
+      // wrong block week whenever the block did not start on a Monday.
+      // blockWeekSpan derives that span from the block's own start date and
+      // week index; if it cannot (an unparseable stored start date), fall
+      // back to the previous rolling-7-day window rather than fetching
+      // nothing.
+      const span = blockWeekSpan(week.blockStartMs, week.weekIndex)
+        ?? { startMs: Date.now() - 7 * 24 * 60 * 60 * 1000, endMs: Infinity };
+      // LB-7: fetch only the sets on/after the span's start rather than the
+      // whole history, then bound the upper edge in JS (getWorkoutSetsSince
+      // takes only a lower bound).
+      const [planned, spanSets, allExercises] = await Promise.all([
         getPlannedMuscleVolume(week.id),
-        getWorkoutSetsSince(user.id, weekAgo),
+        getWorkoutSetsSince(user.id, span.startMs),
         getAllExercises(),
       ]);
+      const recentSets = spanSets.filter((s) => (s.createdAt ?? s.created_at ?? 0) < span.endMs);
 
       const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
       const actual = calculateWeeklyVolume(recentSets, exerciseMap);
 
-      const progress = planned
-        .filter(p => p.planned_sets > 0)
-        .map(p => ({
-          muscle: p.muscle,
-          planned: p.planned_sets,
-          actual: Math.round(actual[p.muscle]?.workingSets || 0),
-          label: MUSCLE_DISPLAY_NAMES[p.muscle] || p.muscle,
-        }))
-        .sort((a, b) => b.planned - a.planned)
-        .slice(0, 8); // top 8 muscles by volume
-
-      setBlockProgress(progress);
+      // P1 (D199): Home stays the glance surface (top 8 by planned sets);
+      // Consistency (useProgressData's loadBlockState) shows every planned
+      // muscle. Same mapper either way, so the two cards can never disagree
+      // about what "planned"/"actual"/"label" mean for a shared muscle.
+      setBlockProgress(buildBlockProgressRows(planned, actual, { limit: 8 }));
       // T2-25: this week's rows already in hand - read the ramp stamp
       // off them rather than fetching anything new.
       try {

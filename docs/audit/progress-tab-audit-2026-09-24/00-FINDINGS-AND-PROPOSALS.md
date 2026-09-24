@@ -69,7 +69,7 @@ Tuesday, so "actual" must count the sets logged inside THAT span, on both
 surfaces. Home currently counts a rolling seven days (`HomeScreen.js:1276`,
 `weekAgo = Date.now() - 7d`), which after a Monday session on a
 Wednesday-started block credits the previous block week's work to this
-one. Fix (lane F2, in flight at the time of writing): one pure helper,
+one. Fix (lane F2, LANDED 2026-09-24 on main; the commit hash is recorded on the board at the next landing): one pure helper,
 `src/lib/blockWeekProgress.js` (`blockWeekSpan`, `buildBlockProgressRows`),
 used by both surfaces; `getCurrentMesocycleWeek` gains `blockStartMs`
 (additive); tests pin the helper, the block-week span across the UK clock
@@ -211,7 +211,7 @@ one.
 
 ## 3. Proposals (ranked; the lighter option is never the recommendation)
 
-P1 (F2, building now). The block-week mapper and span on both surfaces,
+P1 (F2, LANDED 2026-09-24). The block-week mapper and span on both surfaces,
 with the end-to-end test. Also show every planned muscle on the Consistency
 card (Home keeps its top eight, being a glance surface).
 

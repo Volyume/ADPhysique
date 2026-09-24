@@ -154,7 +154,7 @@ export function getCurrentMesoWeek(startDateMs, experience = 'intermediate', now
 // day in the Americas (week ticking a day early) and one hour into the
 // day under BST (an hour late at midnight). Full ISO timestamps keep
 // their instant. Every status/week read in this module shares this rule.
-function parseBlockStartMs(v) {
+export function parseBlockStartMs(v) {
   if (typeof v !== 'string') return v;
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
   if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime();

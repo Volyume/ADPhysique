@@ -12,7 +12,7 @@ import { createActivityRepository } from './database/activity';
 import { createBodyMetricsRepository } from './database/bodyMetrics';
 import { createPlanFoldersRepository } from './database/planFolders';
 import { MICRO_COLUMNS, microColumnsCreateFragment } from './food/micronutrients';
-import { getCurrentBlockWeekIndex, getBlockStatus, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK } from './mesocycle';
+import { getCurrentBlockWeekIndex, getBlockStatus, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK, parseBlockStartMs } from './mesocycle';
 import { resolveRecoveryState } from './recoveryState';
 import { compareSessionResolutionVersions } from './blockProgression';
 import { compareEffectiveMaintenanceVersions, isValidEffectiveMaintenanceMemo } from './effectiveMaintenance';
@@ -5665,6 +5665,11 @@ export async function getCurrentMesocycleWeek(userId) {
       mesocycleId: meso.id,
       blockId: meso.id,
       weekIndex: row.week_index,
+      // F2 (progress-tab-audit-2026-09-24, D199): additive -- the block
+      // week's own span (used by blockWeekProgress.js's blockWeekSpan) is
+      // derived from this plus weekIndex, so plan-vs-actual can compare the
+      // block's own week rather than a rolling or Monday-anchored one.
+      blockStartMs: parseBlockStartMs(meso.startDate),
       awaitingDecision,
       isDeload: row.is_deload === 1,
       deloadWeek,

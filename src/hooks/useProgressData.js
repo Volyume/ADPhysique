@@ -14,6 +14,7 @@ import {
 } from '../lib/algorithms';
 import { logError } from '../lib/errorLog';
 import { localDayKey, localDayKeysEndingAt, localWeekStartMs } from '../lib/dayKey';
+import { blockWeekSpan, buildBlockProgressRows } from '../lib/blockWeekProgress';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -171,7 +172,7 @@ export default function useProgressData() {
         loadSessionDurationTrend(workouts, isCurrentRequest),
         loadMuscleFrequency(sets, exMap, isCurrentRequest),
         loadFatigueTrend(isCurrentRequest),
-        loadBlockState(isCurrentRequest),
+        loadBlockState(sets, exMap, isCurrentRequest),
       ]);
     } catch (e) {
       if (!isCurrentRequest()) return;
@@ -234,17 +235,32 @@ export default function useProgressData() {
     }
   }
 
-  async function loadBlockState(isCurrentRequest = () => true) {
+  async function loadBlockState(sets, exMap, isCurrentRequest = () => true) {
     try {
       const week = await getCurrentMesocycleWeek(user.id).catch(() => null);
       // X15 (cross-surface-consistency-audit-2026-07-30): this passed
       // user.id, but getPlannedMuscleVolume filters
       // `WHERE mesocycle_week_id = ?` -- so BlockProgressCard rendered null
       // for every user, always. Pass the actual current week's row id.
-      const progress = week?.id ? await getPlannedMuscleVolume(week.id).catch(() => []) : [];
+      const plannedRows = week?.id ? await getPlannedMuscleVolume(week.id).catch(() => []) : [];
       if (!isCurrentRequest()) return;
       setCurrentMesoWeek(week);
-      setBlockProgress(progress || []);
+      // F2 (progress-tab-audit-2026-09-24, D199): "actual" must count the
+      // sets logged inside THIS BLOCK WEEK's own seven days, not a rolling
+      // or Monday-anchored window -- a block that did not start on a Monday
+      // would otherwise credit a session to the wrong week. blockWeekSpan
+      // derives that span from the block's own start date; when it cannot
+      // (no active block, or an unparseable stored start date) fall back to
+      // the same Monday-anchored week loadVolumeSnapshot above already uses,
+      // so the card still shows a sensible number rather than nothing.
+      const span = blockWeekSpan(week?.blockStartMs, week?.weekIndex)
+        ?? { startMs: localWeekStartMs(Date.now()), endMs: Infinity };
+      const spanSets = (sets || []).filter((s) => {
+        const at = s.createdAt ?? s.created_at ?? 0;
+        return at >= span.startMs && at < span.endMs;
+      });
+      const actual = calculateWeeklyVolume(spanSets, exMap);
+      setBlockProgress(buildBlockProgressRows(plannedRows, actual));
     } catch (_) {
       if (isCurrentRequest()) {
         setCurrentMesoWeek(null);
