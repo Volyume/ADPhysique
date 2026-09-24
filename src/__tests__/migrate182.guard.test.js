@@ -48,8 +48,7 @@ describe('house migration shape', () => {
       expect(HEADER).toContain(field);
     }
     expect(HEADER).toContain('run against production');
-    expect(HEADER).toMatch(/WRITTEN/);
-    expect(HEADER).toMatch(/NOT YET/);
+    expect(HEADER).toMatch(/Applied remotely:\s+YES - 2026-09-24 15:30 UTC \(written 2026-09-23\)/);
     expect(HEADER).toContain('D92-11 ANSWERED');
     expect(HEADER).toContain('decision B');
     expect(HEADER).toContain('D196');
@@ -228,7 +227,7 @@ describe('the acceptance block proves the posture and the policy state, read-onl
 describe('the file is registered in the tracker', () => {
   test('supabase/README.md carries the status entry and a ledger row', () => {
     const README = read('supabase/README.md');
-    expect(README).toMatch(/182[^\n]*WRITTEN[^\n]*NOT APPLIED/);
+    expect(README).toMatch(/\| 182 \|[^\n]*\*\*APPLIED 2026-09-24 15:30 UTC\*\*/);
     expect(README).toContain('| 182 | `migrate_182_ed_flag_cloud_push.sql` |');
     const row = README.split('\n').find((l) => l.startsWith('| 182 | `migrate_182_'));
     expect(row).toContain('D92-11');
@@ -239,7 +238,7 @@ describe('the file is registered in the tracker', () => {
     expect(row).toContain('PGRST202');
   });
 
-  test('CLAUDE.md and the taskboard carry 182 as written, not applied, and never as raise-only', () => {
+  test('CLAUDE.md and the taskboard carry 182 as applied, and never as raise-only', () => {
     const CLAUDE = read('CLAUDE.md');
     expect(CLAUDE).toMatch(/\*\*182\*\*/);
     expect(CLAUDE).not.toMatch(/raise-only/);

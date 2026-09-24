@@ -31,7 +31,7 @@
  * stays inside the named scope; and that the tracker knows the file.
  *
  * LEAD RULING 2026-09-23: `community_hub_summary` is re-issued from
- * migrate_176's body (WRITTEN, NOT APPLIED; it already carries the
+ * migrate_176's body (applied 2026-09-24 14:14 UTC, before 180; it already carries the
  * closed-groups fix), not migrate_170's, and the four helper calls inside
  * FILTER/sample expressions sit LAST in their AND so the cheap column tests
  * run first (review L1).
@@ -251,8 +251,7 @@ describe('house migration shape', () => {
       expect(HEADER).toContain(field);
     }
     expect(HEADER).toContain('run against production');
-    expect(HEADER).toMatch(/WRITTEN/);
-    expect(HEADER).toMatch(/NOT YET/);
+    expect(HEADER).toMatch(/Applied remotely:\s+YES - 2026-09-24 15:13 UTC \(written 2026-09-23\)/);
   });
 
   test('the header states both facts: the OBSERVED dormancy before 182 (review H1) and the calm arm (decision B)', () => {
@@ -575,7 +574,7 @@ describe('scope discipline: the fix stays inside consistency sharing', () => {
 describe('the file is registered in the tracker', () => {
   test('supabase/README.md carries the status row, naming the two arms, the apply order and migrate_182', () => {
     const README = read('supabase/README.md');
-    expect(README).toMatch(/180[^\n]*WRITTEN[^\n]*NOT APPLIED/);
+    expect(README).toMatch(/\| 180 \|[^\n]*\*\*APPLIED 2026-09-24 15:13 UTC\*\*/);
     expect(README).toContain('| 180 | `migrate_180_community_consistency_server_gate.sql` |');
     const row = README.split('\n').find((l) => l.startsWith('| 180 | `migrate_180_'));
     expect(row).toContain('D92-11');

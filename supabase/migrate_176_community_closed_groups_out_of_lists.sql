@@ -34,11 +34,11 @@
 --                    the marked lines and compares with the source files.
 --
 -- Applied locally:   n/a (cloud-only objects; nothing in database.js)
--- Applied remotely:  NOT YET - WRITTEN 2026-09-13; waits for the founder's
---                    exact phrase "run against production" (supabase/README
---                    status block is the live record). Claude-run through
---                    the Supabase connector under the checksum protocol when
---                    it runs.
+-- Applied remotely:  YES - 2026-09-24 14:14 UTC (written 2026-09-13), under the
+--                    founder's exact phrase "run against production" given
+--                    2026-09-24 for the batch 176 to 183, and BEFORE 180 as
+--                    both files require; md5 `d3310ad2e14c2888f6adc118b07fd75a`
+--                    / 20,326 bytes checked in the DO block; record in README.
 -- Safe to re-run:    YES until migrate_180 is applied; after that Part 0
 --                    refuses (re-apply 180 instead, whose body carries
 --                    this file's change). CREATE OR REPLACE FUNCTION,

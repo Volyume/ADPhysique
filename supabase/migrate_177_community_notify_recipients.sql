@@ -35,11 +35,15 @@
 --                    src/__tests__/migrate177.guard.test.js.
 --
 -- Applied locally:   n/a (cloud-only objects; nothing in database.js)
--- Applied remotely:  NOT YET - WRITTEN 2026-09-22; waits for the founder's
---                    exact phrase "run against production" (supabase/README
---                    status block is the live record). Claude-run through
---                    the Supabase connector under the checksum protocol
---                    when it runs.
+-- Applied remotely:  YES - 2026-09-24 14:33 UTC (written 2026-09-22), under
+--                    the founder's exact phrase "run against production"
+--                    given 2026-09-24 for the batch 176 to 183; Claude-run
+--                    through the Supabase connector under the checksum
+--                    protocol: whole file md5
+--                    `0399fd9f69f4e4a146ad2f335c17993a` / 16,577 bytes
+--                    re-checked inside the executing DO block, acceptance
+--                    block passed, verified read-only after the apply
+--                    (supabase/README status block is the live record).
 -- Safe to re-run:    YES - CREATE OR REPLACE FUNCTION, REVOKE/GRANT are
 --                    idempotent, and the acceptance block is read-only.
 -- Rollback:          re-issue `community_respect_all(text, text, text)`

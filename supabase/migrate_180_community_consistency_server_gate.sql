@@ -180,11 +180,16 @@
 --                    marked lines and compares with the source files.
 --
 -- Applied locally:   n/a (cloud-only objects; nothing in database.js)
--- Applied remotely:  NOT YET - WRITTEN 2026-09-23; waits for the
---                    founder's exact phrase "run against production"
---                    (supabase/README.md status block is the live
---                    record). Claude-run through the Supabase connector
---                    under the checksum protocol when it runs.
+-- Applied remotely:  YES - 2026-09-24 15:13 UTC (written 2026-09-23), under
+--                    the founder's exact phrase "run against production"
+--                    given 2026-09-24 for the batch 176 to 183; Claude-run
+--                    through the Supabase connector under the checksum
+--                    protocol: whole file md5
+--                    `91cf47e9d27eea4a19ed414ae6a83d7a` / 84,502 bytes
+--                    re-checked inside the executing DO block, acceptance
+--                    block passed, verified read-only after the apply
+--                    (supabase/README status block is the live record). 176
+--                    was already live (14:14 UTC), so Part 0 passed.
 -- Safe to re-run:    YES - CREATE OR REPLACE FUNCTION throughout,
 --                    REVOKE/GRANT idempotent by nature, acceptance block
 --                    read-only; Part 0's pre-flight is read-only and
@@ -216,7 +221,7 @@
 --                    training_profile's current bodies), 176
 --                    (community_hub_summary's closed-groups body).
 --                    LEAD RULING 2026-09-23, REQUIRED APPLY ORDER: 176
---                    BEFORE 180. 176 is WRITTEN, NOT APPLIED; this
+--                    BEFORE 180 (176 went 14:14 UTC, this 15:13 UTC); this
 --                    migration's community_hub_summary is re-issued from
 --                    176's body (not 170's) precisely so that fix is
 --                    never lost, so 176 must land BEFORE 180 -- see
@@ -837,7 +842,7 @@ REVOKE ALL ON FUNCTION public._community_cohort_stats(uuid, text, text, text) FR
 -- ─── Part 5: community_hub_summary re-issued ────────────────────────────
 -- LEAD RULING 2026-09-23 (resolving the migrate_176/180 sequencing
 -- conflict flagged in the prior draft of this migration): migrate_176
--- (WRITTEN, NOT APPLIED) already re-issues this exact function from
+-- (APPLIED 2026-09-24, before this) already re-issues this exact function from
 -- migrate_170 with its own single marked change (`AND g.status =
 -- 'active'`; closed groups leave the Hub). Building from migrate_170
 -- here, as the prior draft did, would silently drop that fix the moment

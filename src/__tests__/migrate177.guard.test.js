@@ -88,13 +88,10 @@ describe('house migration shape', () => {
       expect(HEADER).toContain(field);
     }
     expect(HEADER).toContain('run against production');
-    // Matches the migrate_176 header convention exactly: "NOT YET -
-    // WRITTEN ...; waits for the founder's exact phrase" (the migration
-    // file's own header), distinct from the README status line's
-    // "WRITTEN ..., NOT APPLIED" wording checked in the tracker
-    // describe block below.
-    expect(HEADER).toMatch(/WRITTEN/);
-    expect(HEADER).toMatch(/NOT YET/);
+    // Matches the applied-header convention (migrate_175): "YES - <time>
+    // UTC (written <date>), under the founder's exact phrase", distinct
+    // from the README rows checked in the tracker describe block below.
+    expect(HEADER).toMatch(/Applied remotely:\s+YES - 2026-09-24 14:33 UTC \(written 2026-09-22\)/);
   });
 
   test('no new table, no DROP, no destructive statement', () => {
@@ -183,7 +180,7 @@ describe('RPC-only security posture', () => {
 describe('the file is registered in the tracker', () => {
   test('supabase/README.md carries the status entry and a ledger row', () => {
     const README = read('supabase/README.md');
-    expect(README).toMatch(/177[^\n]*WRITTEN[^\n]*NOT APPLIED/);
+    expect(README).toMatch(/\| 177 \|[^\n]*\*\*APPLIED 2026-09-24 14:33 UTC\*\*/);
     expect(README).toContain('| 177 | `migrate_177_community_notify_recipients.sql` |');
   });
 });

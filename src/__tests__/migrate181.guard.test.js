@@ -62,8 +62,7 @@ describe('house migration shape', () => {
       expect(HEADER).toContain(field);
     }
     expect(HEADER).toContain('run against production');
-    expect(HEADER).toMatch(/WRITTEN 2026-09-23/);
-    expect(HEADER).toMatch(/NOT YET/);
+    expect(HEADER).toMatch(/Applied remotely:\s+YES - 2026-09-24 15:23 UTC \(written 2026-09-23\)/);
   });
 
   test('no new table, no DROP, no destructive statement, no RLS toggle', () => {
@@ -83,7 +82,7 @@ describe('house migration shape', () => {
 
   test('the file is registered in the tracker', () => {
     const README = read('supabase/README.md');
-    expect(README).toMatch(/181[^\n]*WRITTEN[^\n]*NOT APPLIED/);
+    expect(README).toMatch(/\| 181 \|[^\n]*\*\*APPLIED 2026-09-24 15:23 UTC\*\*/);
     expect(README).toContain('| 181 | `migrate_181_gym_moderation_lists.sql` |');
   });
 });

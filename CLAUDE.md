@@ -12,24 +12,19 @@ are paying. Every change affects them. Work accordingly.
 > was REVERTED on the founder's device verdict — never re-propose it.
 > Cloud migrations are CLAUDE-RUN, gated on the founder's exact phrase
 > "run against production" per batch (`supabase/README`); applied through
-> `migrate_175` (2026-09-12 15:05 UTC; the README status block is the
-> live record) except **155**, which waits for the store apps to move to
-> a build without Partners (README status block); **176** (closed groups
-> leave the Hub and "My groups", 2026-09-13), **177** (push recipients),
-> **178** (the note post), **179** (RLS on the two tooling tables),
-> **180** (the server-side withhold on consistency sharing: open ED flag OR
-> calm mode, founder decision B 2026-09-23 / D196), **181** (gym moderation
-> lists) and **182** (the ED-flag cloud push, raises and clears, forward-only,
-> scoped to the caller's own row, no signals, that arms 180 and
-> both edge-function ED gates; D92-11 answered) and **183** (EXECUTE
-> revoked on the three Community RPCs with no caller left), written
-> 2026-09-22/24, are WRITTEN, guard-proved and NOT APPLIED, waiting for the
-> phrase; 179
-> can go alone and first, 176 must apply BEFORE 180 (both files refuse the
-> other order in code), and 178 must be applied before any build carrying
-> the note door. Only **049** is HELD
-> (059 is applied; its `meal_[0-9]+` CHECK is live); 150 is RETIRED. This
-> line is updated at every apply (founder order 2026-09-12).
+> `migrate_183` (176 to 183 applied 2026-09-24, 14:04 to 15:33 UTC, under
+> the founder's phrase given that day, 176 before 180; the README status
+> block is the live record) except **155**, which waits for the store apps
+> to move to a build without Partners (README status block). **182** (the
+> ED-flag cloud push, raises and clears, forward-only, scoped to the
+> caller's own row, no signals; D92-11 answered, D196) is live, so the ED
+> arm of 180's server-side withhold and both edge-function ED gates arm the
+> moment a device on a build carrying the push raises a flag; no such build
+> has shipped yet. The `community-notify` edge function is at version 4
+> (2026-09-24 15:38 UTC: the note push copy and the group_accepted recency
+> bound). Only **049** is HELD (059 is applied; its `meal_[0-9]+` CHECK is
+> live); 150 is RETIRED. This line is updated at every apply (founder order
+> 2026-09-12).
 > Decision delegation (D33) and the full
 > operating model are PERMANENT law — Section 4, D40 block. The decisions
 > register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`.
@@ -56,7 +51,7 @@ database is the source of truth on device. Local migrations run via
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
 is absolute — all user data stays in Dublin. Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_183`; 176 to 183 WRITTEN NOT APPLIED, 176 before 180; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_183`, applied through 183 except 155 and 049 HELD; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,

@@ -65,8 +65,7 @@ describe('house migration shape', () => {
       expect(HEADER).toContain(field);
     }
     expect(HEADER).toContain('run against production');
-    expect(HEADER).toMatch(/WRITTEN 2026-09-24/);
-    expect(HEADER).toMatch(/NOT YET/);
+    expect(HEADER).toMatch(/Applied remotely:\s+YES - 2026-09-24 15:33 UTC \(written 2026-09-24\)/);
   });
 
   test('no DROP, no GRANT, no CREATE and no destructive statement in the executable code', () => {
@@ -90,7 +89,7 @@ describe('house migration shape', () => {
 
   test('the file is registered in the README ledger and status', () => {
     const README = read('supabase/README.md');
-    expect(README).toMatch(/183[^\n]*WRITTEN[^\n]*NOT APPLIED/);
+    expect(README).toMatch(/\| 183 \|[^\n]*\*\*APPLIED 2026-09-24 15:33 UTC\*\*/);
     expect(README).toContain('| 183 | `migrate_183_community_unused_rpcs_revoked.sql` |');
   });
 });

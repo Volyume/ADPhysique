@@ -100,11 +100,17 @@
 --                    flags the moment the app on a device pushes one.
 -- Applied locally:   n/a (cloud-only objects; the client change is code,
 --                    not schema; nothing in database.js changes shape)
--- Applied remotely:  NOT YET - WRITTEN 2026-09-23; waits for the founder's
---                    exact phrase "run against production"
---                    (supabase/README.md status block is the live
---                    record). Claude-run through the Supabase connector
---                    under the checksum protocol when it runs.
+-- Applied remotely:  YES - 2026-09-24 15:30 UTC (written 2026-09-23), under
+--                    the founder's exact phrase "run against production"
+--                    given 2026-09-24 for the batch 176 to 183; Claude-run
+--                    through the Supabase connector under the checksum
+--                    protocol: whole file md5
+--                    `ebc724923b8155be65c84363024d4523` / 16,177 bytes
+--                    re-checked inside the executing DO block, acceptance
+--                    block passed, verified read-only after the apply
+--                    (supabase/README status block is the live record). The
+--                    cloud table held 0 open flags at apply; the ED arms go
+--                    live on the first device push.
 -- Safe to re-run:    YES - CREATE OR REPLACE FUNCTION, DROP POLICY IF
 --                    EXISTS, REVOKE/GRANT idempotent by nature, acceptance
 --                    block read-only.

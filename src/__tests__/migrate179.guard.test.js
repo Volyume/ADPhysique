@@ -18,11 +18,11 @@ const README = fs.readFileSync(path.join(__dirname, '../../supabase/README.md'),
 const CODE = SQL.replace(/^\s*--.*$/gm, '');
 
 describe('migrate_179: the two tooling tables get RLS and lose their client-role grants', () => {
-  test('header carries the house fields and the not-applied status', () => {
+  test('header carries the house fields and the apply record', () => {
     for (const field of ['Purpose:', 'Applied locally:', 'Applied remotely:', 'Safe to re-run:', 'Rollback:', 'Depends on:']) {
       expect(SQL).toContain(field);
     }
-    expect(SQL).toMatch(/NOT YET - WRITTEN 2026-09-23/);
+    expect(SQL).toMatch(/YES - 2026-09-24 14:04 UTC \(written 2026-09-23\)/);
     expect(SQL).toContain('run against production');
   });
 
@@ -50,9 +50,9 @@ describe('migrate_179: the two tooling tables get RLS and lose their client-role
     expect(CODE).not.toMatch(/DISABLE ROW LEVEL SECURITY/);
   });
 
-  test('the README status block registers 179 as written and not applied', () => {
+  test('the README ledger registers 179 as applied', () => {
     expect(README).toContain('| 179 | `migrate_179_tooling_tables_rls.sql` |');
     const row = README.split('\n').find((l) => l.startsWith('| 179 |')) ?? '';
-    expect(row).toMatch(/WRITTEN 2026-09-23, NOT APPLIED/);
+    expect(row).toMatch(/\*\*APPLIED 2026-09-24 14:04 UTC\*\*/);
   });
 });

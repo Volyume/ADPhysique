@@ -88,9 +88,19 @@
 --
 -- Applied locally:   N/A -- no local SQLite table; nothing in database.js
 --                    changes; PRAGMA user_version is untouched.
--- Applied remotely:  NOT YET - WRITTEN 2026-09-23; waits for the founder's
---                    exact phrase "run against production" (supabase/README
---                    status block is the live record).
+-- Applied remotely:  YES - 2026-09-24 15:23 UTC (written 2026-09-23), under
+--                    the founder's exact phrase "run against production"
+--                    given 2026-09-24 for the batch 176 to 183; Claude-run
+--                    through the Supabase connector under the checksum
+--                    protocol: whole file md5
+--                    `9ac736c2e337acbdc88dfd08541e29c6` / 13,982 bytes
+--                    re-checked inside the executing DO block, acceptance
+--                    block passed, verified read-only after the apply
+--                    (supabase/README status block is the live record). One
+--                    chunk of three was first inserted with one extra
+--                    box-drawing character (a transcription miscount), caught
+--                    by the per-chunk md5 and corrected in place before
+--                    anything ran.
 -- Safe to re-run:    YES. Both functions are CREATE OR REPLACE; the
 --                    REVOKE/GRANT pair is idempotent; the acceptance block
 --                    is read-only.

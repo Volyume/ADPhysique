@@ -109,11 +109,15 @@
 --                    marked lines and compares with the source files.
 --
 -- Applied locally:   n/a (cloud-only objects; nothing in database.js)
--- Applied remotely:  NOT YET - WRITTEN 2026-09-22; waits for the
---                    founder's exact phrase "run against production"
+-- Applied remotely:  YES - 2026-09-24 14:33 UTC (written 2026-09-22), under
+--                    the founder's exact phrase "run against production"
+--                    given 2026-09-24 for the batch 176 to 183; Claude-run
+--                    through the Supabase connector under the checksum
+--                    protocol: whole file md5
+--                    `1d88be8baec6219a9ff10397d6abdce9` / 30,396 bytes
+--                    re-checked inside the executing DO block, acceptance
+--                    block passed, verified read-only after the apply
 --                    (supabase/README status block is the live record).
---                    Claude-run through the Supabase connector under the
---                    checksum protocol when it runs.
 -- Safe to re-run:    YES - the CHECK widening drops and re-adds by name
 --                    (DROP CONSTRAINT IF EXISTS), CREATE OR REPLACE
 --                    FUNCTION and REVOKE/GRANT are idempotent, and the

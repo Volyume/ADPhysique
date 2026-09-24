@@ -26,10 +26,16 @@
 --                    table (grep, 2026-09-23).
 --
 -- Applied locally:   n/a (cloud-only tooling tables; nothing in database.js)
--- Applied remotely:  NOT YET - WRITTEN 2026-09-23; waits for the founder's
---                    exact phrase "run against production" (supabase/README
---                    status block is the live record). Safe to apply on its
---                    own, ahead of 177 and 178: it depends on nothing.
+-- Applied remotely:  YES - 2026-09-24 14:04 UTC (written 2026-09-23), under
+--                    the founder's exact phrase "run against production"
+--                    given 2026-09-24 for the batch 176 to 183; Claude-run
+--                    through the Supabase connector under the checksum
+--                    protocol: whole file md5
+--                    `e5c5bceaa83268594870af742a1f1a94` / 3,607 bytes
+--                    re-checked inside the executing DO block, acceptance
+--                    block passed, verified read-only after the apply
+--                    (supabase/README status block is the live record). Went
+--                    first and alone, as it depends on nothing.
 -- Safe to re-run:    YES. ENABLE ROW LEVEL SECURITY and REVOKE are
 --                    idempotent; IF EXISTS covers an environment where the
 --                    tooling never created a table.

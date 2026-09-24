@@ -307,7 +307,7 @@ describe('RPC-only security posture', () => {
 describe('the file is registered in the tracker', () => {
   test('supabase/README.md carries the status entry and names the file', () => {
     const README = read('supabase/README.md');
-    expect(README).toMatch(/178 WRITTEN 2026-09-22, NOT APPLIED/);
+    expect(README).toMatch(/178 APPLIED 2026-09-24 14:33 UTC \(written 2026-09-22/);
     expect(README).toContain('migrate_178_community_note_posts.sql');
   });
 });

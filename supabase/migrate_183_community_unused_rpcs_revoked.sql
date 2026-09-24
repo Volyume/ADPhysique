@@ -48,9 +48,17 @@
 -- Applied locally:   N/A - no local SQLite table; nothing in
 --                    `src/lib/database.js` changes, `PRAGMA user_version`
 --                    is untouched.
--- Applied remotely:  NOT YET - WRITTEN 2026-09-24; waits for the
---                    founder's exact phrase "run against production"
---                    (supabase/README status block is the live record).
+-- Applied remotely:  YES - 2026-09-24 15:33 UTC (written 2026-09-24), under
+--                    the founder's exact phrase "run against production"
+--                    given 2026-09-24 for the batch 176 to 183; Claude-run
+--                    through the Supabase connector under the checksum
+--                    protocol: whole file md5
+--                    `2b51f2c589f75a856fa6c69e7d27eccf` / 7,657 bytes
+--                    re-checked inside the executing DO block, acceptance
+--                    block passed, verified read-only after the apply
+--                    (supabase/README status block is the live record). The
+--                    fourth RPC the audit named, the one the client still
+--                    calls, confirmed still executable by authenticated.
 -- Safe to re-run:    YES. `REVOKE ALL ... FROM PUBLIC, anon,
 --                    authenticated` is idempotent (revoking a privilege
 --                    that is already absent is a no-op, never an error);

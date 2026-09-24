@@ -54,12 +54,12 @@ function reverted(text, [now, before]) {
 }
 
 describe('house migration shape', () => {
-  test('the header carries every mandatory field and waits for the phrase', () => {
+  test('the header carries every mandatory field and records the apply', () => {
     for (const field of ['Purpose:', 'Applied locally:', 'Applied remotely:', 'Safe to re-run:', 'Rollback:', 'Transaction:', 'Depends on:']) {
       expect(HEADER).toContain(field);
     }
     expect(HEADER).toContain('run against production');
-    expect(HEADER).toMatch(/Applied remotely:\s+NOT YET/);
+    expect(HEADER).toMatch(/Applied remotely:\s+YES - 2026-09-24 14:14 UTC \(written 2026-09-13\)/);
   });
 
   test('three functions and nothing else: no table change, no data change', () => {
