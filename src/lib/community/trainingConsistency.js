@@ -298,26 +298,49 @@ export async function publishConsistency(userId, { nowMs = Date.now() } = {}) {
   if (!uid) return { sent: false, reason: 'no_user', payload: null };
 
   try {
-    const [bands, share, counters] = await Promise.all([
-      loadTrainingProfile(uid, { nowMs, windowWeeks: TP_WINDOW_WEEKS }),
-      readShareSettings(uid),
-      loadConsistency(uid, { nowMs }),
-    ]);
-    const { allowed, gated, isMinor } = await consistencyGateState(uid, !!share.consistency);
-    const payload = shareablePayload(bands, share, {
-      consistencyCounters: counters,
-      consistencyGated: gated || isMinor,
-    });
-    // `allowed` is redundant with the gate composition above (kept as a
-    // belt-and-braces assertion, never a second source of truth): if the
-    // toggle is off, `shareablePayload` already omits the counters via
-    // `share.consistency` and stamps `share_consistency: false`.
-    void allowed;
+    const { payload } = await composeTrainingProfilePayload(uid, { nowMs });
     await callCommunity('community_update_training_profile', { _p: payload });
     return { sent: true, reason: null, payload };
   } catch (e) {
     return { sent: false, reason: e?.code ?? 'unavailable', payload: null };
   }
+}
+
+/**
+ * THE ONE COMPOSITION every sender of the training profile uses (lead
+ * ruling 2026-09-24, register D198; the Opus review of migration 180, L4):
+ * the bands, the share settings, the counters and the gate (calm mode, an
+ * open ED-pattern flag, a minor), folded through `shareablePayload`.
+ * `publishConsistency` and `publishSharingSettings` here, and
+ * `trainingProfile.js`'s `syncTrainingProfile`, all call this, so no sender
+ * can stamp `share_consistency: true` for a gated person, and no sender
+ * can wipe the counters another sender just published by sending the
+ * bands without them. Before this ruling `syncTrainingProfile` (hub open,
+ * the band toggles, Recalculate, Join) sent the bands alone: for a calm or
+ * flagged person that stamped `share_consistency: true` with every counter
+ * null (nothing leaked, but the stored preference was wrong until the
+ * next publish), and for everyone it nulled the published counters until
+ * the next workout or foreground publish.
+ *
+ * `share` may be passed by a caller whose toggle has just changed and is
+ * not in storage yet (the settings screen); otherwise it is read.
+ *
+ * @param {string} uid
+ * @param {{nowMs?: number, share?: (object|null)}} [opts]
+ * @returns {Promise<{payload: object, share: object, gated: boolean, isMinor: boolean}>}
+ */
+export async function composeTrainingProfilePayload(uid, { nowMs = Date.now(), share = null } = {}) {
+  const [bands, effectiveShare, counters] = await Promise.all([
+    loadTrainingProfile(uid, { nowMs, windowWeeks: TP_WINDOW_WEEKS }),
+    share ? Promise.resolve(share) : readShareSettings(uid),
+    loadConsistency(uid, { nowMs }),
+  ]);
+  const { gated, isMinor } = await consistencyGateState(uid, !!effectiveShare?.consistency);
+  const payload = shareablePayload(bands, effectiveShare, {
+    consistencyCounters: counters,
+    consistencyGated: gated || isMinor,
+  });
+  return { payload, share: effectiveShare, gated, isMinor };
 }
 
 /**
@@ -342,15 +365,7 @@ export async function publishSharingSettings(userId, share, { removeShared = fal
   const uid = userId ?? currentUserId();
   if (!uid) return { sent: false, reason: 'no_user' };
   try {
-    const [bands, counters] = await Promise.all([
-      loadTrainingProfile(uid, { nowMs, windowWeeks: TP_WINDOW_WEEKS }),
-      loadConsistency(uid, { nowMs }),
-    ]);
-    const { gated, isMinor } = await consistencyGateState(uid, !!share?.consistency);
-    const full = shareablePayload(bands, share, {
-      consistencyCounters: counters,
-      consistencyGated: gated || isMinor,
-    });
+    const { payload: full } = await composeTrainingProfilePayload(uid, { nowMs, share });
     const p = {
       share_sessions: full.share_sessions,
       sessions_audience: full.sessions_audience,

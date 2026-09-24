@@ -34,12 +34,26 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 jest.mock('../transport', () => ({ callCommunity: jest.fn(async () => ({})) }));
-jest.mock('../profile', () => ({ currentUserId: () => 'u1' }));
+// D198 (2026-09-24): `syncTrainingProfile` now composes its payload through
+// `trainingConsistency.composeTrainingProfilePayload`, which reads the
+// cached `me` (for the minor gate), the calm/ED suppression and the
+// counters' plan reads, so those are stubbed here and flipped per test.
+const mockMe = { is_minor: false };
+const mockGate = { suppressed: false };
+jest.mock('../profile', () => ({
+  currentUserId: () => 'u1',
+  readCachedMe: jest.fn(async () => ({ ...mockMe })),
+}));
+jest.mock('../../../hooks/usePhotoSuppression', () => ({
+  readEdOrCalmSuppressed: jest.fn(async () => mockGate.suppressed),
+}));
 jest.mock('../../database', () => ({
   getCompletedWorkoutStartTimestamps: jest.fn(async () => []),
   getWorkoutSetsSince: jest.fn(async () => []),
   getAllExercises: jest.fn(async () => []),
   getActivePlan: jest.fn(async () => null),
+  getRoutinesForPlan: jest.fn(async () => []),
+  getPRCountInWindow: jest.fn(async () => 0),
 }));
 
 const { callCommunity } = require('../transport');
@@ -567,5 +581,97 @@ describe('the send is throttled to once a day', () => {
     expect('tp_days' in params._p).toBe(false);
     expect('sessions' in params._p).toBe(false);
     expect(params._p.share_age_band).toBe(false);
+  });
+});
+
+/**
+ * D198 (lead ruling 2026-09-24; the Opus review of migration 180, L4):
+ * this send carries the consistency GATE and the COUNTERS, composed in the
+ * one place every other sender uses. Written to fail against the previous
+ * body, which folded the bands alone: a calm or flagged person with the
+ * toggle on was sent as `share_consistency: true`, and every send nulled
+ * the counters `publishConsistency` had published.
+ */
+describe('the send carries the consistency gate and the counters, exactly as publishConsistency does (D198)', () => {
+  const COUNTER_KEYS = ['c_sessions_week', 'c_sessions_month', 'c_weeks_streak', 'c_prs_4w', 'c_planned_per_week'];
+
+  beforeEach(async () => {
+    mockMe.is_minor = false;
+    mockGate.suppressed = false;
+    db.getCompletedWorkoutStartTimestamps.mockResolvedValue([NOW - DAY, NOW - (3 * DAY)]);
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, consistency: true });
+  });
+
+  async function sentPayload() {
+    const out = await syncTrainingProfile('u1', { force: true, nowMs: NOW });
+    expect(out.sent).toBe(true);
+    const [, params] = callCommunity.mock.calls[callCommunity.mock.calls.length - 1];
+    return params._p;
+  }
+
+  test('toggle on, not gated: share_consistency true and the counters travel', async () => {
+    const p = await sentPayload();
+    expect(p.share_consistency).toBe(true);
+    for (const key of COUNTER_KEYS) expect(key in p).toBe(true);
+    // Two completed workouts inside the last three days: a real count
+    // travels (which local week each falls in depends on today's weekday,
+    // so the exact split is not pinned, only that the counters are live).
+    expect(Number.isFinite(p.c_sessions_week)).toBe(true);
+    expect(Number.isFinite(p.c_sessions_month)).toBe(true);
+    expect(p.c_sessions_week + p.c_sessions_month).toBeGreaterThan(0);
+  });
+
+  test('toggle on but calm mode or an open ED flag: share_consistency false and NO counter key at all', async () => {
+    mockGate.suppressed = true;
+    const p = await sentPayload();
+    expect(p.share_consistency).toBe(false);
+    for (const key of COUNTER_KEYS) expect(key in p).toBe(false);
+  });
+
+  test('toggle on but a minor: share_consistency false and no counter key', async () => {
+    mockMe.is_minor = true;
+    const p = await sentPayload();
+    expect(p.share_consistency).toBe(false);
+    for (const key of COUNTER_KEYS) expect(key in p).toBe(false);
+  });
+
+  test('an unreadable me fails closed (treated as a minor)', async () => {
+    const profile = require('../profile');
+    profile.readCachedMe.mockRejectedValueOnce(new Error('cache'));
+    const p = await sentPayload();
+    expect(p.share_consistency).toBe(false);
+  });
+
+  test('toggle off: share_consistency false and no counter key', async () => {
+    await writeShareSettings('u1', { ...TP_DEFAULT_SHARE, consistency: false });
+    const p = await sentPayload();
+    expect(p.share_consistency).toBe(false);
+    for (const key of COUNTER_KEYS) expect(key in p).toBe(false);
+  });
+
+  test('source: every sender composes through composeTrainingProfilePayload; none folds the bands alone', () => {
+    const fs = require('fs');
+    const path = require('path');
+    // Statement text only: the ruling comments name the old call.
+    const code = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+    const profileSrc = code(fs.readFileSync(path.join(__dirname, '..', 'trainingProfile.js'), 'utf8'));
+    const consistencySrc = code(fs.readFileSync(path.join(__dirname, '..', 'trainingConsistency.js'), 'utf8'));
+    const syncStart = profileSrc.indexOf('export async function syncTrainingProfile(');
+    const syncBody = profileSrc.slice(syncStart, profileSrc.indexOf('\n}\n', syncStart));
+    expect(syncBody).toContain("require('./trainingConsistency')");
+    expect(syncBody).toContain('composeTrainingProfilePayload(uid, { nowMs })');
+    expect(syncBody).not.toMatch(/shareablePayload\(/);
+    expect(consistencySrc).toContain('export async function composeTrainingProfilePayload(');
+    for (const fn of ['publishConsistency', 'publishSharingSettings']) {
+      const at = consistencySrc.indexOf(`export async function ${fn}(`);
+      const body = consistencySrc.slice(at, consistencySrc.indexOf('\n}\n', at));
+      expect(body).toContain('composeTrainingProfilePayload(uid, {');
+      expect(body).not.toMatch(/shareablePayload\(/);
+    }
+    // The composer itself is the only place shareablePayload is folded with the gate.
+    const composerAt = consistencySrc.indexOf('export async function composeTrainingProfilePayload(');
+    const composer = consistencySrc.slice(composerAt, consistencySrc.indexOf('\n}\n', composerAt));
+    expect(composer).toContain('consistencyGated: gated || isMinor,');
+    expect(composer).toContain('consistencyGateState(uid, !!effectiveShare?.consistency)');
   });
 });

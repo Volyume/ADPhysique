@@ -691,11 +691,18 @@ export async function syncTrainingProfile(userId, { force = false, nowMs = Date.
   }
 
   try {
-    const [bands, share] = await Promise.all([
-      loadTrainingProfile(uid, { nowMs }),
-      readShareSettings(uid),
-    ]);
-    const payload = shareablePayload(bands, share);
+    // Lead ruling 2026-09-24 (register D198; the Opus review of migration
+    // 180, L4): this send used to fold the bands alone through
+    // `shareablePayload(bands, share)`, with no counters and no gate. For a
+    // calm or flagged person with the toggle on that stamped
+    // `share_consistency: true` (every counter null, so nothing leaked, but
+    // the stored preference was wrong until the next publish), and for
+    // everyone it nulled the counters `publishConsistency` had published.
+    // It now composes the payload exactly as every other sender does, in
+    // one place. Lazy require: `trainingConsistency` imports this module.
+    // eslint-disable-next-line global-require
+    const { composeTrainingProfilePayload } = require('./trainingConsistency');
+    const { payload } = await composeTrainingProfilePayload(uid, { nowMs });
     await callCommunity('community_update_training_profile', { _p: payload });
     try {
       await AsyncStorage.setItem(tpSyncedKey(uid), String(nowMs));
