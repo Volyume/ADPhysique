@@ -95,6 +95,10 @@ jest.mock('../../store/useAppStore', () => ({
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
 jest.mock('../../lib/database', () => ({
   getRecentCompletedWorkouts: jest.fn(),
+  // A3(a)/(c) (progress-tab audit 2026-09-24, second pass): bare jest.fn()
+  // doubles, same rationale as WorkoutHistoryScreen.loadState.test.js.
+  getCompletedWorkoutCount: jest.fn(),
+  getCompletedWorkoutsBetween: jest.fn(),
   getWorkoutSetsForWorkoutIds: jest.fn(),
   getAllExercises: jest.fn(),
   createWorkout: jest.fn(),

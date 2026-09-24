@@ -113,19 +113,30 @@ function spanDaysOf(points, dateOf) {
  * house style). Under an open ED flag the rate-of-change is suppressed —
  * average only, no direction or delta (COMP-004's safety behaviour).
  *
+ * `toDisplay` (progress-tab audit 2026-09-24, second pass, A1 follow-up):
+ * converts a kg number to the caller's display unit for the two numbers
+ * this renders (the average and the delta magnitude) ONLY -- the
+ * direction/"holding steady" decision (directionWord against the 0.1 kg
+ * dead-band) is always computed on the raw kg EWMA first, so the level band
+ * keeps the same real-world meaning regardless of display unit. Defaults to
+ * identity, so every existing caller (kg, or a caller that never passes it)
+ * is byte-identical.
+ *
  * @returns {string} e.g. "3 months: average 82.4 kg, down 1.8 kg."
  */
-export function weightTakeaway({ windowKey, coversAll, points, dateOf, ewma, unit = 'kg', edFlagOpen = false }) {
+export function weightTakeaway({
+  windowKey, coversAll, points, dateOf, ewma, unit = 'kg', edFlagOpen = false, toDisplay = (v) => v,
+}) {
   if (!ewma || ewma.length < 2) return '';
   const phrase = windowPhrase(windowKey, coversAll, spanDaysOf(points, dateOf));
   const avg = ewma.reduce((t, v) => t + v, 0) / ewma.length;
   if (edFlagOpen) {
-    return `${phrase}: average ${num1(avg)} ${unit}.`;
+    return `${phrase}: average ${num1(toDisplay(avg))} ${unit}.`;
   }
   const delta = ewma[ewma.length - 1] - ewma[0];
   const dir = directionWord(delta, 0.1);
-  if (dir === 'level') return `${phrase}: average ${num1(avg)} ${unit}, holding steady.`;
-  return `${phrase}: average ${num1(avg)} ${unit}, ${dir} ${num1(Math.abs(delta))} ${unit}.`;
+  if (dir === 'level') return `${phrase}: average ${num1(toDisplay(avg))} ${unit}, holding steady.`;
+  return `${phrase}: average ${num1(toDisplay(avg))} ${unit}, ${dir} ${num1(toDisplay(Math.abs(delta)))} ${unit}.`;
 }
 
 /**

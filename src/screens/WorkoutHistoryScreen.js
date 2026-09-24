@@ -20,7 +20,7 @@ import Card from '../components/Card';
 import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
 import SearchBar from '../components/SearchBar';
-import { getRecentCompletedWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets, uid } from '../lib/database';
+import { getRecentCompletedWorkouts, getCompletedWorkoutCount, getCompletedWorkoutsBetween, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets, uid } from '../lib/database';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
@@ -60,6 +60,50 @@ function classifyMuscleGroup(primaryMuscles) {
   if (hasUpper) return 'upper';
   if (hasLower) return 'lower';
   return null;
+}
+
+// A3(b)/A4 (progress-tab audit 2026-09-24, second pass): the per-workout row
+// derivation, shared by the first page (loadWorkouts) and every "Show more"
+// page (handleShowMore) so paging can never drift from the first page's
+// shape. A4: exerciseTypeById is now built from allExercises exactly as
+// LiftProgressScreen.js builds it before its buildWeeklyLoadSeries call, and
+// passed into calculateTonnage -- the tonnage call used to pass no type map
+// at all, so isLoadBearingSet counted every set as load-bearing and a
+// distance/duration exercise's metres x seconds were added as kilograms.
+function buildHistoryRows(page, pageSets, allExercises) {
+  const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
+  const exerciseTypeById = Object.fromEntries(
+    allExercises.map(e => [e.id, e.exercise_type ?? e.exerciseType ?? 'weight_reps']),
+  );
+  const loadSemanticsById = buildLoadSemanticsById(allExercises);
+  const setsByWorkout = new Map();
+  for (const s of pageSets) {
+    const arr = setsByWorkout.get(s.workoutId);
+    if (arr) arr.push(s); else setsByWorkout.set(s.workoutId, [s]);
+  }
+  return page.map(w => {
+    const mySets = setsByWorkout.get(w.id) || [];
+    const workingSets = mySets.filter(s => s.setType !== 'warmup');
+    const exerciseIds = [...new Set(mySets.map(s => s.exerciseId))];
+    // allExerciseNames is the FULL list (search needs every exercise in
+    // the session); exerciseNames stays capped at 4 for the card summary
+    // line, unchanged from before.
+    const allExerciseNames = exerciseIds.map(id => exerciseMap[id]?.name).filter(Boolean);
+    const exerciseNames = allExerciseNames.slice(0, 4);
+    // O4: derived from the same exerciseMap lookup, no extra query.
+    const primaryMuscles = [...new Set(exerciseIds.map(id => exerciseMap[id]?.primaryMuscle).filter(Boolean))];
+    return {
+      workout: w,
+      setCount: mySets.length,
+      workingSetCount: workingSets.length,
+      exerciseCount: exerciseIds.length,
+      // D107-2: per-hand sets count x2, assistance is excluded.
+      tonnage: calculateTonnage(mySets, exerciseTypeById, loadSemanticsById),
+      exerciseNames,
+      allExerciseNames,
+      muscleGroup: classifyMuscleGroup(primaryMuscles),
+    };
+  });
 }
 
 const DAY_HEADERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -114,12 +158,31 @@ export default function WorkoutHistoryScreen({ navigation }) {
   const [expandedId, setExpandedId] = useState(null);
   const [expandedSets, setExpandedSets] = useState({}); // workoutId -> grouped exercise data
   const loadRequestRef = useRef(0);
+  // A3(a)/(b) (progress-tab audit 2026-09-24, second pass): the TRUE
+  // completed-session count (getCompletedWorkoutCount), independent of the
+  // bounded page in `workouts`. null while unloaded/unavailable -- the
+  // header falls back to workouts.length so a transient read failure never
+  // shows "undefined sessions".
+  const [completedCount, setCompletedCount] = useState(null);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Filter + view state
   const [filter, setFilter] = useState('all');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null); // Date | null
+  // A3(c) (progress-tab audit 2026-09-24, second pass; reworked per lead
+  // review): full row data for the VISIBLE calendar month only, from the
+  // dedicated ranged read -- correct for any month, never just the loaded
+  // page. Both the calendar's trained-day dots AND the card list under it
+  // read from this SAME data (never a dot with no matching card). null
+  // while unloaded/unavailable; both fall back to the loaded page
+  // (`workouts`) in that case, exactly the pre-fix behaviour.
+  const [monthRows, setMonthRows] = useState(null);
+  // Bumped to force the visible month to refetch outside its own deps
+  // (viewMode/month/user.id) -- specifically after a delete, so a session
+  // removed while its month is open drops both its dot and its card.
+  const [monthReloadKey, setMonthReloadKey] = useState(0);
   // L07-F11: find a past workout by workout name, routine name, or exercise
   // name. Filters the list already loaded by loadWorkouts, no extra query -
   // routineName already comes back on each row from the getRecentCompletedWorkouts
@@ -152,37 +215,20 @@ export default function WorkoutHistoryScreen({ navigation }) {
         getAllExercises(),
       ]);
       if (!isCurrentRequest()) return;
-      const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
-      const setsByWorkout = new Map();
-      for (const s of pageSets) {
-        const arr = setsByWorkout.get(s.workoutId);
-        if (arr) arr.push(s); else setsByWorkout.set(s.workoutId, [s]);
-      }
+      setWorkouts(buildHistoryRows(page, pageSets, allExercises));
 
-      const withSets = page.map(w => {
-        const mySets = setsByWorkout.get(w.id) || [];
-        const workingSets = mySets.filter(s => s.setType !== 'warmup');
-        const exerciseIds = [...new Set(mySets.map(s => s.exerciseId))];
-        // allExerciseNames is the FULL list (search needs every exercise in
-        // the session); exerciseNames stays capped at 4 for the card summary
-        // line, unchanged from before.
-        const allExerciseNames = exerciseIds.map(id => exerciseMap[id]?.name).filter(Boolean);
-        const exerciseNames = allExerciseNames.slice(0, 4);
-        // O4: derived from the same exerciseMap lookup, no extra query.
-        const primaryMuscles = [...new Set(exerciseIds.map(id => exerciseMap[id]?.primaryMuscle).filter(Boolean))];
-        return {
-          workout: w,
-          setCount: mySets.length,
-          workingSetCount: workingSets.length,
-          exerciseCount: exerciseIds.length,
-          // D107-2: per-hand sets count x2, assistance is excluded.
-          tonnage: calculateTonnage(mySets, null, buildLoadSemanticsById(allExercises)),
-          exerciseNames,
-          allExerciseNames,
-          muscleGroup: classifyMuscleGroup(primaryMuscles),
-        };
-      });
-      setWorkouts(withSets);
+      // A3(a): the TRUE completed-session count, for the header and for
+      // deciding whether "Show more" has anything left to load. Read
+      // defensively (await tolerates a plain non-promise return from an
+      // unmocked test double; the try/catch tolerates a genuine rejection)
+      // so a failure here never blanks the history that DID load.
+      let totalCount = null;
+      try {
+        const n = await getCompletedWorkoutCount(user.id);
+        totalCount = Number.isFinite(n) ? n : null;
+      } catch (_e) { totalCount = null; }
+      if (!isCurrentRequest()) return;
+      setCompletedCount(totalCount);
     } catch (e) {
       if (!isCurrentRequest()) return;
       logError('WorkoutHistoryScreen.loadWorkouts', e, { userId: user?.id });
@@ -191,6 +237,84 @@ export default function WorkoutHistoryScreen({ navigation }) {
       if (isCurrentRequest()) setLoading(false);
     }
   }
+
+  // A3(b): "Show more" pages forward from the last-loaded row's own
+  // attributed timestamp (the same COALESCE(ended_at, started_at,
+  // created_at) getRecentCompletedWorkouts sorts and pages on) AND its id --
+  // a plain timestamp cursor would skip a session sharing that exact
+  // millisecond with the boundary row (imported/restored history can carry
+  // identical timestamps), so the id breaks the tie the same way the read's
+  // own ORDER BY does. Appends to the existing page rather than replacing
+  // it. Guards against a concurrent refresh (loadRequestRef, same pattern
+  // as loadWorkouts' isCurrentRequest) so a pull-to-refresh that lands
+  // mid-fetch can never have a stale older page appended onto a fresh list.
+  async function handleShowMore() {
+    if (!user?.id || loadingMore) return;
+    const last = workouts[workouts.length - 1]?.workout;
+    const attributedAt = last ? (last.endedAt ?? last.startedAt ?? last.createdAt ?? null) : null;
+    if (attributedAt == null || last?.id == null) return;
+    const requestId = loadRequestRef.current;
+    setLoadingMore(true);
+    try {
+      const nextPage = await getRecentCompletedWorkouts(user.id, 50, { attributedAt, id: last.id });
+      if (loadRequestRef.current !== requestId) return;
+      if (!nextPage.length) {
+        // The count read said there was more but nothing came back (a race
+        // with a delete, most likely) -- correct the count down so "Show
+        // more" disappears instead of retrying forever.
+        setCompletedCount(workouts.length);
+        return;
+      }
+      const [pageSets, allExercises] = await Promise.all([
+        getWorkoutSetsForWorkoutIds(nextPage.map(w => w.id)),
+        getAllExercises(),
+      ]);
+      if (loadRequestRef.current !== requestId) return;
+      const nextRows = buildHistoryRows(nextPage, pageSets, allExercises);
+      setWorkouts(prev => [...prev, ...nextRows]);
+    } catch (e) {
+      logError('WorkoutHistoryScreen.handleShowMore', e, { userId: user?.id });
+      toast.show("Couldn't load more sessions. Try again.", { variant: 'error' });
+    } finally {
+      if (loadRequestRef.current === requestId) setLoadingMore(false);
+    }
+  }
+
+  // A3(c) (reworked per lead review): re-fetch the visible calendar month's
+  // full rows whenever the month changes, the calendar is opened, or
+  // monthReloadKey is bumped (a delete while this month is open). monthRows
+  // is cleared to null the moment the visible month changes, BEFORE the
+  // fetch starts, so a previous month's rows never linger under the new
+  // grid while the read is in flight -- trainedDatesSet and
+  // filteredWorkouts both fall back to the loaded page (`workouts`) during
+  // that gap and whenever the read is unavailable, exactly the pre-fix
+  // behaviour. Depends on the month's year/month (not the calendarDate
+  // object reference) so it never refetches for a reason other than an
+  // actual visible-month change, the view opening, or an explicit reload.
+  const calendarYear = calendarDate.getFullYear();
+  const calendarMonth = calendarDate.getMonth();
+  useEffect(() => {
+    if (viewMode !== 'calendar' || !user?.id) return;
+    let cancelled = false;
+    setMonthRows(null);
+    const monthStart = new Date(calendarYear, calendarMonth, 1).getTime();
+    const monthEnd = new Date(calendarYear, calendarMonth + 1, 1).getTime();
+    (async () => {
+      try {
+        const rows = await getCompletedWorkoutsBetween(user.id, monthStart, monthEnd);
+        if (cancelled) return;
+        const [pageSets, allExercises] = await Promise.all([
+          getWorkoutSetsForWorkoutIds(rows.map(w => w.id)),
+          getAllExercises(),
+        ]);
+        if (cancelled) return;
+        setMonthRows(buildHistoryRows(rows, pageSets, allExercises));
+      } catch (_e) {
+        if (!cancelled) setMonthRows(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [viewMode, calendarYear, calendarMonth, user?.id, monthReloadKey]);
 
   async function handleRepeatAsIs(workout) {
     try {
@@ -317,6 +441,11 @@ export default function WorkoutHistoryScreen({ navigation }) {
               if (expandedId === workout.id) setExpandedId(null);
               toast.show('Workout deleted.', { variant: 'success' });
               loadWorkouts();
+              // A3(c): the visible calendar month's own deps (viewMode,
+              // month, user.id) do not change on a delete, so without this
+              // an open month would keep showing the deleted session's dot
+              // and card until the month or view changed again.
+              setMonthReloadKey(k => k + 1);
             } catch (e) {
               logError('WorkoutHistory.delete', e, { workoutId: workout.id });
               toast.show("Couldn't delete that workout. Try again.", { variant: 'error' });
@@ -372,7 +501,14 @@ export default function WorkoutHistoryScreen({ navigation }) {
 
   // ─── Filtering logic ────────────────────────────────────────────────────────
   const filteredWorkouts = useMemo(() => {
-    let result = workouts;
+    // A3(c) (reworked per lead review): calendar mode filters over the
+    // visible month's own rows (monthRows) once they've loaded, falling
+    // back to the loaded page exactly as before while they haven't -- so
+    // the grid's dots (trainedDatesSet, below) and the list under it are
+    // always built from the SAME source (never a dot with no card, or a
+    // card whose day has no dot). List mode is unchanged: it always
+    // filters the loaded page and pages further with "Show more".
+    let result = viewMode === 'calendar' ? (monthRows ?? workouts) : workouts;
 
     // L07-F11: text search runs first, so it composes with the calendar day/
     // month narrowing and filter chips below rather than being bypassed by
@@ -422,12 +558,20 @@ export default function WorkoutHistoryScreen({ navigation }) {
     }
 
     return result;
-  }, [workouts, filter, viewMode, calendarDate, selectedDay, search]);
+  }, [workouts, monthRows, filter, viewMode, calendarDate, selectedDay, search]);
 
   // ─── Calendar helpers ────────────────────────────────────────────────────────
+  // A3(c) (reworked per lead review): the SAME source as filteredWorkouts
+  // above (monthRows once loaded, else the loaded page) -- so a dotted day
+  // always has a matching card, and a card's day is always dotted. Fall
+  // back to the loaded page's own derivation only while the month read is
+  // still in flight or unavailable (e.g. offline), so the grid never
+  // regresses to fully blank for the months it WOULD already get right
+  // from the loaded page (the current/most recent months).
   const trainedDatesSet = useMemo(() => {
-    return new Set(workouts.map(item => workoutDayKey(item.workout)));
-  }, [workouts]);
+    const source = viewMode === 'calendar' ? (monthRows ?? workouts) : workouts;
+    return new Set(source.map(item => workoutDayKey(item.workout)));
+  }, [workouts, viewMode, monthRows]);
 
   function buildCalendarCells() {
     const firstOfMonth = startOfMonth(calendarDate);
@@ -456,7 +600,11 @@ export default function WorkoutHistoryScreen({ navigation }) {
         <PressableCard
           onPress={() => handleToggleExpand(workout.id)}
           style={styles.cardHeaderTouchable}
-          accessibilityLabel={`Workout on ${format(date, 'd MMM yyyy')}, ${isExpanded ? 'expanded' : 'collapsed'}`}
+          // A5 (progress-tab audit 2026-09-24, second pass): the visible
+          // duration and set-count chips (cardMeta, just below) were
+          // collapsed away from screen readers -- the label now carries the
+          // same two facts, in the same wording, before the expand state.
+          accessibilityLabel={`Workout on ${format(date, 'd MMM yyyy')}, ${workout.durationMinutes || 0} min, ${workingSetCount} set${workingSetCount !== 1 ? 's' : ''}, ${isExpanded ? 'expanded' : 'collapsed'}`}
           accessibilityHint="Double-tap to show or hide the exercise breakdown"
           accessibilityState={{ expanded: isExpanded }}
         >
@@ -769,12 +917,21 @@ export default function WorkoutHistoryScreen({ navigation }) {
     ));
   }
 
+  // A3(a): the TRUE completed-session count when it loaded successfully;
+  // falls back to the loaded page's length (the old behaviour) while the
+  // count is still unloaded or failed, so a transient read failure never
+  // shows "undefined sessions".
+  const headerSessionCount = completedCount ?? workouts.length;
+  // A3(b): more sessions exist beyond the loaded page(s) -- offer "Show
+  // more" (list view only; calendar view pages by month instead).
+  const canShowMore = viewMode === 'list' && completedCount != null && workouts.length < completedCount;
+
   const listHeader = (
     <View style={styles.listHeaderWrap}>
       {/* Top bar: title + toggle */}
       <View style={styles.topBar}>
         <Text style={[styles.topBarTitle, live.topBarTitle]}>
-          {workouts.length} session{workouts.length !== 1 ? 's' : ''}
+          {headerSessionCount} session{headerSessionCount !== 1 ? 's' : ''}
         </Text>
         <TouchableOpacity
           style={[styles.toggleBtn, live.toggleBtn, viewMode === 'calendar' && [styles.toggleBtnActive, live.toggleBtnActive]]}
@@ -856,6 +1013,24 @@ export default function WorkoutHistoryScreen({ navigation }) {
     </View>
   );
 
+  // A3(b): a calm, factual line naming exactly how many of the total are
+  // showing, plus the control that loads the next page and appends it.
+  const listFooter = canShowMore ? (
+    <View style={styles.showMoreWrap}>
+      <Text style={[styles.showMoreText, live.showMoreText]}>
+        {`Showing the latest ${workouts.length} of ${completedCount} sessions`}
+      </Text>
+      <Button
+        title="Show more"
+        variant="secondary"
+        size="sm"
+        loading={loadingMore}
+        onPress={handleShowMore}
+        accessibilityLabel="Show more sessions"
+      />
+    </View>
+  ) : null;
+
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Workout history" />
@@ -865,6 +1040,7 @@ export default function WorkoutHistoryScreen({ navigation }) {
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -1218,6 +1394,19 @@ const styles = StyleSheet.create({
     ...type.label,
     color: colors.textPrimary,
   },
+
+  // A3(b) (progress-tab audit 2026-09-24, second pass): the "Show more"
+  // footer, below the loaded page when more completed sessions exist.
+  showMoreWrap: {
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingTop: spacing.md,
+  },
+  showMoreText: {
+    ...type.caption,
+    color: colors.textMuted,
+    textAlign: 'center',
+  },
 });
 
 // Campaign 2026-07-10 item 8 (history + cardio theme migration): the frozen
@@ -1270,5 +1459,6 @@ function buildLiveStyles(t) {
     repeatBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     deleteBtn: { borderColor: t.colors.border },
     repeatBtnText: { ...t.type.label, color: t.colors.textPrimary },
+    showMoreText: { ...t.type.caption, color: t.colors.textMuted },
   };
 }

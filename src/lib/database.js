@@ -3660,19 +3660,79 @@ export async function getLatestCompletedWorkoutId(userId) {
 // Workout History renders a bounded recent page. Keep this separate from
 // getAllWorkouts because analytics, sync and coach flows still need full
 // history reads.
-export async function getRecentCompletedWorkouts(userId, limit = 50) {
+//
+// A3(b) (progress-tab audit 2026-09-24, second pass; reworked per lead
+// review to a keyset cursor). `before` is an additive `{ attributedAt, id }`
+// cursor for "Show more" paging: a plain `< attributedAt` cursor would skip
+// any session sharing that exact millisecond with the boundary row
+// (imported or restored history can carry identical timestamps), so the
+// tiebreak also compares `w.id` -- the ORDER BY sorts on the same pair, so a
+// caller pages forward by passing the last-loaded row's own attributedAt and
+// id back in. Omitted (the existing two-arg call every current caller
+// uses), the rows are the same as before; only sessions sharing an exact
+// attributed millisecond now sort deterministically by id instead of in
+// whatever order SQLite happened to return them.
+export async function getRecentCompletedWorkouts(userId, limit = 50, before = null) {
   const parsedLimit = Number(limit);
   const safeLimit = Number.isFinite(parsedLimit) ? Math.max(0, Math.floor(parsedLimit)) : 50;
   if (!userId || safeLimit <= 0) return [];
+  const d = await db();
+  const hasCursor = !!before && Number.isFinite(before.attributedAt) && before.id != null;
+  const rows = await d.getAllAsync(
+    `SELECT w.*, r.name AS routine_name
+     FROM workouts w
+     LEFT JOIN routines r ON r.id = w.routine_id
+     WHERE w.user_id = ? AND w.is_completed = 1
+     ${hasCursor ? `AND (COALESCE(w.ended_at, w.started_at, w.created_at) < ?
+       OR (COALESCE(w.ended_at, w.started_at, w.created_at) = ? AND w.id < ?))` : ''}
+     ORDER BY COALESCE(w.ended_at, w.started_at, w.created_at) DESC, w.id DESC
+     LIMIT ?`,
+    hasCursor
+      ? [userId, before.attributedAt, before.attributedAt, before.id, safeLimit]
+      : [userId, safeLimit],
+  );
+  return rows.map(rowToCamel);
+}
+
+// A3(a) (progress-tab audit 2026-09-24, second pass): the TRUE lifetime
+// completed-session count, independent of the bounded page
+// getRecentCompletedWorkouts above loads for the history list (LB-7). Same
+// completion predicate (`is_completed = 1`) as that read, so the header
+// count and the loaded list can never disagree about what counts as
+// "completed". A plain COUNT, never the full row set.
+export async function getCompletedWorkoutCount(userId) {
+  if (!userId) return 0;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT COUNT(*) AS count FROM workouts WHERE user_id = ? AND is_completed = 1',
+    [userId],
+  );
+  return row?.count ?? 0;
+}
+
+// A3(c) (progress-tab audit 2026-09-24, second pass; reworked per lead
+// review). The first version of this read returned day-keys only, which let
+// the calendar's trained-day dots come from a wider set than the sessions
+// actually listed under it -- a day older than the loaded 50-row page (LB-7)
+// could show a dot from this read while the card list, still built only
+// from that loaded page, showed nothing for it, and tapping the dotted day
+// said "No session on <date>". FULL rows for a month range instead, in the
+// SAME shape as getRecentCompletedWorkouts (including the routine-name
+// join), so the calendar's dots and the sessions listed under it are always
+// built from the exact same rows -- never the whole history, bounded to
+// [startMs, endMs).
+export async function getCompletedWorkoutsBetween(userId, startMs, endMs) {
+  if (!userId || !Number.isFinite(startMs) || !Number.isFinite(endMs)) return [];
   const d = await db();
   const rows = await d.getAllAsync(
     `SELECT w.*, r.name AS routine_name
      FROM workouts w
      LEFT JOIN routines r ON r.id = w.routine_id
      WHERE w.user_id = ? AND w.is_completed = 1
-     ORDER BY COALESCE(w.ended_at, w.started_at, w.created_at) DESC
-     LIMIT ?`,
-    [userId, safeLimit],
+       AND COALESCE(w.ended_at, w.started_at, w.created_at) >= ?
+       AND COALESCE(w.ended_at, w.started_at, w.created_at) < ?
+     ORDER BY COALESCE(w.ended_at, w.started_at, w.created_at) DESC, w.id DESC`,
+    [userId, startMs, endMs],
   );
   return rows.map(rowToCamel);
 }

@@ -11,6 +11,8 @@ import {
   volumeTakeaway,
   workloadTakeaway,
 } from '../chartWindows';
+import { kgToLbs } from '../units';
+import { weightChartValue } from '../bodyMetricsDisplay';
 
 const DAY = 86400000;
 const NOW = new Date(2026, 5, 10, 12).getTime(); // fixed anchor
@@ -85,6 +87,60 @@ describe('chartWindows: weightTakeaway', () => {
   test('a flat trend reads "holding steady", not "up 0"', () => {
     expect(weightTakeaway({ windowKey: '1M', coversAll: false, points, dateOf, ewma: [82.0, 82.02, 82.0], unit: 'kg' }))
       .toBe('1 month: average 82 kg, holding steady.');
+  });
+});
+
+describe('chartWindows: weightTakeaway toDisplay (progress-tab audit 2026-09-24, second pass, A1 follow-up)', () => {
+  // THE DEFECT: the takeaway banner always read in kg, unlike the chart's
+  // own axis/tooltip (already fixed to respect bodyWeightUnits). toDisplay
+  // converts the two NUMBERS this renders (average, delta magnitude) only;
+  // the direction/"holding steady" decision stays a kg-only judgement so
+  // the level band keeps one real-world meaning regardless of display unit.
+  const points = [{ t: daysAgo(80) }, { t: daysAgo(40) }, { t: daysAgo(2) }];
+  const dateOf = (p) => p.t;
+  const toLbs = (v) => weightChartValue(v, 'lbs');
+
+  test('lbs: the average and the delta both convert through toDisplay, matching the chart\'s own conversion', () => {
+    const ewma = [82.5, 82.5, 82.35];
+    const avgLbs = kgToLbs((82.5 + 82.5 + 82.35) / 3).toFixed(1);
+    const deltaLbs = kgToLbs(Math.abs(82.35 - 82.5)).toFixed(1);
+    const line = weightTakeaway({
+      windowKey: '3M', coversAll: false, points, dateOf, ewma, unit: 'lbs', toDisplay: toLbs,
+    });
+    expect(line).toBe(`3 months: average ${avgLbs} lbs, down ${deltaLbs} lbs.`);
+  });
+
+  test('a flat kg series reads a clean converted average: 82.5 kg is 181.9 lbs', () => {
+    const line = weightTakeaway({
+      windowKey: '3M', coversAll: false, points, dateOf, ewma: [82.5, 82.5, 82.5], unit: 'lbs', toDisplay: toLbs,
+    });
+    expect(line).toBe('3 months: average 181.9 lbs, holding steady.');
+  });
+
+  test('the level dead-band (0.1 kg) is decided on the RAW kg delta, never the converted one', () => {
+    // A 0.05 kg drift is inside the dead-band in kg terms -- "holding
+    // steady" in BOTH units, even though 0.05 kg is a non-trivial ~0.1 lbs
+    // once converted, so a unit-aware dead-band would have called it "down".
+    const ewmaKg = [82.50, 82.50, 82.45];
+    expect(weightTakeaway({ windowKey: '3M', coversAll: false, points, dateOf, ewma: ewmaKg, unit: 'kg' }))
+      .toMatch(/holding steady/);
+    expect(weightTakeaway({
+      windowKey: '3M', coversAll: false, points, dateOf, ewma: ewmaKg, unit: 'lbs', toDisplay: toLbs,
+    })).toMatch(/holding steady/);
+  });
+
+  test('the open-ED-flag branch (average only, no direction) also formats through toDisplay', () => {
+    const line = weightTakeaway({
+      windowKey: '3M', coversAll: false, points, dateOf, ewma: [82.5, 82.5, 82.5],
+      unit: 'lbs', edFlagOpen: true, toDisplay: toLbs,
+    });
+    expect(line).toBe('3 months: average 181.9 lbs.');
+    expect(line).not.toMatch(/up|down|steady/);
+  });
+
+  test('a caller that omits toDisplay (every existing kg caller) is byte-identical to before', () => {
+    expect(weightTakeaway({ windowKey: '3M', coversAll: false, points, dateOf, ewma: [84.2, 83.0, 82.4], unit: 'kg' }))
+      .toBe('3 months: average 83.2 kg, down 1.8 kg.');
   });
 });
 

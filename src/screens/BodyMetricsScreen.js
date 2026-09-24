@@ -64,6 +64,11 @@ import { isCalm, WELLBEING_HELPLINE, WELLBEING_KEY } from '../lib/wellbeing';
 // the SAME shared derivation the Progress root's "Your trend" card uses
 // (deriveWeightTrend, weightTrend.js), never a hand-rolled parallel branch.
 import { deriveWeightTrend } from '../lib/weightTrend';
+// A1/A2 (progress-tab audit 2026-09-24, second pass): dependency-free pure
+// helpers (see the module header there for the two defects each fixes).
+import {
+  weightChartUnitLabel, weightChartValue, weightChartTooltipTitle, weightSnapshotDateLabel,
+} from '../lib/bodyMetricsDisplay';
 import { validateBodyMetricForm } from '../lib/bodyMetricValidate';
 import { mergeMorningWeightsIntoHistory } from '../lib/bodyMetricsHistoryMerge';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
@@ -276,9 +281,15 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
   // (raw dots stay visible beside it). Display-only promotion; coaching
   // decisions + safety keep the plain EWMA (see weeklyCoach §12 note).
   const smoothed = sparse ? [] : robustValues(weights);
+  // A1 follow-up (progress-tab audit 2026-09-24, second pass): the takeaway
+  // banner used to always read in kg, unlike the chart's own axis/tooltip
+  // fixed above -- unit and toDisplay now match the chart exactly, so a
+  // pounds user reads the SAME converted figure everywhere on this card.
+  const chartUnit = weightChartUnitLabel(bodyWeightUnits);
   const takeaway = sparse ? '' : weightTakeaway({
     windowKey, coversAll, points: windowed, dateOf: weightDateOf,
-    ewma: smoothed, unit: 'kg', edFlagOpen,
+    ewma: smoothed, unit: chartUnit, edFlagOpen,
+    toDisplay: (v) => weightChartValue(v, bodyWeightUnits),
   });
 
   return (
@@ -294,7 +305,7 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
         <View style={chartStyles.wrap}>
           <VolyumeChart
             data={windowed.map((e, i) => ({
-              value: e.body_weight,
+              value: weightChartValue(e.body_weight, bodyWeightUnits),
               label: i === 0 || i === windowed.length - 1 ? safeFormatDate(e.metric_date, 'd MMM') : '',
             }))}
             width={chartWidth}
@@ -305,21 +316,20 @@ function WeightTrendChart({ entries, bodyWeightUnits, edFlagOpen, userId }) {
             curved
             showDots={windowed.length <= 6}
             dotRadius={3}
-            yAxisSuffix={bodyWeightUnits === 'st' ? ' kg' : ` ${bodyWeightUnits || 'kg'}`}
+            yAxisSuffix={` ${chartUnit}`}
             sections={3}
-            min={Math.floor(Math.min(...weights) - 1)}
-            max={Math.ceil(Math.max(...weights) + 1)}
+            min={Math.floor(Math.min(...weights.map(w => weightChartValue(w, bodyWeightUnits))) - 1)}
+            max={Math.ceil(Math.max(...weights.map(w => weightChartValue(w, bodyWeightUnits))) + 1)}
             backgroundColor={t.colors.surface}
             interactive
             accessibilityLabel="Weight trend chart"
             formatTooltip={(i) => {
               const e = windowed[i];
               if (!e) return null;
-              const unit = bodyWeightUnits === 'st' ? 'kg' : (bodyWeightUnits || 'kg');
               const trend = smoothed[i];
               return {
-                title: `${e.body_weight} ${unit}`,
-                sub: `${safeFormatDate(e.metric_date, 'd MMM')}${trend != null ? ` - trend ${trend.toFixed(1)} ${unit}` : ''}`,
+                title: weightChartTooltipTitle(e.body_weight, bodyWeightUnits),
+                sub: `${safeFormatDate(e.metric_date, 'd MMM')}${trend != null ? ` - trend ${weightChartValue(trend, bodyWeightUnits).toFixed(1)} ${chartUnit}` : ''}`,
               };
             }}
           />
@@ -1127,7 +1137,7 @@ export default function BodyMetricsScreen() {
             {/* Header row with phase chip */}
             <View style={styles.snapshotHeader}>
               <SectionLabel>
-                Weight - {safeFormatDate(latest?.metric_date, 'd MMM yyyy') || 'Today'}
+                Weight - {weightSnapshotDateLabel(latest?.metric_date)}
               </SectionLabel>
               {phase && (
                 <View style={[styles.phaseChip, { borderColor: phase.color }]}>

@@ -87,6 +87,13 @@ jest.mock('../../store/useAppStore', () => ({
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
 jest.mock('../../lib/database', () => ({
   getRecentCompletedWorkouts: jest.fn(),
+  // A3(a)/(c) (progress-tab audit 2026-09-24, second pass): bare jest.fn()
+  // doubles (unmocked -> resolve to undefined via `await`, never throw) so
+  // every existing test in this file keeps its old, page-length-derived
+  // behaviour untouched; tests that exercise the new count/range reads
+  // mock these explicitly.
+  getCompletedWorkoutCount: jest.fn(),
+  getCompletedWorkoutsBetween: jest.fn(),
   getWorkoutSetsForWorkoutIds: jest.fn(),
   getAllExercises: jest.fn(),
   createWorkout: jest.fn(),
