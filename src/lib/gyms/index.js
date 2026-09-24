@@ -182,18 +182,6 @@ export async function placeCentroid(q) {
 }
 
 /**
- * Every venue in one town/postcode-sector place key.
- *
- * @param {string} townKey
- * @param {{limit?: number}} [opts]
- * @returns {Promise<Array<object>>}
- */
-export async function inPlace(townKey, { limit = 40 } = {}) {
-  const data = await callGyms('gyms_in_place', { _town_key: townKey, _limit: limit });
-  return venuesFrom(data);
-}
-
-/**
  * One venue, with its brand and its source names (never the raw source
  * payloads, per the fixed contract).
  *

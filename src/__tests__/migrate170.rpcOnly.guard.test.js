@@ -102,6 +102,15 @@ const DECLARED = Object.keys(BODIES);
 const PUBLIC_RPCS = {
   community_upsert_profile: 'community_upsert_profile(jsonb, boolean)',
   community_dimension: 'community_dimension(text, text, text, int)',
+  // RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9): migrate_183
+  // revokes EXECUTE on community_dimensions_me (no client wrapper ever
+  // called it - only comments in CommunityHubScreen.js). This key still
+  // pins migrate_170's own SIGNATURE and grant AS OF THIS FILE (untouched
+  // by 183 - no DROP, no CREATE OR REPLACE), so it stays true here. It no
+  // longer feeds the "is inventoried as a client RPC" test below: the
+  // security matrix inventory lists the RPCs the client can call, and a
+  // fully revoked RPC is pinned ABSENT there (the migrate_164 precedent;
+  // lead ruling on Lane A's STOP), see REVOKED_LATER below.
   community_dimensions_me: 'community_dimensions_me(text)',
   community_board: 'community_board(text, text, text, text, integer, text)',
   community_hub_summary: 'community_hub_summary(text)',
@@ -895,11 +904,20 @@ describe('the file is registered in the tracker', () => {
     expect(README).toContain('| 170 | `migrate_170_community_connection.sql` |');
   });
 
+  // RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9): the RPCs of
+  // this file that a LATER migration revoked entirely are pinned absent
+  // from the inventory, the migrate_164 precedent (lead ruling on Lane A's
+  // STOP). Their signatures above still pin what 170 itself declared.
+  const REVOKED_LATER = ['community_dimensions_me']; // migrate_183
   test('community_hub_summary is inventoried as a client RPC in the security matrix', () => {
     const inventory = JSON.parse(fs.readFileSync(path.join(
       ROOT, 'scripts', 'security', 'supabase-matrix.targets.json',
     ), 'utf8'));
     for (const name of Object.keys(PUBLIC_RPCS)) {
+      if (REVOKED_LATER.includes(name)) {
+        expect(inventory.clientRpcNames).not.toContain(name);
+        continue;
+      }
       expect(inventory.clientRpcNames).toContain(name);
     }
     expect(inventory.clientRpcNames.filter((n) => n.startsWith('_community_'))).toEqual([]);

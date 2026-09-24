@@ -21,8 +21,10 @@ are paying. Every change affects them. Work accordingly.
 > calm mode, founder decision B 2026-09-23 / D196), **181** (gym moderation
 > lists) and **182** (the ED-flag cloud push, raises and clears, forward-only,
 > scoped to the caller's own row, no signals, that arms 180 and
-> both edge-function ED gates; D92-11 answered), written 2026-09-22/23,
-> are WRITTEN, guard-proved and NOT APPLIED, waiting for the phrase; 179
+> both edge-function ED gates; D92-11 answered) and **183** (EXECUTE
+> revoked on the three Community RPCs with no caller left), written
+> 2026-09-22/24, are WRITTEN, guard-proved and NOT APPLIED, waiting for the
+> phrase; 179
 > can go alone and first, 176 must apply BEFORE 180 (both files refuse the
 > other order in code), and 178 must be applied before any build carrying
 > the note door. Only **049** is HELD
@@ -54,7 +56,7 @@ database is the source of truth on device. Local migrations run via
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
 is absolute — all user data stays in Dublin. Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (highest `migrate_182`; 176 to 182 WRITTEN NOT APPLIED, 176 before 180; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_183`; 176 to 183 WRITTEN NOT APPLIED, 176 before 180; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,

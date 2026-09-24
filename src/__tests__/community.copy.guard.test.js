@@ -36,6 +36,18 @@
  * brace-balanced interpolation stripping were needed on top of the
  * `code()`/`stringLiterals()` helpers above, and its one named
  * exception.
+ *
+ * Extended 2026-09-24 (founder order 2026-09-22 item 9, Part E; the
+ * item 8 review that named it): (1) the handle census above now also
+ * walks `lib/community/*.js`, which renders real copy of its own; (2)
+ * `stringLiterals()` is hardened so a template literal nested inside
+ * another template literal's own `${...}` no longer confuses the scan
+ * (see `scanTemplateLiteralEnd`'s comment for the constructed case);
+ * (3) a third census, same shape as the handle one, pins that no
+ * Community copy reads "age band" any more either ("Age group"
+ * everywhere a person reads it, item 8). Jest's own test titles are
+ * developer-facing, not user-facing copy, so they sit under
+ * `__tests__` and are outside every census's scope here.
  */
 
 const fs = require('fs');
@@ -44,6 +56,11 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '../..');
 const SCREENS_DIR = path.join(ROOT, 'src/screens');
 const COMPONENTS_COMMUNITY_DIR = path.join(ROOT, 'src/components/community');
+// Item 9 hygiene pass (founder order 2026-09-22, Part E point 1; item 8
+// review): `lib/community/*.js` renders real copy too (`reasons.js`,
+// `groups.js`'s GROUP_PURPOSE_LINE, `earlyDays.js`), and the handle census
+// below had left it out.
+const LIB_COMMUNITY_DIR = path.join(ROOT, 'src/lib/community');
 const INTRO_CARD = path.join(ROOT, 'src/components/HomeCommunityIntroCard.js');
 const RULES_SCREEN = path.join(ROOT, 'src/screens/CommunityRulesScreen.js');
 const LIMITS_FILE = path.join(ROOT, 'src/lib/community/limits.js');
@@ -68,16 +85,107 @@ function code(source) {
     .replace(/(^|[^:])\/\/[^\n]*/g, '$1');
 }
 
+/**
+ * From `start` (a template literal's opening backtick), the index just
+ * past its TRUE matching closing backtick. A naive "next backtick
+ * closes it" regex is fooled by a template literal NESTED inside this
+ * one's own `${...}` (item 9 hygiene pass, Part E point 2; item 8
+ * review's constructed case: `` `${cond ? 'x' : `@${y}`} tail` `` --
+ * the inner opening backtick reads as the outer literal's close, and
+ * the genuine tail is lost). This walks the literal itself, and hands
+ * off to `scanBracedExpressionEnd` for every `${...}` it meets, which
+ * recurses back here for any template literal nested inside THAT
+ * expression -- so a backtick is only ever treated as a close while
+ * literal text is actually being scanned, at any nesting depth. Escape
+ * sequences (`\` + any character) are skipped as a pair. Returns null
+ * if the source runs out first (never true of real, well-formed code).
+ */
+function scanTemplateLiteralEnd(source, start) {
+  let i = start + 1;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === '\\') { i += 2; continue; }
+    if (ch === '`') return i + 1;
+    if (ch === '$' && source[i + 1] === '{') {
+      const close = scanBracedExpressionEnd(source, i + 2);
+      if (close == null) return null;
+      i = close;
+      continue;
+    }
+    i += 1;
+  }
+  return null;
+}
+
+/**
+ * From `start` (just past a template literal's `${`), the index just
+ * past THIS interpolation's own matching `}`. Depth-counts `{`/`}` the
+ * same way `stripBraced` does, but also skips a quoted string (so a
+ * `}` inside one, e.g. `${isAdmin ? 'settings}' : x}`, never miscounts)
+ * and a nested template literal (via `scanTemplateLiteralEnd`,
+ * recursively, so ITS OWN `${...}` and any further nesting never
+ * miscounts this level either). Returns null if unterminated.
+ */
+function scanBracedExpressionEnd(source, start) {
+  let i = start;
+  let depth = 1;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === '\'' || ch === '"') {
+      i += 1;
+      while (i < source.length && source[i] !== ch) {
+        i += source[i] === '\\' ? 2 : 1;
+      }
+      i += 1;
+      continue;
+    }
+    if (ch === '`') {
+      const end = scanTemplateLiteralEnd(source, i);
+      if (end == null) return null;
+      i = end;
+      continue;
+    }
+    if (ch === '{') { depth += 1; i += 1; continue; }
+    if (ch === '}') {
+      depth -= 1;
+      i += 1;
+      if (depth === 0) return i;
+      continue;
+    }
+    i += 1;
+  }
+  return null;
+}
+
 /** Every quoted string's CONTENT (single, double, template), in the
  * order it appears. Call this AFTER `code()`, or a `//` inside a
- * comment's own prose could be misread as starting one. */
+ * comment's own prose could be misread as starting one. The template
+ * branch is a manual scan (`scanTemplateLiteralEnd`), not a regex, so a
+ * literal nested inside this one's own interpolation is skipped as a
+ * unit rather than mistaken for the close -- see that function's own
+ * comment for the constructed case this fixes. */
 function stringLiterals(source) {
   const out = [];
-  const re = /'((?:\\.|[^'\\])*)'|"((?:\\.|[^"\\])*)"|`((?:\\.|[^`\\])*)`/g;
-  let m = re.exec(source);
-  while (m) {
-    out.push(m[1] ?? m[2] ?? m[3] ?? '');
-    m = re.exec(source);
+  let i = 0;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === '\'' || ch === '"') {
+      let j = i + 1;
+      while (j < source.length && source[j] !== ch) {
+        j += source[j] === '\\' ? 2 : 1;
+      }
+      out.push(source.slice(i + 1, j));
+      i = j + 1;
+      continue;
+    }
+    if (ch === '`') {
+      const end = scanTemplateLiteralEnd(source, i);
+      if (end == null) { i += 1; continue; }
+      out.push(source.slice(i + 1, end - 1));
+      i = end;
+      continue;
+    }
+    i += 1;
   }
   return out;
 }
@@ -285,12 +393,18 @@ describe('the founder\'s definition is actually in place', () => {
 });
 
 /**
- * Community screens plus every top-level file under
- * `components/community/` -- the two globs the census below covers.
- * Deliberately narrower than `targetFiles()` above: the intro card, the
- * Today row and the Settings screen are that OTHER guard's own three
- * named extra sites, not this one's (R2's scope is exactly the two
- * globs plus the onboarding step 5 slice, read separately below).
+ * Community screens, every top-level file under `components/community/`,
+ * and every top-level file under `lib/community/` -- the three globs
+ * the census below covers. Deliberately narrower than `targetFiles()`
+ * above: the intro card, the Today row and the Settings screen are that
+ * OTHER guard's own three named extra sites, not this one's (R2's scope
+ * was originally exactly the first two globs plus the onboarding step 5
+ * slice, read separately below).
+ *
+ * EXTENDED 2026-09-24 (founder order 2026-09-22 item 9, Part E point 1;
+ * item 8 review): `lib/community/*.js` renders real copy too and had
+ * been left out. Both directories are still read top-level only -- see
+ * `targetFiles()`'s own comment for why a `.js`-only filter is enough.
  */
 function handleCensusFiles() {
   const screens = fs.readdirSync(SCREENS_DIR)
@@ -299,7 +413,10 @@ function handleCensusFiles() {
   const components = fs.readdirSync(COMPONENTS_COMMUNITY_DIR)
     .filter((f) => f.endsWith('.js'))
     .map((f) => path.join(COMPONENTS_COMMUNITY_DIR, f));
-  return [...screens, ...components];
+  const lib = fs.readdirSync(LIB_COMMUNITY_DIR)
+    .filter((f) => f.endsWith('.js'))
+    .map((f) => path.join(LIB_COMMUNITY_DIR, f));
+  return [...screens, ...components, ...lib];
 }
 
 /** The onboarding wizard's step 5, "Your gym" -- the only step that
@@ -368,11 +485,13 @@ describe('no "handle"/"handles" word survives in Community copy (A-14 census, fo
    * text a person reads. Exactly one occurrence is let through, and
    * only in that one slice; a second would still fail.
    */
-  test('there is Community copy to guard (screens + components)', () => {
+  test('there is Community copy to guard (screens + components + lib)', () => {
     // If this ever falls near zero, the guard has quietly stopped
     // guarding anything (a folder rename, a moved file) rather than
-    // passing honestly.
-    expect(handleCensusFiles().length).toBeGreaterThan(50);
+    // passing honestly. Raised from 50 to 80 when `lib/community/*.js`
+    // joined the walk (item 9, Part E point 1): the three globs together
+    // run to 92 files today.
+    expect(handleCensusFiles().length).toBeGreaterThan(80);
   });
 
   test.each(handleCensusFiles().map((f) => [path.relative(ROOT, f), f]))(
@@ -387,6 +506,109 @@ describe('no "handle"/"handles" word survives in Community copy (A-14 census, fo
   test('ProOnboardingScreen.js step 5 carries no "handle"/"handles" string literal or JSX text, but for the one named layout-key exception', () => {
     const stripped = code(proOnboardingStep5Slice());
     const { literalHits, jsxHits } = handleHits(stripped, { allowLiteralOnce: 'handle' });
+    expect({ literalHits, jsxHits }).toEqual({ literalHits: [], jsxHits: [] });
+  });
+});
+
+/**
+ * `stringLiterals()`'s own correctness, direct (item 9 hygiene pass,
+ * founder order 2026-09-22, Part E point 2; item 8 review). Every other
+ * test in this file exercises the helper only indirectly, through real
+ * source; this pins the constructed case the review named, where a
+ * template literal nests inside another template literal's own
+ * `${...}`. The OLD regex-based scan read the inner literal's OPENING
+ * backtick as the outer literal's CLOSE: it produced two garbled
+ * fragments (`` `${cond ? 'go to your handle settings' : ` `` and
+ * `` } suffix` ``, neither the true content) and silently dropped
+ * anything the inner literal's own text carried that fell either side
+ * of ITS interpolation. Written to fail first against the pre-fix
+ * `stringLiterals()`; the report carries that failing output.
+ */
+describe('stringLiterals correctly spans a nested template literal', () => {
+  test('the review\'s constructed case: a template literal inside another one\'s ${...}', () => {
+    // `${cond ? 'go to your handle settings' : `@${y}`} suffix`
+    const source = '`${cond ? \'go to your handle settings\' : `@${y}`} suffix`';
+    expect(stringLiterals(source)).toEqual([
+      "${cond ? 'go to your handle settings' : `@${y}`} suffix",
+    ]);
+  });
+
+  test('a plainer nested case still separates correctly either side of the inner literal', () => {
+    // `${a ? `left ${x} mid` : 'right'} tail`
+    const source = '`${a ? `left ${x} mid` : \'right\'} tail`';
+    expect(stringLiterals(source)).toEqual([
+      "${a ? `left ${x} mid` : 'right'} tail",
+    ]);
+  });
+
+  test('an ordinary, non-nested template literal is unaffected', () => {
+    const source = '`Hello ${name}, welcome`';
+    expect(stringLiterals(source)).toEqual(['Hello ${name}, welcome']);
+  });
+
+  test('single and double quotes are unaffected, in the presence of a nested-template literal elsewhere', () => {
+    const source = "'a' + \"b\" + `${x ? `c` : 'd'}e`";
+    expect(stringLiterals(source)).toEqual(['a', 'b', '${x ? `c` : \'d\'}e']);
+  });
+});
+
+/**
+ * Every "age band"/"age bands" hit in `source` (after `code()` has
+ * already stripped comments): string-literal hits (interpolations
+ * stripped first) and JSX-text hits (expression containers stripped
+ * first). The PHRASE, not the field: `\s+` between the two words means
+ * `age_band`/`ageBand`/`TP_AGE_BANDS` (the field, RPC params, keys and
+ * constant names, untouched by item 8's rename) never false-positive --
+ * only the words a person would actually read, the same mechanism
+ * `handleHits` above uses to leave `handle_taken` alone.
+ */
+function ageBandHits(strippedSource) {
+  const re = /\bage\s+bands?\b/i;
+  const literalHits = stringLiterals(strippedSource)
+    .map(stripInterpolations)
+    .filter((s) => re.test(s));
+  const jsxHits = jsxTextContents(strippedSource)
+    .map(stripExpressionContainers)
+    .filter((s) => re.test(s));
+  return { literalHits, jsxHits };
+}
+
+describe('no "age band"/"age bands" phrase survives in Community copy (item 9 hygiene pass, founder order 2026-09-22 Part E point 3; item 8 review)', () => {
+  /**
+   * WHAT THIS PINS, and why it is written to fail rather than pass:
+   * item 8 renamed every user-facing "Age band" to "Age group" (board:
+   * "Username and Age group everywhere"; live today in
+   * `CommunityTrainingProfileScreen.js`'s `label: 'Age group'`,
+   * `PeopleFiltersSheet.js`'s "Age group" section and accessibility
+   * label, `CommunityDimensionScreen.js`'s "Your age group" header and
+   * body line, and `lib/community/reasons.js`'s `'Same age group'`
+   * reason). This is the census that catches the NEXT one: a fresh
+   * screen, a copy-pasted hint, a moderator string that reaches for the
+   * old phrase instead of "Age group". Same scopes as the handle
+   * census just above (screens, components, lib, and the onboarding
+   * step 5 slice), same comment/interpolation/expression-container
+   * stripping, so a variable like `ageBand` or a key like `age_band` is
+   * judged on the copy sitting around it, never on the field name
+   * inside the expression that fills it in. No named exception was
+   * needed: nothing in scope uses the two words, space-separated, as an
+   * identifier.
+   */
+  test('there is Community copy to guard (screens + components + lib)', () => {
+    expect(handleCensusFiles().length).toBeGreaterThan(80);
+  });
+
+  test.each(handleCensusFiles().map((f) => [path.relative(ROOT, f), f]))(
+    '%s carries no "age band"/"age bands" string literal or JSX text',
+    (rel, full) => {
+      const stripped = code(fs.readFileSync(full, 'utf8'));
+      const { literalHits, jsxHits } = ageBandHits(stripped);
+      expect({ rel, literalHits, jsxHits }).toEqual({ rel, literalHits: [], jsxHits: [] });
+    },
+  );
+
+  test('ProOnboardingScreen.js step 5 carries no "age band"/"age bands" string literal or JSX text', () => {
+    const stripped = code(proOnboardingStep5Slice());
+    const { literalHits, jsxHits } = ageBandHits(stripped);
     expect({ literalHits, jsxHits }).toEqual({ literalHits: [], jsxHits: [] });
   });
 });

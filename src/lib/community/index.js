@@ -149,7 +149,7 @@ export {
 
 export {
   FIND_MODES, FIND_MODE_ORDER, doorsFor, doorLine, doorZeroState,
-  findPeople, gymSummary, gymSuggest,
+  findPeople, gymSummary,
   FILTER_SCOPES, PLACE_BAND_MILES, PLACE_BAND_LABELS,
   normaliseFilters, filterChips, removeFilterChip, peopleCountLine,
 } from './findPeople';

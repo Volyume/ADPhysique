@@ -282,30 +282,6 @@ export async function gymSummary(key) {
   };
 }
 
-/**
- * The gym typeahead on the profile editor (SD-27). Suggests labels
- * ALREADY used in the same area, so "PureGym Leeds" is chosen once and
- * then chosen again, rather than retyped into four near-misses that never
- * join up into one page.
- *
- * @param {string} areaKey
- * @param {string} prefix
- * @returns {Promise<Array<{label: string, count: number}>>}
- */
-export async function gymSuggest(areaKey, prefix) {
-  const text = String(prefix ?? '').trim();
-  if (!areaKey || !text) return [];
-  const data = await callCommunity('community_gym_suggest', {
-    _area_key: areaKey, _prefix: text,
-  });
-  const rows = Array.isArray(data?.gyms) ? data.gyms : (Array.isArray(data) ? data : []);
-  return rows
-    .map((row) => (typeof row === 'string'
-      ? { label: row, count: 0 }
-      : { label: row?.label ?? null, count: Number(row?.count ?? 0) }))
-    .filter((row) => !!row.label);
-}
-
 // ─── Combinable filters (spec 1.1 C, 1.3; migration 163) ───────────────
 
 /** The three "Where" scopes the filters sheet offers. */

@@ -192,6 +192,11 @@ describe('client RPC arguments match the migration signatures', () => {
     'community_find_people',
     'community_programme_people',
     'community_gym_summary',
+    // RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9): migrate_183
+    // revokes EXECUTE on this RPC (no client wrapper calls it any more -
+    // `gymSuggest` was deleted the same lane), but the function is still
+    // DECLARED by migrate_161/162 and is not dropped, so it stays a name
+    // this guard must recognise rather than flag as missing/unexpected.
     'community_gym_suggest',
     'community_conversations',
     'community_messages',

@@ -636,6 +636,13 @@ describe('161: security review 2026-09-06 - push replay, programme door, block',
     expect(body).toMatch(/UPDATE public\.community_conversations SET closed_at = now\(\)/);
   });
 
+  // RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9): migrate_183
+  // revokes EXECUTE on community_gym_suggest (PUBLIC, anon and
+  // authenticated) because no client wrapper calls it any more (the
+  // wrapper `gymSuggest` and its barrel export were deleted the same
+  // lane). This pin is about migrate_161's own SOURCE BODY, not the live
+  // grant, so it stays true unchanged: the function is not dropped, only
+  // its grant moves.
   test('the previously un-railed RPCs, and find_people, now call the rate check', () => {
     for (const fn of [
       'community_respond_connect', 'community_update_training_profile',
@@ -650,6 +657,9 @@ describe('161: security review 2026-09-06 - push replay, programme door, block',
     }
   });
 
+  // RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9): same reason
+  // as above - migrate_183's revoke does not touch community_gym_suggest's
+  // body, only its grant, so this source pin against migrate_161 stays true.
   test('gym_summary and gym_suggest require a Community profile', () => {
     for (const fn of ['community_gym_summary', 'community_gym_suggest']) {
       const at = CODE_161.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}(`);

@@ -24,6 +24,7 @@ jest.mock('../transport', () => ({
 import {
   venueLine, distanceLabel, isPendingVenue, milesToMetres, METRES_PER_MILE,
   search, near, placeCentroid, get,
+  submit, confirmSubmission, report,
   pendingSubmissions, pendingReports, reviewSubmission, reviewReport,
 } from '../index';
 import { callGyms, GymsError } from '../transport';
@@ -179,6 +180,97 @@ describe('search, near and placeCentroid (30-IMPLEMENTATION.md 1.1 A)', () => {
     expect(out.website).toBe('https://www.puregym.com');
     expect(out.postcode).toBe('ML1 1AA');
     expect(out.source_names).toEqual(['PureGym']);
+  });
+});
+
+// ─── Founder order 2026-09-22 item 9 (B-06): submit, confirmSubmission and
+// report (GD-11, GD-12) had no test at all until now. Same pattern as the
+// migrate_181 block below: exact RPC name, exact param keys, response
+// normalisation, refusal-code mapping through callGyms. ───────────────────
+describe('submit / confirmSubmission / report (GD-11, GD-12)', () => {
+  beforeEach(() => { callGyms.mockReset(); });
+
+  test('submit trims every field and normalises a recognised postcode', async () => {
+    callGyms.mockResolvedValue({ id: 'v1', status: 'pending' });
+    await submit({
+      name: '  Volt Gym  ', addressLine: ' 1 Main St ', town: ' Burscough ',
+      postcode: ' l40 4bl ', website: ' https://voltgym.example ', operator: ' Volt Ltd ',
+    });
+    expect(callGyms).toHaveBeenCalledWith('gyms_submit', {
+      _p: {
+        name: 'Volt Gym',
+        address_line: '1 Main St',
+        town: 'Burscough',
+        postcode: 'L40 4BL',
+        website: 'https://voltgym.example',
+        operator: 'Volt Ltd',
+      },
+    });
+  });
+
+  test('submit falls back to a trimmed, uppercased postcode when it does not parse as one', async () => {
+    callGyms.mockResolvedValue({ id: 'v1', status: 'pending' });
+    await submit({
+      name: 'Volt Gym', addressLine: '1 Main St', town: 'Burscough', postcode: ' not a postcode ',
+    });
+    expect(callGyms).toHaveBeenCalledWith('gyms_submit', expect.objectContaining({
+      _p: expect.objectContaining({ postcode: 'NOT A POSTCODE' }),
+    }));
+  });
+
+  test('submit sends null for an omitted website/operator, never an empty string', async () => {
+    callGyms.mockResolvedValue({ id: 'v1', status: 'pending' });
+    await submit({ name: 'Volt Gym', addressLine: '1 Main St', town: 'Burscough', postcode: 'L40 4BL' });
+    expect(callGyms).toHaveBeenCalledWith('gyms_submit', expect.objectContaining({
+      _p: expect.objectContaining({ website: null, operator: null }),
+    }));
+  });
+
+  test('submit normalises a duplicate response', async () => {
+    callGyms.mockResolvedValue({ duplicate_of: 'v9', display_name: 'Volt Gym Wigan' });
+    const out = await submit({ name: 'Volt Gym', addressLine: '1 Main St', town: 'Wigan', postcode: 'WN1 1AA' });
+    expect(out).toEqual({ duplicate: true, id: 'v9', displayName: 'Volt Gym Wigan' });
+  });
+
+  test('submit normalises a non-duplicate response, defaulting status to pending', async () => {
+    callGyms.mockResolvedValue({ id: 'v1' });
+    const out = await submit({ name: 'Volt Gym', addressLine: '1 Main St', town: 'Wigan', postcode: 'WN1 1AA' });
+    expect(out).toEqual({ duplicate: false, id: 'v1', status: 'pending' });
+  });
+
+  test('confirmSubmission calls gyms_confirm_submission with _id', async () => {
+    callGyms.mockResolvedValue({ ok: true });
+    await confirmSubmission('s1');
+    expect(callGyms).toHaveBeenCalledWith('gyms_confirm_submission', { _id: 's1' });
+  });
+
+  test('report calls gyms_report with _venue_id/_kind/_detail, detail trimmed', async () => {
+    callGyms.mockResolvedValue({ ok: true });
+    await report('v1', 'wrong_name', '  actually called Volt Fitness  ');
+    expect(callGyms).toHaveBeenCalledWith('gyms_report', {
+      _venue_id: 'v1', _kind: 'wrong_name', _detail: 'actually called Volt Fitness',
+    });
+  });
+
+  test('report sends a null detail when none is given', async () => {
+    callGyms.mockResolvedValue({ ok: true });
+    await report('v1', 'closed');
+    expect(callGyms).toHaveBeenCalledWith('gyms_report', { _venue_id: 'v1', _kind: 'closed', _detail: null });
+  });
+
+  test.each([
+    ['submit', () => submit({ name: 'Volt Gym', addressLine: '1 Main St', town: 'Wigan', postcode: 'WN1 1AA' })],
+    ['confirmSubmission', () => confirmSubmission('s1')],
+    ['report', () => report('v1', 'closed')],
+  ])('%s surfaces a refusal as a GymsError with that code', async (_name, call) => {
+    callGyms.mockRejectedValue(new GymsError('rate_limited', 'rate_limited'));
+    await expect(call()).rejects.toMatchObject({ code: 'rate_limited' });
+    await expect(call()).rejects.toBeInstanceOf(GymsError);
+  });
+
+  test('confirmSubmission surfaces already_confirmed specifically (a repeat confirmation)', async () => {
+    callGyms.mockRejectedValue(new GymsError('already_confirmed', 'already_confirmed'));
+    await expect(confirmSubmission('s1')).rejects.toMatchObject({ code: 'already_confirmed' });
   });
 });
 

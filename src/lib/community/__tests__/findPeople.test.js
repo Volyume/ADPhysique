@@ -29,7 +29,7 @@ jest.mock('../transport', () => {
 const { callCommunity } = require('../transport');
 const {
   FIND_MODES, FIND_MODE_ORDER, doorsFor, doorLine, doorZeroState,
-  findPeople, gymSummary, gymSuggest,
+  findPeople, gymSummary,
   normaliseFilters, filterChips, removeFilterChip, peopleCountLine,
 } = require('../findPeople');
 
@@ -449,26 +449,6 @@ describe('the gym surfaces', () => {
       label: null, count: 0, following_count: 0, open_to_partner_count: 0,
       by_style: [], by_time_band: [],
     });
-  });
-
-  test('the gym typeahead asks for nothing until there is something to match', async () => {
-    expect(await gymSuggest('leeds', '  ')).toEqual([]);
-    expect(await gymSuggest(null, 'pure')).toEqual([]);
-    expect(callCommunity).not.toHaveBeenCalled();
-  });
-
-  test('the typeahead answers labels already used in the same area', async () => {
-    callCommunity.mockResolvedValue({ gyms: [{ label: 'PureGym Leeds', count: 6 }] });
-    const out = await gymSuggest('leeds', 'pure');
-    expect(callCommunity).toHaveBeenCalledWith('community_gym_suggest', {
-      _area_key: 'leeds', _prefix: 'pure',
-    });
-    expect(out).toEqual([{ label: 'PureGym Leeds', count: 6 }]);
-  });
-
-  test('a bare string list still resolves to labels', async () => {
-    callCommunity.mockResolvedValue(['PureGym Leeds', null]);
-    expect(await gymSuggest('leeds', 'pure')).toEqual([{ label: 'PureGym Leeds', count: 0 }]);
   });
 
   test('an empty gym id is refused before the network', async () => {

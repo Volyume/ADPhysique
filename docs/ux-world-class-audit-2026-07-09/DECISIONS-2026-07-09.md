@@ -9448,3 +9448,86 @@ see why the shape is what it is:
    exactly; L8 the 180 acceptance block hardened (STABLE on the two new
    helpers, the withheld helper's live body compared exactly, real-row
    calm probes in both directions).
+
+## D197 — Item 9, Community hygiene: the lead rulings (2026-09-24; founder order 2026-09-22, "Do 1-11 in order")
+
+Built on two supervised Sonnet lanes from `scratchpad/briefs/item9-hygiene.md`
+(authority: audit `docs/audit/community-audit-2026-09-22/B-functionality-
+backend-safety-engineering.md` B-04, B-05, B-06 and the item 1 reviewer's
+R-02), lead-reviewed hunk by hunk, landed the same day. Rulings:
+
+1. **Three revoked, not four (evidence before assertion).** The audit's
+   B-04 named four RPCs with "zero client callers". `gyms_near` IS called:
+   `src/components/community/GymPicker.js:58` imports it as `nearGyms` and
+   runs it for the radius search at line 206 (the audit's `near(` grep
+   missed the alias). Migration 183 revokes EXECUTE from PUBLIC, anon and
+   authenticated on exactly `community_dimensions_me(text)`,
+   `gyms_in_place(text, integer)` and `community_gym_suggest(text, text)`;
+   bodies untouched (no DROP, no CREATE OR REPLACE); its acceptance block
+   proves `gyms_near` still executable, and its guard pins that the name
+   never appears outside that proof. No edge function calls any of the
+   three (grep of `supabase/functions/**`, pinned in the guard).
+2. **One signature for `community_dimensions_me`, not two.** migrate_170
+   Part 7 drops every overload by name (`pg_get_function_identity_arguments`)
+   before creating the `(text)` form, its own acceptance requires that
+   form, and no later migration re-creates a zero-arg overload (the guard
+   walks every migration numbered above 170, this file and future ones).
+3. **A revoked RPC leaves the security-matrix inventory (Lane A's STOP).**
+   `scripts/security/supabase-matrix.targets.json` `clientRpcNames` lists
+   exactly the RPCs the client can call (the hostile-matrix executor
+   refuses a fixture that does not cover every listed name). The house
+   precedent for a fully revoked RPC is ABSENCE, pinned as such:
+   `migrate164.rpcOnly.guard.test.js` asserts `not.toContain` for the nine
+   programme RPCs 164 revoked. The three names are removed and their
+   absence pinned in `migrate183.guard.test.js`; the two tests that had
+   listed `gyms_in_place` and `community_dimensions_me` as inventoried
+   (`gyms.rpcOnly.guard`, `migrate170.rpcOnly.guard`) are re-anchored to
+   assert the opposite, with the reason. The wrappers `inPlace`
+   (`src/lib/gyms/index.js`) and `gymSuggest` (`src/lib/community/
+   findPeople.js` and the barrel) are deleted with their tests; every
+   other census guard that names the three pins a migration's own SOURCE
+   (bodies and grants as of that file), which 183 does not change, so
+   those stay true and carry a RE-ANCHORED note only.
+4. **The `group_accepted` proof gets its recency bound (R-02).**
+   `supabase/functions/community-notify/index.ts` now selects `joined_at`
+   and applies `.gte('joined_at', sinceIso)` in the `group_accepted`
+   branch, matching its two siblings; sound because
+   `community_group_approve` (migrate_165) sets `joined_at = now()` at
+   approval. Belt and braces only: the activity-row check already bounds
+   every push of this kind by recency and `pushed_at`. Pinned by
+   `communityNotify.groupProof.guard.test.js`. The function redeploys
+   only by manual dispatch under the founder's phrase, never CI.
+5. **`public/p` is a static retired page (B-05).** The 268-line page that
+   still fetched `community-public?kind=programme` (an endpoint that no
+   longer serves programmes) is now 58 static lines: the head meta kept,
+   the title "Volyume Community", the description "This link has retired.
+   Volyume Community shares training stories, not programmes.", one line
+   of body copy and the two store links, no fetch, no script, `en-GB`. An
+   installed app still opens an old `/p/` link straight to the Hub
+   (app.json's verified `/p` app link; `links.js` resolves `p` to the
+   Hub). Pinned in `community.earlyDays.guard.test.js` (the only test that
+   reads the page): no `fetch(`, no `community-public`, proved fail-first
+   against the old page.
+6. **The untested surfaces get tests (B-06).** `submit`,
+   `confirmSubmission` and `report` in `src/lib/gyms/__tests__/index.test.js`
+   (exact RPC names and param keys, response normalisation, refusal-code
+   mapping); `src/screens/__tests__/CommunityGroupMembers.test.js` (roster
+   from `listGroupMembers`; admin Approve, Remove and Make admin call
+   `approveGroupRequest`, `removeGroupMember`, `promoteGroupMember` with
+   the group and user ids; an already-admin row offers Remove only; a
+   non-admin sees no Approve and no row menu; loading, offline and failed
+   states). `respect.js` already had its suite; no work.
+7. **The copy census reaches further (Part E, from the item 8 review).**
+   `community.copy.guard.test.js`: the "handle" census now walks
+   `src/lib/community/*.js` too (92 files); `stringLiterals()` is a manual
+   scan that spans a template literal nested inside another's `${...}`
+   (the review's constructed case, proved fail-first against the old
+   regex: three of four new unit cases failed as predicted); a third
+   census pins that no "age band"/"age bands" phrase survives in any of
+   the same scopes (the field names `age_band`/`ageBand` never match),
+   proved fail-first by reverting `reasons.js` and a JSX line in
+   `CommunityDimensionScreen.js`, both restored byte-identical. Both
+   censuses find NONE today.
+8. **Not a build gate.** 183 is a grant change on RPCs no build calls;
+   the community-notify change tightens a proof window only. Neither
+   holds a build.

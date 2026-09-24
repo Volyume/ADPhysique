@@ -68,14 +68,21 @@ const FUNCTIONS = declaredFunctions();
 // delete_user_data is re-issued here too (Part 10) but it is not a gyms_*/
 // _gyms_* function and its own privilege discipline is pinned by
 // dbFunctionPrivilege.contract.test.js against migrate_152, not here.
+// RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9): migrate_183
+// revokes EXECUTE on community_gym_suggest (no client wrapper calls it any
+// more - `gymSuggest` was deleted the same lane) and on gyms_in_place (its
+// wrapper `inPlace` was also deleted). Both filters below read migrate_162's
+// own DECLARED functions, which migrate_183 does not touch (no DROP, no
+// CREATE OR REPLACE - only the grant moves), so both names stay declared
+// here and every assertion below about migrate_162's source stays true.
 const GYMS_FUNCTIONS = FUNCTIONS.filter(
   (f) => f.name.startsWith('gyms_') || f.name.startsWith('_gyms_')
     || f.name === 'community_set_gyms' || f.name === '_community_gym_key_sync'
-    || f.name === 'community_gym_summary' || f.name === 'community_gym_suggest',
+    || f.name === 'community_gym_summary' || f.name === 'community_gym_suggest', // RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9)
 );
 const RPCS = GYMS_FUNCTIONS.filter(
   (f) => f.name.startsWith('gyms_') || f.name === 'community_set_gyms'
-    || f.name === 'community_gym_summary' || f.name === 'community_gym_suggest',
+    || f.name === 'community_gym_summary' || f.name === 'community_gym_suggest', // RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9)
 );
 const HELPERS = GYMS_FUNCTIONS.filter(
   (f) => f.name.startsWith('_gyms_') || f.name === '_community_gym_key_sync',
@@ -434,6 +441,9 @@ describe('GD-14: Community integration', () => {
     expect(body).toContain("_community_rate_check(v_uid, 'gym_summary'");
   });
 
+  // RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9): migrate_183
+  // revokes EXECUTE on community_gym_suggest, but its BODY (what this test
+  // pins) is untouched - no DROP, no CREATE OR REPLACE - so this stays true.
   test('community_gym_suggest delegates to gyms_suggest and keeps its own signature', () => {
     const at = CODE.indexOf('CREATE OR REPLACE FUNCTION public.community_gym_suggest(_area_key text, _prefix text DEFAULT NULL)');
     expect(at).toBeGreaterThan(-1);
@@ -532,14 +542,24 @@ describe('the security matrix inventory is updated', () => {
     expect(entry.disposition).toBe('rpc_only');
   });
 
-  test('every gyms_* RPC and community_set_gyms is inventoried', () => {
+  // RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9; lead ruling
+  // on Lane A's STOP): migrate_183 revokes EXECUTE on gyms_in_place and its
+  // wrapper `inPlace` is deleted, so it is no longer a client RPC. The
+  // security matrix inventory (scripts/security/supabase-matrix.targets.
+  // json) lists exactly the RPCs the client can call, and the house
+  // precedent for a fully revoked RPC is ABSENCE, pinned as such:
+  // migrate164.rpcOnly.guard.test.js asserts `not.toContain` for the nine
+  // programme RPCs 164 revoked. gyms_in_place moves to that side here;
+  // migrate183.guard.test.js pins the same for all three revoked names.
+  test('every live gyms_* RPC and community_set_gyms is inventoried; the revoked gyms_in_place is not', () => {
     for (const name of [
-      'gyms_search', 'gyms_near', 'gyms_in_place', 'gyms_get', 'gyms_suggest',
+      'gyms_search', 'gyms_near', 'gyms_get', 'gyms_suggest',
       'gyms_submit', 'gyms_confirm_submission', 'gyms_report',
       'gyms_review_submission', 'gyms_review_report', 'community_set_gyms',
     ]) {
       expect(inventory.clientRpcNames).toContain(name);
     }
+    expect(inventory.clientRpcNames).not.toContain('gyms_in_place');
     // The internal helpers are NOT client RPCs and must never be listed.
     expect(inventory.clientRpcNames.filter((n) => n.startsWith('_gyms_'))).toEqual([]);
   });

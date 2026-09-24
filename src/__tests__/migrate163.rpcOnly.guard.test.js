@@ -57,6 +57,12 @@ const RPC_SIGNATURES = signatureList("REVOKE ALL ON FUNCTION public.%s FROM PUBL
 
 const FUNCTIONS = declaredFunctions();
 const NEW_RPCS = ['gyms_place_centroid', 'community_set_place'];
+// RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9): migrate_183
+// revokes EXECUTE on gyms_in_place (no client wrapper calls it any more -
+// `inPlace` was deleted the same lane), but this array and every test below
+// pin what migrate_163 itself RE-ISSUED and granted AS OF THAT FILE, a
+// historical fact migrate_183 does not change (no DROP, no CREATE OR
+// REPLACE of gyms_in_place - only the grant moves, in a later file).
 const REISSUED_RPCS = [
   'gyms_search', 'gyms_near', 'gyms_get', 'gyms_in_place', 'gyms_submit',
   'community_set_gyms', 'community_upsert_profile', 'community_find_people',

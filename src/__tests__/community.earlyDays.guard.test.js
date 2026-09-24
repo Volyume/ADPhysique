@@ -84,6 +84,19 @@ describe('the store links are real', () => {
       expect(read(`public/${dir}/index.html`)).toContain(id);
     }
   });
+
+  // RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9): public/p used
+  // to fetch community-public?kind=programme and render a shared
+  // programme; that Edge Function no longer serves programmes (community
+  // audit 2026-09-22, B-05), so the page is now a static retirement
+  // notice. This file already reads public/p/index.html for the App
+  // Store link assertion above, so the retirement is pinned alongside it
+  // rather than in a second file that reads the same page.
+  test('the retired programme page fetches nothing and never names the retired function', () => {
+    const page = read('public/p/index.html');
+    expect(page).not.toMatch(/fetch\(/);
+    expect(page).not.toMatch(/community-public/);
+  });
 });
 
 describe('the honest lines come from the shared helpers', () => {

@@ -409,6 +409,19 @@ serve(async (req: Request) => {
       // admin who approved it, checked via the activity row's actor below,
       // since the membership row alone cannot say who approved it);
       // `group_invited` is proved by the target's own 'invited' row.
+      // RE-ANCHORED 2026-09-24 (founder order 2026-09-22 item 9, R-02: the
+      // item 1 reviewer found this branch had no recency filter). All three
+      // branches now carry the same `.gte('joined_at', sinceIso)` bound.
+      // `group_accepted` had none until this change, unlike its two
+      // siblings here - a stale-but-still-'member' row from any point in
+      // the past would have verified a replayed or forged call.
+      // `community_group_approve` (migrate_165) sets `joined_at = now()` at
+      // the moment of approval, so the bound is sound for this branch too.
+      // Belt and braces only: the activity-row check below (step 5b)
+      // already bounds every push of this kind by recency
+      // (`.gte('created_at', sinceIso)`) and by `pushed_at`, since
+      // group_accepted is one of ACTIVITY_BACKED_KINDS - this closes the
+      // gap in the proof itself, not a live hole in what got pushed.
       activityTargetKind = 'group'
       activityTargetId = refId
       if (kind === 'group_request') {
@@ -436,10 +449,11 @@ serve(async (req: Request) => {
       } else {
         const { data } = await admin
           .from('community_group_members')
-          .select('user_id, state')
+          .select('user_id, state, joined_at')
           .eq('group_id', refId)
           .eq('user_id', targetUserId)
           .eq('state', 'member')
+          .gte('joined_at', sinceIso)
           .limit(1)
           .maybeSingle()
         verified = !!data
