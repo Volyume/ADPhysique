@@ -140,7 +140,7 @@ describe('Part 0: refuses to (re-)run once migrate_180 is live (review H2)', () 
   });
   test('refuses when community_hub_summary already calls _community_ed_flag_open', () => {
     expect(PART0).toContain("pg_get_functiondef(to_regprocedure('public.community_hub_summary(text)'))");
-    expect(PART0).toContain("strpos(v_def, '_community_ed_flag_open(') > 0");
+    expect(PART0).toContain("strpos(v_def, '_community_consistency_withheld(') > 0 OR strpos(v_def, '_community_ed_flag_open(') > 0");
     expect(PART0).toContain("RAISE EXCEPTION 'migrate_176 refused: migrate_180 is live");
   });
   test('the header records the apply order and the changed re-run rule', () => {

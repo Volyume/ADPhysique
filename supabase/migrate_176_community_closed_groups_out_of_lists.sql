@@ -75,8 +75,8 @@ DECLARE
 BEGIN
   IF to_regprocedure('public.community_hub_summary(text)') IS NOT NULL THEN
     v_def := pg_get_functiondef(to_regprocedure('public.community_hub_summary(text)'));
-    IF v_def IS NOT NULL AND strpos(v_def, '_community_ed_flag_open(') > 0 THEN
-      RAISE EXCEPTION 'migrate_176 refused: migrate_180 is live (community_hub_summary carries the ED gate); re-apply migrate_180 instead of this file';
+    IF v_def IS NOT NULL AND (strpos(v_def, '_community_consistency_withheld(') > 0 OR strpos(v_def, '_community_ed_flag_open(') > 0) THEN
+      RAISE EXCEPTION 'migrate_176 refused: migrate_180 is live (community_hub_summary carries the withhold gate); re-apply migrate_180 instead of this file';
     END IF;
   END IF;
 END $$;

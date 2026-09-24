@@ -233,6 +233,19 @@ describe('string-value scrubbing', () => {
     expect(scrubValue('normal log line')).toBe('normal log line');
   });
 
+  // Founder decision B (2026-09-23, register D196; Opus review H2): only a
+  // flagged person's device ever calls the ED flag's cloud push, so the RPC
+  // name in a fetch breadcrumb, a PostgREST error and the sync module's
+  // own scope tag would each tell Sentry that the person has a flag.
+  test.each([
+    'https://x.supabase.co/rest/v1/rpc/ed_flag_push',
+    'Could not find the function public.ed_flag_push(_cleared_at, _id, _raised_at, _reason) in the schema cache',
+    'sync.tables.edPatternFlags.push',
+    'sync.tables.edPatternFlags.pullRow',
+  ])('the ED flag push cannot be inferred from %s', (s) => {
+    expect(scrubValue(s)).toBe('[redacted]');
+  });
+
   test.each([
     'login failed for victim@example.com',
     'Authorization: Bearer super-secret',

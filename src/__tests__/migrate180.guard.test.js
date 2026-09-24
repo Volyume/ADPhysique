@@ -4,26 +4,31 @@
  *
  * WHAT THIS SUITE PINS, and why every case is written to FAIL: the file is
  * WRITTEN, NOT APPLIED until the founder's phrase, so only source can check
- * it. It pins the mandatory header and its two facts (the helper's ED-flag
- * predicate, and the OBSERVED truth that nothing writes the cloud table yet,
- * so the gate is DORMANT until D92-11 -- review H1); that the new helper
- * `_community_ed_flag_open` is BYTE-FOR-BYTE the pinned body (review M2:
- * an inverted RETURN or a flipped EXISTS must fail here, not in
- * production), SECURITY DEFINER/STABLE on the pinned search_path, revoked
- * from every client role and never granted to any; that all SIX re-issued
- * readers and the re-issued `community_update_training_profile` are
- * byte-for-byte their current sources (migrate_172 lines 302-406 and
- * 63-292; migrate_170 lines 1268-1531, 882-961 and 3632-3719; migrate_171
- * lines 63-114; migrate_176 lines 88-241 for community_hub_summary) once
- * the lines marked migrate_180 are removed, AND that each marked change
- * sits at its named anchor (review M1: a block that moved above the base
- * assignment, or into the wrong arm, used to revert just as cleanly); that
- * no signature or client-facing grant changed and no GRANT of any shape
+ * it. It pins the mandatory header and its two facts (the ED helper's
+ * predicate and the OBSERVED truth that nothing wrote the cloud table
+ * before migrate_182 -- review H1; and, since founder decision B of
+ * 2026-09-23 (register D196), the calm-mode arm read from the guarded
+ * synced pref, READ-SIDE ONLY); that the three helpers
+ * `_community_ed_flag_open`, `_community_calm_mode_on` and
+ * `_community_consistency_withheld` are each BYTE-FOR-BYTE their pinned
+ * bodies (review M2: an inverted RETURN, a flipped EXISTS or a dropped arm
+ * must fail here, not in production), SECURITY DEFINER/STABLE on the
+ * pinned search_path, revoked from every client role and never granted to
+ * any; that all SIX re-issued readers and the re-issued
+ * `community_update_training_profile` are byte-for-byte their current
+ * sources (migrate_172 lines 302-406 and 63-292; migrate_170 lines
+ * 1268-1531, 882-961 and 3632-3719; migrate_171 lines 63-114; migrate_176
+ * lines 88-241 for community_hub_summary) once the lines marked
+ * migrate_180 are removed, AND that each marked change sits at its named
+ * anchor (review M1); that the six readers call the WITHHELD helper (both
+ * arms) while the write-side force in Part 8 calls the ED helper ONLY
+ * (fact (b): calm mode never pins the stored preference off); that no
+ * signature or client-facing grant changed and no GRANT of any shape
  * widens anything (review M2); that the apply order 176-before-180 is a
  * refusal in code, Part 0 (review H2); that the acceptance block carries
- * the behavioural probes and the open-flag count (review M3); that no
- * destructive statement was introduced; that the fix stays inside the
- * named scope; and that the tracker knows the file.
+ * the behavioural probes for all three helpers and the open-flag count
+ * (review M3); that no destructive statement was introduced; that the fix
+ * stays inside the named scope; and that the tracker knows the file.
  *
  * LEAD RULING 2026-09-23: `community_hub_summary` is re-issued from
  * migrate_176's body (WRITTEN, NOT APPLIED; it already carries the
@@ -54,6 +59,8 @@ function fnSpan(text, startMarker, endMarker = 'END $$;') {
 }
 
 const HELPER = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public._community_ed_flag_open(_uid uuid)');
+const CALM = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public._community_calm_mode_on(_uid uuid)');
+const WITHHELD = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public._community_consistency_withheld(_uid uuid)');
 const PROFILE_CARD = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public._community_profile_card(_uid uuid, _viewer uuid)');
 const BOARD = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public.community_board(', '$function$;');
 const COHORT_STATS = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public._community_cohort_stats(');
@@ -62,8 +69,9 @@ const GROUP_GET = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public.community_group
 const FRIENDS_TODAY = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public.community_friends_trained_today(', '$function$;');
 const UPDATE_TRAINING_PROFILE = fnSpan(SQL, 'CREATE OR REPLACE FUNCTION public.community_update_training_profile(_p jsonb)');
 
-/** The helper, byte-for-byte (review M2). Any drift -- an inverted RETURN,
- * a NOT on the EXISTS, a widened predicate -- fails here. */
+/** The three helpers, byte-for-byte (review M2). Any drift -- an inverted
+ * RETURN, a NOT on an EXISTS, a widened predicate, a dropped arm -- fails
+ * here. */
 const HELPER_EXPECTED = `CREATE OR REPLACE FUNCTION public._community_ed_flag_open(_uid uuid)
 RETURNS boolean
 LANGUAGE plpgsql
@@ -93,6 +101,45 @@ BEGIN
   RETURN v_open;
 END $$;`;
 
+const CALM_EXPECTED = `CREATE OR REPLACE FUNCTION public._community_calm_mode_on(_uid uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_calm boolean;
+BEGIN
+  -- Fail closed: a null owner id is an unexpected shape, not "not calm".
+  IF _uid IS NULL THEN
+    RETURN true;
+  END IF;
+
+  BEGIN
+    SELECT EXISTS (
+      SELECT 1 FROM public.user_prefs
+      WHERE user_id = _uid AND key = '@volyume_wellbeing_mode' AND value = 'calm'
+    ) INTO v_calm;
+  EXCEPTION WHEN OTHERS THEN
+    -- Fail closed: any unexpected error withholds rather than exposes.
+    RETURN true;
+  END;
+
+  RETURN v_calm;
+END $$;`;
+
+const WITHHELD_EXPECTED = `CREATE OR REPLACE FUNCTION public._community_consistency_withheld(_uid uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  RETURN public._community_ed_flag_open(_uid) OR public._community_calm_mode_on(_uid);
+END $$;`;
+
 /** Every marked change is a PURE insertion relative to its source: removing
  * it (once) must leave the source byte-for-byte. Each entry is
  * [addition, anchor, follower]: the addition must sit IMMEDIATELY after
@@ -102,7 +149,7 @@ const PROFILE_CARD_ADDITIONS = [[
   '  -- RE-ANCHORED 2026-09-22 (founder order, item 6, "safety backstop"): the\n'
   + "  -- client's calm/ED withhold on consistency sharing had no server-side\n"
   + '  -- equivalent (audit B-02); this is the one place it is enforced here.\n'
-  + '  v_show_consistency := v_show_consistency AND NOT public._community_ed_flag_open(p.user_id);\n',
+  + '  v_show_consistency := v_show_consistency AND NOT public._community_consistency_withheld(p.user_id);\n',
   "    AND p.status = 'active' AND p.is_minor = false;\n",
   '',
 ]];
@@ -110,7 +157,7 @@ const BOARD_ADDITIONS = [[
   '      -- RE-ANCHORED 2026-09-22 (founder order, item 6, "safety backstop"):\n'
   + '      -- withhold consistency data for an owner with an open ED-pattern\n'
   + "      -- flag, matching the client's calm/ED withhold server-side (B-02).\n"
-  + '      AND NOT public._community_ed_flag_open(p.user_id)\n',
+  + '      AND NOT public._community_consistency_withheld(p.user_id)\n',
   "    WHERE p.status = 'active'\n      AND p.is_minor = false\n      AND p.share_consistency = true\n",
   '      AND p.c_updated_at IS NOT NULL\n',
 ]];
@@ -122,13 +169,13 @@ const COHORT_STATS_ADDITIONS = [
     + '             -- withhold server-side (B-02). Last in the AND (review L1):\n'
     + '             -- the cheap column tests run first, so the helper is called\n'
     + '             -- only for members who trained today.\n'
-    + '             AND NOT public._community_ed_flag_open(p.user_id)',
+    + '             AND NOT public._community_consistency_withheld(p.user_id)',
     '             AND p.c_last_trained_day IS NOT NULL AND p.c_last_trained_day = _today',
     ')\n  INTO v_member_count, v_trained_count',
   ],
   [
     '\n       -- RE-ANCHORED 2026-09-22 (founder order, item 6, "safety backstop"); last in the AND (review L1).\n'
-    + '       AND NOT public._community_ed_flag_open(p.user_id)',
+    + '       AND NOT public._community_consistency_withheld(p.user_id)',
     '       AND p.c_last_trained_day IS NOT NULL AND p.c_last_trained_day = _today',
     ') AS trained_today',
   ],
@@ -137,14 +184,14 @@ const HUB_SUMMARY_ADDITIONS = [
   [
     '          -- RE-ANCHORED 2026-09-22 (founder order, item 6, "safety\n'
     + '          -- backstop"); last in the AND (review L1).\n'
-    + '          AND NOT public._community_ed_flag_open(p2.user_id)\n',
+    + '          AND NOT public._community_consistency_withheld(p2.user_id)\n',
     '          AND p2.c_last_trained_day IS NOT NULL AND p2.c_last_trained_day = v_today\n',
     '      ),\n',
   ],
   [
     '\n             -- RE-ANCHORED 2026-09-22 (founder order, item 6, "safety\n'
     + '             -- backstop"); last in the AND (review L1).\n'
-    + '             AND NOT public._community_ed_flag_open(p3.user_id)',
+    + '             AND NOT public._community_consistency_withheld(p3.user_id)',
     '             AND p3.c_last_trained_day IS NOT NULL AND p3.c_last_trained_day = v_today',
     ') AS trained_today',
   ],
@@ -154,13 +201,13 @@ const GROUP_GET_ADDITIONS = [[
   + "      -- withhold this member's contribution to the sum while their\n"
   + "      -- ED-pattern flag is open, matching the client's calm/ED withhold\n"
   + '      -- server-side (B-02).\n'
-  + '      AND NOT public._community_ed_flag_open(p2.user_id)\n',
+  + '      AND NOT public._community_consistency_withheld(p2.user_id)\n',
   "      AND p2.status = 'active' AND p2.is_minor = false\n      AND p2.share_consistency = true\n",
   '      AND NOT public._community_is_blocked(v_uid, p2.user_id);\n',
 ]];
 const FRIENDS_TODAY_ADDITIONS = [[
   '    -- RE-ANCHORED 2026-09-22 (founder order, item 6, "safety backstop").\n'
-  + '    AND NOT public._community_ed_flag_open(p.user_id)\n',
+  + '    AND NOT public._community_consistency_withheld(p.user_id)\n',
   '    AND p.is_minor = false\n    AND p.share_consistency = true\n',
   '    AND p.c_updated_at IS NOT NULL\n',
 ]];
@@ -208,17 +255,21 @@ describe('house migration shape', () => {
     expect(HEADER).toMatch(/NOT YET/);
   });
 
-  test('the header states both facts, including the OBSERVED dormancy (review H1)', () => {
+  test('the header states both facts: the OBSERVED dormancy before 182 (review H1) and the calm arm (decision B)', () => {
     expect(HEADER).toContain('FACT (a)');
     expect(HEADER).toContain('FACT (b)');
-    expect(HEADER).toMatch(/calm mode: CLIENT-ONLY/);
-    expect(HEADER).toContain('do not invent a calm signal');
     expect(HEADER).toContain('NOTHING\n--                    WRITES THE CLOUD TABLE TODAY');
     expect(HEADER).toContain('DORMANT until D92-11');
-    expect(HEADER).toContain('B-02 is therefore NOT closed');
+    expect(HEADER).toContain('migrate_182 adds that write path');
+    expect(HEADER).toContain('B-02 is therefore NOT closed\n--                    by this migration alone: it closes with migrate_182');
     expect(HEADER).toContain('is withdrawn');
     // The prior draft's inference must not come back as a fact.
     expect(HEADER).not.toMatch(/at least as reliable as the client's own read(?!" was an inference)/);
+    // Founder decision B, 2026-09-23: the calm arm, read-side only.
+    expect(HEADER).toContain('founder\n--                    decision B (2026-09-23, register D196), READ-SIDE\n--                    ONLY');
+    expect(HEADER).toContain('That force stays\n--                    ED-flag-only');
+    expect(HEADER).toContain('do not invent a calm\n--                    signal');
+    expect(HEADER).not.toMatch(/calm mode: CLIENT-ONLY/);
   });
 
   test('the header records the enforced apply order (review H2)', () => {
@@ -235,12 +286,12 @@ describe('house migration shape', () => {
     expect(SQL).not.toMatch(/ENABLE ROW LEVEL SECURITY/i);
   });
 
-  test('the only DROP <object> statement shape mentioned anywhere is the new helper, in the rollback comment', () => {
+  test('the only DROP <object> statement shapes mentioned anywhere are the three new helpers, in the rollback comment', () => {
     const dropLines = SQL.split('\n').filter((l) => /\bDROP\s+(FUNCTION|TABLE|INDEX|POLICY|TRIGGER|VIEW|COLUMN)\b/i.test(l));
-    expect(dropLines.length).toBeGreaterThan(0);
+    expect(dropLines).toHaveLength(3);
     for (const line of dropLines) {
       expect(line.trim().startsWith('--')).toBe(true);
-      expect(line).toContain('_community_ed_flag_open');
+      expect(line).toMatch(/_community_(ed_flag_open|calm_mode_on|consistency_withheld)\(uuid\)/);
     }
   });
 });
@@ -250,8 +301,6 @@ describe('Part 0: the apply order is a refusal in code (review H2)', () => {
     expect(SQL.indexOf('-- ─── Part 0')).toBeLessThan(SQL.indexOf('-- ─── Part 1'));
     expect(PART0).toContain('DO $$');
     expect(PART0).not.toMatch(/\b(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)\b/);
-    // list_mine is the probe: only 176 touches it, so a re-run of THIS
-    // file cannot satisfy its own pre-flight (hub_summary would).
     expect(PART0).toContain("pg_get_functiondef(to_regprocedure('public.community_group_list_mine()'))");
     expect(PART0).toContain("strpos(v_def, 'AND g.status = ''active''; -- migrate_176') = 0");
     expect(PART0).toContain("RAISE EXCEPTION 'migrate_180 refused: migrate_176 is not applied");
@@ -262,32 +311,30 @@ describe('Part 0: the apply order is a refusal in code (review H2)', () => {
   test('migrate_176 carries the matching refusal for the other direction', () => {
     const SQL176 = SRC176.join('\n');
     const part0 = SQL176.slice(SQL176.indexOf('-- ─── Part 0'), SQL176.indexOf('-- ─── Part 1'));
-    expect(part0).toContain("strpos(v_def, '_community_ed_flag_open(') > 0");
+    expect(part0).toContain("strpos(v_def, '_community_consistency_withheld(') > 0 OR strpos(v_def, '_community_ed_flag_open(') > 0");
     expect(part0).toContain("RAISE EXCEPTION 'migrate_176 refused: migrate_180 is live");
   });
 });
 
-describe('the new helper: _community_ed_flag_open', () => {
-  test('is byte-for-byte the pinned body (review M2)', () => {
+describe('the three helpers', () => {
+  test('are byte-for-byte their pinned bodies (review M2)', () => {
     expect(HELPER).toBe(HELPER_EXPECTED);
+    expect(CALM).toBe(CALM_EXPECTED);
+    expect(WITHHELD).toBe(WITHHELD_EXPECTED);
   });
 
-  test('SECURITY DEFINER, STABLE, on the pinned search_path', () => {
-    expect(HELPER).toMatch(/SECURITY DEFINER/);
-    expect(HELPER).toMatch(/\bSTABLE\b/);
-    expect(HELPER).toMatch(/SET search_path = public, pg_temp/);
+  test('SECURITY DEFINER, STABLE, on the pinned search_path, each returning boolean from (_uid uuid)', () => {
+    for (const [fn, name] of [[HELPER, '_community_ed_flag_open'], [CALM, '_community_calm_mode_on'], [WITHHELD, '_community_consistency_withheld']]) {
+      expect(fn).toMatch(/SECURITY DEFINER/);
+      expect(fn).toMatch(/\bSTABLE\b/);
+      expect(fn).toMatch(/SET search_path = public, pg_temp/);
+      expect(SQL).toContain(`CREATE OR REPLACE FUNCTION public.${name}(_uid uuid)\nRETURNS boolean`);
+    }
   });
 
-  test('signature is exactly (_uid uuid) returning boolean', () => {
-    expect(SQL).toContain('CREATE OR REPLACE FUNCTION public._community_ed_flag_open(_uid uuid)\nRETURNS boolean');
-  });
-
-  test('answers true when a row exists for that user with cleared_at and deleted_at both null', () => {
+  test('the ED arm reads exactly the open-flag predicate and fails closed', () => {
     expect(HELPER).toContain('FROM public.ed_pattern_flags');
     expect(HELPER).toContain('WHERE user_id = _uid AND cleared_at IS NULL AND deleted_at IS NULL');
-  });
-
-  test('fails closed: a null id and any unexpected error both answer true, never false', () => {
     expect(HELPER).toMatch(/IF _uid IS NULL THEN\s*\n\s*RETURN true;/);
     expect(HELPER).toMatch(/EXCEPTION WHEN OTHERS THEN\s*\n(\s*--[^\n]*\n)*\s*RETURN true;/);
     expect(HELPER).not.toMatch(/RETURN false;/);
@@ -295,32 +342,51 @@ describe('the new helper: _community_ed_flag_open', () => {
     expect(HELPER).not.toMatch(/RETURN NOT/);
   });
 
-  test('revoked from PUBLIC, anon and authenticated, and granted to nobody in any GRANT shape (review M2)', () => {
-    expect(SQL).toMatch(/REVOKE ALL ON FUNCTION public\._community_ed_flag_open\(uuid\) FROM PUBLIC, anon, authenticated;/);
-    expect(SQL).not.toMatch(/GRANT\s+(EXECUTE|ALL)[^\n]*_community_ed_flag_open/);
+  test("the calm arm reads the person's own wellbeing pref and nothing else, and fails closed (decision B)", () => {
+    expect(CALM).toContain('FROM public.user_prefs');
+    expect(CALM).toContain("WHERE user_id = _uid AND key = '@volyume_wellbeing_mode' AND value = 'calm'");
+    expect(CALM).toMatch(/IF _uid IS NULL THEN\s*\n\s*RETURN true;/);
+    expect(CALM).toMatch(/EXCEPTION WHEN OTHERS THEN\s*\n(\s*--[^\n]*\n)*\s*RETURN true;/);
+    expect(CALM).not.toMatch(/RETURN false;/);
+    expect(CALM).not.toMatch(/NOT EXISTS/);
+    // Only the wellbeing key: no other pref can ever feed this arm.
+    expect(CALM.match(/key = '[^']+'/g)).toEqual(["key = '@volyume_wellbeing_mode'"]);
+  });
+
+  test('the withheld helper is the OR of the two arms and nothing else', () => {
+    expect(WITHHELD).toContain('RETURN public._community_ed_flag_open(_uid) OR public._community_calm_mode_on(_uid);');
+    expect(WITHHELD).not.toMatch(/\bAND\b/);
+    expect(WITHHELD).not.toMatch(/\bNOT\b/);
+  });
+
+  test('all three revoked from PUBLIC, anon and authenticated, and granted to nobody in any GRANT shape (review M2)', () => {
+    for (const name of ['_community_ed_flag_open', '_community_calm_mode_on', '_community_consistency_withheld']) {
+      expect(SQL).toMatch(new RegExp(`REVOKE ALL ON FUNCTION public\\.${name}\\(uuid\\) FROM PUBLIC, anon, authenticated;`));
+      expect(SQL).not.toMatch(new RegExp(`GRANT\\s+(EXECUTE|ALL)[^\\n]*${name}`));
+    }
   });
 });
 
 describe('every re-issued reader is its current source plus the marked call only, at its anchor', () => {
-  test('_community_profile_card is migrate_172 lines 302-406 plus the ED-flag AND', () => {
+  test('_community_profile_card is migrate_172 lines 302-406 plus the withheld AND', () => {
     const source = SRC172.slice(301, 406).join('\n').trimEnd();
     expect(revert(PROFILE_CARD, PROFILE_CARD_ADDITIONS).trimEnd()).toBe(source);
     expectAnchored(PROFILE_CARD, PROFILE_CARD_ADDITIONS);
   });
 
-  test('community_board is migrate_170 lines 1268-1531 plus the ED-flag AND in the roster WHERE', () => {
+  test('community_board is migrate_170 lines 1268-1531 plus the withheld AND in the roster WHERE', () => {
     const source = SRC170.slice(1267, 1531).join('\n').trimEnd();
     expect(revert(BOARD, BOARD_ADDITIONS).trimEnd()).toBe(source);
     expectAnchored(BOARD, BOARD_ADDITIONS);
   });
 
-  test('_community_cohort_stats is migrate_170 lines 882-961 plus the two ED-flag ANDs, each last in its AND', () => {
+  test('_community_cohort_stats is migrate_170 lines 882-961 plus the two withheld ANDs, each last in its AND', () => {
     const source = SRC170.slice(881, 961).join('\n').trimEnd();
     expect(revert(COHORT_STATS, COHORT_STATS_ADDITIONS).trimEnd()).toBe(source);
     expectAnchored(COHORT_STATS, COHORT_STATS_ADDITIONS);
   });
 
-  test('community_hub_summary is migrate_176 lines 88-241 plus the two ED-flag ANDs, each last in its AND', () => {
+  test('community_hub_summary is migrate_176 lines 88-241 plus the two withheld ANDs, each last in its AND', () => {
     const source = SRC176.slice(87, 241).join('\n').trimEnd();
     expect(source.startsWith('CREATE OR REPLACE FUNCTION public.community_hub_summary(_today text DEFAULT NULL)')).toBe(true);
     expect(source.endsWith('END $$;')).toBe(true);
@@ -334,13 +400,13 @@ describe('every re-issued reader is its current source plus the marked call only
     );
   });
 
-  test('community_group_get is migrate_170 lines 3632-3719 plus the ED-flag AND', () => {
+  test('community_group_get is migrate_170 lines 3632-3719 plus the withheld AND', () => {
     const source = SRC170.slice(3631, 3719).join('\n').trimEnd();
     expect(revert(GROUP_GET, GROUP_GET_ADDITIONS).trimEnd()).toBe(source);
     expectAnchored(GROUP_GET, GROUP_GET_ADDITIONS);
   });
 
-  test('community_friends_trained_today is migrate_171 lines 63-114 plus the ED-flag AND', () => {
+  test('community_friends_trained_today is migrate_171 lines 63-114 plus the withheld AND', () => {
     const source = SRC171.slice(62, 114).join('\n').trimEnd();
     expect(revert(FRIENDS_TODAY, FRIENDS_TODAY_ADDITIONS).trimEnd()).toBe(source);
     expectAnchored(FRIENDS_TODAY, FRIENDS_TODAY_ADDITIONS);
@@ -353,26 +419,33 @@ describe('every re-issued reader is its current source plus the marked call only
   });
 });
 
-describe('every marked change actually calls the new helper (wired, not only declared)', () => {
+describe('every marked change actually calls the right helper (wired, not only declared)', () => {
   test.each([
-    ['_community_profile_card', () => PROFILE_CARD, '_community_ed_flag_open(p.user_id)'],
-    ['community_board', () => BOARD, '_community_ed_flag_open(p.user_id)'],
-    ['_community_cohort_stats', () => COHORT_STATS, '_community_ed_flag_open(p.user_id)'],
-    ['community_group_get', () => GROUP_GET, '_community_ed_flag_open(p2.user_id)'],
-    ['community_friends_trained_today', () => FRIENDS_TODAY, '_community_ed_flag_open(p.user_id)'],
-    ['community_update_training_profile', () => UPDATE_TRAINING_PROFILE, '_community_ed_flag_open(v_uid)'],
-  ])('%s calls %s', (_name, span, call) => {
+    ['_community_profile_card', () => PROFILE_CARD, '_community_consistency_withheld(p.user_id)'],
+    ['community_board', () => BOARD, '_community_consistency_withheld(p.user_id)'],
+    ['_community_cohort_stats', () => COHORT_STATS, '_community_consistency_withheld(p.user_id)'],
+    ['community_group_get', () => GROUP_GET, '_community_consistency_withheld(p2.user_id)'],
+    ['community_friends_trained_today', () => FRIENDS_TODAY, '_community_consistency_withheld(p.user_id)'],
+  ])('%s calls %s (both arms)', (_name, span, call) => {
     expect(span()).toContain(call);
+    expect(span()).not.toContain('_community_ed_flag_open(');
   });
 
-  test('community_hub_summary calls it for both the count and the sample (two members, p2 and p3)', () => {
-    expect(HUB_SUMMARY).toContain('_community_ed_flag_open(p2.user_id)');
-    expect(HUB_SUMMARY).toContain('_community_ed_flag_open(p3.user_id)');
+  test('community_hub_summary calls the withheld helper for both the count and the sample (two members, p2 and p3)', () => {
+    expect(HUB_SUMMARY).toContain('_community_consistency_withheld(p2.user_id)');
+    expect(HUB_SUMMARY).toContain('_community_consistency_withheld(p3.user_id)');
+    expect(HUB_SUMMARY).not.toContain('_community_ed_flag_open(');
+  });
+
+  test('the write-side force in Part 8 calls the ED arm ONLY, never the calm arm (fact (b))', () => {
+    expect(UPDATE_TRAINING_PROFILE).toContain('_community_ed_flag_open(v_uid)');
+    expect(UPDATE_TRAINING_PROFILE).not.toContain('_community_consistency_withheld(');
+    expect(UPDATE_TRAINING_PROFILE).not.toContain('_community_calm_mode_on(');
   });
 
   test('the profile-card gate is a strengthening AND, never a replacement of the existing condition', () => {
     expect(PROFILE_CARD).toContain(
-      'v_show_consistency := v_show_consistency AND NOT public._community_ed_flag_open(p.user_id);',
+      'v_show_consistency := v_show_consistency AND NOT public._community_consistency_withheld(p.user_id);',
     );
     expect(PROFILE_CARD).toContain(
       'v_show_consistency := v_viewable AND coalesce(p.share_consistency, false)\n    AND p.status = \'active\' AND p.is_minor = false;',
@@ -392,9 +465,9 @@ describe('every marked change actually calls the new helper (wired, not only dec
   });
 });
 
-describe('RPC-only security posture, all eight functions', () => {
+describe('RPC-only security posture, all ten functions', () => {
   test('SECURITY DEFINER on the pinned search_path, every function', () => {
-    for (const fn of [HELPER, PROFILE_CARD, BOARD, COHORT_STATS, HUB_SUMMARY, GROUP_GET, FRIENDS_TODAY, UPDATE_TRAINING_PROFILE]) {
+    for (const fn of [HELPER, CALM, WITHHELD, PROFILE_CARD, BOARD, COHORT_STATS, HUB_SUMMARY, GROUP_GET, FRIENDS_TODAY, UPDATE_TRAINING_PROFILE]) {
       expect(fn).toMatch(/SECURITY DEFINER/);
       expect(fn).toMatch(/SET search_path\s*(=|TO)\s*'?public'?,\s*'?pg_temp'?/);
     }
@@ -412,7 +485,7 @@ describe('RPC-only security posture, all eight functions', () => {
     expect(SQL).toContain('CREATE OR REPLACE FUNCTION public.community_update_training_profile(_p jsonb)');
   });
 
-  test('the two internal helpers stay revoked from every client role and are granted to nobody in any shape', () => {
+  test('the two internal readers stay revoked from every client role and are granted to nobody in any shape', () => {
     expect(SQL).toMatch(/REVOKE ALL ON FUNCTION public\._community_profile_card\(uuid, uuid\) FROM PUBLIC, anon, authenticated;/);
     expect(SQL).toMatch(/REVOKE ALL ON FUNCTION public\._community_cohort_stats\(uuid, text, text, text\) FROM PUBLIC, anon, authenticated;/);
     expect(SQL).not.toMatch(/GRANT\s+(EXECUTE|ALL)[^\n]*_community_profile_card/);
@@ -440,31 +513,49 @@ describe('RPC-only security posture, all eight functions', () => {
 });
 
 describe('the acceptance block proves the gate works, not only that it is wired (review M3)', () => {
-  test('is read-only and checks the table, the posture (with the NULL proconfig arm), the volatility and every wiring', () => {
+  test('is read-only and checks both tables, the posture (with the NULL proconfig arm), the volatility and every wiring', () => {
     expect(ACCEPT).not.toMatch(/\b(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|TRUNCATE)\b/);
     expect(ACCEPT).toContain("to_regclass('public.ed_pattern_flags') IS NULL");
+    expect(ACCEPT).toContain("to_regclass('public.user_prefs') IS NULL");
     expect(ACCEPT).toContain('OR p.proconfig IS NULL');
     expect(ACCEPT).toContain("'search_path=public, pg_temp' = ANY (p.proconfig)");
+    expect(ACCEPT).toContain("'_community_ed_flag_open', '_community_calm_mode_on',\n        '_community_consistency_withheld', '_community_profile_card',");
     expect(ACCEPT).toContain("IS DISTINCT FROM 's' THEN\n    RAISE EXCEPTION 'acceptance failed: _community_ed_flag_open is not STABLE'");
-    for (const fn of ['_community_profile_card', 'community_board', '_community_cohort_stats', 'community_hub_summary', 'community_group_get', 'community_friends_trained_today', 'community_update_training_profile']) {
-      expect(ACCEPT).toContain(`acceptance failed: ${fn} does not call _community_ed_flag_open`);
+    for (const fn of ['_community_profile_card', 'community_board', '_community_cohort_stats', 'community_hub_summary', 'community_group_get', 'community_friends_trained_today']) {
+      expect(ACCEPT).toContain(`acceptance failed: ${fn} does not call _community_consistency_withheld`);
     }
+    expect(ACCEPT).toContain('acceptance failed: community_update_training_profile does not call _community_ed_flag_open');
   });
 
-  test('probes the helper: NULL is true, an id with no row is false, an open row (when one exists) is true', () => {
+  test('probes all three helpers: NULL is true, an id with no row is false, an open row (when one exists) is true, and the OR composes', () => {
     expect(ACCEPT).toContain('IF public._community_ed_flag_open(NULL) IS DISTINCT FROM true THEN');
     expect(ACCEPT).toContain('IF public._community_ed_flag_open(gen_random_uuid()) IS DISTINCT FROM false THEN');
     expect(ACCEPT).toContain('IF v_probe IS NOT NULL AND public._community_ed_flag_open(v_probe) IS DISTINCT FROM true THEN');
+    expect(ACCEPT).toContain('IF public._community_calm_mode_on(NULL) IS DISTINCT FROM true THEN');
+    expect(ACCEPT).toContain('IF public._community_calm_mode_on(gen_random_uuid()) IS DISTINCT FROM false THEN');
+    expect(ACCEPT).toContain('IF public._community_consistency_withheld(NULL) IS DISTINCT FROM true\n     OR public._community_consistency_withheld(gen_random_uuid()) IS DISTINCT FROM false THEN');
+    expect(ACCEPT).toContain("strpos(v_def, '_community_ed_flag_open(_uid) OR public._community_calm_mode_on(_uid)') = 0");
   });
 
-  test('prints the open-flag count so the dormancy (review H1) is visible in the apply output', () => {
+  test('prints the open-flag count so the state of the ED arm is visible in the apply output', () => {
     expect(ACCEPT).toContain("RAISE NOTICE 'migrate_180: open ED-pattern flags in the cloud table: %");
-    expect(ACCEPT).toContain('dormant until D92-11');
+    expect(ACCEPT).toContain('0 means no device on a build with the migrate_182 push has raised a flag yet, or 182 is not applied');
+    expect(ACCEPT).not.toContain('dormant until D92-11');
+    // Review L8: the two decision-B helpers STABLE, the withheld helper's
+    // live body compared exactly, and the calm arm probed against real
+    // pref rows in both directions when any exist.
+    expect(ACCEPT).toContain("IS DISTINCT FROM 's' THEN\n    RAISE EXCEPTION 'acceptance failed: _community_calm_mode_on is not STABLE'");
+    expect(ACCEPT).toContain("IS DISTINCT FROM 's' THEN\n    RAISE EXCEPTION 'acceptance failed: _community_consistency_withheld is not STABLE'");
+    expect(ACCEPT).toContain("IF v_def IS DISTINCT FROM E'BEGIN\\n  RETURN public._community_ed_flag_open(_uid) OR public._community_calm_mode_on(_uid);\\nEND' THEN");
+    expect(ACCEPT).toContain("WHERE u.key = '@volyume_wellbeing_mode' AND u.value = 'calm' LIMIT 1;");
+    expect(ACCEPT).toContain("the calm arm answers false for a real calm pref row");
+    expect(ACCEPT).toContain("WHERE u.key = '@volyume_wellbeing_mode' AND u.value IS DISTINCT FROM 'calm'");
+    expect(ACCEPT).toContain("the calm arm withholds a person who is neither calm nor flagged");
   });
 
-  test('client roles can execute exactly the five RPCs and none of the three internals', () => {
-    for (const internal of ['_community_ed_flag_open(uuid)', '_community_profile_card(uuid, uuid)', '_community_cohort_stats(uuid, text, text, text)']) {
-      expect(ACCEPT).toContain(`IF has_function_privilege('authenticated', 'public.${internal}', 'EXECUTE')`);
+  test('client roles can execute exactly the five RPCs and none of the five internals', () => {
+    for (const internal of ['_community_ed_flag_open(uuid)', '_community_calm_mode_on(uuid)', '_community_consistency_withheld(uuid)', '_community_profile_card(uuid, uuid)', '_community_cohort_stats(uuid, text, text, text)']) {
+      expect(ACCEPT).toContain(`has_function_privilege('authenticated', 'public.${internal}', 'EXECUTE')`);
     }
     expect(ACCEPT).toContain("IF NOT has_function_privilege('authenticated', 'public.community_board(text, text, text, text, integer, text)', 'EXECUTE')");
     expect(ACCEPT).toContain("IF has_function_privilege('anon', 'public.community_board(text, text, text, text, integer, text)', 'EXECUTE')");
@@ -482,13 +573,14 @@ describe('scope discipline: the fix stays inside consistency sharing', () => {
 });
 
 describe('the file is registered in the tracker', () => {
-  test('supabase/README.md carries the status row, naming the dormancy and the apply order', () => {
+  test('supabase/README.md carries the status row, naming the two arms, the apply order and migrate_182', () => {
     const README = read('supabase/README.md');
     expect(README).toMatch(/180[^\n]*WRITTEN[^\n]*NOT APPLIED/);
     expect(README).toContain('| 180 | `migrate_180_community_consistency_server_gate.sql` |');
     const row = README.split('\n').find((l) => l.startsWith('| 180 | `migrate_180_'));
-    expect(row).toContain('DORMANT');
     expect(row).toContain('D92-11');
     expect(row).toContain('176 BEFORE 180');
+    expect(row).toContain('calm');
+    expect(row).toContain('182');
   });
 });

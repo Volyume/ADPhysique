@@ -32,13 +32,13 @@
 --                    `idx_ed_pattern_flags_open ... WHERE cleared_at IS
 --                    NULL AND deleted_at IS NULL`) and the client's own
 --                    `getOpenEdPatternFlag` uses on its local mirror
---                    (`src/lib/database.js:11938-11946`). The helper
+--                    (`src/lib/database.js:11947-11955`). The helper
 --                    below uses that predicate and no other.
 --                    OBSERVED (Opus adversarial review 2026-09-23, H1;
 --                    verified by the lead against the tree): NOTHING
 --                    WRITES THE CLOUD TABLE TODAY. `raiseEdPatternFlag`
 --                    and `clearEdPatternFlag` write the device's SQLite
---                    only (`src/lib/database.js:11959-11989`); the sync
+--                    only (`src/lib/database.js:12000-12030`); the sync
 --                    registry has `ed_pattern_flags` `direction:
 --                    'pull_only'` (`src/lib/sync/registry.js:153-160`)
 --                    and PUSH_HANDLERS leaves it out on purpose
@@ -54,68 +54,91 @@
 --                    withholds nothing -- it is DORMANT until D92-11
 --                    lands a cloud write, exactly as the two edge
 --                    functions' existing ED gates have been since they
---                    shipped. The moment any row is written it is live,
---                    with no further change here. The prior draft's
+--                    shipped. DECIDED 2026-09-23 (founder decision B,
+--                    register D196): migrate_182 adds that write path
+--                    (`ed_flag_push`: raises and clears, forward-only,
+--                    scoped to the caller's own row, no signals) and the
+--                    client pushes on raise, clear and every sync cycle;
+--                    once 182 is applied and a device on a build with the
+--                    push raises a flag, this gate is live with no
+--                    further change here. The prior draft's
 --                    sentence that the cloud row is "at least as reliable
 --                    as the client's own read" was an inference from the
 --                    table module's docstring, not observed behaviour,
 --                    and is withdrawn. Audit B-02 is therefore NOT closed
---                    by this migration alone: this is the second wall
---                    behind the client gate, and it holds nothing until
---                    D92-11 is answered (founder question, in chat).
---                    RLS (review L2): `migrate_017` lines 38-45 let an
---                    owner INSERT and UPDATE their own rows, so once a
---                    push exists a determined owner could clear their own
---                    cloud flag with a direct call. That changes only what
---                    OTHERS see of their counters, which the device gate
---                    already lets them change; the D92-11 design should
---                    still weigh dropping the owner UPDATE policy in
---                    favour of a clear path the engine controls. The
---                    acceptance block below reports the count of open
---                    flags in the cloud table at apply time, so the
---                    dormancy is visible in the apply output, not assumed.
+--                    by this migration alone: it closes with migrate_182
+--                    and the client push landed beside it (decision B),
+--                    this file being the second wall behind the client
+--                    gate.
+--                    RLS (review L2, resolved by migrate_182): the owner
+--                    INSERT and UPDATE policies from `migrate_017` lines
+--                    38-45 are dropped there and table writes revoked
+--                    from the client roles, so the RPC is the only client
+--                    write path. An owner can still CLEAR their own flag
+--                    through the RPC (a clear is one of its two inputs,
+--                    forward-only, never reversible); that changes only
+--                    what OTHERS see of their counters, which the device
+--                    gate already lets them change, and it is the same
+--                    action their own engine takes. The acceptance block
+--                    below reports the count of open flags in the cloud
+--                    table at apply time, so the state of the ED arm is
+--                    visible in the apply output, not assumed.
 --
---                    FACT (b), calm mode: CLIENT-ONLY for this purpose.
---                    `@volyume_wellbeing_mode` (`src/lib/
---                    wellbeing.js:17`) is a guarded, synced AsyncStorage
---                    pref (`src/lib/sync.js:1871-1877`,
---                    `SYNCED_PREF_PATTERNS`) that CAN eventually land in
---                    the generic `user_prefs` mirror (`user_id, key,
---                    value` -- `migrate_012_complete_sync.sql:287-293`),
---                    but only through the BULK prefs push
---                    (`_pushAllUserPrefs`/`syncUserPref`,
---                    `src/lib/sync.js:2106-2165`): `setWellbeingMode`
---                    (`src/lib/wellbeing.js:31-43`, called from
---                    `SettingsCoachingScreen.js:76`) writes AsyncStorage
---                    and a local write-stamp only, and never calls
---                    `syncUserPref`/`pushPrefSoon` itself, so the cloud
---                    mirror can lag the device's real state by an
---                    unbounded amount between sync cycles. No SQL
---                    function, edge function or job anywhere in the
---                    codebase reads `user_prefs` as a decision signal:
---                    partner-cheer, community-notify and the retention-
---                    email job contract
---                    (`migrate_123_retention_email_loop.sql:51-65`, its
---                    "suppressed_wellbeing" status) all gate on
---                    `ed_pattern_flags` alone. Treating the generic prefs
---                    mirror as an authoritative calm signal would be
---                    inventing a new use of a table nothing else reads
---                    that way, on a value that is not reliably fresh --
---                    refused per the lead's item 6 build brief of
---                    2026-09-23 ("do not invent a calm signal" -- a lead
---                    instruction, not a founder quotation; review L3).
---                    Review 2026-09-23 also notes the bulk prefs push does
---                    carry `@volyume_wellbeing_mode` to `user_prefs` on
---                    each sync cycle (`src/lib/sync.js:2106-2165`), so a
---                    withhold-only calm arm read from that mirror is
---                    POSSIBLE; it is a founder fork (put beside D92-11 in
---                    chat), not ruled here. This migration's helper and
---                    every reader below therefore cover the OPEN
---                    ED-PATTERN FLAG ONLY.
+--                    FACT (b), calm mode: gated here too since founder
+--                    decision B (2026-09-23, register D196), READ-SIDE
+--                    ONLY. `@volyume_wellbeing_mode` (`src/lib/
+--                    wellbeing.js:17`, values 'calm' | 'normal' |
+--                    'unspecified') is a GUARDED synced pref: the bulk
+--                    prefs push carries it to `user_prefs` (`user_id,
+--                    key, value` -- `migrate_012_complete_sync.sql:
+--                    287-293`) on every sync cycle with its honest local
+--                    write stamp (`src/lib/sync.js` `_pushAllUserPrefs`,
+--                    `_guardedPrefUpdatedAt`), a stale device's push can
+--                    never walk the cloud value backwards over a newer
+--                    edit (`_dropStaleGuardedPushes`), and the pull side
+--                    ratchets: a pulled 'normal' never replaces a local
+--                    'calm' (`filterGuardedPulledPrefs`). So the cloud
+--                    value is the NEWEST edit any of the person's devices
+--                    has pushed (newest-edit-wins on push; the ratchet
+--                    protects the device's own copy, not the mirror),
+--                    refreshed each cycle: a person who turns calm on
+--                    on one device is withheld here from that device's
+--                    next push, and a person who turns it off is shown
+--                    again from that push. Review M4. The prior
+--                    draft's ruling that this mirror was "not reliably
+--                    fresh" enough to read was the lead's, made before
+--                    the founder's decision; the decision supersedes it.
+--                    What the arm does: `_community_calm_mode_on(uid)`
+--                    answers true when the mirror says 'calm' (and on any
+--                    read error), and `_community_consistency_withheld(
+--                    uid)` = open ED flag OR calm mode -- the same OR the
+--                    client's `isPhotoSuppressed` / `derivePhotoSuppression`
+--                    apply (`src/hooks/usePhotoSuppression.js`), fail
+--                    closed. Every reader below calls the withheld helper.
+--                    What it deliberately does NOT do: force the STORED
+--                    `share_consistency` off in Part 8. That force stays
+--                    ED-flag-only, because a mirror that lags a device
+--                    which just turned calm off would otherwise pin the
+--                    person's stored preference to false silently (the
+--                    client discards the response); withholding on read
+--                    resumes by itself the moment the mirror catches up,
+--                    a stored false would not. Purpose limitation: the
+--                    server reads the person's own calm choice only to
+--                    withhold their own counters from others, the same
+--                    purpose the choice serves on the device; nothing
+--                    else reads it and nothing new is stored or shared.
+--                    The lead's earlier instruction "do not invent a calm
+--                    signal" (item 6 build brief; not a founder
+--                    quotation, review L3) meant: never derive calm from
+--                    anything but the person's own pref. This arm reads
+--                    exactly that pref and nothing else.
 --
 --                    DELIVERABLE. Part 1: `_community_ed_flag_open(uuid)`,
---                    a new SECURITY DEFINER helper, fail-closed (true) on
---                    a null input or any read error. Parts 2-7 re-issue,
+--                    `_community_calm_mode_on(uuid)` and
+--                    `_community_consistency_withheld(uuid)` (the OR of
+--                    the two), new SECURITY DEFINER helpers, each
+--                    fail-closed (true) on a null input or any read
+--                    error. Parts 2-7 re-issue,
 --                    byte-for-byte, every server reader found by grepping
 --                    every migration for `share_consistency`, `v_show_
 --                    consistency`, `c_sessions`, `c_streak`, `c_prs_4w`:
@@ -131,11 +154,12 @@
 --                    `community_group_get` (migrate_170 lines 3632-3719)
 --                    and `community_friends_trained_today` (migrate_171
 --                    lines 63-114) -- each with the marked change
---                    `AND NOT public._community_ed_flag_open(<owner>)`
+--                    `AND NOT public._community_consistency_withheld(<owner>)`
 --                    inserted alongside its existing `share_consistency`
 --                    test, nothing else touched. Part 8 re-issues
 --                    `community_update_training_profile` (migrate_172
---                    lines 63-292): a caller with an open flag now has
+--                    lines 63-292): a caller with an open ED flag (the
+--                    flag only, not calm mode: fact (b)) now has
 --                    `share_consistency` stored false regardless of what
 --                    was sent, mirroring the existing minor check
 --                    immediately above it; the response is unchanged
@@ -176,7 +200,9 @@
 --                    1550-1702 if 176 is ALSO being rolled back in the
 --                    same operation); `community_friends_trained_today`
 --                    from migrate_171 lines 63-114 (the versions without
---                    the ED-flag test); then
+--                    the withheld test); then
+--                    DROP FUNCTION public._community_consistency_withheld(uuid),
+--                    DROP FUNCTION public._community_calm_mode_on(uuid) and
 --                    DROP FUNCTION public._community_ed_flag_open(uuid).
 --                    No table changes to reverse.
 -- Transaction:       no explicit BEGIN/COMMIT; the runner supplies one.
@@ -263,6 +289,59 @@ END $$;
 
 REVOKE ALL ON FUNCTION public._community_ed_flag_open(uuid) FROM PUBLIC, anon, authenticated;
 
+-- Founder decision B (2026-09-23, register D196): the calm-mode arm, read
+-- from the guarded synced pref (fact (b), file header). True when the
+-- mirror says 'calm'; a missing row is 'not calm' (most people never set
+-- it); any read error fails closed.
+
+CREATE OR REPLACE FUNCTION public._community_calm_mode_on(_uid uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_calm boolean;
+BEGIN
+  -- Fail closed: a null owner id is an unexpected shape, not "not calm".
+  IF _uid IS NULL THEN
+    RETURN true;
+  END IF;
+
+  BEGIN
+    SELECT EXISTS (
+      SELECT 1 FROM public.user_prefs
+      WHERE user_id = _uid AND key = '@volyume_wellbeing_mode' AND value = 'calm'
+    ) INTO v_calm;
+  EXCEPTION WHEN OTHERS THEN
+    -- Fail closed: any unexpected error withholds rather than exposes.
+    RETURN true;
+  END;
+
+  RETURN v_calm;
+END $$;
+
+REVOKE ALL ON FUNCTION public._community_calm_mode_on(uuid) FROM PUBLIC, anon, authenticated;
+
+-- The one OR every reader below calls: withheld when the ED flag is open
+-- OR calm mode is on, exactly the client's `isPhotoSuppressed` composition
+-- (`src/hooks/usePhotoSuppression.js`). Both arms fail closed, so a null
+-- id or a read error withholds.
+
+CREATE OR REPLACE FUNCTION public._community_consistency_withheld(_uid uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  RETURN public._community_ed_flag_open(_uid) OR public._community_calm_mode_on(_uid);
+END $$;
+
+REVOKE ALL ON FUNCTION public._community_consistency_withheld(uuid) FROM PUBLIC, anon, authenticated;
+
 -- ─── Part 2: _community_profile_card re-issued ──────────────────────────
 -- migrate_172 lines 302-406 carried forward byte-for-byte; the marked
 -- migrate_180 change below is the ONLY difference (guard-proved).
@@ -302,7 +381,7 @@ BEGIN
   -- RE-ANCHORED 2026-09-22 (founder order, item 6, "safety backstop"): the
   -- client's calm/ED withhold on consistency sharing had no server-side
   -- equivalent (audit B-02); this is the one place it is enforced here.
-  v_show_consistency := v_show_consistency AND NOT public._community_ed_flag_open(p.user_id);
+  v_show_consistency := v_show_consistency AND NOT public._community_consistency_withheld(p.user_id);
 
   SELECT f.state INTO v_following
   FROM public.community_follows f
@@ -523,7 +602,7 @@ BEGIN
       -- RE-ANCHORED 2026-09-22 (founder order, item 6, "safety backstop"):
       -- withhold consistency data for an owner with an open ED-pattern
       -- flag, matching the client's calm/ED withhold server-side (B-02).
-      AND NOT public._community_ed_flag_open(p.user_id)
+      AND NOT public._community_consistency_withheld(p.user_id)
       AND p.c_updated_at IS NOT NULL
       AND p.c_updated_at >= now() - interval '14 days'
       AND NOT public._community_is_blocked(v_uid, p.user_id)
@@ -693,7 +772,7 @@ BEGIN
              -- withhold server-side (B-02). Last in the AND (review L1):
              -- the cheap column tests run first, so the helper is called
              -- only for members who trained today.
-             AND NOT public._community_ed_flag_open(p.user_id))
+             AND NOT public._community_consistency_withheld(p.user_id))
   INTO v_member_count, v_trained_count
   FROM public.community_profiles p
   WHERE p.status = 'active' AND p.visibility = 'public' AND p.is_minor = false
@@ -720,7 +799,7 @@ BEGIN
       (p.share_consistency = true
        AND p.c_last_trained_day IS NOT NULL AND p.c_last_trained_day = _today
        -- RE-ANCHORED 2026-09-22 (founder order, item 6, "safety backstop"); last in the AND (review L1).
-       AND NOT public._community_ed_flag_open(p.user_id)) AS trained_today
+       AND NOT public._community_consistency_withheld(p.user_id)) AS trained_today
     FROM public.community_profiles p
     WHERE p.status = 'active' AND p.visibility = 'public' AND p.is_minor = false
       AND p.user_id <> _uid
@@ -910,7 +989,7 @@ BEGIN
           AND p2.c_last_trained_day IS NOT NULL AND p2.c_last_trained_day = v_today
           -- RE-ANCHORED 2026-09-22 (founder order, item 6, "safety
           -- backstop"); last in the AND (review L1).
-          AND NOT public._community_ed_flag_open(p2.user_id)
+          AND NOT public._community_consistency_withheld(p2.user_id)
       ),
       'sample', (
         SELECT coalesce(jsonb_agg(jsonb_build_object(
@@ -923,7 +1002,7 @@ BEGIN
              AND p3.c_last_trained_day IS NOT NULL AND p3.c_last_trained_day = v_today
              -- RE-ANCHORED 2026-09-22 (founder order, item 6, "safety
              -- backstop"); last in the AND (review L1).
-             AND NOT public._community_ed_flag_open(p3.user_id)) AS trained_today
+             AND NOT public._community_consistency_withheld(p3.user_id)) AS trained_today
           FROM public.community_group_members gm3
           JOIN public.community_profiles p3 ON p3.user_id = gm3.user_id
           WHERE gm3.group_id = g.id AND gm3.state = 'member'
@@ -1022,7 +1101,7 @@ BEGIN
       -- withhold this member's contribution to the sum while their
       -- ED-pattern flag is open, matching the client's calm/ED withhold
       -- server-side (B-02).
-      AND NOT public._community_ed_flag_open(p2.user_id)
+      AND NOT public._community_consistency_withheld(p2.user_id)
       AND NOT public._community_is_blocked(v_uid, p2.user_id);
   END IF;
 
@@ -1090,7 +1169,7 @@ BEGIN
     AND p.is_minor = false
     AND p.share_consistency = true
     -- RE-ANCHORED 2026-09-22 (founder order, item 6, "safety backstop").
-    AND NOT public._community_ed_flag_open(p.user_id)
+    AND NOT public._community_consistency_withheld(p.user_id)
     AND p.c_updated_at IS NOT NULL
     AND p.c_updated_at >= now() - interval '14 days'
     AND p.c_last_trained_day IS NOT NULL
@@ -1363,17 +1442,24 @@ GRANT EXECUTE ON FUNCTION public.community_update_training_profile(jsonb) TO aut
 
 -- ─── Acceptance check (read-only) ────────────────────────────────────────
 -- Run after the apply and read the output before declaring this migration
--- landed. Expect: the ed_pattern_flags table present; the helper present,
+-- landed. Expect: the ed_pattern_flags and user_prefs tables present; the ED
+-- helper present,
 -- STABLE (checked, not assumed), SECURITY DEFINER, search_path pinned,
 -- executable by no client role, and answering true for NULL, false for an
 -- id with no row and true for an open row when one exists (review M3;
--- nothing is written); all eight functions (the helper and the seven
--- re-issues) SECURITY DEFINER on the pinned search_path; the five client-callable RPCs
+-- nothing is written); the calm and withheld helpers present and probed the
+-- same way; all ten functions (the three helpers and the seven re-issues)
+-- SECURITY DEFINER on the pinned search_path; the five client-callable RPCs
 -- executable by authenticated and not by anon; the two internal helpers
 -- executable by neither; and every reader's live body actually calling the
--- new helper (the fix is wired, not only declared). The NOTICE at the end
--- prints the count of open flags in the cloud table: 0 means the gate is
--- dormant until D92-11 lands a cloud write (fact (a)).
+-- new helper (the fix is wired, not only declared); the two decision-B
+-- helpers STABLE like the first, the withheld helper's live body compared
+-- to its expected body exactly (not only searched for the OR), and the calm
+-- arm probed against a real 'calm' pref row when one exists (review L8).
+-- The NOTICE at the end prints the count of open flags in the cloud table:
+-- 0 means no device on a build carrying the migrate_182 push has raised a
+-- flag yet, or 182 is not applied; the ED arm is live from the first push,
+-- the calm arm from apply (fact (a)).
 
 DO $$
 DECLARE
@@ -1399,10 +1485,68 @@ BEGIN
   IF public._community_ed_flag_open(gen_random_uuid()) IS DISTINCT FROM false THEN
     RAISE EXCEPTION 'acceptance failed: _community_ed_flag_open answers true for an id with no row';
   END IF;
+  -- The calm arm and the OR (founder decision B): same probes, same
+  -- fail-closed shape; the withheld helper must be exactly the OR of the
+  -- two arms, so an edit that drops one arm fails here.
+  IF to_regclass('public.user_prefs') IS NULL THEN
+    RAISE EXCEPTION 'acceptance failed: user_prefs table missing (the calm arm would fail closed on every read)';
+  END IF;
+  IF public._community_calm_mode_on(NULL) IS DISTINCT FROM true THEN
+    RAISE EXCEPTION 'acceptance failed: _community_calm_mode_on(NULL) is not true';
+  END IF;
+  IF public._community_calm_mode_on(gen_random_uuid()) IS DISTINCT FROM false THEN
+    RAISE EXCEPTION 'acceptance failed: _community_calm_mode_on answers true for an id with no row';
+  END IF;
+  IF public._community_consistency_withheld(NULL) IS DISTINCT FROM true
+     OR public._community_consistency_withheld(gen_random_uuid()) IS DISTINCT FROM false THEN
+    RAISE EXCEPTION 'acceptance failed: _community_consistency_withheld does not compose the two arms';
+  END IF;
+  -- Review L8: the two decision-B helpers are STABLE like the first, and
+  -- the withheld helper's LIVE body is compared to its expected body
+  -- exactly (prosrc is stored verbatim), not only searched for the OR, so
+  -- an extra arm, a dropped arm or a changed operator fails here.
+  IF (SELECT p.provolatile FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = '_community_calm_mode_on') IS DISTINCT FROM 's' THEN
+    RAISE EXCEPTION 'acceptance failed: _community_calm_mode_on is not STABLE';
+  END IF;
+  IF (SELECT p.provolatile FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'public' AND p.proname = '_community_consistency_withheld') IS DISTINCT FROM 's' THEN
+    RAISE EXCEPTION 'acceptance failed: _community_consistency_withheld is not STABLE';
+  END IF;
+  v_def := (SELECT btrim(p.prosrc, E' \n') FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public' AND p.proname = '_community_consistency_withheld');
+  IF v_def IS DISTINCT FROM E'BEGIN\n  RETURN public._community_ed_flag_open(_uid) OR public._community_calm_mode_on(_uid);\nEND' THEN
+    RAISE EXCEPTION 'acceptance failed: _community_consistency_withheld live body is not exactly the OR of the two arms';
+  END IF;
+  v_def := pg_get_functiondef(to_regprocedure('public._community_consistency_withheld(uuid)'));
+  IF v_def IS NULL OR strpos(v_def, '_community_ed_flag_open(_uid) OR public._community_calm_mode_on(_uid)') = 0 THEN
+    RAISE EXCEPTION 'acceptance failed: _community_consistency_withheld is not the OR of the two arms';
+  END IF;
   SELECT f.user_id INTO v_probe FROM public.ed_pattern_flags f
    WHERE f.cleared_at IS NULL AND f.deleted_at IS NULL LIMIT 1;
   IF v_probe IS NOT NULL AND public._community_ed_flag_open(v_probe) IS DISTINCT FROM true THEN
     RAISE EXCEPTION 'acceptance failed: _community_ed_flag_open answers false for an open flag';
+  END IF;
+  -- Review L8: the calm arm against REAL pref rows when any exist (nothing
+  -- is written): a person whose mirror says 'calm' is withheld; a person
+  -- whose mirror says anything else, with no open flag, is NOT withheld
+  -- (the arm must never over-withhold either).
+  v_probe := NULL;
+  SELECT u.user_id INTO v_probe FROM public.user_prefs u
+   WHERE u.key = '@volyume_wellbeing_mode' AND u.value = 'calm' LIMIT 1;
+  IF v_probe IS NOT NULL AND (public._community_calm_mode_on(v_probe) IS DISTINCT FROM true
+     OR public._community_consistency_withheld(v_probe) IS DISTINCT FROM true) THEN
+    RAISE EXCEPTION 'acceptance failed: the calm arm answers false for a real calm pref row';
+  END IF;
+  v_probe := NULL;
+  SELECT u.user_id INTO v_probe FROM public.user_prefs u
+   WHERE u.key = '@volyume_wellbeing_mode' AND u.value IS DISTINCT FROM 'calm'
+     AND NOT EXISTS (SELECT 1 FROM public.ed_pattern_flags f
+                     WHERE f.user_id = u.user_id AND f.cleared_at IS NULL AND f.deleted_at IS NULL)
+   LIMIT 1;
+  IF v_probe IS NOT NULL AND (public._community_calm_mode_on(v_probe) IS DISTINCT FROM false
+     OR public._community_consistency_withheld(v_probe) IS DISTINCT FROM false) THEN
+    RAISE EXCEPTION 'acceptance failed: the calm arm withholds a person who is neither calm nor flagged';
   END IF;
 
   IF EXISTS (
@@ -1410,7 +1554,8 @@ BEGIN
     JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public'
       AND p.proname IN (
-        '_community_ed_flag_open', '_community_profile_card',
+        '_community_ed_flag_open', '_community_calm_mode_on',
+        '_community_consistency_withheld', '_community_profile_card',
         '_community_cohort_stats', 'community_board', 'community_hub_summary',
         'community_group_get', 'community_friends_trained_today',
         'community_update_training_profile'
@@ -1427,6 +1572,12 @@ BEGIN
   IF has_function_privilege('authenticated', 'public._community_ed_flag_open(uuid)', 'EXECUTE')
      OR has_function_privilege('anon', 'public._community_ed_flag_open(uuid)', 'EXECUTE') THEN
     RAISE EXCEPTION 'acceptance failed: _community_ed_flag_open is executable by a client role';
+  END IF;
+  IF has_function_privilege('authenticated', 'public._community_calm_mode_on(uuid)', 'EXECUTE')
+     OR has_function_privilege('anon', 'public._community_calm_mode_on(uuid)', 'EXECUTE')
+     OR has_function_privilege('authenticated', 'public._community_consistency_withheld(uuid)', 'EXECUTE')
+     OR has_function_privilege('anon', 'public._community_consistency_withheld(uuid)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'acceptance failed: a withheld helper is executable by a client role';
   END IF;
   IF has_function_privilege('authenticated', 'public._community_profile_card(uuid, uuid)', 'EXECUTE')
      OR has_function_privilege('anon', 'public._community_profile_card(uuid, uuid)', 'EXECUTE') THEN
@@ -1455,29 +1606,29 @@ BEGIN
   -- Every reader actually calls the new helper - the fix is wired, not
   -- only declared.
   v_def := pg_get_functiondef(to_regprocedure('public._community_profile_card(uuid, uuid)'));
-  IF v_def IS NULL OR strpos(v_def, '_community_ed_flag_open(p.user_id)') = 0 THEN
-    RAISE EXCEPTION 'acceptance failed: _community_profile_card does not call _community_ed_flag_open';
+  IF v_def IS NULL OR strpos(v_def, '_community_consistency_withheld(p.user_id)') = 0 THEN
+    RAISE EXCEPTION 'acceptance failed: _community_profile_card does not call _community_consistency_withheld';
   END IF;
   v_def := pg_get_functiondef(to_regprocedure('public.community_board(text, text, text, text, integer, text)'));
-  IF v_def IS NULL OR strpos(v_def, '_community_ed_flag_open(p.user_id)') = 0 THEN
-    RAISE EXCEPTION 'acceptance failed: community_board does not call _community_ed_flag_open';
+  IF v_def IS NULL OR strpos(v_def, '_community_consistency_withheld(p.user_id)') = 0 THEN
+    RAISE EXCEPTION 'acceptance failed: community_board does not call _community_consistency_withheld';
   END IF;
   v_def := pg_get_functiondef(to_regprocedure('public._community_cohort_stats(uuid, text, text, text)'));
-  IF v_def IS NULL OR strpos(v_def, '_community_ed_flag_open(p.user_id)') = 0 THEN
-    RAISE EXCEPTION 'acceptance failed: _community_cohort_stats does not call _community_ed_flag_open';
+  IF v_def IS NULL OR strpos(v_def, '_community_consistency_withheld(p.user_id)') = 0 THEN
+    RAISE EXCEPTION 'acceptance failed: _community_cohort_stats does not call _community_consistency_withheld';
   END IF;
   v_def := pg_get_functiondef(to_regprocedure('public.community_hub_summary(text)'));
-  IF v_def IS NULL OR strpos(v_def, '_community_ed_flag_open(p2.user_id)') = 0
-     OR strpos(v_def, '_community_ed_flag_open(p3.user_id)') = 0 THEN
-    RAISE EXCEPTION 'acceptance failed: community_hub_summary does not call _community_ed_flag_open';
+  IF v_def IS NULL OR strpos(v_def, '_community_consistency_withheld(p2.user_id)') = 0
+     OR strpos(v_def, '_community_consistency_withheld(p3.user_id)') = 0 THEN
+    RAISE EXCEPTION 'acceptance failed: community_hub_summary does not call _community_consistency_withheld';
   END IF;
   v_def := pg_get_functiondef(to_regprocedure('public.community_group_get(uuid)'));
-  IF v_def IS NULL OR strpos(v_def, '_community_ed_flag_open(p2.user_id)') = 0 THEN
-    RAISE EXCEPTION 'acceptance failed: community_group_get does not call _community_ed_flag_open';
+  IF v_def IS NULL OR strpos(v_def, '_community_consistency_withheld(p2.user_id)') = 0 THEN
+    RAISE EXCEPTION 'acceptance failed: community_group_get does not call _community_consistency_withheld';
   END IF;
   v_def := pg_get_functiondef(to_regprocedure('public.community_friends_trained_today(text)'));
-  IF v_def IS NULL OR strpos(v_def, '_community_ed_flag_open(p.user_id)') = 0 THEN
-    RAISE EXCEPTION 'acceptance failed: community_friends_trained_today does not call _community_ed_flag_open';
+  IF v_def IS NULL OR strpos(v_def, '_community_consistency_withheld(p.user_id)') = 0 THEN
+    RAISE EXCEPTION 'acceptance failed: community_friends_trained_today does not call _community_consistency_withheld';
   END IF;
   v_def := pg_get_functiondef(to_regprocedure('public.community_update_training_profile(jsonb)'));
   IF v_def IS NULL OR strpos(v_def, '_community_ed_flag_open(v_uid)') = 0 THEN
@@ -1486,6 +1637,6 @@ BEGIN
 
   SELECT count(*) INTO v_open_count FROM public.ed_pattern_flags f
    WHERE f.cleared_at IS NULL AND f.deleted_at IS NULL;
-  RAISE NOTICE 'migrate_180: open ED-pattern flags in the cloud table: % (0 means the gate is dormant until D92-11 lands a cloud write; fact (a))', v_open_count;
+  RAISE NOTICE 'migrate_180: open ED-pattern flags in the cloud table: % (0 means no device on a build with the migrate_182 push has raised a flag yet, or 182 is not applied; the calm arm reads user_prefs and is live on apply; fact (a))', v_open_count;
   RAISE NOTICE 'migrate_180 acceptance: OK';
 END $$;

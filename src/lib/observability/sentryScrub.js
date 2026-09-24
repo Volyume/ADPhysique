@@ -144,6 +144,13 @@ export const SENSITIVE_VALUE_SUBSTRINGS = Object.freeze([
   'body_composition_log',
   'daily_intake_rollups',
   'ed_pattern_flags',
+  // Founder decision B (2026-09-23, register D196; Opus review H2): the ED
+  // flag's cloud push. Only a flagged person's device ever calls the RPC,
+  // so its name in a fetch breadcrumb URL, a PostgREST error string or a
+  // log scope would tell Sentry that the person has a flag (Article 9).
+  // The camel-case spelling is the sync module's own scope tag.
+  'ed_flag_push',
+  'edPatternFlags',
   'health_data_consent',
   'progress_photo_meta',
   'progress_scan_sessions',

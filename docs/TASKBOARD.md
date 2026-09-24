@@ -35,11 +35,11 @@ The full register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.
 
 ## COMMUNITY PROPOSALS 1 TO 11 (founder order 2026-09-22: "Do 1-11 in order. Utilise the lowest level agent suitable and you do the plan and design and thinking and orchestration") — IN PROGRESS; each item: build lane (Sonnet or Haiku), lead diff review, fresh-eyes adversarial review (Opus for server-side safety), full gate, one commit, merged to main
 
-**Landed on main, in order:** item 1 client half, every provable action sends its push (`5441df58`); item 2 with 4a, Community's visible home on Today (`92580e80`); item 3, the profile is created at onboarding step 5 (`20d229c7`); item 4b, link previews on the public pages (`3f1249ef`); item 1 server half, migration 177 returns the recipients for Respect-all and join requests (`518f1ce6`); item 5, the free-text note post with migration 178 (`55937478`); the founder's Nutrition order of 2026-09-22/23, the pill row replaced by a Higher-calorie day feature row and a Trends header action (`26cf33cc`); migration 179, RLS on the two tooling tables the Supabase advisor flagged (`2e567408`). Gate at the last landing: lint 0, tsc 0, imports OK, 1324 suites / 20,545 tests.
+**Landed on main, in order:** item 1 client half, every provable action sends its push (`5441df58`); item 2 with 4a, Community's visible home on Today (`92580e80`); item 3, the profile is created at onboarding step 5 (`20d229c7`); item 4b, link previews on the public pages (`3f1249ef`); item 1 server half, migration 177 returns the recipients for Respect-all and join requests (`518f1ce6`); item 5, the free-text note post with migration 178 (`55937478`); the founder's Nutrition order of 2026-09-22/23, the pill row replaced by a Higher-calorie day feature row and a Trends header action (`26cf33cc`); migration 179, RLS on the two tooling tables the Supabase advisor flagged (`2e567408`); item 6, migration 180, the server-side ED backstop on consistency sharing, Opus-reviewed, DORMANT until D92-11 (`590b03fd`, which also adds 176's Part 0 order guard); item 7, migration 181 and the Gyms segment of the moderation screen (`b4a24e65`); item 8, look and copy (`cbdbf8be`: the quiet group empty line, Username and Age group everywhere, the group-create purpose line, the You-row and profile-strip figures at the title role, the copy census; review SHIP); founder decision B on D92-11 (register D196; 2026-09-24, hash recorded below): migration 182 `ed_flag_push` (raises and clears, forward-only, scoped to the caller's own row, clocks clamped, no signals, the owner write policies dropped; proved on a PostgreSQL 16 harness T1-T12), the migration 180 calm arm (every consistency reader withholds on open ED flag OR calm mode, read-side only; L8 acceptance hardening), 176's Part 0 needle, the client push (first in every sync cycle's push phase, counted; immediate and guarded after a raise or a clear; quiet PGRST202 skip while 182 is unapplied; neutral telemetry), the pull ratchet (a pulled clear never closes a local open flag), the Sentry scrub of the table and RPC names, three guards, the push and pull-ratchet suites; Opus review SHIP WITH FIXES, every fix taken. Gate at the last landing (2026-09-24, over the decision B tree): lint 0, tsc 0, imports OK, 1329 suites passed (1 pre-existing skip) / 20,823 tests passed (16 pre-existing skips), 0 failures.
 
-**Migrations WRITTEN, NOT APPLIED (founder phrase per batch):** 176, 177, 178, 179. 179 depends on nothing and can go alone and first. 178 is a hard gate for the next build: no build carrying the "Say hello" door before 178 is applied (on the live server a note is refused). The community-notify edge function carries the note's push copy and deploys only by manual dispatch under the same phrase.
+**Migrations WRITTEN, NOT APPLIED (founder phrase per batch):** 176, 177, 178, 179, 180, 181, 182. 179 depends on nothing and can go alone and first. 176 BEFORE 180, enforced in code (180's Part 0 refuses until 176's list_mine change is live; 176's Part 0 refuses to re-run once 180's gate is live). 182 (the ED-flag cloud push, founder decision B, D196) is independent of the rest and is NOT a build gate (the client skips quietly on PostgREST PGRST202 while the RPC is missing; nothing reaches the cloud until 182 is applied); 180 now carries both arms (open ED flag OR calm mode) and its ED arm goes live once 182 is applied and a device on the new build raises a flag. 178 is a hard gate for the next build: no build carrying the "Say hello" door before 178 is applied (on the live server a note is refused). The community-notify edge function carries the note's push copy and deploys only by manual dispatch under the same phrase.
 
-**In flight:** item 8 look and copy (Sonnet build lane, brief `scratchpad/briefs/item8-look-and-copy.md`; recovery path: the brief is complete and every change is file:line-specified, so a partial tree is reviewed hunk by hunk against it and finished by a relaunch). **Queued, in order:** item 9 hygiene (brief drafted at `scratchpad/briefs/item9-hygiene.md`: migration 182 revokes EXECUTE on `community_dimensions_me`, `gyms_in_place` and `community_gym_suggest` ONLY, since the audit's `gyms_near` zero-caller claim is wrong, `GymPicker.js:58` imports it as `nearGyms`; the static retired page for `public/p`; tests for the gyms `submit`/`confirmSubmission`/`report` wrappers and `CommunityGroupMembersScreen`; the `group_accepted` recency filter in community-notify); item 10 Partners migration 155 (founder confirmation and phrase); item 11 remainder (leaked-password setting in the dashboard; the two dashboard-only edge functions "tips" and "bright-handler").
+**In flight:** nothing; item 9 starts next (two lanes, Sonnet build + Haiku census, per its brief). **Queued, in order:** item 9 hygiene (brief drafted at `scratchpad/briefs/item9-hygiene.md`: migration 183 revokes EXECUTE on `community_dimensions_me`, `gyms_in_place` and `community_gym_suggest` ONLY, since the audit's `gyms_near` zero-caller claim is wrong, `GymPicker.js:58` imports it as `nearGyms`; the static retired page for `public/p`; tests for the gyms `submit`/`confirmSubmission`/`report` wrappers and `CommunityGroupMembersScreen`; the `group_accepted` recency filter in community-notify; the copy census extended to `src/lib/community`, the nested-template-literal case and an "Age band" census, from the item 8 review); item 10 Partners migration 155 (founder confirmation and phrase); item 11 remainder (leaked-password setting in the dashboard; the two dashboard-only edge functions "tips" and "bright-handler").
 
 **Side findings for the founder (not fixed, surfaced in chat):** the wizard's completion-time body-profile save replaces every column on a re-run (wellbeing score and consent flag); payload string values were unfiltered for blocked terms until 178 (closed there); a rate limit cut two lanes off on 2026-09-22 evening, both relaunched and completed on 2026-09-23. **From the Opus review of migration 180 (2026-09-23), lead-verified:** nothing writes the cloud `ed_pattern_flags` table (engine flags live in device SQLite only; registry pull-only; no migration or edge function inserts it), so migration 180's gate AND the two edge functions' existing ED gates (partner-cheer, community-notify push suppression) are dormant for engine-raised flags until D92-11 (the raise-only push, open since 2026-08-10) is decided; the fork is in chat. Also L4: `syncTrainingProfile` skips `consistencyGateState` (sends `share_consistency: true` for a calm or flagged user; counters null, nothing leaks, but it wipes what `publishConsistency` published), not fixed.
 
@@ -3792,28 +3792,28 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
-- **ED FLAG CLOUD WRITE, D92-11 (re-raised 2026-09-23 by the Opus review of
-  migration 180, lead-verified) - DECISION.** Nothing writes the cloud
-  `ed_pattern_flags` table: the engine raises flags into device SQLite
-  only, the sync registry has the table pull-only, no migration or edge
-  function inserts it. So migration 180's server gate on consistency
-  sharing, AND the two edge functions' existing ED gates (partner-cheer,
-  community-notify push suppression), withhold nothing for an engine-raised
-  flag until a cloud write exists. Options, asked in chat: (A) wire the
-  raise-only push D92-11 records as the design (an ed_pattern_flags row
-  reaches Dublin when raised, cleared_at moves forward only; Article 9
-  data, RLS already owner-scoped; the lead recommends dropping the owner
-  UPDATE policy in favour of an engine-controlled clear); (B) also, or
-  instead, a withhold-only calm arm on the server read from the synced
-  prefs mirror; (C) keep flags per-device deliberately, correct the
-  registry comment and the two edge functions' claims, and leave 180 as a
-  wall that only a future write would arm. 180 is committed as the shared
-  foundation and is NOT applied until the phrase, whichever way this goes.
-- **MIGRATIONS 176 TO 181 (2026-09-23) - the phrase.** All six WRITTEN,
+- **ED FLAG CLOUD WRITE, D92-11 - DECIDED 2026-09-23: founder chose B
+  (register D196).** Built the same day by the lead and landed on main
+  2026-09-24 after the Opus review (SHIP WITH FIXES, every fix taken; D196
+  items 8 and 9): migration 182 (`ed_flag_push`: raises and clears,
+  forward-only, scoped to the caller's own row, clocks clamped, no
+  signals; the owner write policies dropped; proved on a PostgreSQL 16
+  harness), migration 180 amended (calm arm read from the guarded synced
+  pref; every consistency reader withholds on open ED flag OR calm mode,
+  read-side only), the client push on raise, clear and every sync cycle
+  (a pulled clear never closes a local open flag). While 182 is NOT
+  applied the client skips quietly (PostgREST PGRST202), so the next build
+  is safe against the live server; nothing reaches the cloud until the
+  phrase. Once 182 is applied and a device on that build raises a flag,
+  180's gate and both edge-function ED gates are live. Founder-side: the
+  phrase (below) and, after the build ships, a device walk of the ED-flag
+  flow on two devices (checklist in chat).
+- **MIGRATIONS 176 TO 182 (2026-09-23) - the phrase.** All seven WRITTEN,
   guard-proved, NOT APPLIED. Order inside the batch: 179 can go alone and
-  first; 176 BEFORE 180 (both files refuse the other order in code); 178
-  before any build carrying the "Say hello" door. Say "run against
-  production: 176, 177, 178, 179, 180, 181" (or a subset in that order).
+  first; 176 BEFORE 180 (both files refuse the other order in code); 182
+  is independent of the rest; 178 before any build carrying the "Say
+  hello" door. Say "run against production: 176, 177, 178, 179, 180, 181,
+  182" (or a subset in that order).
 - **GYM DIRECTORY (2026-09-07) - founder items after the build.** (a)
   When 162 passes re-review: say "run against production" for the batch
   160 + 161 + 162 and the generated seed chunks (`node

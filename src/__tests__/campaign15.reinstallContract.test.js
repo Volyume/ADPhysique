@@ -294,16 +294,22 @@ describe('C15 boundaries that this campaign must not cross (33, 34, 35)', () => 
     expect(list).not.toMatch(/cycle_tracking/);
     expect(list).not.toMatch(/ed_flag|ed_pattern/);
     // Calm mode's own long-standing sync is deliberately still there and
-    // is NOT the same thing: calm is the stricter state, and propagating
-    // an ED FLAG is the separate decision D92-11 still holds.
+    // is NOT the same thing: calm is the stricter state. RE-ANCHORED
+    // 2026-09-23 (founder decision B, register D196): D92-11 is now
+    // ANSWERED, and the ED flag travels through its own RPC push, never
+    // through this pref allowlist, which must stay exactly as narrow.
     expect(list).toMatch(/@volyume_wellbeing_mode/);
   });
 
-  test('the ED flag is pull-only and server-authoritative, with no device writer (33)', () => {
-    // D92-11 is about the DEVICE publishing local ED/wellbeing state to
-    // the cloud. The cloud table is the other direction: the flag is
-    // raised server-side and the device only reads it. That asymmetry is
-    // the boundary, so pin it rather than pretending the table is absent.
+  test('the ED flag stays pull-only in the registry; its device writer is the dedicated RPC push, never the engine (33)', () => {
+    // RE-ANCHORED 2026-09-23 (founder decision B, register D196). The old
+    // comment here said the flag was "raised server-side and the device
+    // only reads it"; that was never true (nothing wrote the cloud table,
+    // review H1 of migrate_180). The device now publishes its flag through
+    // the raise-only, forward-only `ed_flag_push` RPC
+    // (src/lib/sync/tables/edPatternFlags.js), and the registry entry stays
+    // pull_only so the generic engine's upsert/delete semantics can never
+    // reach a forward-only safety row. That is the boundary pinned here.
     const registry = fs.readFileSync(p('lib/sync/registry.js'), 'utf8');
     const start = registry.indexOf("table: 'ed_pattern_flags'");
     expect(start).toBeGreaterThan(-1);

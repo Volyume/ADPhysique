@@ -149,6 +149,12 @@ const CLIENT_RPCS = [
   'gyms_search',
   'gyms_submit',
   'gyms_suggest',
+  // RE-ANCHORED 2026-09-23 (founder decision B, register D196; answers
+  // D92-11): the ED-pattern flag's cloud push (migrate_182). SECURITY
+  // DEFINER, `search_path = public, pg_temp`, user from auth.uid(), granted
+  // to `authenticated` only; the only client write path to ed_pattern_flags
+  // (the table's owner INSERT/UPDATE policies are dropped in the same file).
+  'ed_flag_push',
 ];
 
 /** Every RPC name the app actually calls, read from the real source. */

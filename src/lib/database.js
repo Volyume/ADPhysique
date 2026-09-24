@@ -11049,14 +11049,6 @@ export async function insertOrUpdatePlannedMuscleVolumeFromCloud(userId, row) {
 }
 
 /**
- * ed_pattern_flags from cloud. Server is authoritative per
- * SYNC_REGISTRY (conflictStrategy=server_wins), so INSERT OR
- * REPLACE: any local edits to the row are stomped by the cloud
- * copy on the next pull. Local writes still go through
- * raise/clear; they reach the cloud via the existing supabase
- * upsert path inside the engine, not through this helper.
- */
-/**
  * recipe_ingredients all-rows reader for SYNC. Includes
  * tombstones (deleted_at IS NOT NULL) so the per-table push in
  * src/lib/sync/tables/recipeIngredients.js can ship the delete
@@ -11208,6 +11200,25 @@ export async function upsertTierHistoryFromCloud(userId, row) {
 export async function upsertEdPatternFlagFromCloud(userId, row) {
   if (!row?.id) return;
   const d = await db();
+  // Founder decision B (2026-09-23, register D196 item 8; D92 item 7,
+  // "nothing remote may weaken an ED-safety state"): the cloud copy is
+  // server-wins for everything EXCEPT a clear. A pulled clear never closes
+  // a local OPEN row: each device's own engine clears its own flag (the
+  // weekly coach re-evaluates the clear on every run), and the cloud state
+  // exists for the server-side gates. A pulled OPEN row does open the local
+  // mirror (the stricter direction). The signals the detector stored
+  // locally are kept when the cloud, which never carries them, says null.
+  const local = await d.getFirstAsync(
+    `SELECT signals_json, cleared_at, deleted_at FROM ed_pattern_flags
+     WHERE user_id = ? AND id = ?`,
+    [userId, row.id],
+  );
+  const cloudCleared = row.cleared_at ? _tsToMs(row.cleared_at) : null;
+  const localOpen = !!local && local.cleared_at == null && local.deleted_at == null;
+  if (localOpen && cloudCleared != null) return;
+  const cloudSignals = typeof row.signals_json === 'string'
+    ? row.signals_json
+    : (row.signals_json ? JSON.stringify(row.signals_json) : null);
   await d.runAsync(
     `INSERT OR REPLACE INTO ed_pattern_flags
        (id, user_id, flag_state, reason, signals_json,
@@ -11217,11 +11228,9 @@ export async function upsertEdPatternFlagFromCloud(userId, row) {
       row.id, userId,
       row.flag_state ?? 'raised',
       row.reason ?? null,
-      typeof row.signals_json === 'string'
-        ? row.signals_json
-        : (row.signals_json ? JSON.stringify(row.signals_json) : null),
+      cloudSignals ?? local?.signals_json ?? null,
       _tsToMs(row.raised_at) ?? Date.now(),
-      row.cleared_at ? _tsToMs(row.cleared_at) : null,
+      cloudCleared,
       _tsToMs(row.updated_at) ?? Date.now(),
       row.deleted_at ? _tsToMs(row.deleted_at) : null,
     ],
@@ -11954,6 +11963,38 @@ export async function getRecentEdPatternFlags(userId, limit = 5) {
     [userId, limit],
   );
   return rows;
+}
+
+/**
+ * How long a CLEARED flag keeps being re-pushed to the cloud after its
+ * clear (founder decision B, D196): long enough that a clear the immediate
+ * push missed (offline, killed app) still lands on a later cycle, short
+ * enough that old history is not re-sent forever.
+ */
+export const ED_FLAG_PUSH_CLEARED_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * The rows the cloud push considers (founder decision B, 2026-09-23, D196;
+ * `src/lib/sync/tables/edPatternFlags.js` `pushEdPatternFlags`). Only the
+ * columns the push needs: the signals column is deliberately NOT selected,
+ * so the health-derived indicators cannot reach the payload by accident.
+ * Every open row plus rows cleared within ED_FLAG_PUSH_CLEARED_WINDOW_MS,
+ * newest first, bounded; a person never has more real flags than this.
+ */
+export async function getEdPatternFlagsForCloudPush(userId, limit = 20, nowMs = Date.now()) {
+  const d = await db();
+  // Every open row, plus rows cleared within the last 30 days: a clear the
+  // immediate push missed still reaches the cloud on a later cycle, and
+  // long-cleared history stops being re-sent (the server is forward-only,
+  // so a re-push of it would be a no-op anyway). Newest first, bounded.
+  const clearedSinceMs = nowMs - ED_FLAG_PUSH_CLEARED_WINDOW_MS;
+  return d.getAllAsync(
+    `SELECT id, reason, raised_at, cleared_at FROM ed_pattern_flags
+     WHERE user_id = ? AND deleted_at IS NULL
+       AND (cleared_at IS NULL OR cleared_at >= ?)
+     ORDER BY raised_at DESC LIMIT ?`,
+    [userId, clearedSinceMs, limit],
+  );
 }
 
 export async function raiseEdPatternFlag(userId, { reason, signals }) {

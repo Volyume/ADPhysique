@@ -9292,3 +9292,159 @@ settled tree; one commit per item; merged to main and pushed the same step.
     clause slips through), and the returned key renamed
     `confirmation_count` (it is the row's distinct-confirmer count, never
     a count of submitters).
+11. **Item 8, look and copy (two Sonnet lanes, one Sonnet review:
+    SHIP).** Rulings: the Group screen's own empty feed is one quiet line
+    with no button, because the members-only "Share a workout with the
+    group" door above it is the section's one action (rule 9); "Age band"
+    becomes "Age group" and "Handle" becomes "Username" on every surface a
+    person reads, including the invite sheet, search, find people, the
+    rules text and the privacy receipt, with the rules version left at 3
+    (a synonym is not a rules change) and the same ruling recorded on the
+    receipt's own comment; the group-create screen states what a group is
+    for with the Hub's exact sentence through one shared constant (one
+    register across screens); the "one figure per screen" step-up goes to
+    exactly two sites, the Hub's You-row metric and the Profile strip's
+    leading cell, both "sessions this week", through a `metricRole` prop
+    and a `lead` flag that default off, pinned by presentation-guard rule
+    (d) and a dated clarification of blueprint rule 1; the "Same age band"
+    reason line the first lane flagged joins the rename. A copy census
+    now fails on any "handle" word in Community screen or component
+    copy, JSX text included, with the one named layout-key exception. The
+    review's three findings are tooling reach, not defects, and are ruled
+    into item 9: extend the census to `src/lib/community`, harden the
+    nested-template-literal case, and add the same census for "Age band".
+
+## D196 — ED flag cloud write and the calm arm: founder decision B (2026-09-23; answers D92-11)
+
+The question, re-raised by the Opus review of migration 180 (D195 item 9)
+and put to the founder in chat with three options: (A) wire the raise-only
+push D92-11 recorded as the design; (B) A plus a withhold-only calm-mode
+arm on the server read from the synced prefs mirror; (C) keep flags per
+device and leave 180 as a wall a future write would arm. Founder: "I select
+B." Lead rulings under that decision, each recorded so a future reader can
+see why the shape is what it is:
+
+1. **One narrow write path, not the registry engine.** Migration 182 adds
+   `ed_flag_push(_id, _raised_at, _cleared_at, _reason)`, SECURITY DEFINER
+   on `auth.uid()`: a new id inserts the caller's row; an existing row
+   moves forward only (`cleared_at` set once, never nulled or moved;
+   `raised_at` and `deleted_at` never touched; reason set once; an
+   unchanged re-push is a no-op). CORRECTED after the Opus review of the
+   build (2026-09-23/24, M1, L1, L3): every read and write is scoped to
+   the caller's OWN composite key `(user_id = auth.uid(), id)` (the PK
+   since migrate_018), so there is no foreign row to refuse: two people
+   who hold the same local id each get their own row and neither can see
+   or touch the other's; the stored row is locked (`FOR UPDATE`) and the
+   insert is race-safe (`ON CONFLICT (user_id, id) DO NOTHING`); clocks
+   are CLAMPED, never refused (a future raise or clear to now(), a clear
+   before its stored raise up to the raise), because a refusal would keep
+   a wrong-clock device's flag out of the cloud for ever with every server
+   gate off for it. The device pushes raises AND clears. Proved on a
+   PostgreSQL 16 harness (T1-T12). The registry entry stays `pull_only`:
+   the generic engine's last-write-wins upsert and delete semantics are
+   wrong for a forward-only safety row. The client pushes every open row
+   plus rows cleared in the last 30 days on every sync cycle (FIRST in
+   `bulkUploadLocalData`'s push phase, so a workout backlog can never
+   starve it, before the pull; a real failure counts for the sign-out
+   push-first safety) and immediately after a raise or a clear (guarded:
+   never during a sign-out wipe, without Article 9 consent, without a
+   session, or for a user other than the signed-in one); the RPC's
+   idempotence makes that safe and a person has a handful of flags at
+   most, so no queue row or watermark column is needed. While 182 is not
+   applied the client skips quietly on PostgREST PGRST202 (uncounted, no
+   Sentry error): a build carrying the push is safe against the live
+   server, and nothing reaches the cloud until the phrase applies it.
+2. **No signals leave the device.** The RPC has no parameter for
+   `signals_json` and never writes it; the row read for the push never
+   selects it; the payload is shaped in exactly one function. Verified
+   first: nothing on a second device reads the reason or the signals
+   (every consumer of `getOpenEdPatternFlag` tests presence only), so the
+   cloud row carries the user id, a short reason code and the timestamps.
+   The `ed_pattern_flag_fired` telemetry event already carried the four
+   signal booleans to `engine_telemetry` before this decision; that is a
+   separate purpose and is unchanged. Telemetry for the push (review H2):
+   the scope is neutral (`sync.flagPush`), no row id ever travels as log
+   context, and the Sentry scrubber now redacts the table and RPC names
+   from any message that carries them, as the second wall.
+3. **The owner write policies go.** Migration 182 drops migrate_017's
+   owner INSERT and UPDATE policies and revokes INSERT/UPDATE/DELETE on the
+   table from the client roles, so a direct call can no longer un-clear,
+   edit or delete a flag (review L2). Precisely: an owner CAN still clear
+   their own flag through the RPC (a clear is one of its two inputs,
+   forward-only, never reversible), which is the same action their own
+   engine takes and changes only what others see of their counters; what
+   is closed is every other write. The owner SELECT policy stays for the
+   pull. The recommendation to drop the owner UPDATE policy was made with
+   the options and is taken.
+4. **The calm arm is read-side only.** Migration 180, amended: two more
+   helpers, `_community_calm_mode_on(uid)` (true when `user_prefs`
+   `@volyume_wellbeing_mode` = 'calm', true on any read error, false when
+   no row) and `_community_consistency_withheld(uid)` = open ED flag OR
+   calm mode, the same OR the client's `isPhotoSuppressed` applies; every
+   consistency reader now calls the withheld helper. The write-side force
+   in `community_update_training_profile` stays ED-flag-only: a calm
+   mirror that lags a device which just turned calm off would otherwise
+   pin the person's stored `share_consistency` to false silently (the
+   client discards the response); withholding on read resumes by itself
+   the moment the mirror catches up, a stored false would not.
+5. **Why the mirror is sound to read (corrects the lead's earlier
+   ruling).** The wellbeing pref is a GUARDED synced pref: the bulk push
+   carries it every cycle with its honest local write stamp, a stale
+   device's push can never walk the cloud value backwards, and the pull
+   ratchets so a pulled 'normal' never replaces a local 'calm'. The cloud
+   value is therefore the NEWEST edit any of the person's devices has
+   pushed (newest-edit-wins on push; the ratchet protects each device's
+   own copy, not the mirror: review M4 corrected the first draft's
+   "strictest state"), refreshed each cycle: turning calm on on one device
+   withholds from that device's next push, turning it off shows again
+   from that push. The lead's earlier "not reliably fresh"
+   ruling in the 180 header was made before the founder's decision and is
+   superseded. Purpose limitation: the server reads the person's own calm
+   choice only to withhold their own counters from others, the same
+   purpose it serves on the device; nothing else reads it and nothing new
+   is stored or shared.
+6. **What becomes live.** Once 182 is applied and a device on a build
+   with the push raises a flag, migration 180's ED arm AND the two edge
+   functions' existing ED gates (partner-cheer, community-notify push
+   suppression), which read the same table and were dormant since they
+   shipped, are live. Audit B-02 closes with 180 + 182 + the client push
+   together. Apply order inside the batch: 179 alone first if wanted; 176
+   BEFORE 180 (enforced in code); 182 independent of 176-181.
+7. **Record corrections.** The `ed_pattern_flags` sync module's header
+   had claimed the table was written "by the engine (and the upgrade_tier
+   RPC)"; neither was true and the header now says so. Two contract tests
+   that described the flag as "raised server-side" are re-anchored to the
+   real boundary: the registry stays pull-only, the writer is the RPC push.
+   Side finding kept open for item 9 or the founder's word: the
+   training-profile sync path sends `share_consistency: true` for a calm or
+   flagged person on band toggles, Recalculate and Join (D195 item 9, L4).
+8. **The pull ratchets: a pulled clear never closes a local open flag
+   (review M2; D92 item 7, "nothing remote may weaken an ED-safety
+   state").** The first build's pull was INSERT OR REPLACE, so a second
+   device's clear, or a stale cloud copy, would have closed this device's
+   open flag and lifted every local suppression with it. Ruled: the local
+   mirror (`upsertEdPatternFlagFromCloud`) is server-wins for everything
+   EXCEPT a clear. A pulled clear on a local OPEN row is ignored (each
+   device's own engine clears its own flag; the weekly coach re-evaluates
+   the clear on every run; the cloud state exists for the server-side
+   gates); a pulled OPEN row does open the local mirror, including one
+   this device had cleared (the stricter state is the only safe resting
+   position, and the next forward-only push clears the cloud copy again
+   if the engine still says so); and the signals the detector stored
+   locally are kept when the cloud, which never carries them, says null
+   (the first build nulled them on the first pull). Pinned against the
+   real database.js on an in-memory SQLite
+   (`src/lib/__tests__/edPatternFlags.pullRatchet.test.js`).
+9. **The review's other fixes, all taken (Opus adversarial review of the
+   build, 2026-09-23/24, verdict SHIP WITH FIXES).** H1 migrate_176's
+   Part 0 needle now matches the withheld helper as well as the ED helper,
+   so 176 still refuses to re-run over an amended 180; H2 neutral
+   telemetry (item 2); M1/L1/L3 the RPC body (item 1); M2 the pull ratchet
+   (item 8); M4 the mirror wording (item 5); L2/L9 the 180 header's RLS
+   paragraph and stale spans rewritten to the design that exists; L4 the
+   push moved to the front of the push phase, counted, with the 30-day
+   window on cleared rows; L5 the guards on the immediate push; L7 the
+   push fixtures carry `signals_json` and the wire keys are asserted
+   exactly; L8 the 180 acceptance block hardened (STABLE on the two new
+   helpers, the withheld helper's live body compared exactly, real-row
+   calm probes in both directions).

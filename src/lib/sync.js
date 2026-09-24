@@ -64,6 +64,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getPullWatermark, setPullWatermark, nextWatermark, isoFromMs, getPushWatermark, setPushWatermark } from './sync/watermark';
 import { isDeletedAccountFkError } from './sync/telemetry';
+import { pushEdPatternFlags } from './sync/tables/edPatternFlags';
 import { logError, logWarn, logInfo } from './errorLog';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -782,6 +783,19 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
   _bulkPushAllNetwork = true;
   let threw = false;
   try {
+    // ED-pattern flags (founder decision B, 2026-09-23, D196; answers
+    // D92-11): the dedicated forward-only push through the ed_flag_push
+    // RPC, FIRST in the push phase so a workout backlog can never starve
+    // the safety row, and before the pull. Idempotent server-side; a real
+    // failure is counted for the sign-out push-first safety and retried by
+    // the next cycle; a server without migrate_182 yet is a quiet skip
+    // (`rpc_missing`), not a failure. The registry keeps the table
+    // pull_only on purpose. The scope stays neutral (review H2).
+    const flagPush = await pushEdPatternFlags(sb, { userId: supabaseUserId });
+    if (flagPush?.errors > 0) {
+      logBulkWarn('sync.flagPush', `${flagPush.errors} row push(es) failed`, { supabaseUserId, errors: flagPush.errors });
+    }
+
     // Every exercise, canonical + custom, pushed first so all the
     // downstream FK references (routine_exercises, workout_sets) land
     // on cloud rows that exist. Previously only is_custom=1 rows were

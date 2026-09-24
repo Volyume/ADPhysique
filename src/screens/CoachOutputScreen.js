@@ -47,6 +47,7 @@ import {
   applyCoachTrainingAdjustmentAtomically,
   getActivePeakWeekPlan,
 } from '../lib/database';
+import { pushEdPatternFlagsNow } from '../lib/sync/tables/edPatternFlags';
 import { getProgressScanCoachSummary } from '../lib/progressScanStore';
 import {
   applyProgressScanCoachContext,
@@ -2151,6 +2152,13 @@ export default function CoachOutputScreen({ navigation, route }) {
             reason: 'multi-signal harm check',
             signals: result.edPatternSignals,
           });
+          // Founder decision B (2026-09-23, D196; answers D92-11): tell the
+          // cloud now, so migrate_180's gate and the push-suppression gates
+          // learn within seconds rather than at the next sync cycle. Best
+          // effort and never awaited on the user's path: the next cycle's
+          // bulkUploadLocalData re-pushes whatever this misses. The signals
+          // never travel (the RPC has no parameter for them).
+          pushEdPatternFlagsNow(user.id).catch(() => {});
           // Q1 ED-safety: the flag is raised here in the foreground, so cancel
           // the (now audible) weigh-in prompts immediately. Their weekly
           // triggers are otherwise laid days ahead and would fire in the
@@ -2163,6 +2171,9 @@ export default function CoachOutputScreen({ navigation, route }) {
           });
         } else if (result.edPatternClearedThisWeek && edPatternOpen) {
           await clearEdPatternFlag(user.id);
+          // Decision B: the clear travels the same way, forward-only on the
+          // server (cleared_at is set once, never nulled). Best effort.
+          pushEdPatternFlagsNow(user.id).catch(() => {});
           // Re-lay the weigh-in prompts now the flag has cleared (per the saved
           // morning toggle; both helpers self-guard and self-cancel).
           try {

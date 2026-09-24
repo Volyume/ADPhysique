@@ -195,13 +195,26 @@ const CONTRACT = [
     reinstall: EXPECTED_LOCAL_LOSS,
   },
   {
-    state: 'ED and wellbeing screening state',
-    authority: 'the device (raw answers), the server (the ED flag)',
-    mechanism: 'raw answers never sync; the cloud flag is pull-only and server-authoritative',
+    // RE-ANCHORED 2026-09-23 (founder decision B, register D196): the row
+    // used to cover the answers and the flag together, with the flag "read,
+    // never written, by the device". The flag is now written by the device
+    // (its own row below); the raw answers stay local.
+    state: 'ED and wellbeing screening answers',
+    authority: 'the device',
+    mechanism: 'raw answers never sync',
     applier: null,
-    destination: 'local only for answers; the flag is read, never written, by the device',
-    conflict: 'not applicable: the device is not a writer (D92-11 holds)',
+    destination: 'local only',
+    conflict: 'not applicable: nothing remote ever sees the answers',
     reinstall: EXPECTED_LOCAL_LOSS,
+  },
+  {
+    state: 'the ED-pattern flag',
+    authority: 'the device that raises or clears it; the cloud row serves the server-side gates',
+    mechanism: 'the device publishes raises and clears through the ed_flag_push RPC (forward-only on the server, never the signals); the pull is server-wins with the open-flag ratchet',
+    applier: 'upsertEdPatternFlagFromCloud',
+    destination: 'ed_pattern_flags, the local mirror',
+    conflict: 'server-wins on pull, except a pulled clear never closes a local open row (D196 item 8; D92 item 7)',
+    reinstall: RESTORED,
   },
 ];
 
@@ -226,12 +239,20 @@ describe('C15-8 every contracted state family matches the code', () => {
         expect(REGISTRY).not.toMatch(/progress_photo|progress_scan/);
       }
       if (/ED and wellbeing/.test(state)) {
-        // The one asymmetry worth stating precisely: a cloud ED-flag table
-        // exists, but the device only READS it. D92-11 is about the device
-        // publishing local state, and that writer still does not exist.
+        // RE-ANCHORED 2026-09-23 (founder decision B, register D196; D92-11
+        // answered): the device now PUBLISHES its flag, but through the
+        // dedicated raise-only, forward-only `ed_flag_push` RPC
+        // (src/lib/sync/tables/edPatternFlags.js pushEdPatternFlags, called
+        // from bulkUploadLocalData and after a raise or clear), never through
+        // the registry engine, whose upsert/delete semantics are wrong for a
+        // forward-only safety row. So the registry entry STAYS pull_only, and
+        // this pin now guards that the generic push is never switched on for
+        // it by mistake.
         const entry = REGISTRY.slice(REGISTRY.indexOf("table: 'ed_pattern_flags'"));
         expect(entry.slice(0, 300)).toMatch(/direction: 'pull_only'/);
         expect(REGISTRY).not.toMatch(/scoff/i);
+        const SYNC = src('lib/sync.js');
+        expect(SYNC).toContain("await pushEdPatternFlags(sb, { userId: supabaseUserId });");
       }
     },
   );
@@ -274,6 +295,10 @@ describe('C15-8 nothing ships without an entry in the contract', () => {
     'exercise_intent', 'exercise_swaps', 'exercise_slot_defaults', 'morning_weights',
     'progress_scan_sessions', 'progress_scan_assets', 'progress_photo_meta',
     'workouts', 'workout_sets', 'exercises', 'custom_exercises',
+    // RE-ANCHORED 2026-09-23 (founder decision B, register D196): the ED
+    // flag is contracted now (RESTORED through the pull, written by the
+    // device through the ed_flag_push RPC), no longer out of scope.
+    'ed_pattern_flags',
   ]);
 
   // Families this contract deliberately scopes OUT, each with the campaign
@@ -287,7 +312,6 @@ describe('C15-8 nothing ships without an entry in the contract', () => {
     'capability_constraints', 'session_constraint_effects',
     'weekly_checkins_v2', 'weight_log', 'body_composition_log',
     'daily_steps', 'cardio_log',                        // retired surfaces
-    'ed_pattern_flags',                                 // D92-11 holds
     'tier_history', 'profiles',                         // billing / identity
     'notification_preferences',                         // the projection, contracted above
     'plan_folders',
