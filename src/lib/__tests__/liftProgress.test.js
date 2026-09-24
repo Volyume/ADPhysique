@@ -1,4 +1,4 @@
-import { buildLiftProgressRows } from '../liftProgress';
+import { buildLiftProgressRows, seriesDeltaPct } from '../liftProgress';
 import { calculate1RM } from '../algorithms';
 
 // Helper: a completed working set in the camelCase shape getCompletedWorkoutSets
@@ -95,5 +95,44 @@ describe('buildLiftProgressRows', () => {
   test('empty input returns an empty array', () => {
     expect(buildLiftProgressRows([], EXERCISES)).toEqual([]);
     expect(buildLiftProgressRows(null, null)).toEqual([]);
+  });
+});
+
+// B1 (progress-tab audit 2026-09-24): LiftProgressScreen's row badge used to
+// always report the e1RM series's first-to-latest change beside whichever
+// headline the metric switcher actually showed. seriesDeltaPct is the pure
+// helper that lets the badge compute that change from the SAME series the
+// on-screen lens is drawing (buildExerciseMetricSeries's heaviest/reps/
+// volume arrays), mirroring buildLiftProgressRows's own deltaPct formula
+// above exactly.
+describe('seriesDeltaPct', () => {
+  test('percent change from the first to the last point', () => {
+    expect(seriesDeltaPct([60, 97, 73])).toBe(22); // (73-60)/60*100 = 21.67 -> 22
+    expect(seriesDeltaPct([8, 3, 11])).toBe(38); // (11-8)/8*100 = 37.5 -> 38
+    expect(seriesDeltaPct([480, 291, 803])).toBe(67); // (803-480)/480*100 = 67.29 -> 67
+  });
+
+  test('a fall reports a negative percentage', () => {
+    expect(seriesDeltaPct([100, 90, 80])).toBe(-20);
+  });
+
+  test('no change reports 0, not null', () => {
+    expect(seriesDeltaPct([50, 60, 50])).toBe(0);
+  });
+
+  test('null for fewer than two points', () => {
+    expect(seriesDeltaPct([])).toBeNull();
+    expect(seriesDeltaPct([42])).toBeNull();
+    expect(seriesDeltaPct(null)).toBeNull();
+    expect(seriesDeltaPct(undefined)).toBeNull();
+  });
+
+  test('null rather than Infinity/NaN when the first point is zero', () => {
+    expect(seriesDeltaPct([0, 50])).toBeNull();
+  });
+
+  test('null when a point is non-finite', () => {
+    expect(seriesDeltaPct([NaN, 50])).toBeNull();
+    expect(seriesDeltaPct([50, Infinity])).toBeNull();
   });
 });

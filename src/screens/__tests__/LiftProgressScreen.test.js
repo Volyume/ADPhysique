@@ -74,6 +74,7 @@ import {
   getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight,
 } from '../../lib/database';
 import { calculate1RM } from '../../lib/algorithms';
+import { getWeeklyLoadWindow, DEFAULT_LOAD_WEEKS } from '../../lib/progressSeries';
 import LiftProgressScreen from '../LiftProgressScreen';
 
 const LIFT_PROGRESS_SOURCE = require('fs').readFileSync(
@@ -516,5 +517,227 @@ describe('LiftProgressScreen malformed restored/legacy data (EP-23/UI-11)', () =
     expect(() => new Date(date).toISOString()).not.toThrow();
     expect(Number.isNaN(new Date(date).getTime())).toBe(false);
     expect(weight).not.toBe('NaN');
+  });
+});
+
+// B1 (progress-tab audit 2026-09-24): the row badge used to always report
+// the e1RM series's first-to-latest change beside whichever headline the
+// metric switcher actually showed, so switching to "Total lifted" /
+// "Heaviest weight" / "Total reps" left the 1RM-based percentage sitting
+// under a headline it no longer describes.
+describe('LiftProgressScreen -- badge follows the selected lens (B1, 2026-09-24)', () => {
+  const METRIC_EXERCISES = [{ id: 'bench', name: 'Barbell Bench Press', primaryMuscle: 'chest' }];
+  const METRIC_SETS = [
+    set({ exerciseId: 'bench', workoutId: 'w1', weight: 60, reps: 8, at: 1000 }),
+    set({ exerciseId: 'bench', workoutId: 'w2', weight: 97, reps: 3, at: 2000 }),
+    set({ exerciseId: 'bench', workoutId: 'w3', weight: 73, reps: 11, at: 3000 }),
+  ];
+
+  beforeEach(() => {
+    getCompletedWorkoutSets.mockResolvedValue(METRIC_SETS);
+    getAllExercises.mockResolvedValue(METRIC_EXERCISES);
+  });
+
+  test('the e1RM lens keeps its existing badge value (today\'s value, unchanged)', async () => {
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    const row = capturedListProps.data.find(r => r.name === 'Barbell Bench Press');
+    expect(row.deltaPct).not.toBeNull();
+    const text = renderedText(capturedListProps.renderItem({ item: row, index: 0 }));
+    expect(text).toContain(`${row.deltaPct > 0 ? '+' : ''}${row.deltaPct}%`);
+    expect(text).toContain('since first log');
+  });
+
+  test('Heaviest weight lens badge is that lens\'s own first-to-latest change (60kg -> 73kg = +22%), not the e1RM one', async () => {
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    let headerTree;
+    act(() => { headerTree = create(capturedListProps.ListHeaderComponent); });
+    const chip = findMetricChip(headerTree, 'Heaviest weight');
+    act(() => { chip.props.onPress(); });
+
+    const row = capturedListProps.data.find(r => r.name === 'Barbell Bench Press');
+    const text = renderedText(capturedListProps.renderItem({ item: row, index: 0 }));
+    expect(text).toContain('+22%');
+    expect(text).toContain('since first log');
+    expect(text).not.toContain(`${row.deltaPct}%`);
+  });
+
+  test('Total reps lens badge is that lens\'s own first-to-latest change (8 -> 11 = +38%)', async () => {
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    let headerTree;
+    act(() => { headerTree = create(capturedListProps.ListHeaderComponent); });
+    const chip = findMetricChip(headerTree, 'Total reps');
+    act(() => { chip.props.onPress(); });
+
+    const row = capturedListProps.data.find(r => r.name === 'Barbell Bench Press');
+    const text = renderedText(capturedListProps.renderItem({ item: row, index: 0 }));
+    expect(text).toContain('+38%');
+    expect(text).toContain('since first log');
+  });
+
+  test('Total lifted lens badge is that lens\'s own first-to-latest change (480 -> 803 = +67%)', async () => {
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    let headerTree;
+    act(() => { headerTree = create(capturedListProps.ListHeaderComponent); });
+    const chip = findMetricChip(headerTree, 'Total lifted');
+    act(() => { chip.props.onPress(); });
+
+    const row = capturedListProps.data.find(r => r.name === 'Barbell Bench Press');
+    const text = renderedText(capturedListProps.renderItem({ item: row, index: 0 }));
+    expect(text).toContain('+67%');
+    expect(text).toContain('since first log');
+  });
+
+  test('badge and caption are hidden when the selected lens has fewer than two points', async () => {
+    getCompletedWorkoutSets.mockResolvedValue([
+      set({ exerciseId: 'bench', workoutId: 'w1', weight: 60, reps: 8, at: 1000 }),
+    ]);
+
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    let headerTree;
+    act(() => { headerTree = create(capturedListProps.ListHeaderComponent); });
+    const chip = findMetricChip(headerTree, 'Heaviest weight');
+    act(() => { chip.props.onPress(); });
+
+    const row = capturedListProps.data.find(r => r.name === 'Barbell Bench Press');
+    const text = renderedText(capturedListProps.renderItem({ item: row, index: 0 }));
+    expect(text).not.toContain('%');
+    expect(text).not.toContain('since first log');
+  });
+});
+
+// B2 (progress-tab audit 2026-09-24): the "Weight lifted" hero used to gate
+// on distinct workouts over ALL loaded sets (all time) while its own chart
+// only ever draws the last 8 Monday-anchored weeks, so a returning user with
+// old sessions and nothing recent saw the hero appear with an empty
+// "This week: 0" chart. Date.now() is pinned so the fixture's timestamps sit
+// at a known, reproducible distance from "now".
+describe('LiftProgressScreen -- Weight lifted hero gate matches its own chart window (B2, 2026-09-24)', () => {
+  const FIXED_NOW = new Date(2026, 8, 24, 12, 0, 0).getTime();
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  let nowSpy;
+
+  beforeEach(() => {
+    nowSpy = jest.spyOn(Date, 'now').mockReturnValue(FIXED_NOW);
+  });
+
+  afterEach(() => {
+    nowSpy.mockRestore();
+  });
+
+  test('three sessions older than eight weeks and none inside the window -> hero hidden', async () => {
+    const win = getWeeklyLoadWindow(DEFAULT_LOAD_WEEKS, FIXED_NOW);
+    const oldAt = win.startMs - 10 * DAY_MS; // safely before the window opens
+    getCompletedWorkoutSets.mockResolvedValue([
+      set({ exerciseId: 'bench', workoutId: 'old1', weight: 60, reps: 8, at: oldAt }),
+      set({ exerciseId: 'bench', workoutId: 'old2', weight: 60, reps: 8, at: oldAt - DAY_MS }),
+      set({ exerciseId: 'bench', workoutId: 'old3', weight: 60, reps: 8, at: oldAt - 2 * DAY_MS }),
+    ]);
+
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    const text = renderedText(capturedListProps.ListHeaderComponent);
+    expect(text).not.toContain('Weight lifted');
+  });
+
+  test('three sessions inside the window -> hero shown', async () => {
+    const win = getWeeklyLoadWindow(DEFAULT_LOAD_WEEKS, FIXED_NOW);
+    const recentAt = win.startMs + DAY_MS; // safely inside the window
+    getCompletedWorkoutSets.mockResolvedValue([
+      set({ exerciseId: 'bench', workoutId: 'r1', weight: 60, reps: 8, at: recentAt }),
+      set({ exerciseId: 'bench', workoutId: 'r2', weight: 62, reps: 8, at: recentAt + DAY_MS }),
+      set({ exerciseId: 'bench', workoutId: 'r3', weight: 64, reps: 8, at: recentAt + 2 * DAY_MS }),
+    ]);
+
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    const text = renderedText(capturedListProps.ListHeaderComponent);
+    expect(text).toContain('Weight lifted');
+  });
+});
+
+// B3 (progress-tab audit 2026-09-24): a person WITH a body weight but no
+// lift matching any tracked standard used to see nothing in the standing
+// slot at all -- add the calm third-state line without disturbing the two
+// existing branches.
+describe('LiftProgressScreen -- standing card third state (B3, 2026-09-24)', () => {
+  const THIRD_STATE_LINE = 'Your standing appears once you log a bench press, squat, deadlift, overhead press or barbell row.';
+
+  test('bodyweight set, lifts logged, none match a tracked standard -> the calm one-line card renders', async () => {
+    getLatestBodyWeight.mockResolvedValue({ weightKg: 80 });
+    getCompletedWorkoutSets.mockResolvedValue([
+      set({ exerciseId: 'curl', workoutId: 'w1', weight: 20, reps: 10, at: 1000 }),
+    ]);
+    getAllExercises.mockResolvedValue([{ id: 'curl', name: 'Bicep Curl', primaryMuscle: 'biceps' }]);
+
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    const text = renderedText(capturedListProps.ListHeaderComponent);
+    expect(text).toContain(THIRD_STATE_LINE);
+    // The other two branches did not also render.
+    expect(text).not.toContain('Add your body weight');
+    expect(text).not.toContain('overall across');
+  });
+
+  test('existing branch unchanged: a matching standard still renders the standing card, not the third state', async () => {
+    getLatestBodyWeight.mockResolvedValue({ weightKg: 80 });
+    // Default SETS/EXERCISES fixture (top of file) includes Barbell Bench Press.
+
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    const text = renderedText(capturedListProps.ListHeaderComponent);
+    expect(text).toContain('overall across');
+    expect(text).not.toContain(THIRD_STATE_LINE);
+  });
+
+  test('existing branch unchanged: no body weight still renders the "Add your body weight" prompt, not the third state', async () => {
+    // Default getLatestBodyWeight resolves null (top-level beforeEach).
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    const text = renderedText(capturedListProps.ListHeaderComponent);
+    expect(text).toContain('Add your body weight');
+    expect(text).not.toContain(THIRD_STATE_LINE);
+  });
+});
+
+// B4 (progress-tab audit 2026-09-24): strengthLevels used to be keyed by the
+// exercise's own name, so two variants of the same lift (both scored
+// against the SAME standard) produced two rows and counted as two "main
+// lifts" instead of one.
+describe('LiftProgressScreen -- strength standing collapses by category, not exercise name (B4, 2026-09-24)', () => {
+  test('two bench variants collapse to one row, naming the higher-ratio variant, and count as 1 main lift', async () => {
+    getLatestBodyWeight.mockResolvedValue({ weightKg: 80 });
+    getCompletedWorkoutSets.mockResolvedValue([
+      // Barbell Bench Press: 90kg/80kg = 1.125 ratio (the better of the two).
+      set({ exerciseId: 'bench', workoutId: 'w1', weight: 90, reps: 5, at: 1000 }),
+      // Close-Grip Bench Press: 70kg/80kg = 0.875 ratio.
+      set({ exerciseId: 'cgbench', workoutId: 'w2', weight: 70, reps: 5, at: 2000 }),
+    ]);
+    getAllExercises.mockResolvedValue([
+      { id: 'bench', name: 'Barbell Bench Press', primaryMuscle: 'chest' },
+      { id: 'cgbench', name: 'Close-Grip Bench Press', primaryMuscle: 'chest' },
+    ]);
+
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    await flush();
+
+    const text = renderedText(capturedListProps.ListHeaderComponent);
+    expect(text).toContain('overall across 1 main lift');
+    expect(text).toContain('Barbell Bench Press');
+    expect(text).not.toContain('Close-Grip Bench Press');
   });
 });

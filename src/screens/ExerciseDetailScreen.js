@@ -596,8 +596,16 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   const difficultyLabel = difficultyDisplayLabel(exercise);
   const subregionLabel = subregionDisplayLabel(exercise.subregion);
 
-  const allTimeSets = history.flat();
-  const best1RM = allTimeSets.reduce((best, s) => {
+  // B5 (progress-tab audit 2026-09-24): this used to flatten `history`,
+  // which is capped to the last 8 sessions (setHistory(sessions.slice(0,
+  // 8)) above), so "Estimated max" and the goal progress below it read the
+  // best of only the last 8 sessions while the uncapped "Personal records"
+  // card (built from `prs`, sourced from the full `mySets`) could show a
+  // higher figure inches away. `allSessions` is the uncapped state (COMP-019)
+  // -- flattening THAT instead makes best1RM genuinely all-time, and the name
+  // now says what it is.
+  const allSets = allSessions.flat();
+  const best1RM = allSets.reduce((best, s) => {
     const est = calculate1RM(s.weight || 0, s.actualReps || 0);
     return est > best ? est : best;
   }, 0);

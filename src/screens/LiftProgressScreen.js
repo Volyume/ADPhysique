@@ -23,11 +23,11 @@ import { SkeletonRow } from '../components/Skeleton';
 import VolyumeChart from '../components/VolyumeChart';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
-import { buildLiftProgressRows, buildExerciseMetricSeries, derivePRIndices } from '../lib/liftProgress';
+import { buildLiftProgressRows, buildExerciseMetricSeries, derivePRIndices, seriesDeltaPct } from '../lib/liftProgress';
 import { MUSCLE_DISPLAY_NAMES, buildLoadSemanticsById } from '../lib/algorithms';
-import { getStrengthLevel, summariseStrengthStanding } from '../lib/strengthStandards';
+import { getStrengthLevel, summariseStrengthStanding, matchStandardKey } from '../lib/strengthStandards';
 import { kgToLbs } from '../lib/units';
-import { buildWeeklyLoadSeries } from '../lib/progressSeries';
+import { buildWeeklyLoadSeries, getWeeklyLoadWindow, DEFAULT_LOAD_WEEKS } from '../lib/progressSeries';
 import { formatNumber } from '../lib/format';
 import Sparkline from '../components/Sparkline';
 import useAppStore from '../store/useAppStore';
@@ -179,8 +179,31 @@ export default function LiftProgressScreen({ navigation }) {
       const exerciseTypeById = Object.fromEntries(typeById);
       // D107-2: per-hand sets count x2 in weekly load, assistance excluded.
       const loadSemanticsById = buildLoadSemanticsById(exercises);
+      // AnalyticsScreen.stage3Guards.test.js pins this exact call (one
+      // production call site, weekBoundary: 'monday') byte-for-byte -- do
+      // not add args here. The B2 gate below reads its own Date.now() a
+      // statement later instead of sharing a `now` through this call.
       setWeeklyLoad(buildWeeklyLoadSeries(sets, { exerciseTypeById, loadSemanticsById, weekBoundary: 'monday' }));
-      setWeeklyLoadSessionCount(new Set((sets || []).map(s => s.workoutId ?? s.workout_id)).size);
+      // B2 (progress-tab audit 2026-09-24): the hero gate used to count
+      // distinct workouts over ALL loaded sets (all time), while the hero's
+      // own chart above only ever draws the last 8 Monday-anchored weeks --
+      // a returning user with old sessions and nothing recent saw the hero
+      // appear with an empty "This week: 0" chart. Gate on distinct
+      // workouts whose sets fall inside that SAME window instead.
+      // getWeeklyLoadWindow shares the exact bounds-building code the call
+      // above's monday branch uses internally, so this cannot drift from
+      // what that chart actually draws (both resolve `now` a statement
+      // apart, never far enough to cross a Monday boundary).
+      const loadWindow = getWeeklyLoadWindow(DEFAULT_LOAD_WEEKS);
+      const inWindowWorkoutIds = new Set(
+        (sets || [])
+          .filter(s => {
+            const at = Number(s.createdAt ?? s.created_at) || 0;
+            return at >= loadWindow.startMs && at < loadWindow.endMs;
+          })
+          .map(s => s.workoutId ?? s.workout_id),
+      );
+      setWeeklyLoadSessionCount(inWindowWorkoutIds.size);
 
       if (bw?.weightKg) {
         // Bodyweight is canonical kg; estimated maxes come from logged gym
@@ -191,11 +214,23 @@ export default function LiftProgressScreen({ navigation }) {
           ? Math.round(kgToLbs(bw.weightKg) * 10) / 10
           : Math.round(bw.weightKg * 10) / 10;
         setBodyWeight(bwValue);
+        // B4 (progress-tab audit 2026-09-24): the STANDARD's category
+        // (bench/squat/deadlift/ohp/row) is the identity, not the exercise's
+        // own name -- two variants of the same lift (e.g. "Barbell Bench
+        // Press" and "Close-Grip Bench Press") are both scored against the
+        // SAME standard and must collapse to one row, keyed by category,
+        // keeping whichever variant currently has the best ratio and naming
+        // the row after that variant.
         const levels = {};
         for (const r of builtRows) {
           if (!r.bestE1rm) continue;
+          const key = matchStandardKey(r.name);
+          if (!key) continue;
           const lvl = getStrengthLevel(r.name, r.bestE1rm, bwValue);
-          if (lvl) levels[r.name] = lvl;
+          if (!lvl) continue;
+          if (!levels[key] || lvl.ratio > levels[key].level.ratio) {
+            levels[key] = { name: r.name, level: lvl };
+          }
         }
         setStrengthLevels(levels);
       } else {
@@ -290,8 +325,12 @@ export default function LiftProgressScreen({ navigation }) {
 
   const standing = useMemo(() => {
     const rowByName = Object.fromEntries(rows.map(r => [r.name, r]));
+    // B4: strengthLevels is now keyed by standard category, one entry per
+    // category (see loadData) -- Object.values's length is therefore
+    // already the category count summariseStrengthStanding reports as
+    // "main lifts", with no further change needed there.
     return summariseStrengthStanding(
-      Object.entries(strengthLevels).map(([name, level]) => ({
+      Object.values(strengthLevels).map(({ name, level }) => ({
         lift: name,
         oneRm: rowByName[name]?.bestE1rm ?? null,
         level,
@@ -300,6 +339,10 @@ export default function LiftProgressScreen({ navigation }) {
   }, [rows, strengthLevels]);
 
   const hasStanding = bodyWeight && Object.keys(strengthLevels).length > 0;
+  // B3: bodyweight is set and lifts exist, but none of them matched any of
+  // the five tracked standards (e.g. only isolation/machine work logged so
+  // far) -- the prior render left this slot blank instead of saying so.
+  const noMatchingStandard = bodyWeight && rows.length > 0 && Object.keys(strengthLevels).length === 0;
   const tabRows = filter === 'best' ? rows.filter(isRecentBest) : rows;
   // C1: substring match on name, case-insensitive; an empty query is a no-op
   // so clearing the box restores the tab's full, already-sorted list.
@@ -350,21 +393,35 @@ export default function LiftProgressScreen({ navigation }) {
             />
           </View>
           <Text style={[styles.sectionSub, live.sectionSub]}>Based on {bodyWeight} {units} body weight</Text>
-          {Object.entries(strengthLevels).map(([name, lvl]) => (
-            <View key={name} style={[styles.strengthRow, live.strengthRow]}>
+          {/* B4: one row per matched STANDARD CATEGORY (key), named after
+              whichever exercise variant produced that category's best ratio
+              -- not one row per exercise name. */}
+          {Object.entries(strengthLevels).map(([key, entry]) => (
+            <View key={key} style={[styles.strengthRow, live.strengthRow]}>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.strengthName, live.strengthName]} numberOfLines={1}>{name}</Text>
+                <Text style={[styles.strengthName, live.strengthName]} numberOfLines={1}>{entry.name}</Text>
                 <Text style={[styles.strengthNarrative, live.strengthNarrative]}>
-                  {lvl.ratio >= 1
-                    ? `${lvl.ratio.toFixed(2)}x your body weight`
-                    : `${Math.round(lvl.ratio * 100)}% of your body weight`}
+                  {entry.level.ratio >= 1
+                    ? `${entry.level.ratio.toFixed(2)}x your body weight`
+                    : `${Math.round(entry.level.ratio * 100)}% of your body weight`}
                 </Text>
               </View>
-              <View style={[styles.levelBadge, { backgroundColor: withAlpha(resolveLevelColor(lvl.label), alpha.tint) }]}>
-                <Text style={[styles.levelBadgeText, live.levelBadgeText, { color: resolveLevelColor(lvl.label) }]}>{lvl.label}</Text>
+              <View style={[styles.levelBadge, { backgroundColor: withAlpha(resolveLevelColor(entry.level.label), alpha.tint) }]}>
+                <Text style={[styles.levelBadgeText, live.levelBadgeText, { color: resolveLevelColor(entry.level.label) }]}>{entry.level.label}</Text>
               </View>
             </View>
           ))}
+        </View>
+      ) : noMatchingStandard ? (
+        // B3: the third state -- bodyweight is known and lifts exist, but
+        // none matched a tracked standard yet. Calm, one line, no action
+        // (there is nothing to tap here, unlike the body-weight prompt
+        // below): it just names what would make the card appear.
+        <View style={[styles.standingEmptyCard, live.standingEmptyCard]}>
+          <Ionicons name="barbell-outline" size={20} color={t.colors.textMuted} />
+          <Text style={[styles.standingEmptyText, live.standingEmptyText]}>
+            Your standing appears once you log a bench press, squat, deadlift, overhead press or barbell row.
+          </Text>
         </View>
       ) : (!bodyWeight && rows.length > 0) ? (
         <TouchableOpacity
@@ -462,6 +519,19 @@ export default function LiftProgressScreen({ navigation }) {
           const headlineMetric = (metric === 'e1rm' || !hasNonE1rmSeries) ? 'e1rm' : metric;
           const headlineMeta = METRIC_HEADLINE[headlineMetric];
           const headlineValue = headlineMetric === 'e1rm' ? item.bestE1rm : Math.max(...nonE1rmSeries);
+          // B1 (progress-tab audit 2026-09-24): the "+N%" badge + "since
+          // first log" caption follow whichever headline is ACTUALLY on
+          // screen (headlineMetric, which itself already falls back to
+          // e1rm when this exercise has no series for the selected lens --
+          // see hasNonE1rmSeries above), not always the e1RM change. The
+          // e1RM lens keeps its existing item.deltaPct (today's value,
+          // unchanged); every other lens computes its own first-to-latest
+          // change from that lens's own series, hidden when that series has
+          // fewer than two points.
+          const badgeDeltaPct = headlineMetric === 'e1rm' ? item.deltaPct : seriesDeltaPct(nonE1rmSeries);
+          const showBadge = headlineMetric === 'e1rm'
+            ? (badgeDeltaPct != null && item.sessions > 1)
+            : (badgeDeltaPct != null);
           // Item 10: PR markers on whichever lens the row is currently
           // showing, same series the sparkline itself draws.
           const prIndices = derivePRIndices(series);
@@ -524,13 +594,13 @@ export default function LiftProgressScreen({ navigation }) {
                   {headlineMetric === 'volume' && (
                     <InfoTooltip text="Total weight moved: each set's weight times reps, added up." size={11} />
                   )}
-                  {item.deltaPct != null && item.sessions > 1 && (
-                    <Text style={[styles.delta, live.delta, { color: trendColor(item.deltaPct) }]}>
-                      {item.deltaPct > 0 ? '+' : ''}{item.deltaPct}%
+                  {showBadge && (
+                    <Text style={[styles.delta, live.delta, { color: trendColor(badgeDeltaPct) }]}>
+                      {badgeDeltaPct > 0 ? '+' : ''}{badgeDeltaPct}%
                     </Text>
                   )}
                 </View>
-                {item.deltaPct != null && item.sessions > 1 && (
+                {showBadge && (
                   <Text style={[styles.deltaCaption, live.deltaCaption]}>since first log</Text>
                 )}
               </View>
@@ -740,6 +810,22 @@ const styles = StyleSheet.create({
   bwPromptTitle: { ...type.bodyStrong, color: colors.textPrimary },
   bwPromptText: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
 
+  // ── Standing card, third state (B3): bodyweight known, lifts logged, none
+  // matched a tracked standard yet. Same card shell as bwPromptCard but not
+  // pressable (no CTA), so it drops the chevron and the primary-tinted edge.
+  standingEmptyCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    marginBottom: spacing.md,
+  },
+  standingEmptyText: { ...type.captionTight, color: colors.textSecondary, flex: 1 },
+
   // ── Filter ──
   filterRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   filterTab: {
@@ -842,6 +928,8 @@ function buildLiveStyles(t) {
     bwPromptCard: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     bwPromptTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     bwPromptText: { ...t.type.captionTight, color: t.colors.textSecondary },
+    standingEmptyCard: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    standingEmptyText: { ...t.type.captionTight, color: t.colors.textSecondary },
     filterTab: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     filterTabActive: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
     filterTabText: { ...t.type.label, color: t.colors.textSecondary },

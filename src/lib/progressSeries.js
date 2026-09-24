@@ -31,6 +31,54 @@ function setTimestamp(s) {
   return s.createdAt ?? s.created_at ?? 0;
 }
 
+// The Monday-anchored week boundaries a weekBoundary:'monday' series bins
+// into, oldest -> newest, current week last. Extracted out of
+// buildWeeklyLoadSeries (B2, progress-tab audit 2026-09-24) so a caller that
+// needs to know whether a raw timestamp falls INSIDE the exact window a
+// weekBoundary:'monday' series call draws -- e.g. gating a "this week" hero
+// on there being enough sessions inside its OWN chart's window, not just
+// anywhere in all-time history -- reuses these bounds rather than
+// recomputing them by a different route and risking drift from the series
+// itself. `weeks` is the already-clamped count (see clampInt at the call
+// sites below); this performs no clamping of its own.
+function buildMondayWeekBounds(weeks, now) {
+  const bounds = [];
+  let end = localWeekEndMs(now);
+  for (let i = 0; i < weeks; i++) {
+    const start = localWeekStartMs(end - 1);
+    bounds.unshift({ start, end });
+    end = start;
+  }
+  return bounds;
+}
+
+/**
+ * The Monday-anchored window a `buildWeeklyLoadSeries(sets, { weeks, now,
+ * weekBoundary: 'monday' })` call draws, as a single [startMs, endMs) range
+ * covering every bin (oldest week's start to the current week's exclusive
+ * end) -- not the per-week bins themselves.
+ *
+ * B2 (progress-tab audit 2026-09-24): LiftProgressScreen's "Weight lifted"
+ * hero used to gate on session count over ALL loaded history while its own
+ * chart only ever drew the last 8 Monday-anchored weeks, so a returning
+ * user with old sessions and nothing recent saw the hero appear with an
+ * empty "This week: 0" chart. A caller filters its own sets/sessions against
+ * this window (a set at `t` is inside when `t >= startMs && t < endMs`) so
+ * whatever it gates matches EXACTLY what the paired series call will draw,
+ * using the identical bounds-building helper.
+ *
+ * @param {number} [weeks] - same meaning as buildWeeklyLoadSeries's `weeks`
+ *   (clamped the same way, so passing the same value to both always agrees).
+ * @param {number} [now] - epoch ms "now"; pass the SAME value given to the
+ *   paired buildWeeklyLoadSeries call so both derive from one clock read.
+ * @returns {{startMs: number, endMs: number}}
+ */
+export function getWeeklyLoadWindow(weeks = DEFAULT_LOAD_WEEKS, now = Date.now()) {
+  const n = clampInt(weeks, 1, MAX_LOAD_WEEKS, DEFAULT_LOAD_WEEKS);
+  const bounds = buildMondayWeekBounds(n, now);
+  return { startMs: bounds[0].start, endMs: bounds[bounds.length - 1].end };
+}
+
 /**
  * Weekly training-load (tonnage) series for the hero chart, oldest → newest.
  * The last entry is the current week (weeksAgo 0). `exerciseTypeById` is
@@ -63,13 +111,7 @@ export function buildWeeklyLoadSeries(sets, {
     // (a DST week is 167h or 169h, never a fixed 168h), so this stays
     // correct across the spring/autumn boundary the rolling grammar never
     // had to worry about.
-    const bounds = [];
-    let end = localWeekEndMs(now);
-    for (let i = 0; i < n; i++) {
-      const start = localWeekStartMs(end - 1);
-      bounds.unshift({ start, end });
-      end = start;
-    }
+    const bounds = buildMondayWeekBounds(n, now);
     const bins = bounds.map(() => []);
     for (const s of (sets || [])) {
       const at = setTimestamp(s);

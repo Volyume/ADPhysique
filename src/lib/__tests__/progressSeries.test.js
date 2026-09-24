@@ -18,6 +18,7 @@
 
 import {
   buildWeeklyLoadSeries,
+  getWeeklyLoadWindow,
   DEFAULT_LOAD_WEEKS,
   MAX_LOAD_WEEKS,
 } from '../progressSeries';
@@ -135,6 +136,56 @@ describe('buildWeeklyLoadSeries with weekBoundary: monday', () => {
 
   test('still respects the MAX_LOAD_WEEKS cap', () => {
     expect(buildWeeklyLoadSeries([], { weeks: 500, now: NOW, weekBoundary: 'monday' })).toHaveLength(MAX_LOAD_WEEKS);
+  });
+});
+
+// getWeeklyLoadWindow (B2, progress-tab audit 2026-09-24): the single
+// [startMs, endMs) range LiftProgressScreen's "Weight lifted" hero gate
+// filters sets against, so the gate can never disagree with the paired
+// buildWeeklyLoadSeries({weekBoundary:'monday'}) call about where the
+// window sits -- both are built from the same buildMondayWeekBounds helper.
+describe('getWeeklyLoadWindow', () => {
+  test('startMs is the start of the OLDEST of the n Monday-anchored weeks, endMs the exclusive end of the current week', () => {
+    const win = getWeeklyLoadWindow(DEFAULT_LOAD_WEEKS, NOW);
+    expect(win.endMs).toBe(localWeekEndMs(NOW));
+    // 8 weeks back from the current week's start, in local calendar days.
+    const currentWeekStart = localWeekStartMs(NOW);
+    const oldestWeekStart = new Date(currentWeekStart);
+    oldestWeekStart.setDate(oldestWeekStart.getDate() - 7 * (DEFAULT_LOAD_WEEKS - 1));
+    expect(win.startMs).toBe(oldestWeekStart.getTime());
+  });
+
+  test('a set exactly at startMs is inside and gets binned; one 1ms earlier is outside and never binned', () => {
+    const win = getWeeklyLoadWindow(DEFAULT_LOAD_WEEKS, NOW);
+    const inside = [{ createdAt: win.startMs, weight: 100, actualReps: 5, workoutId: 'w1', setType: 'straight', exerciseId: 'e1' }];
+    const outside = [{ createdAt: win.startMs - 1, weight: 100, actualReps: 5, workoutId: 'w2', setType: 'straight', exerciseId: 'e1' }];
+
+    expect(inside[0].createdAt >= win.startMs && inside[0].createdAt < win.endMs).toBe(true);
+    expect(outside[0].createdAt >= win.startMs && outside[0].createdAt < win.endMs).toBe(false);
+
+    // Cross-checked against the real series builder: whatever this window
+    // says is "inside" is exactly what buildWeeklyLoadSeries's own monday
+    // bins pick up, since both derive from the same bounds helper.
+    expect(buildWeeklyLoadSeries(inside, { now: NOW, weekBoundary: 'monday' }).some(pt => pt.value > 0)).toBe(true);
+    expect(buildWeeklyLoadSeries(outside, { now: NOW, weekBoundary: 'monday' }).every(pt => pt.value === 0)).toBe(true);
+  });
+
+  test('a set just before endMs is inside; a set at endMs itself is not (exclusive end)', () => {
+    const win = getWeeklyLoadWindow(DEFAULT_LOAD_WEEKS, NOW);
+    expect(win.endMs - 1 >= win.startMs && win.endMs - 1 < win.endMs).toBe(true);
+    expect(win.endMs >= win.startMs && win.endMs < win.endMs).toBe(false);
+  });
+
+  test('deterministic and clamps weeks the same way buildWeeklyLoadSeries does', () => {
+    const a = getWeeklyLoadWindow(500, NOW);
+    const b = getWeeklyLoadWindow(MAX_LOAD_WEEKS, NOW);
+    expect(a).toEqual(b);
+  });
+
+  test('defaults to DEFAULT_LOAD_WEEKS and Date.now() when called with no args', () => {
+    const win = getWeeklyLoadWindow();
+    expect(win.endMs).toBeGreaterThan(0);
+    expect(win.startMs).toBeLessThan(win.endMs);
   });
 });
 

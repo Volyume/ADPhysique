@@ -52,6 +52,7 @@ import ExerciseDetailScreen from '../ExerciseDetailScreen';
 import {
   getExerciseById, getCompletedSetHistoryForExercise, getExerciseGoal, getAllExercises,
 } from '../../lib/database';
+import { calculate1RM } from '../../lib/algorithms';
 
 const EXERCISE_DETAIL_SOURCE = require('fs').readFileSync(
   require('path').resolve(__dirname, '../ExerciseDetailScreen.js'),
@@ -295,5 +296,103 @@ describe('ExerciseDetailScreen polish guards', () => {
     expect(EXERCISE_DETAIL_SOURCE).toMatch(/title="Remove goal"[\s\S]*?icon="trash-outline"[\s\S]*?variant="outline"/);
     expect(EXERCISE_DETAIL_SOURCE).not.toMatch(/goalSetLinkText|removeGoalLinkText/);
     expect(EXERCISE_DETAIL_SOURCE).not.toMatch(/textDecorationLine: 'underline'/);
+  });
+});
+
+// B5 (progress-tab audit 2026-09-24): "Estimated max" and the goal card's
+// progress used to read best1RM from `history.flat()`, and `history` is
+// capped to the last 8 sessions -- so a best set OUTSIDE that cap could
+// show a LOWER "Estimated max" than the uncapped "Personal records" card
+// (built from `prs`, sourced from the full set history) inches away on the
+// same screen. best1RM must be the best estimated 1RM over ALL sessions.
+describe('ExerciseDetailScreen -- Estimated max uses ALL sessions, not just the last 8 (B5, 2026-09-24)', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('a best set from 10 sessions ago is the Estimated max and matches the Personal records card', async () => {
+    getExerciseById.mockResolvedValueOnce({
+      id: 'e1', name: 'Barbell Bench Press', primaryMuscle: 'chest', secondaryMuscles: [],
+      defaultRepMin: 6, defaultRepMax: 12,
+    });
+
+    // Ten sessions, newest first (mirrors the screen's own "newest-first
+    // already" assumption about getCompletedSetHistoryForExercise's
+    // ordering -- see the sessionArrays comment in ExerciseDetailScreen.js).
+    // The heaviest set, and so the true all-time best estimated 1RM, sits
+    // in the OLDEST session (w10), which is outside the 8-session `history`
+    // slice built from the front of this newest-first list.
+    const sets = [];
+    for (let i = 1; i <= 9; i++) {
+      sets.push({ workoutId: `w${i}`, weight: 60, actualReps: 5, setType: 'straight', createdAt: 10000 - i * 100 });
+    }
+    sets.push({ workoutId: 'w10', weight: 140, actualReps: 5, setType: 'straight', createdAt: 100 });
+    getCompletedSetHistoryForExercise.mockResolvedValueOnce(sets);
+    getExerciseGoal.mockResolvedValueOnce(null);
+    getAllExercises.mockResolvedValueOnce([]);
+
+    let tree;
+    await act(async () => {
+      tree = create(
+        <ExerciseDetailScreen
+          navigation={{ goBack: jest.fn(), push: jest.fn() }}
+          route={{ params: { exerciseId: 'e1' } }}
+        />,
+      );
+    });
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    const trueBest = calculate1RM(140, 5);
+    // Overview headline (Math.round, no decimal).
+    expect(text).toContain(`Estimated max: ~${Math.round(trueBest)}`);
+    // Personal records card (safeToFixed, 1 decimal) -- the SAME figure,
+    // not the lower one the last-8-sessions cap used to produce.
+    expect(text).toContain(trueBest.toFixed(1));
+    // The 9 recent-but-lighter sessions must NOT have produced the
+    // headline instead.
+    const lighterBest = calculate1RM(60, 5);
+    expect(text).not.toContain(`Estimated max: ~${Math.round(lighterBest)}`);
+  });
+
+  test('the goal card\'s progress also uses the all-sessions best, not just the last 8', async () => {
+    getExerciseById.mockResolvedValueOnce({
+      id: 'e1', name: 'Barbell Bench Press', primaryMuscle: 'chest', secondaryMuscles: [],
+      defaultRepMin: 6, defaultRepMax: 12,
+    });
+
+    const sets = [];
+    for (let i = 1; i <= 9; i++) {
+      sets.push({ workoutId: `w${i}`, weight: 60, actualReps: 5, setType: 'straight', createdAt: 10000 - i * 100 });
+    }
+    sets.push({ workoutId: 'w10', weight: 140, actualReps: 5, setType: 'straight', createdAt: 100 });
+    getCompletedSetHistoryForExercise.mockResolvedValueOnce(sets);
+    // A target ABOVE the true all-sessions best (163.3-ish) so it is not
+    // auto-marked achieved at load time (that decision already uses the
+    // uncapped `mySets`, unrelated to this render-time bug) -- this isolates
+    // the goal PROGRESS BAR / "Current est. max" figure specifically.
+    const trueBest = calculate1RM(140, 5);
+    const target = Math.ceil(trueBest) + 40;
+    getExerciseGoal.mockResolvedValueOnce({ id: 'g1', targetWeight: target, targetDate: null, achievedAt: null });
+    getAllExercises.mockResolvedValueOnce([]);
+
+    let tree;
+    await act(async () => {
+      tree = create(
+        <ExerciseDetailScreen
+          navigation={{ goBack: jest.fn(), push: jest.fn() }}
+          route={{ params: { exerciseId: 'e1' } }}
+        />,
+      );
+    });
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    // "Current est. max" in the goal card renders best1RM.toFixed(1) --
+    // the same all-sessions figure as the Overview/PR card, not the
+    // last-8-sessions one.
+    expect(text).toContain(trueBest.toFixed(1));
+    const kgToGo = (target - trueBest).toFixed(1);
+    expect(text).toContain(`${kgToGo}kg to go`);
   });
 });

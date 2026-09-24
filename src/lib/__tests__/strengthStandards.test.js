@@ -3,6 +3,7 @@ import {
   LEVEL_LABELS,
   getStrengthLevel,
   summariseStrengthStanding,
+  matchStandardKey,
 } from '../strengthStandards';
 
 describe('STRENGTH_STANDARDS catalogue', () => {
@@ -183,6 +184,44 @@ describe('summariseStrengthStanding', () => {
     ]);
     expect(out.count).toBe(1);
     expect(out.overallLabel).toBe('Intermediate');
+  });
+});
+
+// matchStandardKey (B4, progress-tab audit 2026-09-24): the CATEGORY a name
+// matches is the true identity for "how many main lifts" a standing is built
+// from -- two variants of the same lift both matching the same category must
+// collapse to one row/count, not two. A standalone function rather than a
+// new field on getStrengthLevel's return, so every existing getStrengthLevel
+// call site (including the exact-shape `toEqual` assertions above) is
+// unaffected.
+describe('matchStandardKey', () => {
+  test('returns the matched category key for one variant of each of the five tracked compounds', () => {
+    expect(matchStandardKey('Barbell Bench Press')).toBe('bench');
+    expect(matchStandardKey('Back Squat')).toBe('squat');
+    expect(matchStandardKey('Deadlift')).toBe('deadlift');
+    expect(matchStandardKey('Overhead Press')).toBe('ohp');
+    expect(matchStandardKey('Barbell Row')).toBe('row');
+  });
+
+  test('two variants of the same lift collapse onto the same category key', () => {
+    expect(matchStandardKey('Barbell Bench Press')).toBe('bench');
+    expect(matchStandardKey('Close-Grip Bench Press')).toBe('bench');
+    expect(matchStandardKey('Incline Bench Press')).toBe('bench');
+  });
+
+  test('returns null for an untracked exercise or a missing/empty name', () => {
+    expect(matchStandardKey('Bicep Curl')).toBeNull();
+    expect(matchStandardKey('Lat Pulldown')).toBeNull();
+    expect(matchStandardKey('')).toBeNull();
+    expect(matchStandardKey(null)).toBeNull();
+    expect(matchStandardKey(undefined)).toBeNull();
+  });
+
+  test('every key it can return is a real STRENGTH_STANDARDS key', () => {
+    const names = ['Barbell Bench Press', 'Back Squat', 'Deadlift', 'Overhead Press', 'Barbell Row'];
+    for (const name of names) {
+      expect(Object.keys(STRENGTH_STANDARDS)).toContain(matchStandardKey(name));
+    }
   });
 });
 

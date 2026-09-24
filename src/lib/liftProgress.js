@@ -159,6 +159,24 @@ export function buildExerciseMetricSeries(sets, exerciseTypeById = null) {
   return out;
 }
 
+// B1 (progress-tab audit 2026-09-24): percent change from the first to the
+// last point of ANY per-lens series (one of buildExerciseMetricSeries's
+// e1rm/heaviest/reps/volume arrays, oldest -> newest), mirroring the exact
+// "first session to latest" formula buildLiftProgressRows already uses for
+// its own (e1RM-only) deltaPct above. Used by LiftProgressScreen's row
+// badge so the "+N%" beside a non-e1RM headline (Heaviest weight / Total
+// reps / Total lifted) reports THAT lens's own change instead of always the
+// e1RM one. Needs at least two points to mean anything and a non-zero,
+// finite first value to divide by; returns null rather than a misleading
+// 0% or an Infinity/NaN otherwise, same as buildLiftProgressRows's guard.
+export function seriesDeltaPct(series) {
+  if (!Array.isArray(series) || series.length < 2) return null;
+  const first = series[0];
+  const last = series[series.length - 1];
+  if (!Number.isFinite(first) || !Number.isFinite(last) || first === 0) return null;
+  return Math.round(((last - first) / first) * 100);
+}
+
 // Item 10 (campaign 2026-07-10, CP-5 residue): which points in a session
 // series earned a personal best, for LiftProgressScreen's row sparkline
 // marker (Sparkline's new highlightIndices, same gold ring-and-dot idiom

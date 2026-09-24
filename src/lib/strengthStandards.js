@@ -39,6 +39,32 @@ export const STRENGTH_STANDARDS = {
 export const LEVEL_LABELS = ['Beginner', 'Novice', 'Intermediate', 'Advanced', 'Elite'];
 
 /**
+ * Which STRENGTH_STANDARDS category (if any) an exercise name matches.
+ *
+ * B4 (progress-tab audit 2026-09-24): the CATEGORY is the true identity for
+ * "how many main lifts a standing is built from" -- two variants of the same
+ * lift (e.g. "Barbell Bench Press" and "Close-Grip Bench Press") both match
+ * 'bench' and are being scored against the SAME standard, so a caller
+ * collapsing per-exercise strength levels into one row/count per lift keys
+ * on this, not on the exercise's own name. Added as a standalone function
+ * (rather than a new field on getStrengthLevel's return) so every existing
+ * getStrengthLevel call site and its pinned exact-shape assertions are
+ * unaffected.
+ *
+ * @param {string} exerciseName
+ * @returns {string|null} one of the STRENGTH_STANDARDS keys ('bench',
+ *   'squat', 'deadlift', 'ohp', 'row'), or null when the name matches none
+ *   of the five tracked compounds.
+ */
+export function matchStandardKey(exerciseName) {
+  if (!exerciseName) return null;
+  for (const [key, std] of Object.entries(STRENGTH_STANDARDS)) {
+    if (std.match.test(exerciseName)) return key;
+  }
+  return null;
+}
+
+/**
  * Compute the strength level for a given exercise + 1RM + bodyweight.
  *
  * @param {string} exerciseName  - logged exercise name (e.g. "Barbell Bench Press")
