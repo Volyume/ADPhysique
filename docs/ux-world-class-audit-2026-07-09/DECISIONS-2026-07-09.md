@@ -9570,3 +9570,42 @@ the fix, and both only strengthen a safety posture. Rulings:
    in-memory SQLite (`src/lib/__tests__/saveUserBodyProfile.merge.test.js`).
 3. **Not a build gate, no schema change.** Both fixes are client code;
    the next build carries them.
+
+## D199 — Progress-tab audit, first pass: the lead rulings (2026-09-24; founder order 2026-09-24, "work out why recovery doesn't show nor does this week's plan")
+
+Source: `docs/audit/progress-tab-audit-2026-09-24/00-FINDINGS-AND-PROPOSALS.md`
+(findings F1 to F7 with file:line evidence, proposals P1 to P7, founder
+questions Q1 to Q4). Rulings made under D33 (best for the user, never
+effort); everything that is a product fork went to the founder as a
+multi-choice question and is NOT ruled here.
+
+1. **"This week's plan" compares the plan row against its own block
+   week.** The card's contract (`BlockProgressCard.js:14`, `{muscle,
+   label, actual, planned}`) was never satisfied by `useProgressData`
+   (raw `planned_muscle_volume` rows with `planned_sets` and no `actual`
+   or `label` were passed straight through), so the Consistency card has
+   rendered empty bars and "/" since the X15 fix of 2026-07-30 and
+   rendered nothing before it. The plan row belongs to a BLOCK week
+   (`mesocycle.js:164-171`: block start date plus seven-day steps, not
+   Monday), so "actual" counts the sets logged inside that span, on both
+   surfaces; the Home card, which counted a rolling seven days, moves to
+   the same span. One pure helper (`src/lib/blockWeekProgress.js`)
+   serves both; `getCurrentMesocycleWeek` gains the additive
+   `blockStartMs`. Consistency shows every planned muscle; Home keeps its
+   top eight (a glance surface). The end-to-end test that drives raw rows
+   into the real card is part of the fix, because its absence is why the
+   defect survived two months.
+2. **The weekly landmarks stay the bands.** MEV/MAV/MRV and
+   `getVolumeStatus` are weekly by definition and are not touched by any
+   window fix; what a 2- or 4-week window SHOWS against them is the
+   founder's fork (Q1), with the weekly-average reading recommended and
+   "totals against weekly targets" (today's behaviour) named as wrong.
+3. **Recovery: no withhold changes.** No ED/calm gate applies to the
+   recovery gauges today and none is added or removed by any proposal;
+   the proposals only make the block say what would fill it and add the
+   weekly check-in signals the app already stores. Whether the founder's
+   device showed an empty block or no block is the founder's fact (Q2).
+4. **Scope stated honestly.** This pass audited the two screens in the
+   screenshots in depth and the rest of the tab by inventory plus one
+   accuracy sweep; the screens not yet audited in depth are listed in the
+   report's section 6, and their order is the founder's (Q4).
