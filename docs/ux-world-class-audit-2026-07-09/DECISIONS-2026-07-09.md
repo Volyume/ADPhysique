@@ -9807,3 +9807,33 @@ upper/lower's forced third-upper adjacency could land mid-week because
 one upper session's exercise mix made the recovery term prefer it; with
 the real layout the weekend is where that adjacency belongs, and
 campaign16's law-5 test stays untouched.
+
+**D201 addendum 4 (2026-09-25, lead, rulings 4 to 7 from the lane R-B and
+R-C reviews).**
+- **Ruling 4, session letters follow the final position.** The scorer moved
+  a 4-day upper/lower to Upper A, Lower B, Upper B, Lower A (the heavier
+  lower session belongs before the longer gap under the Mon, Tue, Thu, Fri
+  layout). The letters mean "first Upper of the week, second Upper", so
+  after sequencing `generatePlan` re-assigns them by final position, per
+  repeated base name (`reletterByPosition` in `src/lib/planEngine.js`): the
+  week always reads Upper A, Lower A, Upper B, Lower B. Names without a
+  letter (every DIVISION_MATRIX title, a lone "Legs") are untouched, so
+  `requiredSessionIdentity` and the bikini/6 set-identity pin stand.
+  Pinned in `planEngine.recoverySequencing.test.js`; the previously
+  failing `programmeStructureMemory` CASE G passes again unchanged.
+- **Ruling 5, the recommendation copy is the spec's.** Lane R-C shipped
+  "Train Push today. Legs is still recovering, estimated ready by
+  Thursday." An instruction, not the spec's three plain facts (4.2 point
+  4). Replaced with "Legs is next in your plan. Quads are estimated 64%
+  recovered, ready by Thursday. Push is ready now." "in your plan" is the
+  one addition: under F1 the card title above the line is the recommended
+  session, so a bare "Legs is next" would read as a contradiction.
+- **Ruling 6, the Home line never repeats the card title.** The plain line
+  under the programme-next session is "Quads are estimated 64% recovered,
+  ready by Thursday." or "Every muscle it trains is estimated recovered.",
+  never prefixed with "<Name> is next." (spec 4.3: one line under the
+  session name). When that session's planned sets could not be read the
+  line is null: with no read behind it there is no estimate to state, and
+  "estimated recovered" would be a false all-clear.
+- **Ruling 7, the change-workout sheet's recovery line wraps to two
+  lines**, so "ready by <day>" is never cut off on a narrow phone.
