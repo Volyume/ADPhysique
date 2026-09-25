@@ -9163,7 +9163,12 @@ export async function getYearOfLiftsData(userId, yearMs = null) {
     // distance/duration reuse the weight column; exclude them so the Year of
     // Lifts tonnage and e1RM PRs aren't polluted by metres/seconds. LEFT JOINs
     // keep unknown/unmatched exercises as weight_reps (counted).
-    `SELECT ws.weight, ws.actual_reps, ws.exercise_id, ex.name AS exercise_name,
+    // S6-3 follow-up (progress-tab audit 2026-09-24, D200 "fix it all"):
+    // ws.set_type and ws.evidence_class are now projected too -- the
+    // isE1rmEligibleRow gate below already called for them, but with
+    // neither column selected every row read as the 'straight'/null
+    // default and the gate was a no-op.
+    `SELECT ws.weight, ws.actual_reps, ws.set_type, ws.evidence_class, ws.exercise_id, ex.name AS exercise_name,
             ex.primary_muscle AS muscle
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
@@ -9276,7 +9281,10 @@ export async function getRecapData(userId, { startMs, endMs = Date.now(), compar
       // distance/duration reuse the weight column; exclude them so recap
       // tonnage, best-session and e1RM PRs aren't polluted. LEFT JOINs keep
       // unknown/unmatched exercises as weight_reps (counted).
-      `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.exercise_id, ex.name AS exercise_name
+      // S6-3 (progress-tab audit 2026-09-24): ws.set_type and
+      // ws.evidence_class are projected so the best-1RM loop below can gate
+      // on isE1rmEligibleRow, the same read getYearOfLiftsData already runs.
+      `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.set_type, ws.evidence_class, ws.exercise_id, ex.name AS exercise_name
        FROM workout_sets ws
        JOIN workouts w ON ws.workout_id = w.id
        LEFT JOIN exercises ex ON ex.id = ws.exercise_id
@@ -9325,6 +9333,14 @@ export async function getRecapData(userId, { startMs, endMs = Date.now(), compar
   const bestByExercise = new Map();
   for (const x of sets) {
     if (!x.exercise_name) continue;
+    // S6-3 (progress-tab audit 2026-09-24): the shared e1RM eligibility rule
+    // (D97-18/C6 R-15) applies to the recap's best-lift read too - a myo-
+    // reps/rest-pause row's actual_reps is a SUM of efforts and a ballistic
+    // row is non-maximal effort, so either fabricates an inflated estimated
+    // max that headlines the monthly recap and inflates its "N PRs" share-
+    // card count. Tonnage/set counts above keep every working set; only the
+    // record read is gated.
+    if (!isE1rmEligibleRow(x)) continue;
     const e1rm = calculate1RM(x.weight || 0, x.actual_reps || 0);
     if (!e1rm) continue;
     const prev = bestByExercise.get(x.exercise_name);
@@ -9370,7 +9386,10 @@ export async function getBlockReflectionData(userId, mesocycleId) {
     // distance/duration reuse the weight column; exclude them so the block's
     // first/last-week tonnage and tonnageDelta aren't polluted. LEFT JOINs keep
     // unknown/unmatched exercises as weight_reps (counted).
-    `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.set_type, ws.exercise_id, ex.name AS exercise_name
+    // S6-3 (progress-tab audit 2026-09-24): ws.evidence_class is additionally
+    // projected (ws.set_type was already selected) so the best-1RM loop below
+    // can gate on isE1rmEligibleRow, the same read getYearOfLiftsData runs.
+    `SELECT ws.workout_id, ws.weight, ws.actual_reps, ws.set_type, ws.evidence_class, ws.exercise_id, ex.name AS exercise_name
      FROM workout_sets ws
      JOIN workouts w ON ws.workout_id = w.id
      LEFT JOIN exercises ex ON ex.id = ws.exercise_id
@@ -9447,6 +9466,9 @@ export async function getBlockReflectionData(userId, mesocycleId) {
   const blockBestByExercise = new Map();
   for (const s of sets) {
     if (!s.exercise_name) continue;
+    // S6-3: the shared e1RM eligibility gate, as in getRecapData above
+    // (kept short: campaign10m's guard reads the next 600 characters).
+    if (!isE1rmEligibleRow(s)) continue;
     const e1rm = calculate1RM(s.weight || 0, s.actual_reps || 0);
     if (!e1rm) continue;
     const prev = blockBestByExercise.get(s.exercise_name);

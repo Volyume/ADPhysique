@@ -58,25 +58,54 @@ function recentMonthRecapParams(earliestWorkoutAt) {
   };
 }
 
+// S6-7 (progress-tab audit 2026-09-24): the recap banner used to strip
+// " so far" from monthLabel unconditionally, so a first-month user read
+// "Your September recap is ready" and then opened a deck headed "September
+// so far, in numbers" -- the banner's promise didn't match the deck it
+// opened. The banner now agrees with the deck: an in-progress month keeps
+// "so far" in both places. Exported (the file's one deliberate named
+// export, alongside the default) so this pure copy rule can be pinned
+// directly -- the real banner is only visible in the first 7 days of a
+// month, which a mounted render cannot pin deterministically on every day
+// the test suite happens to run.
+export function recapBannerText(monthLabel) {
+  return monthLabel.endsWith(' so far')
+    ? `Your recap of ${monthLabel} is ready - 45 seconds`
+    : `Your ${monthLabel} recap is ready - 45 seconds`;
+}
+
 // Campaign 23 (§8/§21/§22 R2): the Training pillar's copy, built from
 // computeTrainingPillarSummary's pure counts (lib/progress/pillars.js) --
 // no imperative training advice, only factual evidence statements and (for
 // the zero-history state) the single honest next action §23's state F/L
 // sanctions.
+// S6-4 (progress-tab audit 2026-09-24, D200-3): computeTrainingPillarSummary
+// is a ROLLING 30-day window ({ windowDays: 30 }, below), never a calendar
+// month -- the recap tile on this same screen uses the real calendar month,
+// so this copy must read "in the last 30 days", never "this month", or the
+// two get confused for each other.
 function trainingPillarCopy({ completedWorkoutCount, summary, lastSessionAt, unitsLabel, now = Date.now() }) {
   if (completedWorkoutCount === 0) {
     return { state: 'No sessions logged yet', evidence: 'Log your first session to start your training evidence.' };
   }
   if (summary.trainedCount === 0) {
+    // S6-6 (progress-tab audit 2026-09-24): `days` used to be measured from
+    // the last session of ANY type and rendered straight into the STATE
+    // line, so a person whose only session today was cardio or timed work
+    // (trainedCount stays 0 -- this pillar only counts weight_reps lifts)
+    // read the self-contradicting "No sessions in the last 0 days". The
+    // state is now the fixed window statement; the honest "last session"
+    // fact (when known) carries the day count in the EVIDENCE line instead.
     const days = Number.isFinite(lastSessionAt) ? Math.max(0, Math.floor((now - lastSessionAt) / DAY_MS)) : null;
-    return {
-      state: days != null ? `No sessions in the last ${days} day${days === 1 ? '' : 's'}` : 'No sessions this month',
-      evidence: null,
-    };
+    const evidence = days == null ? null
+      : days === 0 ? 'Last session today'
+      : days === 1 ? 'Last session yesterday'
+      : `Last session ${days} days ago`;
+    return { state: 'No lifts logged in the last 30 days', evidence };
   }
   const state = summary.improvedCount > 0
-    ? `Strength up on ${summary.improvedCount} of ${summary.trainedCount} lift${summary.trainedCount === 1 ? '' : 's'} this month`
-    : 'No new bests this month, holding steady';
+    ? `Strength up on ${summary.improvedCount} of ${summary.trainedCount} lift${summary.trainedCount === 1 ? '' : 's'} in the last 30 days`
+    : 'No new bests in the last 30 days, holding steady';
   const best = summary.namedBests[0];
   const evidence = best
     ? `${best.exerciseName} ${formatNumber(Math.round(best.weight))} ${unitsLabel} x ${best.reps}, new best`
@@ -176,6 +205,22 @@ export default function AnalyticsScreen({ navigation, route }) {
     hasData,
     handleRefresh,
   } = useProgressData();
+
+  // S6-2 (progress-tab audit 2026-09-24): built ONCE here, the same shape
+  // src/screens/WorkoutHistoryScreen.js's buildHistoryRows builds, and
+  // passed into every calculateTonnage call below. The SessionCard tonnage
+  // used to pass NO exercise-type map at all, so isLoadBearingSet
+  // (algorithms.js) treated every set as load-bearing and a distance/
+  // duration exercise's metres/seconds were summed as kilograms into the
+  // "Total lifted" hero of the WorkoutSummary this row opens, and from
+  // there into its share card.
+  const exerciseTypeById = useMemo(
+    () => Object.fromEntries(
+      Object.values(exerciseMap).map(e => [e.id, e.exercise_type ?? e.exerciseType ?? 'weight_reps']),
+    ),
+    [exerciseMap],
+  );
+  const loadSemanticsById = useMemo(() => buildLoadSemanticsById(Object.values(exerciseMap)), [exerciseMap]);
 
   // Campaign 23 (§8/§21/§22 R2): the Training pillar's numeric summary
   // (trailing-month strength-direction count + named bests, per-exercise-
@@ -387,7 +432,7 @@ export default function AnalyticsScreen({ navigation, route }) {
                     setCount: mySets.length,
                     workingSetCount: workingSets.length,
                     // D107-2: per-hand sets count x2, assistance is excluded.
-                    tonnage: calculateTonnage(mySets, null, buildLoadSemanticsById(Object.values(exerciseMap))),
+                    tonnage: calculateTonnage(mySets, exerciseTypeById, loadSemanticsById),
                     exerciseNames,
                     startedAt: w.startedAt,
                     endedAt: w.endedAt,
@@ -440,7 +485,7 @@ export default function AnalyticsScreen({ navigation, route }) {
           >
             <Ionicons name="newspaper-outline" size={18} color={t.colors.primary} />
             <Text style={[styles.recapCardText, live.recapCardText]}>
-              Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready - 45 seconds
+              {recapBannerText(recentMonthRecapParams(earliestWorkoutAt).monthLabel)}
             </Text>
             <TouchableOpacity
               onPress={dismissRecapCard}

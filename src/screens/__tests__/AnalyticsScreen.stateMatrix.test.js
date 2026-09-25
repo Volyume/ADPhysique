@@ -586,10 +586,12 @@ describe('State matrix — A: established Pro, all progressing, photos current',
     expect(errors).toEqual([]);
 
     // Training pillar: real computeTrainingPillarSummary output — 2 of 3
-    // lifts improved this month, most recent named best is e1 @ 85kg x 5.
+    // lifts improved in the last 30 days, most recent named best is e1 @
+    // 85kg x 5. (S6-4, progress-tab audit 2026-09-24: re-pinned from "this
+    // month" -- the summary is a rolling 30-day window, D200-3.)
     const training = pillarRow(tree, 'Training');
     expect(training.length).toBe(1);
-    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 2 of 3 lifts this month. Bench press 85 kg x 5, new best');
+    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 2 of 3 lifts in the last 30 days. Bench press 85 kg x 5, new best');
 
     // Body pillar: state 3 (20 entries), the real !hasComparison branch.
     const body = pillarRow(tree, 'Body');
@@ -646,7 +648,9 @@ describe('State matrix — B: training up, weight stalled', () => {
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts this month/);
+    // S6-4 (progress-tab audit 2026-09-24): re-pinned from "this month" --
+    // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
+    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts in the last 30 days/);
     const body = pillarRow(tree, 'Body');
     expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your smoothed weight trend is updated\./);
     // No instruction/imperative anywhere in the Body pillar's copy.
@@ -673,7 +677,9 @@ describe('State matrix — C: weight moving, training stalled', () => {
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toBe('Training. No new bests this month, holding steady. Keep training to build your evidence trail.');
+    // S6-4 (progress-tab audit 2026-09-24): re-pinned from "this month" --
+    // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
+    expect(training[0].props.accessibilityLabel).toBe('Training. No new bests in the last 30 days, holding steady. Keep training to build your evidence trail.');
     const body = pillarRow(tree, 'Body');
     expect(body[0].props.accessibilityLabel).toMatch(/kg\/week/);
   });
@@ -700,7 +706,9 @@ describe('State matrix — D: both training and weight progressing; Visual pilla
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts this month/);
+    // S6-4 (progress-tab audit 2026-09-24): re-pinned from "this month" --
+    // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
+    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts in the last 30 days/);
     const body = pillarRow(tree, 'Body');
     expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your smoothed weight trend is updated\./);
     const visual = pillarRow(tree, 'Progress photos');
@@ -731,7 +739,9 @@ describe('State matrix — E: neither training nor weight moving clearly', () =>
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toBe('Training. No new bests this month, holding steady. Keep training to build your evidence trail.');
+    // S6-4 (progress-tab audit 2026-09-24): re-pinned from "this month" --
+    // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
+    expect(training[0].props.accessibilityLabel).toBe('Training. No new bests in the last 30 days, holding steady. Keep training to build your evidence trail.');
     const body = pillarRow(tree, 'Body');
     expect(body[0].props.accessibilityLabel).toContain('Log your weight for 7 days and your trend appears here.');
     expect(flattenText(tree)).not.toMatch(/add (a |two )?(sets?|weight)/i);
@@ -869,7 +879,9 @@ describe('State matrix — K: no pillar is ever shown locked, whatever the store
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts this month/);
+    // S6-4 (progress-tab audit 2026-09-24): re-pinned from "this month" --
+    // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
+    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts in the last 30 days/);
     expect(flattenText(tree)).not.toMatch(/Part of Pro/);
     expect(flattenText(tree)).toContain('Recent sessions');
     expect(flattenText(tree)).toContain('Consistency');
@@ -943,9 +955,11 @@ describe('State matrix — N: multiple PR events; only the best 2-3 are named, t
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on 4 of 4 lifts this month\./);
+    // S6-4 (progress-tab audit 2026-09-24): re-pinned from "this month" --
+    // computeTrainingPillarSummary is a rolling 30-day window (D200-3).
+    expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on 4 of 4 lifts in the last 30 days\./);
     // Exactly one named-best evidence line, the most recent (e4).
-    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 4 of 4 lifts this month. Overhead press 45 kg x 6, new best');
+    expect(training[0].props.accessibilityLabel).toBe('Training. Strength up on 4 of 4 lifts in the last 30 days. Overhead press 45 kg x 6, new best');
   });
 });
 
@@ -1002,7 +1016,12 @@ describe('State matrix — P: no recent sessions, factual gap statement, no sham
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
-    expect(training[0].props.accessibilityLabel).toBe('Training. No sessions in the last 60 days');
+    // S6-6 (progress-tab audit 2026-09-24): re-pinned from "Training. No
+    // sessions in the last 60 days" -- the state is now the fixed 30-day
+    // window statement, and the day count moved to the evidence line as an
+    // honest "Last session ..." fact (see the new "S6-6" describe block
+    // below for the 0/1/12-day evidence variants this rewrite covers).
+    expect(training[0].props.accessibilityLabel).toBe('Training. No lifts logged in the last 30 days. Last session 60 days ago');
     expect(training[0].props.accessibilityLabel).not.toMatch(/shame|lazy|missed|should/i);
     // Recent sessions ARE present in useProgressData (last 3 completed
     // workouts regardless of window) -- R3 is conditioned on
@@ -1010,5 +1029,159 @@ describe('State matrix — P: no recent sessions, factual gap statement, no sham
     // session still lists; the pillar's OWN 30-day gap statement is the
     // state under test here, not R3's visibility rule.
     expect(flattenText(tree)).toContain('Recent sessions');
+  });
+});
+
+// ─── FIX LANE S6 additions (progress-tab audit 2026-09-24) ────────────────
+//
+// The blocks below are NOT part of the original PROGRESS-UX-SPEC state
+// matrix (A-P) above; they reuse this file's mount scaffold because
+// AnalyticsScreen.js cannot be required at all without it (every other
+// AnalyticsScreen*.test.js file avoids that cost by reading the source as
+// plain text instead of executing the module -- not possible here, since
+// these fixes must be proven against the REAL running function, not a
+// regex on its text).
+
+// Finds a node carrying BOTH the given accessibilityLabel and a function
+// onPress prop on the SAME element (Card -> PressableCard -> AnimatedPressable
+// all forward onPress/accessibilityLabel together, unmodified, so any match
+// carries the original handler) and invokes it -- the established way to
+// simulate a tap on a Card-class surface in this test-renderer harness
+// (no existing AnalyticsScreen test simulates a press, so there is no
+// prior convention to follow beyond the tree-search idiom findByLabel
+// already uses above).
+function pressByLabel(tree, label) {
+  const nodes = tree.root.findAll(
+    (n) => n.props && n.props.accessibilityLabel === label && typeof n.props.onPress === 'function',
+  );
+  expect(nodes.length).toBeGreaterThan(0);
+  TestRenderer.act(() => { nodes[0].props.onPress(); });
+}
+
+// ─── S6-6: trainedCount === 0 evidence, day-phrasing ──────────────────────
+describe('S6-6: trainedCount === 0 evidence reads the honest "Last session ..." fact, never "N days"', () => {
+  test('a session logged today reads "Last session today", never "0 days"', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: () => Promise.resolve([workout('w1', { daysAgoN: 0 })]),
+        // A non-weight_reps exercise so trainedCount stays 0 despite a
+        // session logged today -- the exact defect scenario: a lifts-only
+        // pillar whose only evidence is a same-day non-lift session.
+        getCompletedWorkoutSets: () => Promise.resolve([
+          completedSet({ id: 's1', workoutId: 'w1', exerciseId: 'e5', weight: 2000, reps: 600, daysAgoN: 0 }),
+        ]),
+        getAllExercises: () => Promise.resolve([
+          exercise('e5', { name: 'Row', primaryMuscle: 'back', type: 'distance' }),
+        ]),
+      },
+    });
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+    const training = pillarRow(tree, 'Training');
+    expect(training[0].props.accessibilityLabel).toBe('Training. No lifts logged in the last 30 days. Last session today');
+    // \b0 days\b, not a bare /0 days/: the fixed window text itself
+    // legitimately contains "...last 30 days", whose tail is the substring
+    // "0 days" -- a plain /0 days/ regex is a false positive against that,
+    // not a check on the evidence line this test actually targets.
+    expect(training[0].props.accessibilityLabel).not.toMatch(/\b0 days\b/);
+  });
+
+  test('a session logged yesterday reads "Last session yesterday"', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: () => Promise.resolve([workout('w1', { daysAgoN: 1 })]),
+        getCompletedWorkoutSets: () => Promise.resolve([
+          completedSet({ id: 's1', workoutId: 'w1', exerciseId: 'e5', weight: 2000, reps: 600, daysAgoN: 1 }),
+        ]),
+        getAllExercises: () => Promise.resolve([
+          exercise('e5', { name: 'Row', primaryMuscle: 'back', type: 'distance' }),
+        ]),
+      },
+    });
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+    const training = pillarRow(tree, 'Training');
+    expect(training[0].props.accessibilityLabel).toBe('Training. No lifts logged in the last 30 days. Last session yesterday');
+  });
+
+  test('a session logged 12 days ago reads "Last session 12 days ago"', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: () => Promise.resolve([workout('w1', { daysAgoN: 12 })]),
+        getCompletedWorkoutSets: () => Promise.resolve([
+          completedSet({ id: 's1', workoutId: 'w1', exerciseId: 'e5', weight: 2000, reps: 600, daysAgoN: 12 }),
+        ]),
+        getAllExercises: () => Promise.resolve([
+          exercise('e5', { name: 'Row', primaryMuscle: 'back', type: 'distance' }),
+        ]),
+      },
+    });
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+    const training = pillarRow(tree, 'Training');
+    expect(training[0].props.accessibilityLabel).toBe('Training. No lifts logged in the last 30 days. Last session 12 days ago');
+  });
+
+  test('no "this month" string survives anywhere on the mounted landing', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: threeWorkouts,
+        getCompletedWorkoutSets: improvingTrainingSets,
+        getAllExercises: EXERCISES,
+      },
+    });
+    const { tree, errors } = await mountAnalytics({});
+    expect(errors).toEqual([]);
+    expect(flattenText(tree)).not.toContain('this month');
+  });
+});
+
+// ─── S6-2: SessionCard tonnage excludes non-load exercise types ───────────
+describe('S6-2: SessionCard tonnage excludes a non-load (distance/duration) exercise\'s metres/seconds', () => {
+  test('a mixed weight_reps + distance workout navigates with tonnage 1000, not 1,201,000', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        getAllWorkouts: () => Promise.resolve([workout('w1', { daysAgoN: 1 })]),
+        getCompletedWorkoutSets: () => Promise.resolve([
+          completedSet({ id: 's1', workoutId: 'w1', exerciseId: 'e1', weight: 100, reps: 10, daysAgoN: 1 }),
+          completedSet({ id: 's2', workoutId: 'w1', exerciseId: 'e5', weight: 2000, reps: 600, daysAgoN: 1 }),
+        ]),
+        getAllExercises: () => Promise.resolve([
+          exercise('e1', { name: 'Bench press', primaryMuscle: 'chest', type: 'weight_reps' }),
+          exercise('e5', { name: 'Row', primaryMuscle: 'back', type: 'distance' }),
+        ]),
+      },
+    });
+    const nav = makeNav();
+    const { tree, errors } = await mountAnalytics({ navigation: nav });
+    expect(errors).toEqual([]);
+    pressByLabel(tree, 'View summary for Session w1');
+    expect(nav.navigate).toHaveBeenCalledWith('WorkoutSummary', expect.objectContaining({ tonnage: 1000 }));
+  });
+});
+
+// ─── S6-7: recap banner text agrees with the deck it opens ────────────────
+//
+// recapBannerText is a pure function, exported for exactly this reason
+// (see its own comment in AnalyticsScreen.js): the real banner only renders
+// in the first 7 days of a calendar month (recapCardHidden's own gate,
+// `new Date().getDate() > 7`), which a mounted render cannot pin
+// deterministically on every day this suite happens to run. Unit-testing
+// the extracted pure copy rule sidesteps faking the system clock across
+// the whole mount pipeline.
+describe('S6-7: recap banner text agrees with the deck it opens', () => {
+  test('a "so far" label renders "Your recap of <Month> so far is ready"', () => {
+    const { recapBannerText } = require('../AnalyticsScreen');
+    expect(recapBannerText('September so far')).toBe('Your recap of September so far is ready - 45 seconds');
+  });
+
+  test('a completed-month label renders "Your <Month> recap is ready" (byte-identical to before the fix)', () => {
+    const { recapBannerText } = require('../AnalyticsScreen');
+    expect(recapBannerText('August')).toBe('Your August recap is ready - 45 seconds');
   });
 });
