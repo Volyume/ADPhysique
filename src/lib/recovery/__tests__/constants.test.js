@@ -7,6 +7,12 @@
  * estimate; recoveryHours is clamped to [24, 168] and deterministic; an
  * unknown muscle takes the most conservative baseline; the module does no
  * I/O.
+ *
+ * LANE R-G addition (Opus review finding 25, spec section 9; D201 addendum,
+ * lead ruling 3, and addendum 6 ruling 12): TYPICAL_WEEK_GAP_HOURS holds
+ * exactly the typical-week layout per session count and every row sums to
+ * a full week; PLAN_OPENING_RIR (spec 5.1) is the RIR the sequencer's
+ * scorer is judged at.
  */
 import fs from 'fs';
 import path from 'path';
@@ -15,6 +21,7 @@ import {
   RECOVERY_ESTIMATE_LABEL, BASE_RECOVERY_HOURS, REFERENCE_SETS,
   DOSE_FACTOR_MIN, DOSE_FACTOR_MAX, RATING_FACTOR, FIRST_WEEK_FACTOR, FEEDBACK_FACTOR,
   RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX, READY_PERCENT, NEARLY_PERCENT, LOOKBACK_DAYS,
+  TYPICAL_WEEK_GAP_HOURS, PLAN_OPENING_RIR,
   doseFactor, ratingFactor, intensityFactor, feedbackFactor, recoveryHours,
 } from '../constants';
 
@@ -123,6 +130,30 @@ describe('recoveryHours', () => {
     const a = recoveryHours('back', { sets: 9, recoveryRating: 'good', rirTarget: 2, ratings: { joint: 2 } });
     const b = recoveryHours('back', { sets: 9, recoveryRating: 'good', rirTarget: 2, ratings: { joint: 2 } });
     expect(a).toBe(b);
+  });
+});
+
+describe('TYPICAL_WEEK_GAP_HOURS and PLAN_OPENING_RIR (D201 addendum, lead ruling 3; spec 5.1)', () => {
+  test('holds exactly the typical-week layout, keyed by session count', () => {
+    expect(TYPICAL_WEEK_GAP_HOURS).toEqual({
+      1: [168],
+      2: [72, 96],
+      3: [48, 48, 72],
+      4: [24, 48, 24, 72],
+      5: [24, 24, 24, 24, 72],
+      6: [24, 24, 24, 24, 24, 48],
+      7: [24, 24, 24, 24, 24, 24, 24],
+    });
+  });
+
+  test('every row sums to a full week (168 hours), so the wrap gap always closes the week', () => {
+    for (const row of Object.values(TYPICAL_WEEK_GAP_HOURS)) {
+      expect(row.reduce((sum, hours) => sum + hours, 0)).toBe(168);
+    }
+  });
+
+  test('the block-opening RIR the sequencer\'s scorer is judged at is 3 (spec 5.1)', () => {
+    expect(PLAN_OPENING_RIR).toBe(3);
   });
 });
 

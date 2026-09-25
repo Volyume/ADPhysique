@@ -7,6 +7,13 @@
  * renders exactly as it did before this feature existed; the row's own name
  * is never re-derived from the recovery line.
  *
+ * LANE R-G additions (Opus review finding 25, spec section 9; D201 addendum
+ * 4 ruling 7, addendum 6 ruling 14): the recovery line's Text wraps to two
+ * lines; the row's accessibilityLabel speaks that same line with "percent"
+ * spelled out and carries no "%"; the "Next up" badge always marks
+ * nextWorkout.idx, never the row a selectedWorkoutOverride merely
+ * highlights.
+ *
  * Same mount pattern as HomeChangeWorkoutSheet.test.js (react-test-renderer,
  * reduce-motion forced via the store mock so BottomSheet mounts
  * synchronously).
@@ -86,5 +93,66 @@ describe('the change-workout sheet renders each outstanding session\'s verdict l
     const { tree } = render({ recoveryPerSession: [] });
     const text = flattenText(tree.toJSON());
     expect(text).not.toMatch(/recovered|Ready now/);
+  });
+});
+
+describe('D201 addendum 4 ruling 7: the recovery line wraps to two lines', () => {
+  test('the Text carries numberOfLines={2}, so "ready by <day>" is never cut off', () => {
+    const line = 'Quads are estimated 64% recovered, ready by Thursday.';
+    const { tree } = render({ recoveryPerSession: [{ routineId: 'legs', line }] });
+    const textNode = tree.root.findAll((n) => {
+      if (n.type !== 'Text') return false;
+      const kids = n.props.children;
+      return kids === line || (Array.isArray(kids) && kids.join('') === line);
+    })[0];
+    expect(textNode).toBeTruthy();
+    expect(textNode.props.numberOfLines).toBe(2);
+  });
+});
+
+describe('the row speaks its recovery line with "percent" spelled out (spec section 6 accessibility)', () => {
+  test('accessibilityLabel is "Day <n>, <name>. <line with % replaced>" and contains no %', () => {
+    const recoveryPerSession = [
+      { routineId: 'legs', line: 'Quads are estimated 64% recovered, ready by Thursday.' },
+    ];
+    const { tree } = render({ recoveryPerSession });
+    const row = tree.root.findAll(
+      (n) => typeof n.props?.accessibilityLabel === 'string' && n.props.accessibilityLabel.startsWith('Day 1, Legs'),
+    )[0];
+    expect(row).toBeTruthy();
+    expect(row.props.accessibilityLabel).toBe(
+      'Day 1, Legs. Quads are estimated 64 percent recovered, ready by Thursday.',
+    );
+    expect(row.props.accessibilityLabel).not.toMatch(/%/);
+  });
+});
+
+describe('D201 addendum 6 ruling 14: "Next up" always marks programme order; the override is what is selected', () => {
+  test('the badge stays on nextWorkout.idx and the highlighted row is the override\'s row', () => {
+    const { tree } = render({
+      nextWorkout: { idx: 0 },
+      selectedWorkoutOverride: { routine: { id: 'push' }, total: 2, idx: 1 },
+    });
+    // accessibilityState is forwarded from TouchableOpacity down onto its
+    // own rendered host node too, so a bare 'accessibilityState' in n.props
+    // search over-matches; accessibilityLabel plus a real onPress function
+    // (same idiom as HomeChangeWorkoutSheet.test.js's pressByLabel) isolates
+    // the one TouchableOpacity instance per row.
+    const rowByLabel = (label) => tree.root.findAll(
+      (n) => n.props && n.props.accessibilityLabel === label && typeof n.props.onPress === 'function',
+    )[0];
+    const row0 = rowByLabel('Day 1, Legs');
+    const row1 = rowByLabel('Day 2, Push');
+    expect(row0).toBeTruthy();
+    expect(row1).toBeTruthy();
+    expect(row0.props.accessibilityState).toEqual({ selected: false });
+    expect(row1.props.accessibilityState).toEqual({ selected: true });
+
+    const hasNextBadge = (row) => row.findAll((c) => c.type === 'Text').some((t) => {
+      const kids = t.props.children;
+      return kids === 'Next up' || (Array.isArray(kids) && kids.join('') === 'Next up');
+    });
+    expect(hasNextBadge(row0)).toBe(true);
+    expect(hasNextBadge(row1)).toBe(false);
   });
 });

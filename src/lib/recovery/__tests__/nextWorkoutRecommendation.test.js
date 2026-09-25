@@ -84,6 +84,28 @@ describe('programme order is kept', () => {
     expect(result.programmeNextLine).toBe(`Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}.`);
   });
 
+  test('programmeNext is not_yet at the projected time and the ONLY other outstanding session is also not ready: no recommendation, but programmeNextLine still names the limiting muscle', () => {
+    const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
+    const legsReadyAt = NOW + 2 * DAY_MS;
+    const pushReadyAt = NOW + 3 * DAY_MS;
+    const recoveryMap = {
+      quads: staticEntry('quads', { recoveredPercent: 64, status: 'recovering', readyAtMs: legsReadyAt }),
+      chest: staticEntry('chest', { recoveredPercent: 50, status: 'recovering', readyAtMs: pushReadyAt }),
+    };
+    const result = recommendNextWorkout({
+      sessions,
+      plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 } },
+      recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
+    });
+    // Push is genuinely not a qualifying candidate: it fails the RULE's
+    // "ready at the projected time" condition too, not just the limiting-
+    // muscle-overlap one.
+    expect(result.perSession.find((p) => p.routineId === 'push').verdict).toBe('not_yet');
+    expect(result.recommended).toBeNull();
+    expect(result.reason).toBeNull();
+    expect(result.programmeNextLine).toBe(`Quads are estimated 64% recovered, ${readyClause(legsReadyAt, NOW)}.`);
+  });
+
   test('programmeNext not ready, another outstanding session IS ready, but it shares the limiting muscle with >= 2 planned sets: no recommendation', () => {
     const sessions = [session('legs', 'Legs', 1), session('pull', 'Pull', 2)];
     const readyAtMs = NOW + 2 * DAY_MS;
