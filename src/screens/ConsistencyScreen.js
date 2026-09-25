@@ -156,7 +156,13 @@ export default function ConsistencyScreen({ navigation }) {
         ) : null}
 
         {/* ── Recovery signals ── */}
-        {!loading && hasData ? <ReadinessCards userId={user?.id} tier={tier} /> : null}
+        {!loading && hasData ? (
+          <ReadinessCards
+            userId={user?.id}
+            tier={tier}
+            onRateLastSession={(params) => navigation.navigate('WorkoutSummary', params)}
+          />
+        ) : null}
 
         {/* ── Training load (ACWR) ── */}
         {hasData && workloadData && workloadData.ratio !== null && (

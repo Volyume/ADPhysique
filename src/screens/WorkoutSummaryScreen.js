@@ -145,6 +145,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const {
     workoutId, durationMinutes, exerciseCount, setCount, workingSetCount, tonnage,
     exerciseNames = [], readOnly = false,
+    // P3(a) (progress-tab audit 2026-09-24, D200-2): the "Rate your last
+    // session" reopen from Consistency. Honoured ONLY together with
+    // readOnly: true -- see handleDone and the prefill/rating-card effects
+    // below, every one of which treats a stray allowRating on the live
+    // route (readOnly false) as inert.
+    allowRating = false,
     routineId = null, routineName: passedRoutineName = null,
     detectedPRs = [], exerciseData = [],
     startedAt = null, endedAt = null,
@@ -296,6 +302,16 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [constraintDetailExpanded, setConstraintDetailExpanded] = useState(false);
 
   const feedbackDebounceRef = useRef(null);
+
+  // allowRating (D200-2/P3(a)): the rating card starts expanded for a "Rate
+  // your last session" reopen. Flips `feedbackExpanded` once on mount
+  // rather than changing its initializer, which
+  // WorkoutSummaryScreen.feedback.guard.test.js pins at `useState(false)`;
+  // the toggle still opens/closes normally afterwards, live or read-only.
+  useEffect(() => {
+    if (readOnly && allowRating) setFeedbackExpanded(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!readOnly && routineId && user?.id) {
@@ -598,7 +614,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // post-session rating. A Skip-started (or pre-COMP-008) session leaves these
   // null, which both readers already treat as a neutral default.
   useEffect(() => {
-    if (readOnly || !workoutId) return;
+    // allowRating (D200-2/P3(a) section 3(i)): runs so stored ratings show
+    // and count as real, same as a live reopen of an already-rated session.
+    if ((readOnly && !allowRating) || !workoutId) return;
     let cancelled = false;
     (async () => {
       try {
@@ -629,7 +647,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       } catch (_e) {}
     })();
     return () => { cancelled = true; };
-  }, [readOnly, workoutId]);
+  }, [readOnly, allowRating, workoutId]);
 
   // COMP-005: block-end recap. When the session just finished sits in the final
   // planned week of the active mesocycle, offer the block story in-flow (no
@@ -915,6 +933,35 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   }
 
   async function handleDone() {
+    // allowRating (D200-2/P3(a) section 3(iv)): a "Rate your last session"
+    // reopen. Saves ONLY the touched rating keys through the same
+    // updateWorkout call the live path uses below, never a notes key
+    // (notes are not loaded in this mode -- see the prefill effect and the
+    // rating card above -- so sending one would clobber real notes with
+    // null) and never the weekly_checkins sleep write, then closes. A save
+    // failure keeps the existing calm toast/error-card pattern and stays on
+    // screen, exactly like the live path's own catch block below.
+    if (readOnly && allowRating) {
+      setSaving(true);
+      setSaveError(null);
+      if (feedbackDebounceRef.current) clearTimeout(feedbackDebounceRef.current);
+      const ratings = {};
+      for (const k of ['sessionDifficulty', 'overallPump', 'jointDiscomfort', 'fatigueLevel']) {
+        if (realFieldsRef.current.has(k)) ratings[k] = feedback[k];
+      }
+      try {
+        await updateWorkout(workoutId, ratings);
+      } catch (e) {
+        logError('WorkoutSummaryScreen.saveWorkoutFeedback', e, { workoutId, userId: user?.id });
+        setSaving(false);
+        setSaveError('Could not save your session notes and ratings on your device. Try Close again.');
+        toast.show('Could not save your session yet. Try Close again.', { variant: 'error' });
+        return;
+      }
+      setSaving(false);
+      navigation.goBack();
+      return;
+    }
     if (readOnly) {
       navigation.goBack();
       return;
@@ -2003,22 +2050,33 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             inputs grouped into ONE distinct card at the end, separated from
             the celebratory "what happened" zone above. Same controls, same
             handlers; only the grouping and header treatment changed. */}
-        {!readOnly && (
+        {/* allowRating (D200-2/P3(a) section 3(ii)): a "Rate your last
+            session" reopen renders ONLY the toggle + four RatingRows below,
+            never the header/purpose copy or either notes field. Notes are
+            not loaded in this mode (see the prefill effect above) and
+            handleDone's allowRating save never sends a notes key, so an
+            editable notes box here would silently discard whatever was
+            typed into it. */}
+        {(!readOnly || allowRating) && (
           <Card style={styles.coachZoneCard}>
-            <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, live.sectionTitle]}>Workout feedback</Text>
-              <Text style={[styles.optionalLabel, live.optionalLabel]}>optional</Text>
-            </View>
-            <Text style={[styles.coachZoneSubHeading, live.coachZoneSubHeading]}>How did the session feel?</Text>
-            {/* C5-P17-03 (D96): the purpose sentence sat INSIDE the
-                expander, so the user had to decide to rate before being
-                told why rating matters. That is the opposite order to the
-                pre-session prompt, which leads with its purpose line before
-                any control. Same sentence, same words, moved above the
-                toggle. */}
-            <Text style={[styles.feedbackPurpose, live.feedbackPurpose]}>
-              Your answers shape how your recovery is read and, when coaching is active, whether next session's workload still makes sense. Skip anything you're not sure about.
-            </Text>
+            {!readOnly && (
+              <>
+                <View style={styles.sectionHeaderRow}>
+                  <Text style={[styles.sectionTitle, live.sectionTitle]}>Workout feedback</Text>
+                  <Text style={[styles.optionalLabel, live.optionalLabel]}>optional</Text>
+                </View>
+                <Text style={[styles.coachZoneSubHeading, live.coachZoneSubHeading]}>How did the session feel?</Text>
+                {/* C5-P17-03 (D96): the purpose sentence sat INSIDE the
+                    expander, so the user had to decide to rate before being
+                    told why rating matters. That is the opposite order to the
+                    pre-session prompt, which leads with its purpose line before
+                    any control. Same sentence, same words, moved above the
+                    toggle. */}
+                <Text style={[styles.feedbackPurpose, live.feedbackPurpose]}>
+                  Your answers shape how your recovery is read and, when coaching is active, whether next session's workload still makes sense. Skip anything you're not sure about.
+                </Text>
+              </>
+            )}
             <TouchableOpacity
               style={[styles.feedbackToggleBtn, live.feedbackToggleBtn]}
               onPress={() => setFeedbackExpanded(e => !e)}
@@ -2058,32 +2116,38 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 <RatingRow label="Muscle engagement" field="overallPump" value={realFieldsRef.current.has('overallPump') ? feedback.overallPump : null} max={3} onChange={rateFeedback('overallPump')} />
                 <RatingRow label="Joint discomfort" field="jointDiscomfort" value={realFieldsRef.current.has('jointDiscomfort') ? feedback.jointDiscomfort : null} max={3} onChange={rateFeedback('jointDiscomfort')} hint="Joints and tendons, not normal muscle soreness" />
                 <RatingRow label="Fatigue" field="fatigueLevel" value={realFieldsRef.current.has('fatigueLevel') ? feedback.fatigueLevel : null} max={5} onChange={rateFeedback('fatigueLevel')} />
-                <TextField accessibilityLabel="Workout feedback notes"
-                  fieldStyle={styles.notesField}
-                  inputStyle={[styles.notesInput, live.notesInput]}
-                  value={notes}
-                  onChangeText={(t) => { notesDirtyRef.current = true; setNotes(t); }}
-                  placeholder="Anything notable from this session"
-                  placeholderTextColor={t.colors.textMuted}
-                  multiline
-                />
+                {!readOnly && (
+                  <TextField accessibilityLabel="Workout feedback notes"
+                    fieldStyle={styles.notesField}
+                    inputStyle={[styles.notesInput, live.notesInput]}
+                    value={notes}
+                    onChangeText={(t) => { notesDirtyRef.current = true; setNotes(t); }}
+                    placeholder="Anything notable from this session"
+                    placeholderTextColor={t.colors.textMuted}
+                    multiline
+                  />
+                )}
               </View>
             )}
-            <View style={[styles.coachZoneDivider, live.coachZoneDivider]} />
-            <Text style={[styles.coachZoneSubHeading, live.coachZoneSubHeading]}>Notes for next time</Text>
-            <TextField accessibilityLabel="Notes for next time"
-              fieldStyle={styles.nextTimeNoteField}
-              inputStyle={[styles.nextTimeNoteInput, live.nextTimeNoteInput]}
-              value={nextTimeNote}
-              onChangeText={setNextTimeNote}
-              // WAVE-A-FINDINGS.md COPY_DEFECT (:1744): the example hard-coded
-              // kg regardless of the user's chosen unit; same root cause as
-              // the hero-stat fix above, bundled per the change plan.
-              placeholder={`Anything to remember for next session? e.g. try ${units === 'lbs' ? '185lbs' : '85kg'}, wider grip, reduce volume`}
-              placeholderTextColor={t.colors.textMuted}
-              multiline
-              numberOfLines={3}
-            />
+            {!readOnly && (
+              <>
+                <View style={[styles.coachZoneDivider, live.coachZoneDivider]} />
+                <Text style={[styles.coachZoneSubHeading, live.coachZoneSubHeading]}>Notes for next time</Text>
+                <TextField accessibilityLabel="Notes for next time"
+                  fieldStyle={styles.nextTimeNoteField}
+                  inputStyle={[styles.nextTimeNoteInput, live.nextTimeNoteInput]}
+                  value={nextTimeNote}
+                  onChangeText={setNextTimeNote}
+                  // WAVE-A-FINDINGS.md COPY_DEFECT (:1744): the example hard-coded
+                  // kg regardless of the user's chosen unit; same root cause as
+                  // the hero-stat fix above, bundled per the change plan.
+                  placeholder={`Anything to remember for next session? e.g. try ${units === 'lbs' ? '185lbs' : '85kg'}, wider grip, reduce volume`}
+                  placeholderTextColor={t.colors.textMuted}
+                  multiline
+                  numberOfLines={3}
+                />
+              </>
+            )}
           </Card>
         )}
 

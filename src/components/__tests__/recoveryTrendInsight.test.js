@@ -1,3 +1,13 @@
+// P3(a) (progress-tab audit 2026-09-24, D200-2): ReadinessCards.js now
+// imports Button (the "Rate your last session" control), which pulls in
+// ../lib/haptics -> expo-haptics -- a chain this file's minimal, no-render
+// pure-function test never needed to satisfy before and that crashes in
+// this suite's environment ("Cannot read properties of undefined (reading
+// 'EventEmitter')"). Mocked away exactly as every other component test
+// that imports something using Button already does; this test never
+// renders JSX, so the mock's own shape does not matter.
+jest.mock('../Button', () => () => null);
+
 import { computeRecoveryTrendInsight } from '../ReadinessCards';
 
 // Check-ins arrive newest-first. energyScore / sorenessScore / sleepQuality

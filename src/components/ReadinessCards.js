@@ -19,14 +19,18 @@ import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from './AnimatedEntrance';
 import InfoTooltip from './InfoTooltip';
 import SectionLabel from './SectionLabel';
+import Button from './Button';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
-import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { MUSCLE_DISPLAY_NAMES, calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
 import { trainingRecency } from '../lib/trainingRecency';
 import {
   getAllWorkouts, getCompletedWorkoutSets,
   getLastTrainedPerMuscle, getRecentCheckins,
+  getRecentCompletedWorkouts,
+  getWorkoutSetsForWorkout, getAllExercises,
 } from '../lib/database';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
+import { safeFormatDate } from '../lib/safeFormat';
 
 const MILESTONES = [
   { sessions: 1,    label: 'First session',  icon: 'star-outline' },
@@ -136,11 +140,49 @@ export function computeRecoveryTrendInsight(checkins, nowMs = Date.now()) {
   return null;
 }
 
+// P3(a) (progress-tab audit 2026-09-24, D200-2): the one-tap "Rate your
+// last session" path. Builds the WorkoutSummary route params EXACTLY the
+// way WorkoutHistoryScreen.buildHistoryRows builds them for its own "View
+// summary" button (workoutId, durationMinutes, exerciseCount, setCount,
+// workingSetCount, tonnage, exerciseNames, startedAt, endedAt, routineId,
+// routineName, readOnly: true), plus allowRating: true. Returns null when
+// there is no completed workout or the latest one already carries both
+// post-session ratings, so the caller renders no button.
+function buildRateLastSessionParams(workout, sets, allExercises) {
+  if (!workout) return null;
+  if (workout.fatigueLevel != null && workout.jointDiscomfort != null) return null;
+  const exercises = allExercises ?? [];
+  const exerciseMap = Object.fromEntries(exercises.map((e) => [e.id, e]));
+  const exerciseTypeById = Object.fromEntries(
+    exercises.map((e) => [e.id, e.exercise_type ?? e.exerciseType ?? 'weight_reps']),
+  );
+  const loadSemanticsById = buildLoadSemanticsById(exercises);
+  const mySets = sets ?? [];
+  const workingSets = mySets.filter((s) => s.setType !== 'warmup');
+  const exerciseIds = [...new Set(mySets.map((s) => s.exerciseId))];
+  const exerciseNames = exerciseIds.map((id) => exerciseMap[id]?.name).filter(Boolean).slice(0, 4);
+  return {
+    workoutId: workout.id,
+    durationMinutes: workout.durationMinutes,
+    exerciseCount: exerciseIds.length,
+    setCount: mySets.length,
+    workingSetCount: workingSets.length,
+    tonnage: calculateTonnage(mySets, exerciseTypeById, loadSemanticsById),
+    exerciseNames,
+    startedAt: workout.startedAt,
+    endedAt: workout.endedAt,
+    routineId: workout.routineId ?? null,
+    routineName: workout.routineName ?? null,
+    readOnly: true,
+    allowRating: true,
+  };
+}
+
 // FOUNDER DECISION (fully free, no tier split): every reader below used to
 // fork on `tier` (muscle freshness, the recovery-trend insight, and the
 // learning-promise tooltip copy); the component no longer takes a tier prop
 // and always runs the full behaviour.
-export default function ReadinessCards({ userId }) {
+export default function ReadinessCards({ userId, onRateLastSession }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
   // (defined further down this file, after the frozen `styles` block).
@@ -151,6 +193,16 @@ export default function ReadinessCards({ userId }) {
   const [sampleCounts, setSampleCounts] = useState({ soreness: 0, fatigue: 0, joint: 0 });
   const [muscleFreshness, setMuscleFreshness] = useState({});
   const [recoveryTrendInsight, setRecoveryTrendInsight] = useState(null);
+  // P3(a): the latest completed session's WorkoutSummary route params, or
+  // null when there is no completed session or it already carries both
+  // post-session ratings -- either way, the "Rate your last session"
+  // button renders nothing.
+  const [rateSessionParams, setRateSessionParams] = useState(null);
+  // P3(b): the latest weekly check-in row (camelCased, from
+  // getRecentCheckins(userId, 1)), read independently of the >=3 gate the
+  // existing trend-insight sentence below uses, so this row can show as
+  // soon as a single check-in exists.
+  const [latestCheckin, setLatestCheckin] = useState(null);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -222,6 +274,37 @@ export default function ReadinessCards({ userId }) {
       const checkins = await getRecentCheckins(userId, 6);
       if (checkins.length >= 3) setRecoveryTrendInsight(computeRecoveryTrendInsight(checkins));
     } catch (_) {}
+
+    // P3(a): the latest completed session, only when it still needs a
+    // post-session rating. getRecentCompletedWorkouts(userId, 1) (not
+    // getWorkoutById) so the row carries routineName from its routines
+    // join -- a bare `SELECT * FROM workouts` never would, and the
+    // summary's title depends on it (founder device report 2026-08-24,
+    // WorkoutHistoryScreen's own route-building comment). Same ordering
+    // WorkoutHistoryScreen's list uses, so "latest" agrees with it.
+    try {
+      const [lastWorkout] = await getRecentCompletedWorkouts(userId, 1);
+      if (lastWorkout) {
+        const [lastSets, exercisesForLast] = await Promise.all([
+          getWorkoutSetsForWorkout(lastWorkout.id),
+          getAllExercises(),
+        ]);
+        setRateSessionParams(buildRateLastSessionParams(lastWorkout, lastSets, exercisesForLast));
+      } else {
+        setRateSessionParams(null);
+      }
+    } catch (_) {}
+    // Best-effort: a failed read here only means the button doesn't show
+    // this visit, never a crash or a stale nav target.
+
+    // P3(b): the latest weekly check-in, independent of the trend
+    // insight's own >=3 gate above.
+    try {
+      const recent = await getRecentCheckins(userId, 1);
+      setLatestCheckin(recent?.[0] ?? null);
+    } catch (_) {}
+    // Best-effort: a failed read here only means the check-in row doesn't
+    // show this visit, never a crash.
   }, [userId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -242,6 +325,29 @@ export default function ReadinessCards({ userId }) {
     // Factual ordering only: most recently trained first. No severity or
     // readiness implication - trainingRecency carries none to sort by.
     .sort((a, b) => a.daysAgo - b.daysAgo);
+
+  // P3(a) (D200-2): true whenever AT LEAST ONE gauge is still short of
+  // MIN_RATED_SESSIONS -- the shared caption explains why that gauge (or
+  // those gauges) read N/A, and disappears once every gauge has enough.
+  const gaugesIncomplete = sampleCounts.soreness < MIN_RATED_SESSIONS
+    || sampleCounts.fatigue < MIN_RATED_SESSIONS
+    || sampleCounts.joint < MIN_RATED_SESSIONS;
+
+  // P3(b): "Week of 21 Sep" from the check-in's weekStart, and the four
+  // check-in values on the exact scales WeeklyCheckInScreen.js uses
+  // (energyScore/stressScore/sorenessScore 1-5, sleepHours in hours),
+  // omitting any value the check-in left null. Empty string/array when
+  // there is no check-in, so the row below renders nothing.
+  const checkinWeekLabel = latestCheckin ? safeFormatDate(latestCheckin.weekStart, 'd MMM', '') : '';
+  const checkinValuesLine = latestCheckin
+    ? [
+      checkinWeekLabel ? `Week of ${checkinWeekLabel}` : null,
+      latestCheckin.energyScore != null ? `Energy ${latestCheckin.energyScore}/5` : null,
+      latestCheckin.stressScore != null ? `Stress ${latestCheckin.stressScore}/5` : null,
+      latestCheckin.sleepHours != null ? `Sleep ${latestCheckin.sleepHours} h` : null,
+      latestCheckin.sorenessScore != null ? `Soreness ${latestCheckin.sorenessScore}/5` : null,
+    ].filter(Boolean).join(' · ')
+    : '';
 
   return (
     <AnimatedEntrance index={1} style={{ gap: spacing.md }}>
@@ -287,7 +393,44 @@ export default function ReadinessCards({ userId }) {
             <RecoveryGauge label="Fatigue" value={recovery.fatigue} samples={sampleCounts.fatigue} />
             <RecoveryGauge label="Joint comfort" value={recovery.joint} samples={sampleCounts.joint} invertGood />
           </View>
+          {/* P3(a) (F3, D200-2): present only while at least one gauge is
+              still short of MIN_RATED_SESSIONS -- names the two inputs and
+              when they start counting, so an N/A gauge is never unexplained. */}
+          {gaugesIncomplete && (
+            <Text style={[styles.recoveryWaitingCaption, live.recoveryWaitingCaption]}>
+              These read the soreness you report before a session and the fatigue and joint comfort you rate after it. They appear after two rated sessions in the last two weeks.
+            </Text>
+          )}
+
+          {/* P3(a): a one-tap path to the latest completed session's
+              summary, rating mode. Absent once that session carries both
+              post-session ratings (rateSessionParams is then null),
+              independent of gaugesIncomplete above (T2's own test (b)). */}
+          {rateSessionParams && (
+            <Button
+              title="Rate your last session"
+              variant="secondary"
+              size="sm"
+              onPress={() => onRateLastSession?.(rateSessionParams)}
+              accessibilityLabel="Rate your last session"
+            />
+          )}
+
           <Text style={[styles.recoveryNote, live.recoveryNote]}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
+
+          {/* P3(b): the latest weekly check-in's own signals, read
+              independently of the trend-insight sentence below. */}
+          {latestCheckin && (
+            <>
+              <View style={[styles.recoveryDivider, live.recoveryDivider]} />
+              <View>
+                <Text style={[styles.checkinTitle, live.checkinTitle]}>From your weekly check-in</Text>
+                {checkinValuesLine ? (
+                  <Text style={[styles.checkinValues, live.checkinValues]}>{checkinValuesLine}</Text>
+                ) : null}
+              </View>
+            </>
+          )}
 
           {freshnessEntries.length > 0 && (
             <>
@@ -351,9 +494,12 @@ function RecoveryGauge({ label, value, samples = 0, invertGood = false }) {
   const display = hasValue ? value.toFixed(1) : 'N/A';
 
   let dotColor = t.colors.textMuted;
+  // P3(a) (F3, D200-2): honest and specific per sample count -- 0 -> no
+  // session has rated anything yet; 1 -> one rated session is not enough
+  // for a running average (C5-P18-01, unchanged).
   let scaleNote = samples > 0 && !enoughSamples
-    ? 'After a couple of sessions'
-    : 'Nothing to show yet';
+    ? 'One rated session so far'
+    : 'Not rated yet';
   if (hasValue) {
     const v = parseDecimalInput(value);
     if (invertGood) {
@@ -404,6 +550,11 @@ const styles = StyleSheet.create({
   gaugeLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   gaugeScale: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   recoveryNote: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
+  // P3(a): the waiting-state caption under the gauge row (F3, D200-2).
+  recoveryWaitingCaption: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
+  // P3(b): the "From your weekly check-in" row, same hierarchy as mfTitle/mfSub.
+  checkinTitle: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  checkinValues: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
 
   trendInsightCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
@@ -453,6 +604,9 @@ function buildLiveStyles(t) {
     gaugeLabel: { ...t.type.caption, color: t.colors.textMuted },
     gaugeScale: { ...t.type.caption, color: t.colors.textMuted },
     recoveryNote: { ...t.type.caption, color: t.colors.textMuted },
+    recoveryWaitingCaption: { ...t.type.caption, color: t.colors.textMuted },
+    checkinTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    checkinValues: { ...t.type.captionTight, color: t.colors.textMuted },
     trendInsightGood: { backgroundColor: t.colors.successBg ?? t.colors.primaryBg, borderColor: withAlpha(t.colors.success, alpha.edge) },
     trendInsightWarn: { backgroundColor: t.colors.warningBg, borderColor: withAlpha(t.colors.warning, alpha.edge) },
     trendInsightText: { ...t.type.bodySm, color: t.colors.textSecondary },

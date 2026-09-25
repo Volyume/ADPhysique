@@ -1629,8 +1629,8 @@ describe('CHECK-IN: one rated session is never rendered as a trend (C5-P18-01/02
     expect(src).toContain('const MIN_RATED_SESSIONS = 2;');
     expect(src).toMatch(/const enoughSamples = samples >= MIN_RATED_SESSIONS;/);
     expect(src).toMatch(/const hasValue = value != null && !isNaN\(value\) && enoughSamples;/);
-    // The existing no-value state is reused, with an honest caption.
-    expect(src).toContain("'After a couple of sessions'");
+    // The existing no-value state is reused, with an honest caption (D200-2 wording).
+    expect(src).toContain("'One rated session so far'");
   });
 
   test('the 1-3 soreness answer is not drawn on a 1-5 gauge', () => {
