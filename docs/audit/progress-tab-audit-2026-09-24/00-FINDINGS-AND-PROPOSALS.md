@@ -392,3 +392,99 @@ with each. Lane A carries F8, F9, F15, F16, F17; lane B carries F10 to F14.
 `YearOfLiftsScreen`, `ProgressPhotosScreen`, `ShareCardScreen` and the
 capability flows reached from the tab. Inventory only (R3). Second pass
 proposed under Q4.
+
+
+## 7. Second pass over the section-6 screens (read lane S6, 2026-09-25; every finding lead-verified in the code)
+
+The Sonnet read lane worked from the code only (no access to this report),
+against the D200 rulings. The lead read each consuming mechanism before
+accepting it. Severity 1 = a wrong or misleading number or a privacy or
+wellbeing rule broken; 2 = inconsistent with another surface; 3 = stale on
+selection; 4 = copy or accessibility.
+
+### S6-1. The landing's Body pillar shows bodyweight and its rate under calm mode (severity 1)
+
+OBSERVED. `src/screens/AnalyticsScreen.js:92-107` (`bodyPillarCopy`) renders
+`formatBodyWeight(weightTrend.ewmaNow)` and, when `showRate`, the weekly rate,
+from `useWeightTrend` (`src/hooks/useWeightTrend.js`), which reads the ED flag
+(fail closed) but never the wellbeing mode; `deriveWeightTrend`
+(`src/lib/weightTrend.js`) has an `edFlagOpen` branch and no calm input. The
+Photos pillar one row below is hidden under `visualPillar.suppressed` (calm
+OR ED, `usePhotoSuppression`), and Body metrics itself sits behind a
+per-session re-confirmation screen under calm (`BodyMetricsScreen.js:1055`,
+the screen's own gate; its comment at 586-599 records that the shared
+derivation takes no calm input). `WeightTrendCard` has no live consumer, so
+the landing is the only reader of the hook.
+SUGGESTS. A calm-mode user opens the Progress tab and reads their smoothed
+weight and "-0.4 kg/week" with no confirmation step, the one figure the same
+card withholds a row below and Body metrics withholds behind a confirmation.
+RULING (lead, hands-on, safety-adjacent; D200 item 5). The withhold lives in
+the shared derivation: `deriveWeightTrend` gains `calm` (default false, so
+BodyMetricsScreen's call is unchanged) and returns no figure, no rate, no
+maintenance, no dot and one calm line at every state; `useWeightTrend` reads
+the RAW wellbeing key fail-closed (a read failure counts as calm, the same
+sentinel `usePhotoSuppression` uses) and passes it in. Tests:
+`src/lib/__tests__/weightTrend.test.js` (S6-1 block) and
+`src/hooks/__tests__/useWeightTrend.calm.test.js` (real hook, mocked I/O,
+fail-closed case, source guard).
+
+### S6-2. Recent sessions on the landing open the summary with an inflated "Total lifted" (severity 1)
+
+OBSERVED. `AnalyticsScreen.js:390` calls `calculateTonnage(mySets, null,
+...)` with no exercise-type map, so `isLoadBearingSet` counts every set;
+`WorkoutSummaryScreen.js:146` draws the route's `tonnage` as its hero and
+`handleShareCard` (1085-1096) sends the same figure and its intensity tier to
+the share card. `WorkoutHistoryScreen.buildHistoryRows` passes the real map
+for the same session, so the two paths disagree (F16's pattern). FIX LANE S6.
+
+### S6-3. Monthly, weekly and block recaps fabricate "Personal records" from cluster and ballistic rows (severity 1)
+
+OBSERVED. `database.js` `getYearOfLiftsData` gates its PR loop with
+`isE1rmEligibleRow` (9216-9239, C6 R-15); `getRecapData` (topPRs, 9325-9335;
+its SELECT at 9279 fetches no `set_type`) and `getBlockReflectionData`
+(9445-9461; selects `set_type`, never reads it) call `calculate1RM` on every
+row. A myo-reps or rest-pause row's summed reps headline the month, week and
+block recaps and the "N PRs" share stat (`shareCard/recapPayload.js:26-39`).
+FIX LANE S6 (select `set_type` and `evidence_class`, gate both loops).
+
+### S6-4. The Training pillar labels a rolling 30-day window "this month" (severity 1)
+
+OBSERVED. `computeTrainingPillarSummary` (`src/lib/progress/pillars.js:29`)
+is `now - 30 days`; `trainingPillarCopy` (`AnalyticsScreen.js:66-85`) says
+"this month" three times while the recap tile on the same screen means the
+calendar month. D200 item 3 forbids "this month" on a rolling window.
+FIX LANE S6: "in the last 30 days".
+
+### S6-5. The Consistency screen's load sparkline sums metres and seconds as kilograms (severity 1)
+
+OBSERVED. `src/hooks/useProgressData.js:212` `calculateTonnage(wkSets, null,
+loadSemanticsById)`, the same missing map as S6-2, feeding the Weekly load
+bars on Consistency. LANE E (the file is lane E's).
+
+### S6-6. "No sessions in the last 0 days" (severity 1, cardio-only trainers)
+
+OBSERVED. `pillars.js:46-47` counts only `weight_reps` exercises;
+`AnalyticsScreen.js:188-191` takes `lastSessionAt` from every set; the
+`trainedCount === 0` branch renders the day count. A timed-only session
+today reads "No sessions in the last 0 days". FIX LANE S6: "No lifts logged
+in the last 30 days" with "Last session today / yesterday / N days ago".
+
+### S6-7. The recap banner strips "so far" that the deck it opens then states (severity 4)
+
+OBSERVED. `AnalyticsScreen.js:443` `.replace(' so far', '')`;
+`YearOfLiftsScreen.js:230` heads the deck "September so far, in numbers."
+FIX LANE S6: "Your recap of September so far is ready".
+
+Surfaces the lane checked with no finding: the landing's Photos pillar
+(suppressed under calm/ED), its sessions-this-week line (Monday-anchored),
+the Recaps and Year of lifts tile gates; `ShareCardScreen` privacy copy,
+toggles and unit fallbacks; `shareCard/recapPayload.js`, `greatWeek.js`
+(weight hero cut-only, suppressed under calm/ED) and `drawShareCard.js`
+unit call sites; `YearOfLiftsScreen` unit handling, neutral framing and the
+year-over-year basis; `ProgressPhotosScreen` unit-aware weight, double
+suppression, focus refresh. UNVERIFIED by the lane (recorded, not claimed):
+whether `ProgressScanTrend`'s comparable-scan count can disagree with the
+Answer Block's scan evidence line (two call chains, not traced to a shared
+function); the internals of `ProgressPhotoCompare`, `ProgressScanCompare`,
+`BeforeAfterShareSheet` and `PhotoDetailsSheet`; `getRoutineWorkoutTonnages`
+(unreachable from this tab, read-only path).

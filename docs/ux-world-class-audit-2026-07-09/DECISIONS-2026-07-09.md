@@ -9675,3 +9675,19 @@ four questions become rulings:
    section 6 lists (the landing, the recap story, Year of lifts, photos,
    share cards) and a fix lane for what it finds. Two lanes at a time,
    disjoint files, lead review of every diff, one commit per lane.
+5. **S6-1 ruling (2026-09-25, lead, safety-adjacent).** The read lane over
+   the section-6 screens found the Progress landing's Body pillar showing
+   the smoothed bodyweight and its weekly rate under calm mode, with no calm
+   read anywhere in its chain (report section 7). The withhold goes into the
+   SHARED derivation, not a screen-local gate: `deriveWeightTrend` takes
+   `calm` (default false, so BodyMetricsScreen's own call and its
+   re-confirmation gate are unchanged) and under calm returns no figure, no
+   rate, no maintenance, no dot and no prompt to weigh, at every state, with
+   one plain line ("Your weigh-ins are kept in Body metrics, ready when you
+   want them."); `useWeightTrend` reads the raw wellbeing key fail-closed (a
+   read failure counts as calm, `usePhotoSuppression`'s sentinel). Rationale:
+   the landing is the hook's only consumer today, but a view-model that is
+   calm-safe by construction cannot be re-broken by the next consumer; the
+   ED branch is untouched (never weakened). The other six S6 findings are
+   defects with no fork: S6-2, S6-3, S6-4, S6-6 and S6-7 to fix lane S6,
+   S6-5 to lane E with the file it lives in.
