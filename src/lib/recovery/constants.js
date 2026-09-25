@@ -224,3 +224,29 @@ export function recoveryHours(muscle, {
     * feedbackFactor(ratings ?? {});
   return clamp(RECOVERY_HOURS_MIN, RECOVERY_HOURS_MAX, hours);
 }
+
+/**
+ * D201 addendum (lead ruling 3, sequencing residual): a spacing PRIOR for
+ * PLAN GENERATION only, used to turn N sessions a week into hours between
+ * them the way a real week actually spreads them, rather than assuming
+ * N even slices of 168 hours. No weekday is ever assigned to a plan or a
+ * session (D17: "user trains on the days they want and have lives"); this
+ * table never reaches storage, a session object, or the UI. The runtime
+ * next-workout logic (Section 4 of the spec) is separate and reads the
+ * user's own habitual training days, never this table.
+ *
+ * Each row is hours from one session to the next for a typical week of
+ * that many sessions, spread as evenly as habit allows, LAST entry is the
+ * wrap (last session of the week back to the first of the next), always
+ * the longest gap because a real week's rest days concentrate there
+ * (Sat/Sun for most schedules). Each row sums to 168.
+ */
+export const TYPICAL_WEEK_GAP_HOURS = Object.freeze({
+  1: [168],
+  2: [72, 96], // Mon, Thu
+  3: [48, 48, 72], // Mon, Wed, Fri
+  4: [24, 48, 24, 72], // Mon, Tue, Thu, Fri
+  5: [24, 24, 24, 24, 72], // Mon-Fri
+  6: [24, 24, 24, 24, 24, 48], // Mon-Sat
+  7: [24, 24, 24, 24, 24, 24, 24],
+});

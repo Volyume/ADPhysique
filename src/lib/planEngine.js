@@ -31,6 +31,11 @@ import { fitToTimeBudget, FIT_STATUS, TIME_TOLERANCE_MIN } from './timeConstrain
 // pure and deterministic; only a narrative string uses it, never a
 // prescribed set, rep or landmark value.
 import { BLOCK_PLANNED_WEEKS } from './mesocycle';
+// D201 (per-muscle recovery programme, spec section 5): reorders a week's
+// already-built sessions for recovery spacing. Pure, reads only this
+// module's own POOL/exerciseLibrary data (via buildExerciseByIdForRecovery
+// below) and the plan's own inputs; changes no exercise, set or muscle.
+import { sequenceSessionsForRecovery, describeSpacing } from './recovery/sequenceSessions';
 
 // ---------------------------------------------------------------------------
 // Public label maps
@@ -786,6 +791,46 @@ function buildEffectivePool(exerciseLibrary, canonicalNames = null) {
     }
   }
   return merged;
+}
+
+// D201 (per-muscle recovery programme, spec section 5): id -> { primaryMuscle,
+// secondaryMuscles } for every exercise the CURRENT run's pool can select, so
+// sequenceSessionsForRecovery can run each session's exercises through
+// allocateExerciseVolume (algorithms.js) the same way the volume tracker
+// does everywhere else. Built fresh per call from whichever pool is live for
+// this run (_effectivePool: library-generated or the hand-written fallback,
+// buildEffectivePool above) rather than cached, because _effectivePool
+// itself changes per run. An exercise name that exists under more than one
+// muscle bucket keeps its FIRST bucket (POOL/the generated pool key each
+// exercise under exactly one primary muscle in practice).
+const LETTERED_NAME = /^(.+) ([A-Z])$/;
+function reletterByPosition(workouts) {
+  const baseCounts = new Map();
+  for (const w of workouts) {
+    const m = LETTERED_NAME.exec(w?.name ?? '');
+    if (m) baseCounts.set(m[1], (baseCounts.get(m[1]) ?? 0) + 1);
+  }
+  const seen = new Map();
+  return workouts.map((w) => {
+    const m = LETTERED_NAME.exec(w?.name ?? '');
+    if (!m || (baseCounts.get(m[1]) ?? 0) < 2) return w;
+    const n = seen.get(m[1]) ?? 0;
+    seen.set(m[1], n + 1);
+    const name = `${m[1]} ${String.fromCharCode(65 + n)}`;
+    return name === w.name ? w : { ...w, name };
+  });
+}
+
+function buildExerciseByIdForRecovery() {
+  const out = {};
+  for (const [muscle, entries] of Object.entries(_effectivePool)) {
+    for (const entry of entries ?? []) {
+      const id = canonicalExerciseId(entry.n);
+      if (!id || out[id]) continue;
+      out[id] = { primaryMuscle: muscle, secondaryMuscles: entry.secondary ?? [] };
+    }
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -3483,7 +3528,36 @@ function _generatePlanInner(inputs) {
   });
 
   // Discard sessions that ended up with no exercises (shouldn't happen but guard it)
-  const validWorkouts = workouts.filter(w => w.exercises.length > 0);
+  const unsequencedWorkouts = workouts.filter(w => w.exercises.length > 0);
+
+  // D201 (per-muscle recovery programme, spec section 5): reorder the
+  // week's sessions, once, so each muscle's next session lands as close as
+  // possible to its estimated recovery, given the days per week. Changes
+  // only the ORDER of validWorkouts; no exercise, set or muscle moves, and
+  // no other computation below is order-sensitive (weeklyVolumeSummary and
+  // divisionCoverage are per-muscle/per-row sums, not position-dependent).
+  // Runs after validWorkouts and before whyThis is composed (below), which
+  // is the one place in generatePlan both conditions hold at once; this
+  // covers DIVISION_MATRIX builds exactly like generated splits (founder
+  // fork F2), because both paths already converge into this one array by
+  // this point in the function. The FIRST session never moves (D201
+  // addendum, lead ruling 1): a DIVISION_MATRIX day 0 keeps opening on the
+  // division's priority muscle; only the rest of the week's order can
+  // change.
+  const recoverySequenced = sequenceSessionsForRecovery(unsequencedWorkouts, {
+    daysPerWeek: effectiveDays,
+    recoveryRating,
+    rirTarget: unsequencedWorkouts[0]?.exercises?.[0]?.rirTarget ?? null,
+    exerciseById: buildExerciseByIdForRecovery(),
+  });
+  // The letters in generated names ("Upper A", "Lower B", "Push A") mark
+  // the first, second, third session of that kind IN THE WEEK, so once the
+  // scorer has chosen the order they are re-assigned by final position:
+  // a 4-day upper/lower always reads Upper A, Lower A, Upper B, Lower B,
+  // never Upper A, Lower B, Upper B, Lower A. Only a "<base> <letter>"
+  // name whose base repeats in the week is touched; every other name
+  // (a DIVISION_MATRIX title, a lone "Legs") is left exactly as authored.
+  const validWorkouts = reletterByPosition(recoverySequenced.workouts);
 
   // C16 DIVISION (completion pass): the truthfulness report. Computed from
   // the FINISHED week - after the time trim, after continuity has not yet
@@ -3519,6 +3593,12 @@ function _generatePlanInner(inputs) {
   const whyThis               = buildWhyThis(
     { ...inputs, weakPoints: safeWeakPointsUI }, splitType, effectiveDays, validWorkouts, safeWeakPointsUI
   );
+  // D201: one calm sentence naming the spacing sequenceSessionsForRecovery
+  // actually achieved, added only when there is something to say (a muscle
+  // trained 2+ times this week). Same object shape as buildWhyThis's other
+  // entries (a plain sentence string under its own key).
+  const recoverySpacingSentence = describeSpacing(recoverySequenced);
+  if (recoverySpacingSentence) whyThis.sequencing = recoverySpacingSentence;
 
   // Plan-name label keyed off internalGoal so strength_size / weak_point
   // phases produce their own short labels (kept under the legacy keys).

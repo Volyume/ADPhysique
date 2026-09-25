@@ -26,7 +26,9 @@
  */
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
-import { generatePlan } from '../planEngine';
+import { generatePlan, POOL } from '../planEngine';
+import { canonicalExerciseId } from '../exercise/canonicalId';
+import { sequenceSessionsForRecovery } from '../recovery/sequenceSessions';
 
 const read = (p) => readFileSync(resolve(__dirname, '../..', p), 'utf8');
 
@@ -49,6 +51,53 @@ function everyPlan() {
   return out;
 }
 
+// The hand-authored DIVISION_MATRIX bikini[6] cell (planEngine.js,
+// `bikini: { ... 6: [...] }`): six session IDENTITIES, two of them
+// sharing the display name "Glutes" - the fact this whole suite exists to
+// prove. Used two ways below: as an order-free SET (identities survive
+// any future recovery-sequencing refinement) and, reconstructed into this
+// order, as the INPUT sequenceSessionsForRecovery is asked to re-score
+// (D201 and its addenda: lead rulings 1-3, 2026-09-25) so the ORDER
+// assertion tracks the scorer's actual behaviour instead of a literal
+// array that a future scoring refinement would silently outdate again -
+// as happened twice already (see the D201 register).
+const AUTHORED_BIKINI_6_NAMES = [
+  'Glutes', 'Upper (Delt + Back)', 'Glutes', 'Lower (Quad)', 'Upper (Delt + Arm)', 'Glutes Pump + Abs',
+];
+
+/** exerciseId -> { primaryMuscle, secondaryMuscles }, built from the same
+ * hand-written POOL fallback planEngine.js uses when no exerciseLibrary is
+ * supplied (as here) - mirrors planEngine.js's own buildExerciseByIdForRecovery. */
+function buildExerciseByIdFromPool() {
+  const out = {};
+  for (const [muscle, entries] of Object.entries(POOL)) {
+    for (const entry of entries ?? []) {
+      const id = canonicalExerciseId(entry.n);
+      if (!id || out[id]) continue;
+      out[id] = { primaryMuscle: muscle, secondaryMuscles: entry.secondary ?? [] };
+    }
+  }
+  return out;
+}
+
+/**
+ * Regroups `workouts` (the generator's final, already-sequenced order) by
+ * name and pops them out in `authoredNames` order, reconstructing the
+ * pre-hook (authored) input array sequenceSessionsForRecovery was actually
+ * called with. Correct even for the two same-named "Glutes" sessions: lead
+ * ruling 1 guarantees workouts[0] is the untouched authored lead, so it is
+ * always the first "Glutes" enqueued (and so the first popped); the other
+ * "Glutes" is then the only one left, by elimination.
+ */
+function reconstructAuthoredOrder(workouts, authoredNames) {
+  const queues = new Map();
+  for (const w of workouts) {
+    if (!queues.has(w.name)) queues.set(w.name, []);
+    queues.get(w.name).push(w);
+  }
+  return authoredNames.map((name) => queues.get(name).shift());
+}
+
 describe('A REQUIRED SESSION IS NOT ITS NAME', () => {
   test('the generator genuinely repeats a session name within one programme week', () => {
     // If this ever stops being true the model is still correct, but the
@@ -60,8 +109,34 @@ describe('A REQUIRED SESSION IS NOT ITS NAME', () => {
     expect(repeated.length).toBeGreaterThan(0);
     const bikini = repeated.find((r) => r.goal === 'bikini' && r.daysPerWeek === 6);
     expect(bikini).toBeTruthy();
-    expect(bikini.plan.workouts.map((w) => w.name))
-      .toEqual(['Glutes', 'Upper (Delt + Back)', 'Glutes', 'Lower (Quad)', 'Upper (Delt + Arm)', 'Glutes Pump + Abs']);
+
+    // D201 (per-muscle recovery programme) reorders these six sessions for
+    // recovery spacing, and moved this exact pin twice already as the
+    // scorer's own model was refined (lead rulings 1-3, 2026-09-25; see
+    // the D201 register). Two assertions that survive any future
+    // refinement without going stale:
+    const actualNames = bikini.plan.workouts.map((w) => w.name);
+
+    // 1. The SET of six session identities is exactly the hand-authored
+    //    DIVISION_MATRIX bikini[6] cell, order-free - this suite's whole
+    //    point is that these six sessions have six distinct identities
+    //    regardless of a display-name repeat or where sequencing places it.
+    expect([...actualNames].sort()).toEqual([...AUTHORED_BIKINI_6_NAMES].sort());
+
+    // 2. The ORDER matches whatever sequenceSessionsForRecovery itself
+    //    returns for the authored order, called here exactly as
+    //    planEngine.js's own hook calls it (same options, same
+    //    exerciseById source) - so this half tracks the scorer's actual
+    //    behaviour rather than a literal array a future scoring
+    //    refinement would silently outdate again.
+    const authoredOrder = reconstructAuthoredOrder(bikini.plan.workouts, AUTHORED_BIKINI_6_NAMES);
+    const rescored = sequenceSessionsForRecovery(authoredOrder, {
+      daysPerWeek: 6,
+      recoveryRating: BASE.recoveryRating,
+      rirTarget: authoredOrder[0]?.exercises?.[0]?.rirTarget ?? null,
+      exerciseById: buildExerciseByIdFromPool(),
+    });
+    expect(actualNames).toEqual(rescored.workouts.map((w) => w.name));
   });
 
   test('so NOTHING may identify a required session by its display name', () => {
