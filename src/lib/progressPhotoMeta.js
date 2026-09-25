@@ -132,6 +132,15 @@ export async function getPhotoMetaMap(names, userId = null) {
  *
  * Returns the resulting metadata in the shared shape. `userId` is only needed
  * for the weight snapshot; a null userId simply yields weightKg = null.
+ *
+ * `options.resnapshotWeight: true` (S7-8, progress-tab audit second pass,
+ * 2026-09-25, register D200 item 7, report §8) re-runs the nearest-weigh-in
+ * lookup even when takenAt is unchanged, for a caller that specifically
+ * wants to retry a previously-null snapshot (BeforeAfterShareSheet.js's
+ * lazy backfill: it re-sends the SAME takenAt it just read, which this
+ * function would otherwise treat as nothing having changed, so a null
+ * weight could never be filled in later once a weigh-in existed). Never
+ * set by a plain pose/note/date edit.
  */
 export async function upsertPhotoMeta(userId, name, patch = {}, options = {}) {
   if (!name) return defaultMeta(name);
@@ -156,13 +165,22 @@ export async function upsertPhotoMeta(userId, name, patch = {}, options = {}) {
     const prevUnscored = existing ? (existing.unscored === 1 || existing.unscored === true) : false;
     const unscored = prevUnscored || patch.unscored === true;
 
-    // Snapshot the weight only when the row is CREATED or takenAt CHANGES;
-    // otherwise keep the existing snapshot so a pose/note edit never re-reads it.
+    // Snapshot the weight only when the row is CREATED, takenAt CHANGES, or
+    // the caller explicitly asks for a re-snapshot (options.resnapshotWeight,
+    // S7-8); otherwise keep the existing snapshot so a plain pose/note edit
+    // never re-reads it.
     let weightKg = existing ? existing.weight_kg : null;
     const takenAtChanged = takenAt !== prevTakenAt;
-    if ((!existing || takenAtChanged) && Number.isFinite(takenAt)) {
+    if ((!existing || takenAtChanged || options.resnapshotWeight === true) && Number.isFinite(takenAt)) {
       try {
-        const w = await getBodyWeightNearestTo(userId, takenAt);
+        // maxDistanceMs (lead follow-up, D200 item 7): a photo is meant to be
+        // captioned with the weigh-in it was actually taken near, not
+        // whatever weigh-in merely happens to be nearest in an account with
+        // a long gap between them -- a photo with the closest logged weight
+        // three months away should read as "no weight", not that stale
+        // figure. Seven days is the same cadence the app already asks scan
+        // retakes to keep to (PROGRESS_SCAN_MIN_INTERVAL_MS).
+        const w = await getBodyWeightNearestTo(userId, takenAt, { maxDistanceMs: 7 * 24 * 60 * 60 * 1000 });
         weightKg = w ? w.weightKg : null;
       } catch (_) { /* leave weightKg as-is; no snapshot is a valid state */ }
     }

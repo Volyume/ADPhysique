@@ -1,8 +1,11 @@
 import { create, act } from 'react-test-renderer';
+import { TouchableOpacity } from 'react-native';
 
 jest.mock('../../hooks/usePhotoSuppression', () => ({ __esModule: true, default: jest.fn(() => false) }));
 
 import usePhotoSuppression from '../../hooks/usePhotoSuppression';
+import useAppStore from '../../store/useAppStore';
+import { formatBodyWeight } from '../../lib/units';
 import ProgressScanCompare, {
   defaultScanPair,
   orderedScanEntries,
@@ -13,7 +16,7 @@ import ProgressScanCompare, {
 const DAY = 86400000;
 const base = Date.UTC(2026, 0, 1);
 
-function scan(id, day, score = 66) {
+function scan(id, day, score = 66, { tier = 'moderate' } = {}) {
   return {
     id,
     status: 'complete',
@@ -29,8 +32,8 @@ function scan(id, day, score = 66) {
       physiqueAssessment: {
         visualLeannessScore: score,
         leannessBandLabel: score >= 65 ? 'Lean' : 'Defined',
-        scanConfidenceTier: 'moderate',
-        scanConfidenceLabel: 'Moderate',
+        scanConfidenceTier: tier,
+        scanConfidenceLabel: tier,
         progressSignal: day > 1 ? 'slight_positive' : 'baseline',
         progressSignalLabel: day > 1 ? 'Slight positive trend' : 'Baseline set',
       },
@@ -57,6 +60,9 @@ function scan(id, day, score = 66) {
   };
 }
 
+const ORIGINAL_BODY_WEIGHT_UNITS = useAppStore.getState().bodyWeightUnits;
+afterEach(() => { useAppStore.setState({ bodyWeightUnits: ORIGINAL_BODY_WEIGHT_UNITS }); });
+
 function flattenText(node) {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node);
@@ -82,12 +88,43 @@ describe('ProgressScanCompare helpers', () => {
   });
 
   test('score and weight labels hide exact values on request', () => {
+    useAppStore.setState({ bodyWeightUnits: 'kg' });
     const s = scan('a', 1, 66);
     expect(scanRangeLabel(s)).toBe('Lean 66/100');
     expect(scanRangeLabel(s, { hideExact: true })).toBe('Baseline set');
     expect(scanWeightLabel(s)).toBe('81 kg');
     expect(scanWeightLabel(s, { hideExact: true })).toBeNull();
     expect(scanRangeLabel(scan('m', 2, null))).toBe('Measured only');
+  });
+
+  // S7-4 (progress-tab audit second pass, D200 item 7): scanWeightLabel used
+  // to return a hard-coded `${kg} kg` regardless of the store's unit
+  // preference. Tests for all three units.
+  test('scanWeightLabel formats through the store bodyWeightUnits preference: kg, lbs and st', () => {
+    const s = scan('a', 1, 66); // stats.weightKg = 81
+    for (const units of ['kg', 'lbs', 'st']) {
+      useAppStore.setState({ bodyWeightUnits: units });
+      expect(scanWeightLabel(s)).toBe(formatBodyWeight(81, units));
+    }
+    // hideExact still wins outright, whatever the unit.
+    expect(scanWeightLabel(s, { hideExact: true })).toBeNull();
+  });
+
+  // S7-3 (same audit pass): a Low-tier score used to print outright here at
+  // any confidence tier; it now goes through buildScoreTierContract, same
+  // as the timeline (identical 'Show anyway' wording).
+  test('scanRangeLabel holds a Low-tier score behind "Show anyway" until revealed; the band still shows', () => {
+    const low = scan('low', 1, 40, { tier: 'low' });
+    expect(scanRangeLabel(low)).toBe('Defined Show anyway');
+    expect(scanRangeLabel(low, { revealed: true })).toBe('Defined 40/100');
+    // hideExact overrides the reveal state entirely (a stronger, orthogonal
+    // preference): still trend-only copy, never a number.
+    expect(scanRangeLabel(low, { hideExact: true, revealed: true })).toBe('Baseline set');
+  });
+
+  test('scanRangeLabel shows High/Moderate scores outright, with no reveal step', () => {
+    expect(scanRangeLabel(scan('hi', 1, 90, { tier: 'high' }))).toBe('Lean 90/100');
+    expect(scanRangeLabel(scan('mid', 1, 66, { tier: 'moderate' }))).toBe('Lean 66/100');
   });
 });
 
@@ -131,5 +168,29 @@ describe('ProgressScanCompare component', () => {
     legacy.signals.physiqueAssessment.leannessBandLabel = 'Athletic';
     expect(scanRangeLabel(legacy)).toBe('Defined 71/100');
     expect(scanRangeLabel(legacy)).not.toContain('37');
+  });
+
+  // S7-3: a Low-tier scan pair holds its numbers behind "Show anyway" until
+  // tapped, then reveals for the rest of this session (never persisted).
+  test('a Low-tier pair holds both numbers behind "Show anyway", tapping one reveals only that scan', async () => {
+    usePhotoSuppression.mockReturnValue(false);
+    const tree = await render([scan('new', 20, 66, { tier: 'low' }), scan('old', 1, 54, { tier: 'low' })]);
+    let text = flattenText(tree.toJSON());
+    expect(text).toContain('Lean Show anyway');
+    expect(text).toContain('Defined Show anyway');
+    expect(text).not.toContain('66/100');
+    expect(text).not.toContain('54/100');
+
+    const revealButtons = tree.root.findAllByType(TouchableOpacity).filter(
+      (node) => /Score available behind a show-anyway control\./.test(node.props.accessibilityLabel || ''),
+    );
+    expect(revealButtons).toHaveLength(2);
+    await act(async () => { revealButtons[0].props.onPress(); });
+
+    text = flattenText(tree.toJSON());
+    // Exactly one of the two scans is revealed; the other stays hidden.
+    const revealedCount = [text.includes('66/100'), text.includes('54/100')].filter(Boolean).length;
+    expect(revealedCount).toBe(1);
+    expect(text).toContain('Show anyway');
   });
 });

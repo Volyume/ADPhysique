@@ -6674,8 +6674,10 @@ export async function getLatestBodyWeight(userId) {
 // when the photo was taken); only if the photo predates every weigh-in do we
 // fall back to the nearest one overall (the earliest recorded). Returns
 // { weightKg, loggedAt } or null when the user has no logged weigh-in.
-export async function getBodyWeightNearestTo(userId, t) {
-  return bodyMetricsRepository.getBodyWeightNearestTo(userId, t);
+// `opts.maxDistanceMs` (optional, forwarded as-is): see the repository
+// implementation (database/bodyMetrics.js) for the bound this adds.
+export async function getBodyWeightNearestTo(userId, t, opts) {
+  return bodyMetricsRepository.getBodyWeightNearestTo(userId, t, opts);
 }
 
 // Most recent logged body composition that actually carries a body fat figure.

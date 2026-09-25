@@ -97,6 +97,24 @@ describe('ProgressScanTrend', () => {
     expect(expandedText).toMatch(/setup changed too much/i);
   });
 
+  // S7-9 (progress-tab audit second pass, 2026-09-25, register D200 item 7):
+  // the comparable branch used to ignore the point's own computed
+  // progressSignalLabel, always showing the generic sentence.
+  test("a comparable point's expanded detail shows its own progress-signal label, not the generic sentence", async () => {
+    usePhotoSuppression.mockReturnValue(false);
+    const tree = await render([scan('a', 1), scan('b', 9)]); // comparable pair, 8 days apart
+    const buttons = tree.root.findAllByType(TouchableOpacity);
+    const comparablePoint = buttons.find((n) => typeof n.props.accessibilityLabel === 'string'
+      && n.props.accessibilityLabel.includes('Volyume Score')
+      && !n.props.accessibilityLabel.includes('starting point')
+      && !n.props.accessibilityLabel.includes('Not connected'));
+    expect(comparablePoint).toBeTruthy();
+    await act(async () => { comparablePoint.props.onPress(); });
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Slight positive trend');
+    expect(text).not.toContain('Comparable with the previous set.');
+  });
+
   test('confidence is legible from the accessibility label, never colour alone', async () => {
     usePhotoSuppression.mockReturnValue(false);
     const tree = await render([scan('a', 1, { tier: 'high' }), scan('b', 10, { tier: 'low' })]);

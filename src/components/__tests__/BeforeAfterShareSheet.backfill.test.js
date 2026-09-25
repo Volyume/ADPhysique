@@ -63,11 +63,15 @@ async function mount() {
 
 beforeEach(() => jest.clearAllMocks());
 
-test('backfills the null-weight photo exactly once with just its takenAt', async () => {
+test('backfills the null-weight photo exactly once with just its takenAt, forcing a re-snapshot', async () => {
   await mount();
   const oldCalls = mockUpsertPhotoMeta.mock.calls.filter((c) => c[1] === OLD.name);
   expect(oldCalls.length).toBe(1);
-  expect(oldCalls[0]).toEqual(['u-share-1', OLD.name, { takenAt: OLD.ts }]);
+  // S7-8 (progress-tab audit second pass, D200 item 7): re-sending the same
+  // takenAt used to be read as "unchanged" by upsertPhotoMeta, so a null
+  // weight could never be filled in later. resnapshotWeight: true forces
+  // the nearest-weigh-in lookup to run again for this backfill.
+  expect(oldCalls[0]).toEqual(['u-share-1', OLD.name, { takenAt: OLD.ts }, { resnapshotWeight: true }]);
 });
 
 test('never backfills a photo that already has a weight snapshot', async () => {

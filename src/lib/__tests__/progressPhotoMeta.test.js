@@ -183,7 +183,9 @@ describe('upsertPhotoMeta weight snapshot semantics', () => {
     getBodyWeightNearestTo.mockClear();
     mockState.nearestWeight = { weightKg: 78.6, loggedAt: 4000 };
     const res = await upsertPhotoMeta('user-1', '100.jpg', { takenAt: 5000 });
-    expect(getBodyWeightNearestTo).toHaveBeenCalledWith('user-1', 5000);
+    // maxDistanceMs (lead follow-up, D200 item 7): every weight-snapshot
+    // read now bounds itself to 7 days either side of takenAt.
+    expect(getBodyWeightNearestTo).toHaveBeenCalledWith('user-1', 5000, { maxDistanceMs: 7 * 24 * 60 * 60 * 1000 });
     expect(res.takenAt).toBe(5000);
     expect(res.weightKg).toBe(78.6);
   });
@@ -192,6 +194,38 @@ describe('upsertPhotoMeta weight snapshot semantics', () => {
     mockState.nearestWeight = null;
     const res = await upsertPhotoMeta('user-1', '100.jpg', { pose: 'back' });
     expect(res.weightKg).toBeNull();
+  });
+
+  // S7-8 (progress-tab audit second pass, 2026-09-25, register D200 item 7):
+  // a caller that re-sends the SAME takenAt (BeforeAfterShareSheet.js's lazy
+  // backfill) used to be read as "nothing changed" -- a null weight could
+  // never be filled in later even once a matching weigh-in existed.
+  test('resnapshotWeight: true re-reads the nearest weight even with an unchanged takenAt', async () => {
+    mockState.nearestWeight = null;
+    await upsertPhotoMeta('user-1', '100.jpg', { pose: 'front' }); // create, null snapshot
+    getBodyWeightNearestTo.mockClear();
+    mockState.nearestWeight = { weightKg: 79.2, loggedAt: 80 }; // a weigh-in now exists
+    const res = await upsertPhotoMeta('user-1', '100.jpg', { takenAt: 100 }, { resnapshotWeight: true });
+    expect(getBodyWeightNearestTo).toHaveBeenCalledWith('user-1', 100, { maxDistanceMs: 7 * 24 * 60 * 60 * 1000 });
+    expect(res.weightKg).toBe(79.2);
+    expect(res.pose).toBe('front'); // untouched fields still preserved
+  });
+
+  test('without resnapshotWeight, the same unchanged takenAt still skips the re-read (unchanged contract)', async () => {
+    mockState.nearestWeight = null;
+    await upsertPhotoMeta('user-1', '100.jpg', {});
+    getBodyWeightNearestTo.mockClear();
+    mockState.nearestWeight = { weightKg: 79.2, loggedAt: 80 };
+    const res = await upsertPhotoMeta('user-1', '100.jpg', { takenAt: 100 });
+    expect(getBodyWeightNearestTo).not.toHaveBeenCalled();
+    expect(res.weightKg).toBeNull();
+  });
+
+  test('resnapshotWeight on a brand new row behaves exactly like a normal create', async () => {
+    mockState.nearestWeight = { weightKg: 80.1, loggedAt: 50 };
+    const res = await upsertPhotoMeta('user-1', '300.jpg', { pose: 'side' }, { resnapshotWeight: true });
+    expect(res.weightKg).toBe(80.1);
+    expect(mockWeightCalls).toEqual([{ userId: 'user-1', t: 300 }]);
   });
 
   test('user-scoped upsert does not inherit legacy unowned note or weight', async () => {

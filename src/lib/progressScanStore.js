@@ -16,9 +16,13 @@ import {
   normaliseStoredProgressScanSignals,
   progressScanAssessmentCopy,
   requiredPosesComplete,
-  scanComparability,
   parseMaybeJson,
 } from './progressScanAnalysis';
+// S7-2 (progress-tab audit second pass, register D200 item 7): the one
+// shared comparison-predecessor policy and running comparable-scan count,
+// also used by the read-time Trend view (progressScanTrendViewModel.js) --
+// see that module's header and progressScanChain.js for why.
+import { resolveComparablePrevious, comparableChainCount } from './progressScanChain';
 import { getPhotoMetaMap, deletePhotoMeta } from './progressPhotoMeta';
 import { deleteProgressPhoto } from './progressPhotos';
 import { buildProgressScanCalibrationJson } from './progressScanCalibrationExport';
@@ -330,9 +334,12 @@ export async function finishProgressScanSession(userId, scanId, opts = {}) {
     signals: baseSignalsSummary,
     stats: scanStats,
   };
-  const comparablePrevious = previousCandidates.find((candidate) => (
-    scanComparability(currentForDelta, candidate).comparable
-  )) ?? latestPrevious;
+  // S7-2(b): the shared skip-ahead resolver (progressScanChain.js) -- a
+  // single poor scan must not sever the chain. `latestPrevious` above is
+  // untouched (it still feeds the engine's own trend continuity check);
+  // this only picks which prior scan the delta explanation compares
+  // against.
+  const { previous: comparablePrevious } = resolveComparablePrevious(currentForDelta, previousCandidates);
   const deltaExplanation = ['complete', 'measured'].includes(analysis.analysisStatus)
     ? explainMeasuredScanDelta({ currentScan: currentForDelta, previousScan: comparablePrevious })
     : null;
@@ -463,7 +470,28 @@ export async function getProgressScanCoachSummary(userId, { suppressed = false }
         LIMIT 1`,
       [userId],
     ).catch(() => null);
-    return coachSummaryFromScan(rowToScan(row), { suppressed });
+    const latest = rowToScan(row);
+    const summary = coachSummaryFromScan(latest, { suppressed });
+    if (!summary || !latest) return summary;
+    // S7-2(a) (progress-tab audit second pass, register D200 item 7, report
+    // §8): `summary.comparableCount` above is whatever was stored on this
+    // scan's own deltaExplanation at finish time -- scanComparability's
+    // per-pair POSE count (REQUIRED_SCAN_POSES.length, i.e. always 2 or 0),
+    // never a running count of comparable SCANS. The evidence chain
+    // (progressScanCheckInEvidence.buildScanEvidencePacket) reads this as a
+    // running scan count and gates `eligibleForAssessment` on `>= 3`, so it
+    // could never go true from the real chain. Recompute the real running
+    // count here, at READ time, from the ordered scan history, with the
+    // same skip-ahead predecessor policy the Trend view uses
+    // (progressScanChain.js), so a later history correction (e.g. a
+    // deleted scan) is reflected on the next read rather than a value
+    // frozen at finish time. This is the one store function every
+    // consumer (WeeklyCheckInScreen, CoachOutputScreen, AthleteProfileScreen,
+    // useVisualPillar) reads the bounded scan summary from, so fixing it
+    // here fixes the count everywhere it is used.
+    const priorRows = await getPreviousAnalysedProgressScans(userId, latest.capturedAt, 20);
+    const ordered = [...priorRows].reverse().concat(latest);
+    return { ...summary, comparableCount: comparableChainCount(ordered) };
   } catch (e) {
     logError('progressScanStore.getCoachSummary', e, { userId });
     return null;

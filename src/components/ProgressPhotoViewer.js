@@ -459,7 +459,11 @@ export default function ProgressPhotoViewer({
     backfilledRef.current.add(name);
     (async () => {
       try {
-        const updated = await upsertPhotoMeta(userId, name, { takenAt: meta.takenAt });
+        // S7-8 (progress-tab audit second pass, D200 item 7): re-sending the
+        // same takenAt is otherwise read as unchanged, so a null weight here
+        // could never be filled in later even once a matching weigh-in
+        // existed; resnapshotWeight forces the re-read for this backfill.
+        const updated = await upsertPhotoMeta(userId, name, { takenAt: meta.takenAt }, { resnapshotWeight: true });
         setMetaMap((m) => ({ ...m, [name]: updated }));
       } catch (e) {
         logError('ProgressPhotoViewer.backfillWeight', e, { name });

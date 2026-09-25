@@ -21,6 +21,15 @@
  *     decision and updates the locked-rule note + the screen's privacy line.
  *
  * The share is OFFERED, never pushed: no nag, no urgency, no streak, calm voice.
+ *
+ * S7-7 (progress-tab audit second pass, 2026-09-25, register D200 item 7,
+ * report §8): the screen passes the whole library (`photos` or, when scored
+ * scans exist, `scanShareItems`), not the timeline's own date-range filter
+ * (ProgressPhotosScreen.js's `filterAndSort`). Deliberate: a share is about
+ * two specific, deliberately-chosen photos, not "what the timeline happens
+ * to be scrolled to"; the pose preference is covered by `defaultPair`'s own
+ * pose-aware selection (S7-6, shared with ProgressPhotoCompare). No
+ * behaviour change here.
  */
 import {
   useState, useEffect, useMemo, useCallback, useRef,
@@ -161,11 +170,28 @@ export default function BeforeAfterShareSheet({
 
   const active = visible && !suppressed;
 
-  // Default the pair to earliest vs latest each time the sheet opens.
+  // Default the pair each time the sheet opens: pose-aware (S7-6, progress-
+  // tab audit second pass, D200 item 7) when pose metadata exists, matching
+  // ProgressPhotoCompare's own default-pair preference (shared helper,
+  // beforeAfterParams.preferPoseAwarePair) -- otherwise the same earliest-
+  // vs-latest choice as before. `sorted` carries no pose (listProgressPhotos
+  // reads files only; pose lives in progress_photo_meta), so it is looked up
+  // for the whole visible list here, once, ahead of picking the pair -- a
+  // scan-derived list (scanShareItemsFromEntries's items) has no matching
+  // progress_photo_meta rows, so every pose resolves null there and this
+  // degrades to the unchanged earliest/latest choice.
   useEffect(() => {
-    if (!visible) return;
-    setSelected(defaultPair(sorted));
-  }, [visible, sorted]);
+    if (!visible) return undefined;
+    let alive = true;
+    (async () => {
+      const names = sorted.map((p) => p.name);
+      const poseMap = names.length ? await getPhotoMetaMap(names, userId).catch(() => ({})) : {};
+      if (!alive) return;
+      const posed = sorted.map((p) => ({ ...p, pose: poseMap[p.name]?.pose ?? null }));
+      setSelected(defaultPair(posed));
+    })();
+    return () => { alive = false; };
+  }, [visible, sorted, userId]);
 
   // The chosen pair, ordered older→newer.
   const items = selected
@@ -225,7 +251,12 @@ export default function BeforeAfterShareSheet({
         if (!meta || meta.weightKg != null) continue;
         if (backfilledRef.current.has(name)) continue;
         backfilledRef.current.add(name);
-        upsertPhotoMeta(userId, name, { takenAt: meta.takenAt })
+        // S7-8: re-sending the SAME takenAt used to be read as "nothing
+        // changed" (upsertPhotoMeta only re-snapshots on create or a takenAt
+        // change), so a null weight here could never be filled in later even
+        // once a matching weigh-in existed. resnapshotWeight forces the
+        // re-read for this backfill specifically.
+        upsertPhotoMeta(userId, name, { takenAt: meta.takenAt }, { resnapshotWeight: true })
           .then((updated) => { if (alive && updated) setMetaMap((prev) => ({ ...prev, [name]: updated })); })
           .catch(() => {});
       }

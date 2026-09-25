@@ -39,10 +39,12 @@ import {
   derivePhotoCorroborationSignal,
 } from '../progressScanCheckInEvidence';
 import { buildProgressScanCoachEvidence } from '../progressScanCoachEvidence';
+import { comparableChainCount } from '../progressScanChain';
 
 const SOURCE = fs.readFileSync(path.resolve(__dirname, '../progressScanCheckInEvidence.js'), 'utf8');
 
 const NOW = 1720000000000; // fixed epoch ms, matches baseScan.capturedAt style used elsewhere in this suite family
+const DAY = 86400000;
 
 function scoredEvidence(overrides = {}) {
   return {
@@ -218,6 +220,48 @@ describe('status path e: thin trend-window data never conflicts', () => {
     const packet = buildScanEvidencePacket({ evidence, weightTrend: trend(-2.5), goalPhase: 'mild_cut', nowMs: NOW });
     expect(packet.assessment).toBe('inconclusive');
     expect(packet.eligibleForAssessment).toBe(false);
+  });
+
+  // S7-2a (progress-tab audit second pass, 2026-09-25, register D200 item
+  // 7, report §8): trendWindow.count fed here must be the real running
+  // count of comparable SCANS (progressScanChain.comparableChainCount),
+  // never scanComparability's own per-pair POSE count -- which is always 2
+  // or 0 and could never clear this >= 3 gate from the real producer chain.
+  // Built from a REAL chain of scans through the real producer, not a
+  // hand-typed literal.
+  function chainScan(id, day) {
+    return {
+      id,
+      status: 'complete',
+      requiredPosesComplete: true,
+      capturedAt: NOW + day * DAY,
+      analysisStatus: 'complete',
+      qualityLabel: 'good',
+      signals: { physiqueAssessment: { visualLeannessScore: 66, scanConfidenceTier: 'moderate' } },
+      assets: [
+        { pose: 'front', lightingScore: 0.7, framingScore: 0.88, segmentationConfidence: 0.9, cameraTiltDegrees: 0 },
+        { pose: 'back', lightingScore: 0.7, framingScore: 0.88, segmentationConfidence: 0.9, cameraTiltDegrees: 0 },
+      ],
+    };
+  }
+
+  test('a real chain of exactly 2 comparable scans (thin data) stays inconclusive', () => {
+    const chain = [chainScan('c0', 0), chainScan('c1', 8), chainScan('c2', 16)];
+    const realCount = comparableChainCount(chain);
+    expect(realCount).toBe(2);
+    const evidence = scoredEvidence({ trendWindow: { count: realCount, spanDays: null, direction: 'down', magnitudePoints: 3, comparableOnly: true } });
+    const packet = buildScanEvidencePacket({ evidence, weightTrend: trend(-2.5), goalPhase: 'mild_cut', nowMs: NOW });
+    expect(packet.eligibleForAssessment).toBe(false);
+  });
+
+  test('a real chain of exactly 3 comparable scans clears the gate: eligibleForAssessment reaches true from the real producer', () => {
+    const chain = [chainScan('c0', 0), chainScan('c1', 8), chainScan('c2', 16), chainScan('c3', 24)];
+    const realCount = comparableChainCount(chain);
+    expect(realCount).toBe(3);
+    const evidence = scoredEvidence({ trendWindow: { count: realCount, spanDays: null, direction: 'down', magnitudePoints: 3, comparableOnly: true } });
+    const packet = buildScanEvidencePacket({ evidence, weightTrend: trend(-2.5), goalPhase: 'mild_cut', nowMs: NOW });
+    expect(packet.status).toBe('valid');
+    expect(packet.eligibleForAssessment).toBe(true);
   });
 });
 

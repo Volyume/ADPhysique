@@ -72,6 +72,26 @@ describe('buildTrendPoints', () => {
     expect(comparableCount).toBe(2); // b-vs-a, d-vs-c
   });
 
+  // S7-2b (progress-tab audit second pass, 2026-09-25, register D200 item
+  // 7, report §8): buildTrendPoints used to compare each point strictly
+  // against the literal previous scan, while finishProgressScanSession
+  // skipped ahead to the nearest comparable one at save time -- so the
+  // Trend view and the stored status could disagree for a good scan that
+  // follows one poor one. Both now share progressScanChain's resolver.
+  test('S1 (good) / S2 (poor, 8+ days later) / S3 (good, 8+ days later): the Trend view marks S3 comparable, skipping the poor S2 (matches storage)', () => {
+    const scans = [scan('s1', 1), scan('s2', 9), scan('s3', 17)];
+    // Force s2 poor (scanComparability fails on either side's qualityLabel);
+    // the scan() helper only derives 'poor' from a null score, so it is set
+    // directly here.
+    scans[1].qualityLabel = 'poor';
+    const { points, comparableCount } = buildTrendPoints(scans);
+    const byId = Object.fromEntries(points.map((p) => [p.scanId, p]));
+    expect(byId.s2.comparable).toBe(false); // the poor scan itself never counts
+    expect(byId.s3.comparable).toBe(true); // S3 skips S2 and connects to S1
+    expect(byId.s3.gapReason).toBeNull();
+    expect(comparableCount).toBe(1); // only s3 (skip-to-s1) is comparable
+  });
+
   test('confidence is encoded by marker shape, never colour: solid for High/Moderate, hollow for Low, unscored for no score', () => {
     const scans = [
       scan('high', 1, { tier: 'high' }),

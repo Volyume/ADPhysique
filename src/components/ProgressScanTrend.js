@@ -8,6 +8,17 @@
 // house pattern for progress-photo overlays (ProgressScanCompare: a
 // SafeAreaView + ScrollView, not FlashList; the list here is bounded to the
 // scan library cap, never long enough to need virtualisation).
+//
+// S7-7 (progress-tab audit second pass, 2026-09-25, register D200 item 7,
+// report §8): the screen passes `scans={visibleScans}` -- the full scan
+// history, not the timeline's OWN pose/date-range filter
+// (ProgressPhotosScreen.js's `filterAndSort`). This is deliberate, not an
+// oversight: comparability chains (buildTrendPoints -> progressScanChain's
+// skip-ahead resolver) need the full history to resolve each point's
+// predecessor correctly and to count comparable scans accurately, so cutting
+// the input to a date range would silently corrupt both the connections and
+// the running count. The date range is a timeline VIEW filter; this is a
+// library-wide evidence surface. No behaviour change here.
 import { useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
@@ -119,10 +130,14 @@ export default function ProgressScanTrend({ scans = [], onClose }) {
           const dateLabel = formatProgressPhotoDay(point.capturedAt);
           const expanded = expandedId === point.scanId;
           const showsGap = !point.isBaseline && !point.comparable;
+          // S7-9 (same audit pass): the comparable branch used to ignore
+          // the point's own computed progressSignalLabel (e.g. "Leaner"),
+          // falling straight to the generic sentence even when the engine
+          // had already named the direction.
           const detailText = point.isBaseline
             ? 'Your starting point.'
             : point.comparable
-              ? 'Comparable with the previous set.'
+              ? (point.progressSignalLabel || 'Comparable with the previous set.')
               : (point.gapReason || 'Not compared with the previous set.');
           return (
             <View key={point.scanId} style={styles.row}>

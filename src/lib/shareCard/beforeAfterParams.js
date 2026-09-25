@@ -47,8 +47,37 @@ export function orderPair(a, b) {
 }
 
 /**
- * Default pair for a photo list: earliest vs latest by timestamp. Returns up to
- * two names; fewer than two photos yields whatever exists.
+ * Pose-aware default-pair preference (S7-6, progress-tab audit second pass,
+ * 2026-09-25, register D200 item 7, report §8): prefers the latest item's
+ * own pose when an earlier item shares it, so a mixed front/back/side
+ * library defaults to two matched-pose photos rather than whichever two
+ * happen to be oldest/newest overall; falls back to the oldest/newest of the
+ * whole list when no pose data is present, or nothing earlier shares the
+ * latest's pose (identical to the pre-fix, pose-blind behaviour). Shared
+ * with ProgressPhotoCompare.js's own default-pair selection, which applied
+ * this same preference locally before this extraction; `getTime` reads each
+ * item's timestamp field (`ts` here, `takenAt` there).
+ *
+ * @param {Array<{pose?: (string|null)}>} items - at least one item; each
+ *   item optionally carries a `pose`.
+ * @param {{getTime?: (item: object) => number}} [opts]
+ * @returns {[object, object]} [older, newer] by timestamp, from the
+ *   preferred pool.
+ */
+export function preferPoseAwarePair(items, { getTime = (p) => p.ts } = {}) {
+  const asc = [...items].sort((a, b) => getTime(a) - getTime(b));
+  const latest = asc[asc.length - 1];
+  const samePose = latest?.pose ? asc.filter((p) => p.pose === latest.pose) : asc;
+  const pool = samePose.length >= 2 ? samePose : asc;
+  return [pool[0], pool[pool.length - 1]];
+}
+
+/**
+ * Default pair for a photo list: earliest vs latest by timestamp, preferring
+ * two photos of the SAME pose when the latest photo has one (see
+ * `preferPoseAwarePair` above). Returns up to two names; fewer than two
+ * photos yields whatever exists. Items with no `pose` field behave exactly
+ * as before this fix (earliest vs latest overall).
  */
 export function defaultPair(photos) {
   const sorted = (Array.isArray(photos) ? photos : [])
@@ -56,7 +85,8 @@ export function defaultPair(photos) {
     .sort((x, y) => x.ts - y.ts);
   if (sorted.length === 0) return [];
   if (sorted.length === 1) return [sorted[0].name];
-  return [sorted[0].name, sorted[sorted.length - 1].name];
+  const [older, newer] = preferPoseAwarePair(sorted);
+  return [older.name, newer.name];
 }
 
 export function finiteNumber(value) {

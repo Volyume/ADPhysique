@@ -1,3 +1,14 @@
+// S7-7 (progress-tab audit second pass, 2026-09-25, register D200 item 7,
+// report §8): the screen passes `scans={scoredScans}` -- the full scan
+// history, not the timeline's OWN pose/date-range filter
+// (ProgressPhotosScreen.js's `filterAndSort`). This is deliberate, not an
+// oversight: comparability chains need the full history to resolve each
+// scan's comparison predecessor and count comparable scans correctly
+// (progressScanChain.js), so cutting the input to a date range would
+// silently corrupt both the pairing and the running count this component
+// and its evidence chain rely on. The date range is a timeline VIEW
+// filter; this is a library-wide comparison surface. No behaviour change
+// here.
 import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
@@ -18,8 +29,9 @@ import {
   normaliseScanCompareSelection,
   orderedScanEntries,
 } from '../lib/progressScanCompareViewModel';
-import { formatVolyumeScore, progressScanAssessmentForDisplay } from '../lib/progressScanDisplay';
-import { confidenceChipLabel, resolveConfidenceTier } from '../lib/progressScanResultsContract';
+import { progressScanAssessmentForDisplay } from '../lib/progressScanDisplay';
+import { buildScoreTierContract, confidenceChipLabel, resolveConfidenceTier } from '../lib/progressScanResultsContract';
+import { formatBodyWeight } from '../lib/units';
 
 export { defaultScanPair, orderedScanEntries } from '../lib/progressScanCompareViewModel';
 
@@ -31,11 +43,25 @@ function finiteNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
-export function scanRangeLabel(scan, { hideExact = false } = {}) {
+// S7-3 (progress-tab audit second pass, 2026-09-25, register D200 item 7,
+// report §8): a Low-tier score used to print outright here at any
+// confidence tier, while the timeline holds it behind "Show anyway"
+// (buildScoreTierContract) and the Trend view withholds it entirely. This
+// now goes through the SAME tier contract, with `revealed` the caller's
+// per-scan "Show anyway" state (never persisted -- see the component's own
+// revealedIds below). The band stays visible either way
+// (tierContract.showBand), matching the tier contract's own semantics; only
+// the exact number sits behind the affordance.
+export function scanRangeLabel(scan, { hideExact = false, revealed = false } = {}) {
   const assessment = progressScanAssessmentForDisplay(scan);
   if (hideExact) return assessment?.progressSignalLabel || 'Progress signal';
-  if (assessment?.visualLeannessScore != null) {
-    return `${assessment.leannessBandLabel || 'Scored'} ${formatVolyumeScore(assessment.visualLeannessScore)}`;
+  const tierContract = buildScoreTierContract(scan, { revealed });
+  if (tierContract.hasNumericScore) {
+    const band = tierContract.bandLabel || 'Scored';
+    // Identical wording to the timeline's own score cell (ProgressPhotosScreen.js
+    // libraryScanSummary): the exact string 'Show anyway' stands in for the
+    // number until this scan is revealed for the session.
+    return tierContract.showScore ? `${band} ${tierContract.scoreText}` : `${band} Show anyway`;
   }
   const reasons = new Set([
     ...(Array.isArray(scan?.abstentionReasons) ? scan.abstentionReasons : []),
@@ -46,10 +72,22 @@ export function scanRangeLabel(scan, { hideExact = false } = {}) {
   return scan?.analysisStatus === 'measured' ? 'Measured only' : 'Not scored';
 }
 
+// S7-4 (same audit pass): used to return a hard-coded `${kg} kg` regardless
+// of the user's chosen body-weight unit. Signature kept EXACTLY as pinned
+// (src/screens/__tests__/ProgressPhotosScreen.progressScan.guard.test.js,
+// "scan-set weight is withheld under suppression or hideExact on every live
+// rendering site") -- the unit preference is read at the point of
+// formatting via useAppStore.getState() (a plain imperative read; this is a
+// formatter function, not a hook, so it cannot subscribe itself) rather
+// than as a new parameter. The component below still subscribes via the
+// useAppStore hook (as ProgressPhotosScreen.js does for the same field), so
+// the label re-renders correctly if the preference changes while this is
+// open.
 export function scanWeightLabel(scan, { hideExact = false } = {}) {
   if (hideExact) return null;
   const kg = finiteNumber(scan?.stats?.weightKg);
-  return kg == null ? null : `${kg} kg`;
+  if (kg == null) return null;
+  return formatBodyWeight(kg, useAppStore.getState().bodyWeightUnits);
 }
 
 // Results-ui-and-copy-blueprint.md §1: a score never renders without its
@@ -64,17 +102,37 @@ function scanConfidenceChipText(scan) {
   return confidenceChipLabel(resolveConfidenceTier(scan));
 }
 
-function ScanSummary({ scan, label, hideExact }) {
+function ScanSummary({ scan, label, hideExact, revealed = false, onRevealLowScore }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
   const weight = scanWeightLabel(scan, { hideExact });
   const confidenceChip = scanConfidenceChipText(scan);
+  const rangeText = scanRangeLabel(scan, { hideExact, revealed });
+  // S7-3: the reveal affordance only applies to a real Low-tier score, and
+  // never under hideExact (which already withholds every number outright).
+  const tierContract = !hideExact ? buildScoreTierContract(scan, { revealed }) : null;
+  const showsRevealAffordance = !!tierContract?.requiresRevealAffordance && !tierContract.revealed;
   return (
     <View style={[styles.summaryPanel, live.summaryPanel]}>
       <Text style={[styles.summaryLabel, live.summaryLabel]}>{label}</Text>
       <Text style={[styles.summaryDate, live.summaryDate]}>{formatProgressPhotoDay(scan?.capturedAt)}</Text>
-      <Text style={[styles.summaryRange, live.summaryRange]}>{scanRangeLabel(scan, { hideExact })}</Text>
+      {showsRevealAffordance ? (
+        <TouchableOpacity
+          onPress={onRevealLowScore}
+          accessibilityRole="button"
+          accessibilityLabel={tierContract.accessibilityLabel}
+        >
+          <Text style={[styles.summaryRange, live.summaryRange]}>{rangeText}</Text>
+        </TouchableOpacity>
+      ) : (
+        <Text
+          style={[styles.summaryRange, live.summaryRange]}
+          accessibilityLabel={tierContract?.hasNumericScore ? tierContract.accessibilityLabel : undefined}
+        >
+          {rangeText}
+        </Text>
+      )}
       {confidenceChip ? <Text style={[styles.summaryConfidence, live.summaryConfidence]}>{confidenceChip}</Text> : null}
       <Text style={[styles.summaryMeta, live.summaryMeta]}>
         {[scan?.qualityLabel || 'saved', weight, `${scan?.assets?.length || 0} photos`].filter(Boolean).join(' | ')}
@@ -113,8 +171,17 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
   const live = buildLiveStyles(t);
   const suppressed = usePhotoSuppression();
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
+  // S7-4: subscribed here (as ProgressPhotosScreen.js subscribes for the
+  // same field) purely so the tree re-renders if the unit preference
+  // changes while this stays open; scanWeightLabel itself reads the
+  // current value imperatively at format time.
+  useAppStore((s) => s.bodyWeightUnits);
   const entries = useMemo(() => orderedScanEntries(scans), [scans]);
   const [selected, setSelected] = useState([]);
+  // S7-3: per-scan "Show anyway" reveal, for this session only (never
+  // persisted, never affects the engine's own tier decision) -- the same
+  // contract and naming as ProgressPhotosScreen.js's revealedLowScoreIds.
+  const [revealedIds, setRevealedIds] = useState(() => new Set());
 
   useEffect(() => {
     setSelected((prev) => normaliseScanCompareSelection(prev, entries));
@@ -122,6 +189,14 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
 
   function toggleSelect(id) {
     setSelected((prev) => nextScanCompareSelection(prev, id));
+  }
+
+  function toggleRevealLowScore(scanId) {
+    setRevealedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(scanId)) next.delete(scanId); else next.add(scanId);
+      return next;
+    });
   }
 
   const { earlier, later, rows, delta } = useMemo(
@@ -173,7 +248,7 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
                 style={[styles.scanChip, live.scanChip, active && [styles.scanChipActive, live.scanChipActive]]}
               >
                 <Text style={[styles.scanChipDate, live.scanChipDate, active && [styles.scanChipDateActive, live.scanChipDateActive]]}>{formatProgressPhotoDay(scan.capturedAt)}</Text>
-                <Text style={[styles.scanChipRange, live.scanChipRange, active && [styles.scanChipRangeActive, live.scanChipRangeActive]]}>{scanRangeLabel(scan, { hideExact })}</Text>
+                <Text style={[styles.scanChipRange, live.scanChipRange, active && [styles.scanChipRangeActive, live.scanChipRangeActive]]}>{scanRangeLabel(scan, { hideExact, revealed: revealedIds.has(scan.id) })}</Text>
               </TouchableOpacity>
             );
           })}
@@ -187,8 +262,20 @@ export default function ProgressScanCompare({ scans = [], onClose, hideExact = f
         ) : (
           <>
             <View style={styles.summaryRow}>
-              <ScanSummary scan={earlier} label="Earlier" hideExact={hideExact} />
-              <ScanSummary scan={later} label="Later" hideExact={hideExact} />
+              <ScanSummary
+                scan={earlier}
+                label="Earlier"
+                hideExact={hideExact}
+                revealed={revealedIds.has(earlier.id)}
+                onRevealLowScore={() => toggleRevealLowScore(earlier.id)}
+              />
+              <ScanSummary
+                scan={later}
+                label="Later"
+                hideExact={hideExact}
+                revealed={revealedIds.has(later.id)}
+                onRevealLowScore={() => toggleRevealLowScore(later.id)}
+              />
             </View>
 
             {deltaText ? (

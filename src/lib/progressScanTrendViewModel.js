@@ -8,7 +8,7 @@
 // classifies each one against its immediately preceding scan, exactly the
 // pairwise pattern the engine itself already uses.
 import { orderedScanEntries } from './progressScanCompareViewModel';
-import { scanComparability } from './progressScanAnalysis';
+import { resolveComparablePrevious, comparableChainCount } from './progressScanChain';
 import { progressScanAssessmentForDisplay, progressScanScoreForDisplay, formatVolyumeScore } from './progressScanDisplay';
 import { resolveConfidenceTier, confidenceChipLabel } from './progressScanResultsContract';
 
@@ -34,25 +34,33 @@ function pointValueText(score, tier) {
 }
 
 // Builds the ordered point list plus the count of scans that landed a
-// successful comparison against their immediate predecessor (the engine's
-// own scanComparability gate, called fresh per adjacent pair; never against
-// a more distant scan).
+// successful comparison. S7-2(b): resolves each point's predecessor with
+// the SAME skip-ahead policy finishProgressScanSession uses at save time
+// (progressScanChain.resolveComparablePrevious) -- skipping up to ten
+// earlier, incomparable scans so a single poor scan cannot sever the
+// chain -- rather than the literal immediately-preceding scan, so the
+// Trend view's per-point verdict and the stored status agree for the same
+// scan. `comparableCount` is the shared running count
+// (progressScanChain.comparableChainCount), computed with the identical
+// resolver so it can never disagree with the per-point `comparable` flags
+// above.
 export function buildTrendPoints(scans = []) {
   const ordered = orderedScanEntries(scans);
-  let previous = null;
-  let comparableCount = 0;
 
   const points = ordered.map((scan, index) => {
     const assessment = progressScanAssessmentForDisplay(scan);
     const score = progressScanScoreForDisplay(scan);
     const tier = score != null ? resolveConfidenceTier(scan) : 'not_enough';
     const isBaseline = index === 0;
+    // Nearest-first candidates: every earlier scan in the ordered chain,
+    // most recent first (the same order finishProgressScanSession's own
+    // candidate list already holds).
+    const priorCandidates = ordered.slice(0, index).reverse();
     const comparability = isBaseline
       ? { comparable: false, status: 'baseline', reason: 'This is the first scan in the comparison set.' }
-      : scanComparability(scan, previous);
-    if (comparability.comparable) comparableCount += 1;
+      : resolveComparablePrevious(scan, priorCandidates).comparability;
 
-    const point = {
+    return {
       scanId: scan.id,
       capturedAt: scan.capturedAt,
       score,
@@ -65,11 +73,9 @@ export function buildTrendPoints(scans = []) {
       gapReason: !isBaseline && !comparability.comparable ? comparability.reason : null,
       progressSignalLabel: assessment?.progressSignalLabel ?? null,
     };
-    previous = scan;
-    return point;
   });
 
-  return { points, comparableCount, totalCount: points.length };
+  return { points, comparableCount: comparableChainCount(ordered), totalCount: points.length };
 }
 
 // Language ladder (results-ui-and-copy-blueprint.md §4, fixed wording): the

@@ -18,6 +18,34 @@ import {
   PROGRESS_SCAN_COACH_EVIDENCE_USED_FOR_VALUES,
 } from '../progressScanCoachEvidence';
 import { resolveProgressScanCoachNote } from '../progressScanCoachResolver';
+import { comparableChainCount } from '../progressScanChain';
+
+const DAY = 86400000;
+const base = Date.UTC(2026, 0, 1);
+
+// A REAL chain of scans (through the real producer, comparableChainCount),
+// shaped to satisfy the real scanComparability gate -- not a hand-typed
+// trendWindow.count. S7-2a (progress-tab audit second pass, 2026-09-25,
+// register D200 item 7): scan.comparableCount used to be
+// scanComparability's own per-pair POSE count (always 2 or 0), never a
+// running count of comparable SCANS.
+function chainScan(id, day) {
+  return {
+    id,
+    status: 'complete',
+    requiredPosesComplete: true,
+    capturedAt: base + day * DAY,
+    analysisStatus: 'complete',
+    qualityLabel: 'good',
+    signals: {
+      physiqueAssessment: { visualLeannessScore: 66, scanConfidenceTier: 'moderate' },
+    },
+    assets: [
+      { pose: 'front', lightingScore: 0.7, framingScore: 0.88, segmentationConfidence: 0.9, cameraTiltDegrees: 0 },
+      { pose: 'back', lightingScore: 0.7, framingScore: 0.88, segmentationConfidence: 0.9, cameraTiltDegrees: 0 },
+    ],
+  };
+}
 
 const SOURCE = fs.readFileSync(path.resolve(__dirname, '../progressScanCoachEvidence.js'), 'utf8');
 
@@ -116,6 +144,22 @@ describe('ProgressScanCoachEvidence v1 shape', () => {
     // Bias-flag-style setup findings survive; the five static safety
     // disclaimers coachSummaryFromScan always prepends do not.
     expect(evidence.setupFindings).toEqual(['large_body']);
+  });
+
+  // S7-2a: a REAL chain of scans through the real producer (comparableChainCount),
+  // not a hand-fabricated trendWindow.count -- proving the count this evidence
+  // carries is reachable from an actual scan history, exactly as
+  // progressScanStore.getProgressScanCoachSummary now computes it.
+  test('trendWindow.count reflects a real chain of comparable scans, not scanComparability\'s own per-pair pose count', () => {
+    const chain = [chainScan('c0', 1), chainScan('c1', 9), chainScan('c2', 17), chainScan('c3', 25)];
+    const realCount = comparableChainCount(chain);
+    expect(realCount).toBe(3); // c1/c2/c3 each comparable to their predecessor
+    const scanWithRealCount = { ...baseScan, comparableCount: realCount };
+    const note = resolveProgressScanCoachNote({ scan: scanWithRealCount });
+    const evidence = buildProgressScanCoachEvidence({ scan: scanWithRealCount, note });
+    expect(evidence.trendWindow.count).toBe(3);
+    // Never scanComparability's own per-pair pose count (REQUIRED_SCAN_POSES.length = 2).
+    expect(evidence.trendWindow.count).not.toBe(2);
   });
 
   test('trendOnly hiding on the note carries through to score/band', () => {

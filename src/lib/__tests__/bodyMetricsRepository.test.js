@@ -214,28 +214,113 @@ describe('bodyMetricsRepository', () => {
     });
   });
 
-  test('getBodyWeightNearestTo guards invalid input and falls back to nearest weight', async () => {
-    const db = jest.fn();
-    const repo = createBodyMetricsRepository({
-      db,
-      uid: jest.fn(),
-      rowToCamel,
-      now: jest.fn(() => 1),
+  // getBodyWeightNearestTo (progress-tab audit second pass, D200 item 7,
+  // lead follow-up review): two per-table reads + an explicit JS combine
+  // for BOTH the "on or before" and the "nearest overall" phase, mirroring
+  // getLatestBodyWeight's own body-vs-morning tie-break above (never a
+  // single UNION ALL + ORDER BY, whose cross-table tie order SQL does not
+  // guarantee). `mockNearest` keys the shared getFirstAsync mock off the
+  // SQL text (table + on-or-before vs nearest-overall clause) rather than
+  // call sequence, so it stays correct regardless of internal call order.
+  const DAY = 86400000;
+  function mockNearest(conn, { bodyOnOrBefore = null, morningOnOrBefore = null, bodyNearest = null, morningNearest = null } = {}) {
+    conn.getFirstAsync.mockImplementation(async (sql) => {
+      const isBody = sql.includes('FROM body_metric_log');
+      const isOnOrBefore = sql.includes('logged_at <= ?');
+      if (isOnOrBefore) return isBody ? bodyOnOrBefore : morningOnOrBefore;
+      return isBody ? bodyNearest : morningNearest;
     });
-    await expect(repo.getBodyWeightNearestTo('', 1000)).resolves.toBeNull();
-    await expect(repo.getBodyWeightNearestTo('u1', Number.NaN)).resolves.toBeNull();
-    expect(db).not.toHaveBeenCalled();
+  }
 
-    const { conn, repo: validRepo } = createHarness();
-    conn.getFirstAsync
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ weight_kg: 79, logged_at: 500 });
-
-    await expect(validRepo.getBodyWeightNearestTo('u1', 1000)).resolves.toEqual({
-      weightKg: 79,
-      loggedAt: 500,
+  describe('getBodyWeightNearestTo', () => {
+    test('guards invalid input without ever opening the database', async () => {
+      const db = jest.fn();
+      const repo = createBodyMetricsRepository({
+        db, uid: jest.fn(), rowToCamel, now: jest.fn(() => 1),
+      });
+      await expect(repo.getBodyWeightNearestTo('', 1000)).resolves.toBeNull();
+      await expect(repo.getBodyWeightNearestTo('u1', Number.NaN)).resolves.toBeNull();
+      expect(db).not.toHaveBeenCalled();
     });
-    expect(conn.getFirstAsync).toHaveBeenCalledTimes(2);
+
+    test('falls back to the nearest weigh-in overall when nothing is on or before t', async () => {
+      const { conn, repo } = createHarness();
+      mockNearest(conn, { morningNearest: { weight_kg: 79, logged_at: 500 } });
+      await expect(repo.getBodyWeightNearestTo('u1', 1000)).resolves.toEqual({ weightKg: 79, loggedAt: 500 });
+    });
+
+    test('prefers the on-or-before reading (prefer-the-past rule) over falling to nearest-overall', async () => {
+      const { conn, repo } = createHarness();
+      mockNearest(conn, { bodyOnOrBefore: { weight_kg: 82, logged_at: 400 } });
+      await expect(repo.getBodyWeightNearestTo('u1', 1000)).resolves.toEqual({ weightKg: 82, loggedAt: 400 });
+    });
+
+    test('an exact-timestamp tie between the two tables is deterministic: body_metric_log wins, matching getLatestBodyWeight', async () => {
+      const { conn, repo } = createHarness();
+      mockNearest(conn, {
+        bodyOnOrBefore: { weight_kg: 81, logged_at: 500 },
+        morningOnOrBefore: { weight_kg: 79, logged_at: 500 },
+      });
+      await expect(repo.getBodyWeightNearestTo('u1', 1000)).resolves.toEqual({ weightKg: 81, loggedAt: 500 });
+    });
+
+    test('a tie on the nearest-overall fallback is also deterministic: body_metric_log wins', async () => {
+      const { conn, repo } = createHarness();
+      mockNearest(conn, {
+        bodyNearest: { weight_kg: 81, logged_at: 1500 },
+        morningNearest: { weight_kg: 79, logged_at: 500 }, // same distance from t=1000
+      });
+      await expect(repo.getBodyWeightNearestTo('u1', 1000)).resolves.toEqual({ weightKg: 81, loggedAt: 1500 });
+    });
+
+    describe('maxDistanceMs (lead follow-up, D200 item 7): a photo must not be captioned with a stale weight', () => {
+      const T = 10_000_000;
+
+      test('default (unbounded): a weigh-in three months away is still returned', async () => {
+        const { conn, repo } = createHarness();
+        const threeMonthsAgo = T - 90 * DAY;
+        mockNearest(conn, { bodyOnOrBefore: { weight_kg: 88, logged_at: threeMonthsAgo } });
+        await expect(repo.getBodyWeightNearestTo('u1', T)).resolves.toEqual({ weightKg: 88, loggedAt: threeMonthsAgo });
+      });
+
+      test('eight days before the target, bounded to 7 days: null, not the stale weight', async () => {
+        const { conn, repo } = createHarness();
+        mockNearest(conn, { bodyOnOrBefore: { weight_kg: 88, logged_at: T - 8 * DAY } });
+        await expect(repo.getBodyWeightNearestTo('u1', T, { maxDistanceMs: 7 * DAY })).resolves.toBeNull();
+      });
+
+      test('six days before the target, bounded to 7 days: the reading is returned', async () => {
+        const { conn, repo } = createHarness();
+        mockNearest(conn, { bodyOnOrBefore: { weight_kg: 88, logged_at: T - 6 * DAY } });
+        await expect(repo.getBodyWeightNearestTo('u1', T, { maxDistanceMs: 7 * DAY }))
+          .resolves.toEqual({ weightKg: 88, loggedAt: T - 6 * DAY });
+      });
+
+      test('the bound applies in either direction (an after-the-fact fallback reading too far in the future)', async () => {
+        const { conn, repo } = createHarness();
+        mockNearest(conn, { bodyNearest: { weight_kg: 88, logged_at: T + 8 * DAY } });
+        await expect(repo.getBodyWeightNearestTo('u1', T, { maxDistanceMs: 7 * DAY })).resolves.toBeNull();
+      });
+
+      test('a past reading outside the bound does not block a nearer later reading inside it (lead refinement, D200 item 7)', async () => {
+        const { conn, repo } = createHarness();
+        mockNearest(conn, {
+          bodyOnOrBefore: { weight_kg: 88, logged_at: T - 8 * DAY }, // prefer-the-past pick, but out of bound
+          morningNearest: { weight_kg: 80, logged_at: T + 2 * DAY }, // the weigh-in two days after the photo
+        });
+        await expect(repo.getBodyWeightNearestTo('u1', T, { maxDistanceMs: 7 * DAY }))
+          .resolves.toEqual({ weightKg: 80, loggedAt: T + 2 * DAY });
+      });
+
+      test('unbounded, the same past reading still wins by the prefer-the-past rule', async () => {
+        const { conn, repo } = createHarness();
+        mockNearest(conn, {
+          bodyOnOrBefore: { weight_kg: 88, logged_at: T - 8 * DAY },
+          morningNearest: { weight_kg: 80, logged_at: T + 2 * DAY },
+        });
+        await expect(repo.getBodyWeightNearestTo('u1', T)).resolves.toEqual({ weightKg: 88, loggedAt: T - 8 * DAY });
+      });
+    });
   });
 
   test('getLatestBodyComposition returns the latest body fat row and tolerates read errors', async () => {

@@ -26,6 +26,15 @@
  *
  * Photos never leave the device. This component reads only local files and the
  * local metadata map; it performs no network or sync work.
+ *
+ * S7-7 (progress-tab audit second pass, 2026-09-25, register D200 item 7,
+ * report §8): the screen passes `photos={photos}` -- the whole library, not
+ * the timeline's own date-range filter (ProgressPhotosScreen.js's
+ * `filterAndSort`). Deliberate: this component owns its OWN pose scoping
+ * (the `poseFilter` chips above, and the pose-aware default pair,
+ * `preferPoseAwarePair` -- S7-6), so an externally pre-filtered pose list
+ * would fight that; the date range is a timeline VIEW filter, not a
+ * comparison-library scope. No behaviour change here.
  */
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -48,6 +57,10 @@ import { getPhotoMetaMap } from '../lib/progressPhotoMeta';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import useAppStore from '../store/useAppStore';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
+// S7-6 (progress-tab audit second pass, D200 item 7): the pose preference
+// below is now the ONE shared implementation, also used by
+// beforeAfterParams.defaultPair.
+import { preferPoseAwarePair } from '../lib/shareCard/beforeAfterParams';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const THUMB = 56;
@@ -378,15 +391,12 @@ export default function ProgressPhotoCompare({ photos, onClose, initialName = nu
   }, [enriched, poseFilter]);
 
   // Pose-aware default pair: prefer the latest photo's own pose when it has a
-  // partner, else the earliest and latest overall.
+  // partner, else the earliest and latest overall (preferPoseAwarePair,
+  // shared with beforeAfterParams.defaultPair -- S7-6).
   const defaultPair = useMemo(() => {
     if (enriched.length < 2) return [];
-    const asc = [...enriched].sort((a, b) => a.takenAt - b.takenAt);
-    const latest = asc[asc.length - 1];
-    const samePose = latest.pose ? asc.filter((p) => p.pose === latest.pose) : asc;
-    const pool = samePose.length >= 2 ? samePose : asc;
-    const fallback = [pool[0].name, pool[pool.length - 1].name];
-    return seededPairFor(initialName, enriched, fallback);
+    const [older, newer] = preferPoseAwarePair(enriched, { getTime: (p) => p.takenAt });
+    return seededPairFor(initialName, enriched, [older.name, newer.name]);
   }, [enriched, initialName]);
 
   // Seed the selection once a valid default is known, and never leave the

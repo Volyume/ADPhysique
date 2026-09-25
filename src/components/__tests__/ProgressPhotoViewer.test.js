@@ -290,7 +290,11 @@ test('backfill: a photo with no weight snapshot lazily upserts once for its take
     (c) => c[1] === NAME_A && c[2] && 'takenAt' in c[2] && !('pose' in c[2]),
   );
   expect(backfillCalls.length).toBe(1);
-  expect(backfillCalls[0]).toEqual([USER_ID, NAME_A, { takenAt: TS }]);
+  // S7-8 (progress-tab audit second pass, D200 item 7): re-sending the same
+  // takenAt used to be read as unchanged by upsertPhotoMeta, so a null
+  // weight here could never be filled in later. resnapshotWeight forces
+  // the nearest-weigh-in lookup to run again for this backfill.
+  expect(backfillCalls[0]).toEqual([USER_ID, NAME_A, { takenAt: TS }, { resnapshotWeight: true }]);
 });
 
 test('backfill: does NOT fire when a weight snapshot already exists (never overwrites)', async () => {

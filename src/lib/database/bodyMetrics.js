@@ -120,30 +120,83 @@ export function createBodyMetricsRepository({
     return null;
   }
 
-  async function getBodyWeightNearestTo(userId, t) {
+  // Progress-tab audit second pass (2026-09-25, register D200 item 7,
+  // report §8, lead follow-up review): rebuilt as two per-table reads +
+  // an explicit JS-level combine, mirroring getLatestBodyWeight a few
+  // lines above, rather than a single UNION ALL + ORDER BY -- SQL does
+  // not guarantee which of two exactly-tied rows from different source
+  // tables an ORDER BY on the tied column returns, so the tie-break was
+  // not actually deterministic before. body_metric_log now wins an
+  // exact-timestamp tie against morning_weights, the same rule
+  // getLatestBodyWeight already uses.
+  //
+  // `opts.maxDistanceMs` (optional, default unbounded so every existing
+  // caller is unchanged): when set, a picked weigh-in further than this
+  // from `t`, in either direction, is not returned (null) rather than
+  // silently captioning a photo with a stale weight. The prefer-the-past
+  // rule (an on-or-before reading beats a nearer-but-later one) is
+  // unchanged; the bound is applied to whichever reading that rule picks.
+  async function getBodyWeightNearestTo(userId, t, opts = {}) {
     if (!userId || !Number.isFinite(t)) return null;
+    const { maxDistanceMs } = opts;
     const d = await db();
-    const union = `
-      SELECT weight_kg, logged_at FROM body_metric_log
-        WHERE user_id = ? AND weight_kg IS NOT NULL AND deleted_at IS NULL
-      UNION ALL
-      SELECT weight_kg, logged_at FROM morning_weights
-        WHERE user_id = ? AND weight_kg IS NOT NULL AND deleted_at IS NULL`;
-    const onOrBefore = await d.getFirstAsync(
-      `SELECT weight_kg, logged_at FROM (${union})
-         WHERE logged_at <= ?
-         ORDER BY logged_at DESC LIMIT 1`,
-      [userId, userId, t],
-    );
-    const pick = onOrBefore ?? await d.getFirstAsync(
-      `SELECT weight_kg, logged_at FROM (${union})
-         ORDER BY ABS(logged_at - ?) ASC LIMIT 1`,
-      [userId, userId, t],
-    );
-    if (pick && pick.weight_kg != null) {
-      return { weightKg: pick.weight_kg, loggedAt: pick.logged_at };
+
+    const [bodyOnOrBefore, morningOnOrBefore] = await Promise.all([
+      d.getFirstAsync(
+        `SELECT weight_kg, logged_at FROM body_metric_log
+           WHERE user_id = ? AND weight_kg IS NOT NULL AND deleted_at IS NULL AND logged_at <= ?
+           ORDER BY logged_at DESC LIMIT 1`,
+        [userId, t],
+      ),
+      d.getFirstAsync(
+        `SELECT weight_kg, logged_at FROM morning_weights
+           WHERE user_id = ? AND weight_kg IS NOT NULL AND deleted_at IS NULL AND logged_at <= ?
+           ORDER BY logged_at DESC LIMIT 1`,
+        [userId, t],
+      ),
+    ]);
+    // Prefer the later (closer, from below) reading; body_metric_log wins
+    // an exact tie (>=), matching getLatestBodyWeight.
+    const bodyOnOrBeforeTs = bodyOnOrBefore?.logged_at ?? -Infinity;
+    const morningOnOrBeforeTs = morningOnOrBefore?.logged_at ?? -Infinity;
+    let pick = (bodyOnOrBefore || morningOnOrBefore)
+      ? (bodyOnOrBeforeTs >= morningOnOrBeforeTs ? bodyOnOrBefore : morningOnOrBefore)
+      : null;
+
+    // Lead refinement (D200 item 7): an on-or-before reading that lies
+    // OUTSIDE the bound must not block a nearer, later reading that lies
+    // inside it (a weigh-in the day after a photo beats none at all), so
+    // the bound is applied before the prefer-the-past pick is allowed to
+    // stand, and the nearest-overall search below then runs.
+    const withinBound = (row) => !Number.isFinite(maxDistanceMs) || Math.abs(row.logged_at - t) <= maxDistanceMs;
+    if (pick && !withinBound(pick)) pick = null;
+
+    if (!pick) {
+      const [bodyNearest, morningNearest] = await Promise.all([
+        d.getFirstAsync(
+          `SELECT weight_kg, logged_at FROM body_metric_log
+             WHERE user_id = ? AND weight_kg IS NOT NULL AND deleted_at IS NULL
+             ORDER BY ABS(logged_at - ?) ASC LIMIT 1`,
+          [userId, t],
+        ),
+        d.getFirstAsync(
+          `SELECT weight_kg, logged_at FROM morning_weights
+             WHERE user_id = ? AND weight_kg IS NOT NULL AND deleted_at IS NULL
+             ORDER BY ABS(logged_at - ?) ASC LIMIT 1`,
+          [userId, t],
+        ),
+      ]);
+      // Prefer the smaller distance; body_metric_log wins an exact tie (<=).
+      const bodyDist = bodyNearest ? Math.abs(bodyNearest.logged_at - t) : Infinity;
+      const morningDist = morningNearest ? Math.abs(morningNearest.logged_at - t) : Infinity;
+      pick = (bodyNearest || morningNearest)
+        ? (bodyDist <= morningDist ? bodyNearest : morningNearest)
+        : null;
     }
-    return null;
+
+    if (!pick || pick.weight_kg == null) return null;
+    if (!withinBound(pick)) return null;
+    return { weightKg: pick.weight_kg, loggedAt: pick.logged_at };
   }
 
   async function getLatestBodyComposition(userId) {

@@ -15,6 +15,29 @@
  *    every branch the Progress landing's Visual pillar can render.
  */
 import { computeTrainingPillarSummary, buildVisualPillarCopy } from '../pillars';
+import { comparableChainCount } from '../../progressScanChain';
+
+const SCAN_DAY_MS = 24 * 60 * 60 * 1000;
+
+// S7-2a (progress-tab audit second pass, 2026-09-25, register D200 item 7,
+// report §8): a real, minimal scan chain, run through the real producer
+// (comparableChainCount) -- not a hand-typed trendWindow.count -- so the
+// pillar's own text is proven reachable from an actual scan history.
+function chainScan(id, day) {
+  return {
+    id,
+    status: 'complete',
+    requiredPosesComplete: true,
+    capturedAt: day * SCAN_DAY_MS,
+    analysisStatus: 'complete',
+    qualityLabel: 'good',
+    signals: { physiqueAssessment: { visualLeannessScore: 66, scanConfidenceTier: 'moderate' } },
+    assets: [
+      { pose: 'front', lightingScore: 0.7, framingScore: 0.88, segmentationConfidence: 0.9, cameraTiltDegrees: 0 },
+      { pose: 'back', lightingScore: 0.7, framingScore: 0.88, segmentationConfidence: 0.9, cameraTiltDegrees: 0 },
+    ],
+  };
+}
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = new Date('2026-06-15T12:00:00Z').getTime();
@@ -179,6 +202,25 @@ describe('buildVisualPillarCopy', () => {
       },
     });
     expect(copy.evidence).toBe('Fuller across your last 5 comparable scans, high confidence.');
+  });
+
+  // S7-2a: the "across your last N comparable scans" line, previously
+  // unreachable forever (scanComparability's per-pair pose count could
+  // never clear the evidence chain's >= 3 gate), is now reachable after
+  // three REAL comparable scans through the real producer.
+  test('reachable after three real comparable scans: the evidence line names the real count', () => {
+    const chain = [chainScan('c0', 0), chainScan('c1', 8), chainScan('c2', 16), chainScan('c3', 24)];
+    const realCount = comparableChainCount(chain);
+    expect(realCount).toBe(3);
+    const copy = buildVisualPillarCopy({
+      hasScan: true, hasNote: true, capturedAt: NOW,
+      packet: {
+        status: 'valid', eligibleForAssessment: true, confidenceTier: 'moderate',
+        trendWindow: { count: realCount, direction: 'down', comparableOnly: true },
+      },
+    });
+    expect(copy.state).toBe('Visible change');
+    expect(copy.evidence).toBe('Leaner across your last 3 comparable scans, moderate confidence.');
   });
 
   test('not yet eligible (baseline / thin window): honest immature state with a remaining-scan count', () => {
