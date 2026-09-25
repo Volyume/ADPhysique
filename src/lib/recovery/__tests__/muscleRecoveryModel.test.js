@@ -118,10 +118,16 @@ describe('buildMuscleRecoveryMap -- a single standard-dose quads session', () =>
     expect(at.status).toBe('recovered');
   });
 
-  test('readyAtMs is end + 0.9 * 72 hours (the 90% point)', () => {
+  test('readyAtMs is end + 0.895 * 72 hours (where the rounded percent first reads 90)', () => {
+    // Lead review (Opus finding 23): recoveredPercent is rounded, so the
+    // status turns recovered at a raw 89.5%; ready-by aims at that same
+    // instant, never at the unrounded 90% twenty minutes later.
     const { readyAtMs } = quadsAt(END);
-    const expected = END + 0.9 * 72 * HOUR;
+    const expected = END + 0.895 * 72 * HOUR;
     expect(Math.abs(readyAtMs - expected)).toBeLessThan(2);
+    const atReady = quadsAt(readyAtMs);
+    expect(atReady.recoveredPercent).toBe(90);
+    expect(atReady.status).toBe('recovered');
   });
 
   test('status bands: nearly at 80%, recovered at 92%', () => {
@@ -309,8 +315,9 @@ describe('lead review: contributions cap at F and the ready-by walk stays exact 
     });
     // F = 6 / 6 = 1.0 -> residual 1.0 -> 0%, not below 0 and not "more than fully fatigued".
     expect(map.chest.recoveredPercent).toBe(0);
-    // Ready-by is the end plus 90% of the 60-hour chest length, exactly.
-    expect(map.chest.readyAtMs).toBeCloseTo(now + HOUR + 0.9 * 60 * HOUR, 0);
+    // Ready-by is the end plus 89.5% of the 60-hour chest length, exactly
+    // (the instant the rounded percent first reads 90).
+    expect(map.chest.readyAtMs).toBeCloseTo(now + HOUR + 0.895 * 60 * HOUR, 0);
   });
 
   test('projecting to before a session ended reads that session at full F, not above it', () => {

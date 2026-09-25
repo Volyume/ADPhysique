@@ -126,6 +126,7 @@ describe('sessionReadiness -- empty input', () => {
       weightedPercent: 100,
       limitingMuscle: null,
       limitingReadyAtMs: null,
+      evidence: false,
       muscles: [],
     });
   });

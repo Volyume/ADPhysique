@@ -56,6 +56,14 @@
  * is attempted at all: `programmeNextLine` is null (no estimate to state)
  * and `recommended` stays null.
  *
+ * NO EVIDENCE IS NEVER "READY" IN COPY (spec section 1; Opus review
+ * finding 2). For the RULE a muscle with no session in the last 14 days
+ * counts as fully recovered (it is), so a fresh session can be recommended
+ * over an under-recovered programme next. For the COPY, a session none of
+ * whose counted muscles has a recent session behind it gets no line and no
+ * "ready now": readinessLine and programmeNextLine are null, and the reason's
+ * last sentence says "has had no session in the last 14 days".
+ *
  * PURE. No I/O, no clock: `nowMs`/`projectedAtMs` are arguments.
  */
 import { nextOutstandingSession, SESSION_STATE } from '../blockProgression';
@@ -77,54 +85,80 @@ function muscleVerb(muscleKey) {
 const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 /**
- * The weekday word for a "ready by" instant, relative to nowMs: 'today',
- * 'tomorrow', the weekday name (2-6 days out), or 'in N days' past a week --
- * exactly the build brief's ordering. Civil-calendar-day difference (not a
- * raw ms subtraction), so a DST transition can never shift the word by a day
- * (dayKey.js's own documented rationale for civilDayDifference).
+ * The whole "ready ..." clause for a ready-by instant, relative to nowMs:
+ * "ready now" (already past, or no instant), "ready later today", "ready
+ * by tomorrow", "ready by Thursday" (2 to 6 days out) or "ready in N
+ * days" past a week. Civil-calendar-day difference (not a raw ms
+ * subtraction), so a DST transition can never shift the word by a day
+ * (dayKey.js's own documented rationale for civilDayDifference). One
+ * authority for this wording: the Recovery block's rows reuse it.
  */
-export function readyByPhrase(readyAtMs, nowMs) {
-  if (!Number.isFinite(readyAtMs) || !Number.isFinite(nowMs)) return 'today';
+export function readyClause(readyAtMs, nowMs) {
+  if (!Number.isFinite(readyAtMs) || !Number.isFinite(nowMs) || readyAtMs <= nowMs) return 'ready now';
   const days = civilDayDifference(readyAtMs, nowMs);
-  if (!Number.isFinite(days) || days <= 0) return 'today';
-  if (days === 1) return 'tomorrow';
-  if (days < 7) return WEEKDAY_NAMES[new Date(readyAtMs).getDay()];
-  return `in ${days} days`;
+  if (!Number.isFinite(days) || days <= 0) return 'ready later today';
+  if (days === 1) return 'ready by tomorrow';
+  if (days < 7) return `ready by ${WEEKDAY_NAMES[new Date(readyAtMs).getDay()]}`;
+  return `ready in ${days} days`;
+}
+
+/** "<Muscle> is/are estimated N% recovered, ready by <day>." for a map entry. */
+function muscleEstimateSentence(muscle, percent, readyAtMs, nowMs) {
+  return `${muscleDisplayName(muscle)} ${muscleVerb(muscle)} estimated ${Math.round(percent)}% recovered, ${readyClause(readyAtMs, nowMs)}.`;
 }
 
 /**
  * The per-session calm line, from that session's OWN readiness-now reading
  * (never the projected one -- this is what is true right now, for the
- * change-workout sheet and for the "Keep" fallback's plain line).
+ * change-workout sheet and for a session the athlete picked themselves).
+ * null when no counted muscle has a session in the last 14 days behind it
+ * (readiness.evidence false; spec section 1: never "ready" without a
+ * logged session behind it) or when the planned sets are unknown.
  */
 function readinessLine(readinessNow, nowMs) {
-  if (!readinessNow || readinessNow.verdict === 'ready' || !readinessNow.limitingMuscle) {
+  if (!readinessNow || !readinessNow.evidence) return null;
+  if (readinessNow.verdict === 'ready' || !readinessNow.limitingMuscle) {
     return 'Ready now.';
   }
-  const muscle = readinessNow.limitingMuscle;
-  const name = muscleDisplayName(muscle);
-  const percent = Math.round(readinessNow.minPercent);
-  const when = readyByPhrase(readinessNow.limitingReadyAtMs, nowMs);
-  return `${name} ${muscleVerb(muscle)} estimated ${percent}% recovered, ready by ${when}.`;
+  return muscleEstimateSentence(
+    readinessNow.limitingMuscle, readinessNow.minPercent, readinessNow.limitingReadyAtMs, nowMs,
+  );
 }
 
 /**
  * The line under the programme-next session's name on the Home card (spec
  * 4.3: "one line under the session name" -- the card title already carries
  * the name, so the line never repeats it). null when that session's own
- * planned sets are unknown (lead review): with no read behind it there is
- * no estimate to state, and "estimated recovered" would be a false all-clear.
+ * planned sets are unknown, or when none of the muscles it trains has a
+ * session in the last 14 days behind it (lead review): with no read behind
+ * it there is no estimate to state, and "estimated recovered" would be a
+ * false all-clear.
  */
 function buildProgrammeNextLine(readinessNow, nowMs) {
-  if (!readinessNow) return null;
+  if (!readinessNow || !readinessNow.evidence) return null;
   if (readinessNow.verdict === 'ready' || !readinessNow.limitingMuscle) {
     return 'Every muscle it trains is estimated recovered.';
   }
-  const muscle = readinessNow.limitingMuscle;
-  const name = muscleDisplayName(muscle);
-  const percent = Math.round(readinessNow.minPercent);
-  const when = readyByPhrase(readinessNow.limitingReadyAtMs, nowMs);
-  return `${name} ${muscleVerb(muscle)} estimated ${percent}% recovered, ready by ${when}.`;
+  return muscleEstimateSentence(
+    readinessNow.limitingMuscle, readinessNow.minPercent, readinessNow.limitingReadyAtMs, nowMs,
+  );
+}
+
+/**
+ * The last sentence of the reason: what is true of the recommended session
+ * AT THE MOMENT OF READING (Opus review finding 5: the rule decides on the
+ * projected verdict, but "is ready now" must not be printed while the
+ * session is still 73% recovered). "Push is ready now." when its readiness
+ * now is ready with a session behind it; "Push has had no session in the
+ * last 14 days." when nothing it trains has been trained recently; else
+ * "Push is estimated ready later today." from its own limiting muscle.
+ */
+function recommendedSentence(recommendedName, candidate, nowMs) {
+  const rec = recommendedName || 'The other session';
+  const now = candidate?.readinessNow ?? null;
+  if (!now || !now.evidence) return `${rec} has had no session in the last 14 days.`;
+  if (now.verdict === 'ready' || !now.limitingMuscle) return `${rec} is ready now.`;
+  return `${rec} is estimated ${readyClause(now.limitingReadyAtMs, nowMs)}.`;
 }
 
 /**
@@ -136,16 +170,22 @@ function buildProgrammeNextLine(readinessNow, nowMs) {
  * to do. "in your plan" is the one addition, because under F1 the card
  * title above this line is the RECOMMENDED session, not the programme
  * next, and "Legs is next" alone would read as a contradiction there.
+ * The muscle named is the one the RULE judged limiting at the projected
+ * time (the same muscle the candidate filter excluded on), read at its
+ * recovery NOW from the live map (Opus review finding 18).
  */
-function buildReason(recommendedName, programmeNextName, nextReadinessNow, nowMs) {
-  const next = programmeNextName || 'Your next session';
-  const rec = recommendedName || 'The other session';
-  const muscle = nextReadinessNow?.limitingMuscle ?? null;
-  const when = readyByPhrase(nextReadinessNow?.limitingReadyAtMs, nowMs);
+function buildReason(recommendedName, programmeNextName, nextEntry, candidate, recoveryMap, nowMs) {
+  const opening = programmeNextName
+    ? `${programmeNextName} is next in your plan.`
+    : 'Your planned session is next.';
+  const muscle = nextEntry?.limitingMuscle ?? nextEntry?.readinessNow?.limitingMuscle ?? null;
+  const live = muscle ? (recoveryMap ?? {})[muscle] : null;
+  const percent = live?.recoveredPercent ?? nextEntry?.readinessNow?.minPercent ?? 0;
+  const readyAtMs = live ? live.readyAtMs : nextEntry?.readinessNow?.limitingReadyAtMs;
   const detail = muscle
-    ? `${muscleDisplayName(muscle)} ${muscleVerb(muscle)} estimated ${Math.round(nextReadinessNow.minPercent)}% recovered, ready by ${when}.`
-    : `It is estimated ready by ${when}.`;
-  return `${next} is next in your plan. ${detail} ${rec} is ready now.`;
+    ? muscleEstimateSentence(muscle, percent, readyAtMs, nowMs)
+    : `It is estimated ${readyClause(nextEntry?.readinessNow?.limitingReadyAtMs, nowMs)}.`;
+  return `${opening} ${detail} ${recommendedSentence(recommendedName, candidate, nowMs)}`;
 }
 
 /**
@@ -205,9 +245,10 @@ export function recommendNextWorkout({
         limitingMuscle: readinessAtProjected?.limitingMuscle ?? null,
         limitingReadyAtMs: readinessAtProjected?.limitingReadyAtMs ?? null,
         // No line at all (never a fabricated "Ready now.") when the read is
-        // unknown -- the sheet row then simply shows no extra line, exactly
-        // as it did before this feature existed for that one row.
-        line: plannedKnown ? readinessLine(readinessNow, nowMs) : null,
+        // unknown or nothing it trains has a recent session behind it --
+        // the sheet row then simply shows no extra line, exactly as it did
+        // before this feature existed for that one row.
+        line: readinessLine(readinessNow, nowMs),
       };
     })
     .sort((a, b) => (orderById.get(a.routineId) ?? 0) - (orderById.get(b.routineId) ?? 0));
@@ -243,7 +284,10 @@ export function recommendNextWorkout({
   }
 
   const reason = recommended
-    ? buildReason(routineNamesById?.[recommended.routineId], programmeNextName, nextEntry?.readinessNow, nowMs)
+    ? buildReason(
+      routineNamesById?.[recommended.routineId], programmeNextName, nextEntry,
+      byId.get(recommended.routineId) ?? null, recoveryMap, nowMs,
+    )
     : null;
 
   return {

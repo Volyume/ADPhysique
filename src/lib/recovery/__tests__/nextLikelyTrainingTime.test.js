@@ -58,16 +58,15 @@ describe('today is a habitual weekday', () => {
     expect(result).toBe(new Date(2026, 0, 5, 18, 0, 0, 0).getTime());
   });
 
-  test('the typical minute has already passed: advances to the next habitual day', () => {
+  test('the typical minute has already passed: the rest of today still counts (projection is now)', () => {
+    // Lead review (Opus finding 6): the typical minute is a median, so
+    // about half of real sessions start after it. Someone opening Home on
+    // a training day after that minute is about to train, not waiting for
+    // Wednesday; the projection is NOW, never the next habitual day.
     const result = nextLikelyTrainingTime({
       nowMs: MON_2000, habitualWeekdays: [MONDAY, WEDNESDAY, FRIDAY], typicalStartMinute: START_1800,
     });
-    const d = new Date(result);
-    // Wednesday 7 Jan 2026, 18:00 -- the next habitual day after Monday,
-    // since Monday's own slot has already gone by.
-    expect(d.getDate()).toBe(7);
-    expect(d.getHours()).toBe(18);
-    expect(d.getMinutes()).toBe(0);
+    expect(result).toBe(MON_2000);
   });
 });
 
@@ -95,13 +94,22 @@ describe('today is not a habitual weekday', () => {
     expect(d.getHours()).toBe(18);
   });
 
-  test('a single habitual weekday that IS today, past its minute, projects a full 7 days out', () => {
+  test('a single habitual weekday that IS today, past its minute, still projects to now (not 7 days out)', () => {
     const result = nextLikelyTrainingTime({
       nowMs: MON_2000, habitualWeekdays: [MONDAY], typicalStartMinute: START_1800,
     });
+    expect(result).toBe(MON_2000);
+  });
+
+  test('a single habitual weekday that is NOT today projects to that day at the typical minute', () => {
+    // Monday 20:00 with Wednesday the only habit: Wednesday 7 Jan, 18:00.
+    const result = nextLikelyTrainingTime({
+      nowMs: MON_2000, habitualWeekdays: [WEDNESDAY], typicalStartMinute: START_1800,
+    });
     const d = new Date(result);
-    expect(d.getDate()).toBe(12); // next Monday
+    expect(d.getDate()).toBe(7);
     expect(d.getHours()).toBe(18);
+    expect(d.getMinutes()).toBe(0);
   });
 });
 

@@ -6,15 +6,19 @@
  * train now (register D201, spec
  * docs/recovery-programme-2026-09-25/00-SPEC.md section 3.3)?
  *
- * A muscle only counts if the routine plans at least 2 sets on it - a
- * single incidental secondary-muscle credit should never make a whole
- * session read as "not ready". The routine's readiness is the MINIMUM
- * recoveredPercent over its counted muscles (the limiting one is named), so
- * one under-recovered muscle correctly holds the whole session back; a
- * sets-weighted mean rides alongside for display, never for the verdict. A
- * muscle the recovery map marks 'no_recent_session' (or has no entry at
- * all) counts as 100 - "never trained recently" is not evidence of being
- * unready.
+ * A muscle only counts if the routine plans at least 2 PRIMARY sets on it
+ * (the caller passes primary sets, load.js's loadPlannedSetsByRoutine) - a
+ * secondary-muscle credit never makes a whole session read as "not ready"
+ * (spec 3.3 "primary-loaded"; Opus review finding 12). The routine's
+ * readiness is the MINIMUM recoveredPercent over its counted muscles (the
+ * limiting one is named), so one under-recovered muscle correctly holds
+ * the whole session back; a sets-weighted mean rides alongside for
+ * display, never for the verdict. A muscle the recovery map marks
+ * 'no_recent_session' (or has no entry at all) counts as 100 for the
+ * verdict - "never trained recently" is not evidence of being unready -
+ * but `evidence` is false when NO counted muscle has a session behind it,
+ * so a caller never prints "estimated recovered" off no data at all
+ * (spec section 1; Opus review finding 2).
  *
  * PURE. No I/O, no clock.
  */
@@ -28,7 +32,7 @@ import { READY_PERCENT, NEARLY_PERCENT } from './constants';
  *   readyAtMs, ... } }.
  * @returns {{ verdict: 'ready'|'nearly'|'not_yet', minPercent: number,
  *   weightedPercent: number, limitingMuscle: string|null,
- *   limitingReadyAtMs: number|null,
+ *   limitingReadyAtMs: number|null, evidence: boolean,
  *   muscles: Array<{ muscle: string, plannedSets: number,
  *   recoveredPercent: number, status: string }> }}
  */
@@ -48,6 +52,9 @@ export function sessionReadiness(plannedSetsByMuscle, recoveryMap) {
     muscles.push({ muscle, plannedSets, recoveredPercent, status });
   }
 
+  // At least one counted muscle has a logged session behind its reading.
+  const evidence = muscles.some((m) => m.status !== 'no_recent_session');
+
   if (!muscles.length) {
     return {
       verdict: 'ready',
@@ -55,6 +62,7 @@ export function sessionReadiness(plannedSetsByMuscle, recoveryMap) {
       weightedPercent: 100,
       limitingMuscle: null,
       limitingReadyAtMs: null,
+      evidence: false,
       muscles: [],
     };
   }
@@ -80,5 +88,5 @@ export function sessionReadiness(plannedSetsByMuscle, recoveryMap) {
   const limitingEntry = limitingMuscle ? map[limitingMuscle] : null;
   const limitingReadyAtMs = limitingEntry ? (limitingEntry.readyAtMs ?? null) : null;
 
-  return { verdict, minPercent, weightedPercent, limitingMuscle, limitingReadyAtMs, muscles };
+  return { verdict, minPercent, weightedPercent, limitingMuscle, limitingReadyAtMs, evidence, muscles };
 }

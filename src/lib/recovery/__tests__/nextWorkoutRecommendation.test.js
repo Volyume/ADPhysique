@@ -13,7 +13,7 @@
  * perSession; the exact copy strings (programmeNextLine, reason, and each
  * perSession line), including the weekday word; determinism.
  */
-import { recommendNextWorkout, readyByPhrase } from '../nextWorkoutRecommendation';
+import { recommendNextWorkout, readyClause } from '../nextWorkoutRecommendation';
 import { SESSION_STATE } from '../../blockProgression';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -81,7 +81,7 @@ describe('programme order is kept', () => {
     });
     expect(result.recommended).toBeNull();
     expect(result.reason).toBeNull();
-    expect(result.programmeNextLine).toBe(`Quads are estimated 64% recovered, ready by ${readyByPhrase(readyAtMs, NOW)}.`);
+    expect(result.programmeNextLine).toBe(`Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}.`);
   });
 
   test('programmeNext not ready, another outstanding session IS ready, but it shares the limiting muscle with >= 2 planned sets: no recommendation', () => {
@@ -177,8 +177,8 @@ describe('a recommendation is made when all three conditions hold', () => {
     });
     expect(result.programmeNext).toEqual({ routineId: 'legs' });
     expect(result.recommended).toEqual({ routineId: 'push' });
-    expect(result.reason).toBe(`Legs is next in your plan. Quads are estimated 64% recovered, ready by ${readyByPhrase(readyAtMs, NOW)}. Push is ready now.`);
-    expect(result.programmeNextLine).toBe(`Quads are estimated 64% recovered, ready by ${readyByPhrase(readyAtMs, NOW)}.`);
+    expect(result.reason).toBe(`Legs is next in your plan. Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}. Push is ready now.`);
+    expect(result.programmeNextLine).toBe(`Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}.`);
   });
 
   test('the rule reads the PROJECTED verdict, not the readiness at now', () => {
@@ -265,7 +265,7 @@ describe('per-session copy (used by the change-workout sheet)', () => {
       recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
     });
     const legs = result.perSession.find((p) => p.routineId === 'legs');
-    expect(legs.line).toBe(`Quads are estimated 64% recovered, ready by ${readyByPhrase(readyAtMs, NOW)}.`);
+    expect(legs.line).toBe(`Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}.`);
   });
 
   test('a singular muscle name takes "is", not "are"', () => {
@@ -284,7 +284,7 @@ describe('per-session copy (used by the change-workout sheet)', () => {
     const path = require('path');
     const src = fs.readFileSync(path.join(__dirname, '..', 'nextWorkoutRecommendation.js'), 'utf8');
     // Every template that carries a percent placeholder also carries "estimated".
-    const percentLines = src.split('\n').filter((l) => l.includes('${percent}%'));
+    const percentLines = src.split('\n').filter((l) => /\$\{[^}]*\}%/.test(l));
     expect(percentLines.length).toBeGreaterThan(0);
     for (const line of percentLines) expect(line).toMatch(/estimated/);
     expect(src).not.toMatch(/you must/i);
@@ -292,17 +292,78 @@ describe('per-session copy (used by the change-workout sheet)', () => {
   });
 });
 
-describe('readyByPhrase', () => {
-  test('today, tomorrow, a weekday name, and "in N days" past a week', () => {
-    expect(readyByPhrase(NOW, NOW)).toBe('today');
-    expect(readyByPhrase(NOW + 12 * HOUR_MS, NOW)).toBe('today');
-    expect(readyByPhrase(NOW + DAY_MS, NOW)).toBe('tomorrow');
-    expect(readyByPhrase(NOW + 8 * DAY_MS, NOW)).toBe('in 8 days');
+describe('readyClause', () => {
+  test('now, later today, tomorrow, a weekday name, and "in N days" past a week', () => {
+    expect(readyClause(NOW, NOW)).toBe('ready now');
+    expect(readyClause(NOW - HOUR_MS, NOW)).toBe('ready now');
+    // Lead review (Opus finding 20): never "ready by today".
+    expect(readyClause(NOW + 2 * HOUR_MS, NOW)).toBe('ready later today');
+    expect(readyClause(NOW + DAY_MS, NOW)).toBe('ready by tomorrow');
+    expect(readyClause(NOW + 2 * DAY_MS, NOW)).toMatch(/^ready by (Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday)$/);
+    expect(readyClause(NOW + 8 * DAY_MS, NOW)).toBe('ready in 8 days');
   });
 
   test('non-finite input never throws', () => {
-    expect(readyByPhrase(null, NOW)).toBe('today');
-    expect(readyByPhrase(NaN, NOW)).toBe('today');
+    expect(readyClause(null, NOW)).toBe('ready now');
+    expect(readyClause(NaN, NOW)).toBe('ready now');
+  });
+});
+
+describe('no evidence is never "ready" in copy (spec section 1; Opus review finding 2)', () => {
+  test('a programme next none of whose muscles has a recent session: no line, no recommendation', () => {
+    const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
+    // Empty map: every muscle reads as no_recent_session.
+    const result = recommendNextWorkout({
+      sessions,
+      plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 } },
+      recoveryMap: {}, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
+    });
+    expect(result.recommended).toBeNull();
+    expect(result.programmeNextLine).toBeNull();
+    for (const p of result.perSession) expect(p.line).toBeNull();
+    // The RULE still reads them as fully recovered (they are).
+    expect(result.perSession.find((p) => p.routineId === 'legs').verdict).toBe('ready');
+  });
+
+  test('a fresh candidate is recommended over an under-recovered programme next, and the copy says why honestly', () => {
+    const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
+    const readyAtMs = NOW + 2 * DAY_MS;
+    const recoveryMap = { quads: staticEntry('quads', { recoveredPercent: 64, status: 'recovering', readyAtMs }) };
+    const result = recommendNextWorkout({
+      sessions,
+      plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 } },
+      recoveryMap, projectedAtMs: NOW, nowMs: NOW, routineNamesById: NAMES,
+    });
+    expect(result.recommended).toEqual({ routineId: 'push' });
+    expect(result.reason).toBe(`Legs is next in your plan. Quads are estimated 64% recovered, ${readyClause(readyAtMs, NOW)}. Push has had no session in the last 14 days.`);
+    expect(result.perSession.find((p) => p.routineId === 'push').line).toBeNull();
+  });
+
+  test('a candidate ready at the projected time but not yet now is never called "ready now" (Opus finding 5)', () => {
+    const sessions = [session('legs', 'Legs', 1), session('push', 'Push', 2)];
+    const legsReadyAt = NOW + 2 * DAY_MS;
+    // Chest: one real session that ended 21.9 hours ago with a 30-hour
+    // recovery: 73% now (residual 0.27), 93% six hours from now. The rule
+    // reads the projected verdict (ready) and recommends Push; the copy
+    // must still tell the truth at the moment of reading.
+    const chestEnd = NOW - 21.9 * HOUR_MS;
+    const chest = decayingEntry('chest', { endMs: chestEnd, hoursT: 30 });
+    const projectedAtMs = NOW + 6 * HOUR_MS;
+    const recoveryMap = {
+      quads: staticEntry('quads', { recoveredPercent: 64, status: 'recovering', readyAtMs: legsReadyAt }),
+      chest,
+    };
+    const result = recommendNextWorkout({
+      sessions,
+      plannedSetsByRoutine: { legs: { quads: 10 }, push: { chest: 10 } },
+      recoveryMap, projectedAtMs, nowMs: NOW, routineNamesById: NAMES,
+    });
+    expect(result.recommended).toEqual({ routineId: 'push' });
+    const push = result.perSession.find((p) => p.routineId === 'push');
+    expect(push.readinessNow.verdict).toBe('not_yet');
+    expect(push.readinessAtProjected.verdict).toBe('ready');
+    expect(result.reason).toBe(`Legs is next in your plan. Quads are estimated 64% recovered, ${readyClause(legsReadyAt, NOW)}. Push is estimated ${readyClause(chest.readyAtMs, NOW)}.`);
+    expect(result.reason).not.toMatch(/Push is ready now/);
   });
 });
 

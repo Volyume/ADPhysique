@@ -31,9 +31,9 @@ jest.mock('expo-notifications', () => ({
 }));
 
 const mockDb = {
-  getAllWorkouts: jest.fn(async () => []),
+  getCompletedWorkoutsBetween: jest.fn(async () => []),
   getWorkoutSetsForWorkoutIds: jest.fn(async () => []),
-  getAllExercises: jest.fn(async () => []),
+  getAllExercisesIncludingDeleted: jest.fn(async () => []),
   getMesocycleWeeks: jest.fn(async () => []),
   getRoutineExercisesWithDetails: jest.fn(async () => []),
   getCompletedWorkoutStartTimestamps: jest.fn(async () => []),
@@ -47,7 +47,7 @@ jest.mock('../../../store/useAppStore', () => ({
 }));
 
 const {
-  loadMuscleRecovery, loadPlannedSetsByRoutine,
+  loadMuscleRecovery, loadPlannedSetsByRoutine, primarySetsFromRoutineRows,
   buildRecoverySession, pairSorenessNext, indexWeeks, medianHabitStartMinute,
 } = require('../load');
 const { localWeekStartMs } = require('../../dayKey');
@@ -58,9 +58,9 @@ const HOUR_MS = 60 * 60 * 1000;
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockDb.getAllWorkouts.mockResolvedValue([]);
+  mockDb.getCompletedWorkoutsBetween.mockResolvedValue([]);
   mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue([]);
-  mockDb.getAllExercises.mockResolvedValue([]);
+  mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([]);
   mockDb.getMesocycleWeeks.mockResolvedValue([]);
   mockDb.getRoutineExercisesWithDetails.mockResolvedValue([]);
   mockDb.getCompletedWorkoutStartTimestamps.mockResolvedValue([]);
@@ -233,7 +233,7 @@ describe('loadMuscleRecovery', () => {
     expect(result.recoveryRating).toBe('average');
     expect(result.habitualWeekdays).toBeNull();
     expect(result.map.quads.status).toBe('no_recent_session');
-    expect(mockDb.getAllWorkouts).not.toHaveBeenCalled();
+    expect(mockDb.getCompletedWorkoutsBetween).not.toHaveBeenCalled();
   });
 
   test('reads the profile\'s recoveryRating from the store', async () => {
@@ -244,10 +244,10 @@ describe('loadMuscleRecovery', () => {
 
   test('a completed workout within the window contributes to the map for the muscle it loaded', async () => {
     const startedAt = NOW - 2 * DAY_MS;
-    mockDb.getAllWorkouts.mockResolvedValue([
+    mockDb.getCompletedWorkoutsBetween.mockResolvedValue([
       { id: 'w1', userId: 'u1', isCompleted: 1, deletedAt: null, startedAt, endedAt: startedAt + 3600000, mesocycleId: null, mesocycleWeekId: null },
     ]);
-    mockDb.getAllExercises.mockResolvedValue([{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }]);
+    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }]);
     mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue([
       { id: 's1', workoutId: 'w1', exerciseId: 'ex1', setType: 'straight', actualReps: 8, weight: 100 },
       { id: 's2', workoutId: 'w1', exerciseId: 'ex1', setType: 'straight', actualReps: 8, weight: 100 },
@@ -260,10 +260,10 @@ describe('loadMuscleRecovery', () => {
 
   test('a workout outside the fetch window (LOOKBACK_DAYS + 4) never contributes', async () => {
     const startedAt = NOW - 30 * DAY_MS; // well past 14 + 4 days
-    mockDb.getAllWorkouts.mockResolvedValue([
+    mockDb.getCompletedWorkoutsBetween.mockResolvedValue([
       { id: 'w1', userId: 'u1', isCompleted: 1, deletedAt: null, startedAt, endedAt: startedAt + 3600000 },
     ]);
-    mockDb.getAllExercises.mockResolvedValue([{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }]);
+    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }]);
     mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue([]);
     const result = await loadMuscleRecovery('u1', NOW);
     expect(result.map.quads.status).toBe('no_recent_session');
@@ -271,11 +271,11 @@ describe('loadMuscleRecovery', () => {
 
   test('a soft-deleted or non-completed workout is excluded', async () => {
     const startedAt = NOW - DAY_MS;
-    mockDb.getAllWorkouts.mockResolvedValue([
+    mockDb.getCompletedWorkoutsBetween.mockResolvedValue([
       { id: 'w1', isCompleted: 1, deletedAt: Date.now(), startedAt },
       { id: 'w2', isCompleted: 0, deletedAt: null, startedAt },
     ]);
-    mockDb.getAllExercises.mockResolvedValue([{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }]);
+    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }]);
     mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue([
       { id: 's1', workoutId: 'w1', exerciseId: 'ex1', actualReps: 8, weight: 100 },
       { id: 's2', workoutId: 'w2', exerciseId: 'ex1', actualReps: 8, weight: 100 },
@@ -288,13 +288,13 @@ describe('loadMuscleRecovery', () => {
 
   test('weekRirTarget/isFirstWeek resolve from the workout\'s OWN mesocycleId, no active-plan lookup', async () => {
     const startedAt = NOW - DAY_MS;
-    mockDb.getAllWorkouts.mockResolvedValue([
+    mockDb.getCompletedWorkoutsBetween.mockResolvedValue([
       { id: 'w1', isCompleted: 1, deletedAt: null, startedAt, mesocycleId: 'm1', mesocycleWeekId: 'wk1' },
     ]);
     mockDb.getMesocycleWeeks.mockImplementation(async (mesoId) => (
       mesoId === 'm1' ? [{ id: 'wk1', week_index: 1, is_deload: 0, rir_target: 0 }] : []
     ));
-    mockDb.getAllExercises.mockResolvedValue([{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }]);
+    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }]);
     mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue([
       { id: 's1', workoutId: 'w1', exerciseId: 'ex1', actualReps: 8, weight: 100 },
     ]);
@@ -313,17 +313,17 @@ describe('loadMuscleRecovery', () => {
   test('sorenessNext feeds the model as a feedback factor (a lengthened estimate)', async () => {
     const firstStart = NOW - 3 * DAY_MS;
     const secondStart = firstStart + 24 * HOUR_MS; // within the 96h pairing window
-    mockDb.getAllWorkouts.mockResolvedValue([
+    mockDb.getCompletedWorkoutsBetween.mockResolvedValue([
       { id: 'w1', isCompleted: 1, deletedAt: null, startedAt: firstStart, endedAt: firstStart + 3600000 },
       { id: 'w2', isCompleted: 1, deletedAt: null, startedAt: secondStart, soreness24hBefore: 3 },
     ]);
-    mockDb.getAllExercises.mockResolvedValue([{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }]);
+    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }]);
     mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue([
       { id: 's1', workoutId: 'w1', exerciseId: 'ex1', actualReps: 8, weight: 100 },
     ]);
     const withHighSoreness = await loadMuscleRecovery('u1', NOW);
 
-    mockDb.getAllWorkouts.mockResolvedValue([
+    mockDb.getCompletedWorkoutsBetween.mockResolvedValue([
       { id: 'w1', isCompleted: 1, deletedAt: null, startedAt: firstStart, endedAt: firstStart + 3600000 },
       { id: 'w2', isCompleted: 1, deletedAt: null, startedAt: secondStart, soreness24hBefore: 1 },
     ]);
@@ -333,20 +333,38 @@ describe('loadMuscleRecovery', () => {
     expect(withHighSoreness.map.quads.basis).toBe('time_volume_and_ratings');
   });
 
-  test('best-effort: a failed getAllWorkouts still returns a usable, fully-recovered map, never throws', async () => {
-    mockDb.getAllWorkouts.mockRejectedValue(new Error('db down'));
+  test('best-effort: a failed workouts read never throws, but is reported as degraded (never an all-clear)', async () => {
+    // Opus review finding 10: a core read that failed must not surface as
+    // "every muscle recovered"; both callers hide their surface on degraded.
+    mockDb.getCompletedWorkoutsBetween.mockRejectedValue(new Error('db down'));
     const result = await loadMuscleRecovery('u1', NOW);
     expect(result.map.quads.status).toBe('no_recent_session');
     expect(result.nowMs).toBe(NOW);
+    expect(result.degraded).toBe(true);
+  });
+
+  test('a failed exercise-map or sets read is degraded too; a clean read is not', async () => {
+    mockDb.getAllExercisesIncludingDeleted.mockRejectedValue(new Error('db down'));
+    expect((await loadMuscleRecovery('u1', NOW)).degraded).toBe(true);
+    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([]);
+    expect((await loadMuscleRecovery('u1', NOW)).degraded).toBe(false);
+  });
+
+  test('the workouts read is bounded in the query to the fetch window, never the whole table (Opus finding 17)', async () => {
+    await loadMuscleRecovery('u1', NOW);
+    const [userId, startMs, endMs] = mockDb.getCompletedWorkoutsBetween.mock.calls[0];
+    expect(userId).toBe('u1');
+    expect(startMs).toBe(NOW - 18 * DAY_MS);
+    expect(endMs).toBe(NOW + 1);
   });
 
   test('best-effort: a failed getMesocycleWeeks degrades only that session\'s week info, not the whole read', async () => {
     const startedAt = NOW - DAY_MS;
-    mockDb.getAllWorkouts.mockResolvedValue([
+    mockDb.getCompletedWorkoutsBetween.mockResolvedValue([
       { id: 'w1', isCompleted: 1, deletedAt: null, startedAt, mesocycleId: 'm1' },
     ]);
     mockDb.getMesocycleWeeks.mockRejectedValue(new Error('db down'));
-    mockDb.getAllExercises.mockResolvedValue([{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }]);
+    mockDb.getAllExercisesIncludingDeleted.mockResolvedValue([{ id: 'ex1', primaryMuscle: 'quads', secondaryMuscles: [] }]);
     mockDb.getWorkoutSetsForWorkoutIds.mockResolvedValue([
       { id: 's1', workoutId: 'w1', exerciseId: 'ex1', actualReps: 8, weight: 100 },
     ]);
@@ -374,15 +392,41 @@ describe('loadMuscleRecovery', () => {
 });
 
 describe('loadPlannedSetsByRoutine', () => {
-  test('maps each routine id to its planned sets per muscle via the real allocator', async () => {
+  test('maps each routine id to its planned PRIMARY sets per muscle via the real allocator; no rows is unknown (null)', async () => {
     mockDb.getRoutineExercisesWithDetails.mockImplementation(async (routineId) => (
       routineId === 'r1'
-        ? [{ routineExercise: { recommendedSets: 4 }, exercise: { primaryMuscle: 'chest', secondaryMuscles: [] } }]
+        ? [{ routineExercise: { recommendedSets: 4 }, exercise: { primaryMuscle: 'chest', secondaryMuscles: ['triceps'] } }]
         : []
     ));
     const result = await loadPlannedSetsByRoutine(['r1', 'r2']);
     expect(result.r1.chest).toBe(4);
-    expect(result.r2).toEqual({});
+    // Secondary half-credit never makes a session "train" a muscle (spec 3.3
+    // primary-loaded; Opus review finding 12).
+    expect(result.r1.triceps).toBeUndefined();
+    // A required session with no exercise rows is unknown, not "nothing to
+    // recover" (Opus review finding 11).
+    expect(result.r2).toBeNull();
+  });
+
+  test('a routine with an exercise that no longer resolves (no primary muscle) is unknown (null)', async () => {
+    mockDb.getRoutineExercisesWithDetails.mockResolvedValue([
+      { routineExercise: { recommendedSets: 4 }, exercise: { primaryMuscle: 'chest', secondaryMuscles: [] } },
+      { routineExercise: { recommendedSets: 3 }, exercise: { id: 'gone', name: 'Old custom', primaryMuscle: null, secondaryMuscles: [] } },
+    ]);
+    const result = await loadPlannedSetsByRoutine(['r1']);
+    expect(result.r1).toBeNull();
+  });
+
+  test('primarySetsFromRoutineRows: pure mapping, zero-set rows skipped, an all-zero routine is unknown', () => {
+    expect(primarySetsFromRoutineRows([
+      { routineExercise: { recommendedSets: 3 }, exercise: { primaryMuscle: 'quads', secondaryMuscles: ['glutes'] } },
+      { routineExercise: { recommendedSets: 0 }, exercise: { primaryMuscle: 'calves', secondaryMuscles: [] } },
+    ])).toEqual({ quads: 3 });
+    expect(primarySetsFromRoutineRows([
+      { routineExercise: { recommendedSets: 0 }, exercise: { primaryMuscle: 'calves', secondaryMuscles: [] } },
+    ])).toBeNull();
+    expect(primarySetsFromRoutineRows([])).toBeNull();
+    expect(primarySetsFromRoutineRows(null)).toBeNull();
   });
 
   test('duplicate routine ids are only read once', async () => {

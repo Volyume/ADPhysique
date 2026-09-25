@@ -3368,6 +3368,18 @@ export async function getAllExercises() {
   return _allExercisesCache;
 }
 
+// D201 (per-muscle recovery, src/lib/recovery/load.js): the exercise map
+// the recovery model credits logged sets against. UNFILTERED on purpose: a
+// set logged on a since-deleted custom exercise still fatigued the muscle
+// it trained, exactly as getWeeklyVolumeByMuscle's own unfiltered join
+// still counts it. Read-only, uncached (the recovery loader runs once per
+// screen focus and never mutates), additive.
+export async function getAllExercisesIncludingDeleted() {
+  const d = await db();
+  const rows = await d.getAllAsync('SELECT * FROM exercises ORDER BY name ASC');
+  return rows.map(rowToCamel);
+}
+
 export async function getExerciseById(id) {
   const d = await db();
   const row = await d.getFirstAsync('SELECT * FROM exercises WHERE id = ?', [id]);

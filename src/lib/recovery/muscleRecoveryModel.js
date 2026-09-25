@@ -42,10 +42,13 @@ import {
 const MS_PER_MINUTE = 60 * 1000;
 const MS_PER_HOUR = 60 * MS_PER_MINUTE;
 const LOOKBACK_MS = LOOKBACK_DAYS * 24 * MS_PER_HOUR;
-// recoveredPercent >= READY_PERCENT reads as recovered; the residual bound
-// that corresponds to that percent, so the ready-by walk has one number to
-// aim at instead of re-deriving it from the percent formula each time.
-const READY_RESIDUAL = 1 - READY_PERCENT / 100;
+// recoveredPercent >= READY_PERCENT reads as recovered. recoveredPercent is
+// ROUNDED, so the status flips the moment the raw percent reaches
+// READY_PERCENT - 0.5; the ready-by walk aims at exactly that residual, so
+// "ready by" and "recovered" name the same instant (Opus review finding 23:
+// aiming at the unrounded 0.100 put ready-by about 20 minutes after the
+// status had already turned recovered).
+const READY_RESIDUAL = 1 - (READY_PERCENT - 0.5) / 100;
 
 const clamp = (lo, hi, v) => Math.min(hi, Math.max(lo, v));
 

@@ -9,12 +9,15 @@
  * orchestrator module that reads the database directly and composes pure
  * engine calls, called from the screen.
  *
- * EVERY READ IS BEST-EFFORT. A failed read never throws out of this module
- * and never blanks data that DID load: `loadMuscleRecovery` always returns a
- * usable shape, built from whatever succeeded, with logError recording the
- * failure (CLAUDE.md error convention). The caller (HomeScreen) can render
- * exactly as it did before this feature existed whenever this degrades to
- * nothing useful.
+ * EVERY READ IS BEST-EFFORT. A failed read never throws out of this module:
+ * `loadMuscleRecovery` always returns a usable shape, with logError
+ * recording the failure (CLAUDE.md error convention), and sets
+ * `degraded: true` when one of the CORE reads (the workouts, their sets,
+ * the exercise map) failed. Both callers (HomeScreen, ReadinessCards) render
+ * NOTHING from a degraded result rather than an all-clear built on a read
+ * that never happened (Opus review finding 10: a database fault used to
+ * surface as "estimated recovered"). A failed week or habit read only
+ * neutralises the factor it feeds and is not degradation.
  *
  * THE SESSIONS SHAPE THE MODEL EXPECTS (muscleRecoveryModel.js): per
  * completed workout, `{ id, startedAt, endedAt, durationMinutes, sets,
@@ -42,15 +45,18 @@
  * never short of the data it would need to find its pairing partner. The
  * model re-applies its own LOOKBACK_DAYS cutoff internally
  * (buildMuscleRecoveryMap), so handing it the wider set is always safe --
- * the extra days simply never contribute.
+ * the extra days simply never contribute. The window is applied IN THE
+ * QUERY (getCompletedWorkoutsBetween), never by reading the whole workouts
+ * table and filtering in JavaScript (Opus review finding 17: Home and
+ * Consistency each do this on every focus).
  */
 import {
-  getAllWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, getMesocycleWeeks,
-  getRoutineExercisesWithDetails, getCompletedWorkoutStartTimestamps,
+  getCompletedWorkoutsBetween, getWorkoutSetsForWorkoutIds, getAllExercisesIncludingDeleted,
+  getMesocycleWeeks, getRoutineExercisesWithDetails, getCompletedWorkoutStartTimestamps,
 } from '../database';
 import { logError } from '../errorLog';
 import { localWeekStartMs } from '../dayKey';
-import { plannedWeeklyVolumeByMuscle } from '../planVolumeTargets';
+import { allocateExerciseVolume } from '../algorithms';
 import {
   deriveHabitualTrainingWeekdays, HABIT_WINDOW_WEEKS, MIN_HISTORY_WEEKS,
 } from '../notifications/trainingHabitSchedule';
@@ -219,7 +225,8 @@ function selectCompletedWorkouts(allWorkouts, windowStartMs, nowMs) {
  * @param {string} userId
  * @param {number} [nowMs]
  * @returns {Promise<{ map: object, nowMs: number, recoveryRating: string,
- *   habitualWeekdays: number[]|null, typicalStartMinute: number }>}
+ *   habitualWeekdays: number[]|null, typicalStartMinute: number,
+ *   degraded: boolean }>}
  */
 export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
   const recoveryRating = readRecoveryRating();
@@ -230,26 +237,34 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
       recoveryRating,
       habitualWeekdays: null,
       typicalStartMinute: DEFAULT_TRAINING_START_MINUTE,
+      degraded: false,
     };
   }
 
-  let allWorkouts = [];
-  try {
-    allWorkouts = await getAllWorkouts(userId);
-  } catch (e) {
-    logError('recovery.load.getAllWorkouts', e, { userId });
-    allWorkouts = [];
-  }
-
+  let degraded = false;
   const windowStartMs = nowMs - (LOOKBACK_DAYS + FETCH_MARGIN_DAYS) * DAY_MS;
-  const completed = selectCompletedWorkouts(allWorkouts, windowStartMs, nowMs);
+  let windowWorkouts = [];
+  try {
+    // Bounded in the query: completed workouts whose end (or start) falls
+    // inside the window. The end bound is exclusive, hence + 1.
+    windowWorkouts = await getCompletedWorkoutsBetween(userId, windowStartMs, nowMs + 1);
+  } catch (e) {
+    logError('recovery.load.getCompletedWorkoutsBetween', e, { userId });
+    windowWorkouts = [];
+    degraded = true;
+  }
+  const completed = selectCompletedWorkouts(windowWorkouts, windowStartMs, nowMs);
 
   let exercises = [];
   try {
-    exercises = await getAllExercises();
+    // Including soft-deleted custom exercises: a logged set on one still
+    // fatigued the muscle it trained (Opus review finding 22; the volume
+    // trend's own join is unfiltered for the same reason).
+    exercises = await getAllExercisesIncludingDeleted();
   } catch (e) {
     logError('recovery.load.getAllExercises', e, {});
     exercises = [];
+    degraded = true;
   }
   const exerciseById = Object.fromEntries((exercises ?? []).map((ex) => [ex.id, ex]));
 
@@ -260,6 +275,7 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
     } catch (e) {
       logError('recovery.load.getWorkoutSetsForWorkoutIds', e, { userId });
       sets = [];
+      degraded = true;
     }
   }
   const setsByWorkoutId = new Map();
@@ -306,25 +322,31 @@ export async function loadMuscleRecovery(userId, nowMs = Date.now()) {
 
   const map = buildMuscleRecoveryMap({ sessions, exerciseById, recoveryRating, nowMs });
 
-  return { map, nowMs, recoveryRating, habitualWeekdays, typicalStartMinute };
+  return { map, nowMs, recoveryRating, habitualWeekdays, typicalStartMinute, degraded };
 }
 
 /**
- * Planned sets per muscle, per routine, for the given routine ids -- the
- * ONLY other I/O `recommendNextWorkout` needs (`plannedSetsByRoutine`). Kept
- * in this loader (the domain's one I/O file) rather than in the screen, so
- * Home still only composes. One best-effort read per routine: a routine
- * whose exercises fail to load degrades to `null` (lead review: an UNKNOWN
- * session must never be read as fully ready -- `{}` would mean "genuinely
- * no planned volume", a different, legitimate fact this must not be
- * confused with). `recommendNextWorkout` reads `null` as unknown and never
- * treats it as a candidate, nor as evidence that `programmeNext` itself is
- * ready. Every read here is local SQLite already-successful in the same
- * call chain (the routine ids come from a just-resolved programme
- * position), so a failure here is expected to be rare.
+ * Planned PRIMARY sets per muscle, per routine, for the given routine ids
+ * -- the ONLY other I/O `recommendNextWorkout` needs
+ * (`plannedSetsByRoutine`). Kept in this loader (the domain's one I/O
+ * file) rather than in the screen, so Home still only composes.
+ *
+ * PRIMARY sets only (spec 3.3 / 4.2 "primary-loaded"; Opus review finding
+ * 12): a hinge's half-credit to the back must never make a lower day read
+ * "Back is estimated 20% recovered" or exclude it as sharing a limiting
+ * muscle. The role comes from the same allocateExerciseVolume every
+ * volume surface uses, so muscle keys stay normalised the same way.
+ *
+ * UNKNOWN IS NULL, NEVER `{}` (lead review; Opus review finding 11): a
+ * routine whose read failed, that has no exercise rows at all, whose rows
+ * include an exercise that no longer resolves (no primary muscle), or that
+ * allocates no primary sets to any muscle, is `null`. `recommendNextWorkout`
+ * reads `null` as unknown and never treats it as a candidate, nor as
+ * evidence that `programmeNext` itself is ready. `{}` would read as
+ * "genuinely nothing to recover" and win as the safest choice.
  *
  * @param {string[]} routineIds
- * @returns {Promise<object>} { [routineId]: { [muscle]: plannedSets } | null }
+ * @returns {Promise<object>} { [routineId]: { [muscle]: primarySets } | null }
  */
 export async function loadPlannedSetsByRoutine(routineIds) {
   const ids = Array.from(new Set((Array.isArray(routineIds) ? routineIds : []).filter(Boolean)));
@@ -333,15 +355,33 @@ export async function loadPlannedSetsByRoutine(routineIds) {
     try {
       // eslint-disable-next-line no-await-in-loop
       const rows = await getRoutineExercisesWithDetails(routineId);
-      const exercises = (rows ?? []).map((row) => ({
-        recommendedSets: row?.routineExercise?.recommendedSets,
-        exercise: row?.exercise,
-      }));
-      result[routineId] = plannedWeeklyVolumeByMuscle([{ exercises }]);
+      result[routineId] = primarySetsFromRoutineRows(rows);
     } catch (e) {
       logError('recovery.load.loadPlannedSetsByRoutine', e, { routineId });
       result[routineId] = null;
     }
   }
   return result;
+}
+
+/**
+ * { [muscle]: primary sets } from getRoutineExercisesWithDetails rows, or
+ * null when the routine is unknown (see loadPlannedSetsByRoutine). Pure
+ * and exported so it is directly unit-testable with plain fixtures.
+ */
+export function primarySetsFromRoutineRows(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (!list.length) return null;
+  const out = {};
+  for (const row of list) {
+    const sets = Number(row?.routineExercise?.recommendedSets ?? row?.routineExercise?.recommended_sets);
+    const exercise = row?.exercise ?? null;
+    if (!exercise || !exercise.primaryMuscle) return null; // an unresolved exercise: unknown
+    if (!Number.isFinite(sets) || sets <= 0) continue;
+    for (const alloc of allocateExerciseVolume(exercise)) {
+      if (!alloc?.muscle || alloc.role !== 'primary') continue;
+      out[alloc.muscle] = (out[alloc.muscle] || 0) + sets * alloc.sets;
+    }
+  }
+  return Object.keys(out).length ? out : null;
 }

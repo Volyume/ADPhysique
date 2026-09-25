@@ -11,12 +11,16 @@
  *
  * The projection is the next HABITUAL weekday (deriveHabitualTrainingWeekdays,
  * trainingHabitSchedule.js) at or after now, at the athlete's typical
- * session start time (median minute-of-day, see load.js). Today counts if
- * today is itself a habitual weekday and that minute has not yet passed.
- * With no habit at all (null or empty -- both read as "nothing to project
- * onto"), the projection collapses to "now": every readiness figure is then
- * read at the instant the athlete is actually looking at the screen, which
- * is the honest answer for someone with no established pattern yet.
+ * session start time (median minute-of-day, see load.js). On a habitual
+ * day the projection is today: the typical minute if it has not yet
+ * passed, otherwise NOW (Opus review finding 6: the minute is a median, so
+ * about half of real sessions start after it; someone opening Home at the
+ * gym at 18:10 on a training day is about to train, not waiting for
+ * Thursday). With no habit at all (null or empty -- both read as "nothing
+ * to project onto"), the projection collapses to "now": every readiness
+ * figure is then read at the instant the athlete is actually looking at
+ * the screen, which is the honest answer for someone with no established
+ * pattern yet.
  *
  * PURE. No I/O, no Date.now() -- every instant is an argument, so the same
  * inputs give the same output every time (CLAUDE.md: the engine is
@@ -62,11 +66,10 @@ export function nextLikelyTrainingTime({ nowMs, habitualWeekdays, typicalStartMi
   const todayWeekday = nowDate.getDay();
   const todayMinuteOfDay = nowDate.getHours() * 60 + nowDate.getMinutes();
 
-  // Today counts when today is itself habitual AND the typical minute has
-  // not yet passed -- "the minute has not passed" per the build brief, so
-  // the boundary minute itself still counts as today.
-  if (habitSet.has(todayWeekday) && minute >= todayMinuteOfDay) {
-    return atMinuteOfDay(nowDate, minute);
+  // A habitual day is today's projection: the typical minute if it has not
+  // yet passed (the boundary minute itself still counts), else now.
+  if (habitSet.has(todayWeekday)) {
+    return minute >= todayMinuteOfDay ? atMinuteOfDay(nowDate, minute) : now;
   }
 
   // Otherwise walk forward, day by day, to the next habitual weekday.
