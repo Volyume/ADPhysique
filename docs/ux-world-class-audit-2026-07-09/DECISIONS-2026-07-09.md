@@ -9776,3 +9776,19 @@ body figure. Build order per the spec's section 10: the lead wrote
 `src/lib/recovery/constants.js` (the evidence header, the baselines and
 factors) first; lanes R-A and R-B run beside each other, then R-C and
 R-D, then an Opus review.
+
+**D201 addendum 2 (2026-09-25, lead, sequencing rulings on lane R-B's
+three pin conflicts).** (1) The lead slot is fixed: the first authored
+session stays first for every plan and the scorer permutes the rest; for
+the physique divisions the rulebook's "session 0 leads with the priority
+muscle" is a coaching decision (planengineRebuildPhase2 pins it), and for
+generic splits nothing is lost. F2 now reads: a division's day order may
+move when strictly better, its lead session stays. (2) The adjacency
+(systemic overlap) term is linear, never across the week boundary, because
+that boundary nearly always holds a rest day; the under- and
+over-recovered terms stay circular with even spacing (a repeat across the
+boundary is a real repeat). This is also why campaign16's law 5 test is
+linear and stays untouched. (3) requiredSessionIdentity's bikini 6-day
+exact-order pin may be re-anchored if the scorer still spreads the four
+glute sessions more evenly under (1) and (2): identities unchanged, order
+moved for recovery spacing, comment on the pin.
