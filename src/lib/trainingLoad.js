@@ -14,8 +14,9 @@
  *    "this week" on a Sunday meant something different from the
  *    Monday-anchored "this week" the muscle-frequency table already used
  *    (F4);
- *  - `getAcuteChronicWorkload` (`database.js:4136-4187`) is ALSO rolling,
- *    and sums `weight * reps` directly with no exercise-type map, so a
+ *  - the old database read `getAcuteChronicWorkload` (retired 2026-09-25
+ *    once nothing called it) was ALSO rolling, and summed `weight * reps`
+ *    directly with no exercise-type map, so a
  *    distance/duration set's metres/seconds were summed as kilograms
  *    (S6-5) -- a second, disagreeing kg figure for the same fact (F5);
  *  - `weekWindowsEndingAt` (`weekWindows.js`) and the old sparkline loop
@@ -29,9 +30,9 @@
  * `calculateTonnage` WITH the caller's exercise-type map and load
  * semantics, so a distance/duration set never enters the kg total.
  * `acuteChronicFromSeries` then reads the acute:chronic ratio off that same
- * series, transplanting `getAcuteChronicWorkload`'s exact aggregation rule
- * so the sparkline's "Now" bar and the workload card's "this week" figure
- * are always the same number.
+ * series, transplanting that retired read's exact aggregation rule so the
+ * sparkline's "Now" bar and the workload card's "this week" figure are
+ * always the same number.
  */
 import { localWeekStartMs, localWeekEndMs } from './dayKey';
 import { calculateTonnage } from './algorithms';
@@ -101,19 +102,20 @@ export function mondayWeekLoadSeries(sets, {
 
 /**
  * Reads the Acute:Chronic Workload Ratio off a `mondayWeekLoadSeries`
- * result, transplanting `getAcuteChronicWorkload`'s exact rule
- * (`database.js:4163-4186`) so the two can never disagree given the same
- * series -- except the one defect named in the NOTE below, corrected here:
+ * result, transplanting the exact rule of the database read it replaced
+ * (`getAcuteChronicWorkload`, retired 2026-09-25 once nothing called it)
+ * so the two could never disagree given the same series -- except the one
+ * defect named in the NOTE below, corrected here:
  *   - acute = the CURRENT week's tonnage (the series' last entry);
  *   - chronic = the mean of the PREVIOUS weeks with tonnage > 0 (zero
  *     weeks dropped), taking at most the four most recent past entries;
  *   - fewer than two such populated past weeks -> not enough data (`null`);
  *   - acute/chronic are each `Math.round`ed; ratio is rounded to 2 dp.
  *
- * NOTE (lead ruling, defect, fixed HERE, `getAcuteChronicWorkload` left
- * untouched): `getAcuteChronicWorkload` computes `ratio = chronic > 0 ?
- * acute / chronic : null` and then returns `ratio ? Math.round(ratio *
- * 100) / 100 : null` -- a truthy check, not a null check, so a genuine
+ * NOTE (lead ruling, defect, fixed HERE): the retired read computed
+ * `ratio = chronic > 0 ? acute / chronic : null` and then returned
+ * `ratio ? Math.round(ratio * 100) / 100 : null` -- a truthy check, not a
+ * null check, so a genuine
  * `ratio === 0` (acute is exactly 0 with a populated chronic average, e.g.
  * a rest-day Monday morning) collapsed to `null` ("not enough data") and
  * hid the whole card instead of reading 0.00.
@@ -131,7 +133,7 @@ export function acuteChronicFromSeries(series) {
 
   const acute = list[list.length - 1]?.tonnage ?? 0;
   // Up to the four most recent PAST weeks (the current entry excluded),
-  // zero-tonnage weeks dropped -- same as getAcuteChronicWorkload's
+  // zero-tonnage weeks dropped -- the retired read's own
   // `weeklyTonnage.slice(1, 5).filter(t => t > 0)`.
   const pastWeeks = list
     .slice(0, -1)

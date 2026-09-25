@@ -19,7 +19,6 @@ jest.mock('../../lib/database', () => ({
   dismissInsight: jest.fn(),
   runInsightsEngine: jest.fn(),
   getActivePlan: jest.fn(),
-  getAcuteChronicWorkload: jest.fn(),
   getRecentWorkoutFeedback: jest.fn(),
   getCurrentMesocycleWeek: jest.fn(),
   getPlannedMuscleVolume: jest.fn(),
@@ -68,7 +67,6 @@ beforeEach(() => {
   database.dismissInsight.mockResolvedValue(undefined);
   database.runInsightsEngine.mockResolvedValue([]);
   database.getActivePlan.mockResolvedValue(null);
-  database.getAcuteChronicWorkload.mockResolvedValue(null);
   database.getRecentWorkoutFeedback.mockResolvedValue([]);
   database.getCurrentMesocycleWeek.mockResolvedValue(null);
   database.getPlannedMuscleVolume.mockResolvedValue([]);
@@ -212,7 +210,6 @@ describe('useProgressData auth boundary', () => {
     expect(ref.current.allSets).toEqual([]);
     expect(ref.current.exerciseMap).toEqual({});
     expect(ref.current.completedWorkoutCount).toBe(0);
-    expect(database.getAcuteChronicWorkload).not.toHaveBeenCalled();
 
     act(() => { tree.unmount(); });
   });

@@ -4147,64 +4147,6 @@ export async function getRecentlyUsedExerciseIds(userId, limit = 8) {
   return rows.map(r => r.exerciseId);
 }
 
-/**
- * Returns acute (this week) and chronic (4-week average) training tonnage
- * for calculating the Acute:Chronic Workload Ratio.
- * Only counts hard sets from completed workouts (setType != 'warmup').
- */
-export async function getAcuteChronicWorkload(userId) {
-  const d = await db();
-  const now = Date.now();
-  const MS_DAY = 86400000;
-
-  // Fetch hard sets from last 5 weeks.
-  // distance/duration exercises reuse the weight column (metres) / reps column
-  // (seconds); they must never enter a load (weight*reps) sum or they pollute
-  // the ACWR. LEFT JOINs keep unknown/unmatched exercises as weight_reps so
-  // ordinary lifting tonnage is unchanged.
-  const fiveWeeksAgo = now - 35 * MS_DAY;
-  const rows = await d.getAllAsync(`
-    SELECT s.weight, s.actual_reps AS reps, w.started_at
-    FROM workout_sets s
-    JOIN workouts w ON w.id = s.workout_id
-    LEFT JOIN exercises e ON e.id = s.exercise_id
-    LEFT JOIN custom_exercises ce ON ce.id = s.exercise_id AND ce.user_id = s.user_id
-    WHERE w.user_id = ?
-      AND w.is_completed = 1
-      AND s.set_type != 'warmup'
-      AND s.weight > 0
-      AND s.actual_reps > 0
-      AND w.started_at >= ?
-      AND COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')
-    ORDER BY w.started_at ASC
-  `, [userId, fiveWeeksAgo]);
-
-  // Bucket into weekly tonnage (week 0 = this week, week 1 = last week, etc.)
-  const weeklyTonnage = [0, 0, 0, 0, 0]; // index 0 = most recent
-  for (const row of rows) {
-    const daysAgo = Math.floor((now - row.started_at) / MS_DAY);
-    const weekIdx = Math.floor(daysAgo / 7);
-    if (weekIdx < 5) {
-      weeklyTonnage[weekIdx] += row.weight * row.reps;
-    }
-  }
-
-  const acute = weeklyTonnage[0];
-  // Chronic = average of weeks 1-4 (exclude current week)
-  const pastWeeks = weeklyTonnage.slice(1, 5).filter(t => t > 0);
-  if (pastWeeks.length < 2) return null; // not enough data
-
-  const chronic = pastWeeks.reduce((s, t) => s + t, 0) / pastWeeks.length;
-  const ratio = chronic > 0 ? acute / chronic : null;
-
-  return {
-    acute: Math.round(acute),
-    chronic: Math.round(chronic),
-    ratio: ratio ? Math.round(ratio * 100) / 100 : null,
-    weeksOfData: pastWeeks.length,
-  };
-}
-
 export async function getWorkoutSetsForWorkout(workoutId) {
   const d = await db();
   const rows = await d.getAllAsync(

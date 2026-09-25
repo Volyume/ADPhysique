@@ -1210,7 +1210,6 @@ describe('Edge: empty arrays in expected-populated state', () => {
     database.getAllMesocycles = () => Promise.resolve([]);
     database.getActivePlan = () => Promise.resolve(null);
     database.runInsightsEngine = () => Promise.resolve([]);
-    database.getAcuteChronicWorkload = () => Promise.resolve(null);
     database.getRecentWorkoutFeedback = () => Promise.resolve([]);
     database.getCurrentMesocycleWeek = () => Promise.resolve(null);
     database.getPlannedMuscleVolume = () => Promise.resolve([]);

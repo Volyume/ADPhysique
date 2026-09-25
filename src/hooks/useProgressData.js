@@ -17,9 +17,9 @@ import { blockWeekSpan, buildBlockProgressRows } from '../lib/blockWeekProgress'
 // Progress-tab audit 2026-09-24 (F4/F5, D200 item 3, S6-5), lane E: the ONE
 // Monday-anchored weekly tonnage series shared by the plan card's sparkline
 // and the workload (ACWR) card, replacing the old rolling-7-day bucketing
-// (mesoTonnage) and getAcuteChronicWorkload (database.js, rolling, no
-// exercise-type map) below. See trainingLoad.js's header for the full
-// defect history.
+// (mesoTonnage) and the since-retired database read getAcuteChronicWorkload
+// (rolling, no exercise-type map). See trainingLoad.js's header for the
+// full defect history.
 import { mondayWeekLoadSeries, acuteChronicFromSeries } from '../lib/trainingLoad';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;

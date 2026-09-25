@@ -197,20 +197,20 @@ export function volumeTakeaway({
  * banded statusText (which names the safe ranges) stays untouched — this is
  * the one-line takeaway in the same register as the takeaways above.
  *
- * T22 (comprehension-trust-audit-2026-08-06): getAcuteChronicWorkload drops
- * zero-tonnage weeks from the chronic average and only needs 2 populated
- * past weeks (database.js) — so the true window can be 2, 3 or 4 weeks. The
- * label must say which, not always claim 4. Zero-filling instead would
- * poison the ratio after any break, so the computation itself is unchanged;
- * only the copy is made honest about the real count.
+ * T22 (comprehension-trust-audit-2026-08-06): acuteChronicFromSeries
+ * (trainingLoad.js) drops zero-tonnage weeks from the chronic average and
+ * only needs 2 populated past weeks — so the true window can be 2, 3 or 4
+ * weeks. The label must say which, not always claim 4. Zero-filling instead
+ * would poison the ratio after any break, so the computation itself is
+ * unchanged; only the copy is made honest about the real count.
  *
  * @param {number|null} ratio - acute/chronic ratio, or null/undefined when
- *   there isn't enough history to compute one (getAcuteChronicWorkload's
- *   own gate, database.js: needs >=2 past weeks with tonnage > 0).
+ *   there isn't enough history to compute one (acuteChronicFromSeries's
+ *   own gate, trainingLoad.js: needs >=2 past weeks with tonnage > 0).
  * @param {number} acute - this week's tonnage in kg
  * @param {number} chronic - average tonnage in kg over weeksOfData past weeks
  * @param {number} [weeksOfData=4] - actual count of past weeks averaged
- *   (getAcuteChronicWorkload's weeksOfData; 2-4). Defaults to 4 for callers
+ *   (acuteChronicFromSeries's weeksOfData; 2-4). Defaults to 4 for callers
  *   that predate this parameter.
  * @returns {string} e.g. "This week so far: 12,450 kg against a 4-week average of 10,200 kg."
  */

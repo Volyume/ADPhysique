@@ -7916,20 +7916,19 @@ Header is explicit: **"presentation layer only; it never feeds the coaching engi
 Shown: `VolumeHeatmapScreen.js:551-552, :599-611`, legend "Fresh / Recovering / Recently trained" (`:512-514`).
 Status **LIVE**, consumed by no decision (see §A.3).
 
-**22. Weekly training load (tonnage) series** — `buildWeeklyLoadSeries(sets, {weeks, now, exerciseTypeById})` (`src/lib/progressSeries.js:44`).
-Rolling 7-day windows back from `now`; default 8 weeks, hard cap 12 (`:19-20`) so a runaway window is impossible from any call site (`:11-13`).
-`exerciseTypeById` passed to `calculateTonnage` so distance/duration never inflate load.
-Shown: `TrainingLoadHero` (`AnalyticsScreen.js:432`).
-Status **LIVE-COND** (`enoughForTrends`).
+**22. Weekly training load (tonnage) series** — `buildWeeklyLoadSeries(sets, {weeks, now, exerciseTypeById, loadSemanticsById, weekBoundary})` (`src/lib/progressSeries.js:103`).
+Default 8 weeks, hard cap 12, so a runaway window is impossible from any call site; `exerciseTypeById` and `loadSemanticsById` passed to `calculateTonnage` so distance/duration never inflate load.
+Shown: the Lift progress screen builds it Monday-anchored (`LiftProgressScreen.js:186`) for the "Weight lifted" share card (`:267-282`). The Progress landing's `TrainingLoadHero` was removed with the landing hero (Campaign 23 §9); the Consistency plan card's sparkline and the workload card use `mondayWeekLoadSeries` (entry 24) instead.
+Status **LIVE-COND** (`weeklyLoad.length >= 2`).
 
-**23. Sessions-per-week sparkline** — `buildWeeklySessionCounts(sets, {windowDays, now})` (`progressSeries.js:71`). Default 30 days, cap 90 (`:21-22`). A session = a distinct `workout_id`.
-Shown: "Sessions" SparkCard (`AnalyticsScreen.js:434-441`).
-Status **LIVE-COND**.
+**23. Sessions-per-week sparkline** — `buildWeeklySessionCounts(sets, {windowDays, now})` (`progressSeries.js`). Default 30 days, cap 90. A session = a distinct `workout_id`.
+Shown: nowhere since Campaign 23 removed the Progress landing's "Sessions" SparkCard; the helper stays exported and unit-tested with no caller (noted 2026-09-25, retirement is a separate call).
+Status **DORMANT**.
 
-**24. Acute:Chronic workload ratio** — `getAcuteChronicWorkload(userId)` (`database.js`), loaded at `useProgressData.js:155`.
-Zero-tonnage weeks are dropped from the chronic average; needs ≥2 populated past weeks, so the true window is 2–4 weeks — the copy must say which (`chartWindows.js:167-178`).
-Takeaway line: `workloadTakeaway(ratio, acute, chronic, weeksOfData)` (`chartWindows.js:185`).
-Shown: `WorkloadCard` (`ConsistencyScreen.js:154-156`, component at `ProgressSections.js:264`).
+**24. Acute:Chronic workload ratio** — `acuteChronicFromSeries(series)` (`src/lib/trainingLoad.js:128`) over the Monday-anchored `mondayWeekLoadSeries` (`trainingLoad.js:65`), both computed in `useProgressData.js:180-183` (lane E, 2026-09-25; the old rolling database read `getAcuteChronicWorkload` was retired once nothing called it).
+Zero-tonnage weeks are dropped from the chronic average; needs ≥2 populated past weeks, so the true window is 2–4 weeks — the copy must say which (`trainingLoad.js:108-111`); a genuine ratio of 0 reads 0.00, never "not enough data".
+Takeaway line: `workloadTakeaway(ratio, acute, chronic, weeksOfData)` (`chartWindows.js:217`).
+Shown: `WorkloadCard` (`ConsistencyScreen.js:153`, component at `ProgressSections.js:282`).
 Status **LIVE-COND** (`workloadData.ratio !== null`).
 
 **25. Lifetime totals** — sessions, kg lifted, reps.
@@ -9344,7 +9343,7 @@ always scheduled (`CoachingRemindersScreen.js:1-13`).
 | Progress scan timer | Capture sheet (`ProgressGhostCapture.js:361`) | Picker | 5 s (`progressScanPreferences.js:23`) | 0, 5, 10 (`:31`) | `@volyume_progress_scan_timer_seconds` | as above | Shutter delay; an explicit 0 ("no timer") is preserved, only unset/corrupt falls to the default (`:59-68`) | YES | no | none | Pro | `setProgressScanTimerPreference` `:89-98` |
 | Hide exact scan numbers | none | boolean | **true** (`progressScanPreferences.js:34-42`) | true/false | `@volyume_progress_scan_hide_exact_numbers` | none | Coach output shows a progress-signal label instead of an exact range/weight (`CoachOutputScreen.js:1493`, `ProgressScanCompare.js:34-50`) | YES if ever written | no | An ED-protective default | **No UI writes this.** `setProgressScanHideExactPreference` has no call site outside its own module. **LEGACY-UNREACHABLE as a user setting; effectively a hard-coded ON default** | `progressScanPreferences.js:44-50` |
 | Physique tracking enabled | Auto-set, not a toggle | boolean | off until set | `'true'` | `@volyume_physique_tracking_enabled` | Unlocks the body-composition surfaces | Auto-enabled for any Pro user on focus (`BodyMetricsScreen.js:594-602`) and on a successful targets calculation (`NutritionTargetsScreen.js:539`) | YES | no | none | **INTERNAL** (no user-facing control found) | `BodyMetricsScreen.js:63`, `NutritionTargetsScreen.js:225` |
-| Weight chart window | Body metrics (`BodyMetricsScreen.js:203`) | Chip row | window auto-picked from data | window keys | `@volyume_chart_window_weight` | none | Chart range | YES | no | none | none | `lib/chartWindows.js` |
+| Weight chart window | Body metrics (`BodyMetricsScreen.js:297`) | Chip row | window auto-picked from data | window keys | `@volyume_chart_window_weight` | none | Chart range | YES | no | none | none | `lib/chartWindows.js` |
 | e1RM chart window | Exercise detail (`ExerciseDetailScreen.js:550-554`) | Chip row | auto-picked (`pickInitialWindowKey`) | `TREND_WINDOWS` keys | `@volyume_chart_window_e1rm` | none | Chart range; emits `chart_window_changed` telemetry | YES | no | none | none | `ExerciseDetailScreen.js:295-304` |
 | Exercise-detail chart metric | `ExerciseDetailScreen.js:556-560` | Chip row | first of `CHART_METRICS` | `CHART_METRICS` keys | `@volyume_chart_metric_detail` | none | Which series the chart plots | YES | no | none | none | `:309-316` |
 | Volume chart window | Volume heatmap (`VolumeHeatmapScreen.js:119-123`) | Chip row | default window | window keys | `@volyume_chart_window_volume` | none | Chart range | YES | no | none | none | `:113-117` |

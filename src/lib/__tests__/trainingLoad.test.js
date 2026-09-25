@@ -178,15 +178,15 @@ describe('trainingLoad: acuteChronicFromSeries -- the chronic rule', () => {
   });
 
   test('defect fixed: a zero-acute week with populated chronic data reads ratio 0.00, not null', () => {
-    // getAcuteChronicWorkload (database.js:4179-4184) computes
-    // `ratio = chronic > 0 ? acute / chronic : null` then returns
+    // The database read this replaced (getAcuteChronicWorkload, retired
+    // 2026-09-25 once nothing called it) computed
+    // `ratio = chronic > 0 ? acute / chronic : null` then returned
     // `ratio ? Math.round(ratio * 100) / 100 : null` -- a TRUTHY check, so
     // a genuine ratio of exactly 0 (rest-day Monday morning, chronic > 0)
     // collapsed to null and hid the whole WorkloadCard (ConsistencyScreen.js
     // and ProgressSections.js both gate on `ratio === null`/`!== null`, a
     // strict null check, so a real 0 now renders correctly). Lead ruling:
-    // that truthy check was the defect, fixed here (getAcuteChronicWorkload
-    // itself stays untouched).
+    // that truthy check was the defect, fixed here.
     const result = acuteChronicFromSeries(series([1000, 1000], 0));
     expect(result.ratio).toBe(0);
     expect(result.acute).toBe(0);
@@ -199,11 +199,12 @@ describe('trainingLoad: acuteChronicFromSeries -- the chronic rule', () => {
   });
 });
 
-describe('trainingLoad: parity with getAcuteChronicWorkload\'s aggregation rule (database.js:4163-4186)', () => {
-  // A faithful, minimal re-implementation of database.js's own bucketing
-  // rule, operating on a plain 5-slot `weeklyTonnage` array (index 0 = this
-  // week, 1..4 = the four prior weeks, oldest last) -- exactly as
-  // getAcuteChronicWorkload builds it, so this test proves
+describe('trainingLoad: parity with the retired database read\'s aggregation rule', () => {
+  // A faithful, minimal re-implementation of the bucketing rule the old
+  // getAcuteChronicWorkload read used (retired 2026-09-25 once nothing
+  // called it), operating on a plain 5-slot `weeklyTonnage` array (index 0
+  // = this week, 1..4 = the four prior weeks, oldest last) -- exactly as
+  // that read built it, so this test proves
   // acuteChronicFromSeries computes the SAME numbers from the equivalent
   // Monday-week series, not merely a similarly-shaped one.
   function referenceRule(weeklyTonnage) {

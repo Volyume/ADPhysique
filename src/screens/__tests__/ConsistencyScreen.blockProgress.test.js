@@ -41,7 +41,6 @@ jest.mock('../../lib/database', () => ({
   getAllExercises: jest.fn(),
   getAllMesocycles: jest.fn(),
   getActivePlan: jest.fn(),
-  getAcuteChronicWorkload: jest.fn(),
   getRecentWorkoutFeedback: jest.fn(),
   getCurrentMesocycleWeek: jest.fn(),
   getPlannedMuscleVolume: jest.fn(),
@@ -137,7 +136,6 @@ describe('ConsistencyScreen "This week\'s plan" card, real hook + real card', ()
     database.getAllExercises.mockResolvedValue(EXERCISES);
     database.getAllMesocycles.mockResolvedValue([]);
     database.getActivePlan.mockResolvedValue(null);
-    database.getAcuteChronicWorkload.mockResolvedValue(null);
     database.getRecentWorkoutFeedback.mockResolvedValue([]);
     database.getCurrentMesocycleWeek.mockResolvedValue(WEEK);
     database.getPlannedMuscleVolume.mockResolvedValue(PLANNED_ROWS);
