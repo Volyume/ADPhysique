@@ -9691,3 +9691,16 @@ four questions become rulings:
    ED branch is untouched (never weakened). The other six S6 findings are
    defects with no fork: S6-2, S6-3, S6-4, S6-6 and S6-7 to fix lane S6,
    S6-5 to lane E with the file it lives in.
+6. **Lane D pin ruling (2026-09-25, lead).** `campaign5.firstUse.test.js`
+   pins the literal one-sample gauge caption "After a couple of sessions"
+   inside `ReadinessCards.js` ("a recovery gauge waits for a second rated
+   session before it shows a verdict", C5-P18-01). The pin's intent is the
+   wait itself (MIN_RATED_SESSIONS, enoughSamples, hasValue, all kept); the
+   caption literal is re-anchored to the D200-2 wording "One rated session
+   so far", which states the same wait more specifically. Also ruled: the
+   "Rate your last session" params read the latest session through
+   `getRecentCompletedWorkouts(userId, 1)` so `routineName` comes through
+   the routines join and the summary keeps its title (founder device report
+   2026-08-24); the rating reopen shows only the four rating rows (no notes
+   fields, since notes are not loaded in that mode and a save must never
+   clobber them) and re-enables no live-finish side effect.
