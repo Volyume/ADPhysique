@@ -9757,3 +9757,22 @@ ED-safety system and the calorie side are untouched. A full written spec
 with the evidence base precedes any build (Section 4, "plan first, wait
 for go"); two read lanes (PR1 plan building and sequencing, PR2 the
 next-workout rule) map the existing machinery first.
+
+**D201 addendum (2026-09-25, forks F1 to F3 ruled by the lead on the
+founder's criteria, verbatim: "Make a choice which gives the end user the
+best results and minimizes injury and also the best and easiest to use
+product. Go").** F1: recommend, never silently switch, and make the
+recovered session the easy path: when the programme's next session is
+estimated not ready and another required session of the week is, Home
+shows the recovered session as the primary action with the reason ("Train
+Push today. Legs is still recovering, estimated ready by Thursday.") and
+"Keep Legs" one tap away; programme order and required sessions never
+change in storage. Rationale: the injury-minimising default is the one
+that takes least effort, and a plan that reorders itself silently is the
+confusing one. F2: the scorer may move a physique division's hand-authored
+day order when strictly better for recovery; muscle priorities stay as
+authored. F3: a percent with the word "estimated" and a band colour on the
+body figure. Build order per the spec's section 10: the lead wrote
+`src/lib/recovery/constants.js` (the evidence header, the baselines and
+factors) first; lanes R-A and R-B run beside each other, then R-C and
+R-D, then an Opus review.
