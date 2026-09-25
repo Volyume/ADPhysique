@@ -9960,3 +9960,15 @@ landmarks only, never calories or floors.
 in their forties or older gets a lower MRV (and from 50 a slightly higher
 MEV), which is the engine's designed, evidence-backed conservatism for
 recovery capacity with age. Existing plans are untouched until regenerated.
+
+## D203 — The app version is the founder's, never bumped by the lead (founder rule 2026-09-25)
+
+Founder, verbatim: "You don't bump the iOS version. 2.1.0 is already
+closed." Standing rule: no session changes `version`, `buildNumber` or
+`versionCode` in `app.json` or `package.json`, on any platform, for any
+reason; a version or build number is set only by the founder, or on the
+founder's explicit instruction naming the exact value. 2.1.0 is closed in
+App Store Connect; the next number is the founder's call. Observed at the
+time of the rule: `app.json` reads version 2.1.0, buildNumber 10,
+versionCode 3357, last changed in `b1a29708` before 2026-09-24; no commit
+since has touched a version field.
