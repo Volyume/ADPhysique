@@ -9924,3 +9924,39 @@ parked. The rulings the fixes required:
   bounded in the query to the 18-day window, soft-deleted custom
   exercises keep their credit, and ready-by aims at the instant the rounded
   percent first reads 90.
+
+## D202 — Plan inputs carry the athlete's age (lead, 2026-09-25, under the founder's "Do the items on the board")
+
+**Observed.** `planEngine.computeLandmarks(experience, recoveryRating,
+nutritionPhase, age)` has applied an age table since the engine's first
+version (`ageMultipliers`: MRV +5% under 30, unchanged in the thirties, -8%
+in the forties, -15% with MEV +5% in the fifties, -25% with MEV +10% from
+60), and `generatePlan` reads `inputs.age` and passes it through. No
+caller ever set `age`: `planAutoGen.buildPlanInputs(profile)` built every
+plan as if the athlete were in their thirties, although the profile stores
+`dateOfBirth`.
+
+**Ruling.** `buildPlanInputs` now derives `age` from the profile's date of
+birth through the one shared helper `src/lib/ageFromDateOfBirth.js`
+(moved out of the effective-maintenance service so nutrition and training
+can never disagree about the athlete's age; floors at 13; null when no date
+of birth is stored, which keeps the neutral thirties table). Every plan
+input path goes through `buildPlanInputs` (auto-generation, the routine
+detail regenerate, the heatmap's division comparison), so the landmarks,
+the plan's weekly volume and the division comparison all read the same age.
+The block seed's profile-adjusted prior (`blockLedgerGather.
+profileAdjustedPrior`) read `userProfile.age`, a field the profile never
+carries, so it too always passed null; it now derives the age through the
+same helper from a caller-supplied instant (the module's purity guard
+forbids a clock read): the ledger runner passes the finished block's own
+start for its ledger prior and one `Date.now()` per seeding pass, and
+`buildPlanLandmarks` takes `nowMs` from `getPlanLandmarks`. So the seed
+prior, the heatmap's landmarks and the plan's landmarks agree.
+Deterministic: the same profile and the same "now" give the same plan;
+`nowMs` is an argument for tests. Not ED-adjacent: the table scales volume
+landmarks only, never calories or floors.
+
+**Effect on users.** A user under 30 gains up to 5% MRV headroom; a user
+in their forties or older gets a lower MRV (and from 50 a slightly higher
+MEV), which is the engine's designed, evidence-backed conservatism for
+recovery capacity with age. Existing plans are untouched until regenerated.
