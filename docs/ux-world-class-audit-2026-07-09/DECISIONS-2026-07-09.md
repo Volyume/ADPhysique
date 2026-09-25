@@ -9837,3 +9837,29 @@ R-C reviews).**
   "estimated recovered" would be a false all-clear.
 - **Ruling 7, the change-workout sheet's recovery line wraps to two
   lines**, so "ready by <day>" is never cut off on a narrow phone.
+
+**D201 addendum 5 (2026-09-25, lead, rulings 8 to 10 from the lane R-D
+review).**
+- **Ruling 8, the body figure's recovery bands are solid.** Lane R-D
+  tinted "recovering" at alpha.soft (0.19) of the error token for calm
+  tone; on a small region that reads as the neutral "no data" grey, and
+  the one thing the figure exists to show at a glance is which muscles are
+  still recovering. The three bands now use the same solid success /
+  warning / error tokens the volume figure uses; the calm tone lives in
+  the copy. The legend reads Recovered / Nearly recovered / Recovering /
+  No recent session.
+- **Ruling 9, no duplicate "No recent session" line.** The Training
+  recency chips (narrowed to muscles without a row, per the spec's "chips
+  fold into the rows") are the one place a muscle with no session in 14
+  days is named, with its exact recency; the lane's extra "No recent
+  session: <names>" line under the rows repeated them and was dropped.
+- **Ruling 10, the Consistency "Next workout" row names the session.**
+  Home's card omits the name because its title carries it (ruling 6);
+  this row has no such title, so it reads "Legs is next. Quads are
+  estimated 64% recovered, ready by Thursday." or the swap reason from
+  ruling 5, and is hidden when the programme-next session's planned sets
+  could not be read.
+- Note: `src/lib/recovery/readyByLabel.js` (spec section 6 file list) was
+  not built; lane R-C's `readyByPhrase` in `nextWorkoutRecommendation.js`
+  already carries the today / tomorrow / weekday / "in N days" wording
+  with its own pins, and lane R-D reuses it. One authority, as intended.
