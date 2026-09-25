@@ -20,6 +20,7 @@ import AnimatedEntrance from './AnimatedEntrance';
 import InfoTooltip from './InfoTooltip';
 import SectionLabel from './SectionLabel';
 import Button from './Button';
+import BodyDiagramHeatmap from './BodyDiagramHeatmap';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { MUSCLE_DISPLAY_NAMES, calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
 import { trainingRecency } from '../lib/trainingRecency';
@@ -31,6 +32,24 @@ import {
 } from '../lib/database';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
 import { safeFormatDate } from '../lib/safeFormat';
+import { logError } from '../lib/errorLog';
+// D201 (per-muscle recovery, spec docs/recovery-programme-2026-09-25/
+// 00-SPEC.md section 6): the "Recovery by muscle" section below. load.js is
+// the domain's ONLY I/O (mirrors HomeScreen.loadRecoveryRecommendation's
+// exact call chain: loadMuscleRecovery -> resolveProgrammePosition ->
+// loadPlannedSetsByRoutine -> nextLikelyTrainingTime -> recommendNextWorkout);
+// everything else here is pure derivation over their results.
+import { resolveProgrammePosition } from '../lib/programmePosition';
+import { SESSION_STATE } from '../lib/blockProgression';
+import { RECOVERY_ESTIMATE_LABEL } from '../lib/recovery/constants';
+import { loadMuscleRecovery, loadPlannedSetsByRoutine } from '../lib/recovery/load';
+import { nextLikelyTrainingTime } from '../lib/recovery/nextLikelyTrainingTime';
+// readyByPhrase: R-C had already written and exported this (with its own
+// pinned copy tests, nextWorkoutRecommendation.test.js) by the time this
+// lane started, so it is reused here rather than a second
+// src/lib/recovery/readyByLabel.js -- exactly the duplicate-authority the
+// build brief asked to check for first.
+import { recommendNextWorkout, readyByPhrase } from '../lib/recovery/nextWorkoutRecommendation';
 
 const MILESTONES = [
   { sessions: 1,    label: 'First session',  icon: 'star-outline' },
@@ -178,6 +197,59 @@ function buildRateLastSessionParams(workout, sets, allExercises) {
   };
 }
 
+// D201 (per-muscle recovery, spec section 6): row order -- "recovering
+// first then nearly then recovered, then by name". A muscle with no
+// session in the last 14 days never reaches this table at all (rows only
+// ever hold the other three statuses; see muscleRecoveryRows below).
+const RECOVERY_ROW_STATUS_RANK = Object.freeze({ recovering: 0, nearly: 1, recovered: 2 });
+
+// ASCII compare, not localeCompare: MUSCLE_DISPLAY_NAMES are plain English
+// words, and Hermes' localeCompare needs full-icu to sort correctly, which
+// this app does not link -- a plain compare is exact for this alphabet and
+// carries no ICU risk on-device.
+function compareMuscleNames(a, b) {
+  const nameA = MUSCLE_DISPLAY_NAMES[a] || a;
+  const nameB = MUSCLE_DISPLAY_NAMES[b] || b;
+  if (nameA === nameB) return 0;
+  return nameA < nameB ? -1 : 1;
+}
+
+// D201: "ready by Thursday", or "ready now" for a muscle already at/above
+// the recovered threshold (status 'recovered', readyAtMs null by
+// muscleRecoveryModel's own contract) -- calling readyByPhrase for that
+// case would read "ready by today", which is true but reads like there is
+// still something to wait for. Matches the calm "Ready now." wording
+// nextWorkoutRecommendation.js's own readinessLine uses for the equivalent
+// whole-session case.
+function muscleReadyClause(entry, nowMs) {
+  if (entry.status === 'recovered' || !Number.isFinite(entry.readyAtMs)) return 'ready now';
+  return `ready by ${readyByPhrase(entry.readyAtMs, nowMs)}`;
+}
+
+// The row's visible text (spec section 6): "Quads, estimated 64% recovered,
+// ready by Thursday. Trained 2 days ago." The recency FACT is
+// trainingRecency's own unchanged label (the chip's own function, per the
+// build brief -- unchanged); this row only appends the closing full stop
+// the spec's own example carries, same as any second sentence in running
+// copy -- trainingRecency.js itself, and its label string, are untouched.
+function muscleRecoveryRowText(entry, nowMs) {
+  const name = MUSCLE_DISPLAY_NAMES[entry.muscle] || entry.muscle;
+  const percent = entry.recoveredPercent;
+  const recency = trainingRecency(entry.lastSessionEndMs, nowMs);
+  return `${name}, ${RECOVERY_ESTIMATE_LABEL} ${percent}% recovered, ${muscleReadyClause(entry, nowMs)}. ${recency.label}.`;
+}
+
+// The row's spoken form: the same four facts (muscle, estimated N PERCENT
+// recovered, the ready-by phrase, the trained-ago fact) comma-joined as one
+// sentence -- same convention as VolumeHeatmapScreen's rowA11yLabel.
+// "percent" is spelled out (never "%") for a reliable screen-reader read.
+function muscleRecoveryRowA11yLabel(entry, nowMs) {
+  const name = MUSCLE_DISPLAY_NAMES[entry.muscle] || entry.muscle;
+  const percent = entry.recoveredPercent;
+  const recency = trainingRecency(entry.lastSessionEndMs, nowMs);
+  return `${name}, ${RECOVERY_ESTIMATE_LABEL} ${percent} percent recovered, ${muscleReadyClause(entry, nowMs)}, ${recency.label}`;
+}
+
 // FOUNDER DECISION (fully free, no tier split): every reader below used to
 // fork on `tier` (muscle freshness, the recovery-trend insight, and the
 // learning-promise tooltip copy); the component no longer takes a tier prop
@@ -203,6 +275,14 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
   // existing trend-insight sentence below uses, so this row can show as
   // soon as a single check-in exists.
   const [latestCheckin, setLatestCheckin] = useState(null);
+  // D201: loadMuscleRecovery's own result ({ map, nowMs, ... }), or null
+  // when it hasn't resolved yet or the read failed -- null hides the whole
+  // "Recovery by muscle" section (figure, rows, caption, next-workout row)
+  // without touching anything else this component renders (see load()).
+  const [muscleRecovery, setMuscleRecovery] = useState(null);
+  // D201: recommendNextWorkout's result, or null when there is no active
+  // block, no outstanding session to reason about, or the read failed.
+  const [recoveryRecommendation, setRecoveryRecommendation] = useState(null);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -305,6 +385,59 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
     } catch (_) {}
     // Best-effort: a failed read here only means the check-in row doesn't
     // show this visit, never a crash.
+
+    // D201 (per-muscle recovery, spec section 6): the ONLY new I/O this
+    // component performs for the "Recovery by muscle" section, entirely
+    // through src/lib/recovery/load.js -- mirrors
+    // HomeScreen.loadRecoveryRecommendation's own call chain exactly, so
+    // Home and this block can never disagree about what is next. A failed
+    // read here hides the WHOLE section (never a crash, never a stale
+    // figure) and leaves every other reader in this file untouched.
+    try {
+      const recoveryLoad = await loadMuscleRecovery(userId);
+      setMuscleRecovery(recoveryLoad);
+      try {
+        const position = await resolveProgrammePosition(userId);
+        const programmeNext = position?.nextSession ?? null;
+        if (position && programmeNext) {
+          const sessions = position.sessions ?? [];
+          const outstandingIds = sessions
+            .filter((s) => s.state === SESSION_STATE.OUTSTANDING)
+            .map((s) => s.routineId);
+          const plannedSetsByRoutine = await loadPlannedSetsByRoutine(outstandingIds);
+          const projectedAtMs = nextLikelyTrainingTime({
+            nowMs: recoveryLoad.nowMs,
+            habitualWeekdays: recoveryLoad.habitualWeekdays,
+            typicalStartMinute: recoveryLoad.typicalStartMinute,
+          });
+          const routineNamesById = Object.fromEntries(sessions.map((s) => [s.routineId, s.name]));
+          const result = recommendNextWorkout({
+            sessions,
+            plannedSetsByRoutine,
+            recoveryMap: recoveryLoad.map,
+            projectedAtMs,
+            nowMs: recoveryLoad.nowMs,
+            routineNamesById,
+          });
+          // Lead review: this row has no card title naming the session (Home
+          // does), so it carries the programme-next name itself, looked up
+          // from the same sessions the rule was given.
+          setRecoveryRecommendation({
+            ...result,
+            programmeNextName: routineNamesById[result?.programmeNext?.routineId] ?? '',
+          });
+        } else {
+          setRecoveryRecommendation(null);
+        }
+      } catch (e) {
+        logError('ReadinessCards.loadRecoveryRecommendation', e, { userId });
+        setRecoveryRecommendation(null);
+      }
+    } catch (e) {
+      logError('ReadinessCards.loadMuscleRecovery', e, { userId });
+      setMuscleRecovery(null);
+      setRecoveryRecommendation(null);
+    }
   }, [userId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -325,6 +458,50 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
     // Factual ordering only: most recently trained first. No severity or
     // readiness implication - trainingRecency carries none to sort by.
     .sort((a, b) => a.daysAgo - b.daysAgo);
+
+  // D201 (spec section 6): "now" for every recovery-row/next-workout
+  // derivation below, taken from the loader's own snapshot rather than a
+  // fresh Date.now() -- readyByPhrase/trainingRecency then always agree
+  // with whatever nextLikelyTrainingTime/recommendNextWorkout computed
+  // against inside load() above, even if rendering happens moments later.
+  const muscleRecoveryNowMs = muscleRecovery?.nowMs ?? Date.now();
+  // Rows: one per muscle with a session in the last 14 days (status is
+  // never 'no_recent_session' for these), recovering first then nearly
+  // then recovered, then by name (spec section 6). Absent entirely
+  // (muscleRecovery null) whenever the loader hasn't resolved or failed.
+  const muscleRecoveryRows = muscleRecovery
+    ? Object.values(muscleRecovery.map)
+      .filter((entry) => entry.status !== 'no_recent_session')
+      .sort((a, b) => (
+        RECOVERY_ROW_STATUS_RANK[a.status] - RECOVERY_ROW_STATUS_RANK[b.status]
+      ) || compareMuscleNames(a.muscle, b.muscle))
+    : [];
+  // "The chips themselves fold into the rows" -- a muscle with a row above
+  // no longer needs its own Training-recency chip, so that block narrows to
+  // whichever ever-trained muscles (freshnessEntries) have NO row. When
+  // muscleRecovery is null (not yet loaded, or the read failed),
+  // rowMuscleKeys is empty and every chip keeps showing exactly as it did
+  // before this feature existed. Those chips are the one place a muscle
+  // with no session in 14 days is named (lead review: a second "No recent
+  // session: <names>" line under the rows repeated them and was dropped).
+  const rowMuscleKeys = new Set(muscleRecoveryRows.map((entry) => entry.muscle));
+  const noRecentSessionEntries = freshnessEntries.filter((e) => !rowMuscleKeys.has(e.key));
+  // Next-workout row text (spec 4.2 point 4): the swap reason when one
+  // applies ("Legs is next in your plan. Quads are estimated 64% recovered,
+  // ready by Thursday. Push is ready now."), else "<Name> is next." plus
+  // the programme-next line ("Legs is next. Quads are estimated 64%
+  // recovered, ready by Thursday." / "Legs is next. Every muscle it trains
+  // is estimated recovered."). Home's card omits the name because its title
+  // already carries it; this row has no such title, so it names the session
+  // itself. null (row hidden) when the programme-next session's planned
+  // sets could not be read: no estimate to state.
+  const nextWorkoutText = (() => {
+    if (!recoveryRecommendation) return null;
+    if (recoveryRecommendation.reason) return recoveryRecommendation.reason;
+    if (!recoveryRecommendation.programmeNextLine) return null;
+    const who = recoveryRecommendation.programmeNextName || 'Your next session';
+    return `${who} is next. ${recoveryRecommendation.programmeNextLine}`;
+  })();
 
   // P3(a) (D200-2): true whenever AT LEAST ONE gauge is still short of
   // MIN_RATED_SESSIONS -- the shared caption explains why that gauge (or
@@ -432,7 +609,10 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
             </>
           )}
 
-          {freshnessEntries.length > 0 && (
+          {/* D201: narrowed to muscles with NO row in the "Recovery by
+              muscle" section below (spec section 6, "the chips themselves
+              fold into the rows") -- see noRecentSessionEntries above. */}
+          {noRecentSessionEntries.length > 0 && (
             <>
               <View style={[styles.recoveryDivider, live.recoveryDivider]} />
               <View style={styles.mfHeaderRow}>
@@ -448,7 +628,7 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
                 </View>
               </View>
               <View style={styles.mfChipGrid}>
-                {freshnessEntries.map(({ key, displayName, label, color, dot }) => (
+                {noRecentSessionEntries.map(({ key, displayName, label, color, dot }) => (
                   <View key={key} style={[styles.mfChip, { borderColor: withAlpha(color, alpha.edge), backgroundColor: withAlpha(color, alpha.ghost) }]}>
                     <View style={[styles.mfDot, { backgroundColor: dot }]} />
                     <Text style={[styles.mfChipName, live.mfChipName, { color: t.colors.textPrimary }]}>{displayName}</Text>
@@ -459,6 +639,46 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
             </>
           )}
         </View>
+
+        {/* D201 (per-muscle recovery, spec section 6): estimated recovery
+            per muscle -- the body figure (recovery palette), one row per
+            recently-trained muscle, the caption, and the next-workout row. Best-effort off
+            loadMuscleRecovery (see load()): absent entirely, not even the
+            heading, whenever that read hasn't resolved or failed, so a
+            broken estimate never sits here looking like it succeeded. */}
+        {muscleRecovery && (
+          <View style={[styles.mfCard, live.mfCard]}>
+            <Text style={[styles.mfTitle, live.mfTitle]} accessibilityRole="header">Recovery by muscle</Text>
+            <BodyDiagramHeatmap recoveryByMuscle={muscleRecovery.map} />
+            {muscleRecoveryRows.length > 0 && (
+              <View style={styles.rbmRowsList}>
+                {muscleRecoveryRows.map((entry) => (
+                  <View
+                    key={entry.muscle}
+                    accessibilityRole="text"
+                    accessibilityLabel={muscleRecoveryRowA11yLabel(entry, muscleRecoveryNowMs)}
+                  >
+                    <Text style={[styles.rbmRowText, live.rbmRowText]}>
+                      {muscleRecoveryRowText(entry, muscleRecoveryNowMs)}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <Text style={[styles.rbmCaption, live.rbmCaption]}>
+              Estimated from the time since each muscle's last session and how much it did, adjusted by your recovery answer and your ratings. Not a measurement.
+            </Text>
+            {nextWorkoutText && (
+              <>
+                <View style={[styles.recoveryDivider, live.recoveryDivider]} />
+                <View>
+                  <Text style={[styles.rbmNextWorkoutTitle, live.rbmNextWorkoutTitle]}>Next workout</Text>
+                  <Text style={[styles.rbmNextWorkoutText, live.rbmNextWorkoutText]}>{nextWorkoutText}</Text>
+                </View>
+              </>
+            )}
+          </View>
+        )}
 
         {recoveryTrendInsight && (
           <View style={[styles.trendInsightCard, recoveryTrendInsight.type === 'good' ? [styles.trendInsightGood, live.trendInsightGood] : [styles.trendInsightWarn, live.trendInsightWarn]]}>
@@ -577,6 +797,15 @@ const styles = StyleSheet.create({
   mfDot: { width: 6, height: 6, borderRadius: circle(6), flexShrink: 0 },
   mfChipName: { ...type.captionStrong },
   mfChipLabel: { ...type.captionStrong },
+  // D201 (per-muscle recovery, spec section 6): the "Recovery by muscle"
+  // section's own rows/caption/next-workout styles. The section's outer
+  // card reuses mfCard above (pre-existing, previously unused in this
+  // file's own JSX); its heading reuses mfTitle.
+  rbmRowsList: { gap: spacing.sm },
+  rbmRowText: { ...type.bodySm, color: colors.textSecondary },
+  rbmCaption: { ...type.caption, color: colors.textMuted },
+  rbmNextWorkoutTitle: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  rbmNextWorkoutText: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
 });
 
 // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
@@ -615,5 +844,9 @@ function buildLiveStyles(t) {
     mfSub: { ...t.type.captionTight, color: t.colors.textMuted },
     mfChipName: { ...t.type.captionStrong },
     mfChipLabel: { ...t.type.captionStrong },
+    rbmRowText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    rbmCaption: { ...t.type.caption, color: t.colors.textMuted },
+    rbmNextWorkoutTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
+    rbmNextWorkoutText: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
 }

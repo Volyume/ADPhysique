@@ -36,6 +36,25 @@ function getFill(volumeByMuscle, muscle, c) {
   return entry.color;
 }
 
+// D201 (per-muscle recovery, spec docs/recovery-programme-2026-09-25/
+// 00-SPEC.md section 6, F3 RULED): the recovery-band fill, read only when
+// the caller supplies `recoveryByMuscle`. The three bands use the same
+// solid success / warning / error tokens the volume path uses, at the same
+// full strength (lead review: a tinted "recovering" fill at alpha.soft was
+// too close to the neutral "no data" grey to read on a small region, and
+// the one thing this figure exists to show at a glance is which muscles
+// are still recovering; the calm tone lives in the copy, not in hiding
+// the colour). No entry, or 'no_recent_session', gets the EXACT SAME
+// neutral "no data" fill the volume path already uses, so an untrained
+// muscle is never positively coloured either way.
+function getRecoveryFill(recoveryByMuscle, muscle, c) {
+  const status = recoveryByMuscle?.[muscle]?.status;
+  if (status === 'recovered') return c.success;
+  if (status === 'nearly') return c.warning;
+  if (status === 'recovering') return c.error;
+  return c.surface2;
+}
+
 // AX-04 (launch accessibility audit, docs/ux-world-class-audit-2026-07-09/):
 // the unique muscle keys drawn as regions in the SVG below (side_delts, neck
 // and tibialis have no drawn region on this front/back silhouette; see the
@@ -54,8 +73,22 @@ const DIAGRAM_MUSCLE_KEYS = [
 // per-shape focusability is platform-fragile -- see the audit finding). The
 // muscle-by-muscle detail now lives solely in VolumeHeatmapScreen's muscle
 // rows below, which are the real accessible + operable path.
-function diagramSummaryLabel(volumeByMuscle) {
+// D201: when `recoveryByMuscle` is supplied the diagram's colouring swaps
+// to recovery bands (see getRecoveryFill above), so its one spoken summary
+// must swap with it -- otherwise a screen-reader user would be told this
+// image shows "weekly training volume" while it visually shows estimated
+// recovery. Absent `recoveryByMuscle`, this is byte-identical to the
+// original volume-path sentence (existing callers/tests unaffected).
+function diagramSummaryLabel(volumeByMuscle, recoveryByMuscle) {
   const total = DIAGRAM_MUSCLE_KEYS.length;
+  if (recoveryByMuscle) {
+    const withRecentSession = DIAGRAM_MUSCLE_KEYS.filter(
+      m => recoveryByMuscle?.[m]?.status && recoveryByMuscle[m].status !== 'no_recent_session',
+    ).length;
+    return `Body diagram, front and back views, colour-coded by estimated muscle recovery. `
+      + `${withRecentSession} of ${total} muscles have a recent session. `
+      + `The muscle list below has the full detail for each one.`;
+  }
   const withVolume = DIAGRAM_MUSCLE_KEYS.filter(
     m => (volumeByMuscle?.[m]?.workingSets || 0) > 0,
   ).length;
@@ -126,6 +159,11 @@ export default function BodyDiagramHeatmap({
   // without an active generated division plan; nothing renders then.
   divisionMarkers = null,
   divisionLabel = null,
+  // D201: { [muscle]: { recoveredPercent, status } } from
+  // muscleRecoveryModel.buildMuscleRecoveryMap. Additive and optional --
+  // omitted (null), every region and the legend render exactly as they did
+  // for the volume path, unchanged.
+  recoveryByMuscle = null,
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
@@ -144,7 +182,9 @@ export default function BodyDiagramHeatmap({
   // TalkBack try to focus dozens of 15-29dp duplicated-label shape nodes.
   // The wrapping View below now carries the diagram's ONE accessible node.
   const region = muscleKey => ({
-    fill: getFill(volumeByMuscle, muscleKey, t.colors),
+    fill: recoveryByMuscle
+      ? getRecoveryFill(recoveryByMuscle, muscleKey, t.colors)
+      : getFill(volumeByMuscle, muscleKey, t.colors),
     stroke: regionStroke,
     strokeWidth: 0.75,
     onPress: handle(muscleKey),
@@ -156,7 +196,7 @@ export default function BodyDiagramHeatmap({
           for assistive tech -- see diagramSummaryLabel() above. Matches the
           existing SvgBarSparkline.js:71 convention for wrapping a react-
           native-svg chart in a single accessible image node. */}
-      <View accessible accessibilityRole="image" accessibilityLabel={diagramSummaryLabel(volumeByMuscle)}>
+      <View accessible accessibilityRole="image" accessibilityLabel={diagramSummaryLabel(volumeByMuscle, recoveryByMuscle)}>
       <Svg
         viewBox={`0 0 ${TOTAL_WIDTH} ${FIGURE_HEIGHT}`}
         width="100%"
@@ -361,15 +401,30 @@ export default function BodyDiagramHeatmap({
         <Text style={[styles.figureLabel, live.figureLabel]}>Back</Text>
       </View>
 
-      {/* Legend */}
+      {/* Legend. D201: a distinct legend for the recovery palette -- the
+          volume legend's "Below target"/"Too much" wording and its jargon
+          tooltip are specific to volume bands and would misdescribe a
+          recovery-coloured figure, so this branch replaces rather than
+          extends it. The volume branch below is untouched. */}
       <View style={[styles.legend, live.legend]}>
-        <LegendSwatch color={t.colors.textMuted} label="Below target" borderColor={t.colors.border} textStyle={live.legendText} />
-        <LegendSwatch color={t.colors.success} label="Good range" borderColor={t.colors.border} textStyle={live.legendText} />
-        <LegendSwatch color={t.colors.warning} label="Getting close" borderColor={t.colors.border} textStyle={live.legendText} />
-        <LegendSwatch color={t.colors.error} label="Too much" borderColor={t.colors.border} textStyle={live.legendText} />
-        <LegendSwatch color={t.colors.surface2} label="No data" bordered borderColor={t.colors.border} textStyle={live.legendText} />
-        {/* U-F-5: plain-English gloss for the volume bands / "Over limit" jargon. */}
-        <InfoTooltip text={GLOSSARY.volumeBands} size={14} />
+        {recoveryByMuscle ? (
+          <>
+            <LegendSwatch color={t.colors.success} label="Recovered" borderColor={t.colors.border} textStyle={live.legendText} />
+            <LegendSwatch color={t.colors.warning} label="Nearly recovered" borderColor={t.colors.border} textStyle={live.legendText} />
+            <LegendSwatch color={t.colors.error} label="Recovering" borderColor={t.colors.border} textStyle={live.legendText} />
+            <LegendSwatch color={t.colors.surface2} label="No recent session" bordered borderColor={t.colors.border} textStyle={live.legendText} />
+          </>
+        ) : (
+          <>
+            <LegendSwatch color={t.colors.textMuted} label="Below target" borderColor={t.colors.border} textStyle={live.legendText} />
+            <LegendSwatch color={t.colors.success} label="Good range" borderColor={t.colors.border} textStyle={live.legendText} />
+            <LegendSwatch color={t.colors.warning} label="Getting close" borderColor={t.colors.border} textStyle={live.legendText} />
+            <LegendSwatch color={t.colors.error} label="Too much" borderColor={t.colors.border} textStyle={live.legendText} />
+            <LegendSwatch color={t.colors.surface2} label="No data" bordered borderColor={t.colors.border} textStyle={live.legendText} />
+            {/* U-F-5: plain-English gloss for the volume bands / "Over limit" jargon. */}
+            <InfoTooltip text={GLOSSARY.volumeBands} size={14} />
+          </>
+        )}
       </View>
 
       {/* A4: division fingerprint legend, only when markers are shown. The

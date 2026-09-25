@@ -26,6 +26,30 @@ jest.mock('@react-navigation/native', () => ({
   }),
 }));
 jest.mock('@expo/vector-icons/Ionicons', () => () => null);
+// D201: ReadinessCards.js now also imports load.js (loadMuscleRecovery),
+// which pulls in trainingHabitSchedule.js -> trainingReminders.js ->
+// expo-notifications -> expo-modules-core, which throws
+// "Cannot read properties of undefined (reading 'EventEmitter')" at
+// require time in this suite's node env. Same fix HomeScreen's own
+// recovery test (HomeScreen.recoveryRecommendation.test.js) already
+// uses for the identical chain.
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  scheduleNotificationAsync: jest.fn(() => Promise.resolve('id')),
+  cancelScheduledNotificationAsync: jest.fn(() => Promise.resolve()),
+  cancelAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve()),
+  getAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve([])),
+  getPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
+  requestPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
+  setNotificationChannelAsync: jest.fn(() => Promise.resolve()),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: () => {} })),
+  addNotificationReceivedListener: jest.fn(() => ({ remove: () => {} })),
+  SchedulableTriggerInputTypes: {
+    DAILY: 'daily', WEEKLY: 'weekly', YEARLY: 'yearly', DATE: 'date', TIME_INTERVAL: 'timeInterval', CALENDAR: 'calendar',
+  },
+  AndroidImportance: { MAX: 5, HIGH: 4, DEFAULT: 3, LOW: 2, MIN: 1, NONE: 0 },
+  AndroidNotificationPriority: { MAX: 'max', HIGH: 'high', DEFAULT: 'default' },
+}));
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
 jest.mock('../../store/useAppStore', () => ({
   __esModule: true,
@@ -48,6 +72,14 @@ jest.mock('../Button', () => {
     </TouchableOpacity>
   );
 });
+// D201: ReadinessCards.js now imports BodyDiagramHeatmap (the "Recovery by
+// muscle" body figure), which pulls in react-native-svg -- native-only,
+// cannot run in this suite's node test env. Stubbed away exactly as every
+// other component test that transitively imports a react-native-svg
+// wrapper already does (e.g. VolumeHeatmapScreen.test.js for this same
+// component); this suite's own assertions are about gating/copy elsewhere
+// in ReadinessCards and never inspect the figure itself.
+jest.mock('../BodyDiagramHeatmap', () => () => null);
 jest.mock('../../lib/database', () => ({
   getAllWorkouts: jest.fn(),
   getCompletedWorkoutSets: jest.fn(),

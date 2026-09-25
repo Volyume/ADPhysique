@@ -7,6 +7,34 @@
 // that imports something using Button already does; this test never
 // renders JSX, so the mock's own shape does not matter.
 jest.mock('../Button', () => () => null);
+// D201: ReadinessCards.js now also imports BodyDiagramHeatmap (the
+// "Recovery by muscle" body figure), which pulls in react-native-svg --
+// native-only, cannot run here either. Same treatment as the Button mock
+// just above, for the same reason (this suite never renders JSX, so the
+// mock's own shape does not matter).
+jest.mock('../BodyDiagramHeatmap', () => () => null);
+// D201: ReadinessCards.js also now imports load.js (loadMuscleRecovery),
+// which pulls in trainingHabitSchedule.js -> trainingReminders.js ->
+// expo-notifications -> expo-modules-core, which throws at require time
+// in this suite's node env. Same fix HomeScreen's own recovery test
+// (HomeScreen.recoveryRecommendation.test.js) already uses.
+jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
+  scheduleNotificationAsync: jest.fn(() => Promise.resolve('id')),
+  cancelScheduledNotificationAsync: jest.fn(() => Promise.resolve()),
+  cancelAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve()),
+  getAllScheduledNotificationsAsync: jest.fn(() => Promise.resolve([])),
+  getPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
+  requestPermissionsAsync: jest.fn(() => Promise.resolve({ status: 'granted' })),
+  setNotificationChannelAsync: jest.fn(() => Promise.resolve()),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: () => {} })),
+  addNotificationReceivedListener: jest.fn(() => ({ remove: () => {} })),
+  SchedulableTriggerInputTypes: {
+    DAILY: 'daily', WEEKLY: 'weekly', YEARLY: 'yearly', DATE: 'date', TIME_INTERVAL: 'timeInterval', CALENDAR: 'calendar',
+  },
+  AndroidImportance: { MAX: 5, HIGH: 4, DEFAULT: 3, LOW: 2, MIN: 1, NONE: 0 },
+  AndroidNotificationPriority: { MAX: 'max', HIGH: 'high', DEFAULT: 'default' },
+}));
 
 import { computeRecoveryTrendInsight } from '../ReadinessCards';
 
