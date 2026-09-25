@@ -11,6 +11,7 @@
 import { generatePlan, POOL } from '../planEngine';
 import { canonicalExerciseId } from '../exercise/canonicalId';
 import { sequenceSessionsForRecovery } from '../recovery/sequenceSessions';
+import { PLAN_OPENING_RIR } from '../recovery/constants';
 
 /** Mirrors planEngine.js's own buildExerciseByIdForRecovery, built from the
  * exported POOL (no exerciseLibrary is passed below, so planEngine's
@@ -41,9 +42,10 @@ const BASE = {
  * scorer considered, including whatever order existed before the hook. */
 function isAlreadyOptimal(plan) {
   const exerciseById = buildExerciseByIdFromPool();
-  const rirTarget = plan.workouts[0]?.exercises?.[0]?.rirTarget ?? null;
+  // The hook scores at the block's opening RIR (spec 5.1, PLAN_OPENING_RIR),
+  // so the recheck must too, or it would be judging a different model.
   const recheck = sequenceSessionsForRecovery(plan.workouts, {
-    daysPerWeek: plan.daysPerWeek, recoveryRating: BASE.recoveryRating, rirTarget, exerciseById,
+    daysPerWeek: plan.daysPerWeek, recoveryRating: BASE.recoveryRating, rirTarget: PLAN_OPENING_RIR, exerciseById,
   });
   return { optimal: recheck.changed === false, recheck };
 }
@@ -104,6 +106,19 @@ describe('the recovery sequencing hook runs inside generatePlan', () => {
         seen.set(m[1], n + 1);
       }
     }
+  });
+
+  test('a 6-day push/pull/legs keeps legs every third session, never adjacent (spec section 9, real engine)', () => {
+    // Opus review finding 16: the spec's "keeps P/P/L/P/P/L" was pinned only
+    // on a synthetic fixture. Pinned here on the generator's own 6-day plan:
+    // the two legs sessions sit three apart (positions 2 and 5), so each
+    // gets the longest gap the week allows, and no two legs sessions are
+    // ever neighbours.
+    const plan = generatePlan({ ...BASE, daysPerWeek: 6 });
+    const names = plan.workouts.map((w) => w.name);
+    const legsPositions = names.map((n, i) => (/^Legs/.test(n) ? i : -1)).filter((i) => i >= 0);
+    expect(legsPositions).toEqual([2, 5]);
+    expect(names).toEqual(['Push A', 'Pull A', 'Legs A', 'Push B', 'Pull B', 'Legs B']);
   });
 
   test('does not change which exercises, sets or muscles any session carries (4 days)', () => {

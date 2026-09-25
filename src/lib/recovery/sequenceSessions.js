@@ -107,14 +107,18 @@
  * muscle/systemic demands in consecutive planned sessions", planEngine.js
  * ~2117-2141, buildWeightedUpperLower's interleave) into a number: each
  * session's PRIMARY-LOADED muscles are the same QUALIFYING_SETS-or-more
- * set used above; overlap = the shared sets (sum of min(setsA[m],
- * setsB[m]) over every muscle both sessions load) over the SMALLER
- * session's total primary-loaded sets. When overlap exceeds half:
+ * PRIMARY-set reading used above; overlap = the shared sets (sum of
+ * min(setsA[m], setsB[m]) over every muscle both sessions load) over the
+ * SMALLER session's total primary-loaded sets. When overlap exceeds half
+ * the pair is a law-5 clash and costs
  *
- *   adjacency = 100 x (overlap - 0.5)
+ *   adjacency = CLASH_PENALTY_BASE x (1 + (overlap - 0.5))
  *
- * otherwise 0. penalty(order) = the muscle-pair sum + the (linear-only)
- * adjacency sum.
+ * otherwise 0. CLASH_PENALTY_BASE (1e6) dwarfs every recovery term, so
+ * the number of clashes is minimised first and recovery spacing decides
+ * among orders with equally few (Opus review finding 3: at 100 x the
+ * excess, a recovery gain of a few thousand bought a clash).
+ * penalty(order) = the muscle-pair sum + the (linear-only) adjacency sum.
  *
  * Guarded at more than MAX_SEQUENCED_SESSIONS (7) sessions - with the
  * lead fixed, that leaves (N-1)! permutations of the rest, so 7 sessions
@@ -129,16 +133,44 @@ import { recoveryHours, BASE_RECOVERY_HOURS, TYPICAL_WEEK_GAP_HOURS } from './co
 
 /**
  * A session "loads" a muscle, for both the recovery-pair term and the
- * adjacency term's "primary-loaded" set, at this many sets or more. Same
- * threshold sessionReadiness.js uses for its own "at least 2 planned
- * sets" limiting-muscle rule (spec section 3.3), so one plan never reads
- * a muscle as trained by one of these two modules and not trained by the
- * other.
+ * adjacency term's "primary-loaded" set, at this many PRIMARY sets or
+ * more: sets whose exercise names the muscle as its primary mover. The
+ * half-credit a secondary muscle earns (allocateExerciseVolume) still
+ * counts towards the DOSE that sets a source session's recovery hours,
+ * but never makes a session count as one that "trains" that muscle
+ * (spec sections 3.3, 4.2 and 5: primary-loaded; Opus review finding 3:
+ * with secondary credit qualifying, a lower day's hinge read as a back
+ * session and the scorer pulled two lower days together to keep the two
+ * upper days apart, breaking C16 quality law 5). Same threshold and same
+ * primary-only reading as sessionReadiness.js (its caller passes primary
+ * sets), so one plan never reads a muscle as trained by one module and
+ * not by the other.
  */
 const QUALIFYING_SETS = 2;
 
-/** 7! = 5,040. Beyond this the input is returned unchanged rather than scored. */
+/** With the lead fixed, 6! = 720 orders are scored for a 7-session week.
+ * Beyond this the input is returned unchanged rather than scored. */
 const MAX_SEQUENCED_SESSIONS = 7;
+
+/**
+ * C16 quality law 5 ("no two near-identical sessions back to back") as a
+ * DOMINANT term: a linear-adjacent pair whose primary-loaded overlap
+ * exceeds half costs this much plus a slope on the excess, far above any
+ * sum the recovery-pair terms can reach (those are squared hours, a few
+ * thousand at most in practice), so the scorer first minimises the number
+ * of clashes and only then spaces recovery. An unavoidable clash (a 5-day
+ * upper/lower's third upper session) still lands where recovery says.
+ */
+const CLASH_PENALTY_BASE = 1e6;
+
+/**
+ * Ties keep the authored order (spec section 5.4, addendum 2 "strictly
+ * better"). Equal penalties summed in a different muscle order differ by
+ * floating-point noise (about 1e-14), which used to read as "strictly
+ * better" and reorder a tied week; a candidate now has to beat the best
+ * by this relative margin.
+ */
+const TIE_TOLERANCE = 1e-9;
 
 /**
  * Resolves an exercise (the generator's { exerciseId, exerciseName, sets,
@@ -158,9 +190,15 @@ function resolveExerciseRow(exercise, exerciseById) {
   return muscle ? { primaryMuscle: muscle, secondaryMuscles: [] } : null;
 }
 
-/** One session's sets per muscle: { [muscle]: sets }, via allocateExerciseVolume. */
+/**
+ * One session's load: { sets: { [muscle]: dose sets incl. secondary
+ * half-credit }, primarySets: { [muscle]: primary sets only } }, via
+ * allocateExerciseVolume. `sets` feeds the recovery hours a source session
+ * needs; `primarySets` decides which muscles a session counts as training.
+ */
 function computeSessionMuscleSets(workout, exerciseById) {
-  const out = {};
+  const sets = {};
+  const primarySets = {};
   const exercises = Array.isArray(workout?.exercises) ? workout.exercises : [];
   for (const exercise of exercises) {
     const workingSets = Number(exercise?.sets);
@@ -169,19 +207,35 @@ function computeSessionMuscleSets(workout, exerciseById) {
     if (!row) continue;
     for (const alloc of allocateExerciseVolume(row)) {
       if (!alloc?.muscle) continue;
-      out[alloc.muscle] = (out[alloc.muscle] ?? 0) + workingSets * alloc.sets;
+      sets[alloc.muscle] = (sets[alloc.muscle] ?? 0) + workingSets * alloc.sets;
+      if (alloc.role === 'primary') {
+        primarySets[alloc.muscle] = (primarySets[alloc.muscle] ?? 0) + workingSets * alloc.sets;
+      }
     }
   }
-  return out;
+  return { sets, primarySets };
 }
 
-/** Session-array indices (within setsByMuscleList) where `muscle` qualifies. */
-function qualifyingPositions(setsByMuscleList, muscle) {
+/** Session-array indices (within loads) where `muscle` qualifies (primary sets). */
+function qualifyingPositions(loads, muscle) {
   const positions = [];
-  for (let i = 0; i < setsByMuscleList.length; i++) {
-    if ((setsByMuscleList[i][muscle] ?? 0) >= QUALIFYING_SETS) positions.push(i);
+  for (let i = 0; i < loads.length; i++) {
+    if ((loads[i].primarySets[muscle] ?? 0) >= QUALIFYING_SETS) positions.push(i);
   }
   return positions;
+}
+
+/** The muscles at least one session in `loads` trains (primary sets), in
+ * a fixed alphabetical order so every candidate order sums its penalty
+ * terms in the same sequence (see TIE_TOLERANCE). */
+function musclesTrainedIn(loads) {
+  const muscles = new Set();
+  for (const load of loads) {
+    for (const [muscle, count] of Object.entries(load.primarySets)) {
+      if (count >= QUALIFYING_SETS) muscles.add(muscle);
+    }
+  }
+  return Array.from(muscles).sort();
 }
 
 /**
@@ -233,15 +287,16 @@ function sumValues(obj) {
 /**
  * The adjacency term for two LITERALLY adjacent sessions (LINEAR only -
  * never called for the wrap pair; see the module header, lead ruling 2):
- * overlap = the shared qualifying (>= QUALIFYING_SETS) sets over the
- * smaller session's total qualifying sets; term = 100 x (overlap - 0.5)
- * once overlap exceeds half, else 0.
+ * overlap = the shared qualifying PRIMARY (>= QUALIFYING_SETS) sets over
+ * the smaller session's total qualifying primary sets; once overlap
+ * exceeds half the pair is a law-5 clash and costs CLASH_PENALTY_BASE
+ * plus the same base again scaled by the excess, else 0.
  */
-function adjacencyTerm(setsByMuscleA, setsByMuscleB) {
+function adjacencyTerm(loadA, loadB) {
   const qualifyingA = {};
-  for (const [m, s] of Object.entries(setsByMuscleA)) if (s >= QUALIFYING_SETS) qualifyingA[m] = s;
+  for (const [m, s] of Object.entries(loadA.primarySets)) if (s >= QUALIFYING_SETS) qualifyingA[m] = s;
   const qualifyingB = {};
-  for (const [m, s] of Object.entries(setsByMuscleB)) if (s >= QUALIFYING_SETS) qualifyingB[m] = s;
+  for (const [m, s] of Object.entries(loadB.primarySets)) if (s >= QUALIFYING_SETS) qualifyingB[m] = s;
 
   const totalA = sumValues(qualifyingA);
   const totalB = sumValues(qualifyingB);
@@ -255,29 +310,25 @@ function adjacencyTerm(setsByMuscleA, setsByMuscleB) {
   }
 
   const overlap = shared / smaller;
-  return overlap > 0.5 ? 100 * (overlap - 0.5) : 0;
+  return overlap > 0.5 ? CLASH_PENALTY_BASE * (1 + (overlap - 0.5)) : 0;
 }
 
 /**
  * The full penalty for one order. `sessionsInOrder` is an array (length n)
- * of { [muscle]: sets } maps, already in the candidate order. `gapLayout`
- * is that week's TYPICAL_WEEK_GAP_HOURS[n] (or the caller's fallback).
+ * of computeSessionMuscleSets loads, already in the candidate order.
+ * `gapLayout` is that week's TYPICAL_WEEK_GAP_HOURS[n] (or the caller's
+ * fallback).
  */
 function penaltyForOrder(sessionsInOrder, gapLayout, recoveryRating, rirTarget) {
   const n = sessionsInOrder.length;
   let total = 0;
 
-  const musclesTrained = new Set();
-  for (const setsByMuscle of sessionsInOrder) {
-    for (const [muscle, sets] of Object.entries(setsByMuscle)) {
-      if (sets >= QUALIFYING_SETS) musclesTrained.add(muscle);
-    }
-  }
-
-  for (const muscle of musclesTrained) {
+  for (const muscle of musclesTrainedIn(sessionsInOrder)) {
     const positions = qualifyingPositions(sessionsInOrder, muscle);
     for (const { from, distance } of circularPairs(positions, n)) {
-      const sourceSets = sessionsInOrder[from][muscle];
+      // The source session's DOSE (primary plus secondary credit) sets how
+      // long the muscle needs; only primary sets decided it qualifies.
+      const sourceSets = sessionsInOrder[from].sets[muscle];
       const T = recoveryHours(muscle, { sets: sourceSets, recoveryRating, rirTarget });
       const gapBetweenThem = gapBetweenSlots(gapLayout, from, distance);
       const underRecovered = Math.max(0, T - gapBetweenThem) ** 2;
@@ -332,15 +383,9 @@ function* permutations(n) {
  */
 function buildSpacing(sessionsInOrder, gapLayout, recoveryRating, rirTarget) {
   const n = sessionsInOrder.length;
-  const muscles = new Set();
-  for (const setsByMuscle of sessionsInOrder) {
-    for (const [muscle, sets] of Object.entries(setsByMuscle)) {
-      if (sets >= QUALIFYING_SETS) muscles.add(muscle);
-    }
-  }
 
   const candidates = [];
-  for (const muscle of muscles) {
+  for (const muscle of musclesTrainedIn(sessionsInOrder)) {
     const positions = qualifyingPositions(sessionsInOrder, muscle);
     if (positions.length < 2) continue; // once a week: gap is always the full week, not sequencing-sensitive
 
@@ -351,7 +396,7 @@ function buildSpacing(sessionsInOrder, gapLayout, recoveryRating, rirTarget) {
         worst = {
           hoursBetween,
           recoveryHours: recoveryHours(muscle, {
-            sets: sessionsInOrder[from][muscle], recoveryRating, rirTarget,
+            sets: sessionsInOrder[from].sets[muscle], recoveryRating, rirTarget,
           }),
         };
       }
@@ -434,7 +479,9 @@ export function sequenceSessionsForRecovery(workouts, options = {}) {
   for (const tailPerm of permutations(n - 1)) {
     const candidate = [0, ...tailPerm.map((idx) => idx + 1)];
     const p = scoreOrder(candidate);
-    if (p < bestPenalty) {
+    // Strictly better by more than floating-point noise (TIE_TOLERANCE);
+    // an equal-within-noise candidate never displaces the earlier order.
+    if (p < bestPenalty - TIE_TOLERANCE * Math.max(1, bestPenalty)) {
       bestPenalty = p;
       bestOrder = candidate;
     }
@@ -481,5 +528,13 @@ export function describeSpacing(result) {
   const days = Array.isArray(result?.workouts) ? result.workouts.length : rows.length;
   const hours = Math.round(Math.min(...rows.map((s) => s.hoursBetween)));
   const names = rows.map((s) => muscleDisplayName(s.muscle).toLowerCase());
+  // Opus review finding 15: when the week cannot give these muscles their
+  // estimated recovery time (a 6-day plan with three glute sessions has
+  // 24-hour gaps by construction), say what was actually achieved rather
+  // than present a short gap as enough.
+  const tooShort = rows.some((s) => Number.isFinite(s.recoveryHours) && s.hoursBetween < s.recoveryHours);
+  if (tooShort) {
+    return `Assuming a usual ${days}-day week, sessions are ordered to give the ${joinWithAnd(names)} the longest gap the week allows, about ${hours} hours.`;
+  }
   return `Assuming a usual ${days}-day week, sessions are ordered to leave about ${hours} hours before the next session that trains the ${joinWithAnd(names)}.`;
 }

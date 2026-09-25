@@ -344,13 +344,15 @@ describe('lead ruling 2: the adjacency term is linear, the recovery terms stay c
     // term is 0. In-week placement (X@0, Y@1): edges 48 and the wrap
     // 48+72=120; 120 > 2T=96, so that edge alone contributes
     // 0.25 x (120-96)^2 / 24 = 6, on top of which the LINEAR adjacency
-    // term now fires (overlap 1.0 -> 100 x 0.5 = 50). Total: wrap = 0,
-    // in-week = 56. This is the fully-worked, exact proof that a same-
-    // muscle pair placed across the wrap is cheaper than the identical
-    // pair placed in-week under ruling 3, not just the adjacency term in
-    // isolation (ruling 3 couples the two).
+    // term now fires as a law-5 clash (overlap 1.0 -> CLASH_PENALTY_BASE
+    // x (1 + 0.5) = 1,500,000; Opus review finding 3 made the clash term
+    // dominant). Total: wrap = 0, in-week = 1,500,006. This is the
+    // fully-worked, exact proof that a same-muscle pair placed across the
+    // wrap is cheaper than the identical pair placed in-week under ruling
+    // 3, not just the adjacency term in isolation (ruling 3 couples the
+    // two).
     expect(wrapResult.penaltyBefore).toBeCloseTo(0, 6);
-    expect(linearResult.penaltyBefore).toBeCloseTo(56, 6);
+    expect(linearResult.penaltyBefore).toBeCloseTo(1.5e6 + 6, 6);
 
     // The wrap scenario's own input already avoids the linear clash, so
     // its search finds nothing better (changed: false). The in-week
@@ -443,7 +445,9 @@ describe('describeSpacing', () => {
 
     // TYPICAL_WEEK_GAP_HOURS[4] (D201 addendum, lead ruling 3): quads and
     // hamstrings' worst gap is 72 h, not the old flat 84 h.
-    expect(sentence).toBe('Assuming a usual 4-day week, sessions are ordered to leave about 72 hours before the next session that trains the quads and hamstrings.');
+    // Muscles are named in the scorer's fixed alphabetical order (the same
+    // order every candidate sums its terms in, see TIE_TOLERANCE).
+    expect(sentence).toBe('Assuming a usual 4-day week, sessions are ordered to leave about 72 hours before the next session that trains the hamstrings and quads.');
     expect(sentence).not.toMatch(/—/);
     expect(sentence).not.toMatch(/you must/i);
   });

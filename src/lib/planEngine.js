@@ -36,6 +36,7 @@ import { BLOCK_PLANNED_WEEKS } from './mesocycle';
 // module's own POOL/exerciseLibrary data (via buildExerciseByIdForRecovery
 // below) and the plan's own inputs; changes no exercise, set or muscle.
 import { sequenceSessionsForRecovery, describeSpacing } from './recovery/sequenceSessions';
+import { PLAN_OPENING_RIR } from './recovery/constants';
 
 // ---------------------------------------------------------------------------
 // Public label maps
@@ -3547,7 +3548,9 @@ function _generatePlanInner(inputs) {
   const recoverySequenced = sequenceSessionsForRecovery(unsequencedWorkouts, {
     daysPerWeek: effectiveDays,
     recoveryRating,
-    rirTarget: unsequencedWorkouts[0]?.exercises?.[0]?.rirTarget ?? null,
+    // Spec 5.1: the block's opening RIR (Opus review finding 19: the first
+    // exercise's own per-experience target read an advanced plan at RIR 1).
+    rirTarget: PLAN_OPENING_RIR,
     exerciseById: buildExerciseByIdForRecovery(),
   });
   // The letters in generated names ("Upper A", "Lower B", "Push A") mark
@@ -3555,8 +3558,10 @@ function _generatePlanInner(inputs) {
   // scorer has chosen the order they are re-assigned by final position:
   // a 4-day upper/lower always reads Upper A, Lower A, Upper B, Lower B,
   // never Upper A, Lower B, Upper B, Lower A. Only a "<base> <letter>"
-  // name whose base repeats in the week is touched; every other name
-  // (a DIVISION_MATRIX title, a lone "Legs") is left exactly as authored.
+  // name whose base repeats in the week is touched, hand-authored ones
+  // included (a DIVISION_MATRIX "Glute Focus A/B" pair follows the same
+  // positional rule); a name without a trailing letter (a lone "Legs",
+  // "Upper (Delt + Back)") is left exactly as authored.
   const validWorkouts = reletterByPosition(recoverySequenced.workouts);
 
   // C16 DIVISION (completion pass): the truthfulness report. Computed from

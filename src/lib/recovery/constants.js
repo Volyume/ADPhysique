@@ -241,6 +241,14 @@ export function recoveryHours(muscle, {
  * the longest gap because a real week's rest days concentrate there
  * (Sat/Sun for most schedules). Each row sums to 168.
  */
+/**
+ * The RIR a block opens on (spec section 5.1: the scorer judges a plan's
+ * recovery hours at the block's opening intensity, not at any one
+ * exercise's own per-experience target). Mirrors the default week ladder
+ * database.js writes for a new block (`Math.max(0, 3 - i)`, week 1 = 3).
+ */
+export const PLAN_OPENING_RIR = 3;
+
 export const TYPICAL_WEEK_GAP_HOURS = Object.freeze({
   1: [168],
   2: [72, 96], // Mon, Thu

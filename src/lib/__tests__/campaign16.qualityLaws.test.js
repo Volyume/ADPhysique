@@ -279,7 +279,15 @@ describe('LAW 5 consecutive sessions do not repeat the same demand', () => {
       { experience: 'advanced', daysPerWeek: 6 }, { goal: 'bikini', daysPerWeek: 5 },
       { goal: 'bikini', daysPerWeek: 6 }, { goal: 'wellness', daysPerWeek: 5 },
       { goal: 'bodybuilding', daysPerWeek: 5 }, { goal: 'classic_physique', daysPerWeek: 5 },
-      { goal: 'womens_physique', daysPerWeek: 5 }, { goal: 'figure', daysPerWeek: 5 }]) {
+      { goal: 'womens_physique', daysPerWeek: 5 }, { goal: 'figure', daysPerWeek: 5 },
+      // D201 recovery sequencing (Opus review finding 3): the four
+      // configurations where the first scorer, with secondary half-credit
+      // qualifying a session as "training" a muscle, pulled two lower days
+      // together to keep two upper days apart. Pinned on the real library.
+      { experience: 'advanced', daysPerWeek: 4 },
+      { goal: 'strength_hypertrophy', experience: 'advanced', daysPerWeek: 4 },
+      { goal: 'womens_bodybuilding', experience: 'intermediate', daysPerWeek: 5 },
+      { goal: 'womens_physique', experience: 'beginner', equipment: 'machines_cables', daysPerWeek: 4 }]) {
       const p = plan(over);
       // A full-body split trains everything every session by definition;
       // overlap there is the design, not a scheduling mistake.
