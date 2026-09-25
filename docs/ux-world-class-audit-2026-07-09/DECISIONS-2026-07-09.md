@@ -9704,3 +9704,25 @@ four questions become rulings:
    2026-08-24); the rating reopen shows only the four rating rows (no notes
    fields, since notes are not loaded in that mode and a save must never
    clobber them) and re-enables no live-finish side effect.
+7. **S7-1 and S7-5 rulings (2026-09-25, lead, safety-adjacent, hands-on).**
+   Read lane S7 (the photo and scan surfaces read lane S6 left unverified)
+   found the photos timeline card rendering the leanness band ("Lean",
+   "Very Lean") and the card's own logged-weight caption under calm mode or
+   an open ED flag, beside Score, Change and Confidence cells that read
+   "Hidden"; and the shared suppression hook (`usePhotoSuppression`) reading
+   its two inputs once per user, so a screen that stays mounted kept a
+   verdict taken before calm mode was switched on or a flag was raised
+   elsewhere. Rulings: (a) the band and the weight caption are withheld
+   under the same `suppressed` verdict as the sibling cells. The weight
+   half overrides a recorded pin (`ProgressPhotosScreen.progressScan.guard`
+   pinned the self-logged capture weight as deliberately NOT gated, as
+   distinct from the scan-derived weight); gating more under calm/ED only
+   strengthens that law, the row becomes consistent, and the figure stays
+   one tap away behind Body metrics' re-confirmation. The pin is
+   re-anchored with this rationale. (b) The hook re-reads both inputs every
+   time the enclosing screen regains focus (through the navigation context,
+   never useNavigation, so a consumer outside a screen still works); the
+   last verdict stands while the re-read resolves and a suppressing answer
+   applies the moment it lands; the initial read still fails closed. The ED
+   modules themselves are untouched. S7-2, S7-3, S7-4, S7-6, S7-7, S7-8 and
+   S7-9 go to a fix lane with the rulings in its brief (report section 8).

@@ -488,3 +488,70 @@ Answer Block's scan evidence line (two call chains, not traced to a shared
 function); the internals of `ProgressPhotoCompare`, `ProgressScanCompare`,
 `BeforeAfterShareSheet` and `PhotoDetailsSheet`; `getRoutineWorkoutTonnages`
 (unreachable from this tab, read-only path).
+
+
+## 8. The photo and scan surfaces (read lane S7, 2026-09-25; the four items section 7 left unverified, each severity-1 finding lead-verified in the code)
+
+### S7-1. The photos timeline card shows the leanness band and the weight under calm mode or an open ED flag (severity 1)
+
+OBSERVED. `ProgressPhotosScreen.js` `libraryScanSummary`: `scoreValue`,
+`signalValue` and `confidenceValue` read "Hidden" under `suppressed`;
+`bandValue` (the leanness band, "Lean", "Very Lean") has no gate; the card's
+`weightText` renders unconditionally into the meta line.
+RULING (lead, hands-on; register D200 item 7): both gated on the same
+`suppressed`; the weight half re-anchors a recorded pin
+(`ProgressPhotosScreen.progressScan.guard`). Tests:
+`ProgressPhotosScreen.suppressionCard.guard.test.js`.
+
+### S7-2. The landing's scan evidence line can never appear, and two comparison policies disagree (severity 1)
+
+OBSERVED. `scanComparability` (`progressScanAnalysis.js:1287`) sets
+`comparableCount` to the number of poses compared (2) or 0; the evidence
+packet (`progressScanCheckInEvidence.js:446`) needs `trendWindow.count >= 3`
+(from `progressScanCoachEvidence.js:122`, `scan.comparableCount`), so
+`eligibleForAssessment` is never true from the real chain and the Progress
+landing's Photos pillar is stuck on "Building your visual trend, 1 more
+comparable scan" for ever. Separately, `finishProgressScanSession`
+(`progressScanStore.js:333-335`) compares a new scan against the nearest
+comparable predecessor (skipping up to ten), while `buildTrendPoints`
+(`progressScanTrendViewModel.js:41-53`) compares strictly against the
+literal previous scan, so the stored status and the Trend view can disagree
+for the same scan (a good scan after one poor one). FIX LANE S7: one shared
+predecessor resolver used by both, and a real running count of comparable
+scans feeding the packet.
+
+### S7-3. Compare shows a Low-confidence score outright (severity 1)
+
+OBSERVED. `ProgressScanCompare.js` `scanRangeLabel` prints the score at any
+tier; the timeline and the Trend view hold a Low-tier number behind "Show
+anyway" or withhold it (`buildScoreTierContract`). FIX LANE S7.
+
+### S7-4. Compare prints kilograms for a pounds or stone user (severity 1)
+
+OBSERVED. `scanWeightLabel` returns `${kg} kg` with no unit read. FIX LANE
+S7 (`formatBodyWeight` with the store's `bodyWeightUnits`).
+
+### S7-5. Suppression is read once and never re-checked on return (severity 1)
+
+OBSERVED. `usePhotoSuppression` runs its fail-closed reads in an effect
+keyed on the user only; the photos screen is a plain stack screen that
+stays mounted and refreshes its own data on focus, so calm mode switched on
+or a flag raised while away left comparison, trend and share reachable
+until a remount. RULING (lead, hands-on; D200 item 7): the hook re-reads
+both inputs on every focus of the enclosing screen. Tests:
+`usePhotoSuppression.focus.test.js`.
+
+### S7-6 to S7-9 (severity 2 to 4, fix lane S7)
+
+S7-6 the before/after share sheet's default pair ignores pose
+(`beforeAfterParams.js:53-60`) while Photo compare's default is pose-aware;
+S7-7 the sheets receive the whole library rather than the timeline's pose
+or date filter (ruled deliberate for scans, documented in each sheet);
+S7-8 the share sheet's weight backfill re-sends the same `takenAt`, which
+`upsertPhotoMeta` treats as unchanged, so a null weight can never be
+filled later; S7-9 the Trend detail ignores the computed
+`progressSignalLabel`. Verified with no finding: `PhotoDetailsSheet`,
+`ProgressPhotoCompare`'s copy contract and default pair, the before/after
+privacy contract, the shared score arithmetic. Still unverified by the
+lane: `ProgressPhotoViewer`'s own weight suppression and
+`getBodyWeightNearestTo` (both in fix lane S7's brief to verify).
