@@ -9726,3 +9726,34 @@ four questions become rulings:
    applies the moment it lands; the initial read still fails closed. The ED
    modules themselves are untouched. S7-2, S7-3, S7-4, S7-6, S7-7, S7-8 and
    S7-9 go to a fix lane with the rulings in its brief (report section 8).
+
+
+## D201 — Per-muscle recovery: estimate, next-workout aware, and plans sequenced for recovery (founder decision 2026-09-25)
+
+Asked how Recovery is calculated and whether it is scientific per muscle
+group (JeFit's per-muscle recovery as the reference), the founder was
+given the code facts (the three gauges are seven-day half-life averages of
+the user's own soreness, fatigue and joint ratings, whole body; the
+recency chips are factual "trained N days ago"; a prior decision deleted
+the previous elapsed-hours-only per-muscle model as over-claiming, see
+`src/lib/trainingRecency.js`'s header) and three options. Founder choice,
+verbatim: "2 but it needs to work as per the next workout. And the
+workouts should be planned and built with the recovery in mind too so it
+flows your legs are recovered as close as possible to when the next
+workout is legs and so on."
+
+So the programme is: (1) a deterministic per-muscle recovery ESTIMATE
+built from what the app already holds (time since the muscle's last
+session, that session's sets against the user's own MEV/MRV landmarks,
+the user's recovery rating, the soreness/fatigue ratings when present),
+always labelled an estimate from time and volume, never a measurement,
+never "Ready" without evidence; (2) it is read against the NEXT WORKOUT
+(is each muscle the next session trains estimated recovered by then,
+and what is ready to train today); (3) plan building and session
+sequencing take recovery into account so a muscle's next session lands
+as close as possible to its estimated recovery (legs recovered when the
+next legs day comes round). Engine work: deterministic, pure, no AI; the
+ED-safety system and the calorie side are untouched. A full written spec
+with the evidence base precedes any build (Section 4, "plan first, wait
+for go"); two read lanes (PR1 plan building and sequencing, PR2 the
+next-workout rule) map the existing machinery first.
