@@ -89,13 +89,17 @@ export function buildPlanLandmarks({
   plannedByMuscle = null,
   userProfile = null,
   research = VOLUME_LANDMARKS,
+  // D202: the instant the athlete's age is read at (from the profile's
+  // date of birth, inside profileAdjustedPrior). Pure: the caller passes
+  // it; without one the age stays unknown and the thirties table applies.
+  nowMs = null,
 } = {}) {
   const table = {};
   const source = {};
   const personalised = !!userProfile?.experience;
   for (const muscle of Object.keys(research)) {
     const base = research[muscle];
-    const prior = profileAdjustedPrior(muscle, userProfile)
+    const prior = profileAdjustedPrior(muscle, userProfile, nowMs)
       ?? { mev: base.mev, mav: base.mav, mrv: base.mrv };
     const planned = Math.round(Number(plannedByMuscle?.[muscle]) || 0);
     if (planned > 0) {

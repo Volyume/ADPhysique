@@ -28,6 +28,7 @@
 import { allocateExerciseVolume, isBallisticEvidenceRow, VOLUME_LANDMARKS } from './algorithms';
 import { localDaysElapsed } from './mesocycle';
 import { computeLandmarks } from './planEngine';
+import { ageFromDateOfBirth } from './ageFromDateOfBirth';
 import { phaseToNutritionKey } from './coachingGoals';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -414,7 +415,7 @@ export function computeAchievedWeeklyPeak({
  * the modal (bulking) user. The user-facing trainingPhase maps through
  * phaseToNutritionKey here, exactly as planAutoGen does.
  */
-export function profileAdjustedPrior(muscle, userProfile) {
+export function profileAdjustedPrior(muscle, userProfile, nowMs = null) {
   const research = VOLUME_LANDMARKS[muscle];
   try {
     if (userProfile?.experience) {
@@ -422,7 +423,13 @@ export function profileAdjustedPrior(muscle, userProfile) {
         userProfile.experience,
         userProfile.recoveryRating ?? 'average',
         phaseToNutritionKey(userProfile.trainingPhase ?? userProfile.goal ?? null),
-        userProfile.age ?? null,
+        // D202: the profile stores a date of birth, never an `age`, so
+        // `userProfile.age` was always null here and the age table never
+        // applied. The same shared derivation planAutoGen.buildPlanInputs
+        // now uses, so the seed prior and the plan's landmarks agree. This
+        // module never reads the clock (its purity guard): the caller
+        // passes `nowMs`; without one the age stays unknown (null).
+        userProfile.age ?? ageFromDateOfBirth(userProfile.dateOfBirth ?? null, nowMs),
       )[muscle];
       if (adjusted) return { mev: adjusted.MEV, mav: adjusted.MAVhigh, mrv: adjusted.MRV };
     }

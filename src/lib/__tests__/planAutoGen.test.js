@@ -100,6 +100,40 @@ describe('buildPlanInputs', () => {
     expect(inputs.weakPoints).toEqual(['rear_delts']);
   });
 
+  test('carries the athlete\'s age from the profile\'s date of birth, so the engine\'s age-adjusted landmarks apply', () => {
+    // computeLandmarks has taken an `age` since the start (ageMultipliers:
+    // MRV +5% under 30, -8% in the forties, -15% in the fifties, -25% from
+    // 60) but no caller ever passed it, so every plan was built as if the
+    // athlete were in their thirties. Derived through the one shared
+    // helper, at an injected "now" so this pin never ages.
+    const now = new Date(2026, 8, 25, 12, 0, 0).getTime();
+    const inputs = buildPlanInputs({ trainingGoal: 'build_muscle', trainingPhase: 'build', dateOfBirth: '1980-06-15' }, now);
+    expect(inputs.age).toBe(46);
+  });
+
+  test('the age reaches the engine: the built inputs give a 46-year-old a lower quads MRV than the same profile with no date of birth', () => {
+    // Through the real landmarks the engine consumes (D202): generatePlan
+    // hands exactly these four inputs to computeLandmarks, whose forties
+    // row scales MRV by 0.92 and leaves MEV alone.
+    const now = new Date(2026, 8, 25, 12, 0, 0).getTime();
+    const profile = {
+      trainingGoal: 'build_muscle', trainingPhase: 'build', experience: 'intermediate',
+      daysPerWeek: 4, sessionLengthMinutes: 60, equipment: 'full_gym', recoveryRating: 'average',
+    };
+    // eslint-disable-next-line global-require
+    const { computeLandmarks } = require('../planEngine');
+    const landmarksFor = (inputs) => computeLandmarks(inputs.experience, inputs.recoveryRating, inputs.nutritionPhase, inputs.age);
+    const thirties = landmarksFor(buildPlanInputs(profile, now));
+    const forties = landmarksFor(buildPlanInputs({ ...profile, dateOfBirth: '1980-06-15' }, now));
+    expect(forties.quads.MRV).toBeLessThan(thirties.quads.MRV);
+    expect(forties.quads.MEV).toBe(thirties.quads.MEV);
+  });
+
+  test('no date of birth on the profile: age is null (the engine\'s neutral thirties table)', () => {
+    const inputs = buildPlanInputs({ trainingGoal: 'build_muscle', trainingPhase: 'build' });
+    expect(inputs.age).toBeNull();
+  });
+
   test('preserves nullish recoveryRating with the "average" default', () => {
     const inputs = buildPlanInputs({
       trainingGoal: 'build_muscle',

@@ -35,6 +35,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generatePlan } from './planEngine';
 import { assessPlanFit, assessDurationOptions } from './planFit';
 import { phaseToNutritionKey } from './coachingGoals';
+import { ageFromDateOfBirth } from './ageFromDateOfBirth';
 import { loadExerciseIntentState } from './exercise/intent';
 import { filterLibraryForGeneration, generationBlockFor } from './exercise/generation';
 import { applyContinuity, slotKey, summariseDecisions } from './exercise/continuity';
@@ -93,7 +94,7 @@ const DEFAULT_DAYS_PER_WEEK = 4;
  * Exported so tests can verify the default-back-fill rules without
  * touching the database.
  */
-export function buildPlanInputs(profile) {
+export function buildPlanInputs(profile, nowMs = Date.now()) {
   if (!profile?.trainingGoal) return null;
   // Migrate legacy IDs (general_hypertrophy / strength_hypertrophy /
   // weak_point_spec) so old profiles round-trip through the new two-axis
@@ -118,6 +119,14 @@ export function buildPlanInputs(profile) {
     weakPoints: migrated.planWeakPoints ?? [],
     recoveryRating: migrated.recoveryRating ?? 'average',
     nutritionPhase: phaseToNutritionKey(phase),
+    // The engine's landmarks have carried an age adjustment since the
+    // start (planEngine.computeLandmarks -> ageMultipliers: MRV +5% under
+    // 30, -8% in the forties, -15% in the fifties, -25% from 60, with MEV
+    // lifted from 50) but no caller ever passed `age`, so every plan was
+    // built as if the athlete were in their thirties. Derived here from the
+    // profile's date of birth through the one shared helper; null (the
+    // thirties table) when no date of birth is stored.
+    age: ageFromDateOfBirth(migrated.dateOfBirth ?? profile?.dateOfBirth ?? null, nowMs),
   };
 }
 

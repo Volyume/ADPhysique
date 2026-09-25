@@ -411,7 +411,9 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
       });
       const history = priorLedgerEntries(mesos, blockStart, muscle);
       const learned = computeLearnedRange({
-        prior: profileAdjustedPrior(muscle, userProfile),
+        // D202: the athlete's age at this block's start (the prior is
+        // clock-free; the caller supplies the instant).
+        prior: profileAdjustedPrior(muscle, userProfile, blockStart),
         researchMev: VOLUME_LANDMARKS[muscle]?.mev ?? 0,
         adaptedMrv: adaptedTable?.[muscle]?.isAdapted ? adaptedTable[muscle].mrv : null,
         ledgerHistory: history,
@@ -850,7 +852,7 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
       const research = VOLUME_LANDMARKS[muscle];
       const history = priorLedgerEntries(mesos, nowMs, muscle);
       const learned = computeLearnedRange({
-        prior: profileAdjustedPrior(muscle, userProfile),
+        prior: profileAdjustedPrior(muscle, userProfile, nowMs),
         researchMev: research?.mev ?? 0,
         adaptedMrv: adaptedTable?.[muscle]?.isAdapted ? adaptedTable[muscle].mrv : null,
         ledgerHistory: history,
@@ -871,7 +873,7 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
         // next block (CC30; EL-7).
         ledgerEntry: (fresh && !suppressed && !isNonLearningEligibility(recent.entry?.eligibility)) ? recent.entry : null,
         learnedRange: (learned.isLearned && fresh) ? learned : null,
-        profileAdjusted: profileAdjustedPrior(muscle, userProfile),
+        profileAdjusted: profileAdjustedPrior(muscle, userProfile, nowMs),
         research,
         suppressed,
         intent: 'adjust',
@@ -941,7 +943,8 @@ export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', u
     // the other path: whether stale memory prescribed depended on WHICH
     // screen the user reached. The same STALE_EVIDENCE_WEEKS boundary now
     // governs both. Memory persists; actionability expires.
-    const freshnessByMuscle = judgedEvidenceAgeByMuscle(mesosForReplay, Date.now());
+    const nowMs = Date.now();
+    const freshnessByMuscle = judgedEvidenceAgeByMuscle(mesosForReplay, nowMs);
 
     const ranges = {};
     for (const muscle of Object.keys(VOLUME_LANDMARKS)) {
@@ -950,7 +953,7 @@ export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', u
         ? priorLedgerEntries(mesosForReplay, nextStart, muscle)
         : [];
       const learned = computeLearnedRange({
-        prior: profileAdjustedPrior(muscle, userProfile),
+        prior: profileAdjustedPrior(muscle, userProfile, nowMs),
         researchMev: research?.mev ?? 0,
         adaptedMrv: adaptedTable?.[muscle]?.isAdapted ? adaptedTable[muscle].mrv : null,
         ledgerHistory: history,
@@ -969,7 +972,7 @@ export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', u
         manual: manualControls ? manualEntry : null,
         ledgerEntry: isNonLearningEligibility(ledgerEntry?.eligibility) ? null : ledgerEntry,
         learnedRange: (learned.isLearned && learnedFresh) ? learned : null,
-        profileAdjusted: profileAdjustedPrior(muscle, userProfile),
+        profileAdjusted: profileAdjustedPrior(muscle, userProfile, nowMs),
         research,
         suppressed,
         intent,

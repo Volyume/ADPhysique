@@ -139,7 +139,7 @@ export async function getPlanLandmarks(userId, { userProfile = null } = {}) {
       plannedByMuscle = plannedWeeklyVolumeByMuscle(withExercises);
     }
   } catch (_) { plannedByMuscle = null; /* plan layer absent */ }
-  return buildPlanLandmarks({ plannedByMuscle, userProfile: profile });
+  return buildPlanLandmarks({ plannedByMuscle, userProfile: profile, nowMs: Date.now() });
 }
 
 /**

@@ -14,12 +14,9 @@ import {
   resolveEffectiveMaintenance,
   semanticEvidenceSignature,
 } from './effectiveMaintenance';
-
-function ageFromDateOfBirth(value, nowMs) {
-  const born = value ? new Date(value) : null;
-  if (!born || !Number.isFinite(born.getTime())) return null;
-  return Math.max(13, Math.floor((nowMs - born.getTime()) / (365.2425 * 86400000)));
-}
+// One authority for age from a date of birth, shared with
+// planAutoGen.buildPlanInputs (the plan engine's age-adjusted landmarks).
+import { ageFromDateOfBirth } from './ageFromDateOfBirth';
 
 function optionalFiniteNumber(value) {
   if (value == null || value === '') return null;
