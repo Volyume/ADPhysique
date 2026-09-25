@@ -86,9 +86,16 @@ export function MesocyclePulseCard({ meso, currentWeek, progress, tonnageBars, o
         <View style={styles.sparkWrap}>
           <View style={styles.sparkLabelRow}>
             <Text style={[styles.sparkLabel, live.sparkLabel]}>Weekly load</Text>
-            <Text style={[styles.sparkValue, live.sparkValue]}>
-              {(tonnageBars[tonnageBars.length - 1]?.value ?? 0).toLocaleString('en-GB')} kg
-            </Text>
+            {/* F4/F5 (D200 item 3): the bar itself is the current Monday-
+                anchored week SO FAR, not a completed week -- the caption
+                under the value says so, matching WorkloadCard's explanation
+                of the same number below on Consistency. */}
+            <View style={styles.sparkValueCol}>
+              <Text style={[styles.sparkValue, live.sparkValue]}>
+                {(tonnageBars[tonnageBars.length - 1]?.value ?? 0).toLocaleString('en-GB')} kg
+              </Text>
+              <Text style={[styles.sparkValueCaption, live.sparkValueCaption]}>this week so far</Text>
+            </View>
           </View>
           <View style={styles.sparkChartCentered}>
             <SvgBarSparkline
@@ -210,6 +217,13 @@ export function SessionDurationChart({ bars }) {
                 <Text style={[styles.durationBarValue, live.durationBarValue]}>{bar.avgMin}m</Text>
               )}
               <Text style={[styles.durationBarLabel, live.durationBarLabel]}>{bar.weekLabel}</Text>
+              {/* F4 (D200 item 3): the current bar is the Monday-anchored
+                  week SO FAR, not a completed week -- say so, the same
+                  "so far" qualifier the plan card and workload card use for
+                  the identical partial-week reading. */}
+              {bar.weekLabel === 'Now' && (
+                <Text style={[styles.durationBarLabel, live.durationBarLabel]}>so far</Text>
+              )}
             </View>
           );
         })}
@@ -284,7 +298,7 @@ export function WorkloadCard({ data }) {
   let statusText = `Below ${baselineNoun} (under 0.8). Room for more work if you feel fresh.`;
   if (ratio >= 1.5) {
     statusColor = t.colors.error;
-    statusText = 'High load this week (above 1.5). Consider an easier session.';
+    statusText = 'High load this week so far (above 1.5). Consider an easier session.';
   } else if (ratio >= 1.3) {
     statusColor = t.colors.warning;
     statusText = 'Load is elevated (above 1.3). Monitor how you feel.';
@@ -297,13 +311,19 @@ export function WorkloadCard({ data }) {
   const fillPct = Math.min(ratio / 2.0, 1);
 
   const takeaway = workloadTakeaway(ratio, acute, chronic, weeksOfData);
+  // P5/D200-3: this card is now the EXPLANATION of the same figure the plan
+  // card's sparkline draws (F5) -- one weeks-count, used by both the
+  // tooltip and the average stat's label, instead of the tooltip's own
+  // separately-worded baselineNoun.
+  const weeksN = Number.isFinite(weeksOfData) && weeksOfData > 0 ? weeksOfData : 4;
 
   return (
     <View style={[styles.workloadCard, live.workloadCard]}>
       <View style={styles.rowBetween}>
-        <Text style={[styles.workloadTitle, live.workloadTitle]}>Training load</Text>
-        <InfoTooltip text={`Compares this week's total weight moved to ${baselineNoun}. 0.8 to 1.3 is the helpful range. Above 1.5 signals high fatigue risk.`} />
+        <Text style={[styles.workloadTitle, live.workloadTitle]}>Weekly load</Text>
+        <InfoTooltip text={`Compares this week so far (Monday to today) with your average over the previous ${weeksN} full week${weeksN === 1 ? '' : 's'}. 0.8 to 1.3 is the helpful range. Above 1.5 signals high fatigue risk.`} />
       </View>
+      <Text style={[styles.workloadSubtitle, live.workloadSubtitle]}>This week so far against your recent full weeks</Text>
 
       <View style={[styles.workloadBarBg, live.workloadBarBg]}>
         <View style={[styles.workloadBarFill, { width: `${Math.round(fillPct * 100)}%`, backgroundColor: statusColor }]} />
@@ -316,11 +336,11 @@ export function WorkloadCard({ data }) {
         </View>
         <View style={styles.workloadStat}>
           <Text style={[styles.workloadStatValue, live.workloadStatValue]}>{acute.toLocaleString('en-GB')}</Text>
-          <Text style={[styles.workloadStatLabel, live.workloadStatLabel]}>This week (kg)</Text>
+          <Text style={[styles.workloadStatLabel, live.workloadStatLabel]}>This week so far (kg)</Text>
         </View>
         <View style={styles.workloadStat}>
           <Text style={[styles.workloadStatValue, live.workloadStatValue]}>{chronic.toLocaleString('en-GB')}</Text>
-          <Text style={[styles.workloadStatLabel, live.workloadStatLabel]}>{Number.isFinite(weeksOfData) && weeksOfData > 0 ? weeksOfData : 4}-wk avg (kg)</Text>
+          <Text style={[styles.workloadStatLabel, live.workloadStatLabel]}>{weeksN}-wk average (kg)</Text>
         </View>
       </View>
 
@@ -362,9 +382,11 @@ const styles = StyleSheet.create({
   mesoProgressFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   mesoProgressLabel: { ...type.num('caption'), color: colors.textMuted },
   sparkWrap:           { marginTop: spacing.xs },
-  sparkLabelRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: spacing.xs },
+  sparkLabelRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: spacing.xs },
   sparkLabel:          { ...type.caption, color: colors.textMuted },
+  sparkValueCol:       { alignItems: 'flex-end' },
   sparkValue:          { ...type.num('bodyStrong'), color: colors.textPrimary },
+  sparkValueCaption:   { ...type.caption, color: colors.textMuted },
   sparkChartCentered:  { alignItems: 'center', paddingTop: spacing.xs },
 
   // ── Calendar ──
@@ -470,6 +492,10 @@ const styles = StyleSheet.create({
     ...type.label,
     color: colors.textMuted,
   },
+  workloadSubtitle: {
+    ...type.captionTight,
+    color: colors.textSecondary,
+  },
   // R2 (cohesion sweep, 2026-07-11): the training-load meter joins the
   // pill/bar radius family (radius.full), matching the mesocycle progress
   // meter above (mesoProgressTrack/Fill) instead of a one-off radius.sm.
@@ -511,7 +537,7 @@ const styles = StyleSheet.create({
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the
 // frozen `styles` block above, same "frozen base + live override" pattern as
 // BillingPeriodSelector.js's buildLiveStyles. rowBetween/mesoCard/mesoEmpty/
-// mesoTop/sparkWrap/sparkLabelRow/sparkChartCentered/calGrid/calCol/calLegend/
+// mesoTop/sparkWrap/sparkLabelRow/sparkValueCol/sparkChartCentered/calGrid/calCol/calLegend/
 // calDot/durationBarsRow/durationBarCol/durationBar/freqToggle/
 // workloadStats/workloadStat/workloadBarFill/workloadStatus have no colour
 // tokens baked at module scope (workloadBarFill/workloadStatus take their
@@ -530,6 +556,7 @@ function buildLiveStyles(t) {
     mesoProgressLabel: { color: t.colors.textMuted },
     sparkLabel: { color: t.colors.textMuted },
     sparkValue: { color: t.colors.textPrimary },
+    sparkValueCaption: { color: t.colors.textMuted },
     calWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     calLegendText: { color: t.colors.textMuted },
     durationWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
@@ -547,6 +574,7 @@ function buildLiveStyles(t) {
     freqToggleText: { color: t.colors.primary },
     workloadCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     workloadTitle: { color: t.colors.textMuted },
+    workloadSubtitle: { color: t.colors.textSecondary },
     workloadBarBg: { backgroundColor: t.colors.surface2 },
     workloadStatValue: { color: t.colors.textPrimary },
     workloadStatLabel: { color: t.colors.textMuted },

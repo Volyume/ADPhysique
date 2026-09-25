@@ -41,6 +41,10 @@ import { VOLUME_WINDOWS, windowByKey, volumeTakeaway } from '../lib/chartWindows
 import { track } from '../lib/engineTelemetry';
 import { trainingRecency } from '../lib/trainingRecency';
 import { touchTarget } from '../styles/layout';
+// D200 item 3 (Q3) last clause: the volume trend's buckets anchor on the
+// Monday-anchored week end, matching every other "this week" reading on the
+// tab, instead of a rolling window off the wall clock (F4).
+import { localWeekEndMs } from '../lib/dayKey';
 
 const WINDOW_OPTIONS = [
   { weeks: 1, label: '1 week' },
@@ -217,10 +221,19 @@ export default function VolumeHeatmapScreen() {
       const excluded = calculateExcludedWeeklyVolume(recentSets, exerciseMap);
       setHasExcludedVolumeWork(Object.keys(excluded).length > 0);
 
+      // D200-3 (F4): Monday-anchored weeks, matching the weekly check-in's
+      // own call (getWeeklyVolumeByMuscle already supports this anchor) --
+      // the last bucket becomes the current week SO FAR rather than a
+      // rolling seven days from the wall clock. Label it "Now" here (never
+      // in database.js -- weekLabel there stays W1..WN for every other
+      // caller of the shared helper).
       const trendWin = windowByKey(VOLUME_WINDOWS, trendWindowKey) ?? windowByKey(VOLUME_WINDOWS, '4W');
-      const trend = await getWeeklyVolumeByMuscle(user.id, trendWin.weeks);
+      const trend = await getWeeklyVolumeByMuscle(user.id, trendWin.weeks, localWeekEndMs(now));
       if (!isCurrentRequest()) return;
-      setTrendData(trend);
+      const labelledTrend = trend.length
+        ? trend.map((w, i) => (i === trend.length - 1 ? { ...w, weekLabel: 'Now' } : w))
+        : trend;
+      setTrendData(labelledTrend);
 
       const lastTrained = await getLastTrainedByMuscle(user.id).catch(() => ({}));
       if (!isCurrentRequest()) return;
@@ -514,15 +527,27 @@ export default function VolumeHeatmapScreen() {
   // COMP-019: total weekly working sets across all muscles, for the trend
   // takeaway. Weeks with no training are dropped (the average is over training
   // weeks); leading empties signal the window reaches past the account's start.
-  const volWeeklyTotals = useMemo(() => trendData
+  //
+  // D200-3 (F4) last clause: `trendData`'s last entry is now the current
+  // Monday-anchored week SO FAR (its own weekLabel is 'Now'), never a
+  // completed week -- it must never be mixed into an average or a
+  // first-to-last delta. `fullWeeksData` is every entry EXCEPT that one;
+  // `fullWeeksCount` names the real number of full weeks behind the
+  // takeaway ("last 3 full weeks" at the default 4-week window), instead
+  // of the window's generic label, which would otherwise claim a week that
+  // is not finished yet.
+  const fullWeeksData = useMemo(() => trendData.slice(0, -1), [trendData]);
+  const fullWeeksCount = Math.max(0, trendData.length - 1);
+  const volWeeklyTotals = useMemo(() => fullWeeksData
     .map(week => Math.round(Object.values(week.volumeByMuscle || {}).reduce((t, v) => t + v, 0)))
-    .filter(t => t > 0), [trendData]);
-  // Always use the window's canonical phrase. We can't tell "window reaches
-  // past the account start" apart from "a rest week sits inside the window"
-  // without the first-workout date, and the latter must not read as "All N
-  // weeks", so the volume takeaway names the window, not a guessed span.
+    .filter(t => t > 0), [fullWeeksData]);
+  const currentWeekTotal = useMemo(() => (trendData.length
+    ? Math.round(Object.values(trendData[trendData.length - 1]?.volumeByMuscle || {}).reduce((t, v) => t + v, 0))
+    : undefined), [trendData]);
   const volTakeaway = volumeTakeaway({
     windowKey: trendWindowKey, coversAll: false, spanDays: 0, weeklySets: volWeeklyTotals,
+    phraseOverride: fullWeeksCount > 0 ? `Last ${fullWeeksCount} full week${fullWeeksCount === 1 ? '' : 's'}` : undefined,
+    currentWeekTotal,
   });
   const hasWindowVolume = useMemo(() => Object.values(weeklyVolume)
     .some(v => Math.round(v?.workingSets || 0) > 0), [weeklyVolume]);

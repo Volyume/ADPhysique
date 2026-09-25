@@ -5,16 +5,22 @@ import useAppStore from '../store/useAppStore';
 import {
   getCompletedWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
   getActivePlan,
-  getAcuteChronicWorkload,
   getRecentWorkoutFeedback, getCurrentMesocycleWeek, getPlannedMuscleVolume,
 } from '../lib/database';
 import {
   calculateWeeklyVolume,
-  calculate1RM, calculateTonnage, buildLoadSemanticsById, shouldDeload, buildLast4WeekDeloadBuckets,
+  calculate1RM, buildLoadSemanticsById, shouldDeload, buildLast4WeekDeloadBuckets,
 } from '../lib/algorithms';
 import { logError } from '../lib/errorLog';
-import { localDayKey, localDayKeysEndingAt, localWeekStartMs } from '../lib/dayKey';
+import { localDayKey, localDayKeysEndingAt, localWeekStartMs, localWeekEndMs } from '../lib/dayKey';
 import { blockWeekSpan, buildBlockProgressRows } from '../lib/blockWeekProgress';
+// Progress-tab audit 2026-09-24 (F4/F5, D200 item 3, S6-5), lane E: the ONE
+// Monday-anchored weekly tonnage series shared by the plan card's sparkline
+// and the workload (ACWR) card, replacing the old rolling-7-day bucketing
+// (mesoTonnage) and getAcuteChronicWorkload (database.js, rolling, no
+// exercise-type map) below. See trainingLoad.js's header for the full
+// defect history.
+import { mondayWeekLoadSeries, acuteChronicFromSeries } from '../lib/trainingLoad';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -159,12 +165,25 @@ export default function useProgressData() {
       // COMP-005: lifetime completed-session count gates the Recaps tile (>=10).
       setCompletedWorkoutCount(completed.length);
 
-      const wl = await getAcuteChronicWorkload(user.id).catch(() => null);
+      // F4/F5/S6-5 (D200 item 3): ONE Monday-anchored weekly tonnage series
+      // feeds both the plan card's sparkline (loadMesocycle below) and the
+      // workload card, so the two can never show different kg for the same
+      // week again, and both exclude a distance/duration set's
+      // metres/seconds from the kg sum. exerciseTypeById is built from exMap
+      // the same way WorkoutHistoryScreen.buildHistoryRows builds it.
+      let loadSeries = [];
+      try {
+        const exerciseTypeById = Object.fromEntries(
+          Object.values(exMap).map(e => [e.id, e.exercise_type ?? e.exerciseType ?? 'weight_reps']),
+        );
+        const loadSemanticsById = buildLoadSemanticsById(Object.values(exMap));
+        loadSeries = mondayWeekLoadSeries(sets, { weeks: 5, exerciseTypeById, loadSemanticsById });
+      } catch (_) { loadSeries = []; }
       if (!isCurrentRequest()) return;
-      setWorkloadData(wl);
+      setWorkloadData(acuteChronicFromSeries(loadSeries));
 
       await Promise.all([
-        loadMesocycle(workouts, sets, exMap, isCurrentRequest),
+        loadMesocycle(workouts, loadSeries, isCurrentRequest),
         loadVolumeSnapshot(sets, exMap, isCurrentRequest),
         loadDeloadCheck(sets, exMap, workouts, isCurrentRequest),
         loadCalendar(workouts, isCurrentRequest),
@@ -184,7 +203,7 @@ export default function useProgressData() {
     }
   }
 
-  async function loadMesocycle(workouts, sets, exMap, isCurrentRequest = () => true) {
+  async function loadMesocycle(workouts, loadSeries, isCurrentRequest = () => true) {
     try {
       const mesoRows = await getAllMesocycles(user.id);
       let active = mesoRows.find(m => m.isActive === 1 || m.isActive === true) ?? null;
@@ -195,33 +214,28 @@ export default function useProgressData() {
       if (!isCurrentRequest()) return;
       setActiveMeso(active);
 
-      // Build weekly tonnage sparkline: last 4 weeks. Current week highlighted in
-      // primary amber, prior weeks dimmed. Shape matches SvgBarSparkline's
-      // {value, label, color} point format.
-      const bars = [];
-      const now = Date.now();
-      // D107-2: per-hand sets count x2, assistance is excluded.
-      const loadSemanticsById = buildLoadSemanticsById(Object.values(exMap ?? {}));
-      for (let wk = 3; wk >= 0; wk--) {
-        const end   = now - wk * WEEK_MS;
-        const start = end - WEEK_MS;
-        const wkSets = sets.filter(s => {
-          const at = s.createdAt ?? s.created_at ?? 0;
-          return at >= start && at < end;
-        });
-        const tonnage = calculateTonnage(wkSets, null, loadSemanticsById);
-        bars.push({
-          value: Math.round(tonnage),
-          label: wk === 0 ? 'Now' : `-${wk}w`,
+      // F4 (D200 item 3): the sparkline is the last four entries of the
+      // shared Monday-anchored `loadSeries` (three full weeks and the
+      // current week so far) -- byte-identical bar shape and colour rule to
+      // before (SvgBarSparkline's {value, label, color}), just Monday-
+      // anchored instead of rolling, and reading the same series the
+      // workload card's acute:chronic figures come from (F5).
+      const bars = loadSeries.slice(-4).map((week, idx, arr) => {
+        const isNow = idx === arr.length - 1;
+        const weeksAgo = arr.length - 1 - idx;
+        return {
+          value: Math.round(week.tonnage),
+          label: isNow ? 'Now' : `-${weeksAgo}w`,
           // D174: this painted ALL FOUR bars amber or dim-amber, which is the
-          // accent as decoration -- three of them are history. Only the `wk === 0`
-          // bar is "Now", which is the one thing discipline 1 lets amber mark.
-          // The rest take `borderLight`, the token the week ribbon fills a
-          // trained day with, so "a past filled thing" reads the same across
-          // unrelated surfaces (D172's reasoning for the macro arc).
-          color: wk === 0 ? colors.primary : colors.borderLight,
-        });
-      }
+          // accent as decoration -- three of them are history. Only the
+          // current-week bar is "Now", which is the one thing discipline 1
+          // lets amber mark. The rest take `borderLight`, the token the week
+          // ribbon fills a trained day with, so "a past filled thing" reads
+          // the same across unrelated surfaces (D172's reasoning for the
+          // macro arc).
+          color: isNow ? colors.primary : colors.borderLight,
+        };
+      });
       setMesoTonnage(bars);
     } catch (_) {}
   }
@@ -346,20 +360,34 @@ export default function useProgressData() {
     if (!isCurrentRequest()) return;
     try {
       const now = Date.now();
-      const SIX_WEEKS_MS = 6 * WEEK_MS;
-      const windowStart = now - SIX_WEEKS_MS;
 
-      // Bucket completed workouts with a duration into 6 weekly slots (0 = oldest, 5 = most recent)
+      // Q3/D200-3: six Monday-anchored local weeks -- five full weeks plus
+      // the current week so far -- replacing the old rolling-7-day-from-now
+      // buckets (F4). Each start steps back one calendar week via
+      // Date#setDate (the same technique trainingLoad.js's
+      // mondayWeekLoadSeries uses), never a fixed 7*24h subtraction, so a
+      // week either side of a UK clock change still measures a real
+      // calendar week.
+      const starts = [localWeekStartMs(now)];
+      for (let i = 1; i < 6; i++) {
+        const d = new Date(starts[0]);
+        d.setDate(d.getDate() - 7);
+        starts.unshift(d.getTime());
+      }
+
+      // Bucket completed workouts with a duration into the 6 weekly slots
+      // (0 = oldest full week, 5 = the current week so far).
       const buckets = Array.from({ length: 6 }, () => []);
       for (const w of workouts) {
         if (!(w.isCompleted ?? w.is_completed)) continue;
         const dur = w.durationMinutes ?? w.duration_minutes ?? 0;
         if (!dur || dur <= 0) continue;
         const at = w.startedAt ?? w.createdAt ?? w.created_at ?? 0;
-        if (at < windowStart) continue;
-        const weeksAgo = Math.floor((now - at) / WEEK_MS);
-        if (weeksAgo < 0 || weeksAgo >= 6) continue;
-        const idx = 5 - weeksAgo; // 0 = oldest, 5 = this week
+        const idx = starts.findIndex((weekStart, i) => {
+          const weekEnd = i === starts.length - 1 ? now : localWeekEndMs(weekStart);
+          return at >= weekStart && at < weekEnd;
+        });
+        if (idx === -1) continue;
         buckets[idx].push(dur);
       }
 
@@ -374,7 +402,7 @@ export default function useProgressData() {
         const avgMin = sessions.length > 0
           ? Math.round(sessions.reduce((s, v) => s + v, 0) / sessions.length)
           : 0;
-        // Week label: W1 (oldest) to W6 (this week)
+        // Week label: W1 (oldest full week) to W5, then the current week so far.
         const weekLabel = idx === 5 ? 'Now' : `W${idx + 1}`;
         return { avgMin, weekLabel, sessionCount: sessions.length };
       });

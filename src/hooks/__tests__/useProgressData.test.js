@@ -2,6 +2,7 @@ import { create, act } from 'react-test-renderer';
 import useProgressData, { computePRsPerWeek } from '../useProgressData';
 import useAppStore from '../../store/useAppStore';
 import * as database from '../../lib/database';
+import { localWeekStartMs } from '../../lib/dayKey';
 
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn((callback) => {
@@ -26,6 +27,7 @@ jest.mock('../../lib/database', () => ({
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
 
 const DAY = 24 * 60 * 60 * 1000;
+const WEEK = 7 * DAY;
 const NOW = Date.UTC(2026, 0, 31); // fixed reference so week binning is stable
 
 async function flush() {
@@ -226,6 +228,115 @@ describe('useProgressData auth boundary', () => {
     expect(ref.current.hasData).toBe(false);
     expect(ref.current.allSets).toEqual([]);
     expect(ref.current.completedWorkoutCount).toBe(0);
+
+    act(() => { tree.unmount(); });
+  });
+});
+
+// Progress-tab audit 2026-09-24 (F4/F5, D200 item 3, S6-5), lane E. The plan
+// card's sparkline and the workload (ACWR) card now read ONE Monday-anchored
+// weekly tonnage series (src/lib/trainingLoad.js) instead of two disagreeing
+// rolling-7-day bucketings, and that series threads the real exercise-type
+// map through calculateTonnage so a distance/duration set's metres/seconds
+// never enter the kg totals.
+describe('useProgressData: shared Monday-anchored load series (F4/F5/S6-5)', () => {
+  const EXERCISES = [
+    { id: 'e1', primaryMuscle: 'chest', exerciseType: 'weight_reps' },
+    { id: 'run', primaryMuscle: 'legs', exerciseType: 'distance' },
+  ];
+
+  // Unlike computePRsPerWeek (which takes `now` as an explicit parameter),
+  // the hook's own week-bucketing (trainingLoad.js's mondayWeekLoadSeries,
+  // loadSessionDurationTrend) reads the real wall clock. Pin it to the
+  // file's fixed NOW so "this week" in the fixtures below means the same
+  // thing here as it does everywhere else in this file.
+  beforeEach(() => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+    jest.setSystemTime(NOW);
+  });
+  afterEach(() => { jest.useRealTimers(); });
+
+  function setUp(sets) {
+    useAppStore.setState({ user: { id: 'u1' } });
+    database.getAllWorkouts.mockResolvedValue([{ id: 'w1', isCompleted: true, startedAt: NOW }]);
+    database.getCompletedWorkoutSets.mockResolvedValue(sets);
+    database.getAllExercises.mockResolvedValue(EXERCISES);
+  }
+
+  test('the sparkline\'s last bar and the workload card\'s acute figure are the identical number', async () => {
+    const weekStart = localWeekStartMs(NOW);
+    setUp([
+      { id: 's0', workoutId: 'w1', exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: weekStart + DAY }, // this week
+      { id: 's1', workoutId: 'w1', exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: weekStart - WEEK + DAY }, // 1 week ago
+      { id: 's2', workoutId: 'w1', exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: weekStart - 2 * WEEK + DAY }, // 2 weeks ago
+    ]);
+
+    const { ref, tree } = await renderProgressHook();
+
+    expect(ref.current.mesoTonnage).toHaveLength(4);
+    expect(ref.current.mesoTonnage.map((b) => b.label)).toEqual(['-3w', '-2w', '-1w', 'Now']);
+    const lastBar = ref.current.mesoTonnage[3];
+    expect(lastBar.value).toBe(500); // 100kg x 5
+
+    expect(ref.current.workloadData).toEqual({ acute: 500, chronic: 500, ratio: 1, weeksOfData: 2 });
+    // The invariant F5 exists to guarantee: the sparkline's "Now" bar and
+    // the workload card's acute figure are the same number, not two
+    // independently-derived ones.
+    expect(ref.current.workloadData.acute).toBe(lastBar.value);
+
+    act(() => { tree.unmount(); });
+  });
+
+  test('Monday anchoring: a set one millisecond before Monday 00:00 lands in the PRIOR week, not "Now"', async () => {
+    const weekStart = localWeekStartMs(NOW);
+    setUp([
+      { id: 'sBefore', workoutId: 'w1', exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: weekStart - 1 },
+    ]);
+
+    const { ref, tree } = await renderProgressHook();
+
+    const lastBar = ref.current.mesoTonnage[3];
+    expect(lastBar.label).toBe('Now');
+    expect(lastBar.value).toBe(0);
+
+    act(() => { tree.unmount(); });
+  });
+
+  test('S6-5: a distance exercise\'s metres/seconds never enter the sparkline or workload kg totals', async () => {
+    const weekStart = localWeekStartMs(NOW);
+    setUp([
+      { id: 'sRun', workoutId: 'w1', exerciseId: 'run', weight: 5000, actualReps: 1, createdAt: weekStart + DAY }, // a 5km run
+      { id: 'sLift', workoutId: 'w1', exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: weekStart + DAY },
+    ]);
+
+    const { ref, tree } = await renderProgressHook();
+
+    const lastBar = ref.current.mesoTonnage[3];
+    // Only the real lift's tonnage (500 kg) counts; the run's 5000 "kg"
+    // (really 5000 metres) must not be summed in.
+    expect(lastBar.value).toBe(500);
+
+    act(() => { tree.unmount(); });
+  });
+
+  test('the session length trend buckets on six Monday-anchored weeks (W1..W5, Now)', async () => {
+    const weekStart = localWeekStartMs(NOW);
+    useAppStore.setState({ user: { id: 'u1' } });
+    database.getAllWorkouts.mockResolvedValue([
+      { id: 'w1', isCompleted: true, startedAt: weekStart + DAY, durationMinutes: 40 },
+      { id: 'w2', isCompleted: true, startedAt: weekStart - WEEK + DAY, durationMinutes: 50 },
+      { id: 'w3', isCompleted: true, startedAt: weekStart - 4 * WEEK + DAY, durationMinutes: 60 },
+    ]);
+    database.getCompletedWorkoutSets.mockResolvedValue([]);
+    database.getAllExercises.mockResolvedValue([]);
+
+    const { ref, tree } = await renderProgressHook();
+
+    expect(ref.current.durationBars).toHaveLength(6);
+    expect(ref.current.durationBars.map((b) => b.weekLabel)).toEqual(['W1', 'W2', 'W3', 'W4', 'W5', 'Now']);
+    expect(ref.current.durationBars[5]).toMatchObject({ avgMin: 40, sessionCount: 1 }); // Now
+    expect(ref.current.durationBars[4]).toMatchObject({ avgMin: 50, sessionCount: 1 }); // W5, 1 week ago
+    expect(ref.current.durationBars[1]).toMatchObject({ avgMin: 60, sessionCount: 1 }); // W2, 4 weeks ago
 
     act(() => { tree.unmount(); });
   });

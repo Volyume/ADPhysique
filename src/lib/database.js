@@ -4027,8 +4027,15 @@ export async function getWeeklyVolumeByMuscle(userId, weeksBack = 4, anchorMs = 
   const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
   const weekBoundaries = weekWindowsEndingAt(now, weeksBack);
 
-  // Fetch all completed working sets in the full window in one query.
-  const windowStart = now - weeksBack * WEEK_MS;
+  // Fetch all completed working sets in the full window in one query. The
+  // lower bound is the OLDEST window's own start, not a fixed
+  // `now - weeksBack * WEEK_MS` -- weekWindowsEndingAt now steps by
+  // Date#setDate (calendar-aware), so with a Monday-midnight anchor that
+  // fixed subtraction could land up to an hour short of the true oldest
+  // boundary across a UK clock change and miss a set logged in that hour.
+  // The WEEK_MS fallback only matters for weeksBack <= 0 (weekBoundaries
+  // empty), which no caller passes.
+  const windowStart = weekBoundaries[0]?.weekStart ?? (now - weeksBack * WEEK_MS);
   const rows = await d.getAllAsync(
     `SELECT ws.created_at, ws.exercise_id
      FROM workout_sets ws

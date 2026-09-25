@@ -155,18 +155,39 @@ export function e1rmTakeaway({ windowKey, coversAll, points, dateOf, values, uni
 
 /**
  * Weekly-volume takeaway: average weekly sets + first-to-last delta in sets.
- * @returns {string} e.g. "8 weeks: average 14 sets a week, up 3."
+ *
+ * D200-3 last clause (progress-tab audit 2026-09-24, lane E): the volume
+ * heatmap's trend now anchors its window on the Monday-ending local week
+ * (VolumeHeatmapScreen.js), so its last bucket is a PARTIAL current week.
+ * `weeklySets` must already exclude that bucket (the caller passes only the
+ * full weeks) so the average/delta here is never diluted by a partial week;
+ * `phraseOverride` lets the caller say "Last N full weeks" instead of the
+ * window's generic label, and `currentWeekTotal` (optional) prepends a
+ * separate "This week so far" sentence for the excluded bucket's own total.
+ * Both are optional and additive -- a caller that omits them (every
+ * existing caller) is byte-identical to before. `phraseOverride` is used
+ * verbatim (this function does not itself capitalise it) -- the caller
+ * decides the exact wording, matching how it opens a sentence.
+ *
+ * @returns {string} e.g. "8 weeks: average 14 sets a week, up 3." or, with
+ *   `currentWeekTotal` and `phraseOverride: 'Last 3 full weeks'`:
+ *   "This week so far: 9 sets. Last 3 full weeks: average 14 sets a week, up 3."
  */
-export function volumeTakeaway({ windowKey, coversAll, spanDays, weeklySets }) {
-  if (!weeklySets || weeklySets.length < 2) return '';
-  const phrase = windowPhrase(windowKey, coversAll, spanDays);
+export function volumeTakeaway({
+  windowKey, coversAll, spanDays, weeklySets, phraseOverride, currentWeekTotal,
+}) {
+  const hasCurrent = Number.isFinite(currentWeekTotal);
+  const currentR = hasCurrent ? Math.round(currentWeekTotal) : 0;
+  const currentText = hasCurrent ? `This week so far: ${currentR} set${currentR === 1 ? '' : 's'}.` : '';
+  if (!weeklySets || weeklySets.length < 2) return currentText;
+  const phrase = phraseOverride ?? windowPhrase(windowKey, coversAll, spanDays);
   const avg = weeklySets.reduce((t, v) => t + v, 0) / weeklySets.length;
   const avgR = Math.round(avg);
   const delta = Math.round(weeklySets[weeklySets.length - 1] - weeklySets[0]);
   const dir = directionWord(delta, 0);
   const base = `${phrase}: average ${avgR} set${avgR === 1 ? '' : 's'} a week`;
-  if (dir === 'level') return `${base}, holding steady.`;
-  return `${base}, ${dir} ${Math.abs(delta)}.`;
+  const tail = dir === 'level' ? `${base}, holding steady.` : `${base}, ${dir} ${Math.abs(delta)}.`;
+  return currentText ? `${currentText} ${tail}` : tail;
 }
 
 /**
@@ -191,7 +212,7 @@ export function volumeTakeaway({ windowKey, coversAll, spanDays, weeklySets }) {
  * @param {number} [weeksOfData=4] - actual count of past weeks averaged
  *   (getAcuteChronicWorkload's weeksOfData; 2-4). Defaults to 4 for callers
  *   that predate this parameter.
- * @returns {string} e.g. "This week: 12,450 kg against a 4-week average of 10,200 kg."
+ * @returns {string} e.g. "This week so far: 12,450 kg against a 4-week average of 10,200 kg."
  */
 export function workloadTakeaway(ratio, acute, chronic, weeksOfData = 4) {
   if (ratio === null || ratio === undefined || !Number.isFinite(ratio)) return '';
@@ -199,5 +220,7 @@ export function workloadTakeaway(ratio, acute, chronic, weeksOfData = 4) {
   const acuteR = Math.round(acute).toLocaleString('en-GB');
   const chronicR = Math.round(chronic).toLocaleString('en-GB');
   const weeks = Number.isFinite(weeksOfData) && weeksOfData > 0 ? Math.round(weeksOfData) : 4;
-  return `This week: ${acuteR} kg against a ${weeks}-week average of ${chronicR} kg.`;
+  // D200 item 3 (Q3): the acute figure is the current Monday-anchored week
+  // SO FAR, never a completed week -- the copy must say so.
+  return `This week so far: ${acuteR} kg against a ${weeks}-week average of ${chronicR} kg.`;
 }

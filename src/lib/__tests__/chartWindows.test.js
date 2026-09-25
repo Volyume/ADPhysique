@@ -162,20 +162,51 @@ describe('chartWindows: volumeTakeaway', () => {
     expect(volumeTakeaway({ windowKey: '4W', coversAll: false, spanDays: 28, weeklySets: [1, 1, 1] }))
       .toBe('4 weeks: average 1 set a week, holding steady.');
   });
+
+  // D200-3 last clause (progress-tab audit 2026-09-24, lane E, VolumeHeatmapScreen
+  // trend): phraseOverride and currentWeekTotal are additive -- omitted by
+  // both tests above, which stay byte-identical.
+  describe('phraseOverride and currentWeekTotal (additive, heatmap trend)', () => {
+    test('phraseOverride replaces the windowKey-derived phrase, used verbatim (not capitalised by this function)', () => {
+      expect(volumeTakeaway({
+        windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [11, 12, 13],
+        phraseOverride: 'Last 3 full weeks',
+      })).toBe('Last 3 full weeks: average 12 sets a week, up 2.');
+    });
+
+    test('currentWeekTotal prepends a "This week so far" sentence ahead of the full-weeks average', () => {
+      expect(volumeTakeaway({
+        windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [11, 12, 13],
+        phraseOverride: 'Last 3 full weeks', currentWeekTotal: 9,
+      })).toBe('This week so far: 9 sets. Last 3 full weeks: average 12 sets a week, up 2.');
+    });
+
+    test('currentWeekTotal alone (fewer than 2 full weeks) still reads, not empty', () => {
+      expect(volumeTakeaway({ windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [], currentWeekTotal: 5 }))
+        .toBe('This week so far: 5 sets.');
+      expect(volumeTakeaway({ windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [7], currentWeekTotal: 0 }))
+        .toBe('This week so far: 0 sets.');
+    });
+
+    test('a singular current-week total reads "1 set", not "1 sets"', () => {
+      expect(volumeTakeaway({ windowKey: '4W', coversAll: false, spanDays: 0, weeklySets: [], currentWeekTotal: 1 }))
+        .toBe('This week so far: 1 set.');
+    });
+  });
 });
 
 describe('chartWindows: workloadTakeaway', () => {
-  test('this week vs the 4-week average, formatted with thousands separators', () => {
+  test('this week so far vs the 4-week average, formatted with thousands separators', () => {
     expect(workloadTakeaway(1.22, 12450, 10200))
-      .toBe('This week: 12,450 kg against a 4-week average of 10,200 kg.');
+      .toBe('This week so far: 12,450 kg against a 4-week average of 10,200 kg.');
   });
   test('rounds fractional tonnage', () => {
     expect(workloadTakeaway(0.95, 999.6, 1052.4))
-      .toBe('This week: 1,000 kg against a 4-week average of 1,052 kg.');
+      .toBe('This week so far: 1,000 kg against a 4-week average of 1,052 kg.');
   });
   test('a quiet week (zero acute tonnage) still reads, not nonsense', () => {
     expect(workloadTakeaway(0, 0, 8000))
-      .toBe('This week: 0 kg against a 4-week average of 8,000 kg.');
+      .toBe('This week so far: 0 kg against a 4-week average of 8,000 kg.');
   });
   test('null ratio (insufficient weeks of data) returns empty, not a guess', () => {
     expect(workloadTakeaway(null, 5000, 0)).toBe('');
@@ -195,14 +226,14 @@ describe('chartWindows: workloadTakeaway', () => {
   // must say the real count, not always claim 4.
   test('a 2-week average reads "2-week", not a hardcoded 4', () => {
     expect(workloadTakeaway(1.22, 12450, 10200, 2))
-      .toBe('This week: 12,450 kg against a 2-week average of 10,200 kg.');
+      .toBe('This week so far: 12,450 kg against a 2-week average of 10,200 kg.');
   });
   test('a 3-week average reads "3-week"', () => {
     expect(workloadTakeaway(0.9, 9000, 10000, 3))
-      .toBe('This week: 9,000 kg against a 3-week average of 10,000 kg.');
+      .toBe('This week so far: 9,000 kg against a 3-week average of 10,000 kg.');
   });
   test('weeksOfData omitted defaults to 4 (back-compat for older callers)', () => {
     expect(workloadTakeaway(1.22, 12450, 10200))
-      .toBe('This week: 12,450 kg against a 4-week average of 10,200 kg.');
+      .toBe('This week so far: 12,450 kg against a 4-week average of 10,200 kg.');
   });
 });

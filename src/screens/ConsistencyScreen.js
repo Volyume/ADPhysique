@@ -145,6 +145,13 @@ export default function ConsistencyScreen({ navigation }) {
             onPress={() => navigateCrossTab(navigation, 'PlansTab', 'MesocycleBuilder')}
             onBuild={() => navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary')}
           />
+          {/* F5/D200 item 4 (progress-tab audit 2026-09-24, lane E): the
+              workload card now sits directly beneath the plan card so the
+              picture (the sparkline above) and its explanation (this card)
+              are adjacent, instead of separated by Recovery signals below. */}
+          {workloadData && workloadData.ratio !== null && (
+            <WorkloadCard data={workloadData} />
+          )}
           <FatigueTrendCard sessions={fatigueSessions} />
           <BlockProgressCard
             blockProgress={blockProgress}
@@ -163,13 +170,6 @@ export default function ConsistencyScreen({ navigation }) {
             onRateLastSession={(params) => navigation.navigate('WorkoutSummary', params)}
           />
         ) : null}
-
-        {/* ── Training load (ACWR) ── */}
-        {hasData && workloadData && workloadData.ratio !== null && (
-          <View style={styles.section}>
-            <WorkloadCard data={workloadData} />
-          </View>
-        )}
 
         {/* ── Session length trend ── */}
         {hasData && enoughForTrends && durationBars.length > 0 && (
