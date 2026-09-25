@@ -21,6 +21,14 @@
  *     module treats "no evidence" and "evidence not yet available" the same
  *     way: `known: false`, never a guess in either direction.
  *
+ * Register D201 (2026-09-25) adds a second, different-in-kind layer beside
+ * this one: src/lib/recovery/ ESTIMATES recovery of function from time AND
+ * dose AND the user's own recovery rating and ratings, and labels every
+ * figure it produces "estimated", never a measurement. This factual layer
+ * is unchanged by that work and stays exactly what it was: the one
+ * authority for elapsed time, nothing more. src/lib/recovery/ is the one
+ * sanctioned estimate layer; nothing else may add a second one.
+ *
  * PURE. No I/O, no randomness; the caller passes nowMs.
  */
 
