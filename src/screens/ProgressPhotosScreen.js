@@ -1165,7 +1165,13 @@ export default function ProgressPhotosScreen({ navigation }) {
     const scoreValue = suppressed ? 'Hidden' : (tierContract.requiresRevealAffordance && !tierContract.revealed
       ? 'Show anyway'
       : (score != null ? formatVolyumeScore(score) : 'Not scored'));
-    const bandValue = assessment?.leannessBandLabel || (score == null ? 'Not scored' : 'Baseline');
+    // S7-1 (progress-tab audit second pass, 2026-09-25): the leanness band is
+    // a body-composition judgement ("Lean", "Very Lean"), so it is withheld
+    // under suppression exactly like the score, change and confidence cells
+    // beside it. It used to render regardless, next to three "Hidden" cells.
+    const bandValue = suppressed
+      ? 'Hidden'
+      : (assessment?.leannessBandLabel || (score == null ? 'Not scored' : 'Baseline'));
     const signalValue = suppressed
       ? 'Hidden'
       : (assessment?.progressSignalLabel || scan?.deltaExplanation?.trendSummary || (score == null ? 'Not scored' : 'Baseline'));
@@ -1196,7 +1202,13 @@ export default function ProgressPhotosScreen({ navigation }) {
     // WAVE-D-FINDINGS.md UNIT_DEFECT (:1263): was a hard-coded 'kg' literal
     // regardless of bodyWeightUnits; matches BeforeAfterShareSheet.js:148's
     // already-correct read of the same store field.
-    const weightText = Number.isFinite(item.weightKg) ? formatBodyWeight(item.weightKg, bodyWeightUnits) : null;
+    // S7-1 (2026-09-25): the card's bodyweight caption is a bodyweight display
+    // (usePhotoSuppression's own scope), so it is withheld under calm mode or
+    // an open ED flag like every other bodyweight figure on this tab; it used
+    // to render on every dated card regardless.
+    const weightText = (!suppressed && Number.isFinite(item.weightKg))
+      ? formatBodyWeight(item.weightKg, bodyWeightUnits)
+      : null;
     const scanForDay = scanForCheckIn(item);
     const scanSummary = libraryScanSummary(scanForDay);
     // Receipts (results-ui-and-copy-blueprint.md §2/§9): one calm sentence +

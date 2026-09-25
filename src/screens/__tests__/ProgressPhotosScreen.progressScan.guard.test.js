@@ -97,21 +97,25 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
 
     // ProgressPhotosScreen's own check-in card meta line reads a per-photo
     // logged weight (item.weightKg from photo capture metadata, not the
-    // scan's AI-derived stats.weightKg) and is not itself suppression-gated
-    // at this line -- pinned as-is so a refactor cannot silently change this
-    // shape unnoticed. See AUDIT-MODULES-FLAGS.md §1.4 for the distinction
-    // between this self-logged capture weight and the scan-stats weight the
-    // other three sites gate.
+    // scan's AI-derived stats.weightKg). It used to be pinned as NOT
+    // suppression-gated at this line (the self-logged capture weight versus
+    // the scan-stats weight the other three sites gate).
     //
     // RE-PINNED (WAVE-D-FINDINGS.md UNIT_DEFECT, :1263, lead ruling item 2):
     // this line hard-coded a 'kg' literal regardless of the user's chosen
     // body-weight unit (bodyWeightUnits was never even read in this file).
     // Now formats through formatBodyWeight(item.weightKg, bodyWeightUnits),
     // matching the already-correct sibling BeforeAfterShareSheet.js:148.
-    // The weight-privacy law this test pins (not itself suppression-gated
-    // at this line) is unchanged.
+    //
+    // RE-PINNED AGAIN (S7-1, progress-tab audit second pass 2026-09-25,
+    // register D200 item 7): the caption is now withheld under the same
+    // calm-or-ED `suppressed` verdict as the Score, Change and Confidence
+    // cells on the same row. A calm-mode user's own logged weigh-in stays
+    // one tap away behind Body metrics' re-confirmation; it is no longer
+    // printed on every dated card beside three "Hidden" cells. Gating more
+    // under suppression strengthens the weight-privacy law this test pins.
     expect(SCREEN).toMatch(
-      /const weightText = Number\.isFinite\(item\.weightKg\) \? formatBodyWeight\(item\.weightKg, bodyWeightUnits\) : null;/,
+      /const weightText = \(!suppressed && Number\.isFinite\(item\.weightKg\)\)\s*\?\s*formatBodyWeight\(item\.weightKg, bodyWeightUnits\)\s*:\s*null;/,
     );
     expect(SCREEN).toMatch(/import \{ formatBodyWeight \} from '\.\.\/lib\/units';/);
     expect(SCREEN).toMatch(/const bodyWeightUnits = useAppStore\(\(s\) => s\.bodyWeightUnits\);/);

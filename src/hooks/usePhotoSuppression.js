@@ -19,7 +19,8 @@
  * The building blocks: view-your-own-dated-photos and delete stay available;
  * this hook only gates the comparative / weight / share layers on top.
  */
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { NavigationContext } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { getOpenEdPatternFlag } from '../lib/database';
@@ -67,9 +68,20 @@ export async function readEdOrCalmSuppressed(userId) {
   return derivePhotoSuppression({ mode, edFlag });
 }
 
+// S7-5 (progress-tab audit second pass, 2026-09-25): a test double that
+// mocks '@react-navigation/native' without NavigationContext leaves the
+// import undefined; reading a local empty context instead keeps the hook
+// order fixed and simply means "no screen to listen to".
+const NoNavigationContext = createContext(null);
+
 export default function usePhotoSuppression(explicitUserId) {
   const storeUserId = useAppStore((s) => s.user?.id);
   const userId = explicitUserId ?? storeUserId;
+  // S7-5: the enclosing screen's navigation object, when the hook runs
+  // inside one (every consumer today: the photos screen, its sheets, the
+  // Progress landing's visual pillar). Read through the context directly
+  // rather than useNavigation(), which throws outside a navigator.
+  const navigation = useContext(NavigationContext ?? NoNavigationContext);
 
   // Fail CLOSED: start suppressed and only lift once BOTH reads confirm a
   // non-calm, unflagged state. A comparative / weight / share surface must
@@ -78,7 +90,7 @@ export default function usePhotoSuppression(explicitUserId) {
 
   useEffect(() => {
     let alive = true;
-    (async () => {
+    const read = async () => {
       const [mode, edFlag] = await Promise.all([
         // Wellbeing: read the RAW key, not the failure-swallowing wellbeing-mode
         // helper (which maps a read error down to 'unspecified' and would fail
@@ -90,9 +102,24 @@ export default function usePhotoSuppression(explicitUserId) {
         getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
       ]);
       if (alive) setSuppressed(derivePhotoSuppression({ mode, edFlag }));
-    })();
-    return () => { alive = false; };
-  }, [userId]);
+    };
+    read();
+    // S7-5 (2026-09-25): the reads used to run once per userId, so a screen
+    // that stays mounted across navigation (the photos screen is a plain
+    // stack screen and refreshes its own data on focus) kept a verdict
+    // taken before calm mode was switched on or an ED flag was raised
+    // elsewhere in the app, and its comparison, trend and share layers
+    // stayed reachable until a remount. Both reads now run again every time
+    // the enclosing screen regains focus; the last verdict stands while the
+    // re-read resolves, and a suppressing answer applies the moment it lands.
+    const unsubscribe = typeof navigation?.addListener === 'function'
+      ? navigation.addListener('focus', () => { read(); })
+      : null;
+    return () => {
+      alive = false;
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, [userId, navigation]);
 
   return suppressed;
 }
