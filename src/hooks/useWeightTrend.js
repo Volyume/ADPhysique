@@ -14,6 +14,8 @@
  */
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import {
   getMorningWeights, getNutritionTargets, getOpenEdPatternFlag, getLatestCoachOutput,
   getUserBodyProfile, getLatestBodyComposition,
@@ -34,7 +36,7 @@ export default function useWeightTrend(userId) {
       return;
     }
     try {
-      const [weights, targets, recentIntake, edFlag, lastCoach, profile, composition] = await Promise.all([
+      const [weights, targets, recentIntake, edFlag, lastCoach, profile, composition, wellbeingMode] = await Promise.all([
         getMorningWeights(userId, 90),
         getNutritionTargets(userId).catch(() => null),
         getRecentIntakeSummary(userId).catch(() => null),
@@ -45,7 +47,14 @@ export default function useWeightTrend(userId) {
         getLatestCoachOutput(userId).catch(() => null),
         getUserBodyProfile(userId).catch(() => null),
         getLatestBodyComposition(userId).catch(() => null),
+        // Calm mode (S6-1, progress-tab audit 2026-09-24): the RAW wellbeing
+        // key, never the failure-swallowing wellbeing-mode helper (which maps
+        // a read error to 'unspecified' and would fail OPEN); a genuine failure
+        // becomes the 'read_failed' sentinel, which reads as calm below. The
+        // same fail-closed read usePhotoSuppression performs.
+        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
       ]);
+      const calm = isCalm(wellbeingMode) || wellbeingMode === 'read_failed';
 
       // C6 R-2 (D97-22): getMorningWeights(90) is ninety ROWS of any age,
       // not ninety days, so after a long absence the card rendered a
@@ -106,6 +115,8 @@ export default function useWeightTrend(userId) {
         weeklyChange,
         adaptiveBurn,
         edFlagOpen: !!edFlag,
+        // S6-1: calm mode withholds every figure in the shared derivation.
+        calm,
         stepTrend,
         // C6 RD6-8 (D97-25): the label needs to know whether logged
         // food informed the estimate or intake was assumed at target.

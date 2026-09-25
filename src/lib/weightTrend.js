@@ -50,12 +50,20 @@ function isDiverging(actual, expected) {
   return Math.abs(actual - expected) > tolerance;
 }
 
+// S6-1: the one line the Body pillar shows under calm mode. Plain, no
+// number, no prompt to weigh; the figures stay one tap away behind Body
+// metrics' own re-confirmation.
+export const CALM_INSIGHT = 'Your weigh-ins are kept in Body metrics, ready when you want them.';
+
 /**
  * @param {object} input
  * @param {Array}  input.ewmaData     computeEWMA output, oldest-first ({ ewma, weightKg, date })
  * @param {?number} input.weeklyChange computeWeeklyWeightChange output (kg/week) or null
  * @param {?object} input.adaptiveBurn computeAdaptiveTDEEAdjustment output or null
  * @param {boolean} input.edFlagOpen   true when an ED/wellbeing flag is open
+ * @param {boolean} input.calm         true when calm mode is on (or its read
+ *                                      failed): no figure, no rate, no
+ *                                      maintenance, one calm line (S6-1)
  * @param {?object} input.stepTrend    COMP-026 latest-run modifier state
  *                                      { applied:boolean, direction:-1|0|1 }, or null
  * @returns {object} view-model for WeightTrendCard
@@ -75,10 +83,39 @@ function stepTrendLineFor(stepTrend) {
   return null;
 }
 
-export function deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlagOpen = false, stepTrend = null, intakeDaysLogged = 0 } = {}) {
+export function deriveWeightTrend({
+  ewmaData, weeklyChange, adaptiveBurn, edFlagOpen = false, stepTrend = null, intakeDaysLogged = 0, calm = false,
+} = {}) {
   const data = Array.isArray(ewmaData) ? ewmaData : [];
   const n = data.length;
   const state = trendStateFor(n);
+
+  // Calm mode (S6-1, progress-tab audit 2026-09-24, register D200): the
+  // Progress landing's Body pillar rendered the smoothed bodyweight and its
+  // weekly rate from this view-model with no calm read at all, while the
+  // Photos pillar beside it and Body metrics itself (a per-session
+  // re-confirmation screen) withhold under calm. The withhold now lives in
+  // the shared derivation so EVERY consumer of this view-model is calm-safe:
+  // no figure, no rate, no maintenance, no dot, and no nudge to weigh in,
+  // whatever the state. The reader passes calm fail-closed (a failed
+  // wellbeing read counts as calm, the same sentinel usePhotoSuppression
+  // uses). BodyMetricsScreen does not pass calm (its own screen gate
+  // handles it), so its call is unchanged.
+  if (calm) {
+    return {
+      render: true,
+      state,
+      ewmaNow: null,
+      hasSparkline: false,
+      showRate: false,
+      showRaw: false,
+      dot: null,
+      insight: CALM_INSIGHT,
+      maintenance: null,
+      edFlagOpen: !!edFlagOpen,
+      calm: true,
+    };
+  }
 
   if (state === 0) return { render: false, state };
 

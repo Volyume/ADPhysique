@@ -173,3 +173,57 @@ describe('C6 RD6-8 (D97-25): the maintenance label states its intake basis', () 
     expect(vm.maintenance.label).not.toMatch(/weeks of data/);
   });
 });
+
+
+// S6-1 (progress-tab audit 2026-09-24, register D200): calm mode is a branch
+// of the SHARED derivation, so every consumer (the Progress landing's Body
+// pillar via useWeightTrend today) withholds the figure, the rate, the
+// maintenance estimate and the dot without a screen-level gate of its own.
+// The Photos pillar beside it and Body metrics itself already withhold under
+// calm; this pins the Body pillar's view-model to the same rule.
+describe('S6-1: calm mode withholds every figure in the shared derivation', () => {
+  const { CALM_INSIGHT } = require('../weightTrend');
+  const fullBurn = { adjustedTDEE: 2400, confidence: 'high', weeks: 6, actualKgPerWeek: -0.3, expectedKgPerWeek: -0.35 };
+
+  test.each([
+    ['state 0, no weigh-ins', 0],
+    ['state 1, four entries', 4],
+    ['state 2, ten entries', 10],
+    ['state 3, twenty entries', 20],
+    ['state 4, fifty entries', 50],
+  ])('%s: renders the calm line only, no figure, no rate, no maintenance, no dot', (_label, n) => {
+    const vm = deriveWeightTrend({ ewmaData: series(n), weeklyChange: -0.3, adaptiveBurn: fullBurn, calm: true });
+    expect(vm.render).toBe(true);
+    expect(vm.calm).toBe(true);
+    expect(vm.ewmaNow).toBeNull();
+    expect(vm.showRate).toBe(false);
+    expect(vm.showRaw).toBe(false);
+    expect(vm.hasSparkline).toBe(false);
+    expect(vm.maintenance).toBeNull();
+    expect(vm.dot).toBeNull();
+    expect(vm.weeklyChange).toBeUndefined();
+    expect(vm.insight).toBe(CALM_INSIGHT);
+  });
+
+  test('the calm line carries no number and no prompt to weigh in', () => {
+    expect(CALM_INSIGHT).not.toMatch(/\d/);
+    expect(CALM_INSIGHT).not.toMatch(/log|weigh in|record/i);
+    expect(CALM_INSIGHT).not.toMatch(/\u2014/);
+  });
+
+  test('calm wins over an open ED flag and still reports the flag', () => {
+    const vm = deriveWeightTrend({ ewmaData: series(20), weeklyChange: -0.6, calm: true, edFlagOpen: true });
+    expect(vm.calm).toBe(true);
+    expect(vm.edFlagOpen).toBe(true);
+    expect(vm.ewmaNow).toBeNull();
+    expect(vm.insight).toBe(CALM_INSIGHT);
+  });
+
+  test('calm omitted (every existing caller) is unchanged: state 3 still shows the figure and the rate', () => {
+    const vm = deriveWeightTrend({ ewmaData: series(20), weeklyChange: -0.3, adaptiveBurn: fullBurn });
+    expect(vm.calm).toBeUndefined();
+    expect(vm.ewmaNow).toBe(80);
+    expect(vm.showRate).toBe(true);
+    expect(vm.weeklyChange).toBe(-0.3);
+  });
+});
