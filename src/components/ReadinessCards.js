@@ -44,12 +44,10 @@ import { SESSION_STATE } from '../lib/blockProgression';
 import { RECOVERY_ESTIMATE_LABEL } from '../lib/recovery/constants';
 import { loadMuscleRecovery, loadPlannedSetsByRoutine } from '../lib/recovery/load';
 import { nextLikelyTrainingTime } from '../lib/recovery/nextLikelyTrainingTime';
-// readyByPhrase: R-C had already written and exported this (with its own
-// pinned copy tests, nextWorkoutRecommendation.test.js) by the time this
-// lane started, so it is reused here rather than a second
-// src/lib/recovery/readyByLabel.js -- exactly the duplicate-authority the
-// build brief asked to check for first.
-import { recommendNextWorkout, readyByPhrase } from '../lib/recovery/nextWorkoutRecommendation';
+// readyClause: the one authority for the "ready now / later today / by
+// Thursday / in N days" wording (nextWorkoutRecommendation.js), reused
+// here rather than a second src/lib/recovery/readyByLabel.js.
+import { recommendNextWorkout, readyClause } from '../lib/recovery/nextWorkoutRecommendation';
 
 const MILESTONES = [
   { sessions: 1,    label: 'First session',  icon: 'star-outline' },
@@ -214,28 +212,29 @@ function compareMuscleNames(a, b) {
   return nameA < nameB ? -1 : 1;
 }
 
-// D201: "ready by Thursday", or "ready now" for a muscle already at/above
-// the recovered threshold (status 'recovered', readyAtMs null by
-// muscleRecoveryModel's own contract) -- calling readyByPhrase for that
-// case would read "ready by today", which is true but reads like there is
-// still something to wait for. Matches the calm "Ready now." wording
-// nextWorkoutRecommendation.js's own readinessLine uses for the equivalent
-// whole-session case.
+// D201: "ready by Thursday", "ready later today", or "ready now" for a
+// muscle already at/above the recovered threshold (status 'recovered',
+// readyAtMs null by muscleRecoveryModel's own contract) -- one authority,
+// nextWorkoutRecommendation.js's readyClause.
 function muscleReadyClause(entry, nowMs) {
   if (entry.status === 'recovered' || !Number.isFinite(entry.readyAtMs)) return 'ready now';
-  return `ready by ${readyByPhrase(entry.readyAtMs, nowMs)}`;
+  return readyClause(entry.readyAtMs, nowMs);
 }
 
 // The row's visible text (spec section 6): "Quads, estimated 64% recovered,
-// ready by Thursday. Trained 2 days ago." The recency FACT is
-// trainingRecency's own unchanged label (the chip's own function, per the
-// build brief -- unchanged); this row only appends the closing full stop
-// the spec's own example carries, same as any second sentence in running
-// copy -- trainingRecency.js itself, and its label string, are untouched.
-function muscleRecoveryRowText(entry, nowMs) {
+// ready by Thursday. Trained 2 days ago." The recency FACT is the SAME
+// reading the Training recency chip it replaces has always shown:
+// getLastTrainedPerMuscle's latest start for that muscle as a primary
+// mover, through trainingRecency's own unchanged label (Opus review finding
+// 13: the model's own lastSessionEndMs counts secondary credit and session
+// ends, so it could disagree with the chip by a day). The model's instant
+// is only the fallback when the chip source has no reading for the muscle.
+// This row only appends the closing full stop the spec's own example
+// carries; trainingRecency.js itself, and its label string, are untouched.
+function muscleRecoveryRowText(entry, nowMs, lastTrainedAt) {
   const name = MUSCLE_DISPLAY_NAMES[entry.muscle] || entry.muscle;
   const percent = entry.recoveredPercent;
-  const recency = trainingRecency(entry.lastSessionEndMs, nowMs);
+  const recency = trainingRecency(lastTrainedAt ?? entry.lastSessionEndMs, nowMs);
   return `${name}, ${RECOVERY_ESTIMATE_LABEL} ${percent}% recovered, ${muscleReadyClause(entry, nowMs)}. ${recency.label}.`;
 }
 
@@ -243,10 +242,10 @@ function muscleRecoveryRowText(entry, nowMs) {
 // recovered, the ready-by phrase, the trained-ago fact) comma-joined as one
 // sentence -- same convention as VolumeHeatmapScreen's rowA11yLabel.
 // "percent" is spelled out (never "%") for a reliable screen-reader read.
-function muscleRecoveryRowA11yLabel(entry, nowMs) {
+function muscleRecoveryRowA11yLabel(entry, nowMs, lastTrainedAt) {
   const name = MUSCLE_DISPLAY_NAMES[entry.muscle] || entry.muscle;
   const percent = entry.recoveredPercent;
-  const recency = trainingRecency(entry.lastSessionEndMs, nowMs);
+  const recency = trainingRecency(lastTrainedAt ?? entry.lastSessionEndMs, nowMs);
   return `${name}, ${RECOVERY_ESTIMATE_LABEL} ${percent} percent recovered, ${muscleReadyClause(entry, nowMs)}, ${recency.label}`;
 }
 
@@ -395,11 +394,25 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
     // figure) and leaves every other reader in this file untouched.
     try {
       const recoveryLoad = await loadMuscleRecovery(userId);
+      // Opus review finding 10: a core read that failed is not an all-clear.
+      // The whole section stays hidden rather than showing every muscle as
+      // "no recent session" off a read that never happened.
+      if (recoveryLoad?.degraded) {
+        setMuscleRecovery(null);
+        setRecoveryRecommendation(null);
+        return;
+      }
       setMuscleRecovery(recoveryLoad);
       try {
         const position = await resolveProgrammePosition(userId);
         const programmeNext = position?.nextSession ?? null;
-        if (position && programmeNext) {
+        // Opus review finding 1: a FINISHED block awaiting the athlete's
+        // decision has no "next workout" to suggest; Home's own hero says
+        // "choose what comes after this block" there, and this row must not
+        // contradict it. resolveProgrammePosition's gated recovery state is
+        // the one authority for that reading.
+        const awaitingDecision = !!position?.recoveryState?.awaitingDecision;
+        if (position && programmeNext && !awaitingDecision) {
           const sessions = position.sessions ?? [];
           const outstandingIds = sessions
             .filter((s) => s.state === SESSION_STATE.OUTSTANDING)
@@ -656,10 +669,10 @@ export default function ReadinessCards({ userId, onRateLastSession }) {
                   <View
                     key={entry.muscle}
                     accessibilityRole="text"
-                    accessibilityLabel={muscleRecoveryRowA11yLabel(entry, muscleRecoveryNowMs)}
+                    accessibilityLabel={muscleRecoveryRowA11yLabel(entry, muscleRecoveryNowMs, muscleFreshness?.[entry.muscle])}
                   >
                     <Text style={[styles.rbmRowText, live.rbmRowText]}>
-                      {muscleRecoveryRowText(entry, muscleRecoveryNowMs)}
+                      {muscleRecoveryRowText(entry, muscleRecoveryNowMs, muscleFreshness?.[entry.muscle])}
                     </Text>
                   </View>
                 ))}

@@ -20,7 +20,7 @@
  * than re-deriving them through real SQLite reads (those reads are R-C's
  * and R-A's own modules, already covered by their own test suites);
  * nextWorkoutRecommendation.js is mocked ONLY on recommendNextWorkout,
- * keeping readyByPhrase real (pure, no I/O) so this suite's expected
+ * keeping readyClause real (pure, no I/O) so this suite's expected
  * "ready by" strings are computed the exact same way the component does.
  */
 import { create, act } from 'react-test-renderer';
@@ -115,7 +115,7 @@ import * as database from '../../lib/database';
 import { logError } from '../../lib/errorLog';
 import { resolveProgrammePosition } from '../../lib/programmePosition';
 import { loadMuscleRecovery, loadPlannedSetsByRoutine } from '../../lib/recovery/load';
-import { recommendNextWorkout, readyByPhrase } from '../../lib/recovery/nextWorkoutRecommendation';
+import { recommendNextWorkout, readyClause } from '../../lib/recovery/nextWorkoutRecommendation';
 import { RECOVERY_ESTIMATE_LABEL } from '../../lib/recovery/constants';
 
 const NOW = Date.now();
@@ -198,13 +198,13 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
 
   test('a recovering row: percent, "ready by" weekday wording, and the recency fact', async () => {
     const tree = await render();
-    const expected = `Quads, ${RECOVERY_ESTIMATE_LABEL} 64% recovered, ready by ${readyByPhrase(QUADS_READY_AT, NOW)}. Trained 2 days ago.`;
+    const expected = `Quads, ${RECOVERY_ESTIMATE_LABEL} 64% recovered, ${readyClause(QUADS_READY_AT, NOW)}. Trained 2 days ago.`;
     expect(texts(tree)).toContain(expected);
   });
 
   test('a nearly row: percent, "ready by" weekday wording, and the recency fact', async () => {
     const tree = await render();
-    const expected = `Chest, ${RECOVERY_ESTIMATE_LABEL} 80% recovered, ready by ${readyByPhrase(CHEST_READY_AT, NOW)}. Trained 1 day ago.`;
+    const expected = `Chest, ${RECOVERY_ESTIMATE_LABEL} 80% recovered, ${readyClause(CHEST_READY_AT, NOW)}. Trained 1 day ago.`;
     expect(texts(tree)).toContain(expected);
   });
 
@@ -215,7 +215,7 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
 
   test('accessibility label carries the muscle, "estimated N percent recovered", the ready-by phrase and the trained-ago fact', async () => {
     const tree = await render();
-    const expected = `Quads, ${RECOVERY_ESTIMATE_LABEL} 64 percent recovered, ready by ${readyByPhrase(QUADS_READY_AT, NOW)}, Trained 2 days ago`;
+    const expected = `Quads, ${RECOVERY_ESTIMATE_LABEL} 64 percent recovered, ${readyClause(QUADS_READY_AT, NOW)}, Trained 2 days ago`;
     const node = tree.root.findByProps({ accessibilityLabel: expected });
     expect(node).toBeTruthy();
     expect(node.props.accessibilityRole).toBe('text');

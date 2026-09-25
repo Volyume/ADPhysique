@@ -552,7 +552,7 @@ describe('the recommendation card: primary switches, with the reason and a "Keep
     expect(findByLabel(tree, 'Keep Legs').length).toBeGreaterThan(0);
   });
 
-  test('tapping "Keep Legs" restores programme order immediately; the reason line stays, the "Keep" control drops', async () => {
+  test('tapping "Keep Legs" restores programme order immediately; the line under Legs becomes its own, the "Keep" control drops', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({
       db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
@@ -575,8 +575,11 @@ describe('the recommendation card: primary switches, with the reason and a "Keep
     // Lead review: Keep restores programme order as the primary...
     expect(findByLabel(tree, 'Start Legs').length).toBeGreaterThan(0);
     expect(findByLabel(tree, 'Start Push').length).toBe(0);
-    // ...but the reason line STAYS (the alternative is still visible)...
-    expect(text).toContain('Legs is next in your plan. Quads are estimated 64% recovered, ready by Thursday. Push is ready now.');
+    // ...the line under "Legs" is Legs's own (D201 addendum 4 ruling 6: the
+    // line never repeats the card's title; Opus review finding 8), so the
+    // reason, which names Legs, is gone with the control...
+    expect(text).toContain('Quads are estimated 64% recovered, ready by Thursday.');
+    expect(text).not.toMatch(/is next in your plan/);
     // ...and the "Keep" control itself drops -- there is nothing further to keep.
     expect(findByLabel(tree, 'Keep Legs').length).toBe(0);
   });
@@ -611,7 +614,8 @@ describe('the recommendation card: primary switches, with the reason and a "Keep
     expect(second.errors).toEqual([]);
     expect(findByLabel(second.tree, 'Start Legs').length).toBeGreaterThan(0);
     expect(findByLabel(second.tree, 'Start Push').length).toBe(0);
-    expect(flattenText(second.tree)).toContain('Legs is next in your plan. Quads are estimated 64% recovered, ready by Thursday. Push is ready now.');
+    expect(flattenText(second.tree)).toContain('Quads are estimated 64% recovered, ready by Thursday.');
+    expect(flattenText(second.tree)).not.toMatch(/is next in your plan/);
     expect(findByLabel(second.tree, 'Keep Legs').length).toBe(0);
   });
 
@@ -664,6 +668,59 @@ describe('the recommendation card: primary switches, with the reason and a "Keep
     } finally {
       dateNowSpy.mockRestore();
     }
+  });
+});
+
+describe('the recommendation never outranks the block decision, and the line follows the displayed session (Opus review findings 1 and 7)', () => {
+  test('a finished block awaiting the decision shows the block-complete hero, not the recommended session', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: {
+        ...withTwoRoutinePlan(),
+        getAllWorkouts: async () => [completedWorkout('w1', 1)],
+        getCurrentMesocycleWeek: async () => ({ awaitingDecision: true, mesocycleId: 'm1', weekIndex: 6, plannedWeeks: 6 }),
+      },
+      lib: {
+        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
+        recommendNextWorkout: () => RECOMMEND_RESULT,
+      },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    // The recovery override is derived at render from the LIVE block state,
+    // so it can never hide the finished-block hero (it used to: the focus
+    // callback read a stale currentMesoWeek and wrote the override).
+    expect(findByLabel(tree, 'Choose what comes after this block').length).toBeGreaterThan(0);
+    expect(findByLabel(tree, 'Start Push').length).toBe(0);
+    expect(findByLabel(tree, 'Keep Legs').length).toBe(0);
+  });
+
+  test('a session the athlete picks from the sheet shows ITS OWN line, never programme-next\'s', async () => {
+    useAppStore.setState(PRO_USER);
+    applyFixture({
+      db: { ...withTwoRoutinePlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
+      lib: {
+        resolveProgrammePosition: positionWithTwoOutstandingSessions(),
+        recommendNextWorkout: () => PLAIN_RESULT,
+      },
+    });
+    const { tree, errors } = await mountHome({});
+    expect(errors).toEqual([]);
+    expect(flattenText(tree)).toContain('Quads are estimated 64% recovered, ready by Thursday.');
+
+    // Pick Push from the options sheet (its onSelectOverride prop is the
+    // sheet's one way of choosing a different session).
+    const sheet = tree.root.findAll(
+      (n) => typeof n.props.onSelectOverride === 'function' && Array.isArray(n.props.planAllWorkouts),
+    )[0];
+    expect(sheet).toBeTruthy();
+    await TestRenderer.act(async () => {
+      sheet.props.onSelectOverride({ routine: ROUTINE_PUSH, total: 2, idx: 1 });
+    });
+    const text = flattenText(tree);
+    expect(findByLabel(tree, 'Start Push').length).toBeGreaterThan(0);
+    expect(text).toContain('Ready now.');
+    expect(text).not.toContain('Quads are estimated 64% recovered');
   });
 });
 

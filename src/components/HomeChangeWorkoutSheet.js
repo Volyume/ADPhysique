@@ -137,12 +137,18 @@ function HomeChangeWorkoutSheet({
             <SectionLabel tone="muted" style={styles.sheetSectionLabel}>Choose a different workout</SectionLabel>
           ) : null}
           {planAllWorkouts.map((routine, i) => {
-            const isNext = i === nextWorkout?.idx && !selectedWorkoutOverride;
-            const isSel = selectedWorkoutOverride?.idx === i;
+            // "Next up" always marks PROGRAMME order (nextWorkout.idx), whatever
+            // session is currently displayed (Opus review finding 24: the badge
+            // used to vanish while a recovery recommendation was the primary
+            // action, so the sheet stopped showing where the plan actually
+            // was). The highlighted row is the displayed one.
+            const isNext = i === nextWorkout?.idx;
+            const isSel = selectedWorkoutOverride ? selectedWorkoutOverride.idx === i : isNext;
+            const recoveryLine = recoveryLineFor(routine.id);
             return (
               <TouchableOpacity
                 key={routine.id ?? i}
-                style={[styles.pickerRow, live.pickerRow, (isNext || isSel) && [styles.pickerRowActive, live.pickerRowActive]]}
+                style={[styles.pickerRow, live.pickerRow, isSel && [styles.pickerRowActive, live.pickerRowActive]]}
                 onPress={() => {
                   onSelectOverride(
                     i === nextWorkout?.idx ? null : { routine, total: planAllWorkouts.length, idx: i },
@@ -150,11 +156,16 @@ function HomeChangeWorkoutSheet({
                   onClose();
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={`Day ${i + 1}, ${routine.name}`}
-                accessibilityState={{ selected: isNext || isSel }}
+                // The row's label replaces its child text for screen readers, so
+                // the recovery line rides on it, with "percent" spelled out
+                // (spec section 6 accessibility; Opus review finding 9).
+                accessibilityLabel={recoveryLine
+                  ? `Day ${i + 1}, ${routine.name}. ${recoveryLine.replace(/%/g, ' percent')}`
+                  : `Day ${i + 1}, ${routine.name}`}
+                accessibilityState={{ selected: isSel }}
               >
-                <View style={[styles.dayBadge, live.dayBadge, (isNext || isSel) && [styles.dayBadgeActive, live.dayBadgeActive]]}>
-                  <Text style={[styles.dayNum, live.dayNum, (isNext || isSel) && [styles.dayNumActive, live.dayNumActive]]}>
+                <View style={[styles.dayBadge, live.dayBadge, isSel && [styles.dayBadgeActive, live.dayBadgeActive]]}>
+                  <Text style={[styles.dayNum, live.dayNum, isSel && [styles.dayNumActive, live.dayNumActive]]}>
                     D{i + 1}
                   </Text>
                 </View>
@@ -163,9 +174,9 @@ function HomeChangeWorkoutSheet({
                   {exerciseCounts[routine.id] ? (
                     <Text style={[styles.pickerMeta, live.pickerMeta]}>{exerciseCounts[routine.id]} exercises</Text>
                   ) : null}
-                  {recoveryLineFor(routine.id) ? (
+                  {recoveryLine ? (
                     <Text style={[styles.pickerMeta, live.pickerMeta]} numberOfLines={2}>
-                      {recoveryLineFor(routine.id)}
+                      {recoveryLine}
                     </Text>
                   ) : null}
                 </View>
