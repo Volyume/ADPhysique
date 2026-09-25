@@ -55,6 +55,8 @@ campaign entries this section carried were retired to the archive
 
 ---
 
+**VERSION 2.2.0 (2026-09-25)** — set on the founder's instruction ("You need to bump to 2.2.0"; 2.1.0 is closed in App Store Connect): `app.json`, `package.json`, `package-lock.json`; buildNumber and versionCode untouched, as in every previous bump. Founder-side: create 2.2.0 in App Store Connect before the next iOS upload.
+
 ## 2. QUEUED
 
 _Nothing is queued. Founder order 2026-09-25: old items are never brought
