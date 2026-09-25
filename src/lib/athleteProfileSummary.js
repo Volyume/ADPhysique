@@ -1,5 +1,10 @@
 import { buildLiftProgressRows } from './liftProgress';
-import { getStrengthLevel, summariseStrengthStanding } from './strengthStandards';
+import {
+  STRENGTH_STANDARDS,
+  getStrengthLevel,
+  matchStandardKey,
+  summariseStrengthStanding,
+} from './strengthStandards';
 import { kgToLbs } from './units';
 
 function completedWorkoutRows(workouts) {
@@ -36,9 +41,30 @@ export function buildAthleteProfileSummary({
   const liftEntries = [];
 
   if (bwForLiftUnits) {
+    // F13 (progress-tab audit 2026-09-24, register D200 "fix it all"):
+    // mirrors the fix already landed for the Lift progress screen (commit
+    // d2b92e4e, LiftProgressScreen.js ~L225-234). Entries used to be keyed
+    // by exercise NAME, so two variants of the same lift (e.g. "Barbell
+    // Bench Press" and "Close-Grip Bench Press") both matched the 'bench'
+    // standard and were scored + counted as two lifts -- doubling
+    // strength.count and letting keyLifts show the same standard twice
+    // while another went missing entirely. Key by the STANDARD instead
+    // (matchStandardKey), keeping only the higher-ratio variant per
+    // standard, so summariseStrengthStanding and keyLifts each see exactly
+    // one entry per standard.
+    const winners = {};
     for (const row of rows) {
+      if (!row.bestE1rm) continue;
+      const key = matchStandardKey(row.name);
+      if (!key) continue;
       const level = getStrengthLevel(row.name, row.bestE1rm, bwForLiftUnits);
-      if (level) liftEntries.push({ row, level });
+      if (!level) continue;
+      if (!winners[key] || level.ratio > winners[key].level.ratio) {
+        winners[key] = { row, level };
+      }
+    }
+    for (const key of Object.keys(STRENGTH_STANDARDS)) {
+      if (winners[key]) liftEntries.push(winners[key]);
     }
   }
 
