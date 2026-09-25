@@ -9792,3 +9792,18 @@ linear and stays untouched. (3) requiredSessionIdentity's bikini 6-day
 exact-order pin may be re-anchored if the scorer still spreads the four
 glute sessions more evenly under (1) and (2): identities unchanged, order
 moved for recovery spacing, comment on the pin.
+
+**D201 addendum 3 (2026-09-25, lead, sequencing ruling 3).** The scorer's
+gap model is no longer even spacing (168 / N for every gap, which makes the
+week boundary look like any other gap) but the typical weekly LAYOUT for N
+sessions, whose last gap is the boundary and the longest, as real weeks
+are: N=2 [72, 96] (Mon, Thu); N=3 [48, 48, 72]; N=4 [24, 48, 24, 72]
+(Mon, Tue, Thu, Fri); N=5 [24 x 4, 72] (Mon to Fri); N=6 [24 x 5, 48]
+(Mon to Sat); N=7 [24 x 7]. `TYPICAL_WEEK_GAP_HOURS` in
+`src/lib/recovery/constants.js`, a spacing prior for generation only: no
+weekday is ever assigned (D17) and the runtime next-workout logic uses the
+user's real habit. Rationale: with even spacing, a five-day balanced
+upper/lower's forced third-upper adjacency could land mid-week because
+one upper session's exercise mix made the recovery term prefer it; with
+the real layout the weekend is where that adjacency belongs, and
+campaign16's law-5 test stays untouched.
