@@ -56,6 +56,18 @@ const VOLUME_HEATMAP_SOURCE = require('fs').readFileSync(
   'utf8',
 );
 
+// D200-1/F6 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md):
+// BodyDiagramHeatmap is mocked to `() => null` below (its own accessibility
+// suite lives in src/components/__tests__/BodyDiagramHeatmap.test.js), so
+// its division-legend copy cannot be asserted by rendering it from here.
+// This is a source-level regression guard (CLAUDE.md's "Tests" convention),
+// same technique as VOLUME_HEATMAP_SOURCE above, pointed at the other file
+// this build lane changed the copy in.
+const BODY_DIAGRAM_SOURCE = require('fs').readFileSync(
+  require('path').resolve(__dirname, '../../components/BodyDiagramHeatmap.js'),
+  'utf8',
+);
+
 const store = {
   user: { id: 'u1' },
   userProfile: { trainingGoal: 'hypertrophy' },
@@ -83,11 +95,48 @@ function chestSets(count) {
   }));
 }
 
+// D200-1: like chestSets, but placed `daysAgo` in the past, so a fixture can
+// spread sets across several calendar weeks (or keep an account "young" by
+// making this the account's only/earliest data).
+function chestSetsAt(count, daysAgo) {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `set-${daysAgo}-${i}`,
+    exerciseId: 'bench',
+    createdAt: Date.now() - daysAgo * 24 * 60 * 60 * 1000,
+    set_type: 'straight',
+    actualReps: 10,
+    weight: 100,
+  }));
+}
+
 function flattenText(node) {
   if (node == null) return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node);
   if (Array.isArray(node)) return node.map(flattenText).join('');
   return flattenText(node.children);
+}
+
+// D200-1: presses a window-selector chip by its accessibilityLabel ("1
+// week" / "2 weeks" / "4 weeks"), the same find-by-label-and-onPress idiom
+// TodayStrip.test.js and others in this suite already use for a plain
+// TouchableOpacity (no distinct testID here).
+function pressWindow(tree, label) {
+  return tree.root.findAll(
+    (n) => n.props.accessibilityLabel === label && typeof n.props.onPress === 'function',
+  )[0];
+}
+
+// D200-1: finds a muscle row by its accessibilityLabel prefix (e.g.
+// "Chest:"), window-agnostic -- unlike the existing `/weekly sets/` filter
+// above, this also matches the 2/4-week label shape ("average N of M sets
+// per week over the last N weeks, ...").
+function findMuscleRow(tree, prefix) {
+  return tree.root.findAll(
+    (n) => n.props.accessibilityRole === 'text'
+      && typeof n.props.accessibilityLabel === 'string'
+      && n.props.accessibilityLabel.startsWith(prefix)
+      && typeof n.type === 'string',
+  )[0];
 }
 
 beforeEach(() => {
@@ -350,5 +399,115 @@ describe('A7 (final certification 2026-09-05): the heatmap says what it does not
     expect(line).toContain('swings, cleans, snatches and jumps are not counted here');
     expect(line).not.toMatch(/circuit/i);
     expect(line).not.toContain('—');
+  });
+});
+
+describe('D200-1 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md, F1): 2/4-week windows read a per-week average, not the window total', () => {
+  // A steady 12 sets/week rate, logged every week for the last 4 rolling
+  // weeks, plus one much older set (60 days) purely so the account's
+  // EARLIEST set sits well before the 4-week window -- weeksCounted then
+  // clamps to exactly 4 (or 2), never a fractional ceiling muddying the
+  // arithmetic this fixture is designed to make obvious.
+  function steadyRateFixture() {
+    return [
+      ...chestSetsAt(12, 3),
+      ...chestSetsAt(12, 10),
+      ...chestSetsAt(12, 17),
+      ...chestSetsAt(12, 24),
+      ...chestSetsAt(1, 60),
+    ];
+  }
+
+  test('a steady weekly rate reads the SAME status at 4 weeks as at 1 week, never "Too much"', async () => {
+    getCompletedWorkoutSets.mockResolvedValue(steadyRateFixture());
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    // 1-week view first: the unchanged baseline the 4-week view must match,
+    // since the defect this pins was every window drifting further from it.
+    const oneWeekRow = findMuscleRow(tree, 'Chest:');
+    expect(oneWeekRow.props.accessibilityLabel).toBe('Chest: 12 of 22 weekly sets, Good range, Research starting point');
+
+    await act(async () => { pressWindow(tree, '4 weeks').props.onPress(); });
+    await flush();
+
+    // The big number ("12", unrounded average = 48/4 exactly), the
+    // unchanged "/22", and the new total-sets caption in the same row.
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('ChestResearch starting point12/2248 sets in 4 weeks');
+
+    const fourWeekRow = findMuscleRow(tree, 'Chest:');
+    expect(fourWeekRow.props.accessibilityLabel).toContain('Good range');
+    expect(fourWeekRow.props.accessibilityLabel).not.toContain('Too much');
+  });
+
+  test('pressing "2 weeks" on the same fixture reads "24 sets in 2 weeks"', async () => {
+    getCompletedWorkoutSets.mockResolvedValue(steadyRateFixture());
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    await act(async () => { pressWindow(tree, '2 weeks').props.onPress(); });
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('ChestResearch starting point12/2224 sets in 2 weeks');
+  });
+
+  test('the accessibility label at 2/4 weeks names the average explicitly, with the window total', async () => {
+    getCompletedWorkoutSets.mockResolvedValue(steadyRateFixture());
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    await act(async () => { pressWindow(tree, '4 weeks').props.onPress(); });
+    await flush();
+
+    const fourWeekRow = findMuscleRow(tree, 'Chest:');
+    expect(fourWeekRow.props.accessibilityLabel).toMatch(/per week over the last 4 weeks/);
+    expect(fourWeekRow.props.accessibilityLabel).toBe(
+      'Chest: average 12 of 22 sets per week over the last 4 weeks, 48 in total, Good range, Research starting point',
+    );
+  });
+
+  test('a young account divides by the weeks it actually has, and the note says so', async () => {
+    // Account is ten days old: every set it holds sits within the last ten
+    // days, so weeksCounted ceils 10 days to 2 weeks, not the full 4.
+    getCompletedWorkoutSets.mockResolvedValue(chestSetsAt(20, 10));
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    await act(async () => { pressWindow(tree, '4 weeks').props.onPress(); });
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    // ceil(10 days / 7) = 2 weeks counted, not 4 -- 20 sets / 2 = 10/week.
+    expect(text).toContain('ChestResearch starting point10/2220 sets in 4 weeks');
+    expect(text).toContain('Your log covers 2 of those weeks so far, so the average uses 2.');
+  });
+
+  test('the 1-week view keeps its exact pre-D200-1 wording (no caption, no "average")', async () => {
+    getCompletedWorkoutSets.mockResolvedValue(steadyRateFixture());
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Showing sets from the last week');
+    expect(text).not.toContain('average');
+  });
+});
+
+describe('F6 (progress-tab audit 2026-09-24): the division legend names the weekly target, not internal jargon', () => {
+  // BodyDiagramHeatmap is mocked to `() => null` above, so this is a
+  // source-level regression guard on the exact copy (see BODY_DIAGRAM_SOURCE).
+  test('the legend copy renders "weekly target raised for"/"it is capped", not "Elevated for"/"means capped"', () => {
+    expect(BODY_DIAGRAM_SOURCE).toMatch(/weekly target raised for \$\{divisionLabel\}/);
+    expect(BODY_DIAGRAM_SOURCE).toMatch(/Triangle up means the weekly target is raised for/);
+    expect(BODY_DIAGRAM_SOURCE).toMatch(/triangle down means it is capped/);
+    expect(BODY_DIAGRAM_SOURCE).not.toMatch(/Elevated for \$\{divisionLabel\}/);
+    expect(BODY_DIAGRAM_SOURCE).not.toMatch(/triangle down means capped/);
   });
 });

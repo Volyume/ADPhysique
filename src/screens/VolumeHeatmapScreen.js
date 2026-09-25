@@ -27,6 +27,11 @@ import {
   calculateWeeklyVolume, calculateExcludedWeeklyVolume, VOLUME_LANDMARKS,
   MUSCLE_DISPLAY_NAMES, getVolumeStatus,
 } from '../lib/algorithms';
+// D200-1 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md):
+// the 2/4-week windows read the AVERAGE working sets per week against the
+// unchanged weekly bands above, instead of the window's raw total. See
+// volumeWindow.js's header for the defect and the ruling.
+import { weeksCounted, perWeekVolume } from '../lib/volumeWindow';
 import { useFocusEffect } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -73,7 +78,25 @@ export default function VolumeHeatmapScreen() {
   // window switches update in place.
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [previousVolume, setPreviousVolume] = useState({});
+  // D200-1: weeklyVolume stays the RAW window total (still read by
+  // hasWindowVolume below and shown as the 2/4-week caption's total). The
+  // previous window's raw total has no reader any more (the ghost bar reads
+  // previousVolumePerWeek below), so it is no longer held in state.
+  // Every weekly-banded READ -- the muscle rows, the body-diagram memo, the
+  // bar fills, getVolumeStatus and the ghost bar -- reads these per-week
+  // counterparts instead, so a 2- or 4-week window never inflates a steady
+  // weekly rate into a false "too much". At 1 week the divisor is always 1,
+  // so these are numerically identical to the raw totals above; only the
+  // 2/4-week copy changes.
+  const [weeklyVolumePerWeek, setWeeklyVolumePerWeek] = useState({});
+  const [previousVolumePerWeek, setPreviousVolumePerWeek] = useState({});
+  // Divisors behind the per-week state above (volumeWindow.js weeksCounted):
+  // how many of the current/previous window's weeks the account has data
+  // for, counted from its earliest completed set. previousWeeksCounted is
+  // also what hides the ghost bar entirely (0 = the previous window lies
+  // before the account's first set).
+  const [currentWeeksCounted, setCurrentWeeksCounted] = useState(1);
+  const [previousWeeksCounted, setPreviousWeeksCounted] = useState(0);
   const [windowWeeks, setWindowWeeks] = useState(1);
   const [customLandmarks, setCustomLandmarks] = useState(null);
   // D90 #3 (2026-08-06): display statuses read the ONE resolved precedence
@@ -136,7 +159,10 @@ export default function VolumeHeatmapScreen() {
     const isCurrentRequest = () => loadRequestRef.current === requestId;
     if (!user?.id) {
       setWeeklyVolume({});
-      setPreviousVolume({});
+      setWeeklyVolumePerWeek({});
+      setPreviousVolumePerWeek({});
+      setCurrentWeeksCounted(1);
+      setPreviousWeeksCounted(0);
       setTrendData([]);
       setLastTrainedMap({});
       setHasAnyCompletedSets(false);
@@ -161,6 +187,19 @@ export default function VolumeHeatmapScreen() {
       const recentSets = allSets.filter(s => s.createdAt >= windowStart);
       const prevSets = allSets.filter(s => s.createdAt >= prevWindowStart && s.createdAt < windowStart);
 
+      // D200-1: the divisor for the per-week read is counted from the
+      // account's EARLIEST completed set over its WHOLE history (not just
+      // this window), so a young account divides by the weeks it actually
+      // has. A reduce (not Math.min(...spread)) avoids a call-stack limit
+      // on an account with a very long set history.
+      const earliestSetMs = allSets.length
+        ? allSets.reduce((min, s) => (s.createdAt < min ? s.createdAt : min), allSets[0].createdAt)
+        : null;
+      const weeksInCurrentWindow = weeksCounted({ windowStartMs: windowStart, windowEndMs: now, earliestSetMs });
+      const weeksInPreviousWindow = weeksCounted({ windowStartMs: prevWindowStart, windowEndMs: windowStart, earliestSetMs });
+      setCurrentWeeksCounted(weeksInCurrentWindow);
+      setPreviousWeeksCounted(weeksInPreviousWindow);
+
       const allExercises = await getAllExercises();
       if (!isCurrentRequest()) return;
       const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
@@ -168,7 +207,12 @@ export default function VolumeHeatmapScreen() {
       const volume = calculateWeeklyVolume(recentSets, exerciseMap);
       const prevVolume = calculateWeeklyVolume(prevSets, exerciseMap);
       setWeeklyVolume(volume);
-      setPreviousVolume(prevVolume);
+      // D200-1: the read every weekly-banded consumer below actually uses --
+      // divided by the weeks the account has data for, over the UNCHANGED
+      // weekly bands (algorithms.js is untouched). At 1 week the divisor is
+      // always 1, so this is numerically identical to `volume`/`prevVolume`.
+      setWeeklyVolumePerWeek(perWeekVolume(volume, weeksInCurrentWindow));
+      setPreviousVolumePerWeek(perWeekVolume(prevVolume, weeksInPreviousWindow));
       // Same inputs as the volume read, counting only what it excluded.
       const excluded = calculateExcludedWeeklyVolume(recentSets, exerciseMap);
       setHasExcludedVolumeWork(Object.keys(excluded).length > 0);
@@ -292,7 +336,10 @@ export default function VolumeHeatmapScreen() {
       if (!isCurrentRequest()) return;
       logError('VolumeHeatmapScreen.loadData', e, { userId: user?.id, windowWeeks });
       setWeeklyVolume({});
-      setPreviousVolume({});
+      setWeeklyVolumePerWeek({});
+      setPreviousVolumePerWeek({});
+      setCurrentWeeksCounted(1);
+      setPreviousWeeksCounted(0);
       setTrendData([]);
       setLastTrainedMap({});
       setHasAnyCompletedSets(false);
@@ -441,16 +488,20 @@ export default function VolumeHeatmapScreen() {
   // Build the diagram input: for each known muscle, attach workingSets +
   // status + colour from getVolumeStatus. Muscles with no data fall through
   // to the neutral fill inside BodyDiagramHeatmap.
+  // D200-1: reads the per-week average (weeklyVolumePerWeek), not the
+  // window's raw total, so the body figure never inflates a 2/4-week
+  // window into a false "too much"; getVolumeStatus takes the UNROUNDED
+  // average, only the displayed workingSets figure is rounded.
   const volumeByMuscle = useMemo(() => {
     const resolveVolumeStatusColor = buildVolumeStatusColor(t.colors);
     const map = {};
     for (const muscle of muscles) {
-      const sets = Math.round(weeklyVolume[muscle]?.workingSets || 0);
-      const { status, label } = getVolumeStatus(sets, muscle, effectiveLandmarks);
-      map[muscle] = { workingSets: sets, status, color: resolveVolumeStatusColor(status), label };
+      const avgSets = weeklyVolumePerWeek[muscle]?.workingSets || 0;
+      const { status, label } = getVolumeStatus(avgSets, muscle, effectiveLandmarks);
+      map[muscle] = { workingSets: Math.round(avgSets), status, color: resolveVolumeStatusColor(status), label };
     }
     return map;
-  }, [weeklyVolume, effectiveLandmarks, muscles, t]);
+  }, [weeklyVolumePerWeek, effectiveLandmarks, muscles, t]);
 
   // Muscles trained at least once in the 4-week trend window, in heatmap order.
   const trainedMuscles = useMemo(() => {
@@ -490,12 +541,17 @@ export default function VolumeHeatmapScreen() {
     scrollRef.current.scrollTo({ y: Math.max(offset - spacing.lg, 0), animated: true });
   }, []);
 
-  const windowNoteText =
-    windowWeeks === 1
-      ? 'Showing sets from the last week'
-      : windowWeeks === 2
-      ? 'Showing sets from the last 2 weeks'
-      : 'Showing sets from the last 4 weeks';
+  // D200-1: at 2/4 weeks the note names the per-week average reading, not
+  // the window's raw total, and says so plainly when the account's own
+  // history covers fewer weeks than the window (the average then uses
+  // fewer weeks too -- see currentWeeksCounted, set from volumeWindow.js
+  // weeksCounted in loadData). The 1-week view is unchanged.
+  const windowNoteText = windowWeeks === 1
+    ? 'Showing sets from the last week'
+    : `Showing the average sets per week over the last ${windowWeeks} weeks, compared with your weekly targets`
+      + (currentWeeksCounted < windowWeeks
+        ? `. Your log covers ${currentWeeksCounted} of those weeks so far, so the average uses ${currentWeeksCounted}.`
+        : '');
 
   if (loading) {
     return (
@@ -636,16 +692,31 @@ export default function VolumeHeatmapScreen() {
           }}
         >
           {muscles.map(muscle => {
-            const data = weeklyVolume[muscle] || { workingSets: 0 };
-            const prevData = previousVolume[muscle] || { workingSets: 0 };
-            const sets = Math.round(data.workingSets || 0);
-            const prevSets = Math.round(prevData.workingSets || 0);
+            // D200-1: `sets` (displayed, and fed to getVolumeStatus as the
+            // unrounded avgSets) is the PER-WEEK average at every window --
+            // at 1 week the divisor is always 1, so this is unchanged from
+            // the pre-D200-1 total. `totalSets` is the raw window total
+            // (weeklyVolume, untouched), shown in the 2/4-week caption only.
+            const data = weeklyVolumePerWeek[muscle] || { workingSets: 0 };
+            const prevData = previousVolumePerWeek[muscle] || { workingSets: 0 };
+            const avgSets = data.workingSets || 0;
+            const prevAvgSets = prevData.workingSets || 0;
+            const sets = Math.round(avgSets);
+            const totalSets = Math.round(weeklyVolume[muscle]?.workingSets || 0);
             const landmarks = effectiveLandmarks?.[muscle] || VOLUME_LANDMARKS[muscle];
-            const { status, label: statusLabel } = getVolumeStatus(sets, muscle, effectiveLandmarks);
+            // getVolumeStatus takes the UNROUNDED per-week average (D200-1);
+            // algorithms.js itself (getVolumeStatus, VOLUME_LANDMARKS) is
+            // read-only in this build lane and stays entirely weekly.
+            const { status, label: statusLabel } = getVolumeStatus(avgSets, muscle, effectiveLandmarks);
             const color = buildVolumeStatusColor(t.colors)(status);
             const mrv = landmarks.mrv || 20;
-            const fillPct = Math.min(sets / mrv, 1);
-            const ghostFillPct = Math.min(prevSets / mrv, 1);
+            const fillPct = Math.min(avgSets / mrv, 1);
+            // Hidden entirely (not just 0-width) when the previous window
+            // pre-dates the account's first set -- previousWeeksCounted is
+            // one flag for the whole screen (volumeWindow.js weeksCounted
+            // is account-wide, not per-muscle), read below to skip the node.
+            const ghostFillPct = Math.min(prevAvgSets / mrv, 1);
+            const showPerWeekCaption = windowWeeks !== 1;
 
             // AX-04 (launch accessibility audit): recency computed once per
             // row so both the visual chip below and the row's combined
@@ -687,8 +758,15 @@ export default function VolumeHeatmapScreen() {
                   : resolvedSource?.[muscle] === 'profile'
                     ? 'Matched to your profile'
                     : 'Research starting point';
-            const rowA11yLabel = `${MUSCLE_DISPLAY_NAMES[muscle]}: ${sets} of ${mrv} weekly sets, ${statusLabel}, ${provenance}`
-              + (lastTrainedText ? `, ${lastTrainedText}` : '');
+            // D200-1: at 1 week, unchanged. At 2/4 weeks, names the average
+            // explicitly (so a screen-reader user is never told "19 weekly
+            // sets" when 19 is really an average over 2 weeks) and adds the
+            // window total, matching the sighted caption below.
+            const rowA11yLabel = showPerWeekCaption
+              ? `${MUSCLE_DISPLAY_NAMES[muscle]}: average ${sets} of ${mrv} sets per week over the last ${windowWeeks} weeks, ${totalSets} in total, ${statusLabel}, ${provenance}`
+                + (lastTrainedText ? `, ${lastTrainedText}` : '')
+              : `${MUSCLE_DISPLAY_NAMES[muscle]}: ${sets} of ${mrv} weekly sets, ${statusLabel}, ${provenance}`
+                + (lastTrainedText ? `, ${lastTrainedText}` : '');
 
             return (
               <View
@@ -708,23 +786,41 @@ export default function VolumeHeatmapScreen() {
                   <Text style={[styles.provenanceCaption, live.provenanceCaption]}>{provenance}</Text>
                 </View>
                 <View style={[styles.barTrack, live.barTrack]}>
-                  <View
-                    style={[
-                      styles.barFill,
-                      {
-                        width: `${ghostFillPct * 100}%`,
-                        backgroundColor: t.colors.textMuted,
-                        opacity: 0.25,
-                        position: 'absolute',
-                      },
-                    ]}
-                  />
+                  {/* D200-1: hidden entirely, not just 0-width, when the
+                      previous window pre-dates the account's first set. */}
+                  {previousWeeksCounted > 0 && (
+                    <View
+                      style={[
+                        styles.barFill,
+                        {
+                          width: `${ghostFillPct * 100}%`,
+                          backgroundColor: t.colors.textMuted,
+                          opacity: 0.25,
+                          position: 'absolute',
+                        },
+                      ]}
+                    />
+                  )}
                   <View style={[styles.barFill, { width: `${fillPct * 100}%`, backgroundColor: color }]} />
                   <View style={[styles.landmark, live.landmark, { left: `${(landmarks.mev / mrv) * 100}%` }]} />
                   <View style={[styles.landmark, live.landmark, { left: `${(landmarks.mav / mrv) * 100}%` }]} />
                 </View>
-                <Text style={[styles.setsCount, live.setsCount, { color }]}>{sets}</Text>
-                <Text style={[styles.mrvLabel, live.mrvLabel]}>/{mrv}</Text>
+                <View style={styles.countCol}>
+                  <View style={styles.countRow}>
+                    <Text style={[styles.setsCount, live.setsCount, { color }]}>{sets}</Text>
+                    <Text style={[styles.mrvLabel, live.mrvLabel]}>/{mrv}</Text>
+                  </View>
+                  {/* D200-1: the window total beside the per-week average,
+                      at 2/4 weeks only -- the 1-week view carries no caption. */}
+                  {showPerWeekCaption && (
+                    <Text
+                      style={[styles.perWeekCaption, live.perWeekCaption]}
+                      numberOfLines={1}
+                    >
+                      {totalSets} set{totalSets === 1 ? '' : 's'} in {windowWeeks} weeks
+                    </Text>
+                  )}
+                </View>
                 {lastTrainedText && (
                   // AX-04: decorative once the row above carries the combined
                   // label -- an accessible child chip here would nest a
@@ -1117,6 +1213,24 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     width: 24,
   },
+  // D200-1: wraps setsCount+mrvLabel with the 2/4-week "N sets in N weeks"
+  // caption underneath, replacing their old position as bare muscleRow
+  // siblings (countRow reproduces the gap the row's own `gap` used to give
+  // them). No colour/fontSize token here, so no live twin (layout only).
+  countCol: {
+    alignItems: 'flex-end',
+    gap: spacing.xxs,
+  },
+  countRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  // Same token vocabulary as provenanceCaption (fontSize.xs + textMuted).
+  perWeekCaption: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
   freshnessGroup: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1195,6 +1309,7 @@ function buildLiveStyles(t) {
     landmark: { backgroundColor: t.colors.border },
     setsCount: { fontSize: t.fontSize.sm, fontVariant: ['tabular-nums'] },
     mrvLabel: { ...t.type.num('caption'), color: t.colors.textMuted },
+    perWeekCaption: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     lastTrainedChip: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     lastTrainedRecent: { color: t.colors.warning },
     trendTakeaway: { ...t.type.bodySm, color: t.colors.textSecondary },

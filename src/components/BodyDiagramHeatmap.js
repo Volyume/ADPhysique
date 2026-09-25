@@ -375,15 +375,19 @@ export default function BodyDiagramHeatmap({
       {/* A4: division fingerprint legend, only when markers are shown. The
           triangles re-present the volume overlay the plan generator already
           applied for this division; nothing here is computed fresh. */}
+      {/* F6 (progress-tab audit 2026-09-24, D200): "Elevated"/"Capped" named
+          the division overlay's internal mechanism, not what it means for
+          the user -- the triangles mark where THIS division's weekly target
+          differs from the general plan's. Copy now says that directly. */}
       {divisionMarkers && divisionLabel ? (
         <Text
           style={[styles.divisionLegendText, live.divisionLegendText]}
-          accessibilityLabel={`Triangle up means elevated for ${divisionLabel}, triangle down means capped`}
+          accessibilityLabel={`Triangle up means the weekly target is raised for ${divisionLabel}, triangle down means it is capped`}
         >
           <Text style={{ color: t.colors.primary }}>▲</Text>
-          {` Elevated for ${divisionLabel} · `}
+          {` weekly target raised for ${divisionLabel} · `}
           <Text style={{ color: t.colors.textMuted }}>▼</Text>
-          {' Capped'}
+          {' capped'}
         </Text>
       ) : null}
     </View>
