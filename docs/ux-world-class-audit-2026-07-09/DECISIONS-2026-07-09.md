@@ -9863,3 +9863,64 @@ review).**
   not built; lane R-C's `readyByPhrase` in `nextWorkoutRecommendation.js`
   already carries the today / tomorrow / weekday / "in N days" wording
   with its own pins, and lane R-D reuses it. One authority, as intended.
+
+**D201 addendum 6 (2026-09-25, lead, the Opus fresh-eyes review and its
+rulings 11 to 16).** The review (read-only, at 0f490727) returned 25
+findings: 3 blockers, 14 should-fix, 8 nits. Every one was verified in the
+code and fixed by the lead's hand in one round, each with a pin; none was
+parked. The rulings the fixes required:
+- **Ruling 11, "primary-loaded" means primary sets.** Readiness, the
+  candidate filter and the sequencer's pair and adjacency terms count a
+  muscle as trained by a session only from sets whose exercise names it as
+  the primary mover (at least 2). Secondary half-credit still feeds the
+  DOSE that sets a source session's recovery hours and the fatigue the
+  model accrues. With half-credit qualifying, a lower day's hinge read as a
+  back session: the scorer pulled two lower days together to keep two
+  upper days apart (18 of 560 real-library configurations broke C16 law 5),
+  and a lower day on Home read "Back is estimated 20% recovered".
+- **Ruling 12, law 5 is dominant in the scorer.** A linear-adjacent pair
+  whose primary overlap exceeds half costs 1e6 plus a slope, far above any
+  recovery sum, so the number of clashes is minimised first and recovery
+  spacing decides among orders with equally few; an unavoidable clash (a
+  5-day upper/lower's third upper) still lands where recovery says. Ties
+  are compared with a relative tolerance and muscles are summed in a fixed
+  order (floating-point noise had reordered tied weeks). Real-library
+  sweep after the fix: 336 configurations, 0 clashes. The scorer is judged
+  at the block's opening RIR (`PLAN_OPENING_RIR` = 3, spec 5.1).
+- **Ruling 13, no evidence is never "ready" in copy.** For the RULE a
+  muscle with no session in 14 days counts as recovered (it is). For the
+  COPY, a session none of whose counted muscles has a recent session gets
+  no line on Home or the sheet, and the reason's last sentence reads "has
+  had no session in the last 14 days"; "is ready now" is printed only when
+  the recommended session is ready at the moment of reading, else
+  "is estimated ready later today / by Thursday". A routine whose planned
+  sets are unreadable, empty, or include an exercise that no longer
+  resolves is unknown (null), never "nothing to recover". A core read that
+  failed marks the loader degraded and both surfaces render nothing.
+- **Ruling 14, the recommendation is derived at render.** Home computes
+  the recovery override from the live block state, the kept flag and the
+  plan every render, never writes it into the manual override, so it can
+  never hide the finished-block hero (the focus callback read a stale
+  block state) and never flips the card on every focus. The line under the
+  card follows the DISPLAYED session: the reason while the recommendation
+  is primary, the programme-next line under programme next (after "Keep"
+  too, per ruling 6), and a picked session's own line. Tapping the
+  programme-next row in the sheet while the recommendation is primary IS
+  keeping it. The sheet's "Next up" badge always marks programme order and
+  its rows speak their recovery line with "percent" spelled out. The
+  Consistency row is hidden while a block awaits its decision.
+- **Ruling 15, the rest of a training day is still today.** On a habitual
+  weekday after the typical start minute the projection is now, not the
+  next habitual day (the minute is a median; half of sessions start after
+  it), so the swap is judged when it matters.
+- **Ruling 16, honest spacing sentence; the 6-day order stands.** When the
+  week cannot give the longest-recovery muscles their estimated hours, the
+  plan's why-this says "the longest gap the week allows, about N hours"
+  rather than presenting the short gap as enough. The real 6-day plan
+  reads Push A, Pull A, Legs A, Push B, Pull B, Legs B (legs every third
+  session), pinned on the engine; the spec's synthetic P/P/L pin stands
+  beside it. Also: the Recovery block's "Trained N days ago" comes from the
+  chip's own source (getLastTrainedPerMuscle), the workouts read is
+  bounded in the query to the 18-day window, soft-deleted custom
+  exercises keep their credit, and ready-by aims at the instant the rounded
+  percent first reads 90.
