@@ -72,7 +72,10 @@ describe('the hero precedence is stated once, in one place', () => {
 
 describe('B-1 — the week-complete state', () => {
   test('a resolved week no longer falls back to the plan\'s first routine', () => {
-    expect(home).toMatch(/if \(!next && isWeekComplete\(position\)\) \{ setNextWorkout\(null\); return; \}/);
+    // D201 (per-muscle recovery): the same guard also clears the recovery
+    // recommendation and its kept-today flag, so neither can survive into
+    // the week-complete state -- admitted into the literal pattern below.
+    expect(home).toMatch(/if \(!next && isWeekComplete\(position\)\) \{ setNextWorkout\(null\); setRecoveryRecommendation\(null\); setRecoveryRecommendationKept\(false\); return; \}/);
     // And the guard runs BEFORE the idx fallback it replaces.
     expect(home.indexOf('isWeekComplete(position)')).toBeLessThan(home.indexOf('const idx = next'));
   });

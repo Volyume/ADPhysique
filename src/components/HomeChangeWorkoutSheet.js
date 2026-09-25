@@ -28,7 +28,19 @@ function HomeChangeWorkoutSheet({
   // render) when there is no outstanding required session to skip - same
   // gating HomeScreen.js applied to the old standalone link.
   onSkip, skipAccessibilityLabel,
+  // D201 (per-muscle recovery, spec docs/recovery-programme-2026-09-25/
+  // 00-SPEC.md section 4.3): recommendNextWorkout's perSession array, one
+  // entry per OUTSTANDING required session this week, each already
+  // carrying its own calm `line` ("Quads are estimated 64% recovered,
+  // ready by Thursday." / "Ready now."). This sheet renders that line
+  // verbatim under a matching row's exercise count; null/absent while
+  // recovery data is loading or unavailable, in which case rows render
+  // exactly as they did before this feature existed.
+  recoveryPerSession,
 }) {
+  const recoveryLineFor = (routineId) => (
+    (recoveryPerSession ?? []).find((p) => p.routineId === routineId)?.line ?? null
+  );
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
   // keys only.
@@ -150,6 +162,11 @@ function HomeChangeWorkoutSheet({
                   <Text style={[styles.pickerName, live.pickerName]} numberOfLines={1}>{routine.name}</Text>
                   {exerciseCounts[routine.id] ? (
                     <Text style={[styles.pickerMeta, live.pickerMeta]}>{exerciseCounts[routine.id]} exercises</Text>
+                  ) : null}
+                  {recoveryLineFor(routine.id) ? (
+                    <Text style={[styles.pickerMeta, live.pickerMeta]} numberOfLines={2}>
+                      {recoveryLineFor(routine.id)}
+                    </Text>
                   ) : null}
                 </View>
                 {isNext && (
