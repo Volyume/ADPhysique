@@ -548,16 +548,22 @@ const STORE_PLATFORMS = [
 // would silently grow REPORT.screens past the 16 test 1 pins.
 const RECOVERY_STORE_CONFIG = { n: '17', name: 'RecoveryScreen', tabBarIndex: 3, tabBarNested: 'Recovery' };
 
+// Store set v2 (D210 addendum 2): Recovery is shot twice, each starting at
+// its own section (treeToHtml opts.phone.scrollToText): the muscle figure,
+// and the "Your recovery speed" card the personal learner fills. Play takes
+// at most eight phone screenshots; the founder picks which eight from these
+// ten when uploading.
 const STORE_CAPTURES = [
   { n: '01', file: 'today', configN: '01' }, // HomeScreen, Today (tab 0)
   { n: '02', file: 'train', configN: '07' }, // PlansScreen, Train (tab 1)
   { n: '03', file: 'set-logged', configN: '02' }, // ActiveWorkoutScreen, no tab bar
   { n: '04', file: 'workout-summary', configN: '03' }, // WorkoutSummaryScreen, no tab bar
   { n: '05', file: 'progress', configN: '04' }, // AnalyticsScreen, Progress (tab 3)
-  { n: '06', file: 'recovery', config: RECOVERY_STORE_CONFIG }, // RecoveryScreen, from Progress (tab 3)
-  { n: '07', file: 'nutrition', configN: '06' }, // DiaryScreen, Nutrition (tab 2)
-  { n: '08', file: 'weekly-coaching', configN: '05' }, // CoachOutputScreen, no tab bar
-  { n: '09', file: 'community', configN: '13' }, // CommunityHubScreen, from Today (tab 0)
+  { n: '06', file: 'recovery', config: RECOVERY_STORE_CONFIG, scrollToText: 'Recovery by muscle' }, // RecoveryScreen, from Progress (tab 3)
+  { n: '07', file: 'recovery-speed', config: RECOVERY_STORE_CONFIG, scrollToText: 'Your recovery speed' },
+  { n: '08', file: 'nutrition', configN: '06' }, // DiaryScreen, Nutrition (tab 2)
+  { n: '09', file: 'weekly-coaching', configN: '05' }, // CoachOutputScreen, no tab bar
+  { n: '10', file: 'community', configN: '13' }, // CommunityHubScreen, from Today (tab 0)
 ];
 
 test('paper-render the store listing screenshots (Play + App Store)', async () => {
@@ -577,6 +583,18 @@ test('paper-render the store listing screenshots (Play + App Store)', async () =
     await AsyncStorage.setItem(key, 'true');
   }
 
+  // The persona's history (seedPersona.js 4b) was generated at a recovery
+  // speed faster than the start; the learner must find that on its own
+  // from the seeded rows, through the app's own loader, or the Recovery
+  // captures would show a card the persona did not earn.
+  const { loadMuscleRecovery, __resetPersonalMemoForTests } = require('../../src/lib/recovery/load');
+  __resetPersonalMemoForTests();
+  const recoveryLoad = await loadMuscleRecovery(seed.userId, NOW_MS);
+  REPORT.storePersonal = recoveryLoad.personal;
+  console.log(`[paper-render] store persona recovery speed: ${JSON.stringify(recoveryLoad.personal)}`);
+  expect(recoveryLoad.personal && recoveryLoad.personal.reason).toBe('adjusted');
+  expect(recoveryLoad.personal.factor).toBeLessThan(recoveryLoad.personal.prior);
+
   REPORT.store = [];
   try {
     const configs = screenConfigs(seed);
@@ -584,8 +602,11 @@ test('paper-render the store listing screenshots (Play + App Store)', async () =
       const config = capture.config || configs.find((c) => c.n === capture.configN);
       for (const platform of STORE_PLATFORMS) {
         const suffix = `-store-${platform.key}-${capture.n}`;
+        const phone = capture.scrollToText
+          ? { height: platform.cssHeight, scrollToText: capture.scrollToText }
+          : { height: platform.cssHeight };
         // eslint-disable-next-line no-await-in-loop
-        const entry = await processScreen(config, seed, 'dark', { suffix, phone: { height: platform.cssHeight } });
+        const entry = await processScreen(config, seed, 'dark', { suffix, phone });
         REPORT.store.push({
           ...entry,
           n: capture.n,

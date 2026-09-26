@@ -32,6 +32,112 @@ function at(y, m, d, hh = 7, mm = 30) {
 
 function round1(n) { return Math.round(n * 10) / 10; }
 
+/**
+ * The persona's eleven weeks before the block (see the call site, 4b). Pure
+ * arithmetic from the app's own recovery model, written through the app's
+ * own write functions; deterministic (no Math.random).
+ */
+async function seedHistoryBeforeBlock({
+  database, jest, userId, exercises, routines, upper, lower,
+}) {
+  const { recoveryHours } = require('../../src/lib/recovery/constants');
+  const { sessionMuscleLoads, recoveredFractionAt } = require('../../src/lib/recovery/muscleRecoveryModel');
+  const exerciseById = Object.fromEntries(exercises.map((e) => [e.id, e]));
+  const TRUE_SPEED = 0.75;
+  const SENSITIVITY = 0.12;
+  const RIR = 2;
+  const SETS = 3;
+  const LOOKBACK_MS = 14 * DAY_MS;
+  // What the block's first sessions show each lift at (their working sets'
+  // estimated max), so the history climbs towards them.
+  const TARGET_REPS = { upper: 8, lower: 5 };
+  const blockMax = new Map([
+    [upper[0]?.id, 95], [upper[1]?.id, 88], [upper[2]?.id, 57], [upper[3]?.id, 26.5], [upper[4]?.id, 33], [upper[5]?.id, 14],
+    [lower[0]?.id, 116], [lower[1]?.id, 151], [lower[2]?.id, 59], [lower[3]?.id, 30],
+  ]);
+  const step = (id) => ((blockMax.get(id) ?? 40) >= 50 ? 2.5 : 1);
+
+  // Day offsets from NOW and the session type: a varied upper/lower
+  // schedule, the same half of the body sometimes one day apart.
+  const days = [
+    [-86, 'U'], [-85, 'L'], [-83, 'U'], [-82, 'L'], [-80, 'U'],
+    [-78, 'L'], [-77, 'U'], [-76, 'U'], [-74, 'L'], [-72, 'U'], [-71, 'L'],
+    [-69, 'U'], [-67, 'L'], [-66, 'L'], [-64, 'U'], [-62, 'L'], [-61, 'U'],
+    [-58, 'U'], [-57, 'L'], [-55, 'U'], [-54, 'L'], [-52, 'L'], [-51, 'U'],
+    [-49, 'U'], [-48, 'L'], [-46, 'U'], [-44, 'L'], [-43, 'U'], [-42, 'U'],
+    [-40, 'L'], [-38, 'U'], [-37, 'L'], [-36, 'L'], [-34, 'U'], [-32, 'L'],
+    [-30, 'U'], [-29, 'U'], [-27, 'L'], [-25, 'U'], [-24, 'L'], [-22, 'L'],
+    [-21, 'U'], [-19, 'U'], [-18, 'L'], [-16, 'U'], [-15, 'L'], [-13, 'L'], [-12, 'U'],
+  ];
+  let upperTurn = 0;
+  let lowerTurn = 0;
+  const plan = days.map(([offset, kind], i) => {
+    const d = new Date(NOW_MS + offset * DAY_MS);
+    const startedAt = at(d.getFullYear(), d.getMonth(), d.getDate(), 18, (i * 7) % 50);
+    const isUpper = kind === 'U';
+    const routine = isUpper
+      ? ((upperTurn++) % 2 === 0 ? routines.upperA : routines.upperB)
+      : ((lowerTurn++) % 2 === 0 ? routines.lowerA : routines.lowerB);
+    const list = isUpper ? upper : lower;
+    return {
+      id: `h${i}`, startedAt, endedAt: startedAt + 55 * 60 * 1000, routine, list, kind,
+      sets: list.flatMap((ex) => Array.from({ length: SETS }, () => ({ exerciseId: ex.id, setType: 'straight', weight: 1, actualReps: 1 }))),
+      weekRirTarget: null, isFirstWeek: false, ratings: {},
+    };
+  });
+
+  // The recovered fraction each muscle starts each session at, from the
+  // model's own curve at TRUE_SPEED.
+  const curve = {};
+  sessionMuscleLoads(plan, exerciseById).forEach((load) => {
+    for (const [muscle, sets] of Object.entries(load.setsByMuscle)) {
+      if (!(sets > 0)) continue;
+      if (!curve[muscle]) curve[muscle] = [];
+      curve[muscle].push({ endMs: load.endMs, sets, hoursT: recoveryHours(muscle, { sets, personalFactor: TRUE_SPEED }) });
+    }
+  });
+  const recovered = (muscle, atMs) => {
+    const c = (curve[muscle] ?? []).filter((e) => e.endMs <= atMs && atMs - e.endMs <= LOOKBACK_MS);
+    return c.length ? recoveredFractionAt(c, atMs) : 1;
+  };
+  const primaryOf = (ex) => {
+    const p = String(ex.primaryMuscle ?? ex.primary_muscle ?? '').toLowerCase();
+    return p === 'shoulders' ? 'side_delts' : p;
+  };
+
+  for (const [i, session] of plan.entries()) {
+    const weeksBeforeBlock = (NOW_MS - 9 * DAY_MS - session.startedAt) / (7 * DAY_MS);
+    jest.setSystemTime(session.startedAt);
+    // eslint-disable-next-line no-await-in-loop
+    const workout = await database.createWorkout(userId, session.routine.id, {});
+    let setCount = 0;
+    let totalVolume = 0;
+    for (const ex of session.list) {
+      const ability = (blockMax.get(ex.id) ?? 40) * Math.exp(-0.008 * weeksBeforeBlock);
+      // A deterministic wobble of up to half a percent, so the log is not
+      // perfectly smooth.
+      const wobble = 1 + 0.005 * Math.sin((i + 1) * 2.3 + (ex.id.length % 7));
+      const today = ability * (1 - SENSITIVITY * (1 - recovered(primaryOf(ex), session.startedAt))) * wobble;
+      const targetReps = session.kind === 'U' ? TARGET_REPS.upper : TARGET_REPS.lower;
+      const load = Math.max(step(ex.id), Math.round(ability / (1 + (targetReps + RIR) / 30) / step(ex.id)) * step(ex.id));
+      const reps = Math.min(20, Math.max(1, Math.round(30 * (today / load - 1) - RIR)));
+      for (let n = 1; n <= SETS; n += 1) {
+        setCount += 1;
+        totalVolume += reps * load;
+        // eslint-disable-next-line no-await-in-loop
+        await database.createWorkoutSet({
+          userId, workoutId: workout.id, exerciseId: ex.id, setNumber: n, setType: 'straight', actualReps: reps, weight: load, rir: RIR,
+        });
+      }
+    }
+    // eslint-disable-next-line no-await-in-loop
+    await database.updateWorkout(workout.id, {
+      isCompleted: true, endedAt: session.endedAt, durationMinutes: 55, setCount, totalVolume,
+    });
+  }
+  jest.setSystemTime(NOW_MS);
+}
+
 async function seedPersona() {
   const database = require('../../src/lib/database');
   const food = require('../../src/lib/food/db');
@@ -140,6 +246,25 @@ async function seedPersona() {
   await fillRoutine(upperB.id, UPPER_EXERCISES, 6, 10);
   await fillRoutine(lowerB.id, LOWER_EXERCISES, 5, 8);
 
+  // 4b. Eleven weeks of training BEFORE this block (store set v2, register
+  //     D210 addendum 2), logged against the same routines while no plan
+  //     was active, so they carry no plan week (the personal recovery
+  //     learner compares them at the same effort). The schedule varies the
+  //     way a real one does (upper or lower twice in a row now and then,
+  //     gaps from one to five days), and every set's reps come from the
+  //     recovery model ITSELF at a recovery speed of 0.75 (faster than the
+  //     "average" start of 1.0) with a 12% sensitivity: each lift is a
+  //     little down when its muscle has not fully recovered, by exactly what
+  //     that speed says. The learner in src/lib/recovery/personalRecovery.js
+  //     then finds the pattern from these rows on its own; nothing here sets
+  //     its answer (paper-render.test.js's store pass asserts it moved).
+  //     Loads sit below the block's own, so the block's PR sessions below
+  //     stay genuine records.
+  await seedHistoryBeforeBlock({
+    database, jest, userId, exercises, routines: { upperA, upperB, lowerA, lowerB },
+    upper: UPPER_EXERCISES, lower: LOWER_EXERCISES,
+  });
+
   // Activate with a block starting 9 days ago, so getCurrentBlockWeekIndex
   // (floor(daysElapsed/7)+1) reads "week 2 of 6" today. activatePlanWithBlock
   // stamps start_date from the ambient clock (no override parameter), so the
@@ -207,7 +332,18 @@ async function seedPersona() {
     },
   ];
 
-  for (const session of sessions) {
+  // Post-session ratings on the block's sessions (store set v2), so the
+  // Recovery page's soreness, fatigue and joint dials read from real rated
+  // sessions rather than "Not rated yet": soreness before the session on
+  // its 1-3 scale, fatigue after it 1-5, joint discomfort 0-3.
+  const RATINGS = [
+    { soreness24hBefore: 1, fatigueLevel: 3, jointDiscomfort: 0 },
+    { soreness24hBefore: 2, fatigueLevel: 3, jointDiscomfort: 0 },
+    { soreness24hBefore: 1, fatigueLevel: 2, jointDiscomfort: 0 },
+    { soreness24hBefore: 2, fatigueLevel: 4, jointDiscomfort: 1 },
+    { soreness24hBefore: 1, fatigueLevel: 3, jointDiscomfort: 0 },
+  ];
+  for (const [sessionIndex, session] of sessions.entries()) {
     const d = new Date(NOW_MS + session.dayOffset * DAY_MS);
     const startMs = at(d.getFullYear(), d.getMonth(), d.getDate(), 18, 0);
     jest.setSystemTime(startMs);
@@ -239,7 +375,7 @@ async function seedPersona() {
     const endedAt = startMs + durationMinutes * 60 * 1000;
     // eslint-disable-next-line no-await-in-loop
     await database.updateWorkout(workout.id, {
-      isCompleted: true, endedAt, durationMinutes, setCount, totalVolume,
+      isCompleted: true, endedAt, durationMinutes, setCount, totalVolume, ...RATINGS[sessionIndex % RATINGS.length],
     });
   }
   jest.setSystemTime(NOW_MS);

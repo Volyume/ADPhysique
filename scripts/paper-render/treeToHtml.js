@@ -263,6 +263,7 @@ const CONTAINER_TYPES = new Set([
   // resolves this to a plain string host component, same passthrough shape.
   'KeyboardGestureArea',
 ]);
+const SCROLL_TYPES = new Set(['ScrollView', 'RCTScrollView', 'Animated.ScrollView']);
 const SVG_TAGS = new Set(['Svg', 'Path', 'Rect', 'Circle', 'Ellipse', 'Line', 'G', 'Polyline', 'Defs', 'LinearGradient', 'Stop', 'ClipPath']);
 // react-native-svg's own Text (inside an Svg tree) vs RN's host Text -- both
 // arrive here typed 'Text'; disambiguated by an svgDepth counter in ctx.
@@ -384,11 +385,19 @@ const SVG_ATTR_RENAME = {
 function renderSvgNode(node, ctx) {
   const tag = node.type;
   const attrs = [];
+  // react-native-svg's <G x y> is a translation; a browser's <g> has no x or
+  // y attributes and silently ignores them, which drew BodyDiagramHeatmap's
+  // back view on top of its front. So a G's x/y become a translate().
+  const isGroup = tag === 'G';
   for (const key of SVG_ATTR_PASSTHROUGH) {
+    if (isGroup && (key === 'x' || key === 'y')) continue;
     const v = node.props[key];
     if (v === undefined || v === null) continue;
     const attrName = SVG_ATTR_RENAME[key] || key;
     attrs.push(`${attrName}="${escapeHtml(v)}"`);
+  }
+  if (isGroup && (node.props.x !== undefined || node.props.y !== undefined) && node.props.transform === undefined) {
+    attrs.push(`transform="translate(${Number(node.props.x) || 0} ${Number(node.props.y) || 0})"`);
   }
   const inner = renderChildren(node.children, { ...ctx, svgDepth: ctx.svgDepth + 1 });
   if (tag === 'Svg') {
@@ -527,6 +536,12 @@ function renderNode(node, ctx, forceInlineText) {
     const inner = contentStyle
       ? `<div style="${cssToString(contentStyle)}">${renderChildren(node.children, ctx)}</div>`
       : renderChildren(node.children, ctx);
+    // A scroll view is marked so a phone-height capture can start partway
+    // down it (opts.phone.scrollToText): its content is wrapped once more
+    // so the page script can shift just the content, never the view.
+    if (SCROLL_TYPES.has(type)) {
+      return `<div data-pr-scroll="1" style="${cssToString(css)}"><div data-pr-scroll-content="1">${inner}</div></div>`;
+    }
     return `<div style="${cssToString(css)}">${inner}</div>`;
   }
 
@@ -630,6 +645,10 @@ function estimateNode(node, availWidth) {
  *   bottom and a scroll view clips), anything rendered after it (the tab
  *   bar) keeps its natural height at the foot, and the fold line is not
  *   drawn. Used for the Welcome screen's product captures (welcome.js).
+ *   `scrollToText` (optional): start the screen's scroll view at the
+ *   element whose own text is exactly this (a section heading), a little
+ *   below the top, as if the person had scrolled there; the header and tab
+ *   bar stay put. Used by the store set (store.js).
  * @returns {{ html: string, stats: { unknownTypes: object, converterFallbacks: object, estimatedHeightPx: number } }}
  */
 function treeToHtml(json, opts) {
@@ -695,6 +714,23 @@ ${opts.phone ? `#pr-page { display: flex; flex-direction: column; height: ${Numb
 <body>
 <div id="pr-page">${bodyHtml}</div>
 <div id="pr-fold"></div>
+${opts.phone && opts.phone.scrollToText ? `<script>
+(function () {
+  var want = ${JSON.stringify(String(opts.phone.scrollToText))};
+  var view = document.querySelector('[data-pr-scroll]');
+  var content = view && view.querySelector('[data-pr-scroll-content]');
+  if (!content) return;
+  var nodes = content.querySelectorAll('*');
+  for (var i = 0; i < nodes.length; i += 1) {
+    var el = nodes[i];
+    if (el.children.length === 0 && el.textContent.trim() === want) {
+      var offset = el.getBoundingClientRect().top - view.getBoundingClientRect().top - 36;
+      content.style.transform = 'translateY(' + (-Math.max(0, offset)) + 'px)';
+      return;
+    }
+  }
+})();
+</script>` : ''}
 </body>
 </html>`;
 
