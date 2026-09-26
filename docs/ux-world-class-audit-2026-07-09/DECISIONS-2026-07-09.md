@@ -10377,3 +10377,29 @@ one caption changed by the lead); C, nutrition (Sonnet); D, plan and
 programme copy; E, settings, onboarding, notifications and community. The
 sweep also found two D204 breaches on Consistency (D204 addendum 2). The
 board line carries each lane's state and hash.
+
+## D208 — Recovery gets its own place in Progress (founder question 2026-09-26, lead ruling)
+
+Founder, verbatim: "Should we have a place in Progress exclusively for
+recovery rather than it being hidden behind a button for consistency? Have
+a think the best way because it looks like a good feature now hard to
+find." Observed: reaching the Recovery section took four steps (Progress,
+scroll to the bottom, the Consistency tile, then past five training-block
+cards). Fitbod gives muscle recovery a tab of its own
+(fitbod.me/blog/muscle-recovery, "In the Recovery tab ..."); Volyume's bar
+already has five tabs, so a sixth would crowd it.
+
+**Ruling (lead, D33; previewed to the founder the same day,
+https://claude.ai/artifact/CmVbzKKSj6JbzqmmqDiQb7).** A Recovery row in the
+top card on Progress, after the three rows already there (their order
+unchanged), says how many muscles are still recovering and which is last,
+from the same estimate the screen draws (`src/lib/recovery/recoveryPillar.js`,
+describe-only under D204). It opens a Recovery screen that holds the
+Recovery section exactly as it stood on Consistency, in the same order
+(the founder's standing "The order wasn't to change the order or lead with
+anything"): your ratings, then recovery by muscle, then the next workout.
+Its first heading reads "Your ratings", because a "Recovery" heading under a
+screen titled Recovery would repeat itself. Consistency keeps the sessions
+milestone; the section moved rather than being copied. Landed `1ef366ef`;
+guards `recoveryPlace.guard.test.js`, `recoveryPillar.test.js` and
+`RecoveryScreen.rateLastSession.test.js`.
