@@ -10026,14 +10026,17 @@ its recovery, which told the athlete nothing. Dose still sets how long
 recovery takes (T) and how sessions compound; only the scale of the
 percent changed. Spec section 3.1 amended.
 
-**D200-2 addendum (2026-09-26, lead, from the same walk).** The Recovery
-section leads with the per-muscle estimate (the reading every trained
-athlete has) and shows the soreness, fatigue and joint dials only once a
-gauge has its two rated sessions; until then the card carries the one
-caption naming what fills them and the one-tap "Rate your last session"
-path. Three "Not rated yet" dials at the top of the block read as
-"nothing for recovery" (founder). The generated plan name on the block
-card wraps to two lines instead of cutting to "6...".
+**D200-2 addendum (2026-09-26, lead, from the same walk) - WITHDRAWN the
+same day.** The lead had moved the per-muscle estimate to the top of the
+Recovery section and hidden the soreness, fatigue and joint dials until a
+gauge had two rated sessions, reading "I am not seeing anything for
+recovery" as a complaint about three "Not rated yet" dials. Founder,
+verbatim: "The order wasn't to change the order or lead with anything."
+The section order is back as specified (the dials' card first, the
+per-muscle card under it) and the dials render as they always did; the
+pins in `ReadinessCards.rateLastSession.test.js` are restored to their
+pre-walk form. Only the generated plan name wrapping to two lines
+instead of cutting to "6..." stands from this paragraph.
 
 **D201 addendum 8 (2026-09-26, founder, third screenshot of the same
 walk).** Verbatim: "This wall of text for muscle looks shit as well. Look

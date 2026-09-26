@@ -331,9 +331,10 @@ is a follow-on decision, not in this build.
 
 ## 6. Surfaces and copy
 
-- **Recovery block** (`ReadinessCards.js`, first in the Recovery section;
-  the rated-session dials sit below it and render only once a gauge has
-  its two rated sessions, D200-2 addendum 2026-09-26): the body figure
+- **Recovery block** (`ReadinessCards.js`, under the gauges and their
+  caption, as first specified; the 2026-09-26 reorder that put it first
+  and hid the dials was withdrawn the same day on the founder's word,
+  register D204): the body figure
   (`BodyDiagramHeatmap` with a recovery palette: recovered / nearly /
   recovering / no recent session) and one compact row per muscle with a
   logged session in 14 days, under a "Muscle / Estimated recovery"
