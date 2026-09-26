@@ -72,6 +72,34 @@ the decision rounds and every landed section were retired to
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **SESSION SHARING DEFAULT, founder reminder 2026-09-26 ("Remember the
+  default for workouts and so on is to post the session. Users can change
+  settings to set it otherwise though.") - RULE CONFIRMED IN CODE (D194
+  ruling 2), ONE GAP FOUND, QUESTIONS OPEN.** Observed: the client default
+  is on, to everyone (`TP_DEFAULT_SHARE.share_sessions`,
+  `DEFAULT_SESSIONS_AUDIENCE`); the Join screen and the onboarding wizard
+  create the profile with it on and publish it; the summary screen
+  auto-posts the session and up to three PRs when the profile row has it
+  on and the ED/calm gate allows; the Training profile screen turns it
+  off (Remove/Keep) and back on. Gap: `community_create_post` enforces
+  the SERVER row for auto items, the live `community_get_me` returns
+  neither `share_sessions` nor `sessions_audience` (definition read from
+  production 2026-09-26), and the device never reads the row back, so a
+  device can show the switch on while the row says off; every auto item
+  is then refused `not_allowed` and dropped with no message, and the
+  summary strip's "Share every session" link opens a screen whose switch
+  already reads on. A manual "Post this session" is not gated and still
+  works. Production, read-only 2026-09-26: two profiles, both the
+  founder's; `alland` share_sessions false, audience followers (the
+  pre-22-September defaults, row created 2026-09-08); `allan` true,
+  audience followers. Proposed, awaiting the founder's answers (delivered
+  in chat 2026-09-26): (1) migration 184, additive: `community_get_me`
+  returns the two fields; (2) the client adopts the row's pair into the
+  device store on every `refreshMe` unless a sharing publish is pending,
+  so the switch always shows what the server enforces, and the summary
+  strip says so when an auto item is refused; (3) the two pre-flip rows:
+  flip to the default by migration under the phrase, or set in-app.
+
 - **ED FLAG CLOUD WRITE, D92-11 - DECIDED 2026-09-23: founder chose B
   (register D196).** Built the same day by the lead and landed on main
   2026-09-24 as `49dfc0f3` after the Opus review (SHIP WITH FIXES, every fix taken; D196

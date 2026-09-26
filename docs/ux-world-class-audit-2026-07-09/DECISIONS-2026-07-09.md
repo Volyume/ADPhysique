@@ -9179,6 +9179,31 @@ rulings below are the lead's, under D33, on how.
    (A: adoption, visibility, look, copy; B: functionality, backend,
    safety, engineering).
 
+**Addendum (2026-09-26, founder reminder and a verification).** Founder,
+verbatim: "Remember the default for workouts and so on is to post the
+session. Users can change settings to set it otherwise though." The rule
+is ruling 2 above and holds in code: the client default is on, to
+everyone; the Join screen and the onboarding wizard create the profile
+with it on and publish it to the row; on workout completion the summary
+auto-posts the session and up to three PRs when the row has it on and
+the ED/calm gate allows; the Training profile screen turns it off
+(Remove/Keep) and back on; a minor is clamped to followers. Verified
+against the live database, read-only: `community_create_post` gates auto
+items on the ROW's `share_sessions`; `community_get_me` returns neither
+`share_sessions` nor `sessions_audience`; the two profiles that exist are
+both the founder's, `alland` off to followers (the pre-flip defaults,
+created 2026-09-08) and `allan` on to followers. The gap: the device's
+switch is stored on the device and never read back from the row, so a
+device with the default (or after a reinstall) can show "on" while the
+row says "off"; every auto item is then refused and dropped without a
+word, and the strip's "Share every session" link opens a switch that
+already reads on. Proposed to the founder (questions in chat): migration
+184 adds the two fields to `community_get_me`; the client mirrors the row
+into the device store on every refresh unless a sharing publish is
+pending; the strip names a refusal; the two pre-flip rows are the
+founder's to flip (by migration under the phrase) or set in-app. Nothing
+built yet.
+
 ## D195 — Community proposals 1 to 11, executed in order under the lead's orchestration (founder order 2026-09-22)
 
 Founder: "Do 1-11 in order. Utilise the lowest level agent suitable and you do
