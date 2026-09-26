@@ -270,7 +270,7 @@ describe('rows: order, text and accessibility labels (spec section 6)', () => {
     const tree = await render();
     // RE-ANCHORED 2026-09-26 (founder order: plain English, docs/rules/plain-english.md)
     expect(texts(tree)).toContain(
-      "Estimated from the time since each muscle's last session and how many sets it did, adjusted by your recovery answer and your ratings. Not a measurement.",
+      'Estimated from how long ago each muscle was last trained and how many sets it had, adjusted for your answer to ‘How’s your recovery?’ and your ratings. Not a measurement.',
     );
   });
 });
@@ -301,7 +301,7 @@ describe('the personal recovery learning (register D210)', () => {
     loadMuscleRecovery.mockResolvedValue({ ...RECOVERY_RESULT, personal: ADJUSTED });
     const tree = await render({ sections: 'recovery' });
     expect(texts(tree)).toContain(
-      "Estimated from the time since each muscle's last session and how many sets it did, adjusted by your recovery speed, learned from your lifts, and your ratings. Not a measurement.",
+      'Estimated from how long ago each muscle was last trained and how many sets it had, adjusted for your recovery speed (learned from your workouts) and your ratings. Not a measurement.',
     );
     expect(texts(tree)).toContain('Slower than first estimated');
     const quadsRow = tree.root.findAll((n) => typeof n.props.accessibilityLabel === 'string'
@@ -312,7 +312,7 @@ describe('the personal recovery learning (register D210)', () => {
 
   test('recoveryByMuscleCaption: the answer until the learning has moved', () => {
     expect(recoveryByMuscleCaption({ ...ADJUSTED, reason: 'not_clear' })).toBe(recoveryByMuscleCaption(null));
-    expect(recoveryByMuscleCaption(ADJUSTED)).toMatch(/your recovery speed, learned from your lifts, and your ratings/);
+    expect(recoveryByMuscleCaption(ADJUSTED)).toMatch(/your recovery speed \(learned from your workouts\) and your ratings/);
   });
 });
 

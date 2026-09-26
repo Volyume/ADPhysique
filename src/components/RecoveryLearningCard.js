@@ -37,7 +37,7 @@ import {
 import { personalDirection } from '../lib/recovery/personalRecovery';
 
 export const RECOVERY_SPEED_TITLE = 'Your recovery speed';
-export const RECOVERY_SPEED_FOOTER = 'It starts from your answer to ‘How’s your recovery?’ and moves only when your lifts show a clear difference. An estimate, not a measurement.';
+export const RECOVERY_SPEED_FOOTER = 'It starts from your answer to ‘How’s your recovery?’ and only changes when your workouts show a clear difference. It’s an estimate, not a measurement.';
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
@@ -64,8 +64,8 @@ export function learningExampleMuscle(pairsByMuscle) {
 /**
  * The example for an adjusted reading: the muscle the learning rests on
  * most, after a standard session, at the first estimate and now. `sentence`
- * is its spoken form ("Quads after a 6-set session: about 3½ days, up
- * from 3 days."). Hours when the two round to the same number of days.
+ * is its spoken form ("Quads after 6 sets: about 3½ days, up from 3
+ * days."). Hours when the two round to the same number of days.
  * Null when there is no muscle to name.
  *
  * @returns {{ name:string, sets:number, before:string, now:string,
@@ -91,7 +91,7 @@ export function learningExample(personal) {
     sets: REFERENCE_SETS,
     before,
     now,
-    sentence: `${name} after a ${REFERENCE_SETS}-set session: about ${now}, ${way} from ${before}.`,
+    sentence: `${name} after ${REFERENCE_SETS} sets: about ${now}, ${way} from ${before}.`,
   };
 }
 
@@ -115,15 +115,15 @@ export function recoveryLearningCopy(personal) {
   const direction = personalDirection(personal);
   if (!direction) return null;
   const pairs = Math.max(0, Number(personal.pairs) || 0);
-  const evidence = `From ${plural(pairs, 'comparison')} of the same lift on the same day of the week.`;
+  const evidence = `Based on ${plural(pairs, 'comparison')} of the same exercise on the same day in different weeks.`;
   if (direction === 'faster' || direction === 'slower') {
     const pct = Math.round(Math.abs(personal.factor / personal.prior - 1) * 100);
     return {
       state: direction,
       headline: direction === 'faster' ? 'Faster than first estimated' : 'Slower than first estimated',
       body: direction === 'faster'
-        ? `Your lifts hold up after short breaks better than the first estimate expected, so it now estimates your recovery takes about ${pct}% less time, and never less than a day.`
-        : `Your lifts drop after short breaks more than the first estimate expected, so it now estimates your recovery takes about ${pct}% longer, and never more than a week.`,
+        ? `When you train again soon after a workout, you lift more than first expected. So your recovery is now estimated to take about ${pct}% less time, though never less than a day.`
+        : `When you train again soon after a workout, you lift less than first expected. So your recovery is now estimated to take about ${pct}% longer, though never more than a week.`,
       example: learningExample(personal),
       evidence,
       progress: null,
@@ -133,7 +133,7 @@ export function recoveryLearningCopy(personal) {
     return {
       state: 'steady',
       headline: 'In line with the first estimate',
-      body: 'Your lifts after shorter and longer breaks do not show a clear difference from it yet, so it stays as it is.',
+      body: 'So far, how much you lift after short and long breaks shows no clear difference from the first estimate, so the estimate stays the same.',
       example: null,
       evidence,
       progress: null,
@@ -143,7 +143,7 @@ export function recoveryLearningCopy(personal) {
     return {
       state: 'waiting',
       headline: 'Not learning yet',
-      body: 'It learns by comparing the same lift on the same day of the week after breaks of different lengths, short enough to leave some tiredness. Your training so far does not give it that.',
+      body: 'Your recovery speed is worked out by comparing the same exercise on the same day in different weeks, after breaks of different lengths. So far, the breaks before those workouts have been too alike, or long enough to recover fully.',
       example: null,
       evidence: null,
       progress: null,
@@ -153,7 +153,7 @@ export function recoveryLearningCopy(personal) {
     return {
       state: 'waiting',
       headline: 'Not learning yet',
-      body: 'Where a lift is logged with the same reps from one session to the next, it shows what was planned rather than how each day went, so it is left out. That leaves too few comparisons to learn from yet.',
+      body: 'When an exercise is logged with exactly the same reps at least half the time, that shows the plan rather than how each workout went, so it is left out. That leaves too few comparisons so far.',
       example: null,
       evidence: null,
       progress: null,
@@ -162,7 +162,7 @@ export function recoveryLearningCopy(personal) {
   return {
     state: 'learning',
     headline: 'Still learning',
-    body: `It compares each lift with the same lift on the same day of the week, and starts once it has ${PERSONAL_MIN_PAIRS} of those comparisons.`,
+    body: `Each exercise is compared with the same exercise on the same day in an earlier week. Learning starts once there are ${PERSONAL_MIN_PAIRS} of these comparisons.`,
     example: null,
     evidence: null,
     progress: { done: Math.min(pairs, PERSONAL_MIN_PAIRS), needed: PERSONAL_MIN_PAIRS },
@@ -172,8 +172,8 @@ export function recoveryLearningCopy(personal) {
 /** The card's subtitle: "learned" only once something has been learned. */
 export function recoveryLearningSubtitle(copy) {
   return copy && (copy.state === 'faster' || copy.state === 'slower' || copy.state === 'steady')
-    ? 'Learned from your lifts · estimated'
-    : 'Learns from your lifts · estimated';
+    ? 'Learned from your workouts · estimated'
+    : 'Learns from your workouts · estimated';
 }
 
 /** Where a factor sits on the scale, 0 (fastest) to 1 (slowest). */
@@ -241,7 +241,7 @@ function ExampleTiles({ example, live }) {
   return (
     <View style={styles.example}>
       <Text style={[styles.exampleLabel, live.exampleLabel]}>
-        {`${example.name} after a ${example.sets}-set session, estimated`}
+        {`${example.name} after ${example.sets} sets, estimated recovery time`}
       </Text>
       <View style={styles.tiles}>
         <View style={[styles.tile, live.tileFirst]} accessible accessibilityLabel={`First estimate, ${example.before}`}>

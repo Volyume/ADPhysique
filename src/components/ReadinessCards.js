@@ -72,9 +72,9 @@ function nextMilestone(total) {
  */
 export function recoveryByMuscleCaption(personal) {
   const adjustedBy = personal?.reason === 'adjusted'
-    ? 'your recovery speed, learned from your lifts, and your ratings'
-    : 'your recovery answer and your ratings';
-  return `Estimated from the time since each muscle's last session and how many sets it did, adjusted by ${adjustedBy}. Not a measurement.`;
+    ? 'your recovery speed (learned from your workouts) and your ratings'
+    : 'your answer to ‘How’s your recovery?’ and your ratings';
+  return `Estimated from how long ago each muscle was last trained and how many sets it had, adjusted for ${adjustedBy}. Not a measurement.`;
 }
 
 // Task 2 (recovery/freshness UI factual-language amendment): this used to
