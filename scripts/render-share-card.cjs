@@ -68,6 +68,14 @@ async function main() {
     topSet: { weight: 42.5, reps: 10, exerciseName: 'Seated Dumbbell Shoulder Press' },
   };
   const sessionNoLift = { ...session, topSet: null, showPlanName: false };
+  // The optional extras (founder, 2026-09-26): a quote with its source, the
+  // athlete's own caption, and highlight lines the app already showed them.
+  const sessionExtras = {
+    ...session,
+    quote: { text: 'Stimulate, don\u2019t annihilate.', by: 'Lee Haney' },
+    highlights: ['Strongest workout in 4 weeks', '12% more than your 4-week average'],
+  };
+  const sessionCaption = { ...session, quote: { text: 'Back day done before work \u{1F4AA}', by: null }, highlights: ['Strongest workout in 4 weeks'] };
   const pr = { cardType: 'pr', exerciseName: 'Barbell Bench Press', date: 'Sat · 20 Jun 2026', showDate: true, showPRWeight: true, showPrevBest: true, weight: 120, reps: 5, units: 'kg', previousBest: 115 };
   const milestone = { cardType: 'milestone', eyebrow: 'Year of Lifts', title: '2026 in the gym', showDate: false, heroValue: '1,240,000', heroUnit: 'total kg lifted', caption: 'Across 186 sessions this year.', stats: [{ label: 'Sessions', value: '186' }, { label: 'PRs', value: '42' }, { label: 'Hours', value: '210' }] };
   const weekly = {
@@ -115,7 +123,7 @@ async function main() {
   // Campaign 30 (ELITE-SHARE-SPEC pillar 3/#4): every non-beforeAfter card
   // type now renders all THREE aspect presets, not just square/story --
   // portrait 4:5 was previously only wired for beforeAfter.
-  [['session', session], ['sessionPRs', sessionPRs], ['sessionNoLift', sessionNoLift], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone], ['tonnage', tonnage]].forEach(([n, p]) => {
+  [['session', session], ['sessionPRs', sessionPRs], ['sessionNoLift', sessionNoLift], ['sessionExtras', sessionExtras], ['sessionCaption', sessionCaption], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone], ['tonnage', tonnage]].forEach(([n, p]) => {
     render({ ...p, aspect: 'square' }, 1080, `card_${n}_square`);
     render({ ...p, aspect: 'portrait' }, 1080, `card_${n}_portrait`);
     render({ ...p, aspect: 'story' }, 1080, `card_${n}_story`);
@@ -210,6 +218,7 @@ async function main() {
   lp.flush(); const landscape = lp.makeImageSnapshot();
   renderPhoto({ ...session, aspect: 'story' }, 'gym_landscape_story_fitted', landscape, { zoom: 0.01, cx: 0.5, cy: 0.5 });
   renderPhoto({ ...session, aspect: 'story' }, 'gym_landscape_story_cover', landscape);
+  renderPhoto({ ...sessionExtras, aspect: 'story' }, 'gym_session_story_extras', gymPhoto, { zoom: 1.2, cx: 0.5, cy: 0.42 });
   console.log(`\nWrote PNGs to ${OUT}`);
 }
 

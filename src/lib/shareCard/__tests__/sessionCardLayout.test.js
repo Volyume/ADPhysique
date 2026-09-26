@@ -259,3 +259,79 @@ describe('the header', () => {
     expect(record(SESSION()).strings).toContain('Back + Hams');
   });
 });
+
+// Founder, 2026-09-26: "Is there an elegant way to do bodybuilding short
+// quotes that people can insert", "Are there any stats that could be
+// included ... We don't want to force them on but optional?" Nothing extra
+// is drawn unless the screen hands it over; what is handed over is drawn in
+// its place, and never over the footer.
+describe('the optional quote and highlights', () => {
+  const QUOTE = { text: 'Stimulate, don\u2019t annihilate.', by: 'Lee Haney' };
+  const HIGHLIGHTS = ['Strongest workout in 4 weeks', '12% more than your 4-week average', 'A third line that must not fit'];
+
+  test('none of it appears unless it is handed over', () => {
+    const { strings, run } = record(SESSION());
+    expect(run).not.toMatch(/\u201C/);
+    expect(strings.some((t) => /Strongest workout/.test(t))).toBe(false);
+  });
+
+  test('a quote with a source is in curly quotes, with the source under it', () => {
+    const { texts, run } = record(SESSION({ quote: QUOTE }));
+    const q = texts.find((t) => t.str === '\u201CStimulate, don\u2019t annihilate.\u201D');
+    expect(q).toBeTruthy();
+    expect(run).toContain('LEE HANEY');
+    const title = texts.find((t) => t.str === 'Back + Hams');
+    expect(q.y).toBeGreaterThan(title.y);
+  });
+
+  test("the athlete's own words stand as a plain caption", () => {
+    const { strings } = record(SESSION({ quote: { text: 'Back day done before work', by: null } }));
+    expect(strings).toContain('Back day done before work');
+    expect(strings.some((t) => /\u201C/.test(t))).toBe(false);
+  });
+
+  test('highlights sit under the hero, two at most, above the stat row', () => {
+    const { texts, strings } = record(SESSION({ prCount: 0, highlights: HIGHLIGHTS }));
+    const hero = texts.find((t) => t.str === '24,142');
+    const first = texts.find((t) => t.str === HIGHLIGHTS[0]);
+    const second = texts.find((t) => t.str === HIGHLIGHTS[1]);
+    const sets = texts.find((t) => t.str === 'Sets');
+    expect(first.y).toBeGreaterThan(hero.y);
+    expect(second.y).toBeGreaterThan(first.y);
+    expect(sets.y).toBeGreaterThan(second.y);
+    expect(strings).not.toContain(HIGHLIGHTS[2]);
+  });
+
+  test('with every extra on, nothing is drawn over the footer on any format, photo or not', () => {
+    for (const aspect of ['square', 'portrait', 'story']) {
+      const H = cardHeight(1080, aspect !== 'story', aspect);
+      const footerTop = H - (aspect === 'square' ? 128 : 150)
+        - (aspect === 'story' ? Math.round(H * 0.2) : 0);
+      for (const photo of [null, { width: () => 1000, height: () => 1500 }]) {
+        const { texts } = record(SESSION({ aspect, quote: QUOTE, highlights: HIGHLIGHTS }), 1080, photo);
+        texts.filter((t) => t.str !== 'volyume.app').forEach((t) => {
+          expect(t.y).toBeLessThanOrEqual(footerTop);
+        });
+      }
+    }
+  });
+
+  test('a character the typeface cannot draw is left out, never printed as a box', () => {
+    const { drawShareCard: draw } = require('../drawShareCard');
+    const drawn = [];
+    const canvas = new Proxy({}, { get: (_t, key) => (key === 'drawText' ? (str) => drawn.push(str) : () => undefined) });
+    const Skia = makeStubSkia();
+    // A face with no glyph for anything outside the Basic Multilingual Plane
+    // (where emoji live), as Inter has none.
+    Skia.Font = (_tf, px) => ({
+      getSize: () => px,
+      getGlyphIDs: (str) => Array.from(String(str)).map((ch) => (ch.codePointAt(0) > 0xffff ? 0 : 1)),
+      getGlyphWidths: (ids) => ids.map(() => px * 0.55),
+    });
+    draw(canvas, {
+      Skia, width: 1080, params: SESSION({ quote: { text: 'Leg day \u{1F4AA} done', by: null } }), typefaces: { regular: {}, bold: {} }, wordmark: null,
+    });
+    expect(drawn).toContain('Leg day done');
+    expect(drawn.some((t) => /\u{1F4AA}/u.test(t))).toBe(false);
+  });
+});

@@ -725,15 +725,75 @@ function drawParagraph(cv, Skia, x, w, y, str, size, maxLines, s, font) {
   return baseline + Math.round(size * 0.35 * s);
 }
 
+// Characters the loaded face has no glyph for (emoji, most symbols) are left
+// out rather than drawn as empty boxes: a caption the athlete typed must
+// never print tofu onto their image.
+function drawableText(font, str) {
+  return Array.from(String(str || '')).filter((ch) => {
+    if (/\s/.test(ch)) return true;
+    const ids = font.getGlyphIDs(ch);
+    return !!(ids && ids.length && ids[0] !== 0);
+  }).join('').replace(/\s+/g, ' ').trim();
+}
+
+// The athlete's optional quote or caption, under the title (founder,
+// 2026-09-26: "Is there an elegant way to do bodybuilding short quotes that
+// people can insert"). A quote with a named source is set in curly quotes
+// with the name under it as a section label; the athlete's own words, or a
+// line with no source, stand as a plain caption. Two lines at most, in the
+// app's medium weight: the title stays the loudest thing in the head.
+function drawQuote(cv, Skia, x, w, y, quote, size, ovSize, s, font) {
+  if (!quote || !quote.text) return y;
+  const f = font(size, 'medium');
+  const body = drawableText(f, quote.text);
+  if (!body) return y;
+  const by = quote.by ? drawableText(font(ovSize, 'semibold'), quote.by) : '';
+  const str = by ? `\u201C${body}\u201D` : body;
+  const lines = wrapTextCapped(f, str, w, 2);
+  const lineH = Math.round(size * 1.3 * s);
+  let baseline = y + Math.round(size * 1.4 * s);
+  lines.forEach((l, i) => {
+    text(cv, Skia, l, x, baseline, f, PALETTE.text, 'left');
+    if (i < lines.length - 1) baseline += lineH;
+  });
+  let end = baseline + Math.round(size * 0.3 * s);
+  if (by) {
+    const lf = fitOverline(font, by, w, ovSize, s);
+    const lb = end + Math.round(ovSize * 1.5 * s);
+    textTracked(cv, Skia, lf.label, x, lb, lf.font, PALETTE.textMuted, 'left', lf.tracking);
+    end = lb + Math.round(ovSize * 0.3 * s);
+  }
+  return end;
+}
+
+// Optional highlights under the hero (founder, 2026-09-26: "Are there any
+// stats that could be included, like x% more volume than last time,
+// heaviest session in x weeks ... We don't want to force them on but
+// optional"). Each is a line the app has already shown the athlete, handed
+// over as text by the share screen only when the athlete switched it on;
+// set in white under the hero's caption, the way the workout summary puts
+// its comparison line under its hero. Two at most.
+function drawHighlights(cv, Skia, x, w, y, lines, size, s, font) {
+  const shown = (lines || []).filter((l) => typeof l === 'string' && l.trim()).slice(0, 2);
+  if (!shown.length) return y;
+  let baseline = y + Math.round(size * 0.95 * s);
+  shown.forEach((l, i) => {
+    const f = fitFont(null, l, w, size, (px) => font(px, 'semibold'), 14);
+    text(cv, Skia, l, x, baseline, f, PALETTE.text, 'left');
+    if (i < shown.length - 1) baseline += Math.round(size * 1.4 * s);
+  });
+  return baseline + Math.round(size * 0.3 * s);
+}
+
 // Type sizes per format. Over a photo the photo is the subject, so the text
 // steps down and packs tighter, and more of the photo shows between the title
 // at the top and the numbers at the bottom.
 function cardSizes(fmt, photo) {
   const base = fmt === 'square'
-    ? { overline: 22, title: 60, hero: 150, heroCap: 30, statVal: 52, statCap: 25, liftName: 34, liftVal: 38, gap: 30, headGap: 40 }
+    ? { overline: 22, title: 60, quote: 28, hero: 150, heroCap: 30, statVal: 52, statCap: 25, liftName: 34, liftVal: 38, gap: 30, headGap: 40 }
     : fmt === 'portrait'
-      ? { overline: 24, title: 72, hero: 196, heroCap: 32, statVal: 60, statCap: 27, liftName: 38, liftVal: 42, gap: 38, headGap: 60 }
-      : { overline: 26, title: 82, hero: 228, heroCap: 34, statVal: 64, statCap: 28, liftName: 40, liftVal: 46, gap: 44, headGap: 76 };
+      ? { overline: 24, title: 72, quote: 32, hero: 196, heroCap: 32, statVal: 60, statCap: 27, liftName: 38, liftVal: 42, gap: 38, headGap: 60 }
+      : { overline: 26, title: 82, quote: 34, hero: 228, heroCap: 34, statVal: 64, statCap: 28, liftName: 40, liftVal: 46, gap: 44, headGap: 76 };
   if (!photo) return base;
   return {
     ...base,
@@ -868,11 +928,13 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
 
   const drawHead = (cv, y, compact) => {
     const by = drawOverlineRow(cv, Skia, pad, cw, y, p.showPlanName ? p.planName : '', p.showDate ? p.date : '', z.overline, s, font);
-    return drawTitle(cv, Skia, pad, cw, by, p.sessionName || 'Workout complete', z.title, compact ? 1 : 2, s, font);
+    const ty = drawTitle(cv, Skia, pad, cw, by, p.sessionName || 'Workout complete', z.title, compact ? 1 : 2, s, font);
+    return drawQuote(cv, Skia, pad, cw, ty, p.quote, z.quote, z.overline, s, font);
   };
   const drawBody = (cv, y, scale) => {
     const gap = Math.round(z.gap * s);
     let by = drawHero(cv, Skia, pad, cw, y, [{ t: hero.value, ratio: 1 }, { t: hero.unit, ratio: 0.3 }], hero.label, Math.round(z.hero * scale), z.heroCap, p.isSquare, s, font);
+    if (p.highlights && p.highlights.length) by = drawHighlights(cv, Skia, pad, cw, by + Math.round(gap * 0.5), p.highlights, z.heroCap, s, font);
     by = drawRule(cv, Skia, pad, cw, by + gap, s) + gap;
     by = drawStatRow(cv, Skia, pad, cw, by, stats, z.statVal, z.statCap, s, font);
     if (lift) {
@@ -899,7 +961,8 @@ function drawPR(canvas, Skia, W, H, p, s, font, wordmark) {
 
   const drawHead = (cv, y, compact) => {
     const by = drawOverlineRow(cv, Skia, pad, cw, y, 'Personal record', p.showDate ? p.date : '', z.overline, s, font);
-    return drawTitle(cv, Skia, pad, cw, by, p.exerciseName || 'Exercise', z.title, compact ? 1 : 2, s, font);
+    const ty = drawTitle(cv, Skia, pad, cw, by, p.exerciseName || 'Exercise', z.title, compact ? 1 : 2, s, font);
+    return drawQuote(cv, Skia, pad, cw, ty, p.quote, z.quote, z.overline, s, font);
   };
   // The record is the whole card's reason to exist, so its numeral starts a
   // step above the other heroes.
@@ -917,7 +980,8 @@ function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
 
   const drawHead = (cv, y, compact) => {
     const by = drawOverlineRow(cv, Skia, pad, cw, y, p.eyebrow || '', p.showDate ? p.date : '', z.overline, s, font);
-    return drawTitle(cv, Skia, pad, cw, by, p.title || '', z.title, compact ? 1 : 2, s, font);
+    const ty = drawTitle(cv, Skia, pad, cw, by, p.title || '', z.title, compact ? 1 : 2, s, font);
+    return drawQuote(cv, Skia, pad, cw, ty, p.quote, z.quote, z.overline, s, font);
   };
   const drawBody = (cv, y, scale) => {
     const gap = Math.round(z.gap * s);
@@ -958,7 +1022,8 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
 
   const drawHead = (cv, y) => {
     const by = drawOverlineRow(cv, Skia, pad, cw, y, p.weekLabel || '', p.showDate ? p.dateFormatted : '', z.overline, s, font);
-    return drawTitle(cv, Skia, pad, cw, by, p.tierLabel || 'Great Week', z.title, 1, s, font);
+    const ty = drawTitle(cv, Skia, pad, cw, by, p.tierLabel || 'Great Week', z.title, 1, s, font);
+    return drawQuote(cv, Skia, pad, cw, ty, p.quote, z.quote, z.overline, s, font);
   };
   const drawBody = (cv, y, scale) => {
     const gap = Math.round(z.gap * s);

@@ -25,6 +25,7 @@ import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
 import BottomSheet from '../components/BottomSheet';
 import SharePhotoFramer from '../components/SharePhotoFramer';
+import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 import { drawShareCard, cardHeight, drawSticker, stickerHeight } from '../lib/shareCard/drawShareCard';
@@ -32,6 +33,9 @@ import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
 import { loadWordmarkImage } from '../lib/shareCard/wordmarkImage';
 import { loadCardTypefaces } from '../lib/shareCard/cardTypefaces';
 import { isCentreCrop } from '../lib/shareCard/photoFraming';
+import {
+  SHARE_LINES, SHARE_QUOTES, MAX_CAPTION_LENGTH, cleanCaption,
+} from '../lib/shareCard/shareQuotes';
 import { defaultLiftIndex } from '../lib/sessionShareData';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
@@ -195,6 +199,35 @@ export default function ShareCardScreen({ navigation, route }) {
   );
   const [liftSheetOpen, setLiftSheetOpen] = useState(false);
   const chosenLift = liftIndex >= 0 && liftIndex < liftOptions.length ? liftOptions[liftIndex] : null;
+
+  // Optional highlights (founder, 2026-09-26: "Are there any stats that
+  // could be included ... We don't want to force them on but optional?").
+  // Only lines the workout summary itself worked out and showed are
+  // offered, each exactly as it will read on the image; none is on until the
+  // athlete switches it on, and two at most fit.
+  const highlightOptions = useMemo(() => (Array.isArray(sessionData?.highlightOptions)
+    ? sessionData.highlightOptions.filter((o) => o && o.key && o.text)
+    : []), [sessionData]);
+  const [highlightKeys, setHighlightKeys] = useState([]);
+  const chosenHighlights = useMemo(
+    () => highlightOptions.filter((o) => highlightKeys.includes(o.key)).map((o) => o.text).slice(0, 2),
+    [highlightOptions, highlightKeys],
+  );
+  const toggleHighlight = useCallback((key, on) => {
+    setHighlightKeys((prev) => {
+      if (!on) return prev.filter((k) => k !== key);
+      if (prev.includes(key) || prev.length >= 2) return prev;
+      return [...prev, key];
+    });
+  }, []);
+
+  // Optional quote or caption under the title (founder, 2026-09-26: "Is
+  // there an elegant way to do bodybuilding short quotes that people can
+  // insert"): a line in Volyume's voice, a quote with its source, or the
+  // athlete's own words. Off until chosen.
+  const [quote, setQuote] = useState(null);
+  const [quoteSheetOpen, setQuoteSheetOpen] = useState(false);
+  const [captionDraft, setCaptionDraft] = useState('');
   const prName = (pr) => (pr && (pr.exerciseName || pr.exercise)) || 'Exercise';
   const prDetail = (pr) => (pr && pr.weight
     ? `${pr.weight} ${pr.units || 'kg'}${pr.reps ? ` × ${pr.reps}` : ''}`
@@ -359,6 +392,8 @@ export default function ShareCardScreen({ navigation, route }) {
         // The lift the athlete chose, or null for none. No exercise-name
         // list reaches the card (founder order 2026-09-26).
         topSet: chosenLift,
+        // Only the highlights the athlete switched on.
+        highlights: chosenHighlights,
         intensityTier: s.intensityTier || 'solid',
         // R8/M5 (share-card audit 2026-07-27): the session card hard-coded
         // 'kg' for the tonnage hero/stat/top-lift line. `sessionData.units`
@@ -379,13 +414,13 @@ export default function ShareCardScreen({ navigation, route }) {
       previousBest: p.previousBest || '',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSquare, showDate, showVolume, showPlanName, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift, chosenLift]);
+  }, [isSquare, showDate, showVolume, showPlanName, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift, chosenLift, chosenHighlights]);
 
   // The selected card's params: the per-type build plus the chosen aspect
   // preset (the renderer's cardHeight/draw both key off params.aspect).
   const buildParams = useCallback(
-    () => ({ ...buildParamsFor(cardType), aspect: cardAspect }),
-    [buildParamsFor, cardType, cardAspect],
+    () => ({ ...buildParamsFor(cardType), aspect: cardAspect, quote }),
+    [buildParamsFor, cardType, cardAspect, quote],
   );
 
   // ── ONE renderer for preview + export ──────────────────────────────────────
@@ -964,6 +999,57 @@ export default function ShareCardScreen({ navigation, route }) {
           </View>
         ) : null}
 
+        {/* Highlights (founder, 2026-09-26): optional lines the workout
+            summary already worked out, off until switched on, two at most. */}
+        {isSession && highlightOptions.length > 0 ? (
+          <View style={styles.section}>
+            <SectionLabel>Highlights</SectionLabel>
+            <View style={[styles.togglesCard, live.togglesCard]}>
+              {highlightOptions.map((o, i) => {
+                const on = highlightKeys.includes(o.key);
+                return (
+                  <ToggleRow
+                    key={o.key}
+                    label={o.text}
+                    value={on}
+                    onChange={(v) => toggleHighlight(o.key, v)}
+                    disabled={!on && highlightKeys.length >= 2}
+                    last={i === highlightOptions.length - 1}
+                  />
+                );
+              })}
+            </View>
+            <Text style={[styles.privacyNote, live.privacyNote]}>Optional. Up to two, from your workout summary.</Text>
+          </View>
+        ) : null}
+
+        {/* Quote or caption (founder, 2026-09-26): optional, under the
+            title; the same row-and-list pattern as the top lift. */}
+        {!isSticker ? (
+          <View style={styles.section}>
+            <SectionLabel>Quote or caption</SectionLabel>
+            <View style={[styles.togglesCard, live.togglesCard]}>
+              <TouchableOpacity
+                style={styles.pickerRow}
+                onPress={() => { setCaptionDraft(quote && !quote.by && !SHARE_LINES.includes(quote.text) ? quote.text : ''); setQuoteSheetOpen(true); }}
+                accessibilityRole="button"
+                accessibilityLabel={quote ? `Quote or caption: ${quote.text}${quote.by ? `, ${quote.by}` : ''}. Change` : 'Quote or caption: none. Choose one'}
+              >
+                <View style={styles.pickerText}>
+                  <Text style={[styles.pickerValue, live.pickerValue]} numberOfLines={2}>
+                    {quote ? quote.text : 'None'}
+                  </Text>
+                  <Text style={[styles.pickerSub, live.pickerSub]} numberOfLines={1}>
+                    {quote ? (quote.by || 'Under the title') : 'Add a line under the title if you like.'}
+                  </Text>
+                </View>
+                <Text style={[styles.pickerAction, live.pickerAction]}>{quote ? 'Change' : 'Add'}</Text>
+                <Ionicons name="chevron-forward" size={16} color={t.colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
+
         {/* What to include */}
         <View style={styles.section}>
           {cardType === 'pr' && prs.length > 1 ? (
@@ -1132,6 +1218,63 @@ export default function ShareCardScreen({ navigation, route }) {
           />
         ))}
       </BottomSheet>
+
+      {/* Quote or caption: the athlete's own words first, then lines in
+          Volyume's voice, then quotes with their source, then none. */}
+      <BottomSheet
+        visible={quoteSheetOpen}
+        onClose={() => setQuoteSheetOpen(false)}
+        accessibilityLabel="Choose a quote or caption"
+        scroll
+      >
+        <Text style={[styles.sheetTitle, live.sheetTitle]}>Quote or caption</Text>
+        <Text style={[styles.sheetSub, live.sheetSub]}>Optional. It sits under the title on your image.</Text>
+        <SectionLabel>Your own words</SectionLabel>
+        <View style={styles.captionRow}>
+          <TextField
+            value={captionDraft}
+            onChangeText={setCaptionDraft}
+            placeholder="Write a short caption"
+            maxLength={MAX_CAPTION_LENGTH}
+            accessibilityLabel="Your own caption"
+            surface="surface2"
+            containerStyle={styles.captionField}
+          />
+          <Button
+            title="Use"
+            size="sm"
+            fullWidth={false}
+            disabled={!cleanCaption(captionDraft)}
+            onPress={() => { setQuote({ text: cleanCaption(captionDraft), by: null }); setQuoteSheetOpen(false); }}
+            accessibilityLabel="Use your own caption"
+          />
+        </View>
+        <SectionLabel style={styles.sheetGroupLabel}>Lines</SectionLabel>
+        {SHARE_LINES.map((line) => (
+          <OptionRow
+            key={line}
+            title={line}
+            selected={!!quote && !quote.by && quote.text === line}
+            onPress={() => { setQuote({ text: line, by: null }); setQuoteSheetOpen(false); }}
+          />
+        ))}
+        {SHARE_QUOTES.length ? <SectionLabel style={styles.sheetGroupLabel}>Quotes</SectionLabel> : null}
+        {SHARE_QUOTES.map((q) => (
+          <OptionRow
+            key={`${q.by}-${q.text}`}
+            title={`\u201C${q.text}\u201D`}
+            meta={q.by}
+            selected={!!quote && quote.by === q.by && quote.text === q.text}
+            onPress={() => { setQuote({ text: q.text, by: q.by }); setQuoteSheetOpen(false); }}
+          />
+        ))}
+        <OptionRow
+          title="No quote or caption"
+          selected={!quote}
+          onPress={() => { setQuote(null); setQuoteSheetOpen(false); }}
+          last
+        />
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -1185,15 +1328,17 @@ function SegmentBtn({ label, active, onPress, icon }) {
   );
 }
 
-function ToggleRow({ label, value, onChange, last }) {
+function ToggleRow({ label, value, onChange, last, disabled = false }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   return (
     <View style={[styles.toggleRow, live.toggleRow, last && styles.toggleRowLast]}>
-      <Text style={[styles.toggleLabel, live.toggleLabel]}>{label}</Text>
+      <Text style={[styles.toggleLabel, live.toggleLabel, disabled && styles.toggleLabelDisabled]}>{label}</Text>
       <Switch
         value={value}
         onValueChange={onChange}
+        disabled={disabled}
+        accessibilityLabel={label}
         trackColor={{ false: t.colors.surface2, true: withAlpha(t.colors.primary, alpha.strong) }}
         thumbColor={value ? t.colors.primary : t.colors.textMuted}
       />
@@ -1257,6 +1402,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   toggleRowLast: { borderBottomWidth: 0 },
+  // A highlight that cannot be switched on while two already are.
+  toggleLabelDisabled: { opacity: 0.5 },
+  captionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  captionField: { flex: 1 },
+  sheetGroupLabel: { marginTop: spacing.md },
   toggleLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
   privacyNote: { ...type.captionTight, color: colors.textMuted },
   // The top-lift and which-PR rows: one row in a card that opens its list
