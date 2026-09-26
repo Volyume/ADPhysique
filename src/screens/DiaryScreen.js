@@ -2384,6 +2384,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    // Founder device report 2026-09-26: "Spacing at the top of Nutrition is
+    // off ... The Nutrition and Trends button is almost touching the content
+    // below". Today, Train and Coach put their content gap (spacing.lg) under
+    // ScreenHeader's own spacing.xs; this screen spaces its blocks with
+    // margins instead of a gap, so the day pager sat 4pt under the header.
+    // The same spacing.lg here gives the tab the same air under its title.
+    marginTop: spacing.lg,
     marginBottom: spacing.md,
   },
   dateCluster: {
