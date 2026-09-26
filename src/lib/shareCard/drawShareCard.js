@@ -1265,7 +1265,19 @@ export function drawShareCard(canvas, {
       try { params.onDrawError(e); } catch (_) { /* reporting is best-effort */ }
     }
   }
+  drawOutline(canvas, Skia, W, H, s);
   return { width: W, height: H };
+}
+
+// The amber outline (founder, 2026-09-26: "there's no border or outline so no
+// obvious ending on a share. Need the amber outline we have in other areas of
+// the app"): a frame on the image's own edge in the app's amber, drawn last so
+// it sits over a photo too, on every card type and the fallback alike.
+// Square-cornered, because the saved image is a rectangle: a rounded frame
+// would leave the photo showing outside it at the corners.
+function drawOutline(canvas, Skia, W, H, s) {
+  const lw = Math.max(2, Math.round(6 * s));
+  canvas.drawRect(Skia.XYWHRect(lw / 2, lw / 2, W - lw, H - lw), paintFor(Skia, PALETTE.accent, STROKE, lw));
 }
 
 /**
