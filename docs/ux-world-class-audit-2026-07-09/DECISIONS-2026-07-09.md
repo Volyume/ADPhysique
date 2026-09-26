@@ -10409,3 +10409,61 @@ screen titled Recovery would repeat itself. Consistency keeps the sessions
 milestone; the section moved rather than being copied. Landed `1ef366ef`;
 guards `recoveryPlace.guard.test.js`, `recoveryPillar.test.js` and
 `RecoveryScreen.rateLastSession.test.js`.
+
+## D209 — The share image: the app's own style, a chosen top lift, a movable photo (founder order 2026-09-26, lead rulings)
+
+Founder, verbatim, on the Share image screen: "For share screens I don't
+want exercise names list to be an option or show at all as it does not fit
+in the share and looks stupid. Remove them as a default and also remove
+them from the tick boxes. I want the user to be able to select their Top
+Lift rather than it just doing one. Research this and the best way to do
+it. I don't like it defaulting and forcing a list I don't want to share. I
+also think it looks too AI generated at the moment. Use styles from the
+rest of the app and none of the pill nonsense and so on. Put thought into
+how to display it better. Also when adding a photo id like people to be
+able to crop the photo or even move the alignment so that it shows best in
+the background. ... Look into and research other useful things for these
+as well and what others do and propose."
+
+**Built as ordered.** The exercise-names line is gone from the card and the
+toggle from the screen; no caller's name list is drawn. The top lift is the
+athlete's choice. A new photo can be moved and zoomed.
+
+**Lead rulings (D33), previewed to the founder the same day with every card
+drawn by the real renderer (https://claude.ai/artifact/6K1PGc7mURYkV6Gp7R9wnc):**
+
+1. The look. The card takes the app's materials policy (theme.js): Inter and
+   Inter Display loaded into Skia from the bundled fonts (system faces only
+   as a fallback, never gating the card, VOLYUME-2V), the flat near-black
+   ground, uppercase section labels, hairline rules, and one amber object per
+   card, the hero number. No pills, glow, lit frame, trophy or stat icons.
+   The plan name and the date are the card's label row.
+2. The top-lift picker is one row that opens a list (the app's own picker
+   pattern), one entry per exercise with its best set. It opens on the
+   heaviest lift that set a new best today, else the heaviest lift of the
+   session, because a record is the lift an athlete most often wants to
+   show; "Don't show a top lift" is always offered. The "Which PR" pills
+   become the same row and list.
+3. The untitled-session title. With no named routine the old title was a
+   join of exercise names, which the founder's "at all" rules out; it is now
+   the time of day ("Morning workout", as other trackers title an untitled
+   session). Community posts keep their own title rule.
+4. The photo. Choosing a photo opens the move-and-zoom view at once (the
+   crop-before-you-post pattern), with the real card laid over it. The
+   framing is stored as a point of the photo and a zoom, so it survives a
+   change of format. Over a photo the title sits at the top and the numbers
+   at the bottom, with the scrim drawn from where the text is, so the middle
+   of the photo stays clear.
+5. The session's own date travels to the card, so a workout shared later
+   from history is dated when it happened.
+
+**Proposals put to the founder, not built:** choose the main number; a
+"compared with your usual" line; several images from one workout; a light
+card; remembering the last choices; numbers at the top over a photo
+(sources in the preview: Hevy shareables, Strava sharing options,
+FitnessOverlays).
+
+Landed `28ae0332`. Guards: `sessionCardLayout.test.js`,
+`drawShareCard.test.js` (photo framing), `sessionShareData.test.js`,
+`ShareCardScreen.shareTargets.test.js` (the picker end to end),
+`ShareCardScreen.photoAndFonts.guard.test.js`.
